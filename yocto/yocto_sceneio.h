@@ -130,17 +130,17 @@ struct sceneio_shape {
   bool  thin         = true;
 
   // textures
-  int  emission_tex     = -1;
-  int  color_tex        = -1;
-  int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  spectint_tex     = -1;
-  int  scattering_tex   = -1;
-  int  coat_tex         = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
+  sceneio_texture*  emission_tex     = nullptr;
+  sceneio_texture*  color_tex        = nullptr;
+  sceneio_texture*  specular_tex     = nullptr;
+  sceneio_texture*  metallic_tex     = nullptr;
+  sceneio_texture*  roughness_tex    = nullptr;
+  sceneio_texture*  transmission_tex = nullptr;
+  sceneio_texture*  spectint_tex     = nullptr;
+  sceneio_texture*  scattering_tex   = nullptr;
+  sceneio_texture*  coat_tex         = nullptr;
+  sceneio_texture*  opacity_tex      = nullptr;
+  sceneio_texture*  normal_tex       = nullptr;
   bool gltf_textures    = false;  // glTF packed textures
 };
 
@@ -150,7 +150,7 @@ struct sceneio_shape {
 struct sceneio_subdiv {
   // shape data
   string name  = "";
-  int    shape = -1;
+  sceneio_shape*    shape = nullptr;
 
   // primitives
   vector<int>   points    = {};
@@ -178,7 +178,7 @@ struct sceneio_subdiv {
 
   // displacement information
   float displacement     = 0;
-  int   displacement_tex = -1;
+  sceneio_texture*   displacement_tex = nullptr;
 };
 
 // Environment map.
@@ -186,7 +186,7 @@ struct sceneio_environment {
   string  name         = "";
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
+  sceneio_texture*     emission_tex = nullptr;
 };
 
 // Node in a transform hierarchy.

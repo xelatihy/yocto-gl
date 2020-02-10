@@ -77,6 +77,7 @@ struct app_state {
   int selected_material    = -1;
   int selected_environment = -1;
   int selected_texture     = -1;
+  unordered_map<sceneio_texture*, int> texture_map = {};
 
   // error
   string error = "";
@@ -160,7 +161,11 @@ void update_lights(opengl_scene& glscene, const sceneio_model& ioscene) {
   }
 }
 
-void init_scene(opengl_scene& glscene, sceneio_model& ioscene) {
+void init_scene(shared_ptr<app_state> app) {
+  auto& glscene = app->glscene;
+  auto& ioscene = app->ioscene;
+  auto& texture_map = app->texture_map;
+
   // load program
   init_glscene(glscene);
 
@@ -173,6 +178,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& ioscene) {
   }
 
   // textures
+  texture_map[nullptr] = -1;
   for (auto iotexture : ioscene.textures) {
     auto id = add_texture(glscene);
     if (!iotexture->hdr.empty()) {
@@ -199,16 +205,16 @@ void init_scene(opengl_scene& glscene, sceneio_model& ioscene) {
     set_shape_quads(glscene, id, ioshape->quads);
     set_shape_frame(glscene, id, ioshape->frame);
     set_shape_instances(glscene, id, ioshape->instances);
-    set_shape_emission(glscene, id, ioshape->emission, ioshape->emission_tex);
+    set_shape_emission(glscene, id, ioshape->emission, texture_map.at(ioshape->emission_tex));
     set_shape_color(
-        glscene, id, (1 - ioshape->transmission) * ioshape->color, ioshape->color_tex);
+        glscene, id, (1 - ioshape->transmission) * ioshape->color, texture_map.at(ioshape->color_tex));
     set_shape_specular(glscene, id, (1 - ioshape->transmission) * ioshape->specular,
-        ioshape->specular_tex);
+        texture_map.at(ioshape->specular_tex));
     set_shape_metallic(glscene, id, (1 - ioshape->transmission) * ioshape->metallic,
-        ioshape->metallic_tex);
-    set_shape_roughness(glscene, id, ioshape->roughness, ioshape->roughness_tex);
-    set_shape_opacity(glscene, id, ioshape->opacity, ioshape->opacity_tex);
-    set_shape_normalmap(glscene, id, ioshape->normal_tex);
+        texture_map.at(ioshape->metallic_tex));
+    set_shape_roughness(glscene, id, ioshape->roughness, texture_map.at(ioshape->roughness_tex));
+    set_shape_opacity(glscene, id, ioshape->opacity, texture_map.at(ioshape->opacity_tex));
+    set_shape_normalmap(glscene, id, texture_map.at(ioshape->normal_tex));
   }
 }
 
@@ -483,19 +489,19 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       auto ioshape = app->ioscene.shapes[app->selected_material];
       set_shape_emission(app->glscene, app->selected_material, ioshape->emission,
-          ioshape->emission_tex);
+          app->texture_map.at(ioshape->emission_tex));
       set_shape_color(app->glscene, app->selected_material,
-          (1 - ioshape->transmission) * ioshape->color, ioshape->color_tex);
+          (1 - ioshape->transmission) * ioshape->color, app->texture_map.at(ioshape->color_tex));
       set_shape_specular(app->glscene, app->selected_material,
-          (1 - ioshape->transmission) * ioshape->specular, ioshape->specular_tex);
+          (1 - ioshape->transmission) * ioshape->specular, app->texture_map.at(ioshape->specular_tex));
       set_shape_metallic(app->glscene, app->selected_material,
-          (1 - ioshape->transmission) * ioshape->metallic, ioshape->metallic_tex);
+          (1 - ioshape->transmission) * ioshape->metallic, app->texture_map.at(ioshape->metallic_tex));
       set_shape_roughness(app->glscene, app->selected_material, ioshape->roughness,
-          ioshape->roughness_tex);
+          app->texture_map.at(ioshape->roughness_tex));
       set_shape_opacity(app->glscene, app->selected_material, ioshape->opacity,
-          ioshape->opacity_tex);
+          app->texture_map.at(ioshape->opacity_tex));
       set_shape_normalmap(
-          app->glscene, app->selected_material, ioshape->normal_tex);
+          app->glscene, app->selected_material, app->texture_map.at(ioshape->normal_tex));
     }
     end_glheader(win);
   }
@@ -519,7 +525,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (!draw_glwidgets_subdiv(win, app, app->selected_subdiv)) {
       auto iosubdiv = app->ioscene.subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene, iosubdiv);
-      auto ioshape = app->ioscene.shapes[iosubdiv->shape];
+      auto ioshape = iosubdiv->shape;
       auto  idx   = app->selected_subdiv;
       set_shape_positions(app->glscene, idx, ioshape->positions);
       set_shape_normals(app->glscene, idx, ioshape->normals);
@@ -561,7 +567,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       auto app = apps->loaders.front().get();
       apps->loaders.pop_front();
       apps->states.push_back(app);
-      init_scene(app->glscene, app->ioscene);
+      init_scene(app);
       update_lights(app->glscene, app->ioscene);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     } catch (std::exception& e) {

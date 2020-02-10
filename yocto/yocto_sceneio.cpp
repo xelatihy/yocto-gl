@@ -433,7 +433,7 @@ void add_sky(sceneio_model& scene, float sun_angle) {
   auto environment         = add_environment(scene);
   environment->name         = "environments/sky.yaml";
   environment->emission     = {1, 1, 1};
-  environment->emission_tex = (int)scene.textures.size() - 1;
+  environment->emission_tex = texture;
 }
 
 // Reduce memory usage
@@ -591,13 +591,13 @@ void displace_subdiv(sceneio_subdiv* displaced,
 
   *displaced = *subdiv;
 
-  if (!subdiv->displacement || subdiv->displacement_tex < 0) return;
-  auto displacement = scene.textures[subdiv->displacement_tex];
+  if (!subdiv->displacement || subdiv->displacement_tex) return;
+  auto displacement = subdiv->displacement_tex;
   if (subdiv->texcoords.empty())
     throw std::runtime_error("missing texture coordinates");
 
   displaced->displacement     = 0;
-  displaced->displacement_tex = -1;
+  displaced->displacement_tex = nullptr;
 
   // simple case
   if (!subdiv->triangles.empty()) {
@@ -671,7 +671,7 @@ void tesselate_subdiv(
     displaced->triangles = quads_to_triangles(displaced->quads);
     displaced->quads     = {};
   }
-  auto shape     = scene.shapes[displaced->shape];
+  auto shape     = displaced->shape;
   shape->points    = displaced->points;
   shape->lines     = displaced->lines;
   shape->triangles = displaced->triangles;
@@ -923,15 +923,15 @@ static void load_yaml_scene(
   load_yaml(filename, yaml);
 
   auto vmap = unordered_map<string, int>{{"", -1}};
-  auto smap = unordered_map<string, int>{{"", -1}};
+  auto smap = unordered_map<string, sceneio_shape*>{{"", nullptr}};
 
   // parse yaml reference
-  auto get_yaml_ref = [](const yaml_element& yelment, const string& name,
-                          int& value, const unordered_map<string, int>& refs) {
+  auto get_yaml_shape = [](const yaml_element& yelment, const string& name,
+                          sceneio_shape*& value, const unordered_map<string, sceneio_shape*>& refs) {
     auto ref = ""s;
     get_yaml_value(yelment, name, ref);
     if (ref == "") {
-      value = -1;
+      value = nullptr;
     } else {
       if (refs.find(ref) == refs.end())
         throw std::invalid_argument{"missing reference to " + ref};
@@ -940,13 +940,13 @@ static void load_yaml_scene(
   };
 
   // parse yaml reference
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&filename, &scene, &texture_map](
                          const yaml_element& yelment, const string& name,
-                         int& value, const string& dirname = "textures/") {
+                         sceneio_texture*& value, const string& dirname = "textures/") -> sceneio_texture* {
     auto path = ""s;
     get_yaml_value(yelment, name, path);
-    if (path == "") return -1;
+    if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
       value = it->second;
@@ -964,9 +964,9 @@ static void load_yaml_scene(
     }
     texture->name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture->ldr.empty() ? ".png" : ".hdr"));
-    texture_map[path] = (int)scene.textures.size() - 1;
-    value             = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+    texture_map[path] = texture;
+    value             = texture;
+    return texture;
   };
 
   // check for conversion errors
@@ -1054,11 +1054,11 @@ static void load_yaml_scene(
             throw_dependent_error(filename, e.what());
           }
         }
-        smap[shape->name] = (int)scene.shapes.size() - 1;
+        smap[shape->name] = shape;
       } else if (yelement.name == "subdivs") {
         auto subdiv = add_subdiv(scene);
         get_yaml_value(yelement, "name", subdiv->name);
-        get_yaml_ref(yelement, "shape", subdiv->shape, smap);
+        get_yaml_shape(yelement, "shape", subdiv->shape, smap);
         get_yaml_value(yelement, "subdivisions", subdiv->subdivisions);
         get_yaml_value(yelement, "catmullclark", subdiv->catmullclark);
         get_yaml_value(yelement, "smooth", subdiv->smooth);
@@ -1112,9 +1112,9 @@ static void save_yaml_scene(
     if (value == def) return;
     add_yaml_value(yelement, name, value);
   };
-  auto add_tex = [&scene](yaml_element& yelement, const string& name, int ref) {
-    if (ref < 0) return;
-    add_yaml_value(yelement, name, scene.textures[ref]->name);
+  auto add_tex = [](yaml_element& yelement, const string& name, const sceneio_texture* texture) {
+    if (!texture) return;
+    add_yaml_value(yelement, name, texture->name);
   };
 
   // save yaml file
@@ -1206,7 +1206,7 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "subdivs";
     add_val(yelement, "name", subdiv->name);
-    add_val(yelement, "shape", scene.shapes[subdiv->shape]->name);
+    add_val(yelement, "shape", subdiv->shape->name);
     add_opt(
         yelement, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
     add_opt(
@@ -1321,13 +1321,13 @@ static void load_json_scene(
   };
 
   // parse yaml reference
-  auto get_ref = [](const json& ejs, const string& name, int& value,
-                     const unordered_map<string, int>& refs) {
+  auto get_ref = [](const json& ejs, const string& name, auto& value,
+                     const auto& refs) {
     if (!ejs.contains(name)) return;
     auto ref = ""s;
     ejs.at(name).get_to(ref);
     if (ref == "") {
-      value = -1;
+      value = nullptr;
     } else {
       if (refs.find(ref) == refs.end())
         throw std::invalid_argument{"missing reference to " + ref};
@@ -1336,14 +1336,14 @@ static void load_json_scene(
   };
 
   // parse yaml reference
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&filename, &scene, &texture_map](const json& ejs,
-                         const string& name, int& value,
-                         const string& dirname = "textures/") {
-    if (!ejs.contains(name)) return -1;
+                         const string& name, sceneio_texture*& value,
+                         const string& dirname = "textures/") -> sceneio_texture* {
+    if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
-    if (path == "") return -1;
+    if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
       value = it->second;
@@ -1361,13 +1361,13 @@ static void load_json_scene(
     }
     texture->name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture->ldr.empty() ? ".png" : ".hdr"));
-    texture_map[path] = (int)scene.textures.size() - 1;
-    value             = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+    texture_map[path] = texture;
+    value             = texture;
+    return texture;
   };
 
   // shape map
-  auto shape_map = unordered_map<string, int>{{"", -1}};
+  auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
 
   // check for conversion errors
   try {
@@ -1460,7 +1460,7 @@ static void load_json_scene(
             throw_dependent_error(filename, e.what());
           }
         }
-        shape_map[shape->name] = (int)scene.shapes.size() - 1;
+        shape_map[shape->name] = shape;
       }
     }
     if (js.contains("subdivs")) {
@@ -1520,9 +1520,9 @@ static void save_json_scene(
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [&scene](json& ejs, const string& name, int ref) {
-    if (ref < 0) return;
-    ejs[name] = scene.textures[ref]->name;
+  auto add_tex = [](json& ejs, const string& name, const sceneio_texture* texture) {
+    if (!texture) return;
+    ejs[name] = texture->name;
   };
 
   // save yaml file
@@ -1615,7 +1615,7 @@ static void save_json_scene(
   for (auto subdiv : scene.subdivs) {
     auto& ejs = js["subdivs"].emplace_back();
     add_val(ejs, "name", subdiv->name);
-    add_val(ejs, "shape", scene.shapes[subdiv->shape]->name);
+    add_val(ejs, "shape", subdiv->shape->name);
     add_opt(ejs, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
     add_opt(ejs, "catmullclark", subdiv->catmullclark, def_subdiv.catmullclark);
     add_opt(ejs, "smooth", subdiv->smooth, def_subdiv.smooth);
@@ -1693,12 +1693,12 @@ static void load_obj_scene(
   }
 
   // helper to create texture maps
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&filename, &texture_map, &scene](
                          const obj_texture_info& info,
-                         const string&           dirname = "textures/") {
+                         const string&           dirname = "textures/") -> sceneio_texture* {
     auto path = info.path;
-    if (path == "") return -1;
+    if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture = add_texture(scene);
@@ -1713,8 +1713,8 @@ static void load_obj_scene(
     }
     texture->name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture->ldr.empty() ? ".png" : ".hdr"));
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+    texture_map[path] = texture;
+    return texture;
   };
 
   // material map for fast lookup
@@ -1818,10 +1818,10 @@ static void save_obj_scene(
   }
 
   // textures
-  auto get_texture = [&scene](int tex) {
-    if (tex < 0) return obj_texture_info{};
+  auto get_texture = [](const sceneio_texture* texture) {
+    if (!texture) return obj_texture_info{};
     auto info = obj_texture_info{};
-    info.path = scene.textures[tex]->name;
+    info.path = texture->name;
     return info;
   };
 
@@ -1960,13 +1960,13 @@ static void load_gltf_scene(
   load_gltf(filename, gltf);
 
   // convert textures
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&filename, &scene, &gltf, &texture_map](
-                         int ref, const string& dirname = "textures/") {
-    if (ref < 0) return -1;
+                         int ref, const string& dirname = "textures/") -> sceneio_texture* {
+    if (ref < 0) return nullptr;
     auto& gtexture = gltf.textures[ref];
     auto  path     = gtexture.filename;
-    if (path == "") return -1;
+    if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture = add_texture(scene);
@@ -1981,8 +1981,8 @@ static void load_gltf_scene(
     }
     texture->name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture->ldr.empty() ? ".png" : ".hdr"));
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+    texture_map[path] = texture;
+    return texture;
   };
 
   // convert shapes
@@ -2085,10 +2085,10 @@ static void load_pbrt_scene(
   }
 
   // convert materials
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&filename, &scene, &texture_map](const string& path,
-                         const string& dirname = "textures/") {
-    if (path == "") return -1;
+                         const string& dirname = "textures/") -> sceneio_texture* {
+    if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture = add_texture(scene);
@@ -2103,8 +2103,8 @@ static void load_pbrt_scene(
     }
     texture->name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture->ldr.empty() ? ".png" : ".hdr"));
-    texture_map[path] = (int)scene.textures.size() - 1;
-    return (int)scene.textures.size() - 1;
+    texture_map[path] = texture;
+    return texture;
   };
 
   // convert shapes
@@ -2190,8 +2190,7 @@ void save_pbrt_scene(
     pshape.roughness    = shape->roughness;
     pshape.ior          = shape->ior;
     pshape.opacity      = shape->opacity;
-    pshape.color_map =
-        shape->color_tex >= 0 ? scene.textures[shape->color_tex]->name : ""s;
+    pshape.color_map = shape->color_tex ? shape->color_tex->name : ""s;
     pshape.emission = shape->emission;
   }
 
@@ -2199,8 +2198,8 @@ void save_pbrt_scene(
   for (auto environment : scene.environments) {
     auto& penvironment    = pbrt.environments.emplace_back();
     penvironment.emission = environment->emission;
-    if (environment->emission_tex >= 0) {
-      penvironment.emission_map = scene.textures[environment->emission_tex]->name;
+    if (environment->emission_tex) {
+      penvironment.emission_map = environment->emission_tex->name;
     }
   }
 

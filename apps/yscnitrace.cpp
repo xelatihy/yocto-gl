@@ -74,6 +74,7 @@ struct app_state {
   int selected_material    = -1;
   int selected_environment = -1;
   int selected_texture     = -1;
+  unordered_map<sceneio_texture*, int> texture_map = {};
 
   // computation
   int          render_sample  = 0;
@@ -102,7 +103,11 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+void init_scene(shared_ptr<app_state> app) {
+  auto& scene = app->scene;
+  auto& ioscene = app->ioscene;
+  auto& texture_map = app->texture_map;
+
   scene = trace_scene{};
 
   for (auto iocamera : ioscene.cameras) {
@@ -111,6 +116,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_camera_lens(scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
     set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
   }
+
+  texture_map[nullptr] = -1;
   for (auto iotexture : ioscene.textures) {
     auto id = add_texture(scene);
     if (!iotexture->hdr.empty()) {
@@ -118,10 +125,13 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     } else if (!iotexture->ldr.empty()) {
       set_texture(scene, id, std::move(iotexture->ldr));
     }
+    texture_map[iotexture] = id;
   }
+
   for (auto iosubdiv : ioscene.subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
+
   for (auto ioshape : ioscene.shapes) {
     auto id = add_shape(scene);
     set_shape_points(scene, id, ioshape->points);
@@ -135,25 +145,26 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_radius(scene, id, ioshape->radius);
     set_shape_tangents(scene, id, ioshape->tangents);
     set_shape_frames(scene, id, ioshape->instances, ioshape->frame);
-    set_shape_emission(scene, id, ioshape->emission, ioshape->emission_tex);
-    set_shape_color(scene, id, ioshape->color, ioshape->color_tex);
-    set_shape_specular(scene, id, ioshape->specular, ioshape->specular_tex);
+    set_shape_emission(scene, id, ioshape->emission, texture_map.at(ioshape->emission_tex));
+    set_shape_color(scene, id, ioshape->color, texture_map.at(ioshape->color_tex));
+    set_shape_specular(scene, id, ioshape->specular, texture_map.at(ioshape->specular_tex));
     set_shape_ior(scene, id, ioshape->ior);
-    set_shape_metallic(scene, id, ioshape->metallic, ioshape->metallic_tex);
+    set_shape_metallic(scene, id, ioshape->metallic, texture_map.at(ioshape->metallic_tex));
     set_shape_transmission(scene, id, ioshape->transmission, ioshape->thin,
-        ioshape->trdepth, ioshape->transmission_tex);
-    set_shape_roughness(scene, id, ioshape->roughness, ioshape->roughness_tex);
-    set_shape_opacity(scene, id, ioshape->opacity, ioshape->opacity_tex);
+        ioshape->trdepth, texture_map.at(ioshape->transmission_tex));
+    set_shape_roughness(scene, id, ioshape->roughness, texture_map.at(ioshape->roughness_tex));
+    set_shape_opacity(scene, id, ioshape->opacity, texture_map.at(ioshape->opacity_tex));
     set_shape_thin(scene, id, ioshape->thin);
-    set_shape_normalmap(scene, id, ioshape->normal_tex);
+    set_shape_normalmap(scene, id, texture_map.at(ioshape->normal_tex));
     set_shape_scattering(scene, id, ioshape->scattering, ioshape->scanisotropy,
-        ioshape->scattering_tex);
+        texture_map.at(ioshape->scattering_tex));
   }
+
   for (auto ioenvironment : ioscene.environments) {
     auto id = add_environment(scene);
     set_environment_frame(scene, id, ioenvironment->frame);
     set_environment_emission(
-        scene, id, ioenvironment->emission, ioenvironment->emission_tex);
+        scene, id, ioenvironment->emission, texture_map.at(ioenvironment->emission_tex));
   }
 }
 
@@ -231,7 +242,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->name      = get_filename(app->filename);
         app->params    = app->params;
         load_scene(app->filename, app->ioscene);
-        init_scene(app->scene, app->ioscene);
+        init_scene(app);
         init_bvh(app->scene, app->params);
         init_lights(app->scene);
         if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
@@ -527,7 +538,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_environment_frame(
           app->scene, app->selected_environment, ioenvironment->frame);
       set_environment_emission(app->scene, app->selected_environment,
-          ioenvironment->emission, ioenvironment->emission_tex);
+          ioenvironment->emission, app->texture_map.at(ioenvironment->emission_tex));
       init_lights(app->scene);
       reset_display(app);
     }
@@ -563,26 +574,27 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_material];
       set_shape_emission(app->scene, app->selected_material, ioshape->emission,
-          ioshape->emission_tex);
+          app->texture_map.at(ioshape->emission_tex));
       set_shape_color(
-          app->scene, app->selected_material, ioshape->color, ioshape->color_tex);
+          app->scene, app->selected_material, ioshape->color, app->texture_map.at(ioshape->color_tex));
       set_shape_specular(app->scene, app->selected_material, ioshape->specular,
-          ioshape->specular_tex);
+          app->texture_map.at(ioshape->specular_tex));
       set_shape_ior(app->scene, app->selected_material, ioshape->ior);
       set_shape_metallic(app->scene, app->selected_material, ioshape->metallic,
-          ioshape->metallic_tex);
+          app->texture_map.at(ioshape->metallic_tex));
       set_shape_transmission(app->scene, app->selected_material,
           ioshape->transmission, ioshape->thin, ioshape->trdepth,
-          ioshape->transmission_tex);
+          app->texture_map.at(ioshape->transmission_tex));
       set_shape_roughness(app->scene, app->selected_material, ioshape->roughness,
-          ioshape->roughness_tex);
+          app->texture_map.at(ioshape->roughness_tex));
       set_shape_opacity(app->scene, app->selected_material, ioshape->opacity,
-          ioshape->opacity_tex);
+          app->texture_map.at(ioshape->opacity_tex));
       set_shape_thin(app->scene, app->selected_material, ioshape->thin);
       set_shape_normalmap(
-          app->scene, app->selected_material, ioshape->normal_tex);
+          app->scene, app->selected_material, app->texture_map.at(ioshape->normal_tex));
       set_shape_scattering(app->scene, app->selected_material,
-          ioshape->scattering, ioshape->scanisotropy, ioshape->scattering_tex);
+          ioshape->scattering, ioshape->scanisotropy, 
+          app->texture_map.at(ioshape->scattering_tex));
       init_lights(app->scene);
       reset_display(app);
     }
@@ -612,7 +624,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto iosubdiv = app->ioscene.subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene, iosubdiv);
-      auto ioshape = app->ioscene.shapes[iosubdiv->shape];
+      auto ioshape = iosubdiv->shape;
       set_shape_points(app->scene, app->selected_shape, ioshape->points);
       set_shape_lines(app->scene, app->selected_shape, ioshape->lines);
       set_shape_triangles(app->scene, app->selected_shape, ioshape->triangles);
