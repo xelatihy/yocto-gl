@@ -100,10 +100,10 @@ vec2f compute_animation_range(
     const sceneio_model& scene, const string& anim_group = "") {
   if (scene.animations.empty()) return zero2f;
   auto range = vec2f{+flt_max, -flt_max};
-  for (auto& animation : scene.animations) {
-    if (anim_group != "" && animation.group != anim_group) continue;
-    range.x = min(range.x, animation.times.front());
-    range.y = max(range.y, animation.times.back());
+  for (auto animation : scene.animations) {
+    if (anim_group != "" && animation->group != anim_group) continue;
+    range.x = min(range.x, animation->times.front());
+    range.y = max(range.y, animation->times.back());
   }
   if (range.y < range.x) return zero2f;
   return range;

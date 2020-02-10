@@ -339,12 +339,13 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
 
   check_names_(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
+  check_names(scene.subdivs, "subdiv");
   // check_names(scene.shapes, "instance");
   // check_names(scene.shapes, "object");
   check_names_(scene.textures, "texture");
   check_names_(scene.environments, "environment");
-  check_names(scene.nodes, "node");
-  check_names(scene.animations, "animation");
+  check_names_(scene.nodes, "node");
+  check_names_(scene.animations, "animation");
   if (!notextures) check_empty_textures(scene.textures);
 
   return errs;
@@ -361,6 +362,9 @@ namespace yocto {
 sceneio_model::~sceneio_model() {
   for(auto camera : cameras) delete camera;
   for(auto environment : environments) delete environment;
+  for(auto texture : textures) delete texture;
+  for(auto node : nodes) delete node;
+  for(auto animation : animations) delete animation;
 }
 
 // add element
@@ -683,85 +687,85 @@ void tesselate_subdiv(
 }
 
 // Update animation transforms
-void update_transforms(sceneio_model& scene, sceneio_animation& animation,
+void update_transforms(sceneio_model& scene, sceneio_animation* animation,
     float time, const string& anim_group) {
-  if (anim_group != "" && anim_group != animation.group) return;
+  if (anim_group != "" && anim_group != animation->group) return;
 
-  if (!animation.translations.empty()) {
+  if (!animation->translations.empty()) {
     auto value = vec3f{0, 0, 0};
-    switch (animation.interpolation) {
+    switch (animation->interpolation) {
       case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation.times, animation.translations, time);
+        value = keyframe_step(animation->times, animation->translations, time);
         break;
       case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation.times, animation.translations, time);
+        value = keyframe_linear(animation->times, animation->translations, time);
         break;
       case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation.times, animation.translations, time);
+        value = keyframe_bezier(animation->times, animation->translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
     }
-    for (auto target : animation.targets)
-      scene.nodes[target].translation = value;
+    for (auto target : animation->targets)
+      scene.nodes[target]->translation = value;
   }
-  if (!animation.rotations.empty()) {
+  if (!animation->rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
-    switch (animation.interpolation) {
+    switch (animation->interpolation) {
       case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation.times, animation.rotations, time);
+        value = keyframe_step(animation->times, animation->rotations, time);
         break;
       case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation.times, animation.rotations, time);
+        value = keyframe_linear(animation->times, animation->rotations, time);
         break;
       case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation.times, animation.rotations, time);
+        value = keyframe_bezier(animation->times, animation->rotations, time);
         break;
     }
-    for (auto target : animation.targets) scene.nodes[target].rotation = value;
+    for (auto target : animation->targets) scene.nodes[target]->rotation = value;
   }
-  if (!animation.scales.empty()) {
+  if (!animation->scales.empty()) {
     auto value = vec3f{1, 1, 1};
-    switch (animation.interpolation) {
+    switch (animation->interpolation) {
       case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation.times, animation.scales, time);
+        value = keyframe_step(animation->times, animation->scales, time);
         break;
       case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation.times, animation.scales, time);
+        value = keyframe_linear(animation->times, animation->scales, time);
         break;
       case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation.times, animation.scales, time);
+        value = keyframe_bezier(animation->times, animation->scales, time);
         break;
     }
-    for (auto target : animation.targets) scene.nodes[target].scale = value;
+    for (auto target : animation->targets) scene.nodes[target]->scale = value;
   }
 }
 
 // Update node transforms
-void update_transforms(sceneio_model& scene, sceneio_node& node,
+void update_transforms(sceneio_model& scene, sceneio_node* node,
     const frame3f& parent = identity3x4f) {
-  auto frame = parent * node.local * translation_frame(node.translation) *
-               rotation_frame(node.rotation) * scaling_frame(node.scale);
-  if (node.shape >= 0) scene.shapes[node.shape].frame = frame;
-  if (node.instance >= 0)
-    scene.shapes[node.shape].instances[node.instance] = frame;
-  if (node.camera >= 0) scene.cameras[node.camera]->frame = frame;
-  if (node.environment >= 0) scene.environments[node.environment]->frame = frame;
-  for (auto child : node.children)
+  auto frame = parent * node->local * translation_frame(node->translation) *
+               rotation_frame(node->rotation) * scaling_frame(node->scale);
+  if (node->shape >= 0) scene.shapes[node->shape].frame = frame;
+  if (node->instance >= 0)
+    scene.shapes[node->shape].instances[node->instance] = frame;
+  if (node->camera >= 0) scene.cameras[node->camera]->frame = frame;
+  if (node->environment >= 0) scene.environments[node->environment]->frame = frame;
+  for (auto child : node->children)
     update_transforms(scene, scene.nodes[child], frame);
 }
 
 // Update node transforms
 void update_transforms(
     sceneio_model& scene, float time, const string& anim_group) {
-  for (auto& agr : scene.animations)
+  for (auto agr : scene.animations)
     update_transforms(scene, agr, time, anim_group);
-  for (auto& node : scene.nodes) node.children.clear();
+  for (auto node : scene.nodes) node->children.clear();
   for (auto node_id = 0; node_id < scene.nodes.size(); node_id++) {
     auto& node = scene.nodes[node_id];
-    if (node.parent >= 0) scene.nodes[node.parent].children.push_back(node_id);
+    if (node->parent >= 0) scene.nodes[node->parent]->children.push_back(node_id);
   }
   for (auto& node : scene.nodes)
-    if (node.parent < 0) update_transforms(scene, node);
+    if (node->parent < 0) update_transforms(scene, node);
 }
 
 }  // namespace yocto
