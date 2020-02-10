@@ -32,10 +32,10 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
-#include <unordered_set>
 #include <memory>
-using std::unordered_set;
+#include <unordered_set>
 using std::make_shared;
+using std::unordered_set;
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")

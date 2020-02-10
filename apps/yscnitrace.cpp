@@ -55,7 +55,7 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene = nullptr;
-  trace_scene   scene   = {};
+  trace_scene               scene   = {};
 
   // rendering state
   trace_state  state    = {};
@@ -105,7 +105,7 @@ struct app_states {
 // Construct a scene from io
 void init_scene(shared_ptr<app_state> app) {
   auto& scene       = app->scene;
-  auto ioscene     = app->ioscene.get();
+  auto  ioscene     = app->ioscene.get();
   auto& texture_map = app->texture_map;
 
   scene = trace_scene{};
@@ -248,7 +248,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname   = replace_extension(filename, ".edited.yaml");
         app->name      = get_filename(app->filename);
         app->params    = app->params;
-        app->ioscene = make_shared<sceneio_model>();
+        app->ioscene   = make_shared<sceneio_model>();
         load_scene(app->filename, app->ioscene.get());
         init_scene(app);
         init_bvh(app->scene, app->params);
@@ -577,7 +577,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "materials")) {
+  if (app && !app->ioscene->shapes.empty() &&
+      begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {

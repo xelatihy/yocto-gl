@@ -1803,10 +1803,10 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto environment      = add_environment(scene);
-    environment->name     = make_name("environment", scene->environments.size());
-    environment->frame    = oenvironment.frame;
-    environment->emission = oenvironment.emission;
+    auto environment   = add_environment(scene);
+    environment->name  = make_name("environment", scene->environments.size());
+    environment->frame = oenvironment.frame;
+    environment->emission     = oenvironment.emission;
     environment->emission_tex = get_texture(
         oenvironment.emission_map, "environments/");
   }
@@ -2158,10 +2158,10 @@ static void load_pbrt_scene(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto environment      = add_environment(scene);
-    environment->name     = make_name("environment", scene->environments.size());
-    environment->frame    = penvironment.frame;
-    environment->emission = penvironment.emission;
+    auto environment   = add_environment(scene);
+    environment->name  = make_name("environment", scene->environments.size());
+    environment->frame = penvironment.frame;
+    environment->emission     = penvironment.emission;
     environment->emission_tex = get_texture(
         penvironment.emission_map, "environments/");
   }
@@ -2267,7 +2267,7 @@ void save_pbrt_scene(
 namespace yocto {
 
 void make_cornellbox_scene(sceneio_model* scene) {
-  scene->name               = "cornellbox";
+  scene->name              = "cornellbox";
   auto camera              = add_camera(scene);
   camera->name             = "camera";
   camera->frame            = frame3f{{0, 1, 3.9}};

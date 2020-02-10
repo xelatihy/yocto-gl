@@ -119,7 +119,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname     = replace_extension(filename, ".edited.yaml");
         app->name        = get_filename(app->filename);
         app->drawgl_prms = apps->drawgl_prms;
-        app->ioscene = make_shared<sceneio_model>();
+        app->ioscene     = make_shared<sceneio_model>();
         load_scene(app->filename, app->ioscene.get());
         app->time_range           = compute_animation_range(app->ioscene.get());
         app->time                 = app->time_range.x;
@@ -164,7 +164,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model* ioscene) {
 
 void init_scene(shared_ptr<app_state> app) {
   auto& glscene     = app->glscene;
-  auto ioscene     = app->ioscene.get();
+  auto  ioscene     = app->ioscene.get();
   auto& texture_map = app->texture_map;
 
   // load program
@@ -188,7 +188,7 @@ void init_scene(shared_ptr<app_state> app) {
     } else if (!iotexture->ldr.empty()) {
       set_texture(glscene, id, iotexture->ldr);
     }
-      texture_map[iotexture] = id;
+    texture_map[iotexture] = id;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
@@ -492,7 +492,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "materials")) {
+  if (app && !app->ioscene->shapes.empty() &&
+      begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
