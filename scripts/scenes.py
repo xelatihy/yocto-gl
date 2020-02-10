@@ -1,6 +1,6 @@
 #! /usr/bin/env python3 -B
 
-import click, glob, os, sys, math, json
+import click, glob, os, sys, math, json, csv
 
 @click.group()
 def cli():
@@ -355,5 +355,41 @@ def pbrtparse(directory='pbrt-v3-scenes',scene='*'):
         cmd = f'../yocto-gl/bin/yitrace {directory}/{filename}'
         print(cmd, file=sys.stderr)
         os.system(cmd)
+
+@cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='json')
+@click.option('--outformat','-F', default='csv')
+@click.option('--mode','-m', default='default')
+def stats(directory='mcguire',scene='*',format='json',outformat="csv",mode='default'):
+    stats = []
+    keys = ['name', 'cameras', 'environments', 'shapes', 'subdivs', 'textures', 'stextures']
+    for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
+            with open(filename) as f: scene = json.load(f)
+            stat = {}
+            stat['name'] = filename.partition('/')[2].partition('.')[0]
+            stat['cameras'] = len(scene['cameras']) if 'cameras' in scene else 0
+            stat['environments'] = len(scene['environments']) if 'environments' in scene else 0
+            stat['shapes'] = len(scene['shapes']) if 'shapes' in scene else 0
+            stat['subdivs'] = len(scene['subdivs']) if 'subdivs' in scene else 0
+            textures = { }
+            for shape in scene['shapes']:
+                for key, value in shape.items():
+                    if '_tex' not in key: continue
+                    if value not in textures: textures[value] = 0
+                    textures[value] += 1
+            stat['textures'] = len(textures)
+            stat['stextures'] = sum(count for _, count in textures.items())
+            stats += [stat]
+    os.system(f'mkdir -p {directory}/_stats-{format}')
+    with open(f'{directory}/_stats-{format}/stats.{outformat}', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(keys)
+        for stat in stats:
+            writer.writerow([stat[key] for key in keys])
 
 cli()
