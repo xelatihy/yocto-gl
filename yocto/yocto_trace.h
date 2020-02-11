@@ -175,7 +175,7 @@ enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
   diffuse, specular, coat, metal, transmission, refraction, roughness, 
-  shape, instance, element, highlight
+  object, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -217,7 +217,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "shape", "instance", "element", "highlight"};
+    "object", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -466,8 +466,8 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   shape     = -1;
-  int   instance_ = -1;
+  int   object    = -1;
+  int   instance  = -1;
   int   element   = -1;
   vec2f uv        = {0, 0};
   float distance  = 0;
@@ -479,7 +479,7 @@ struct trace_intersection {
 // the shape element index and the element barycentric coordinates.
 trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene* scene, int shape,
+trace_intersection intersect_instance_bvh(const trace_scene* scene, int object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
