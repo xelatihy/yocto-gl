@@ -516,11 +516,11 @@ static T eval_shape_elem(const trace_shape* shape,
 }
 
 // Check texture size
-static vec2i texture_size(const trace_texture& texture) {
-  if (!texture.hdr.empty()) {
-    return texture.hdr.size();
-  } else if (!texture.ldr.empty()) {
-    return texture.ldr.size();
+static vec2i texture_size(const trace_texture* texture) {
+  if (!texture->hdr.empty()) {
+    return texture->hdr.size();
+  } else if (!texture->ldr.empty()) {
+    return texture->ldr.size();
   } else {
     return zero2i;
   }
@@ -528,14 +528,14 @@ static vec2i texture_size(const trace_texture& texture) {
 
 // Evaluate a texture
 static vec4f lookup_texture(
-    const trace_texture& texture, const vec2i& ij, bool ldr_as_linear = false) {
-  if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
-  if (!texture.hdr.empty()) {
-    return texture.hdr[ij];
-  } else if (!texture.ldr.empty() && ldr_as_linear) {
-    return byte_to_float(texture.ldr[ij]);
-  } else if (!texture.ldr.empty() && !ldr_as_linear) {
-    return srgb_to_rgb(byte_to_float(texture.ldr[ij]));
+    const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
+  if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1, 1};
+  if (!texture->hdr.empty()) {
+    return texture->hdr[ij];
+  } else if (!texture->ldr.empty() && ldr_as_linear) {
+    return byte_to_float(texture->ldr[ij]);
+  } else if (!texture->ldr.empty() && !ldr_as_linear) {
+    return srgb_to_rgb(byte_to_float(texture->ldr[ij]));
   } else {
     return {1, 1, 1, 1};
   }
@@ -3090,6 +3090,8 @@ namespace yocto {
 trace_scene::~trace_scene() {
   for (auto camera : cameras) delete camera;
   for (auto environment : environments) delete environment;
+  for (auto shape : shapes) delete shape;
+  for (auto texture : textures) delete texture;
 }
 
 // Add cameras
@@ -3113,18 +3115,18 @@ void clean_cameras(trace_scene* scene) { scene->cameras.clear(); }
 
 // Add texture
 int add_texture(trace_scene* scene) {
-  scene->textures.emplace_back();
+  scene->textures.emplace_back(new trace_texture{});
   return (int)scene->textures.size() - 1;
 }
 void set_texture(trace_scene* scene, int idx, const image<vec4b>& img) {
   auto& texture = scene->textures[idx];
-  texture.ldr   = img;
-  texture.hdr   = {};
+  texture->ldr   = img;
+  texture->hdr   = {};
 }
 void set_texture(trace_scene* scene, int idx, const image<vec4f>& img) {
   auto& texture = scene->textures[idx];
-  texture.ldr   = {};
-  texture.hdr   = img;
+  texture->ldr   = {};
+  texture->hdr   = img;
 }
 void clean_textures(trace_scene* scene) { scene->textures.clear(); }
 

@@ -390,7 +390,7 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
   vector<trace_shape*>       shapes       = {};
-  vector<trace_texture>      textures     = {};
+  vector<trace_texture*>      textures     = {};
   vector<trace_environment*> environments = {};
 
   // computed properties
