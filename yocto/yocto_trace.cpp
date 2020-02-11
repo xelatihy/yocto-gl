@@ -3111,8 +3111,7 @@ trace_camera* add_camera(trace_scene* scene) {
 void set_frame(trace_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(
-    trace_camera* camera, float lens, float aspect, float film) {
+void set_lens(trace_camera* camera, float lens, float aspect, float film) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
@@ -3234,16 +3233,14 @@ void set_metallic(
   material->metallic_tex = metallic_txt;
 }
 void set_ior(trace_material* material, float ior) { material->ior = ior; }
-void set_transmission(trace_material* material, float transmission,
-    bool thin, float trdepth, trace_texture* transmission_txt) {
+void set_transmission(trace_material* material, float transmission, bool thin,
+    float trdepth, trace_texture* transmission_txt) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_txt;
 }
-void set_thin(trace_material* material, bool thin) {
-  material->thin = thin;
-}
+void set_thin(trace_material* material, bool thin) { material->thin = thin; }
 void set_roughness(
     trace_material* material, float roughness, trace_texture* roughness_txt) {
   material->roughness     = roughness;
@@ -3272,12 +3269,11 @@ void clean_shapes(trace_scene* scene) { scene->shapes.clear(); }
 trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
-void set_frame(
-    trace_environment* environment, const frame3f& frame) {
+void set_frame(trace_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_emission(trace_environment* environment,
-    const vec3f& emission, trace_texture* emission_tex) {
+void set_emission(trace_environment* environment, const vec3f& emission,
+    trace_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }

@@ -255,18 +255,18 @@ void set_texture(
 
 // add material
 opengl_material* add_material(opengl_scene* scene);
-void set_emission(opengl_material* material, const vec3f& emission,
-    opengl_texture* emission_txt = nullptr);
-void set_color(opengl_material* material, const vec3f& color,
-    opengl_texture* color_txt = nullptr);
-void set_metallic(opengl_material* material, float metallic,
-    opengl_texture* metallic_txt = nullptr);
-void set_roughness(opengl_material* material, float roughness,
-    opengl_texture* roughness_txt = nullptr);
-void set_specular(opengl_material* material, float specular,
-    opengl_texture* specular_txt = nullptr);
-void set_opacity(opengl_material* material, float opacity,
-    opengl_texture* opacity_txt = nullptr);
+void             set_emission(opengl_material* material, const vec3f& emission,
+                opengl_texture* emission_txt = nullptr);
+void             set_color(opengl_material* material, const vec3f& color,
+                opengl_texture* color_txt = nullptr);
+void             set_metallic(opengl_material* material, float metallic,
+                opengl_texture* metallic_txt = nullptr);
+void             set_roughness(opengl_material* material, float roughness,
+                opengl_texture* roughness_txt = nullptr);
+void             set_specular(opengl_material* material, float specular,
+                opengl_texture* specular_txt = nullptr);
+void             set_opacity(opengl_material* material, float opacity,
+                opengl_texture* opacity_txt = nullptr);
 void set_normalmap(opengl_material* material, opengl_texture* normal_txt);
 void set_gltftextures(opengl_material* material, bool gltf_textures);
 

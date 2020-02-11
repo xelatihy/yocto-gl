@@ -156,8 +156,8 @@ void init_scene(shared_ptr<app_state> app) {
         material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
     set_thin(material, iomaterial->thin);
     set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering,
-        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
+        texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
   }
 
@@ -581,12 +581,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       stop_display(app);
       auto iocamera = app->ioscene->cameras[app->selected_camera];
-      set_frame(
-          app->scene->cameras[app->selected_camera], iocamera->frame);
+      set_frame(app->scene->cameras[app->selected_camera], iocamera->frame);
       set_lens(app->scene->cameras[app->selected_camera], iocamera->lens,
           iocamera->aspect, iocamera->film);
-      set_focus(app->scene->cameras[app->selected_camera],
-          iocamera->aperture, iocamera->focus);
+      set_focus(app->scene->cameras[app->selected_camera], iocamera->aperture,
+          iocamera->focus);
       reset_display(app);
     }
     end_glheader(win);
@@ -601,8 +600,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           app->ioscene->environments[app->selected_environment];
       set_frame(app->scene->environments[app->selected_environment],
           ioenvironment->frame);
-      set_emission(
-          app->scene->environments[app->selected_environment],
+      set_emission(app->scene->environments[app->selected_environment],
           ioenvironment->emission,
           app->texture_map.at(ioenvironment->emission_tex));
       init_lights(app->scene.get());
@@ -676,18 +674,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_ior(material, iomaterial->ior);
       set_metallic(material, iomaterial->metallic,
           app->texture_map.at(iomaterial->metallic_tex));
-      set_transmission(material, iomaterial->transmission,
-          iomaterial->thin, iomaterial->trdepth,
+      set_transmission(material, iomaterial->transmission, iomaterial->thin,
+          iomaterial->trdepth,
           app->texture_map.at(iomaterial->transmission_tex));
       set_roughness(material, iomaterial->roughness,
           app->texture_map.at(iomaterial->roughness_tex));
       set_opacity(material, iomaterial->opacity,
           app->texture_map.at(iomaterial->opacity_tex));
       set_thin(material, iomaterial->thin);
-      set_normalmap(
-          material, app->texture_map.at(iomaterial->normal_tex));
-      set_scattering(material, iomaterial->scattering,
-          iomaterial->scanisotropy,
+      set_normalmap(material, app->texture_map.at(iomaterial->normal_tex));
+      set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
           app->texture_map.at(iomaterial->scattering_tex));
       init_lights(app->scene.get());
       reset_display(app);
@@ -856,12 +852,11 @@ void run_app(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_frame(
-          app->scene->cameras[app->params.camera], iocamera->frame);
+      set_frame(app->scene->cameras[app->params.camera], iocamera->frame);
       set_lens(app->scene->cameras[app->params.camera], iocamera->lens,
           iocamera->aspect, iocamera->film);
-      set_focus(app->scene->cameras[app->params.camera],
-          iocamera->aperture, iocamera->focus);
+      set_focus(app->scene->cameras[app->params.camera], iocamera->aperture,
+          iocamera->focus);
       reset_display(app);
     }
 

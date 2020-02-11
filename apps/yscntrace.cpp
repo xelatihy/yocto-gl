@@ -78,8 +78,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
         material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
     set_thin(material, iomaterial->thin);
     set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering,
-        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
+        texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
   }
 

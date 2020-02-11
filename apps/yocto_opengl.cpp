@@ -986,8 +986,7 @@ void set_metallic(
   material->metallic     = metallic;
   material->metallic_map = metallic_txt;
 }
-void set_normalmap(
-    opengl_material* material, opengl_texture* normal_txt) {
+void set_normalmap(opengl_material* material, opengl_texture* normal_txt) {
   material->normal_map = normal_txt;
 }
 void set_gltftextures(opengl_material* material, bool gltf_textures) {

@@ -211,8 +211,7 @@ void init_scene(shared_ptr<app_state> app) {
     auto glmaterial = add_material(glscene);
     set_emission(glmaterial, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
-    set_color(glmaterial,
-        (1 - iomaterial->transmission) * iomaterial->color,
+    set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
         texture_map.at(iomaterial->color_tex));
     set_specular(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->specular,
@@ -584,8 +583,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto iomaterial = app->ioscene->materials[app->selected_material];
       set_emission(glmaterial, iomaterial->emission,
           app->texture_map.at(iomaterial->emission_tex));
-      set_color(glmaterial,
-          (1 - iomaterial->transmission) * iomaterial->color,
+      set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
           app->texture_map.at(iomaterial->color_tex));
       set_specular(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->specular,
@@ -597,8 +595,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           app->texture_map.at(iomaterial->roughness_tex));
       set_opacity(glmaterial, iomaterial->opacity,
           app->texture_map.at(iomaterial->opacity_tex));
-      set_normalmap(
-          glmaterial, app->texture_map.at(iomaterial->normal_tex));
+      set_normalmap(glmaterial, app->texture_map.at(iomaterial->normal_tex));
     }
     end_glheader(win);
   }
