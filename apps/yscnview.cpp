@@ -71,17 +71,17 @@ struct app_state {
   bool   animate    = false;
 
   // editing
-  int                                  selected_camera      = -1;
-  int                                  selected_object      = -1;
-  int                                  selected_instance    = -1;
-  int                                  selected_shape       = -1;
-  int                                  selected_subdiv      = -1;
-  int                                  selected_material    = -1;
-  int                                  selected_environment = -1;
-  int                                  selected_texture     = -1;
+  int selected_camera      = -1;
+  int selected_object      = -1;
+  int selected_instance    = -1;
+  int selected_shape       = -1;
+  int selected_subdiv      = -1;
+  int selected_material    = -1;
+  int selected_environment = -1;
+  int selected_texture     = -1;
 
   // editing maps
-  unordered_map<sceneio_texture*, opengl_texture*> texture_map          = {};
+  unordered_map<sceneio_texture*, opengl_texture*> texture_map = {};
 
   // error
   string error = "";
@@ -161,13 +161,14 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
     } else {
       area += ioshape->positions.size();
     }
-    auto ke  = ioobject->material->emission * area;
-    set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke, false);
+    auto ke = ioobject->material->emission * area;
+    set_light(
+        add_light(glscene), transform_point(ioobject->frame, pos), ke, false);
   }
 }
 
 void init_scene(shared_ptr<app_state> app) {
-  auto glscene     = app->glscene.get();
+  auto  glscene     = app->glscene.get();
   auto  ioscene     = app->ioscene.get();
   auto& texture_map = app->texture_map;
 
@@ -178,8 +179,7 @@ void init_scene(shared_ptr<app_state> app) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(glscene);
     set_camera_frame(camera, iocamera->frame);
-    set_camera_lens(
-        camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_camera_nearfar(camera, 0.001, 10000);
   }
 
@@ -201,7 +201,7 @@ void init_scene(shared_ptr<app_state> app) {
 
   // shapes
   for (auto ioobject : ioscene->objects) {
-    auto glshape      = add_shape(glscene);
+    auto glshape = add_shape(glscene);
     auto ioshape = ioobject->shape;
     set_shape_positions(glshape, ioshape->positions);
     set_shape_normals(glshape, ioshape->normals);
@@ -217,8 +217,7 @@ void init_scene(shared_ptr<app_state> app) {
     auto iomaterial = ioobject->material;
     set_shape_emission(glshape, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
-    set_shape_color(glshape,
-        (1 - iomaterial->transmission) * iomaterial->color,
+    set_shape_color(glshape, (1 - iomaterial->transmission) * iomaterial->color,
         texture_map.at(iomaterial->color_tex));
     set_shape_specular(glshape,
         (1 - iomaterial->transmission) * iomaterial->specular,
@@ -228,8 +227,8 @@ void init_scene(shared_ptr<app_state> app) {
         texture_map.at(iomaterial->metallic_tex));
     set_shape_roughness(glshape, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(glshape, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
+    set_shape_opacity(
+        glshape, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
     set_shape_normalmap(glshape, texture_map.at(iomaterial->normal_tex));
   }
 }
@@ -491,11 +490,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
-      auto camera = app->glscene->_cameras[app->selected_camera];
+      auto camera   = app->glscene->_cameras[app->selected_camera];
       auto iocamera = app->ioscene->cameras[app->selected_camera];
       set_camera_frame(camera, iocamera->frame);
-      set_camera_lens(camera, iocamera->lens,
-          iocamera->aspect, iocamera->film);
+      set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_camera_nearfar(camera, 0.001, 10000);
     }
     end_glheader(win);
@@ -522,7 +520,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
-      auto glshape  = app->glscene->_shapes[app->selected_shape];
+      auto glshape = app->glscene->_shapes[app->selected_shape];
       auto ioshape = app->ioscene->shapes[app->selected_shape];
       set_shape_positions(glshape, ioshape->positions);
       set_shape_normals(glshape, ioshape->normals);
@@ -540,7 +538,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets_shape(win, app, app->selected_instance)) {
-      auto glshape = app->glscene->_shapes[app->selected_instance];
+      auto glshape    = app->glscene->_shapes[app->selected_instance];
       auto ioinstance = app->ioscene->instances[app->selected_instance];
       set_shape_instances(glshape, ioinstance->frames);
     }
@@ -553,8 +551,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       auto glmaterial = app->glscene->_shapes[app->selected_material];
       auto iomaterial = app->ioscene->materials[app->selected_material];
-      set_shape_emission(glmaterial,
-          iomaterial->emission, app->texture_map.at(iomaterial->emission_tex));
+      set_shape_emission(glmaterial, iomaterial->emission,
+          app->texture_map.at(iomaterial->emission_tex));
       set_shape_color(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->color,
           app->texture_map.at(iomaterial->color_tex));
@@ -564,13 +562,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_shape_metallic(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->metallic,
           app->texture_map.at(iomaterial->metallic_tex));
-      set_shape_roughness(glmaterial,
-          iomaterial->roughness,
+      set_shape_roughness(glmaterial, iomaterial->roughness,
           app->texture_map.at(iomaterial->roughness_tex));
-      set_shape_opacity(glmaterial,
-          iomaterial->opacity, app->texture_map.at(iomaterial->opacity_tex));
-      set_shape_normalmap(glmaterial,
-          app->texture_map.at(iomaterial->normal_tex));
+      set_shape_opacity(glmaterial, iomaterial->opacity,
+          app->texture_map.at(iomaterial->opacity_tex));
+      set_shape_normalmap(
+          glmaterial, app->texture_map.at(iomaterial->normal_tex));
     }
     end_glheader(win);
   }
@@ -620,7 +617,8 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
+    draw_glscene(
+        app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
   }
 }
 
@@ -716,7 +714,8 @@ void run_app(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_camera_frame(app->glscene->_cameras[app->drawgl_prms.camera], iocamera->frame);
+      set_camera_frame(
+          app->glscene->_cameras[app->drawgl_prms.camera], iocamera->frame);
     }
 
     // animation

@@ -20,8 +20,8 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  shared_ptr<opengl_scene>        scene          = nullptr;
-  draw_glscene_params opengl_options = {};
+  shared_ptr<opengl_scene> scene          = nullptr;
+  draw_glscene_params      opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -31,12 +31,13 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  opengl_camera* camera_id = nullptr;
-  opengl_shape* glshape_id = nullptr; 
-  opengl_shape* glpoints_id = nullptr; 
-  opengl_shape* glvector_field_id = nullptr; 
-  opengl_shape* gledges_id = nullptr; 
-  opengl_shape* glpolyline_id = nullptr; ;
+  opengl_camera* camera_id         = nullptr;
+  opengl_shape*  glshape_id        = nullptr;
+  opengl_shape*  glpoints_id       = nullptr;
+  opengl_shape*  glvector_field_id = nullptr;
+  opengl_shape*  gledges_id        = nullptr;
+  opengl_shape*  glpolyline_id     = nullptr;
+  ;
 };
 
 void update_glshape(shared_ptr<app_state> app) {
@@ -173,8 +174,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   init_glscene(app->scene.get());
   app->camera_id = add_camera(app->scene.get());
   set_camera_frame(app->camera_id, app->camera.frame);
-  set_camera_lens(app->camera_id, app->camera.lens,
-      app->camera.aspect, app->camera.film);
+  set_camera_lens(
+      app->camera_id, app->camera.lens, app->camera.aspect, app->camera.film);
   set_camera_nearfar(app->camera_id, 0.001, 10000);
 
   // The model.
@@ -257,10 +258,11 @@ void yimshproc(const string&                         input_filename,
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(win, [app](const opengl_window& win,
-                               const opengl_input&    input) {
-    draw_glscene(app->scene.get(), input.framebuffer_viewport, app->opengl_options);
-  });
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        draw_glscene(
+            app->scene.get(), input.framebuffer_viewport, app->opengl_options);
+      });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](const opengl_window& win,
                const opengl_input& input) { draw_glwidgets(app, win); });
@@ -297,8 +299,8 @@ void yimshproc(const string&                         input_filename,
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
     set_camera_frame(app->camera_id, app->camera.frame);
-    set_camera_lens(app->camera_id, app->camera.lens,
-        app->camera.aspect, app->camera.film);
+    set_camera_lens(
+        app->camera_id, app->camera.lens, app->camera.aspect, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
                               bool pressing, const opengl_input& input) {
@@ -321,8 +323,8 @@ void yimshproc(const string&                         input_filename,
           update_turntable(
               app->camera.frame, app->camera.focus, rotate, dolly, pan);
           set_camera_frame(app->camera_id, app->camera.frame);
-          set_camera_lens(app->camera_id, app->camera.lens,
-              app->camera.aspect, app->camera.film);
+          set_camera_lens(app->camera_id, app->camera.lens, app->camera.aspect,
+              app->camera.film);
         }
       });
 
