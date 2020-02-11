@@ -2,7 +2,7 @@
 // # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt/Yaml/glTF parsing and writing
 //
 // Yocto/ModelIO is a tiny library for loading and saving
-// Ply/Obj/Pbrt/Yaml/glTF. In Yocto/ModelIO, all model data is loaded and saved
+// Ply/Obj/Pbrt/glTF. In Yocto/ModelIO, all model data is loaded and saved
 // at once. Each format is parsed in a manner that is as close as possible to
 // the original. Data can be accessed directly or via converters.
 //
@@ -428,70 +428,6 @@ struct hash<yocto::obj_vertex> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL YAML DECLARATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::string_view;
-
-// Yaml value type
-enum struct yaml_value_type { number, boolean, string, array };
-
-// Yaml value
-struct yaml_value {
-  yaml_value_type   type    = yaml_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<double, 16> array_  = {};
-};
-
-// Yaml element
-struct yaml_element {
-  string                           name       = "";
-  vector<pair<string, yaml_value>> key_values = {};
-};
-
-// Yaml model
-struct yaml_model {
-  vector<string>       comments = {};
-  vector<yaml_element> elements = {};
-};
-
-// Load/save yaml
-void load_yaml(const string& filename, yaml_model& yaml);
-void save_yaml(const string& filename, const yaml_model& yaml);
-
-// type-cheked yaml value access
-void get_yaml_value(const yaml_value& yaml, string& value);
-void get_yaml_value(const yaml_value& yaml, bool& value);
-void get_yaml_value(const yaml_value& yaml, int& value);
-void get_yaml_value(const yaml_value& yaml, float& value);
-void get_yaml_value(const yaml_value& yaml, vec2f& value);
-void get_yaml_value(const yaml_value& yaml, vec3f& value);
-void get_yaml_value(const yaml_value& yaml, mat3f& value);
-void get_yaml_value(const yaml_value& yaml, frame3f& value);
-template <typename T>
-inline void get_yaml_value(
-    const yaml_element& element, const string& name, const T& value);
-bool has_yaml_value(const yaml_element& element, const string& name);
-
-// yaml value construction
-yaml_value make_yaml_value(const string& value);
-yaml_value make_yaml_value(bool value);
-yaml_value make_yaml_value(int value);
-yaml_value make_yaml_value(float value);
-yaml_value make_yaml_value(const vec2f& value);
-yaml_value make_yaml_value(const vec3f& value);
-yaml_value make_yaml_value(const mat3f& value);
-yaml_value make_yaml_value(const frame3f& value);
-template <typename T>
-inline void add_yaml_value(
-    yaml_element& element, const string& name, const T& value);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -679,29 +615,6 @@ struct gltf_model {
 
 // Load gltf file.
 void load_gltf(const string& filename, gltf_model& gltf);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline void get_yaml_value(
-    const yaml_element& element, const string& name, T& value) {
-  for (auto& [key, value_] : element.key_values) {
-    if (key == name) return get_yaml_value(value_, value);
-  }
-}
-
-template <typename T>
-inline void add_yaml_value(
-    yaml_element& element, const string& name, const T& value) {
-  for (auto& [key, value] : element.key_values)
-    if (key == name) throw std::invalid_argument{"value exists"};
-  element.key_values.push_back({name, make_yaml_value(value)});
-}
 
 }  // namespace yocto
 
