@@ -285,9 +285,9 @@ void reset_display(app_state* app) {
   });
 }
 
-void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
+void load_scene_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> app_state* {
+      async(launch::async, [filename]() -> app_state* {
         auto app       = make_unique<app_state>();
         app->filename  = filename;
         app->imagename = replace_extension(filename, ".png");
@@ -481,7 +481,7 @@ bool draw_glwidgets_environment(
   return edited;
 }
 
-void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
+void draw_glwidgets(const opengl_window& win, app_states* apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          app = (!apps->states.empty() && apps->selected >= 0)
@@ -753,7 +753,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   }
 }
 
-void draw(const opengl_window& win, shared_ptr<app_states> apps,
+void draw(const opengl_window& win, app_states* apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
@@ -770,7 +770,7 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
   }
 }
 
-void update(const opengl_window& win, shared_ptr<app_states> apps) {
+void update(const opengl_window& win, app_states* apps) {
   auto is_ready = [](const future<app_state*>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -793,7 +793,8 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
 
 void run_app(int argc, const char* argv[]) {
   // application
-  auto apps      = make_shared<app_states>();
+  auto apps_      = make_unique<app_states>();
+  auto apps      = apps_.get();
   auto filenames = vector<string>{};
 
   // parse command line
