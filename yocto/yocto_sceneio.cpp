@@ -1897,13 +1897,13 @@ static void load_pbrt_scene(
   load_pbrt(filename, pbrt);
 
   // convert cameras
-  for (auto& pcamera : pbrt->cameras) {
+  for (auto pcamera : pbrt->cameras) {
     auto camera    = add_camera(scene);
-    camera->frame  = pcamera.frame;
-    camera->aspect = pcamera.aspect;
+    camera->frame  = pcamera->frame;
+    camera->aspect = pcamera->aspect;
     camera->film   = 0.036;
-    camera->lens   = pcamera.lens;
-    camera->focus  = pcamera.focus;
+    camera->lens   = pcamera->lens;
+    camera->focus  = pcamera->focus;
   }
 
   // convert materials
@@ -1930,51 +1930,51 @@ static void load_pbrt_scene(
   };
 
   // convert shapes
-  for (auto& pshape : pbrt->shapes) {
+  for (auto pshape : pbrt->shapes) {
     auto object   = add_object(scene);
     object->shape = add_shape(scene);
-    object->frame = pshape.frame;
-    if (!pshape.instances.empty()) {
+    object->frame = pshape->frame;
+    if (!pshape->instances.empty()) {
       object->instance         = add_instance(scene);
-      object->instance->frames = pshape.instances;
+      object->instance->frames = pshape->instances;
     }
-    object->shape->positions = pshape.positions;
-    object->shape->normals   = pshape.normals;
-    object->shape->texcoords = pshape.texcoords;
-    object->shape->triangles = pshape.triangles;
+    object->shape->positions = pshape->positions;
+    object->shape->normals   = pshape->normals;
+    object->shape->texcoords = pshape->texcoords;
+    object->shape->triangles = pshape->triangles;
     for (auto& uv : object->shape->texcoords) uv.y = 1 - uv.y;
     object->material               = add_material(scene);
-    object->material->emission     = pshape.emission;
-    object->material->color        = pshape.color;
-    object->material->metallic     = pshape.metallic;
-    object->material->specular     = pshape.specular;
-    object->material->transmission = pshape.transmission;
-    object->material->ior          = pshape.ior;
-    object->material->roughness    = pshape.roughness;
-    object->material->opacity      = pshape.opacity;
-    object->material->thin         = pshape.thin;
-    object->material->color_tex    = get_texture(pshape.color_map);
-    object->material->opacity_tex  = get_texture(pshape.opacity_map);
+    object->material->emission     = pshape->emission;
+    object->material->color        = pshape->color;
+    object->material->metallic     = pshape->metallic;
+    object->material->specular     = pshape->specular;
+    object->material->transmission = pshape->transmission;
+    object->material->ior          = pshape->ior;
+    object->material->roughness    = pshape->roughness;
+    object->material->opacity      = pshape->opacity;
+    object->material->thin         = pshape->thin;
+    object->material->color_tex    = get_texture(pshape->color_map);
+    object->material->opacity_tex  = get_texture(pshape->opacity_map);
   }
 
   // convert environments
-  for (auto& penvironment : pbrt->environments) {
+  for (auto penvironment : pbrt->environments) {
     auto environment          = add_environment(scene);
-    environment->frame        = penvironment.frame;
-    environment->emission     = penvironment.emission;
-    environment->emission_tex = get_texture(penvironment.emission_map);
+    environment->frame        = penvironment->frame;
+    environment->emission     = penvironment->emission;
+    environment->emission_tex = get_texture(penvironment->emission_map);
   }
 
   // lights
-  for (auto& plight : pbrt->lights) {
+  for (auto plight : pbrt->lights) {
     auto object                = add_object(scene);
     object->shape              = add_shape(scene);
-    object->frame              = plight.area_frame;
-    object->shape->triangles   = plight.area_triangles;
-    object->shape->positions   = plight.area_positions;
-    object->shape->normals     = plight.area_normals;
+    object->frame              = plight->area_frame;
+    object->shape->triangles   = plight->area_triangles;
+    object->shape->positions   = plight->area_positions;
+    object->shape->normals     = plight->area_normals;
     object->material           = add_material(scene);
-    object->material->emission = plight.area_emission;
+    object->material->emission = plight->area_emission;
   }
 
   // fix scene
@@ -1992,40 +1992,40 @@ void save_pbrt_scene(
 
   // convert camera
   auto  camera       = scene->cameras.front();
-  auto& pcamera      = pbrt->cameras.emplace_back();
-  pcamera.frame      = camera->frame;
-  pcamera.lens       = camera->lens;
-  pcamera.aspect     = camera->aspect;
-  pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
+  auto pcamera      = pbrt->cameras.emplace_back(new pbrt_camera{});
+  pcamera->frame      = camera->frame;
+  pcamera->lens       = camera->lens;
+  pcamera->aspect     = camera->aspect;
+  pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // convert instances
   for (auto object : scene->objects) {
-    auto& pshape     = pbrt->shapes.emplace_back();
-    pshape.filename_ = replace_extension(object->shape->name, ".ply");
-    pshape.frame     = object->frame;
-    pshape.frend     = object->frame;
+    auto pshape     = pbrt->shapes.emplace_back(new pbrt_shape{});
+    pshape->filename_ = replace_extension(object->shape->name, ".ply");
+    pshape->frame     = object->frame;
+    pshape->frend     = object->frame;
     if (object->instance) {
-      pshape.instances = object->instance->frames;
-      pshape.instances = object->instance->frames;
+      pshape->instances = object->instance->frames;
+      pshape->instances = object->instance->frames;
     }
     auto material       = object->material;
-    pshape.color        = material->color;
-    pshape.metallic     = material->metallic;
-    pshape.specular     = material->specular;
-    pshape.transmission = material->transmission;
-    pshape.roughness    = material->roughness;
-    pshape.ior          = material->ior;
-    pshape.opacity      = material->opacity;
-    pshape.color_map    = material->color_tex ? material->color_tex->name : ""s;
-    pshape.emission     = material->emission;
+    pshape->color        = material->color;
+    pshape->metallic     = material->metallic;
+    pshape->specular     = material->specular;
+    pshape->transmission = material->transmission;
+    pshape->roughness    = material->roughness;
+    pshape->ior          = material->ior;
+    pshape->opacity      = material->opacity;
+    pshape->color_map    = material->color_tex ? material->color_tex->name : ""s;
+    pshape->emission     = material->emission;
   }
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto& penvironment    = pbrt->environments.emplace_back();
-    penvironment.emission = environment->emission;
+    auto penvironment    = pbrt->environments.emplace_back(new pbrt_environment{});
+    penvironment->emission = environment->emission;
     if (environment->emission_tex) {
-      penvironment.emission_map = environment->emission_tex->name;
+      penvironment->emission_map = environment->emission_tex->name;
     }
   }
 

@@ -562,10 +562,11 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_model {
   vector<string>           comments     = {};
-  vector<pbrt_camera>      cameras      = {};
-  vector<pbrt_shape>       shapes       = {};
-  vector<pbrt_environment> environments = {};
-  vector<pbrt_light>       lights       = {};
+  vector<pbrt_camera*>      cameras      = {};
+  vector<pbrt_shape*>       shapes       = {};
+  vector<pbrt_environment*> environments = {};
+  vector<pbrt_light*>       lights       = {};
+  ~pbrt_model();
 };
 
 // Load/save pbrt

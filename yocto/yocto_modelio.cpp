@@ -3055,45 +3055,42 @@ struct pbrt_arealight {
 };
 
 // convert pbrt films
-static pbrt_film convert_film(
+static void convert_film(pbrt_film* film,
     const pbrt_command& command, bool verbose = false) {
-  auto film = pbrt_film{};
   if (command.type == "image") {
-    film.resolution = {512, 512};
-    get_pbrt_value(command.values, "xresolution", film.resolution.x);
-    get_pbrt_value(command.values, "yresolution", film.resolution.y);
-    film.filename = "out.png"s;
-    get_pbrt_value(command.values, "filename", film.filename);
+    film->resolution = {512, 512};
+    get_pbrt_value(command.values, "xresolution", film->resolution.x);
+    get_pbrt_value(command.values, "yresolution", film->resolution.y);
+    film->filename = "out.png"s;
+    get_pbrt_value(command.values, "filename", film->filename);
   } else {
     throw std::invalid_argument{"unknown film " + command.type};
   }
-  return film;
 }
 
 // convert pbrt elements
-static pbrt_camera convert_camera(const pbrt_command& command,
+static void convert_camera(pbrt_camera* camera, const pbrt_command& command,
     const vec2i& resolution, bool verbose = false) {
-  auto camera       = pbrt_camera{};
-  camera.frame      = command.frame;
-  camera.frend      = command.frend;
-  camera.frame      = inverse((frame3f)camera.frame);
-  camera.frame.z    = -camera.frame.z;
-  camera.resolution = resolution;
+  camera->frame      = command.frame;
+  camera->frend      = command.frend;
+  camera->frame      = inverse((frame3f)camera->frame);
+  camera->frame.z    = -camera->frame.z;
+  camera->resolution = resolution;
   auto film_aspect =
       (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
   if (command.type == "perspective") {
     auto fov = 90.0f;
     get_pbrt_value(command.values, "fov", fov);
     // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-    camera.aspect = film_aspect;
-    if (camera.aspect >= 1) {
-      camera.lens = (0.036 / camera.aspect) / (2 * tan(radians(fov) / 2));
+    camera->aspect = film_aspect;
+    if (camera->aspect >= 1) {
+      camera->lens = (0.036 / camera->aspect) / (2 * tan(radians(fov) / 2));
     } else {
-      camera.lens = (0.036 * camera.aspect) / (2 * tan(radians(fov) / 2));
+      camera->lens = (0.036 * camera->aspect) / (2 * tan(radians(fov) / 2));
     }
-    get_pbrt_value(command.values, "frameaspectratio", camera.aspect);
-    camera.focus = 10.0f;
-    get_pbrt_value(command.values, "focaldistance", camera.focus);
+    get_pbrt_value(command.values, "frameaspectratio", camera->aspect);
+    camera->focus = 10.0f;
+    get_pbrt_value(command.values, "focaldistance", camera->focus);
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
     get_pbrt_value(command.values, "lensfile", lensfile);
@@ -3101,20 +3098,19 @@ static pbrt_camera convert_camera(const pbrt_command& command,
     lensfile        = lensfile.substr(lensfile.find('.') + 1);
     lensfile        = lensfile.substr(0, lensfile.size() - 2);
     auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-    camera.lens     = 2 * atan(0.036f / (2 * lens));
-    camera.aperture = 0.0f;
-    get_pbrt_value(command.values, "aperturediameter", camera.aperture);
-    camera.focus = 10.0f;
-    get_pbrt_value(command.values, "focusdistance", camera.focus);
-    camera.aspect = film_aspect;
+    camera->lens     = 2 * atan(0.036f / (2 * lens));
+    camera->aperture = 0.0f;
+    get_pbrt_value(command.values, "aperturediameter", camera->aperture);
+    camera->focus = 10.0f;
+    get_pbrt_value(command.values, "focusdistance", camera->focus);
+    camera->aspect = film_aspect;
   } else {
     throw std::invalid_argument{"unknown camera " + command.type};
   }
-  return camera;
 }
 
 // convert pbrt textures
-static pbrt_texture convert_texture(const pbrt_command& command,
+static void convert_texture(pbrt_texture& texture, const pbrt_command& command,
     unordered_map<string, pbrt_texture>& texture_map, bool verbose = false) {
   auto get_filename = [&texture_map](const string& name) {
     if (name.empty()) return ""s;
@@ -3123,7 +3119,6 @@ static pbrt_texture convert_texture(const pbrt_command& command,
     return pos->second.filename;
   };
 
-  auto texture = pbrt_texture{};
   texture.name = command.name;
   if (command.type == "imagemap") {
     texture.filename = "";
@@ -3181,11 +3176,11 @@ static pbrt_texture convert_texture(const pbrt_command& command,
   } else {
     throw std::invalid_argument{"unknown texture " + command.type};
   }
-  return texture;
 }
 
 // convert pbrt materials
-static pbrt_material convert_material(const pbrt_command& command,
+static pbrt_material convert_material(pbrt_material& material,
+  const pbrt_command& command,
     const unordered_map<string, pbrt_material>&           material_map,
     const unordered_map<string, pbrt_texture>&            texture_map,
     bool                                                  verbose = false) {
@@ -3269,7 +3264,6 @@ static pbrt_material convert_material(const pbrt_command& command,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
-  auto material = pbrt_material{};
   material.name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
@@ -3509,165 +3503,165 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // Convert pbrt shapes
-static pbrt_shape convert_shape(const pbrt_shape_command& command,
+static void convert_shape(pbrt_shape* shape, const pbrt_shape_command& command,
     unordered_map<string, pbrt_arealight>&                arealight_map,
     unordered_map<string, pbrt_material>& material_map, const string& filename,
     const string& ply_dirname, bool verbose = false) {
-  auto shape            = pbrt_shape{};
-  shape.frame           = command.frame;
-  shape.frend           = command.frend;
+  shape->frame           = command.frame;
+  shape->frend           = command.frend;
   auto& arealight       = arealight_map.at(command.arealight);
   auto& material        = material_map.at(command.material);
-  shape.emission        = arealight.emission;
-  shape.color           = material.color;
-  shape.specular        = material.specular;
-  shape.metallic        = material.metallic;
-  shape.transmission    = material.transmission;
-  shape.roughness       = material.roughness;
-  shape.ior             = material.ior;
-  shape.opacity         = material.opacity;
-  shape.color_map       = material.color_map;
-  shape.opacity_map     = material.opacity_map;
-  shape.thin            = material.thin;
-  shape.volmeanfreepath = material.volmeanfreepath;
-  shape.volscatter      = material.volscatter;
-  shape.volscale        = material.volscale;
-  shape.instances       = command.instances;
-  shape.instaends       = command.instaends;
+  shape->emission        = arealight.emission;
+  shape->color           = material.color;
+  shape->specular        = material.specular;
+  shape->metallic        = material.metallic;
+  shape->transmission    = material.transmission;
+  shape->roughness       = material.roughness;
+  shape->ior             = material.ior;
+  shape->opacity         = material.opacity;
+  shape->color_map       = material.color_map;
+  shape->opacity_map     = material.opacity_map;
+  shape->thin            = material.thin;
+  shape->volmeanfreepath = material.volmeanfreepath;
+  shape->volscatter      = material.volscatter;
+  shape->volscale        = material.volscale;
+  shape->instances       = command.instances;
+  shape->instaends       = command.instaends;
   if (command.type == "trianglemesh") {
-    shape.positions = {};
-    shape.normals   = {};
-    shape.texcoords = {};
-    shape.triangles = {};
-    get_pbrt_value(command.values, "P", shape.positions);
-    get_pbrt_value(command.values, "N", shape.normals);
-    get_pbrt_value(command.values, "uv", shape.texcoords);
-    for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-    get_pbrt_value(command.values, "indices", shape.triangles);
+    shape->positions = {};
+    shape->normals   = {};
+    shape->texcoords = {};
+    shape->triangles = {};
+    get_pbrt_value(command.values, "P", shape->positions);
+    get_pbrt_value(command.values, "N", shape->normals);
+    get_pbrt_value(command.values, "uv", shape->texcoords);
+    for (auto& uv : shape->texcoords) uv.y = (1 - uv.y);
+    get_pbrt_value(command.values, "indices", shape->triangles);
   } else if (command.type == "loopsubdiv") {
-    shape.positions = {};
-    shape.triangles = {};
-    get_pbrt_value(command.values, "P", shape.positions);
-    get_pbrt_value(command.values, "indices", shape.triangles);
-    shape.normals.resize(shape.positions.size());
-    // compute_normals(shape.normals, shape.triangles, shape.positions);
+    shape->positions = {};
+    shape->triangles = {};
+    get_pbrt_value(command.values, "P", shape->positions);
+    get_pbrt_value(command.values, "indices", shape->triangles);
+    shape->normals.resize(shape->positions.size());
+    // compute_normals(shape->normals, shape->triangles, shape->positions);
   } else if (command.type == "plymesh") {
-    shape.filename_ = ""s;
-    get_pbrt_value(command.values, "filename", shape.filename_);
+    shape->filename_ = ""s;
+    get_pbrt_value(command.values, "filename", shape->filename_);
     try {
       auto ply = ply_model{};
-      load_ply(ply_dirname + shape.filename_, &ply);
-      shape.positions = get_positions(&ply);
-      shape.normals   = get_normals(&ply);
-      shape.texcoords = get_texcoords(&ply);
-      shape.triangles = get_triangles(&ply);
+      load_ply(ply_dirname + shape->filename_, &ply);
+      shape->positions = get_positions(&ply);
+      shape->normals   = get_normals(&ply);
+      shape->texcoords = get_texcoords(&ply);
+      shape->triangles = get_triangles(&ply);
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
     get_pbrt_value(command.values, "radius", radius);
-    make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, {32, 16}, radius);
+    make_pbrt_sphere(shape->triangles, shape->positions, shape->normals,
+        shape->texcoords, {32, 16}, radius);
   } else if (command.type == "disk") {
     auto radius = 1.0f;
     get_pbrt_value(command.values, "radius", radius);
-    make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, {32, 1}, radius);
+    make_pbrt_disk(shape->triangles, shape->positions, shape->normals,
+        shape->texcoords, {32, 1}, radius);
   } else {
     throw std::invalid_argument{"unknown shape " + command.type};
   }
-  return shape;
 }
 
 // Convert pbrt arealights
-static pbrt_arealight convert_arealight(
+static void convert_arealight(pbrt_arealight* light,
     const pbrt_command& command, bool verbose = false) {
-  auto light = pbrt_arealight{};
-  light.name = command.name;
+  light->name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1}, scale = vec3f{1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    light.emission = l * scale;
+    light->emission = l * scale;
   } else {
     throw std::invalid_argument{"unknown arealight " + command.type};
   }
-  return light;
 }
 
 // Convert pbrt lights
-static pbrt_light convert_light(
+static void convert_light(pbrt_light* light,
     const pbrt_command& command, bool verbose = false) {
-  auto light  = pbrt_light{};
-  light.frame = command.frame;
-  light.frend = command.frend;
+  light->frame = command.frame;
+  light->frend = command.frend;
   if (command.type == "distant") {
     auto l = vec3f{1}, scale = vec3f{1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    light.emission = l * scale;
-    light.from     = zero3f;
-    light.to       = vec3f{0, 0, 1};
-    get_pbrt_value(command.values, "from", light.from);
-    get_pbrt_value(command.values, "to", light.to);
-    light.distant       = true;
+    light->emission = l * scale;
+    light->from     = zero3f;
+    light->to       = vec3f{0, 0, 1};
+    get_pbrt_value(command.values, "from", light->from);
+    get_pbrt_value(command.values, "to", light->to);
+    light->distant       = true;
     auto distant_dist   = 100;
     auto size           = distant_dist * sin(5 * pif / 180);
-    light.area_emission = light.emission * (distant_dist * distant_dist) /
+    light->area_emission = light->emission * (distant_dist * distant_dist) /
                           (size * size);
-    light.area_frame =
-        light.frame *
-        lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
+    light->area_frame =
+        light->frame *
+        lookat_frame(normalize(light->from - light->to) * distant_dist, zero3f,
             {0, 1, 0}, true);
-    light.area_frend =
-        light.frend *
-        lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
+    light->area_frend =
+        light->frend *
+        lookat_frame(normalize(light->from - light->to) * distant_dist, zero3f,
             {0, 1, 0}, true);
     auto texcoords = vector<vec2f>{};
-    make_pbrt_quad(light.area_triangles, light.area_positions,
-        light.area_normals, texcoords, {4, 2}, size);
+    make_pbrt_quad(light->area_triangles, light->area_positions,
+        light->area_normals, texcoords, {4, 2}, size);
   } else if (command.type == "point" || command.type == "goniometric" ||
              command.type == "spot") {
     auto i = vec3f{1}, scale = vec3f{1};
     get_pbrt_value(command.values, "I", i);
     get_pbrt_value(command.values, "scale", scale);
-    light.emission = i * scale;
-    light.from     = zero3f;
-    get_pbrt_value(command.values, "from", light.from);
-    light.area_emission = light.emission;
-    light.area_frame    = light.frame * translation_frame(light.from);
-    light.area_frend    = light.frend * translation_frame(light.from);
+    light->emission = i * scale;
+    light->from     = zero3f;
+    get_pbrt_value(command.values, "from", light->from);
+    light->area_emission = light->emission;
+    light->area_frame    = light->frame * translation_frame(light->from);
+    light->area_frend    = light->frend * translation_frame(light->from);
     auto texcoords      = vector<vec2f>{};
-    make_pbrt_sphere(light.area_triangles, light.area_positions,
-        light.area_normals, texcoords, {4, 2}, 0.0025f);
+    make_pbrt_sphere(light->area_triangles, light->area_positions,
+        light->area_normals, texcoords, {4, 2}, 0.0025f);
   } else {
     throw std::invalid_argument{"unknown light " + command.type};
   }
-  return light;
 }
 
-static pbrt_environment convert_environment(
+static void convert_environment(pbrt_environment* environment,
     const pbrt_command& command, bool verbose = false) {
-  auto environment  = pbrt_environment{};
-  environment.frame = command.frame;
-  environment.frend = command.frend;
-  environment.frame = environment.frame *
+  environment->frame = command.frame;
+  environment->frend = command.frend;
+  environment->frame = environment->frame *
                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-  environment.frend = environment.frend *
+  environment->frend = environment->frend *
                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
   if (command.type == "infinite") {
     auto l = vec3f{1}, scale = vec3f{1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    environment.emission     = scale * l;
-    environment.emission_map = ""s;
-    get_pbrt_value(command.values, "mapname", environment.emission_map);
+    environment->emission     = scale * l;
+    environment->emission_map = ""s;
+    get_pbrt_value(command.values, "mapname", environment->emission_map);
   } else {
     throw std::invalid_argument{"unknown light " + command.type};
   }
-  return environment;
 }
+
+
+  pbrt_model::~pbrt_model() {
+    for(auto camera : cameras) delete camera;
+    for(auto shape : shapes) delete shape;
+    for(auto environment : environments) delete environment;
+    for(auto light : lights) delete light;
+  }
 
 // pbrt stack ctm
 struct pbrt_stack_element {
@@ -3748,9 +3742,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       if (ctx.objects.find(object) == ctx.objects.end())
         throw_parse_error(fs, "unknown object " + object);
       for (auto shape_id : ctx.objects.at(object)) {
-        auto& shape = pbrt->shapes[shape_id];
-        shape.instances.push_back(ctx.stack.back().transform_start);
-        shape.instaends.push_back(ctx.stack.back().transform_end);
+        auto shape = pbrt->shapes[shape_id];
+        shape->instances.push_back(ctx.stack.back().transform_start);
+        shape->instaends.push_back(ctx.stack.back().transform_end);
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
@@ -3811,102 +3805,110 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
         ctx.stack.back().transform_end = ctx.coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
-      auto integrator = pbrt_command{};
-      parse_pbrt_param(fs, str, integrator.type);
-      parse_pbrt_params(fs, str, integrator.values);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
     } else if (cmd == "Sampler") {
-      auto sampler = pbrt_command{};
-      parse_pbrt_param(fs, str, sampler.type);
-      parse_pbrt_params(fs, str, sampler.values);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
     } else if (cmd == "PixelFilter") {
-      auto filter = pbrt_command{};
-      parse_pbrt_param(fs, str, filter.type);
-      parse_pbrt_params(fs, str, filter.values);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
     } else if (cmd == "Film") {
-      auto film = pbrt_command{};
-      parse_pbrt_param(fs, str, film.type);
-      parse_pbrt_params(fs, str, film.values);
-      auto cfilm          = convert_film(film);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      auto cfilm          = pbrt_film{};
+      convert_film(&cfilm, command);
       ctx.film_resolution = cfilm.resolution;
     } else if (cmd == "Accelerator") {
-      auto accelerator = pbrt_command{};
-      parse_pbrt_param(fs, str, accelerator.type);
-      parse_pbrt_params(fs, str, accelerator.values);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
     } else if (cmd == "Camera") {
-      auto camera = pbrt_command{};
-      parse_pbrt_param(fs, str, camera.type);
-      parse_pbrt_params(fs, str, camera.values);
-      camera.frame = ctx.stack.back().transform_start;
-      camera.frend = ctx.stack.back().transform_end;
-      pbrt->cameras.push_back(convert_camera(camera, ctx.film_resolution));
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      command.frame = ctx.stack.back().transform_start;
+      command.frend = ctx.stack.back().transform_end;
+      auto camera = pbrt->cameras.emplace_back(new pbrt_camera{});
+      convert_camera(camera, command, ctx.film_resolution);
     } else if (cmd == "Texture") {
-      auto texture  = pbrt_command{};
+      auto command  = pbrt_command{};
       auto comptype = ""s;
-      parse_pbrt_param(fs, str, texture.name);
+      parse_pbrt_param(fs, str, command.name);
       parse_pbrt_param(fs, str, comptype);
-      parse_pbrt_param(fs, str, texture.type);
-      parse_pbrt_params(fs, str, texture.values);
-      texture_map[texture.name] = convert_texture(texture, texture_map);
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      texture_map[command.name] = {};
+      convert_texture(texture_map[command.name], command, texture_map);
     } else if (cmd == "Material") {
       static auto material_id = 0;
-      auto        material    = pbrt_command{};
-      material.name           = "material_" + std::to_string(material_id++);
-      parse_pbrt_param(fs, str, material.type);
-      parse_pbrt_params(fs, str, material.values);
-      if (material.type == "") {
+      auto        command    = pbrt_command{};
+      command.name           = "material_" + std::to_string(material_id++);
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      if (command.type == "") {
         ctx.stack.back().material = "";
         // pbrt->materials.pop_back();
       } else {
-        ctx.stack.back().material   = material.name;
-        material_map[material.name] = convert_material(
-            material, material_map, texture_map);
+        ctx.stack.back().material   = command.name;
+        material_map[command.name] = {};
+        convert_material(material_map[command.name],
+            command, material_map, texture_map);
       }
     } else if (cmd == "MakeNamedMaterial") {
-      auto material = pbrt_command{};
-      parse_pbrt_param(fs, str, material.name);
-      parse_pbrt_params(fs, str, material.values);
-      material.type = "";
-      for (auto& value : material.values)
-        if (value.name == "type") material.type = value.value1s;
-      material_map[material.name] = convert_material(
-          material, material_map, texture_map);
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.name);
+      parse_pbrt_params(fs, str, command.values);
+      command.type = "";
+      for (auto& value : command.values)
+        if (value.name == "type") command.type = value.value1s;
+      material_map[command.name] = {};
+      convert_material(material_map[command.name],
+          command, material_map, texture_map);
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, ctx.stack.back().material);
     } else if (cmd == "Shape") {
-      auto shape = pbrt_shape_command{};
-      parse_pbrt_param(fs, str, shape.type);
-      parse_pbrt_params(fs, str, shape.values);
-      shape.frame     = ctx.stack.back().transform_start;
-      shape.frend     = ctx.stack.back().transform_end;
-      shape.material  = ctx.stack.back().material;
-      shape.arealight = ctx.stack.back().arealight;
-      shape.interior  = ctx.stack.back().medium_interior;
-      shape.exterior  = ctx.stack.back().medium_exterior;
-      pbrt->shapes.push_back(convert_shape(
-          shape, arealight_map, material_map, filename, ply_dirname));
+      auto command = pbrt_shape_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      command.frame     = ctx.stack.back().transform_start;
+      command.frend     = ctx.stack.back().transform_end;
+      command.material  = ctx.stack.back().material;
+      command.arealight = ctx.stack.back().arealight;
+      command.interior  = ctx.stack.back().medium_interior;
+      command.exterior  = ctx.stack.back().medium_exterior;
+      auto shape = pbrt->shapes.emplace_back(new pbrt_shape{});
+      convert_shape(shape, command, arealight_map, material_map, filename, ply_dirname);
       if (ctx.cur_object != "") {
         ctx.objects[ctx.cur_object].push_back((int)pbrt->shapes.size() - 1);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
-      auto        arealight    = pbrt_command{};
-      arealight.name           = "arealight_" + std::to_string(arealight_id++);
-      parse_pbrt_param(fs, str, arealight.type);
-      parse_pbrt_params(fs, str, arealight.values);
-      arealight.frame               = ctx.stack.back().transform_start;
-      arealight.frend               = ctx.stack.back().transform_end;
-      ctx.stack.back().arealight    = arealight.name;
-      arealight_map[arealight.name] = convert_arealight(arealight);
+      auto        command    = pbrt_command{};
+      command.name           = "arealight_" + std::to_string(arealight_id++);
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      command.frame               = ctx.stack.back().transform_start;
+      command.frend               = ctx.stack.back().transform_end;
+      ctx.stack.back().arealight    = command.name;
+      arealight_map[command.name] = {};
+      convert_arealight(&arealight_map[command.name], command);
     } else if (cmd == "LightSource") {
-      auto light = pbrt_command{};
-      parse_pbrt_param(fs, str, light.type);
-      parse_pbrt_params(fs, str, light.values);
-      light.frame = ctx.stack.back().transform_start;
-      light.frend = ctx.stack.back().transform_end;
-      if (light.type == "infinite") {
-        pbrt->environments.push_back(convert_environment(light));
+      auto command = pbrt_command{};
+      parse_pbrt_param(fs, str, command.type);
+      parse_pbrt_params(fs, str, command.values);
+      command.frame = ctx.stack.back().transform_start;
+      command.frend = ctx.stack.back().transform_end;
+      if (command.type == "infinite") {
+        auto environment = pbrt->environments.emplace_back(new pbrt_environment{});
+        convert_environment(environment, command);
       } else {
-        pbrt->lights.push_back(convert_light(light));
+        auto light = pbrt->lights.emplace_back(new pbrt_light{});
+        convert_light(light, command);
       }
     } else if (cmd == "MakeNamedMedium") {
       auto medium = pbrt_command{};
@@ -4034,23 +4036,23 @@ void save_pbrt(
   }
   format_values(fs, "\n");
 
-  for (auto& camera : pbrt->cameras) {
+  for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
     command.type = "image";
     command.values.push_back(
-        make_pbrt_value("xresolution", camera.resolution.x));
+        make_pbrt_value("xresolution", camera->resolution.x));
     command.values.push_back(
-        make_pbrt_value("yresolution", camera.resolution.y));
+        make_pbrt_value("yresolution", camera->resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
     format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
   }
 
-  for (auto& camera : pbrt->cameras) {
+  for (auto camera : pbrt->cameras) {
     auto command  = pbrt_command{};
     command.type  = "perspective";
-    command.frame = camera.frame;
+    command.frame = camera->frame;
     command.values.push_back(make_pbrt_value(
-        "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
+        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
     format_values(fs, "LookAt {} {} {}\n", command.frame.o,
         command.frame.o - command.frame.z, command.frame.y);
     format_values(fs, "Camera \"{}\" {}\n", command.type, command.values);
@@ -4058,15 +4060,15 @@ void save_pbrt(
 
   format_values(fs, "\nWorldBegin\n\n");
 
-  for (auto& light : pbrt->lights) {
+  for (auto light : pbrt->lights) {
     auto command  = pbrt_command{};
-    command.frame = light.frame;
-    if (light.distant) {
+    command.frame = light->frame;
+    if (light->distant) {
       command.type = "distance";
-      command.values.push_back(make_pbrt_value("L", light.emission));
+      command.values.push_back(make_pbrt_value("L", light->emission));
     } else {
       command.type = "point";
-      command.values.push_back(make_pbrt_value("I", light.emission));
+      command.values.push_back(make_pbrt_value("I", light->emission));
     }
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)command.frame);
@@ -4074,13 +4076,13 @@ void save_pbrt(
     format_values(fs, "AttributeEnd\n");
   }
 
-  for (auto& environment : pbrt->environments) {
+  for (auto environment : pbrt->environments) {
     auto command  = pbrt_command{};
-    command.frame = environment.frame;
+    command.frame = environment->frame;
     command.type  = "infinite";
-    command.values.push_back(make_pbrt_value("L", environment.emission));
+    command.values.push_back(make_pbrt_value("L", environment->emission));
     command.values.push_back(
-        make_pbrt_value("mapname", environment.emission_map));
+        make_pbrt_value("mapname", environment->emission_map));
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)command.frame);
     format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
@@ -4094,88 +4096,88 @@ void save_pbrt(
   auto object_id = 0;
   for (auto& shape : pbrt->shapes) {
     auto command      = pbrt_shape_command{};
-    command.frame     = shape.frame;
-    command.instances = shape.instances;
+    command.frame     = shape->frame;
+    command.instances = shape->instances;
     if (ply_meshes) {
       command.type = "plymesh";
-      command.values.push_back(make_pbrt_value("filename", shape.filename_));
+      command.values.push_back(make_pbrt_value("filename", shape->filename_));
     } else {
       command.type = "trianglemesh";
-      command.values.push_back(make_pbrt_value("indices", shape.triangles));
+      command.values.push_back(make_pbrt_value("indices", shape->triangles));
       command.values.push_back(
-          make_pbrt_value("P", shape.positions, pbrt_value_type::point));
-      if (!shape.normals.empty())
+          make_pbrt_value("P", shape->positions, pbrt_value_type::point));
+      if (!shape->normals.empty())
         command.values.push_back(
-            make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
-      if (!shape.texcoords.empty())
-        command.values.push_back(make_pbrt_value("uv", shape.texcoords));
+            make_pbrt_value("N", shape->triangles, pbrt_value_type::normal));
+      if (!shape->texcoords.empty())
+        command.values.push_back(make_pbrt_value("uv", shape->texcoords));
     }
     auto acommand = pbrt_command{};
-    if (shape.emission != zero3f) {
+    if (shape->emission != zero3f) {
       acommand.type = "diffuse";
-      acommand.values.push_back(make_pbrt_value("L", shape.emission));
+      acommand.values.push_back(make_pbrt_value("L", shape->emission));
     }
     auto mcommand = pbrt_command{};
-    if (shape.specular != 0 && shape.transmission != 0 && !shape.thin) {
+    if (shape->specular != 0 && shape->transmission != 0 && !shape->thin) {
       mcommand.type = "glass";
       mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
       mcommand.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
       mcommand.values.push_back(
-          make_pbrt_value("roughness", pow(shape.roughness, 2)));
-      mcommand.values.push_back(make_pbrt_value("eta", shape.ior));
+          make_pbrt_value("roughness", pow(shape->roughness, 2)));
+      mcommand.values.push_back(make_pbrt_value("eta", shape->ior));
       mcommand.values.push_back(make_pbrt_value("remaproughness", false));
-    } else if (shape.metallic > 0.1f) {
+    } else if (shape->metallic > 0.1f) {
       mcommand.type = "metal";
       mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
       mcommand.values.push_back(
-          make_pbrt_value("roughness", pow(shape.roughness, 2)));
+          make_pbrt_value("roughness", pow(shape->roughness, 2)));
       mcommand.values.push_back(
-          make_pbrt_value("eta", reflectivity_to_eta(shape.color)));
+          make_pbrt_value("eta", reflectivity_to_eta(shape->color)));
       mcommand.values.push_back(make_pbrt_value("remaproughness", false));
     } else {
       mcommand.type = "uber";
-      if (shape.color_map.empty()) {
-        mcommand.values.push_back(make_pbrt_value("Kd", shape.color));
-      } else if (shape.color != zero3f) {
+      if (shape->color_map.empty()) {
+        mcommand.values.push_back(make_pbrt_value("Kd", shape->color));
+      } else if (shape->color != zero3f) {
         mcommand.values.push_back(
-            make_pbrt_value("Kd", shape.color_map, pbrt_value_type::texture));
+            make_pbrt_value("Kd", shape->color_map, pbrt_value_type::texture));
       }
-      if (shape.specular != 0) {
-        mcommand.values.push_back(make_pbrt_value("Ks", vec3f{shape.specular}));
+      if (shape->specular != 0) {
+        mcommand.values.push_back(make_pbrt_value("Ks", vec3f{shape->specular}));
         mcommand.values.push_back(
-            make_pbrt_value("roughness", pow(shape.roughness, 2)));
-        mcommand.values.push_back(make_pbrt_value("eta", shape.ior));
+            make_pbrt_value("roughness", pow(shape->roughness, 2)));
+        mcommand.values.push_back(make_pbrt_value("eta", shape->ior));
         mcommand.values.push_back(make_pbrt_value("remaproughness", false));
       }
-      if (shape.transmission != 0) {
+      if (shape->transmission != 0) {
         mcommand.values.push_back(
-            make_pbrt_value("Kt", vec3f{shape.transmission}));
+            make_pbrt_value("Kt", vec3f{shape->transmission}));
       }
-      if (!shape.opacity_map.empty()) {
+      if (!shape->opacity_map.empty()) {
         mcommand.values.push_back(make_pbrt_value(
-            "opacity", shape.opacity_map, pbrt_value_type::texture));
-      } else if (shape.opacity != 1) {
-        mcommand.values.push_back(make_pbrt_value("opacity", shape.opacity));
+            "opacity", shape->opacity_map, pbrt_value_type::texture));
+      } else if (shape->opacity != 1) {
+        mcommand.values.push_back(make_pbrt_value("opacity", shape->opacity));
       }
     }
     if (ply_meshes) {
       try {
         auto ply = ply_model{};
-        add_positions(&ply, shape.positions);
-        add_normals(&ply, shape.normals);
-        add_texcoords(&ply, shape.texcoords);
-        add_triangles(&ply, shape.triangles);
-        save_ply(get_dirname(filename) + shape.filename_, &ply);
+        add_positions(&ply, shape->positions);
+        add_normals(&ply, shape->normals);
+        add_texcoords(&ply, shape->texcoords);
+        add_triangles(&ply, shape->triangles);
+        save_ply(get_dirname(filename) + shape->filename_, &ply);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
     auto object = "object" + std::to_string(object_id++);
-    if (!shape.instances.empty())
+    if (!shape->instances.empty())
       format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)shape.frame);
-    if (shape.emission != zero3f) {
+    format_values(fs, "Transform {}\n", (mat4f)shape->frame);
+    if (shape->emission != zero3f) {
       format_values(
           fs, "AreaLightSource \"{}\" {}\n", acommand.type, acommand.values);
     }
@@ -4183,8 +4185,8 @@ void save_pbrt(
         mcommand.values);
     format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
     format_values(fs, "AttributeEnd\n");
-    if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");
-    for (auto& iframe : shape.instances) {
+    if (!shape->instances.empty()) format_values(fs, "ObjectEnd\n");
+    for (auto& iframe : shape->instances) {
       format_values(fs, "AttributeBegin\n");
       format_values(fs, "Transform {}\n", (mat4f)iframe);
       format_values(fs, "ObjectInstance \"{}\"\n", object);
