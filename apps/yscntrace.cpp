@@ -87,11 +87,10 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-
   auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
-    auto shape   = add_shape(scene);
+    auto shape = add_shape(scene);
     set_shape_points(shape, ioshape->points);
     set_shape_lines(shape, ioshape->lines);
     set_shape_triangles(shape, ioshape->triangles);
@@ -108,13 +107,13 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
-    auto instance   = add_instance(scene);
+    auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     instance_map[ioinstance] = instance;
   }
 
   for (auto ioobject : ioscene->objects) {
-    auto object   = add_object(scene);
+    auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
     set_material(object, material_map.at(ioobject->material));

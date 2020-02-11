@@ -150,7 +150,7 @@ void clear_shapes(trace_scene* scene);
 
 // Add instance
 trace_instance* add_instance(trace_scene* scene);
-void         set_frames(trace_instance* instance, const vector<frame3f>& frames);
+void set_frames(trace_instance* instance, const vector<frame3f>& frames);
 
 // Add environment
 trace_environment* add_environment(trace_scene* scene);
@@ -389,8 +389,8 @@ struct trace_instance {
 
 // Object.
 struct trace_object {
-  frame3f frame = identity3x4f;
-  trace_shape* shape = nullptr;
+  frame3f         frame    = identity3x4f;
+  trace_shape*    shape    = nullptr;
   trace_material* material = nullptr;
   trace_instance* instance = nullptr;
 };
@@ -405,8 +405,8 @@ struct trace_environment {
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  trace_object* object       = nullptr;
-  int instance   = -1;
+  trace_object*      object      = nullptr;
+  int                instance    = -1;
   trace_environment* environment = nullptr;
 };
 
@@ -419,16 +419,16 @@ struct trace_light {
 // updates node transformations only if defined.
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
-  vector<trace_object*>      objects       = {};
+  vector<trace_object*>      objects      = {};
   vector<trace_shape*>       shapes       = {};
   vector<trace_material*>    materials    = {};
-  vector<trace_instance*>    instances       = {};
+  vector<trace_instance*>    instances    = {};
   vector<trace_texture*>     textures     = {};
   vector<trace_environment*> environments = {};
 
   // computed properties
   vector<trace_light*> lights = {};
-  trace_bvh           bvh    = {};
+  trace_bvh            bvh    = {};
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh       = {};
   vector<vec2i>         embree_instances = {};
@@ -466,12 +466,12 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   object    = -1;
-  int   instance  = -1;
-  int   element   = -1;
-  vec2f uv        = {0, 0};
-  float distance  = 0;
-  bool  hit       = false;
+  int   object   = -1;
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
 };
 
 // Intersect ray with a bvh returning either the first or any intersection
