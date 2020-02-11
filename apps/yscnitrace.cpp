@@ -175,9 +175,9 @@ void init_scene(shared_ptr<app_state> app) {
   }
 
   for (auto ioenvironment : ioscene->environments) {
-    auto id = add_environment(scene);
-    set_environment_frame(scene, id, ioenvironment->frame);
-    set_environment_emission(scene, id, ioenvironment->emission,
+    auto environment = add_environment(scene);
+    set_environment_frame(environment, ioenvironment->frame);
+    set_environment_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
 }
@@ -573,11 +573,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         app->ioscene->environments);
     if (draw_glwidgets_environment(win, app, app->selected_environment)) {
       stop_display(app);
-      auto& ioenvironment =
+      auto ioenvironment =
           app->ioscene->environments[app->selected_environment];
-      set_environment_frame(
-          app->scene.get(), app->selected_environment, ioenvironment->frame);
-      set_environment_emission(app->scene.get(), app->selected_environment,
+      set_environment_frame(app->scene->environments[app->selected_environment],
+          ioenvironment->frame);
+      set_environment_emission(app->scene->environments[app->selected_environment],
           ioenvironment->emission,
           app->texture_map.at(ioenvironment->emission_tex));
       init_lights(app->scene.get());

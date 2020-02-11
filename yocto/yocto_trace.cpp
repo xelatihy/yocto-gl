@@ -945,13 +945,13 @@ static bool has_volume(
 // Evaluate all environment color.
 static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
   auto emission = zero3f;
-  for (auto& environment : scene->environments) {
-    auto wl       = transform_direction(inverse(environment.frame), ray.d);
+  for (auto environment : scene->environments) {
+    auto wl       = transform_direction(inverse(environment->frame), ray.d);
     auto texcoord = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (texcoord.x < 0) texcoord.x += 1;
-    emission += environment.emission *
-                xyz(eval_texture(scene, environment.emission_tex, texcoord));
+    emission += environment->emission *
+                xyz(eval_texture(scene, environment->emission_tex, texcoord));
   }
   return emission;
 }
@@ -2501,14 +2501,14 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
         eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv));
     return normalize(lposition - position);
   } else if (light.environment >= 0) {
-    auto& environment = scene->environments[light.environment];
-    if (environment.emission_tex >= 0) {
-      auto& emission_tex = scene->textures[environment.emission_tex];
-      auto  idx          = sample_discrete(environment.texels_cdf, rel);
+    auto environment = scene->environments[light.environment];
+    if (environment->emission_tex >= 0) {
+      auto& emission_tex = scene->textures[environment->emission_tex];
+      auto  idx          = sample_discrete(environment->texels_cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  uv           = vec2f{
           (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
-      return transform_direction(environment.frame,
+      return transform_direction(environment->frame,
           {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
     } else {
@@ -2549,12 +2549,12 @@ static float sample_lights_pdf(
       }
       pdf += lpdf;
     } else if (light.environment >= 0) {
-      auto& environment = scene->environments[light.environment];
-      if (environment.emission_tex >= 0) {
-        auto& cdf          = environment.texels_cdf;
-        auto& emission_tex = scene->textures[environment.emission_tex];
+      auto environment = scene->environments[light.environment];
+      if (environment->emission_tex >= 0) {
+        auto& cdf          = environment->texels_cdf;
+        auto& emission_tex = scene->textures[environment->emission_tex];
         auto  size         = texture_size(emission_tex);
-        auto  wl = transform_direction(inverse(environment.frame), direction);
+        auto  wl = transform_direction(inverse(environment->frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
             acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
@@ -2975,19 +2975,19 @@ void init_lights(trace_scene* scene) {
     }
   }
   for (auto idx = 0; idx < scene->environments.size(); idx++) {
-    auto& environment = scene->environments[idx];
-    if (environment.emission == zero3f) continue;
-    if (environment.emission_tex >= 0) {
-      auto& texture          = scene->textures[environment.emission_tex];
+    auto environment = scene->environments[idx];
+    if (environment->emission == zero3f) continue;
+    if (environment->emission_tex >= 0) {
+      auto& texture          = scene->textures[environment->emission_tex];
       auto  size             = texture_size(texture);
-      environment.texels_cdf = vector<float>(size.x * size.y);
+      environment->texels_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
-        for (auto i = 0; i < environment.texels_cdf.size(); i++) {
+        for (auto i = 0; i < environment->texels_cdf.size(); i++) {
           auto ij                   = vec2i{i % size.x, i / size.x};
           auto th                   = (ij.y + 0.5f) * pif / size.y;
           auto value                = lookup_texture(texture, ij);
-          environment.texels_cdf[i] = max(xyz(value)) * sin(th);
-          if (i) environment.texels_cdf[i] += environment.texels_cdf[i - 1];
+          environment->texels_cdf[i] = max(xyz(value)) * sin(th);
+          if (i) environment->texels_cdf[i] += environment->texels_cdf[i - 1];
         }
       }
     }
@@ -3083,6 +3083,7 @@ namespace yocto {
 // cleanup
 trace_scene::~trace_scene() {
   for(auto camera : cameras) delete camera;  
+  for(auto environment : environments) delete environment;  
 }
 
 // Add cameras
@@ -3265,19 +3266,15 @@ void set_shape_gltftextures(trace_scene* scene, int idx, bool gltf_textures) {
 void clean_shapes(trace_scene* scene) { scene->shapes.clear(); }
 
 // Add environment
-int add_environment(trace_scene* scene) {
-  scene->environments.emplace_back();
-  return (int)scene->environments.size() - 1;
+trace_environment* add_environment(trace_scene* scene) {
+  return scene->environments.emplace_back(new trace_environment{});
 }
-void set_environment_frame(trace_scene* scene, int idx, const frame3f& frame) {
-  auto& environment = scene->environments[idx];
-  environment.frame = frame;
+void set_environment_frame(trace_environment* environment, const frame3f& frame) {
+  environment->frame = frame;
 }
-void set_environment_emission(
-    trace_scene* scene, int idx, const vec3f& emission, int emission_tex) {
-  auto& environment        = scene->environments[idx];
-  environment.emission     = emission;
-  environment.emission_tex = emission_tex;
+void set_environment_emission(trace_environment* environment, const vec3f& emission, int emission_tex) {
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
 }
 void clear_environments(trace_scene* scene) { scene->environments.clear(); }
 

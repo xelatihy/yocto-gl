@@ -104,9 +104,9 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   }
 
   for (auto ioenvironment : ioscene->environments) {
-    auto id = add_environment(scene);
-    set_environment_frame(scene, id, ioenvironment->frame);
-    set_environment_emission(scene, id, ioenvironment->emission,
+    auto environment = add_environment(scene);
+    set_environment_frame(environment, ioenvironment->frame);
+    set_environment_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
 

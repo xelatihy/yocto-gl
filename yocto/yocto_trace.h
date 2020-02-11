@@ -78,6 +78,7 @@ namespace yocto {
 // Trace scene
 struct trace_scene;
 struct trace_camera;
+struct trace_environment;
 
 // Add cameras
 trace_camera*  add_camera(trace_scene* scene);
@@ -138,10 +139,9 @@ void set_shape_gltftextures(trace_scene* scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene* scene);
 
 // Add environment
-int  add_environment(trace_scene* scene);
-void set_environment_frame(trace_scene* scene, int idx, const frame3f& frame);
-void set_environment_emission(
-    trace_scene* scene, int idx, const vec3f& emission, int emission_map = -1);
+trace_environment* add_environment(trace_scene* scene);
+void set_environment_frame(trace_environment* environment, const frame3f& frame);
+void set_environment_emission(trace_environment* environment, const vec3f& emission, int emission_map = -1);
 void clear_environments(trace_scene* scene);
 
 // Trace state
@@ -393,7 +393,7 @@ struct trace_scene {
   vector<trace_camera*>      cameras      = {};
   vector<trace_shape>       shapes       = {};
   vector<trace_texture>     textures     = {};
-  vector<trace_environment> environments = {};
+  vector<trace_environment*> environments = {};
 
   // computed properties
   vector<trace_light> lights = {};
