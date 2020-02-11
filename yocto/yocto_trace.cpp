@@ -715,12 +715,13 @@ struct trace_point {
 static trace_point eval_point(const trace_scene* scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto  shape                  = scene->shapes[intersection.shape];
-  auto  material               = shape->material;
-  auto& frame                  = shape->frames[intersection.instance_];
-  auto  element                = intersection.element;
-  auto  uv                     = intersection.uv;
-  auto  trace_non_rigid_frames = true;
+  auto object   = scene->objects[intersection.shape];
+  auto shape    = object->shape;
+  auto material = object->material;
+  auto frame    = object->instance->frames[intersection.instance_] * object->frame;
+  auto element                = intersection.element;
+  auto uv                     = intersection.uv;
+  auto trace_non_rigid_frames = true;
 
   // initialize point
   auto point      = trace_point{};
@@ -890,9 +891,10 @@ struct volume_point {
 static volume_point eval_volume(const trace_scene* scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto  shape    = scene->shapes[intersection.shape];
-  auto  material = shape->material;
-  auto& frame    = shape->frames[intersection.instance_];
+  auto  object    = scene->objects[intersection.shape];
+  auto  shape    = object->shape;
+  auto  material = object->material;
+  auto frame    = object->instance->frames[intersection.instance_] * object->frame;
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
 
@@ -941,8 +943,8 @@ static volume_point eval_volume(const trace_scene* scene,
 // Check if an instance as volume scattering
 static bool has_volume(
     const trace_scene* scene, const trace_intersection& intersection) {
-  auto shape = scene->shapes[intersection.shape];
-  return !shape->material->thin && shape->material->transmission;
+  auto object = scene->objects[intersection.shape];
+  return !object->material->thin && object->material->transmission;
 }
 
 // Evaluate all environment color.
@@ -1285,12 +1287,13 @@ static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   auto shape_id = 0;
-  for (auto& shape : scene->shapes) {
+  for (auto object : scene->objects) {
     auto instance_id = 0;
-    for (auto& frame : shape->frames) {
+    for (auto frame : object->instance->frames) {
+      frame = frame * object->frame;
       auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
       rtcSetGeometryInstancedScene(
-          egeometry, (RTCScene)shape->embree_bvh.get());
+          egeometry, (RTCScene)object->shape->embree_bvh.get());
       rtcSetGeometryTransform(
           egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
       rtcCommitGeometry(egeometry);
@@ -1314,8 +1317,9 @@ static void update_embree_bvh(
   for (auto shape_id : updated_instances) update_flags[shape_id] = true;
   for (auto& [shape_id, instance_id] : scene->embree_instances) {
     if (!update_flags[shape_id]) continue;
-    auto& shape     = scene->shapes[shape_id];
-    auto& frame     = shape->frames[instance_id];
+    // FIXME: this is incorrect!!!
+    auto shape      = scene->shapes[shape_id];
+    auto frame     = scene->objects[instance_id]->frame;
     auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape->embree_bvh.get());
     rtcSetGeometryTransform(
@@ -1790,19 +1794,20 @@ void init_bvh(trace_scene* scene, const trace_params& params) {
 
   // instance bboxes
   auto primitives = vector<trace_bvh_primitive>{};
-  auto shape_id   = 0;
-  for (auto& shape : scene->shapes) {
+  auto object_id   = 0;
+  auto empty_instance_frames =  vector<frame3f>{identity3x4f};
+  for (auto object : scene->objects) {
     auto instance_id = 0;
-    for (auto& frame : shape->frames) {
+    for (auto& frame : object->instance->frames) {
       auto& primitive = primitives.emplace_back();
-      primitive.bbox  = shape->bvh.nodes.empty()
+      primitive.bbox  = object->shape->bvh.nodes.empty()
                            ? invalidb3f
-                           : transform_bbox(frame, shape->bvh.nodes[0].bbox);
+                           : transform_bbox(frame * object->frame, object->shape->bvh.nodes[0].bbox);
       primitive.center    = center(primitive.bbox);
-      primitive.primitive = {shape_id, instance_id};
+      primitive.primitive = {object_id, instance_id};
       instance_id += 1;
     }
-    shape_id += 1;
+    object_id += 1;
   }
 
   // build nodes
@@ -1875,12 +1880,13 @@ void update_bvh(trace_scene* scene, const vector<int>& updated_instances,
 #endif
 
   // build primitives
+  auto empty_instance_frames = vector<frame3f>{identity3x4f};
   auto bboxes = vector<bbox3f>(scene->bvh.primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene->bvh.primitives[idx];
-    auto& frame    = scene->shapes[instance.x]->frames[instance.y];
+    auto object = scene->objects[instance.x];
     auto& sbvh     = scene->shapes[instance.x]->bvh;
-    bboxes[idx]    = transform_bbox(frame, sbvh.nodes[0].bbox);
+    bboxes[idx]    = transform_bbox(object->instance->frames[instance.y] * object->frame, sbvh.nodes[0].bbox);
   }
 
   // update nodes
@@ -2052,9 +2058,10 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene->bvh.primitives[idx];
-        auto& frame     = scene->shapes[instance_.x]->frames[instance_.y];
+        auto object = scene->objects[instance_.x];
+        auto frame = object->instance->frames[instance_.y] * object->frame;
         auto  inv_ray   = transform_ray(inverse(frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene->shapes[instance_.x], inv_ray, element,
+        if (intersect_shape_bvh(object->shape, inv_ray, element,
                 uv, distance, find_any)) {
           hit      = true;
           shape    = instance_.x;
@@ -2075,10 +2082,10 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
 static bool intersect_instance_bvh(const trace_scene* scene, int shape,
     int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
-  auto& frame   = scene->shapes[shape]->frames[instance];
+  auto object = scene->objects[shape];
+  auto frame   = object->instance->frames[instance] * object->frame;
   auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(
-      scene->shapes[shape], inv_ray, element, uv, distance, find_any);
+  return intersect_shape_bvh(object->shape, inv_ray, element, uv, distance, find_any);
 }
 
 trace_intersection intersect_scene_bvh(const trace_scene* scene,
@@ -2497,8 +2504,9 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
   auto  light_id = sample_uniform(scene->lights.size(), rl);
   auto& light    = scene->lights[light_id];
   if (light.shape >= 0) {
-    auto  shape     = scene->shapes[light.shape];
-    auto& frame     = shape->frames[light.instance_];
+    auto  object     = scene->objects[light.shape];
+    auto shape = object->shape;
+    auto  frame     = object->instance->frames[light.instance_] * object->frame;
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(frame,
@@ -2532,20 +2540,20 @@ static float sample_lights_pdf(
       // check all intersection
       auto  lpdf          = 0.0f;
       auto  next_position = position;
-      auto& shape         = scene->shapes[light.shape];
-      auto& frame         = shape->frames[light.instance_];
+      auto  object         = scene->objects[light.shape];
+      auto  frame         = object->instance->frames[light.instance_] * object->frame;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
             scene, light.shape, light.instance_, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
-            frame, eval_shape_elem(shape, shape->quadspos, shape->positions,
+            frame, eval_shape_elem(object->shape, object->shape->quadspos, object->shape->positions,
                        isec.element, isec.uv));
         auto lnormal = transform_normal(frame,
-            eval_element_normal(shape, isec.element), trace_non_rigid_frames);
+            eval_element_normal(object->shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
-        auto area = shape->elements_cdf.back();
+        auto area = object->shape->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
@@ -2951,9 +2959,10 @@ void init_state(
 // Init trace lights
 void init_lights(trace_scene* scene) {
   scene->lights.clear();
-  for (auto idx = 0; idx < scene->shapes.size(); idx++) {
-    auto shape = scene->shapes[idx];
-    if (shape->material->emission == zero3f) continue;
+  for (auto idx = 0; idx < scene->objects.size(); idx++) {
+    auto object = scene->objects[idx];
+    if (object->material->emission == zero3f) continue;
+    auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (!shape->triangles.empty()) {
       shape->elements_cdf = vector<float>(shape->triangles.size());
@@ -2974,7 +2983,7 @@ void init_lights(trace_scene* scene) {
         if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
-    for (auto iidx = 0; iidx < shape->frames.size(); iidx++) {
+    for (auto iidx = 0; iidx < object->instance->frames.size(); iidx++) {
       auto& light       = scene->lights.emplace_back();
       light.shape       = idx;
       light.instance_   = iidx;
@@ -3168,21 +3177,36 @@ void set_shape_radius(trace_shape* shape, const vector<float>& radius) {
 void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
-void set_material(trace_shape* shape, trace_material* material) {
-  shape->material = material;
+
+// Default objects
+static trace_instance* default_instance = new trace_instance{ { identity3x4f } };
+
+// Add object
+trace_object* add_object(trace_scene* scene) {
+  auto object = scene->objects.emplace_back(new trace_object{});
+  object->instance = default_instance;
+  return object;
 }
-void set_shape_frame(trace_shape* shape, const frame3f& frame) {
-  shape->frames = {frame};
+void set_frame(trace_object* object, const frame3f& frame) {
+  object->frame = frame;
 }
-void set_shape_frames(trace_shape* shape, const vector<frame3f>& frames,
-    const frame3f& local_frame) {
-  if (frames.empty()) {
-    shape->frames = {local_frame};
-  } else {
-    shape->frames.resize(frames.size());
-    for (auto idx = 0; idx < frames.size(); idx++)
-      shape->frames[idx] = frames[idx] * local_frame;
-  }
+void set_shape(trace_object* object, trace_shape* shape) {
+  object->shape = shape;
+}
+void set_material(trace_object* object, trace_material* material) {
+  object->material = material;
+}
+void set_instance(trace_object* object, trace_instance* instance) {
+  object->instance = instance;
+  if(!object->instance) object->instance = default_instance;
+}
+
+// Add instance
+trace_instance* add_instance(trace_scene* scene) {
+  return scene->instances.emplace_back(new trace_instance{});
+}
+void set_frames(trace_instance* instance, const vector<frame3f>& frames) {
+  instance->frames = frames;
 }
 
 // Add material

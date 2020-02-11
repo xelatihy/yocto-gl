@@ -93,6 +93,13 @@ void          set_camera_lens(
 void set_camera_focus(trace_camera* camera, float aperture, float focus);
 void clear_cameras(trace_scene* scene);
 
+// Add object
+trace_object* add_object(trace_scene* scene);
+void          set_frame(trace_object* object, const frame3f& frame);
+void          set_material(trace_object* object, trace_material* material);
+void          set_shape(trace_object* object, trace_shape* shape);
+void          set_instance(trace_object* object, trace_instance* instance);
+
 // Add texture
 trace_texture* add_texture(trace_scene* scene);
 void           set_texture(trace_texture* texture, const image<vec4b>& img);
@@ -124,7 +131,6 @@ void set_shape_gltftextures(trace_material* material, bool gltf_textures);
 
 // Add shape
 trace_shape* add_shape(trace_scene* scene);
-void         set_material(trace_shape* shape, trace_material* material);
 void         set_shape_points(trace_shape* shape, const vector<int>& points);
 void         set_shape_lines(trace_shape* shape, const vector<vec2i>& lines);
 void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles);
@@ -141,6 +147,10 @@ void set_shape_frame(trace_shape* shape, const frame3f& frame);
 void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
     const frame3f& local_frame);
 void clear_shapes(trace_scene* scene);
+
+// Add instance
+trace_instance* add_instance(trace_scene* scene);
+void         set_frames(trace_instance* instance, const vector<frame3f>& frames);
 
 // Add environment
 trace_environment* add_environment(trace_scene* scene);
@@ -343,10 +353,6 @@ struct trace_material {
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
 struct trace_shape {
-  // frames
-  vector<frame3f> frames   = {};
-  trace_material* material = nullptr;
-
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -376,6 +382,19 @@ struct trace_shape {
   vector<float> elements_cdf = {};
 };
 
+// Instances.
+struct trace_instance {
+  vector<frame3f> frames = {};
+};
+
+// Object.
+struct trace_object {
+  frame3f frame = identity3x4f;
+  trace_shape* shape = nullptr;
+  trace_material* material = nullptr;
+  trace_instance* instance = nullptr;
+};
+
 // Environment map.
 struct trace_environment {
   frame3f        frame        = identity3x4f;
@@ -400,8 +419,10 @@ struct trace_light {
 // updates node transformations only if defined.
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
+  vector<trace_object*>      objects       = {};
   vector<trace_shape*>       shapes       = {};
   vector<trace_material*>    materials    = {};
+  vector<trace_instance*>    instances       = {};
   vector<trace_texture*>     textures     = {};
   vector<trace_environment*> environments = {};
 

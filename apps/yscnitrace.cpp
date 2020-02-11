@@ -80,6 +80,8 @@ struct app_state {
   // editing maps
   unordered_map<sceneio_texture*, trace_texture*>   texture_map  = {};
   unordered_map<sceneio_material*, trace_material*> material_map = {};
+  unordered_map<sceneio_shape*, trace_shape*> shape_map = {};
+  unordered_map<sceneio_instance*, trace_instance*> instance_map = {};
 
   // computation
   int          render_sample  = 0;
@@ -113,6 +115,8 @@ void init_scene(shared_ptr<app_state> app) {
   auto  ioscene      = app->ioscene.get();
   auto& texture_map  = app->texture_map;
   auto& material_map = app->material_map;
+  auto& shape_map = app->shape_map;
+  auto& instance_map = app->instance_map;
 
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
@@ -161,10 +165,9 @@ void init_scene(shared_ptr<app_state> app) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  for (auto ioobject : ioscene->objects) {
+  shape_map[nullptr] = nullptr;
+  for (auto ioshape : ioscene->shapes) {
     auto shape   = add_shape(scene);
-    auto ioshape = ioobject->shape;
-    set_material(shape, material_map.at(ioobject->material));
     set_shape_points(shape, ioshape->points);
     set_shape_lines(shape, ioshape->lines);
     set_shape_triangles(shape, ioshape->triangles);
@@ -175,11 +178,22 @@ void init_scene(shared_ptr<app_state> app) {
     set_shape_colors(shape, ioshape->colors);
     set_shape_radius(shape, ioshape->radius);
     set_shape_tangents(shape, ioshape->tangents);
-    auto ioinstances = ioobject->instance;
-    if (ioinstances)
-      set_shape_frames(shape, ioinstances->frames, ioobject->frame);
-    else
-      set_shape_frame(shape, ioobject->frame);
+    shape_map[ioshape] = shape;
+  }
+
+  instance_map[nullptr] = nullptr;
+  for (auto ioinstance : ioscene->instances) {
+    auto instance   = add_instance(scene);
+    set_frames(instance, ioinstance->frames);
+    instance_map[ioinstance] = instance;
+  }
+
+  for (auto ioobject : ioscene->objects) {
+    auto object   = add_object(scene);
+    set_frame(object, ioobject->frame);
+    set_shape(object, shape_map.at(ioobject->shape));
+    set_material(object, material_map.at(ioobject->material));
+    set_instance(object, instance_map.at(ioobject->instance));
   }
 
   for (auto ioenvironment : ioscene->environments) {
