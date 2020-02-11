@@ -62,7 +62,7 @@ struct app_state {
   shared_ptr<sceneio_model> ioscene = {};
 
   // rendering state
-  shared_ptr<opengl_scene> glscene = {};
+  opengl_scene* glscene = new opengl_scene{};
 
   // view image
   float  time       = 0;
@@ -88,6 +88,11 @@ struct app_state {
 
   // error
   string error = "";
+
+  // cleanup
+  ~app_state() {
+    if(glscene) delete glscene;
+  }
 };
 
 // Application state
@@ -171,7 +176,7 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
 }
 
 void init_scene(shared_ptr<app_state> app) {
-  auto  glscene      = app->glscene.get();
+  auto  glscene      = app->glscene;
   auto  ioscene      = app->ioscene.get();
   auto& texture_map  = app->texture_map;
   auto& material_map = app->material_map;
@@ -646,7 +651,7 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
     draw_glscene(
-        app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
+        app->glscene, input.framebuffer_viewport, app->drawgl_prms);
   }
 }
 
@@ -662,9 +667,8 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       auto app = apps->loaders.front().get();
       apps->loaders.pop_front();
       apps->states.push_back(app);
-      app->glscene = make_shared<opengl_scene>();
       init_scene(app);
-      update_lights(app->glscene.get(), app->ioscene.get());
+      update_lights(app->glscene, app->ioscene.get());
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     } catch (std::exception& e) {
       apps->loaders.pop_front();
