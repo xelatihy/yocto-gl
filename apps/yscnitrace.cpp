@@ -590,7 +590,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (draw_glwidgets_shape(win, app, app->selected_object)) {
       stop_display(app);
-      auto ioobject = app->ioscene->shapes[app->selected_shape];
+      // auto ioobject = app->ioscene->shapes[app->selected_shape];
       // TODO: update editing
       // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
@@ -604,7 +604,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (draw_glwidgets_shape(win, app, app->selected_instance)) {
       stop_display(app);
-      auto ioinstance = app->ioscene->instances[app->selected_instance];
+      // auto ioinstance = app->ioscene->instances[app->selected_instance];
       // TODO: update editing
       // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this

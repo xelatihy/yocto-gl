@@ -2,8 +2,8 @@
 // # Yocto/SceneIO: Tiny library for Yocto/Scene input and output
 //
 // Yocto/SceneIO provides loading and saving functionality for scenes
-// in Yocto/GL. We support a simple to use YAML format, PLY, OBJ and glTF.
-// The YAML serialization is a straight copy of the in-memory scene data.
+// in Yocto/GL. We support a simple to use JSON format, PLY, OBJ and glTF.
+// The JSON serialization is a straight copy of the in-memory scene data.
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
