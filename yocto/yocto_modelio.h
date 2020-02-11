@@ -533,7 +533,7 @@ struct pbrt_arealight {
 // Pbrt medium. Not parsed at the moment.
 struct pbrt_medium {
   // medium parameters
-  string name            = "";
+  string name = "";
 };
 
 // Pbrt shape
@@ -550,7 +550,7 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material* material = nullptr;
+  pbrt_material*  material  = nullptr;
   pbrt_arealight* arealight = nullptr;
 };
 

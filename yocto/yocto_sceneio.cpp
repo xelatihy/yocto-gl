@@ -1945,7 +1945,7 @@ static void load_pbrt_scene(
     material->opacity_tex   = get_texture(pmaterial->opacity_map);
     material_map[pmaterial] = material;
   }
-    
+
   // hack for pbrt empty material
   material_map[nullptr] = add_material(scene);
 
