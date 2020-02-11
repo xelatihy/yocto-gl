@@ -36,8 +36,8 @@ void my_keycallback(
   if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
-    set_camera_frame(app->glcamera, app->camera.frame);
-    set_camera_lens(
+    set_frame(app->glcamera, app->camera.frame);
+    set_lens(
         app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
   }
 

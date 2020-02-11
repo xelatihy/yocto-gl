@@ -239,41 +239,45 @@ struct draw_glscene_params {
 void init_glscene(opengl_scene* scene);
 bool is_initialized(opengl_scene* scene);
 
-// add camera
-opengl_camera* add_camera(opengl_scene* scene);
-void           set_camera_frame(opengl_camera* camera, const frame3f& frame);
-void           set_camera_lens(
-              opengl_camera* camera, float lens, float aspect, float film);
-void set_camera_nearfar(opengl_camera* camera, float near, float far);
+// add scene elements
+opengl_camera*   add_camera(opengl_scene* scene);
+opengl_texture*  add_texture(opengl_scene* scene);
+opengl_material* add_material(opengl_scene* scene);
+opengl_shape*    add_shape(opengl_scene* scene);
+opengl_instance* add_instance(opengl_scene* scene);
+opengl_object*   add_object(opengl_scene* scene);
+opengl_light*    add_light(opengl_scene* scene);
 
-// add texture
-opengl_texture* add_texture(opengl_scene* scene);
-void            set_texture(
-               opengl_texture* texture, const image<vec4b>& img, bool as_srgb = true);
+// camera properties
+void set_frame(opengl_camera* camera, const frame3f& frame);
+void set_lens(opengl_camera* camera, float lens, float aspect, float film);
+void set_nearfar(opengl_camera* camera, float near, float far);
+
+// texture properties
+void set_texture(
+    opengl_texture* texture, const image<vec4b>& img, bool as_srgb = true);
 void set_texture(
     opengl_texture* texture, const image<vec4f>& img, bool as_float = false);
 
-// add material
-opengl_material* add_material(opengl_scene* scene);
-void             set_emission(opengl_material* material, const vec3f& emission,
-                opengl_texture* emission_txt = nullptr);
-void             set_color(opengl_material* material, const vec3f& color,
-                opengl_texture* color_txt = nullptr);
-void             set_metallic(opengl_material* material, float metallic,
-                opengl_texture* metallic_txt = nullptr);
-void             set_roughness(opengl_material* material, float roughness,
-                opengl_texture* roughness_txt = nullptr);
-void             set_specular(opengl_material* material, float specular,
-                opengl_texture* specular_txt = nullptr);
-void             set_opacity(opengl_material* material, float opacity,
-                opengl_texture* opacity_txt = nullptr);
+// material properties
+void set_emission(opengl_material* material, const vec3f& emission,
+    opengl_texture* emission_txt = nullptr);
+void set_color(opengl_material* material, const vec3f& color,
+    opengl_texture* color_txt = nullptr);
+void set_metallic(opengl_material* material, float metallic,
+    opengl_texture* metallic_txt = nullptr);
+void set_roughness(opengl_material* material, float roughness,
+    opengl_texture* roughness_txt = nullptr);
+void set_specular(opengl_material* material, float specular,
+    opengl_texture* specular_txt = nullptr);
+void set_opacity(opengl_material* material, float opacity,
+    opengl_texture* opacity_txt = nullptr);
 void set_normalmap(opengl_material* material, opengl_texture* normal_txt);
 void set_gltftextures(opengl_material* material, bool gltf_textures);
 
-// add shape
-opengl_shape* add_shape(opengl_scene* scene);
-void          set_points(opengl_shape* shape, const vector<int>& points);
-void          set_lines(opengl_shape* shape, const vector<vec2i>& lines);
+// shape properties
+void set_points(opengl_shape* shape, const vector<int>& points);
+void set_lines(opengl_shape* shape, const vector<vec2i>& lines);
 void set_triangles(opengl_shape* shape, const vector<vec3i>& triangles);
 void set_quads(opengl_shape* shape, const vector<vec4i>& quads);
 void set_positions(opengl_shape* shape, const vector<vec3f>& positions);
@@ -282,25 +286,24 @@ void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords);
 void set_colors(opengl_shape* shape, const vector<vec4f>& colors);
 void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents);
 
-// add instance
-opengl_instance* add_instance(opengl_scene* scene);
+// instance properties
 void set_frames(opengl_instance* instance, const vector<frame3f>& frames);
 
-// add object
-opengl_object* add_object(opengl_scene* scene);
-void           set_frame(opengl_object* object, const frame3f& frame);
-void           set_shape(opengl_object* object, opengl_shape* shape);
-void           set_material(opengl_object* object, opengl_material* material);
-void           set_instance(opengl_object* object, opengl_instance* instance);
-void           set_hidden(opengl_object* object, bool hidden);
-void           set_highlighted(opengl_object* object, bool highlighted);
+// object properties
+void set_frame(opengl_object* object, const frame3f& frame);
+void set_shape(opengl_object* object, opengl_shape* shape);
+void set_material(opengl_object* object, opengl_material* material);
+void set_instance(opengl_object* object, opengl_instance* instance);
+void set_hidden(opengl_object* object, bool hidden);
+void set_highlighted(opengl_object* object, bool highlighted);
 
-// add light
-opengl_light* add_light(opengl_scene* scene);
-void          set_light(opengl_light* light, const vec3f& position,
-             const vec3f& emission, bool directional);
-void          clear_lights(opengl_scene* scene);
-bool          has_max_lights(opengl_scene* scene);
+// light properties
+void set_light(opengl_light* light, const vec3f& position,
+    const vec3f& emission, bool directional);
+
+// light size
+void clear_lights(opengl_scene* scene);
+bool has_max_lights(opengl_scene* scene);
 
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene* state, const vec4i& viewport,

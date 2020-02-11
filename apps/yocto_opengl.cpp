@@ -758,16 +758,15 @@ bool is_initialized(const opengl_scene* glscene) {
 opengl_camera* add_camera(opengl_scene* scene) {
   return scene->cameras.emplace_back(new opengl_camera{});
 }
-void set_camera_frame(opengl_camera* camera, const frame3f& frame) {
+void set_frame(opengl_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_camera_lens(
-    opengl_camera* camera, float lens, float aspect, float film) {
+void set_lens(opengl_camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_camera_nearfar(opengl_camera* camera, float near, float far) {
+void set_nearfar(opengl_camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }

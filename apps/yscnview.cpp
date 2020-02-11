@@ -184,9 +184,9 @@ void init_scene(shared_ptr<app_state> app) {
   // camera
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(glscene);
-    set_camera_frame(camera, iocamera->frame);
-    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_nearfar(camera, 0.001, 10000);
+    set_frame(camera, iocamera->frame);
+    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_nearfar(camera, 0.001, 10000);
   }
 
   // textures
@@ -519,9 +519,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       auto camera   = app->glscene->cameras[app->selected_camera];
       auto iocamera = app->ioscene->cameras[app->selected_camera];
-      set_camera_frame(camera, iocamera->frame);
-      set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
-      set_camera_nearfar(camera, 0.001, 10000);
+      set_frame(camera, iocamera->frame);
+      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+      set_nearfar(camera, 0.001, 10000);
     }
     end_glheader(win);
   }
@@ -742,7 +742,7 @@ void run_app(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_camera_frame(
+      set_frame(
           app->glscene->cameras[app->drawgl_prms.camera], iocamera->frame);
     }
 
