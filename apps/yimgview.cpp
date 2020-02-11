@@ -63,12 +63,17 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage   = {};
+  opengl_image*        glimage   = new opengl_image{};
   draw_glimage_params glparams  = {};
   bool                glupdated = true;
 
   // error
   string error = "";
+
+  // cleanup
+  app_state() {
+    if(glimage) delete glimage;
+  }
 };
 
 // app states

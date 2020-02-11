@@ -50,8 +50,13 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage  = {};
+  opengl_image*        glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
+
+  // cleanup
+  app_state() {
+    if(glimage) delete glimage;
+  }
 };
 
 // Simple parallel for used since our target platforms do not yet support

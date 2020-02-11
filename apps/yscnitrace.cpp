@@ -64,7 +64,7 @@ struct app_state {
   float                   exposure = 0;
 
   // view scene
-  opengl_image        glimage  = {};
+  opengl_image*        glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // editing
@@ -92,6 +92,7 @@ struct app_state {
   ~app_state() {
     render_stop = true;
     if (render_future.valid()) render_future.get();
+    if(glimage) delete glimage;
   }
 };
 
