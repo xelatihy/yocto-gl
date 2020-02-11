@@ -99,14 +99,26 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
+  vector<app_state*> states   = {};
   int                           selected = -1;
 
   // loading
-  deque<future<shared_ptr<app_state>>> loaders = {};
+  deque<future<app_state*>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
+
+  // cleanup
+  ~app_states() {
+    while(!loaders.empty()) {
+      try {
+        states.push_back(loaders.front().get());
+      } catch(std::exception&) {
+      }
+      loaders.pop_front();
+    }
+    for(auto app : states) delete app;
+  }
 };
 
 // Compute animation range
@@ -123,10 +135,10 @@ vec2f compute_animation_range(
   return range;
 }
 
-void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
+void load_scene_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
-        auto app         = make_shared<app_state>();
+      async(launch::async, [apps, filename]() -> app_state* {
+        auto app         = make_unique<app_state>();
         app->filename    = filename;
         app->imagename   = replace_extension(filename, ".png");
         app->outname     = replace_extension(filename, ".edited.yaml");
@@ -141,7 +153,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->selected_material    = app->ioscene->shapes.empty() ? -1 : 0;
         app->selected_texture     = app->ioscene->textures.empty() ? -1 : 0;
         app->selected_environment = app->ioscene->environments.empty() ? -1 : 0;
-        return app;
+        return app.release();
       }));
 }
 
@@ -175,7 +187,7 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
   }
 }
 
-void init_scene(shared_ptr<app_state> app) {
+void init_scene(app_state* app) {
   auto  glscene      = app->glscene;
   auto  ioscene      = app->ioscene;
   auto& texture_map  = app->texture_map;
@@ -266,7 +278,7 @@ void init_scene(shared_ptr<app_state> app) {
 }
 
 bool draw_glwidgets_camera(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto iocamera = app->ioscene->cameras[id];
   auto edited   = 0;
   edited += (int)draw_gltextinput(win, "name", iocamera->name);
@@ -293,7 +305,7 @@ bool draw_glwidgets_camera(
 
 /// Visit struct elements.
 bool draw_glwidgets_texture(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto iotexture = app->ioscene->textures[id];
   draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
@@ -306,7 +318,7 @@ bool draw_glwidgets_texture(
 }
 
 bool draw_glwidgets_material(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto iomaterial = app->ioscene->materials[id];
   auto edited     = 0;
   edited += draw_gltextinput(win, "name", iomaterial->name);
@@ -346,7 +358,7 @@ bool draw_glwidgets_material(
 }
 
 bool draw_glwidgets_shape(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto ioshape = app->ioscene->shapes[id];
   auto edited  = 0;
   edited += draw_gltextinput(win, "name", ioshape->name);
@@ -365,7 +377,7 @@ bool draw_glwidgets_shape(
 }
 
 bool draw_glwidgets_instance(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto ioinstance = app->ioscene->instances[id];
   auto edited     = 0;
   edited += draw_gltextinput(win, "name", ioinstance->name);
@@ -375,7 +387,7 @@ bool draw_glwidgets_instance(
 }
 
 bool draw_glwidgets_object(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto ioobject = app->ioscene->objects[id];
   auto edited   = 0;
   edited += draw_gltextinput(win, "name", ioobject->name);
@@ -394,7 +406,7 @@ bool draw_glwidgets_object(
 }
 
 bool draw_glwidgets_subdiv(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto iosubdiv = app->ioscene->subdivs[id];
   auto edited   = 0;
   edited += draw_gltextinput(win, "name", iosubdiv->name);
@@ -423,7 +435,7 @@ bool draw_glwidgets_subdiv(
 }
 
 bool draw_glwidgets_environment(
-    const opengl_window& win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, app_state* app, int id) {
   auto ioenvironment = app->ioscene->environments[id];
   auto edited        = 0;
   edited += draw_gltextinput(win, "name", ioenvironment->name);
@@ -438,7 +450,7 @@ bool draw_glwidgets_environment(
 }
 
 // draw with shading
-void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
+void draw_glwidgets(const opengl_window& win, app_states* apps,
     const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   auto        app = (!apps->states.empty() && apps->selected >= 0)
@@ -464,6 +476,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)app)) {
+    delete apps->states[apps->selected];
     apps->states.erase(apps->states.begin() + apps->selected);
     apps->selected = apps->states.empty() ? -1 : 0;
     app            = (!apps->states.empty() && apps->selected >= 0)
@@ -646,7 +659,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
 }
 
 // draw with shading
-void draw(const opengl_window& win, shared_ptr<app_states> apps,
+void draw(const opengl_window& win, app_states* apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
@@ -656,8 +669,8 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
 }
 
 // update
-void update(const opengl_window& win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
+void update(const opengl_window& win, app_states* apps) {
+  auto is_ready = [](const future<app_state*>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
@@ -680,7 +693,8 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
 
 void run_app(int argc, const char* argv[]) {
   // initialize app
-  auto apps       = make_shared<app_states>();
+  auto apps_      = make_unique<app_states>();
+  auto apps       = apps_.get();
   auto filenames  = vector<string>{};
   auto noparallel = false;
 
