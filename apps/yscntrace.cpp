@@ -198,7 +198,7 @@ void run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render           = trace_samples(state.get(), scene.get(), nsamples, params);
+    render = trace_samples(state.get(), scene.get(), nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

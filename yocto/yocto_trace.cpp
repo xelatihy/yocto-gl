@@ -31,8 +31,8 @@
 #include <atomic>
 #include <deque>
 #include <future>
-#include <mutex>
 #include <memory>
+#include <mutex>
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -596,8 +596,8 @@ static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
     // auto q1 = - normalize(q) * camera->focus / normalize(q).z;
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   } else {
     auto e   = zero3f;
@@ -605,8 +605,8 @@ static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
         camera->film.y * (image_uv.y - 0.5f), distance};
     auto q1  = -q;
     auto d   = normalize(q1 - e);
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   }
 }
@@ -625,8 +625,8 @@ static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
                                         (lens_uv.y - 0.5f) * camera->aperture,
                                         0};
     auto d = normalize(q1 - e);
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   } else {
     auto scale = 1 / camera->lens;
@@ -635,8 +635,8 @@ static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
     auto q1    = -q;
     auto e     = vec3f{-q.x, -q.y, 0};
     auto d     = normalize(q1 - e);
-    auto ray   = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray   = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   }
 }
@@ -2050,8 +2050,8 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
         auto& instance_ = scene->bvh.primitives[idx];
         auto& frame     = scene->shapes[instance_.x].frames[instance_.y];
         auto  inv_ray   = transform_ray(inverse(frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene->shapes[instance_.x], inv_ray, element, uv,
-                distance, find_any)) {
+        if (intersect_shape_bvh(scene->shapes[instance_.x], inv_ray, element,
+                uv, distance, find_any)) {
           hit      = true;
           shape    = instance_.x;
           instance = instance_.y;
@@ -2929,10 +2929,12 @@ void init_state(
       (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
                 (int)round(params.resolution * camera->film.y / camera->film.x)}
-          : vec2i{(int)round(params.resolution * camera->film.x / camera->film.y),
+          : vec2i{
+                (int)round(params.resolution * camera->film.x / camera->film.y),
                 params.resolution};
   state->_extent = image_size;
-  state->_pixels = vector<trace_pixel>((size_t)image_size.x * (size_t)image_size.y, trace_pixel{});
+  state->_pixels = vector<trace_pixel>(
+      (size_t)image_size.x * (size_t)image_size.y, trace_pixel{});
   auto rng = make_rng(1301081);
   for (auto j = 0; j < state->size().y; j++) {
     for (auto i = 0; i < state->size().x; i++) {
@@ -2978,14 +2980,14 @@ void init_lights(trace_scene* scene) {
     auto environment = scene->environments[idx];
     if (environment->emission == zero3f) continue;
     if (environment->emission_tex >= 0) {
-      auto& texture          = scene->textures[environment->emission_tex];
-      auto  size             = texture_size(texture);
+      auto& texture           = scene->textures[environment->emission_tex];
+      auto  size              = texture_size(texture);
       environment->texels_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
         for (auto i = 0; i < environment->texels_cdf.size(); i++) {
-          auto ij                   = vec2i{i % size.x, i / size.x};
-          auto th                   = (ij.y + 0.5f) * pif / size.y;
-          auto value                = lookup_texture(texture, ij);
+          auto ij                    = vec2i{i % size.x, i / size.x};
+          auto th                    = (ij.y + 0.5f) * pif / size.y;
+          auto value                 = lookup_texture(texture, ij);
           environment->texels_cdf[i] = max(xyz(value)) * sin(th);
           if (i) environment->texels_cdf[i] += environment->texels_cdf[i - 1];
         }
@@ -3037,8 +3039,8 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params) {
       }
     }
   } else {
-    parallel_for(
-        render.size(), [&render, state = state.get(), scene, &params](const vec2i& ij) {
+    parallel_for(render.size(),
+        [&render, state = state.get(), scene, &params](const vec2i& ij) {
           for (auto s = 0; s < params.samples; s++) {
             render[ij] = trace_sample(state, scene, ij, params);
           }
@@ -3082,8 +3084,8 @@ namespace yocto {
 
 // cleanup
 trace_scene::~trace_scene() {
-  for(auto camera : cameras) delete camera;  
-  for(auto environment : environments) delete environment;  
+  for (auto camera : cameras) delete camera;
+  for (auto environment : environments) delete environment;
 }
 
 // Add cameras
@@ -3093,10 +3095,11 @@ trace_camera* add_camera(trace_scene* scene) {
 void set_camera_frame(trace_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_camera_lens(trace_camera* camera, float lens, float aspect, float film) {
-  camera->lens  = lens;
-  camera->film  = aspect >= 1 ? vec2f{film, film / aspect}
-                            : vec2f{film * aspect, film};
+void set_camera_lens(
+    trace_camera* camera, float lens, float aspect, float film) {
+  camera->lens = lens;
+  camera->film = aspect >= 1 ? vec2f{film, film / aspect}
+                             : vec2f{film * aspect, film};
 }
 void set_camera_focus(trace_camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
@@ -3269,10 +3272,12 @@ void clean_shapes(trace_scene* scene) { scene->shapes.clear(); }
 trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
-void set_environment_frame(trace_environment* environment, const frame3f& frame) {
+void set_environment_frame(
+    trace_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_environment_emission(trace_environment* environment, const vec3f& emission, int emission_tex) {
+void set_environment_emission(
+    trace_environment* environment, const vec3f& emission, int emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }

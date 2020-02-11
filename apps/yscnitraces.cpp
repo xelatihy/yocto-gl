@@ -50,13 +50,13 @@ struct app_state {
 
   // scene
   shared_ptr<trace_scene> scene      = nullptr;
-  bool        add_skyenv = false;
+  bool                    add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state>  state    = nullptr;
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  shared_ptr<trace_state> state    = nullptr;
+  image<vec4f>            render   = {};
+  image<vec4f>            display  = {};
+  float                   exposure = 0;
 
   // view scene
   opengl_image        glimage  = {};
@@ -207,7 +207,8 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state.get(), app->scene.get(), ij, app->params);
+        app->render[ij] = trace_sample(
+            app->state.get(), app->scene.get(), ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -250,7 +251,7 @@ void run_app(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app->scene = make_shared<trace_scene>();
+  app->scene         = make_shared<trace_scene>();
   init_scene(app->scene.get(), ioscene.get());
   print_elapsed(convert_timer);
 
@@ -302,9 +303,9 @@ void run_app(int argc, const char* argv[]) {
       win, [app](const opengl_window& win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
-          auto  dolly  = 0.0f;
-          auto  pan    = zero2f;
-          auto  rotate = zero2f;
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
           if (input.mouse_left && !input.modifier_shift)
             rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
           if (input.mouse_right)

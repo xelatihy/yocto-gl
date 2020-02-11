@@ -81,9 +81,10 @@ struct trace_camera;
 struct trace_environment;
 
 // Add cameras
-trace_camera*  add_camera(trace_scene* scene);
-void set_camera_frame(trace_camera* camera, const frame3f& frame);
-void set_camera_lens(trace_camera* camera, float lens, float aspect, float film);
+trace_camera* add_camera(trace_scene* scene);
+void          set_camera_frame(trace_camera* camera, const frame3f& frame);
+void          set_camera_lens(
+             trace_camera* camera, float lens, float aspect, float film);
 void set_camera_focus(trace_camera* camera, float aperture, float focus);
 void clear_cameras(trace_scene* scene);
 
@@ -140,8 +141,10 @@ void clear_shapes(trace_scene* scene);
 
 // Add environment
 trace_environment* add_environment(trace_scene* scene);
-void set_environment_frame(trace_environment* environment, const frame3f& frame);
-void set_environment_emission(trace_environment* environment, const vec3f& emission, int emission_map = -1);
+void               set_environment_frame(
+                  trace_environment* environment, const frame3f& frame);
+void set_environment_emission(trace_environment* environment,
+    const vec3f& emission, int emission_map = -1);
 void clear_environments(trace_scene* scene);
 
 // Trace state
@@ -391,8 +394,8 @@ struct trace_light {
 // updates node transformations only if defined.
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
-  vector<trace_shape>       shapes       = {};
-  vector<trace_texture>     textures     = {};
+  vector<trace_shape>        shapes       = {};
+  vector<trace_texture>      textures     = {};
   vector<trace_environment*> environments = {};
 
   // computed properties
