@@ -317,16 +317,16 @@ void load_scene_async(app_states* apps, const string& filename) {
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
   if(!iocamera) return false;
   auto edited   = 0;
-  edited += (int)draw_gltextinput(win, "name", iocamera->name);
-  edited += (int)draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
-  edited += (int)draw_glslider(win, "frame.y", iocamera->frame.y, -1, 1);
-  edited += (int)draw_glslider(win, "frame.z", iocamera->frame.z, -1, 1);
-  edited += (int)draw_glslider(win, "frame.o", iocamera->frame.o, -10, 10);
-  edited += (int)draw_glcheckbox(win, "ortho", iocamera->orthographic);
-  edited += (int)draw_glslider(win, "lens", iocamera->lens, 0.01f, 1);
-  edited += (int)draw_glslider(win, "film", iocamera->film, 0.01f, 0.1f);
-  edited += (int)draw_glslider(win, "focus", iocamera->focus, 0.01f, 1000);
-  edited += (int)draw_glslider(win, "aperture", iocamera->aperture, 0, 5);
+  draw_gllabel(win, "name", iocamera->name);
+  edited += draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", iocamera->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", iocamera->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", iocamera->frame.o, -10, 10);
+  edited += draw_glcheckbox(win, "ortho", iocamera->orthographic);
+  edited += draw_glslider(win, "lens", iocamera->lens, 0.01f, 1);
+  edited += draw_glslider(win, "film", iocamera->film, 0.01f, 0.1f);
+  edited += draw_glslider(win, "focus", iocamera->focus, 0.01f, 1000);
+  edited += draw_glslider(win, "aperture", iocamera->aperture, 0, 5);
   auto from         = iocamera->frame.o,
        to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
   auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
@@ -342,7 +342,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_camera* 
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
   if(!iotexture) return false;
   auto edited    = 0;
-  edited += draw_gltextinput(win, "name", iotexture->name);
+  draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
       to_string(iotexture->hdr.size().x) + " x " +
           to_string(iotexture->hdr.size().y));
@@ -356,7 +356,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_texture*
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_material* iomaterial) {
   if(!iomaterial) return false;
   auto edited     = 0;
-  edited += draw_gltextinput(win, "name", iomaterial->name);
+  draw_gllabel(win, "name", iomaterial->name);
   edited += draw_glhdrcoloredit(win, "emission", iomaterial->emission);
   edited += draw_glcoloredit(win, "color", iomaterial->color);
   edited += draw_glslider(win, "specular", iomaterial->specular, 0, 1);
@@ -395,7 +395,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_material
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_shape* ioshape) {
   if(!ioshape) return false;
   auto edited  = 0;
-  edited += draw_gltextinput(win, "name", ioshape->name);
+  draw_gllabel(win, "name", ioshape->name);
   draw_gllabel(win, "points", to_string(ioshape->points.size()));
   draw_gllabel(win, "lines", to_string(ioshape->lines.size()));
   draw_gllabel(win, "triangles", to_string(ioshape->triangles.size()));
@@ -412,7 +412,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_shape* i
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_instance* ioinstance) {
   if(!ioinstance) return false;
   auto edited     = 0;
-  edited += draw_gltextinput(win, "name", ioinstance->name);
+  draw_gllabel(win, "name", ioinstance->name);
   draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
   return edited;
 }
@@ -420,7 +420,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_instance
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_object* ioobject) {
   if(!ioobject) return false;
   auto edited   = 0;
-  edited += draw_gltextinput(win, "name", ioobject->name);
+  draw_gllabel(win, "name", ioobject->name);
   edited += draw_glslider(win, "frame.x", ioobject->frame.x, -1, 1);
   edited += draw_glslider(win, "frame.y", ioobject->frame.y, -1, 1);
   edited += draw_glslider(win, "frame.z", ioobject->frame.z, -1, 1);
@@ -437,7 +437,7 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_object* 
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
   if(!iosubdiv) return false;
   auto edited   = 0;
-  edited += draw_gltextinput(win, "name", iosubdiv->name);
+  draw_gllabel(win, "name", iosubdiv->name);
   draw_gllabel(win, "points", to_string(iosubdiv->points.size()));
   draw_gllabel(win, "lines", to_string(iosubdiv->lines.size()));
   draw_gllabel(win, "triangles", to_string(iosubdiv->triangles.size()));
@@ -452,14 +452,13 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* 
   draw_gllabel(win, "color", to_string(iosubdiv->colors.size()));
   draw_gllabel(win, "radius", to_string(iosubdiv->radius.size()));
   draw_gllabel(win, "tangsp", to_string(iosubdiv->tangents.size()));
-  // TODO: load
   return edited;
 }
 
 bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_environment* ioenvironment) {
   if(!ioenvironment) return false;
   auto edited        = 0;
-  edited += draw_gltextinput(win, "name", ioenvironment->name);
+  draw_gllabel(win, "name", ioenvironment->name);
   edited += draw_glslider(win, "frame.x", ioenvironment->frame.x, -1, 1);
   edited += draw_glslider(win, "frame.y", ioenvironment->frame.y, -1, 1);
   edited += draw_glslider(win, "frame.z", ioenvironment->frame.z, -1, 1);
