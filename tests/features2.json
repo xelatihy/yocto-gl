@@ -133,7 +133,7 @@
       "emission_tex": "environments/sky.hdr"
     }
   ],
-  "shapes": [
+  "objects": [
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",

@@ -69,6 +69,8 @@ struct app_state {
 
   // editing
   int                                  selected_camera      = -1;
+  int                                  selected_object      = -1;
+  int                                  selected_instance    = -1;
   int                                  selected_shape       = -1;
   int                                  selected_subdiv      = -1;
   int                                  selected_material    = -1;
@@ -133,8 +135,9 @@ void init_scene(shared_ptr<app_state> app) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  for (auto ioshape : ioscene->shapes) {
-    auto id = add_shape(scene);
+  for (auto ioobject : ioscene->objects) {
+    auto id      = add_shape(scene);
+    auto ioshape = ioobject->shape;
     set_shape_points(scene, id, ioshape->points);
     set_shape_lines(scene, id, ioshape->lines);
     set_shape_triangles(scene, id, ioshape->triangles);
@@ -145,8 +148,12 @@ void init_scene(shared_ptr<app_state> app) {
     set_shape_colors(scene, id, ioshape->colors);
     set_shape_radius(scene, id, ioshape->radius);
     set_shape_tangents(scene, id, ioshape->tangents);
-    set_shape_frames(scene, id, ioshape->instances, ioshape->frame);
-    auto iomaterial = ioshape->material;
+    auto ioinstances = ioobject->instance;
+    if (ioinstances)
+      set_shape_frames(scene, id, ioinstances->frames, ioobject->frame);
+    else
+      set_shape_frame(scene, id, ioobject->frame);
+    auto iomaterial = ioobject->material;
     set_shape_emission(scene, id, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
     set_shape_color(
@@ -360,10 +367,6 @@ bool draw_glwidgets_shape(
   auto ioshape = app->ioscene->shapes[id];
   auto edited  = 0;
   edited += draw_gltextinput(win, "name", ioshape->name);
-  edited += draw_glslider(win, "frame.x", ioshape->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame.y", ioshape->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame.z", ioshape->frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", ioshape->frame.o, -10, 10);
   draw_gllabel(win, "points", to_string(ioshape->points.size()));
   draw_gllabel(win, "lines", to_string(ioshape->lines.size()));
   draw_gllabel(win, "triangles", to_string(ioshape->triangles.size()));
@@ -374,7 +377,30 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "color", to_string(ioshape->colors.size()));
   draw_gllabel(win, "radius", to_string(ioshape->radius.size()));
   draw_gllabel(win, "tangsp", to_string(ioshape->tangents.size()));
-  draw_gllabel(win, "instances", to_string(ioshape->instances.size()));
+  return edited;
+}
+
+bool draw_glwidgets_instance(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
+  auto ioinstance = app->ioscene->instances[id];
+  auto edited  = 0;
+  edited += draw_gltextinput(win, "name", ioinstance->name);
+  draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
+  return edited;
+}
+
+bool draw_glwidgets_object(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
+  auto ioobject = app->ioscene->objects[id];
+  auto edited  = 0;
+  edited += draw_gltextinput(win, "name", ioobject->name);
+  edited += draw_glslider(win, "frame.x", ioobject->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", ioobject->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", ioobject->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
+  edited += draw_glcombobox(win, "shape", ioobject->shape, app->ioscene->shapes);
+  edited += draw_glcombobox(win, "material", ioobject->material, app->ioscene->materials);
+  edited += draw_glcombobox(win, "instance", ioobject->instance, app->ioscene->instances);
   return edited;
 }
 
@@ -556,6 +582,30 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
+  if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
+    draw_glcombobox(win, "object##2", app->selected_object, app->ioscene->objects);
+    if (draw_glwidgets_shape(win, app, app->selected_object)) {
+      stop_display(app);
+      auto ioobject = app->ioscene->shapes[app->selected_shape];
+      // TODO: update editing
+      // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
+      // TODO: maybe we should update lights for this
+      reset_display(app);
+    }
+    end_glheader(win);
+  }
+  if (app && !app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
+    draw_glcombobox(win, "instance##2", app->selected_instance, app->ioscene->instances);
+    if (draw_glwidgets_shape(win, app, app->selected_instance)) {
+      stop_display(app);
+      auto ioinstance = app->ioscene->instances[app->selected_instance];
+      // TODO: update editing
+      // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
+      // TODO: maybe we should update lights for this
+      reset_display(app);
+    }
+    end_glheader(win);
+  }
   if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
@@ -571,8 +621,6 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_shape_colors(app->scene, app->selected_shape, ioshape->colors);
       set_shape_radius(app->scene, app->selected_shape, ioshape->radius);
       set_shape_tangents(app->scene, app->selected_shape, ioshape->tangents);
-      set_shape_frames(
-          app->scene, app->selected_shape, ioshape->instances, ioshape->frame);
       update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);

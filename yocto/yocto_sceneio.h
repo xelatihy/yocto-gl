@@ -131,9 +131,6 @@ struct sceneio_material {
 struct sceneio_shape {
   // shape data
   string            name      = "";
-  frame3f           frame     = identity3x4f;
-  vector<frame3f>   instances = {};
-  sceneio_material* material  = nullptr;
 
   // primitives
   vector<int>   points    = {};

@@ -122,7 +122,7 @@
       ]
     }
   ],
-  "shapes": [
+  "objects": [
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",
