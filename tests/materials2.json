@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -135,12 +135,12 @@
   ],
   "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "material": "materials/floor.yaml"
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/largearealight1.yaml",
+      "name": "shapes/largearealight1.json",
       "shape": "shapes/largearealight1.ply",
       "lookat": [
         -0.8,
@@ -153,10 +153,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight1.yaml"
+      "material": "materials/largearealight1.json"
     },
     {
-      "name": "shapes/largearealight2.yaml",
+      "name": "shapes/largearealight2.json",
       "shape": "shapes/largearealight2.ply",
       "lookat": [
         0.8,
@@ -169,10 +169,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight2.yaml"
+      "material": "materials/largearealight2.json"
     },
     {
-      "name": "shapes/sphere-glass-sharp.yaml",
+      "name": "shapes/sphere-glass-sharp.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -188,10 +188,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-glass-sharp.yaml"
+      "material": "materials/sphere-glass-sharp.json"
     },
     {
-      "name": "shapes/sphere-glass-rough.yaml",
+      "name": "shapes/sphere-glass-rough.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -207,10 +207,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-glass-rough.yaml"
+      "material": "materials/sphere-glass-rough.json"
     },
     {
-      "name": "shapes/sphere-transparent.yaml",
+      "name": "shapes/sphere-transparent.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -226,10 +226,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-transparent.yaml"
+      "material": "materials/sphere-transparent.json"
     },
     {
-      "name": "shapes/sphere-thinglass-sharp.yaml",
+      "name": "shapes/sphere-thinglass-sharp.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -245,10 +245,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-thinglass-sharp.yaml"
+      "material": "materials/sphere-thinglass-sharp.json"
     },
     {
-      "name": "shapes/sphere-thinglass-rough.yaml",
+      "name": "shapes/sphere-thinglass-rough.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -264,10 +264,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-thinglass-rough.yaml"
+      "material": "materials/sphere-thinglass-rough.json"
     },
     {
-      "name": "shapes/bunny-glass-sharp.yaml",
+      "name": "shapes/bunny-glass-sharp.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -283,10 +283,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-glass-sharp.yaml"
+      "material": "materials/bunny-glass-sharp.json"
     },
     {
-      "name": "shapes/bunny-glass-rough.yaml",
+      "name": "shapes/bunny-glass-rough.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -302,10 +302,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-glass-rough.yaml"
+      "material": "materials/bunny-glass-rough.json"
     },
     {
-      "name": "shapes/bunny-transparent.yaml",
+      "name": "shapes/bunny-transparent.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -321,10 +321,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-transparent.yaml"
+      "material": "materials/bunny-transparent.json"
     },
     {
-      "name": "shapes/bunny-thinglass-sharp.yaml",
+      "name": "shapes/bunny-thinglass-sharp.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -340,10 +340,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-thinglass-sharp.yaml"
+      "material": "materials/bunny-thinglass-sharp.json"
     },
     {
-      "name": "shapes/bunny-thinglass-rough.yaml",
+      "name": "shapes/bunny-thinglass-rough.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -359,12 +359,12 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-thinglass-rough.yaml"
+      "material": "materials/bunny-thinglass-rough.json"
     }
   ],
   "materials": [
     {
-      "name": "materials/floor.yaml",
+      "name": "materials/floor.json",
       "color": [
         0.7,
         0.7,
@@ -373,7 +373,7 @@
       "color_tex": "textures/floor.png"
     },
     {
-      "name": "materials/largearealight1.yaml",
+      "name": "materials/largearealight1.json",
       "emission": [
         10,
         10,
@@ -381,7 +381,7 @@
       ]
     },
     {
-      "name": "materials/largearealight2.yaml",
+      "name": "materials/largearealight2.json",
       "emission": [
         10,
         10,
@@ -389,7 +389,7 @@
       ]
     },
     {
-      "name": "materials/sphere-glass-sharp.yaml",
+      "name": "materials/sphere-glass-sharp.json",
       "color": [
         1,
         1,
@@ -401,7 +401,7 @@
       "thin": false
     },
     {
-      "name": "materials/sphere-glass-rough.yaml",
+      "name": "materials/sphere-glass-rough.json",
       "specular": 1,
       "color": [
         1,
@@ -413,7 +413,7 @@
       "thin": false
     },
     {
-      "name": "materials/sphere-transparent.yaml",
+      "name": "materials/sphere-transparent.json",
       "color": [
         0.7,
         0.5,
@@ -423,7 +423,7 @@
       "opacity": 0.2
     },
     {
-      "name": "materials/sphere-thinglass-sharp.yaml",
+      "name": "materials/sphere-thinglass-sharp.json",
       "specular": 1,
       "color": [
         1,
@@ -435,7 +435,7 @@
       "thin": true
     },
     {
-      "name": "materials/sphere-thinglass-rough.yaml",
+      "name": "materials/sphere-thinglass-rough.json",
       "specular": 1,
       "color": [
         1,
@@ -447,7 +447,7 @@
       "thin": true
     },
     {
-      "name": "materials/bunny-glass-sharp.yaml",
+      "name": "materials/bunny-glass-sharp.json",
       "color": [
         1,
         1,
@@ -459,7 +459,7 @@
       "thin": false
     },
     {
-      "name": "materials/bunny-glass-rough.yaml",
+      "name": "materials/bunny-glass-rough.json",
       "specular": 1,
       "color": [
         1,
@@ -471,7 +471,7 @@
       "thin": false
     },
     {
-      "name": "materials/bunny-transparent.yaml",
+      "name": "materials/bunny-transparent.json",
       "color": [
         0.7,
         0.5,
@@ -481,7 +481,7 @@
       "opacity": 0.2
     },
     {
-      "name": "materials/bunny-thinglass-sharp.yaml",
+      "name": "materials/bunny-thinglass-sharp.json",
       "specular": 1,
       "color": [
         1,
@@ -493,7 +493,7 @@
       "thin": true
     },
     {
-      "name": "materials/bunny-thinglass-rough.yaml",
+      "name": "materials/bunny-thinglass-rough.json",
       "specular": 1,
       "color": [
         1,

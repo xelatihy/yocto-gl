@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sunsky.yaml",
+      "name": "environments/sunsky.json",
       "emission": [
         1,
         1,
@@ -135,12 +135,12 @@
   ],
   "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "material": "materials/floor.yaml"
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/bunny-uvgrid.yaml",
+      "name": "shapes/bunny-uvgrid.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -156,10 +156,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-uvgrid.yaml"
+      "material": "materials/bunny-uvgrid.json"
     },
     {
-      "name": "shapes/sphere-plastic-sharp.yaml",
+      "name": "shapes/sphere-plastic-sharp.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -175,10 +175,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-sharp.yaml"
+      "material": "materials/sphere-plastic-sharp.json"
     },
     {
-      "name": "shapes/bunny-metal-rough.yaml",
+      "name": "shapes/bunny-metal-rough.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -194,10 +194,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-rough.yaml"
+      "material": "materials/bunny-metal-rough.json"
     },
     {
-      "name": "shapes/sphere-plastic-rough.yaml",
+      "name": "shapes/sphere-plastic-rough.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -213,10 +213,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-rough.yaml"
+      "material": "materials/sphere-plastic-rough.json"
     },
     {
-      "name": "shapes/bunny-metal-sharp.yaml",
+      "name": "shapes/bunny-metal-sharp.json",
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -232,12 +232,12 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-sharp.yaml"
+      "material": "materials/bunny-metal-sharp.json"
     }
   ],
   "materials": [
     {
-      "name": "materials/floor.yaml",
+      "name": "materials/floor.json",
       "color": [
         0.7,
         0.7,
@@ -246,7 +246,7 @@
       "color_tex": "textures/floor.png"
     },
     {
-      "name": "materials/bunny-uvgrid.yaml",
+      "name": "materials/bunny-uvgrid.json",
       "specular": 1,
       "color": [
         1,
@@ -257,7 +257,7 @@
       "color_tex": "textures/uvgrid.png"
     },
     {
-      "name": "materials/sphere-plastic-sharp.yaml",
+      "name": "materials/sphere-plastic-sharp.json",
       "specular": 1,
       "color": [
         0.5,
@@ -267,7 +267,7 @@
       "roughness": 0.01
     },
     {
-      "name": "materials/bunny-metal-rough.yaml",
+      "name": "materials/bunny-metal-rough.json",
       "color": [
         0.66,
         0.45,
@@ -277,7 +277,7 @@
       "roughness": 0.2
     },
     {
-      "name": "materials/sphere-plastic-rough.yaml",
+      "name": "materials/sphere-plastic-rough.json",
       "specular": 1,
       "color": [
         0.5,
@@ -287,7 +287,7 @@
       "roughness": 0.2
     },
     {
-      "name": "materials/bunny-metal-sharp.yaml",
+      "name": "materials/bunny-metal-sharp.json",
       "color": [
         0.7,
         0.7,

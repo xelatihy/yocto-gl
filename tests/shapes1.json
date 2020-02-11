@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -135,12 +135,12 @@
   ],
   "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "material": "materials/floor.yaml"
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/arealight1.yaml",
+      "name": "shapes/arealight1.json",
       "shape": "shapes/arealight1.ply",
       "lookat": [
         -0.4,
@@ -153,10 +153,10 @@
         1,
         0
       ],
-      "material": "materials/arealight1.yaml"
+      "material": "materials/arealight1.json"
     },
     {
-      "name": "shapes/arealight2.yaml",
+      "name": "shapes/arealight2.json",
       "shape": "shapes/arealight2.ply",
       "lookat": [
         0.4,
@@ -169,10 +169,10 @@
         1,
         0
       ],
-      "material": "materials/arealight2.yaml"
+      "material": "materials/arealight2.json"
     },
     {
-      "name": "shapes/sphere-uvgrid.yaml",
+      "name": "shapes/sphere-uvgrid.json",
       "shape": "shapes/sphere.ply",
       "frame": [
         1,
@@ -188,10 +188,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-uvgrid.yaml"
+      "material": "materials/sphere-uvgrid.json"
     },
     {
-      "name": "shapes/uvsphere-flipcap-uvgrid.yaml",
+      "name": "shapes/uvsphere-flipcap-uvgrid.json",
       "shape": "shapes/uvsphere-flipcap.ply",
       "frame": [
         1,
@@ -207,10 +207,10 @@
         0,
         0
       ],
-      "material": "materials/uvsphere-flipcap-uvgrid.yaml"
+      "material": "materials/uvsphere-flipcap-uvgrid.json"
     },
     {
-      "name": "shapes/disk-uvgrid.yaml",
+      "name": "shapes/disk-uvgrid.json",
       "shape": "shapes/disk.ply",
       "frame": [
         1,
@@ -226,10 +226,10 @@
         0,
         0
       ],
-      "material": "materials/disk-uvgrid.yaml"
+      "material": "materials/disk-uvgrid.json"
     },
     {
-      "name": "shapes/uvcylinder-uvgrid.yaml",
+      "name": "shapes/uvcylinder-uvgrid.json",
       "shape": "shapes/uvcylinder.ply",
       "frame": [
         1,
@@ -245,10 +245,10 @@
         0,
         0
       ],
-      "material": "materials/uvcylinder-uvgrid.yaml"
+      "material": "materials/uvcylinder-uvgrid.json"
     },
     {
-      "name": "shapes/cube-uvgrid.yaml",
+      "name": "shapes/cube-uvgrid.json",
       "shape": "shapes/cube.ply",
       "frame": [
         1,
@@ -264,12 +264,12 @@
         0,
         0
       ],
-      "material": "materials/cube-uvgrid.yaml"
+      "material": "materials/cube-uvgrid.json"
     }
   ],
   "materials": [
     {
-      "name": "materials/floor.yaml",
+      "name": "materials/floor.json",
       "color": [
         0.7,
         0.7,
@@ -278,7 +278,7 @@
       "color_tex": "textures/floor.png"
     },
     {
-      "name": "materials/arealight1.yaml",
+      "name": "materials/arealight1.json",
       "emission": [
         20,
         20,
@@ -286,7 +286,7 @@
       ]
     },
     {
-      "name": "materials/arealight2.yaml",
+      "name": "materials/arealight2.json",
       "emission": [
         20,
         20,
@@ -294,7 +294,7 @@
       ]
     },
     {
-      "name": "materials/sphere-uvgrid.yaml",
+      "name": "materials/sphere-uvgrid.json",
       "specular": 1,
       "color": [
         1,
@@ -305,7 +305,7 @@
       "color_tex": "textures/uvgrid.png"
     },
     {
-      "name": "materials/uvsphere-flipcap-uvgrid.yaml",
+      "name": "materials/uvsphere-flipcap-uvgrid.json",
       "specular": 1,
       "color": [
         1,
@@ -316,7 +316,7 @@
       "color_tex": "textures/uvgrid.png"
     },
     {
-      "name": "materials/disk-uvgrid.yaml",
+      "name": "materials/disk-uvgrid.json",
       "specular": 1,
       "color": [
         1,
@@ -327,7 +327,7 @@
       "color_tex": "textures/uvgrid.png"
     },
     {
-      "name": "materials/uvcylinder-uvgrid.yaml",
+      "name": "materials/uvcylinder-uvgrid.json",
       "specular": 1,
       "color": [
         1,
@@ -338,7 +338,7 @@
       "color_tex": "textures/uvgrid.png"
     },
     {
-      "name": "materials/cube-uvgrid.yaml",
+      "name": "materials/cube-uvgrid.json",
       "specular": 1,
       "color": [
         1,
