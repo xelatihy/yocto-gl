@@ -829,6 +829,10 @@ opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
 }
 
 opengl_scene::~opengl_scene() {
+  for(auto camera : _cameras) delete camera;
+  for(auto texture : _textures) delete texture;
+  for(auto shape : _shapes) delete shape;
+  for(auto light : _lights) delete light;
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
@@ -866,58 +870,21 @@ void set_camera_nearfar(opengl_camera* camera, float near, float far) {
 }
 
 // add texture
-int add_texture(opengl_scene* scene) {
-  scene->_textures.emplace_back();
-  return (int)scene->_textures.size() - 1;
+opengl_texture* add_texture(opengl_scene* scene) {
+  return scene->_textures.emplace_back(new opengl_texture{});
 }
 
-int add_texture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
+void set_texture(opengl_texture* texture, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto& texture = scene->_textures.emplace_back();
-  glGenTextures(1, &texture.texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
-      img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
-  glTexParameteri(
-      GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  texture.size     = img.size();
-  texture.is_srgb  = as_srgb;
-  texture.is_float = false;
-  assert(glGetError() == GL_NO_ERROR);
-  return (int)scene->_textures.size() - 1;
-}
-int add_texture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
-  assert(glGetError() == GL_NO_ERROR);
-  auto& texture = scene->_textures.emplace_back();
-  glGenTextures(1, &texture.texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
-      img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
-  glTexParameteri(
-      GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  texture.size     = img.size();
-  texture.is_srgb  = false;
-  texture.is_float = as_float;
-  assert(glGetError() == GL_NO_ERROR);
-  return (int)scene->_textures.size() - 1;
-}
-void set_texture(
-    opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
-  assert(glGetError() == GL_NO_ERROR);
-  auto& texture = scene->_textures[idx];
   if (img.empty()) {
-    glDeleteTextures(1, &texture.texture_id);
-    texture.texture_id = 0;
+    glDeleteTextures(1, &texture->texture_id);
+    texture->texture_id = 0;
     return;
   }
-  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
-  if (texture.size != img.size() || texture.is_srgb != as_srgb ||
-      texture.is_float == true) {
-    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != img.size() || texture->is_srgb != as_srgb ||
+      texture->is_float == true) {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     glTexParameteri(
@@ -925,30 +892,28 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_UNSIGNED_BYTE, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture.size     = img.size();
-  texture.is_srgb  = as_srgb;
-  texture.is_float = false;
+  texture->size     = img.size();
+  texture->is_srgb  = as_srgb;
+  texture->is_float = false;
   assert(glGetError() == GL_NO_ERROR);
 }
-void set_texture(
-    opengl_scene* scene, int idx, const image<vec4f>& img, bool as_float) {
+void set_texture(opengl_texture* texture, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto& texture = scene->_textures[idx];
   if (img.empty()) {
-    glDeleteTextures(1, &texture.texture_id);
-    texture.texture_id = 0;
+    glDeleteTextures(1, &texture->texture_id);
+    texture->texture_id = 0;
     return;
   }
-  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
-  if (texture.size != img.size() || texture.is_float != as_float ||
-      texture.is_srgb == true) {
-    glGenTextures(1, &texture.texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != img.size() || texture->is_float != as_float ||
+      texture->is_srgb == true) {
+    glGenTextures(1, &texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
     glTexParameteri(
@@ -956,14 +921,14 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_FLOAT, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture.size     = img.size();
-  texture.is_srgb  = false;
-  texture.is_float = as_float;
+  texture->size     = img.size();
+  texture->is_srgb  = false;
+  texture->is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
 }
 
@@ -1074,35 +1039,35 @@ void set_shape_highlighted(opengl_shape* shape, bool highlighted) {
   shape->highlighted = highlighted;
 }
 void set_shape_emission(
-    opengl_shape* shape, const vec3f& emission, int emission_txt) {
+    opengl_shape* shape, const vec3f& emission, opengl_texture* emission_txt) {
   shape->emission     = emission;
   shape->emission_map = emission_txt;
 }
 void set_shape_color(
-    opengl_shape* shape, const vec3f& color, int color_txt) {
+    opengl_shape* shape, const vec3f& color, opengl_texture* color_txt) {
   shape->color     = color;
   shape->color_map = color_txt;
 }
 void set_shape_specular(
-    opengl_shape* shape, float specular, int specular_txt) {
+    opengl_shape* shape, float specular, opengl_texture* specular_txt) {
   shape->specular     = specular;
   shape->specular_map = specular_txt;
 }
 void set_shape_roughness(
-    opengl_shape* shape, float roughness, int roughness_txt) {
+    opengl_shape* shape, float roughness, opengl_texture* roughness_txt) {
   shape->roughness     = roughness;
   shape->roughness_map = roughness_txt;
 }
 void set_shape_opacity(
-    opengl_shape* shape, float opacity, int opacity_txt) {
+    opengl_shape* shape, float opacity, opengl_texture* opacity_txt) {
   shape->opacity = opacity;
 }
 void set_shape_metallic(
-    opengl_shape* shape, float metallic, int metallic_txt) {
+    opengl_shape* shape, float metallic, opengl_texture* metallic_txt) {
   shape->metallic     = metallic;
   shape->metallic_map = metallic_txt;
 }
-void set_shape_normalmap(opengl_shape* shape, int normal_txt) {
+void set_shape_normalmap(opengl_shape* shape, opengl_texture* normal_txt) {
   shape->normal_map = normal_txt;
 }
 void set_shape_gltftextures(opengl_shape* shape, bool gltf_textures) {
@@ -1163,46 +1128,41 @@ void draw_glshape(opengl_scene* glscene, opengl_shape* shape,
       glGetUniformLocation(glscene->program_id, "mat_op"), shape->opacity);
   glUniform1i(glGetUniformLocation(glscene->program_id, "mat_double_sided"),
       (int)params.double_sided);
-  if (shape->emission_map >= 0) {
-    auto& emission_map = glscene->_textures.at(shape->emission_map);
+  if (shape->emission_map) {
     glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, shape->emission_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt"), 0);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 0);
   }
-  if (shape->color_map >= 0) {
-    auto& color_map = glscene->_textures.at(shape->color_map);
+  if (shape->color_map) {
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, color_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, shape->color_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt"), 1);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 0);
   }
-  if (shape->metallic_map >= 0) {
-    auto& specular_map = glscene->_textures.at(shape->specular_map);
+  if (shape->metallic_map) {
     glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, shape->specular_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt"), 2);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 0);
   }
-  if (shape->roughness_map >= 0) {
-    auto& roughness_map = glscene->_textures.at(shape->roughness_map);
+  if (shape->roughness_map) {
     glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, shape->roughness_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt"), 3);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 0);
   }
-  if (shape->normal_map >= 0) {
-    auto& normal_map = glscene->_textures.at(shape->normal_map);
+  if (shape->normal_map) {
     glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, shape->normal_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt"), 4);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 1);
   } else {
