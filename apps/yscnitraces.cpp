@@ -49,11 +49,12 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<trace_scene> scene      = nullptr;
+  sceneio_model* ioscene = new sceneio_model{};
+  trace_scene* scene      = new trace_scene{};
   bool                    add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
+  trace_state* state    = new trace_state{};
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -75,6 +76,9 @@ struct app_state {
     render_stop = true;
     if (render_future.valid()) render_future.get();
     if(glimage) delete glimage;
+    if(scene) delete scene;
+    if(state) delete state;
+    if(ioscene) delete ioscene;
   }
 };
 
@@ -195,7 +199,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state.get(), app->scene.get(), app->params);
+  init_state(app->state, app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -203,7 +207,7 @@ void reset_display(shared_ptr<app_state> app) {
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene.get(), preview_prms);
+  auto preview         = trace_image(app->scene, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -222,7 +226,7 @@ void reset_display(shared_ptr<app_state> app) {
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
         app->render[ij] = trace_sample(
-            app->state.get(), app->scene.get(), ij, app->params);
+            app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -258,28 +262,27 @@ void run_app(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, ioscene.get());
+  load_scene(app->filename, app->ioscene);
   print_elapsed(load_timer);
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app->scene         = make_shared<trace_scene>();
-  init_scene(app->scene.get(), ioscene.get());
+  init_scene(app->scene, app->ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
-  ioscene = nullptr;
+  delete app->ioscene;
+  app->ioscene = nullptr;
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene.get(), app->params);
+  init_bvh(app->scene, app->params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(app->scene.get());
+  init_lights(app->scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
@@ -289,8 +292,7 @@ void run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  app->state = make_shared<trace_state>();
-  init_state(app->state.get(), app->scene.get(), app->params);
+  init_state(app->state, app->scene, app->params);
   app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);
