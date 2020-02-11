@@ -211,7 +211,7 @@ const auto trace_bvh_names        = vector<string>{
 
 // Initialize state of the renderer.
 void init_state(
-    trace_state& state, const trace_scene* scene, const trace_params& params);
+    trace_state* state, const trace_scene* scene, const trace_params& params);
 
 // Initialize lights.
 void init_lights(trace_scene* scene);
@@ -229,12 +229,12 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params);
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(trace_state& state, const trace_scene* scene,
+image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
     int samples, const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.
-vec4f trace_sample(trace_state& state, const trace_scene* scene,
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params);
 
 // Check is a sampler requires lights
@@ -417,10 +417,6 @@ struct trace_pixel {
 
 // State of the image being renderer
 struct trace_state {
-  trace_state() {}
-  trace_state(const vec2i& size, const trace_pixel& value)
-      : _extent{size}, _pixels((size_t)size.x * (size_t)size.y, value) {}
-
   vec2i        size() const { return _extent; }
   trace_pixel& at(const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
 

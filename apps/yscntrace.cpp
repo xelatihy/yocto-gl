@@ -188,9 +188,9 @@ void run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto state = trace_state{};
-  init_state(state, scene.get(), params);
-  auto render = image{state.size(), zero4f};
+  auto state = make_shared<trace_state>();
+  init_state(state.get(), scene.get(), params);
+  auto render = image{state->size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
@@ -198,7 +198,7 @@ void run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render           = trace_samples(state, scene.get(), nsamples, params);
+    render           = trace_samples(state.get(), scene.get(), nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

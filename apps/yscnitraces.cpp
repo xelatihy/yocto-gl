@@ -53,7 +53,7 @@ struct app_state {
   bool        add_skyenv = false;
 
   // rendering state
-  trace_state  state    = {};
+  shared_ptr<trace_state>  state    = nullptr;
   image<vec4f> render   = {};
   image<vec4f> display  = {};
   float        exposure = 0;
@@ -181,9 +181,9 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene.get(), app->params);
-  app->render.resize(app->state.size());
-  app->display.resize(app->state.size());
+  init_state(app->state.get(), app->scene.get(), app->params);
+  app->render.resize(app->state->size());
+  app->display.resize(app->state->size());
 
   // render preview
   auto preview_prms = app->params;
@@ -207,7 +207,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state, app->scene.get(), ij, app->params);
+        app->render[ij] = trace_sample(app->state.get(), app->scene.get(), ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -250,6 +250,7 @@ void run_app(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
+  app->scene = make_shared<trace_scene>();
   init_scene(app->scene.get(), ioscene.get());
   print_elapsed(convert_timer);
 
@@ -273,8 +274,9 @@ void run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  init_state(app->state, app->scene.get(), app->params);
-  app->render  = image{app->state.size(), zero4f};
+  app->state = make_shared<trace_state>();
+  init_state(app->state.get(), app->scene.get(), app->params);
+  app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);
 

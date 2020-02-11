@@ -32,6 +32,7 @@
 #include <deque>
 #include <future>
 #include <mutex>
+#include <memory>
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -2895,11 +2896,11 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(trace_state& state, const trace_scene* scene,
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params) {
   auto  sampler        = get_trace_sampler_func(params);
-  auto& pixel          = state.at(ij);
-  auto  ray            = sample_camera(scene, params.camera, ij, state.size(),
+  auto& pixel          = state->at(ij);
+  auto  ray            = sample_camera(scene, params.camera, ij, state->size(),
       rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
   auto [radiance, hit] = sampler(scene, ray, pixel.rng, params);
   if (!hit) {
@@ -2922,7 +2923,7 @@ vec4f trace_sample(trace_state& state, const trace_scene* scene,
 
 // Init a sequence of random number generators.
 void init_state(
-    trace_state& state, const trace_scene* scene, const trace_params& params) {
+    trace_state* state, const trace_scene* scene, const trace_params& params) {
   auto& camera = scene->cameras[params.camera];
   auto  image_size =
       (camera->film.x > camera->film.y)
@@ -2930,11 +2931,12 @@ void init_state(
                 (int)round(params.resolution * camera->film.y / camera->film.x)}
           : vec2i{(int)round(params.resolution * camera->film.x / camera->film.y),
                 params.resolution};
-  state    = {image_size, trace_pixel{}};
+  state->_extent = image_size;
+  state->_pixels = vector<trace_pixel>((size_t)image_size.x * (size_t)image_size.y, trace_pixel{});
   auto rng = make_rng(1301081);
-  for (auto j = 0; j < state.size().y; j++) {
-    for (auto i = 0; i < state.size().x; i++) {
-      state.at({i, j}).rng = make_rng(
+  for (auto j = 0; j < state->size().y; j++) {
+    for (auto i = 0; i < state->size().x; i++) {
+      state->at({i, j}).rng = make_rng(
           params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
@@ -3022,21 +3024,21 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene* scene, const trace_params& params) {
-  auto state = trace_state{};
-  init_state(state, scene, params);
-  auto render = image{state.size(), zero4f};
+  auto state = std::make_unique<trace_state>();
+  init_state(state.get(), scene, params);
+  auto render = image{state->size(), zero4f};
 
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {
       for (auto i = 0; i < render.size().x; i++) {
         for (auto s = 0; s < params.samples; s++) {
-          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+          render[{i, j}] = trace_sample(state.get(), scene, {i, j}, params);
         }
       }
     }
   } else {
     parallel_for(
-        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
+        render.size(), [&render, state = state.get(), scene, &params](const vec2i& ij) {
           for (auto s = 0; s < params.samples; s++) {
             render[ij] = trace_sample(state, scene, ij, params);
           }
@@ -3047,10 +3049,10 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_samples(trace_state& state, const trace_scene* scene,
+image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
     int samples, const trace_params& params) {
-  auto render         = image<vec4f>{state.size()};
-  auto current_sample = state.at(zero2i).samples;
+  auto render         = image<vec4f>{state->size()};
+  auto current_sample = state->at(zero2i).samples;
   samples             = min(samples, params.samples - current_sample);
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {
@@ -3062,7 +3064,7 @@ image<vec4f> trace_samples(trace_state& state, const trace_scene* scene,
     }
   } else {
     parallel_for(render.size(),
-        [&render, &state, &scene, &params, samples](const vec2i& ij) {
+        [&render, state, scene, &params, samples](const vec2i& ij) {
           for (auto s = 0; s < samples; s++) {
             render[ij] = trace_sample(state, scene, ij, params);
           }
