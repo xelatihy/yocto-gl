@@ -3028,32 +3028,6 @@ struct pbrt_texture {
   string filename = "";
 };
 
-// Pbrt material
-struct pbrt_material {
-  // material parameters
-  string name            = "";
-  vec3f  color           = zero3f;
-  float  specular        = 0;
-  float  metallic        = 0;
-  float  transmission    = 0;
-  float  roughness       = 0;
-  float  ior             = 1.5;
-  float  opacity         = 1;
-  string color_map       = "";
-  string opacity_map     = "";
-  bool   thin            = true;
-  vec3f  volmeanfreepath = zero3f;
-  vec3f  volscatter      = zero3f;
-  float  volscale        = 0.01;
-};
-
-// Pbrt area light
-struct pbrt_arealight {
-  // arealight parameters
-  string name     = "";
-  vec3f  emission = zero3f;
-};
-
 // convert pbrt films
 static void convert_film(pbrt_film* film,
     const pbrt_command& command, bool verbose = false) {
@@ -3179,9 +3153,9 @@ static void convert_texture(pbrt_texture& texture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-static pbrt_material convert_material(pbrt_material& material,
+static void convert_material(pbrt_material* material,
   const pbrt_command& command,
-    const unordered_map<string, pbrt_material>&           material_map,
+    const unordered_map<string, pbrt_material*>&           material_map,
     const unordered_map<string, pbrt_texture>&            texture_map,
     bool                                                  verbose = false) {
   // helpers
@@ -3264,7 +3238,7 @@ static pbrt_material convert_material(pbrt_material& material,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
-  material.name = command.name;
+  material->name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
     auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
@@ -3272,107 +3246,107 @@ static pbrt_material convert_material(pbrt_material& material,
     get_texture(command.values, "Ks", specular, specular_map, vec3f{0.25});
     get_texture(command.values, "Kt", transmission, transmission_map, vec3f{0});
     if (max(transmission) > 0.1) {
-      material.color        = transmission;
-      material.color_map    = transmission_map;
-      material.specular     = 1;
-      material.transmission = 1;
+      material->color        = transmission;
+      material->color_map    = transmission_map;
+      material->specular     = 1;
+      material->transmission = 1;
     } else {
-      material.color     = diffuse;
-      material.color_map = diffuse_map;
-      material.specular  = 1;
+      material->color     = diffuse;
+      material->color_map = diffuse_map;
+      material->specular  = 1;
     }
-    get_scalar(command.values, "opacity", material.opacity, 1);
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    get_roughness(command.values, material.roughness, 0.1f);
+    get_scalar(command.values, "opacity", material->opacity, 1);
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    get_roughness(command.values, material->roughness, 0.1f);
   } else if (command.type == "plastic") {
     get_texture(
-        command.values, "Kd", material.color, material.color_map, vec3f{0.25});
-    get_scalar(command.values, "Ks", material.specular, 0.25);
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    material.roughness = 0.1f;
-    get_roughness(command.values, material.roughness, 0.1);
+        command.values, "Kd", material->color, material->color_map, vec3f{0.25});
+    get_scalar(command.values, "Ks", material->specular, 0.25);
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    material->roughness = 0.1f;
+    get_roughness(command.values, material->roughness, 0.1);
   } else if (command.type == "translucent") {
     get_texture(
-        command.values, "Kd", material.color, material.color_map, vec3f{0.25});
-    get_scalar(command.values, "Ks", material.specular, 0.25);
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    get_roughness(command.values, material.roughness, 0.1);
+        command.values, "Kd", material->color, material->color_map, vec3f{0.25});
+    get_scalar(command.values, "Ks", material->specular, 0.25);
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    get_roughness(command.values, material->roughness, 0.1);
   } else if (command.type == "matte") {
     get_texture(
-        command.values, "Kd", material.color, material.color_map, vec3f{0.5});
+        command.values, "Kd", material->color, material->color_map, vec3f{0.5});
   } else if (command.type == "mirror") {
     get_texture(
-        command.values, "Kr", material.color, material.color_map, vec3f{0.9});
-    material.metallic  = 1;
-    material.roughness = 0;
+        command.values, "Kr", material->color, material->color_map, vec3f{0.9});
+    material->metallic  = 1;
+    material->roughness = 0;
   } else if (command.type == "metal") {
     // get_texture(
-    //     values, "Kr", material.specular, material.specular_map,
+    //     values, "Kr", material->specular, material->specular_map,
     //     vec3f{1});
     auto eta = zero3f, etak = zero3f;
     get_color(command.values, "eta", eta,
         vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
     get_color(command.values, "k", etak,
         vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
-    material.color     = eta_to_reflectivity(eta, etak);
-    material.roughness = 0.01f;
-    get_roughness(command.values, material.roughness, 0.01);
+    material->color     = eta_to_reflectivity(eta, etak);
+    material->roughness = 0.01f;
+    get_roughness(command.values, material->roughness, 0.01);
   } else if (command.type == "substrate") {
     get_texture(
-        command.values, "Kd", material.color, material.color_map, vec3f{0.5});
-    get_scalar(command.values, "Ks", material.specular, 0.5);
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    material.roughness = 0.1f;
-    get_roughness(command.values, material.roughness, 0.1);
+        command.values, "Kd", material->color, material->color_map, vec3f{0.5});
+    get_scalar(command.values, "Ks", material->specular, 0.5);
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    material->roughness = 0.1f;
+    get_roughness(command.values, material->roughness, 0.1);
   } else if (command.type == "glass") {
     // get_texture(
-    //     values, "Kr", material.specular, material.specular_map,
+    //     values, "Kr", material->specular, material->specular_map,
     //     vec3f{1});
-    // get_texture(command.values, "Kt", material.transmission,
-    //     material.transmission_map, vec3f{1});
-    material.color        = {1, 1, 1};
-    material.specular     = 1;
-    material.transmission = 1;
-    material.thin         = false;
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    material.roughness = 0;
-    get_roughness(command.values, material.roughness, 0);
+    // get_texture(command.values, "Kt", material->transmission,
+    //     material->transmission_map, vec3f{1});
+    material->color        = {1, 1, 1};
+    material->specular     = 1;
+    material->transmission = 1;
+    material->thin         = false;
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    material->roughness = 0;
+    get_roughness(command.values, material->roughness, 0);
   } else if (command.type == "hair") {
     get_texture(
-        command.values, "color", material.color, material.color_map, vec3f{0});
-    material.roughness = 1;
+        command.values, "color", material->color, material->color_map, vec3f{0});
+    material->roughness = 1;
     if (verbose) printf("hair material not properly supported\n");
   } else if (command.type == "disney") {
-    get_texture(command.values, "color", material.color, material.color_map,
+    get_texture(command.values, "color", material->color, material->color_map,
         vec3f{0.5});
-    material.roughness = 1;
+    material->roughness = 1;
     if (verbose) printf("disney material not properly supported\n");
   } else if (command.type == "kdsubsurface") {
     get_texture(
-        command.values, "Kd", material.color, material.color_map, vec3f{0.5});
-    get_scalar(command.values, "Kr", material.specular, 1);
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    material.roughness = 0;
-    get_roughness(command.values, material.roughness, 0);
+        command.values, "Kd", material->color, material->color_map, vec3f{0.5});
+    get_scalar(command.values, "Kr", material->specular, 1);
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    material->roughness = 0;
+    get_roughness(command.values, material->roughness, 0);
     if (verbose) printf("kdsubsurface material not properly supported\n");
   } else if (command.type == "subsurface") {
-    get_scalar(command.values, "Kr", material.specular, 1);
-    get_scalar(command.values, "Kt", material.transmission, 1);
-    material.color = {1, 1, 1};
-    get_scalar(command.values, "eta", material.ior, 1.5);
-    material.roughness = 0;
-    get_roughness(command.values, material.roughness, 0);
+    get_scalar(command.values, "Kr", material->specular, 1);
+    get_scalar(command.values, "Kt", material->transmission, 1);
+    material->color = {1, 1, 1};
+    get_scalar(command.values, "eta", material->ior, 1.5);
+    material->roughness = 0;
+    get_roughness(command.values, material->roughness, 0);
     auto scale = 1.0f;
     get_pbrt_value(command.values, "scale", scale);
-    material.volscale = 1 / scale;
+    material->volscale = 1 / scale;
     auto sigma_a = zero3f, sigma_s = zero3f;
     auto sigma_a_tex = ""s, sigma_s_tex = ""s;
     get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
         vec3f{0011, .0024, .014});
     get_texture(command.values, "sigma_prime_s", sigma_s, sigma_s_tex,
         vec3f{2.55, 3.12, 3.77});
-    material.volmeanfreepath = 1 / (sigma_a + sigma_s);
-    material.volscatter      = sigma_s / (sigma_a + sigma_s);
+    material->volmeanfreepath = 1 / (sigma_a + sigma_s);
+    material->volscatter      = sigma_s / (sigma_a + sigma_s);
     if (verbose) printf("subsurface material not properly supported\n");
   } else if (command.type == "mix") {
     auto namedmaterial1 = ""s, namedmaterial2 = ""s;
@@ -3382,9 +3356,9 @@ static pbrt_material convert_material(pbrt_material& material,
     auto matit   = material_map.find(matname);
     if (matit == material_map.end())
       throw std::invalid_argument("cannot find material " + matname);
-    auto saved_name = material.name;
-    material        = matit->second;
-    material.name   = saved_name;
+    auto saved_name = material->name;
+    *material        = *matit->second;
+    material->name   = saved_name;
     if (verbose) printf("mix material not properly supported\n");
   } else if (command.type == "fourier") {
     auto bsdffile = ""s;
@@ -3392,45 +3366,44 @@ static pbrt_material convert_material(pbrt_material& material,
     if (bsdffile.rfind("/") != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
-      material.color     = {0.6f, 0.6f, 0.6f};
-      material.specular  = 1;
-      material.ior       = 1.5;
-      material.roughness = 0.2;
+      material->color     = {0.6f, 0.6f, 0.6f};
+      material->specular  = 1;
+      material->ior       = 1.5;
+      material->roughness = 0.2;
     } else if (bsdffile == "ceramic.bsdf") {
-      material.color     = {0.6f, 0.6f, 0.6f};
-      material.specular  = 1;
-      material.ior       = 1.5;
-      material.roughness = 0.25;
+      material->color     = {0.6f, 0.6f, 0.6f};
+      material->specular  = 1;
+      material->ior       = 1.5;
+      material->roughness = 0.25;
     } else if (bsdffile == "leather.bsdf") {
-      material.color     = {0.6f, 0.57f, 0.48f};
-      material.specular  = 1;
-      material.ior       = 1.5;
-      material.roughness = 0.3;
+      material->color     = {0.6f, 0.57f, 0.48f};
+      material->specular  = 1;
+      material->ior       = 1.5;
+      material->roughness = 0.3;
     } else if (bsdffile == "coated_copper.bsdf") {
       auto eta           = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
       auto etak          = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-      material.color     = eta_to_reflectivity(eta, etak);
-      material.metallic  = 1;
-      material.roughness = 0.01;
+      material->color     = eta_to_reflectivity(eta, etak);
+      material->metallic  = 1;
+      material->roughness = 0.01;
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      material.color        = {1, 1, 1};
-      material.specular     = 1;
-      material.ior          = 1.5;
-      material.transmission = 1;
-      material.roughness    = 0.2;
+      material->color        = {1, 1, 1};
+      material->specular     = 1;
+      material->ior          = 1.5;
+      material->transmission = 1;
+      material->roughness    = 0.2;
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
       auto eta           = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
       auto etak          = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-      material.color     = eta_to_reflectivity(eta, etak);
-      material.metallic  = 1;
-      material.roughness = 0.2;
+      material->color     = eta_to_reflectivity(eta, etak);
+      material->metallic  = 1;
+      material->roughness = 0.2;
     } else {
       throw std::invalid_argument{"unknown bsdffile " + bsdffile};
     }
   } else {
     throw std::invalid_argument{"unknown material type " + command.type};
   }
-  return material;
 }
 
 // Make a triangle shape from a quad grid
@@ -3504,27 +3477,31 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 static void convert_shape(pbrt_shape* shape, const pbrt_shape_command& command,
-    unordered_map<string, pbrt_arealight>&                arealight_map,
-    unordered_map<string, pbrt_material>& material_map, const string& filename,
+    unordered_map<string, pbrt_arealight*>&                arealight_map,
+    unordered_map<string, pbrt_material*>& material_map, const string& filename,
     const string& ply_dirname, bool verbose = false) {
   shape->frame           = command.frame;
   shape->frend           = command.frend;
-  auto& arealight       = arealight_map.at(command.arealight);
-  auto& material        = material_map.at(command.material);
-  shape->emission        = arealight.emission;
-  shape->color           = material.color;
-  shape->specular        = material.specular;
-  shape->metallic        = material.metallic;
-  shape->transmission    = material.transmission;
-  shape->roughness       = material.roughness;
-  shape->ior             = material.ior;
-  shape->opacity         = material.opacity;
-  shape->color_map       = material.color_map;
-  shape->opacity_map     = material.opacity_map;
-  shape->thin            = material.thin;
-  shape->volmeanfreepath = material.volmeanfreepath;
-  shape->volscatter      = material.volscatter;
-  shape->volscale        = material.volscale;
+  auto arealight         = arealight_map.at(command.arealight);
+  auto material          = material_map.at(command.material);
+    if(arealight) {
+  shape->emission        = arealight->emission;
+    }
+    if(material) {
+  shape->color           = material->color;
+  shape->specular        = material->specular;
+  shape->metallic        = material->metallic;
+  shape->transmission    = material->transmission;
+  shape->roughness       = material->roughness;
+  shape->ior             = material->ior;
+  shape->opacity         = material->opacity;
+  shape->color_map       = material->color_map;
+  shape->opacity_map     = material->opacity_map;
+  shape->thin            = material->thin;
+  shape->volmeanfreepath = material->volmeanfreepath;
+  shape->volscatter      = material->volscatter;
+  shape->volscale        = material->volscale;
+    }
   shape->instances       = command.instances;
   shape->instaends       = command.instaends;
   if (command.type == "trianglemesh") {
@@ -3661,6 +3638,8 @@ static void convert_environment(pbrt_environment* environment,
     for(auto shape : shapes) delete shape;
     for(auto environment : environments) delete environment;
     for(auto light : lights) delete light;
+    for(auto arealight : arealights) delete arealight;
+    for(auto material : materials) delete material;
   }
 
 // pbrt stack ctm
@@ -3687,8 +3666,8 @@ struct pbrt_context {
 
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
-    unordered_map<string, pbrt_arealight>& arealight_map,
-    unordered_map<string, pbrt_material>&  material_map,
+    unordered_map<string, pbrt_arealight*>& arealight_map,
+    unordered_map<string, pbrt_material*>&  material_map,
     unordered_map<string, pbrt_texture>&   texture_map,
     const string&                          ply_dirname) {
   auto fs = open_file(filename, "rt");
@@ -3855,9 +3834,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
         // pbrt->materials.pop_back();
       } else {
         ctx.stack.back().material   = command.name;
-        material_map[command.name] = {};
-        convert_material(material_map[command.name],
-            command, material_map, texture_map);
+        auto material = pbrt->materials.emplace_back(new pbrt_material{});
+        material_map[command.name] = material;
+        convert_material(material, command, material_map, texture_map);
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto command = pbrt_command{};
@@ -3866,9 +3845,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
-      material_map[command.name] = {};
-      convert_material(material_map[command.name],
-          command, material_map, texture_map);
+      auto material = pbrt->materials.emplace_back(new pbrt_material{});
+      material_map[command.name] = material;
+      convert_material(material, command, material_map, texture_map);
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, ctx.stack.back().material);
     } else if (cmd == "Shape") {
@@ -3895,8 +3874,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       command.frame               = ctx.stack.back().transform_start;
       command.frend               = ctx.stack.back().transform_end;
       ctx.stack.back().arealight    = command.name;
-      arealight_map[command.name] = {};
-      convert_arealight(&arealight_map[command.name], command);
+      auto arealight = pbrt->arealights.emplace_back(new pbrt_arealight{});
+      arealight_map[command.name] = arealight;
+      convert_arealight(arealight, command);
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
       parse_pbrt_param(fs, str, command.type);
@@ -3938,8 +3918,8 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model* pbrt) {
   auto ctx           = pbrt_context{};
-  auto arealight_map = unordered_map<string, pbrt_arealight>{{"", {}}};
-  auto material_map  = unordered_map<string, pbrt_material>{{"", {}}};
+  auto arealight_map = unordered_map<string, pbrt_arealight*>{{"", {}}};
+  auto material_map  = unordered_map<string, pbrt_material*>{{"", {}}};
   auto texture_map   = unordered_map<string, pbrt_texture>{{"", {}}};
   load_pbrt(filename, pbrt, ctx, arealight_map, material_map, texture_map,
       get_dirname(filename));
