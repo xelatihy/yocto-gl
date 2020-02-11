@@ -1054,8 +1054,8 @@ static void load_json_scene(
       value = it->second;
       return it->second;
     }
-    auto texture  = add_texture(scene);
-    texture->name = path;
+    auto texture      = add_texture(scene);
+    texture->name     = path;
     texture_map[path] = texture;
     value             = texture;
     return texture;
@@ -1063,9 +1063,9 @@ static void load_json_scene(
 
   // parse json reference
   auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape = [scene, &shape_map](const json& ejs,
-                       const string& name, sceneio_shape*& value,
-                       const string& dirname = "shapes/") -> sceneio_shape* {
+  auto get_shape = [scene, &shape_map](const json& ejs, const string& name,
+                       sceneio_shape*& value,
+                       const string&   dirname = "shapes/") -> sceneio_shape* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -1075,8 +1075,8 @@ static void load_json_scene(
       value = it->second;
       return it->second;
     }
-    auto shape  = add_shape(scene);
-    shape->name = path;
+    auto shape      = add_shape(scene);
+    shape->name     = path;
     shape_map[path] = shape;
     value           = shape;
     return shape;
@@ -1097,8 +1097,8 @@ static void load_json_scene(
       value = it->second;
       return it->second;
     }
-    auto instance  = add_instance(scene);
-    instance->name = path;
+    auto instance      = add_instance(scene);
+    instance->name     = path;
     instance_map[path] = instance;
     value              = instance;
     return instance;
@@ -1231,27 +1231,27 @@ static void load_json_scene(
 
   // load resources
   try {
-  // load shapes
-  for(auto shape : scene->shapes) {
-      load_shape(get_dirname(filename) + shape->name, shape->points, shape->lines,
-          shape->triangles, shape->quads, shape->positions, shape->normals,
-          shape->texcoords, shape->colors, shape->radius);
-  }
-  // load textures
-  for(auto texture : scene->textures) {
+    // load shapes
+    for (auto shape : scene->shapes) {
+      load_shape(get_dirname(filename) + shape->name, shape->points,
+          shape->lines, shape->triangles, shape->quads, shape->positions,
+          shape->normals, shape->texcoords, shape->colors, shape->radius);
+    }
+    // load textures
+    for (auto texture : scene->textures) {
       if (is_hdr_filename(texture->name)) {
         load_image(get_dirname(filename) + texture->name, texture->hdr);
       } else {
         load_imageb(get_dirname(filename) + texture->name, texture->ldr);
       }
-  }
-  // load instances
-  for(auto instance : scene->instances) {
-      load_instances(get_dirname(filename) + instance->name, instance->frames);
-  }
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
     }
+    // load instances
+    for (auto instance : scene->instances) {
+      load_instances(get_dirname(filename) + instance->name, instance->frames);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
 
   // fix scene
   scene->name = get_basename(filename);
@@ -1452,7 +1452,7 @@ static void load_obj_scene(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto camera          = add_camera(scene);
+    auto camera = add_camera(scene);
     // camera->name         = make_safe_name("camera", ocam.name);
     camera->frame        = ocam.frame;
     camera->orthographic = ocam.ortho;
@@ -1471,10 +1471,12 @@ static void load_obj_scene(
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto texture  = add_texture(scene);
-    if(is_hdr_filename(path)) texture->name = replace_extension(texture->name, ".hdr");
+    auto texture = add_texture(scene);
+    if (is_hdr_filename(path))
+      texture->name = replace_extension(texture->name, ".hdr");
     // texture->name = make_safe_name(
-    //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" : ".png");
+    //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" :
+    //     ".png");
     try {
       if (is_hdr_filename(path)) {
         load_image(get_dirname(filename) + path, texture->hdr);
@@ -1491,7 +1493,7 @@ static void load_obj_scene(
   // handler for materials
   auto material_map = unordered_map<string, sceneio_material*>{};
   for (auto& omat : obj.materials) {
-    auto material              = add_material(scene);
+    auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat.name);
     material->emission         = omat.pbr_emission;
     material->color            = omat.pbr_base;
@@ -1525,7 +1527,7 @@ static void load_obj_scene(
     if (mit == material_map.end()) {
       if (!name.empty())
         throw_missing_reference_error(filename, "material", name);
-      auto material    = add_material(scene);
+      auto material = add_material(scene);
       // material->name   = make_safe_name("material", "<default>");
       material_map[""] = material;
       return material;
@@ -1583,10 +1585,10 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto environment      = add_environment(scene);
+    auto environment = add_environment(scene);
     // environment->name     = make_safe_name("environment", oenvironment.name);
-    environment->frame    = oenvironment.frame;
-    environment->emission = oenvironment.emission;
+    environment->frame        = oenvironment.frame;
+    environment->emission     = oenvironment.emission;
     environment->emission_tex = get_texture(oenvironment.emission_map);
   }
 
