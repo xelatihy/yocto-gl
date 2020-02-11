@@ -103,19 +103,19 @@ void           clear_textures(trace_scene* scene);
 trace_material* add_material(trace_scene* scene);
 void set_shape_emission(trace_material* material, const vec3f& emission,
     trace_texture* emission_txt = nullptr);
-void set_shape_color(
-    trace_material* material, const vec3f& color, trace_texture* color_txt = nullptr);
+void set_shape_color(trace_material* material, const vec3f& color,
+    trace_texture* color_txt = nullptr);
 void set_shape_specular(trace_material* material, float specular = 1,
     trace_texture* specular_txt = nullptr);
 void set_shape_ior(trace_material* material, float ior);
-void set_shape_metallic(
-    trace_material* material, float metallic, trace_texture* metallic_txt = nullptr);
-void set_shape_transmission(trace_material* material, float transmission, bool thin,
-    float trdepth, trace_texture* transmission_txt = nullptr);
+void set_shape_metallic(trace_material* material, float metallic,
+    trace_texture* metallic_txt = nullptr);
+void set_shape_transmission(trace_material* material, float transmission,
+    bool thin, float trdepth, trace_texture* transmission_txt = nullptr);
 void set_shape_roughness(trace_material* material, float roughness,
     trace_texture* roughness_txt = nullptr);
-void set_shape_opacity(
-    trace_material* material, float opacity, trace_texture* opacity_txt = nullptr);
+void set_shape_opacity(trace_material* material, float opacity,
+    trace_texture* opacity_txt = nullptr);
 void set_shape_thin(trace_material* material, bool thin);
 void set_shape_scattering(trace_material* material, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex = nullptr);
@@ -124,7 +124,7 @@ void set_shape_gltftextures(trace_material* material, bool gltf_textures);
 
 // Add shape
 trace_shape* add_shape(trace_scene* scene);
-void set_material(trace_shape* shape, trace_material* material);
+void         set_material(trace_shape* shape, trace_material* material);
 void         set_shape_points(trace_shape* shape, const vector<int>& points);
 void         set_shape_lines(trace_shape* shape, const vector<vec2i>& lines);
 void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles);
@@ -344,7 +344,7 @@ struct trace_material {
 // each verftex data has its own topology.
 struct trace_shape {
   // frames
-  vector<frame3f> frames = {};
+  vector<frame3f> frames   = {};
   trace_material* material = nullptr;
 
   // primitives
@@ -401,7 +401,7 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
   vector<trace_shape*>       shapes       = {};
-  vector<trace_material*>    materials       = {};
+  vector<trace_material*>    materials    = {};
   vector<trace_texture*>     textures     = {};
   vector<trace_environment*> environments = {};
 

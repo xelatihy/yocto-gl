@@ -60,7 +60,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
-    auto material   = add_material(scene);
+    auto material = add_material(scene);
     set_shape_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
     set_shape_color(

@@ -102,15 +102,15 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
-    set_shape_emission(
-        material, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
+    set_shape_emission(material, iomaterial->emission,
+        texture_map.at(iomaterial->emission_tex));
     set_shape_color(
         material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(
-        material, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_specular(material, iomaterial->specular,
+        texture_map.at(iomaterial->specular_tex));
     set_shape_ior(material, iomaterial->ior);
-    set_shape_metallic(
-        material, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_metallic(material, iomaterial->metallic,
+        texture_map.at(iomaterial->metallic_tex));
     set_shape_transmission(material, iomaterial->transmission, iomaterial->thin,
         iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
     set_shape_roughness(material, iomaterial->roughness,

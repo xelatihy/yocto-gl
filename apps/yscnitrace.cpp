@@ -68,18 +68,18 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // editing
-  int                                             selected_camera      = -1;
-  int                                             selected_object      = -1;
-  int                                             selected_instance    = -1;
-  int                                             selected_shape       = -1;
-  int                                             selected_subdiv      = -1;
-  int                                             selected_material    = -1;
-  int                                             selected_environment = -1;
-  int                                             selected_texture     = -1;
+  int selected_camera      = -1;
+  int selected_object      = -1;
+  int selected_instance    = -1;
+  int selected_shape       = -1;
+  int selected_subdiv      = -1;
+  int selected_material    = -1;
+  int selected_environment = -1;
+  int selected_texture     = -1;
 
   // editing maps
-  unordered_map<sceneio_texture*, trace_texture*> texture_map          = {};
-  unordered_map<sceneio_material*, trace_material*> material_map          = {};
+  unordered_map<sceneio_texture*, trace_texture*>   texture_map  = {};
+  unordered_map<sceneio_material*, trace_material*> material_map = {};
 
   // computation
   int          render_sample  = 0;
@@ -109,9 +109,9 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(shared_ptr<app_state> app) {
-  auto  scene       = app->scene.get();
-  auto  ioscene     = app->ioscene.get();
-  auto& texture_map = app->texture_map;
+  auto  scene        = app->scene.get();
+  auto  ioscene      = app->ioscene.get();
+  auto& texture_map  = app->texture_map;
   auto& material_map = app->material_map;
 
   for (auto iocamera : ioscene->cameras) {
@@ -133,17 +133,17 @@ void init_scene(shared_ptr<app_state> app) {
   }
 
   material_map[nullptr] = nullptr;
-  for(auto iomaterial : ioscene->materials) {
+  for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
-    set_shape_emission(
-        material, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
+    set_shape_emission(material, iomaterial->emission,
+        texture_map.at(iomaterial->emission_tex));
     set_shape_color(
         material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(
-        material, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_specular(material, iomaterial->specular,
+        texture_map.at(iomaterial->specular_tex));
     set_shape_ior(material, iomaterial->ior);
-    set_shape_metallic(
-        material, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_metallic(material, iomaterial->metallic,
+        texture_map.at(iomaterial->metallic_tex));
     set_shape_transmission(material, iomaterial->transmission, iomaterial->thin,
         iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
     set_shape_roughness(material, iomaterial->roughness,

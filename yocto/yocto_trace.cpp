@@ -716,7 +716,7 @@ static trace_point eval_point(const trace_scene* scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
   auto  shape                  = scene->shapes[intersection.shape];
-  auto material                = shape->material;
+  auto  material               = shape->material;
   auto& frame                  = shape->frames[intersection.instance_];
   auto  element                = intersection.element;
   auto  uv                     = intersection.uv;
@@ -762,8 +762,8 @@ static trace_point eval_point(const trace_scene* scene,
                         ? uv
                         : eval_shape_elem(shape, shape->quadstexcoord,
                               shape->texcoords, element, uv);
-    auto normalmap = -1 +
-                     2 * xyz(eval_texture(material->normal_tex, texcoord, true));
+    auto normalmap =
+        -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true));
     auto z = shape->normals.empty()
                  ? eval_element_normal(shape, element)
                  : normalize(eval_shape_elem(
@@ -801,12 +801,13 @@ static trace_point eval_point(const trace_scene* scene,
                   eval_texture(material->specular_tex, texcoord).x;
   auto metallic = material->metallic *
                   eval_texture(material->metallic_tex, texcoord).z;
-  auto roughness =
-      material->roughness * eval_texture(material->roughness_tex, texcoord).x *
-      (material->gltf_textures ? eval_texture(material->metallic_tex, texcoord).x
-                            : 1);
-  auto ior          = material->ior;
-  auto coat         = material->coat * eval_texture(material->coat_tex, texcoord).x;
+  auto roughness = material->roughness *
+                   eval_texture(material->roughness_tex, texcoord).x *
+                   (material->gltf_textures
+                           ? eval_texture(material->metallic_tex, texcoord).x
+                           : 1);
+  auto ior  = material->ior;
+  auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
   auto opacity = material->opacity * point.color.w * base_tex.w *
@@ -889,11 +890,11 @@ struct volume_point {
 static volume_point eval_volume(const trace_scene* scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto shape   = scene->shapes[intersection.shape];
-  auto material = shape->material;
-  auto& frame   = shape->frames[intersection.instance_];
-  auto  element = intersection.element;
-  auto  uv      = intersection.uv;
+  auto  shape    = scene->shapes[intersection.shape];
+  auto  material = shape->material;
+  auto& frame    = shape->frames[intersection.instance_];
+  auto  element  = intersection.element;
+  auto  uv       = intersection.uv;
 
   // initialize point
   auto point      = volume_point{};
@@ -3188,8 +3189,8 @@ void set_shape_frames(trace_shape* shape, const vector<frame3f>& frames,
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
 }
-void set_shape_emission(
-    trace_material* material, const vec3f& emission, trace_texture* emission_txt) {
+void set_shape_emission(trace_material* material, const vec3f& emission,
+    trace_texture* emission_txt) {
   material->emission     = emission;
   material->emission_tex = emission_txt;
 }
@@ -3216,7 +3217,9 @@ void set_shape_transmission(trace_material* material, float transmission,
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_txt;
 }
-void set_shape_thin(trace_material* material, bool thin) { material->thin = thin; }
+void set_shape_thin(trace_material* material, bool thin) {
+  material->thin = thin;
+}
 void set_shape_roughness(
     trace_material* material, float roughness, trace_texture* roughness_txt) {
   material->roughness     = roughness;
