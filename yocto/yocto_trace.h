@@ -79,70 +79,70 @@ namespace yocto {
 struct trace_scene;
 
 // Add cameras
-int  add_camera(trace_scene& scene);
-void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame);
+int  add_camera(trace_scene* scene);
+void set_camera_frame(trace_scene* scene, int idx, const frame3f& frame);
 void set_camera_lens(
-    trace_scene& scene, int idx, float lens, float aspect, float film);
-void set_camera_focus(trace_scene& scene, int idx, float aperture, float focus);
-void clear_cameras(trace_scene& scene);
+    trace_scene* scene, int idx, float lens, float aspect, float film);
+void set_camera_focus(trace_scene* scene, int idx, float aperture, float focus);
+void clear_cameras(trace_scene* scene);
 
 // Add texture
-int  add_texture(trace_scene& scene);
-void set_texture(trace_scene& scene, int idx, const image<vec4b>& img);
-void set_texture(trace_scene& scene, int idx, const image<vec4f>& img);
-void clear_textures(trace_scene& scene);
+int  add_texture(trace_scene* scene);
+void set_texture(trace_scene* scene, int idx, const image<vec4b>& img);
+void set_texture(trace_scene* scene, int idx, const image<vec4f>& img);
+void clear_textures(trace_scene* scene);
 
 // Add shape
-int  add_shape(trace_scene& scene);
-void set_shape_points(trace_scene& scene, int idx, const vector<int>& points);
-void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines);
+int  add_shape(trace_scene* scene);
+void set_shape_points(trace_scene* scene, int idx, const vector<int>& points);
+void set_shape_lines(trace_scene* scene, int idx, const vector<vec2i>& lines);
 void set_shape_triangles(
-    trace_scene& scene, int idx, const vector<vec3i>& triangles);
-void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads);
-void set_shape_fvquads(trace_scene& scene, int idx,
+    trace_scene* scene, int idx, const vector<vec3i>& triangles);
+void set_shape_quads(trace_scene* scene, int idx, const vector<vec4i>& quads);
+void set_shape_fvquads(trace_scene* scene, int idx,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord);
 void set_shape_positions(
-    trace_scene& scene, int idx, const vector<vec3f>& positions);
+    trace_scene* scene, int idx, const vector<vec3f>& positions);
 void set_shape_normals(
-    trace_scene& scene, int idx, const vector<vec3f>& normals);
+    trace_scene* scene, int idx, const vector<vec3f>& normals);
 void set_shape_texcoords(
-    trace_scene& scene, int idx, const vector<vec2f>& texcoords);
-void set_shape_colors(trace_scene& scene, int idx, const vector<vec4f>& colors);
-void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
+    trace_scene* scene, int idx, const vector<vec2f>& texcoords);
+void set_shape_colors(trace_scene* scene, int idx, const vector<vec4f>& colors);
+void set_shape_radius(trace_scene* scene, int idx, const vector<float>& radius);
 void set_shape_tangents(
-    trace_scene& scene, int idx, const vector<vec4f>& tangents);
-void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_shape_frames(trace_scene& scene, int idx,
+    trace_scene* scene, int idx, const vector<vec4f>& tangents);
+void set_shape_frame(trace_scene* scene, int idx, const frame3f& frame);
+void set_shape_frames(trace_scene* scene, int idx,
     const vector<frame3f>& instances, const frame3f& local_frame);
 void set_shape_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
+    trace_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_shape_color(
-    trace_scene& scene, int idx, const vec3f& color, int color_txt = -1);
+    trace_scene* scene, int idx, const vec3f& color, int color_txt = -1);
 void set_shape_specular(
-    trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
-void set_shape_ior(trace_scene& scene, int idx, float ior);
+    trace_scene* scene, int idx, float specular = 1, int specular_txt = -1);
+void set_shape_ior(trace_scene* scene, int idx, float ior);
 void set_shape_metallic(
-    trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_shape_transmission(trace_scene& scene, int idx, float transmission,
+    trace_scene* scene, int idx, float metallic, int metallic_txt = -1);
+void set_shape_transmission(trace_scene* scene, int idx, float transmission,
     bool thin, float trdepth, int transmission_txt = -1);
 void set_shape_roughness(
-    trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
+    trace_scene* scene, int idx, float roughness, int roughness_txt = -1);
 void set_shape_opacity(
-    trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_shape_thin(trace_scene& scene, int idx, bool thin);
-void set_shape_scattering(trace_scene& scene, int idx, const vec3f& scattering,
+    trace_scene* scene, int idx, float opacity, int opacity_txt = -1);
+void set_shape_thin(trace_scene* scene, int idx, bool thin);
+void set_shape_scattering(trace_scene* scene, int idx, const vec3f& scattering,
     float scanisotropy, int scattering_tex = -1);
-void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt);
-void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_shapes(trace_scene& scene);
+void set_shape_normalmap(trace_scene* scene, int idx, int normal_txt);
+void set_shape_gltftextures(trace_scene* scene, int idx, bool gltf_textures);
+void clear_shapes(trace_scene* scene);
 
 // Add environment
-int  add_environment(trace_scene& scene);
-void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame);
+int  add_environment(trace_scene* scene);
+void set_environment_frame(trace_scene* scene, int idx, const frame3f& frame);
 void set_environment_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
-void clear_environments(trace_scene& scene);
+    trace_scene* scene, int idx, const vec3f& emission, int emission_map = -1);
+void clear_environments(trace_scene* scene);
 
 // Trace state
 struct trace_state;
@@ -211,30 +211,30 @@ const auto trace_bvh_names        = vector<string>{
 
 // Initialize state of the renderer.
 void init_state(
-    trace_state& state, const trace_scene& scene, const trace_params& params);
+    trace_state& state, const trace_scene* scene, const trace_params& params);
 
 // Initialize lights.
-void init_lights(trace_scene& scene);
+void init_lights(trace_scene* scene);
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene& bvh, const trace_params& params);
+void init_bvh(trace_scene* bvh, const trace_params& params);
 
 // Refit bvh data
-void update_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+void update_bvh(trace_scene* bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+image<vec4f> trace_samples(trace_state& state, const trace_scene* scene,
     int samples, const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.
-vec4f trace_sample(trace_state& state, const trace_scene& scene,
+vec4f trace_sample(trace_state& state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params);
 
 // Check is a sampler requires lights
@@ -447,9 +447,9 @@ struct trace_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
+trace_intersection intersect_instance_bvh(const trace_scene* scene, int shape,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 

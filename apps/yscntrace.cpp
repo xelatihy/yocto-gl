@@ -37,9 +37,7 @@ using namespace yocto;
 using std::make_shared;
 
 // construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model* ioscene) {
-  scene = trace_scene{};
-
+void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto id = add_camera(scene);
     set_camera_frame(scene, id, iocamera->frame);
@@ -167,8 +165,8 @@ void run_app(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = trace_scene{};
-  init_scene(scene, ioscene.get());
+  auto scene         = make_shared<trace_scene>();
+  init_scene(scene.get(), ioscene.get());
   print_elapsed(convert_timer);
 
   // cleanup
@@ -176,23 +174,23 @@ void run_app(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, params);
+  init_bvh(scene.get(), params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene);
+  init_lights(scene.get());
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (scene.lights.empty() && is_sampler_lit(params)) {
+  if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
   auto state = trace_state{};
-  init_state(state, scene, params);
+  init_state(state, scene.get(), params);
   auto render = image{state.size(), zero4f};
 
   // render
@@ -201,7 +199,7 @@ void run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render           = trace_samples(state, scene, nsamples, params);
+    render           = trace_samples(state, scene.get(), nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

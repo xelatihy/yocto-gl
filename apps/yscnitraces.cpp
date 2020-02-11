@@ -49,7 +49,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  trace_scene scene      = {};
+  shared_ptr<trace_scene> scene      = nullptr;
   bool        add_skyenv = false;
 
   // rendering state
@@ -78,9 +78,7 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model* ioscene) {
-  scene = trace_scene{};
-
+void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto id = add_camera(scene);
     set_camera_frame(scene, id, iocamera->frame);
@@ -184,7 +182,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene, app->params);
+  init_state(app->state, app->scene.get(), app->params);
   app->render.resize(app->state.size());
   app->display.resize(app->state.size());
 
@@ -192,7 +190,7 @@ void reset_display(shared_ptr<app_state> app) {
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene, preview_prms);
+  auto preview         = trace_image(app->scene.get(), preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -210,7 +208,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene.get(), ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -253,7 +251,7 @@ void run_app(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  init_scene(app->scene, ioscene.get());
+  init_scene(app->scene.get(), ioscene.get());
   print_elapsed(convert_timer);
 
   // cleanup
@@ -261,22 +259,22 @@ void run_app(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene, app->params);
+  init_bvh(app->scene.get(), app->params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(app->scene);
+  init_lights(app->scene.get());
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
+  if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  init_state(app->state, app->scene, app->params);
+  init_state(app->state, app->scene.get(), app->params);
   app->render  = image{app->state.size(), zero4f};
   app->display = app->render;
   reset_display(app);
@@ -302,7 +300,7 @@ void run_app(int argc, const char* argv[]) {
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto& camera = app->scene.cameras.at(app->params.camera);
+          auto& camera = app->scene->cameras.at(app->params.camera);
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
           auto  rotate = zero2f;
