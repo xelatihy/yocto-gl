@@ -870,7 +870,7 @@ static void save_ply_scene(
 static void load_gltf_scene(
     const string& filename, sceneio_model* scene, bool noparallel);
 
-// Load/save a scene from/to pbrt. This is not robust at all and only
+// Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static void load_pbrt_scene(
@@ -1892,11 +1892,12 @@ namespace yocto {
 static void load_pbrt_scene(
     const string& filename, sceneio_model* scene, bool noparallel) {
   // load pbrt
-  auto pbrt = pbrt_model{};
+  auto pbrt_ = make_unique<pbrt_model>();
+  auto pbrt = pbrt_.get();
   load_pbrt(filename, pbrt);
 
   // convert cameras
-  for (auto& pcamera : pbrt.cameras) {
+  for (auto& pcamera : pbrt->cameras) {
     auto camera    = add_camera(scene);
     camera->frame  = pcamera.frame;
     camera->aspect = pcamera.aspect;
@@ -1929,7 +1930,7 @@ static void load_pbrt_scene(
   };
 
   // convert shapes
-  for (auto& pshape : pbrt.shapes) {
+  for (auto& pshape : pbrt->shapes) {
     auto object   = add_object(scene);
     object->shape = add_shape(scene);
     object->frame = pshape.frame;
@@ -1957,7 +1958,7 @@ static void load_pbrt_scene(
   }
 
   // convert environments
-  for (auto& penvironment : pbrt.environments) {
+  for (auto& penvironment : pbrt->environments) {
     auto environment          = add_environment(scene);
     environment->frame        = penvironment.frame;
     environment->emission     = penvironment.emission;
@@ -1965,7 +1966,7 @@ static void load_pbrt_scene(
   }
 
   // lights
-  for (auto& plight : pbrt.lights) {
+  for (auto& plight : pbrt->lights) {
     auto object                = add_object(scene);
     object->shape              = add_shape(scene);
     object->frame              = plight.area_frame;
@@ -1986,11 +1987,12 @@ static void load_pbrt_scene(
 void save_pbrt_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   // save pbrt
-  auto pbrt = pbrt_model{};
+  auto pbrt_ = make_unique<pbrt_model>();
+  auto pbrt = pbrt_.get();
 
   // convert camera
   auto  camera       = scene->cameras.front();
-  auto& pcamera      = pbrt.cameras.emplace_back();
+  auto& pcamera      = pbrt->cameras.emplace_back();
   pcamera.frame      = camera->frame;
   pcamera.lens       = camera->lens;
   pcamera.aspect     = camera->aspect;
@@ -1998,7 +2000,7 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto object : scene->objects) {
-    auto& pshape     = pbrt.shapes.emplace_back();
+    auto& pshape     = pbrt->shapes.emplace_back();
     pshape.filename_ = replace_extension(object->shape->name, ".ply");
     pshape.frame     = object->frame;
     pshape.frend     = object->frame;
@@ -2020,7 +2022,7 @@ void save_pbrt_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto& penvironment    = pbrt.environments.emplace_back();
+    auto& penvironment    = pbrt->environments.emplace_back();
     penvironment.emission = environment->emission;
     if (environment->emission_tex) {
       penvironment.emission_map = environment->emission_tex->name;

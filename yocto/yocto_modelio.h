@@ -569,9 +569,9 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt);
+void load_pbrt(const string& filename, pbrt_model* pbrt);
 void save_pbrt(
-    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
+    const string& filename, const pbrt_model* pbrt, bool ply_meshes = false);
 
 // Pbrt value type
 enum struct pbrt_value_type {
@@ -640,8 +640,8 @@ struct pbrt_commands {
 };
 
 // Low level parser
-void load_pbrt(const string& filename, pbrt_commands& pbrt);
-void save_pbrt(const string& filename, const pbrt_commands& pbrt);
+void load_pbrt(const string& filename, pbrt_commands* pbrt);
+void save_pbrt(const string& filename, const pbrt_commands* pbrt);
 
 // type-cheked pbrt value access
 void get_pbrt_value(const pbrt_value& pbrt, string& value);
