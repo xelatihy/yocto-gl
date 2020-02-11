@@ -400,7 +400,7 @@ sceneio_object* add_object(sceneio_model* scene) {
 sceneio_instance* add_instance(sceneio_model* scene) {
   auto instance  = scene->instances.emplace_back(new sceneio_instance{});
   instance->name = "instances/instance" +
-                   std::to_string(scene->instances.size()) + ".json";
+                   std::to_string(scene->instances.size()) + ".ply";
   return instance;
 }
 sceneio_material* add_material(sceneio_model* scene) {

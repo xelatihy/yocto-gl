@@ -121,6 +121,8 @@ void run_app(int argc, const char** argv) {
     dirnames.insert(dirname + get_dirname(shape->name));
   for (auto texture : scene->textures)
     dirnames.insert(dirname + get_dirname(texture->name));
+  for (auto instance : scene->instances)
+    dirnames.insert(dirname + get_dirname(instance->name));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       print_fatal("cannot create directory " + output);
