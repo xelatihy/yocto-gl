@@ -78,7 +78,7 @@ void run_app(int argc, const char** argv) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_      = make_unique<sceneio_model>();
+  auto scene_     = make_unique<sceneio_model>();
   auto scene      = scene_.get();
   auto load_timer = print_timed("loading scene");
   load_scene(filename, scene);

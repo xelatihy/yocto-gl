@@ -324,7 +324,8 @@ void set_glimage(
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(
+        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage->texture_size   = img.size();
   glimage->texture_linear = linear;
@@ -342,7 +343,8 @@ void set_glimage(
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(
+        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage->texture_size   = img.size();
   glimage->texture_linear = linear;

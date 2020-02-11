@@ -63,7 +63,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*        glimage   = new opengl_image{};
+  opengl_image*       glimage   = new opengl_image{};
   draw_glimage_params glparams  = {};
   bool                glupdated = true;
 
@@ -72,7 +72,7 @@ struct app_state {
 
   // cleanup
   ~app_state() {
-    if(glimage) delete glimage;
+    if (glimage) delete glimage;
   }
 };
 
@@ -80,7 +80,7 @@ struct app_state {
 struct app_states {
   // data
   vector<app_state*> states   = {};
-  int selected = -1;
+  int                selected = -1;
 
   // loading
   deque<future<app_state*>> loaders = {};
@@ -92,14 +92,14 @@ struct app_states {
 
   // cleanup
   ~app_states() {
-    while(!loaders.empty()) {
+    while (!loaders.empty()) {
       try {
         states.push_back(loaders.front().get());
-      } catch(std::exception&) {
+      } catch (std::exception&) {
       }
       loaders.pop_front();
     }
-    for(auto app : states) delete app;
+    for (auto app : states) delete app;
   }
 };
 
@@ -181,8 +181,8 @@ void load_image_async(app_states* apps, const string& filename) {
       }));
 }
 
-void draw_glwidgets(const opengl_window& win, app_states* apps,
-    const opengl_input& input) {
+void draw_glwidgets(
+    const opengl_window& win, app_states* apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -295,8 +295,8 @@ void draw_glwidgets(const opengl_window& win, app_states* apps,
   }
 }
 
-void draw(const opengl_window& win, app_states* apps,
-    const opengl_input& input) {
+void draw(
+    const opengl_window& win, app_states* apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -335,7 +335,7 @@ void update(const opengl_window& win, app_states* apps) {
 
 void run_app(int argc, const char* argv[]) {
   // prepare application
-  auto apps_      = make_unique<app_states>();
+  auto apps_     = make_unique<app_states>();
   auto apps      = apps_.get();
   auto filenames = vector<string>{};
 

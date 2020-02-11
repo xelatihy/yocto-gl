@@ -49,18 +49,18 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene = new sceneio_model{};
-  trace_scene* scene      = new trace_scene{};
-  bool                    add_skyenv = false;
+  sceneio_model* ioscene    = new sceneio_model{};
+  trace_scene*   scene      = new trace_scene{};
+  bool           add_skyenv = false;
 
   // rendering state
   trace_state* state    = new trace_state{};
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image*        glimage  = new opengl_image{};
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // editing
@@ -75,10 +75,10 @@ struct app_state {
   ~app_state() {
     render_stop = true;
     if (render_future.valid()) render_future.get();
-    if(glimage) delete glimage;
-    if(scene) delete scene;
-    if(state) delete state;
-    if(ioscene) delete ioscene;
+    if (glimage) delete glimage;
+    if (scene) delete scene;
+    if (state) delete state;
+    if (ioscene) delete ioscene;
   }
 };
 
@@ -225,8 +225,7 @@ void reset_display(app_state* app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(
-            app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -236,7 +235,7 @@ void reset_display(app_state* app) {
 void run_app(int argc, const char* argv[]) {
   // application
   auto app_ = make_unique<app_state>();
-  auto app = app_.get();
+  auto app  = app_.get();
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");

@@ -50,12 +50,12 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*        glimage  = new opengl_image{};
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // cleanup
   ~app_state() {
-     if(glimage) delete glimage;
+    if (glimage) delete glimage;
   }
 };
 
@@ -91,8 +91,8 @@ void update_display(app_state* app) {
 
 void run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app_ = make_unique<app_state>();
-  auto app  = app_.get();
+  auto app_      = make_unique<app_state>();
+  auto app       = app_.get();
   auto filenames = vector<string>{};
 
   // command line options
