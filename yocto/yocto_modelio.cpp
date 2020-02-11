@@ -535,11 +535,11 @@ static void throw_read_error(file_wrapper& fs) {
 namespace yocto {
 
 ply_element::~ply_element() {
-  for(auto property : properties) delete property;
+  for (auto property : properties) delete property;
 }
-  ply_model::~ply_model() {
-    for(auto element : elements) delete element;
-  }
+ply_model::~ply_model() {
+  for (auto element : elements) delete element;
+}
 
 static void remove_ply_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -621,8 +621,9 @@ void load_ply(const string& filename, ply_model* ply) {
       parse_value(fs, str, elem->count);
     } else if (cmd == "property") {
       if (ply->elements.empty()) throw_parse_error(fs, "bad header");
-      auto prop  = ply->elements.back()->properties.emplace_back(new ply_property{});
-      auto  tname = ""s;
+      auto prop = ply->elements.back()->properties.emplace_back(
+          new ply_property{});
+      auto tname = ""s;
       parse_value(fs, str, tname);
       if (tname == "list") {
         prop->is_list = true;
@@ -790,13 +791,14 @@ void save_ply(const string& filename, const ply_model* ply) {
   format_values(fs, "format {} 1.0\n", format_map.at(ply->format));
   format_values(fs, "comment Written by Yocto/GL\n");
   format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
-  for (auto& comment : ply->comments) format_values(fs, "comment {}\n", comment);
+  for (auto& comment : ply->comments)
+    format_values(fs, "comment {}\n", comment);
   for (auto elem : ply->elements) {
     format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count);
     for (auto prop : elem->properties) {
       if (prop->is_list) {
-        format_values(
-            fs, "property list uchar {} {}\n", type_map[prop->type], prop->name);
+        format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
+            prop->name);
       } else {
         format_values(fs, "property {} {}\n", type_map[prop->type], prop->name);
       }
@@ -1144,7 +1146,7 @@ static void add_element(ply_model* ply, const string& element, size_t count) {
   for (auto elem : ply->elements) {
     if (elem->name == element) return;
   }
-  auto elem = ply->elements.emplace_back(new ply_element{});
+  auto elem   = ply->elements.emplace_back(new ply_element{});
   elem->name  = element;
   elem->count = count;
 }
@@ -1157,7 +1159,7 @@ static void add_property(ply_model* ply, const string& element,
       if (prop->name == property)
         throw std::runtime_error("property already added");
     }
-    auto prop   = elem->properties.emplace_back(new ply_property{});
+    auto prop     = elem->properties.emplace_back(new ply_property{});
     prop->name    = property;
     prop->type    = type;
     prop->is_list = is_list;
@@ -1230,7 +1232,7 @@ void add_lists(ply_model* ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property) {
   if (values.empty()) return;
   add_property(ply, element, property, sizes.size(), ply_type::i32, true);
-  auto prop    = get_property(ply, element, property);
+  auto prop      = get_property(ply, element, property);
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
 }
@@ -1401,12 +1403,12 @@ static void format_ply_prop(FILE* fs, ply_type type, VT value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-  obj_model::~obj_model() {
-    for(auto shape : shapes) delete shape;
-    for(auto material : materials) delete material;
-    for(auto camera : cameras) delete camera;
-    for(auto environment : environments) delete environment;
-  }
+obj_model::~obj_model() {
+  for (auto shape : shapes) delete shape;
+  for (auto material : materials) delete material;
+  for (auto camera : cameras) delete camera;
+  for (auto environment : environments) delete environment;
+}
 
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -1785,10 +1787,11 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
         }
       }
       // grab shape and add element
-      auto shape   = obj->shapes.back();
-      auto& element = (cmd == "f") ? shape->faces.emplace_back()
-                                   : (cmd == "l") ? shape->lines.emplace_back()
-                                                  : shape->points.emplace_back();
+      auto  shape   = obj->shapes.back();
+      auto& element = (cmd == "f")
+                          ? shape->faces.emplace_back()
+                          : (cmd == "l") ? shape->lines.emplace_back()
+                                         : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
         auto mat_idx = -1;
@@ -1942,7 +1945,8 @@ static void save_mtl(const string& filename, const obj_model* obj) {
       if (material->transmission != zero3f)
         format_values(fs, "Kt {}\n", material->transmission);
       format_values(fs, "Ns {}\n", (int)material->exponent);
-      if (material->opacity != 1) format_values(fs, "d {}\n", material->opacity);
+      if (material->opacity != 1)
+        format_values(fs, "d {}\n", material->opacity);
       if (!material->emission_map.path.empty())
         format_values(fs, "map_Ke {}\n", material->emission_map);
       if (!material->diffuse_map.path.empty())
@@ -1975,7 +1979,8 @@ static void save_mtl(const string& filename, const obj_model* obj) {
         format_values(fs, "Pr {}\n", material->pbr_roughness);
       if (material->pbr_metallic)
         format_values(fs, "Pm {}\n", material->pbr_metallic);
-      if (material->pbr_sheen) format_values(fs, "Ps {}\n", material->pbr_sheen);
+      if (material->pbr_sheen)
+        format_values(fs, "Ps {}\n", material->pbr_sheen);
       if (material->pbr_coat) format_values(fs, "Pc {}\n", material->pbr_coat);
       if (material->pbr_coatroughness)
         format_values(fs, "Pcr {}\n", material->pbr_coatroughness);
@@ -2031,16 +2036,17 @@ static void save_objx(const string& filename, const obj_model* obj) {
 
   // cameras
   for (auto camera : obj->cameras) {
-    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name, camera->ortho,
-        camera->width, camera->height, camera->lens, camera->focus, camera->aperture,
-        camera->frame);
+    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
+        camera->ortho, camera->width, camera->height, camera->lens,
+        camera->focus, camera->aperture, camera->frame);
   }
 
   // environments
   for (auto environment : obj->environments) {
-    format_values(fs, "e {} {} {} {}\n", environment->name, environment->emission,
+    format_values(fs, "e {} {} {} {}\n", environment->name,
+        environment->emission,
         environment->emission_map.path.empty() ? "\"\""s
-                                              : environment->emission_map.path,
+                                               : environment->emission_map.path,
         environment->frame);
   }
 
@@ -2441,7 +2447,7 @@ void add_triangles(obj_model* obj, const string& name,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2467,7 +2473,7 @@ void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2494,7 +2500,7 @@ void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2520,7 +2526,7 @@ void add_points(obj_model* obj, const string& name, const vector<int>& points,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2545,7 +2551,7 @@ void add_fvquads(obj_model* obj, const string& name,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;

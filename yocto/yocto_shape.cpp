@@ -3392,7 +3392,7 @@ void load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_ = make_unique<ply_model>();
-    auto ply = ply_.get();
+    auto ply  = ply_.get();
     load_ply(filename, ply);
 
     // gets vertex
@@ -3415,7 +3415,7 @@ void load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj_ = make_unique<obj_model>();
-    auto obj = obj_.get();
+    auto obj  = obj_.get();
     load_obj(filename, obj, true);
 
     // get shape
@@ -3462,7 +3462,7 @@ void save_shape(const string& filename, const vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_ = make_unique<ply_model>();
-    auto ply = ply_.get();
+    auto ply  = ply_.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
     add_texcoords(ply, texcoords, flip_texcoord);
@@ -3474,7 +3474,7 @@ void save_shape(const string& filename, const vector<int>& points,
     save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_ = make_unique<obj_model>();
-    auto obj = obj_.get();
+    auto obj  = obj_.get();
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
           {}, flip_texcoord);
@@ -3512,7 +3512,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply_ = make_unique<ply_model>();
-    auto ply = ply_.get();
+    auto ply  = ply_.get();
     load_ply(filename, ply);
     positions = get_positions(ply);
     normals   = get_normals(ply);
@@ -3523,8 +3523,8 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_ = make_unique<obj_model>();
-    auto obj = obj_.get();
-    auto err = ""s;
+    auto obj  = obj_.get();
+    auto err  = ""s;
     load_obj(filename, obj, true);
     if (obj->shapes.empty()) throw_emptyshape_error(filename);
     if (obj->shapes.size() > 1) throw_emptyshape_error(filename);
@@ -3556,7 +3556,7 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
     auto obj_ = make_unique<obj_model>();
-    auto obj = obj_.get();
+    auto obj  = obj_.get();
 
     // Add obj data
     add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions, normals,

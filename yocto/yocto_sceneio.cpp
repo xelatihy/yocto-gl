@@ -939,7 +939,7 @@ static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply_ = make_unique<ply_model>();
-    auto ply = ply_.get();
+    auto ply  = ply_.get();
     load_ply(filename, ply);
     frames = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
@@ -955,7 +955,7 @@ static void save_instances(
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply_ = make_unique<ply_model>();
-    auto ply = ply_.get();
+    auto ply  = ply_.get();
     add_values(ply, frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
@@ -1450,7 +1450,7 @@ static void load_obj_scene(
     const string& filename, sceneio_model* scene, bool noparallel) {
   // load obj
   auto obj_ = make_unique<obj_model>();
-  auto obj = obj_.get();
+  auto obj  = obj_.get();
   load_obj(filename, obj, false, true, false);
 
   // convert cameras
@@ -1520,7 +1520,7 @@ static void load_obj_scene(
     material->coat_tex         = get_texture(omat->pbr_coat_map);
     material->opacity_tex      = get_texture(omat->pbr_opacity_map);
     material->normal_tex       = get_texture(omat->normal_map);
-    material_map[omat->name]    = material;
+    material_map[omat->name]   = material;
   }
 
   // get material
@@ -1604,11 +1604,11 @@ static void load_obj_scene(
 static void save_obj_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   auto obj_ = make_unique<obj_model>();
-  auto obj = obj_.get();
+  auto obj  = obj_.get();
 
   // convert cameras
   for (auto camera : scene->cameras) {
-    auto ocamera    = obj->cameras.emplace_back(new obj_camera{});
+    auto ocamera      = obj->cameras.emplace_back(new obj_camera{});
     ocamera->name     = get_basename(camera->name);
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
@@ -1629,16 +1629,16 @@ static void save_obj_scene(
 
   // convert materials and textures
   for (auto material : scene->materials) {
-    auto omaterial                = obj->materials.emplace_back(new obj_material{});
-    omaterial->name                 = get_basename(material->name);
-    omaterial->illum                = 2;
-    omaterial->as_pbr               = true;
-    omaterial->pbr_emission         = material->emission;
-    omaterial->pbr_base             = material->color;
-    omaterial->pbr_specular         = material->specular;
-    omaterial->pbr_roughness        = material->roughness;
-    omaterial->pbr_metallic         = material->metallic;
-    omaterial->pbr_coat             = material->coat;
+    auto omaterial           = obj->materials.emplace_back(new obj_material{});
+    omaterial->name          = get_basename(material->name);
+    omaterial->illum         = 2;
+    omaterial->as_pbr        = true;
+    omaterial->pbr_emission  = material->emission;
+    omaterial->pbr_base      = material->color;
+    omaterial->pbr_specular  = material->specular;
+    omaterial->pbr_roughness = material->roughness;
+    omaterial->pbr_metallic  = material->metallic;
+    omaterial->pbr_coat      = material->coat;
     omaterial->pbr_transmission     = material->transmission;
     omaterial->pbr_opacity          = material->opacity;
     omaterial->pbr_emission_map     = get_texture(material->emission_tex);
@@ -1654,8 +1654,8 @@ static void save_obj_scene(
 
   // convert objects
   for (auto object : scene->objects) {
-    auto oshape   = obj->shapes.emplace_back(new obj_shape{});
-    oshape->name    = get_basename(object->name);
+    auto oshape    = obj->shapes.emplace_back(new obj_shape{});
+    oshape->name   = get_basename(object->name);
     auto shape     = object->shape;
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
@@ -1687,9 +1687,9 @@ static void save_obj_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto oenvironment        = obj->environments.emplace_back(new obj_environment{});
-    oenvironment->name         = get_basename(environment->name);
-    oenvironment->frame        = environment->frame;
+    auto oenvironment   = obj->environments.emplace_back(new obj_environment{});
+    oenvironment->name  = get_basename(environment->name);
+    oenvironment->frame = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_map = get_texture(environment->emission_tex);
   }

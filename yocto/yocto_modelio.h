@@ -79,16 +79,16 @@ struct ply_property {
 
 // Ply elements
 struct ply_element {
-  string               name       = "";
-  size_t               count      = 0;
+  string                name       = "";
+  size_t                count      = 0;
   vector<ply_property*> properties = {};
   ~ply_element();
 };
 
 // Ply model
 struct ply_model {
-  ply_format          format   = ply_format::binary_little_endian;
-  vector<string>      comments = {};
+  ply_format           format   = ply_format::binary_little_endian;
+  vector<string>       comments = {};
   vector<ply_element*> elements = {};
   ~ply_model();
 };
@@ -318,7 +318,7 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  vector<string>          comments     = {};
+  vector<string>           comments     = {};
   vector<obj_shape*>       shapes       = {};
   vector<obj_material*>    materials    = {};
   vector<obj_camera*>      cameras      = {};
