@@ -1893,7 +1893,7 @@ static void load_pbrt_scene(
     const string& filename, sceneio_model* scene, bool noparallel) {
   // load pbrt
   auto pbrt_ = make_unique<pbrt_model>();
-  auto pbrt = pbrt_.get();
+  auto pbrt  = pbrt_.get();
   load_pbrt(filename, pbrt);
 
   // convert cameras
@@ -1988,11 +1988,11 @@ void save_pbrt_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   // save pbrt
   auto pbrt_ = make_unique<pbrt_model>();
-  auto pbrt = pbrt_.get();
+  auto pbrt  = pbrt_.get();
 
   // convert camera
-  auto  camera       = scene->cameras.front();
-  auto pcamera      = pbrt->cameras.emplace_back(new pbrt_camera{});
+  auto camera         = scene->cameras.front();
+  auto pcamera        = pbrt->cameras.emplace_back(new pbrt_camera{});
   pcamera->frame      = camera->frame;
   pcamera->lens       = camera->lens;
   pcamera->aspect     = camera->aspect;
@@ -2000,7 +2000,7 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto object : scene->objects) {
-    auto pshape     = pbrt->shapes.emplace_back(new pbrt_shape{});
+    auto pshape       = pbrt->shapes.emplace_back(new pbrt_shape{});
     pshape->filename_ = replace_extension(object->shape->name, ".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
@@ -2008,7 +2008,7 @@ void save_pbrt_scene(
       pshape->instances = object->instance->frames;
       pshape->instances = object->instance->frames;
     }
-    auto material       = object->material;
+    auto material        = object->material;
     pshape->color        = material->color;
     pshape->metallic     = material->metallic;
     pshape->specular     = material->specular;
@@ -2016,13 +2016,13 @@ void save_pbrt_scene(
     pshape->roughness    = material->roughness;
     pshape->ior          = material->ior;
     pshape->opacity      = material->opacity;
-    pshape->color_map    = material->color_tex ? material->color_tex->name : ""s;
-    pshape->emission     = material->emission;
+    pshape->color_map = material->color_tex ? material->color_tex->name : ""s;
+    pshape->emission  = material->emission;
   }
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment    = pbrt->environments.emplace_back(new pbrt_environment{});
+    auto penvironment = pbrt->environments.emplace_back(new pbrt_environment{});
     penvironment->emission = environment->emission;
     if (environment->emission_tex) {
       penvironment->emission_map = environment->emission_tex->name;

@@ -587,13 +587,13 @@ struct pbrt_environment {
 
 // Pbrt model
 struct pbrt_model {
-  vector<string>           comments     = {};
+  vector<string>            comments     = {};
   vector<pbrt_camera*>      cameras      = {};
   vector<pbrt_shape*>       shapes       = {};
   vector<pbrt_environment*> environments = {};
   vector<pbrt_light*>       lights       = {};
-  vector<pbrt_arealight*>       arealights       = {};
-  vector<pbrt_material*>       materials       = {};
+  vector<pbrt_arealight*>   arealights   = {};
+  vector<pbrt_material*>    materials    = {};
   ~pbrt_model();
 };
 
