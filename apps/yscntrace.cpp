@@ -39,11 +39,10 @@ using std::make_shared;
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
-    auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera->frame);
-    set_camera_lens(
-        scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
+    auto camera = add_camera(scene);
+    set_camera_frame(camera, iocamera->frame);
+    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};

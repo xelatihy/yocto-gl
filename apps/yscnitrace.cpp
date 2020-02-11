@@ -111,11 +111,11 @@ void init_scene(shared_ptr<app_state> app) {
   auto& texture_map = app->texture_map;
 
   for (auto iocamera : ioscene->cameras) {
-    auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera->frame);
+    auto camera = add_camera(scene);
+    set_camera_frame(camera, iocamera->frame);
     set_camera_lens(
-        scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
+        camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
   texture_map[nullptr] = -1;
@@ -556,11 +556,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       stop_display(app);
-      auto& iocamera = app->ioscene->cameras[app->selected_camera];
-      set_camera_frame(app->scene.get(), app->selected_camera, iocamera->frame);
-      set_camera_lens(app->scene.get(), app->selected_camera, iocamera->lens,
+      auto iocamera = app->ioscene->cameras[app->selected_camera];
+      set_camera_frame(app->scene->cameras[app->selected_camera], iocamera->frame);
+      set_camera_lens(app->scene->cameras[app->selected_camera], iocamera->lens,
           iocamera->aspect, iocamera->film);
-      set_camera_focus(app->scene.get(), app->selected_camera, iocamera->aperture,
+      set_camera_focus(app->scene->cameras[app->selected_camera], iocamera->aperture,
           iocamera->focus);
       reset_display(app);
     }
@@ -826,11 +826,10 @@ void run_app(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_camera_frame(app->scene.get(), app->params.camera, iocamera->frame);
-      set_camera_lens(app->scene.get(), app->params.camera, iocamera->lens,
+      set_camera_frame(app->scene->cameras[app->params.camera], iocamera->frame);
+      set_camera_lens(app->scene->cameras[app->params.camera], iocamera->lens,
           iocamera->aspect, iocamera->film);
-      set_camera_focus(
-          app->scene.get(), app->params.camera, iocamera->aperture, iocamera->focus);
+      set_camera_focus(app->scene->cameras[app->params.camera], iocamera->aperture, iocamera->focus);
       reset_display(app);
     }
 
@@ -842,8 +841,8 @@ void run_app(int argc, const char* argv[]) {
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        auto& camera = app->scene->cameras.at(app->params.camera);
-        auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
+        auto camera = app->scene->cameras.at(app->params.camera);
+        auto  ray    = camera_ray(camera->frame, camera->lens, camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene.get(), ray); isec.hit) {

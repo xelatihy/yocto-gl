@@ -77,13 +77,13 @@ namespace yocto {
 
 // Trace scene
 struct trace_scene;
+struct trace_camera;
 
 // Add cameras
-int  add_camera(trace_scene* scene);
-void set_camera_frame(trace_scene* scene, int idx, const frame3f& frame);
-void set_camera_lens(
-    trace_scene* scene, int idx, float lens, float aspect, float film);
-void set_camera_focus(trace_scene* scene, int idx, float aperture, float focus);
+trace_camera*  add_camera(trace_scene* scene);
+void set_camera_frame(trace_camera* camera, const frame3f& frame);
+void set_camera_lens(trace_camera* camera, float lens, float aspect, float film);
+void set_camera_focus(trace_camera* camera, float aperture, float focus);
 void clear_cameras(trace_scene* scene);
 
 // Add texture
@@ -390,7 +390,7 @@ struct trace_light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct trace_scene {
-  vector<trace_camera>      cameras      = {};
+  vector<trace_camera*>      cameras      = {};
   vector<trace_shape>       shapes       = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
@@ -402,6 +402,9 @@ struct trace_scene {
   std::shared_ptr<void> embree_bvh       = {};
   vector<vec2i>         embree_instances = {};
 #endif
+
+  // cleanup
+  ~trace_scene();
 };
 
 // State of a pixel during tracing

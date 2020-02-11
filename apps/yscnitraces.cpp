@@ -80,11 +80,10 @@ struct app_state {
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
-    auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera->frame);
-    set_camera_lens(
-        scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
+    auto camera = add_camera(scene);
+    set_camera_frame(camera, iocamera->frame);
+    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
@@ -300,7 +299,7 @@ void run_app(int argc, const char* argv[]) {
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto& camera = app->scene->cameras.at(app->params.camera);
+          auto camera = app->scene->cameras.at(app->params.camera);
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
           auto  rotate = zero2f;
@@ -309,9 +308,9 @@ void run_app(int argc, const char* argv[]) {
           if (input.mouse_right)
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+            pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
           pan.x = -pan.x;
-          update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+          update_turntable(camera->frame, camera->focus, rotate, dolly, pan);
           reset_display(app);
         }
       });

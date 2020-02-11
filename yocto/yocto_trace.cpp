@@ -581,31 +581,31 @@ static vec4f eval_texture(const trace_scene* scene, int texture_,
 static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
     const vec2f& image_uv, const vec2f& lens_uv) {
   auto& camera   = scene->cameras[camera_];
-  auto  distance = camera.lens;
-  if (camera.focus < flt_max) {
-    distance = camera.lens * camera.focus / (camera.focus - camera.lens);
+  auto  distance = camera->lens;
+  if (camera->focus < flt_max) {
+    distance = camera->lens * camera->focus / (camera->focus - camera->lens);
   }
-  if (camera.aperture) {
-    auto e = vec3f{(lens_uv.x - 0.5f) * camera.aperture,
-        (lens_uv.y - 0.5f) * camera.aperture, 0};
-    auto q = vec3f{camera.film.x * (0.5f - image_uv.x),
-        camera.film.y * (image_uv.y - 0.5f), distance};
+  if (camera->aperture) {
+    auto e = vec3f{(lens_uv.x - 0.5f) * camera->aperture,
+        (lens_uv.y - 0.5f) * camera->aperture, 0};
+    auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
+        camera->film.y * (image_uv.y - 0.5f), distance};
     // distance of the image of the point
-    auto distance1 = camera.lens * distance / (distance - camera.lens);
+    auto distance1 = camera->lens * distance / (distance - camera->lens);
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
-    // auto q1 = - normalize(q) * camera.focus / normalize(q).z;
+    // auto q1 = - normalize(q) * camera->focus / normalize(q).z;
     auto ray = ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
     return ray;
   } else {
     auto e   = zero3f;
-    auto q   = vec3f{camera.film.x * (0.5f - image_uv.x),
-        camera.film.y * (image_uv.y - 0.5f), distance};
+    auto q   = vec3f{camera->film.x * (0.5f - image_uv.x),
+        camera->film.y * (image_uv.y - 0.5f), distance};
     auto q1  = -q;
     auto d   = normalize(q1 - e);
     auto ray = ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
     return ray;
   }
 }
@@ -615,27 +615,27 @@ static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
 static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
     const vec2f& image_uv, const vec2f& lens_uv) {
   auto& camera = scene->cameras[camera_];
-  if (camera.aperture) {
-    auto scale = 1 / camera.lens;
-    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
-        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
-    auto q1    = vec3f{-q.x, -q.y, -camera.focus};
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera.aperture,
-                                        (lens_uv.y - 0.5f) * camera.aperture,
+  if (camera->aperture) {
+    auto scale = 1 / camera->lens;
+    auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
+        camera->film.y * (image_uv.y - 0.5f) * scale, scale};
+    auto q1    = vec3f{-q.x, -q.y, -camera->focus};
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera->aperture,
+                                        (lens_uv.y - 0.5f) * camera->aperture,
                                         0};
     auto d = normalize(q1 - e);
     auto ray = ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
     return ray;
   } else {
-    auto scale = 1 / camera.lens;
-    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
-        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
+    auto scale = 1 / camera->lens;
+    auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
+        camera->film.y * (image_uv.y - 0.5f) * scale, scale};
     auto q1    = -q;
     auto e     = vec3f{-q.x, -q.y, 0};
     auto d     = normalize(q1 - e);
     auto ray   = ray3f{
-        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
     return ray;
   }
 }
@@ -645,7 +645,7 @@ static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
 static ray3f eval_camera(
     const trace_scene* scene, int camera_, const vec2f& uv, const vec2f& luv) {
   auto& camera = scene->cameras[camera_];
-  if (camera.orthographic)
+  if (camera->orthographic)
     return eval_orthographic_camera(scene, camera_, uv, luv);
   else
     return eval_perspective_camera(scene, camera_, uv, luv);
@@ -2925,10 +2925,10 @@ void init_state(
     trace_state& state, const trace_scene* scene, const trace_params& params) {
   auto& camera = scene->cameras[params.camera];
   auto  image_size =
-      (camera.film.x > camera.film.y)
+      (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
-                (int)round(params.resolution * camera.film.y / camera.film.x)}
-          : vec2i{(int)round(params.resolution * camera.film.x / camera.film.y),
+                (int)round(params.resolution * camera->film.y / camera->film.x)}
+          : vec2i{(int)round(params.resolution * camera->film.x / camera->film.y),
                 params.resolution};
   state    = {image_size, trace_pixel{}};
   auto rng = make_rng(1301081);
@@ -3078,27 +3078,26 @@ image<vec4f> trace_samples(trace_state& state, const trace_scene* scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// cleanup
+trace_scene::~trace_scene() {
+  for(auto camera : cameras) delete camera;  
+}
+
 // Add cameras
-int add_camera(trace_scene* scene) {
-  scene->cameras.emplace_back();
-  return (int)scene->cameras.size() - 1;
+trace_camera* add_camera(trace_scene* scene) {
+  return scene->cameras.emplace_back(new trace_camera{});
 }
-void set_camera_frame(trace_scene* scene, int idx, const frame3f& frame) {
-  auto& camera = scene->cameras[idx];
-  camera.frame = frame;
+void set_camera_frame(trace_camera* camera, const frame3f& frame) {
+  camera->frame = frame;
 }
-void set_camera_lens(
-    trace_scene* scene, int idx, float lens, float aspect, float film) {
-  auto& camera = scene->cameras[idx];
-  camera.lens  = lens;
-  camera.film  = aspect >= 1 ? vec2f{film, film / aspect}
+void set_camera_lens(trace_camera* camera, float lens, float aspect, float film) {
+  camera->lens  = lens;
+  camera->film  = aspect >= 1 ? vec2f{film, film / aspect}
                             : vec2f{film * aspect, film};
 }
-void set_camera_focus(
-    trace_scene* scene, int idx, float aperture, float focus) {
-  auto& camera    = scene->cameras[idx];
-  camera.aperture = aperture;
-  camera.focus    = focus;
+void set_camera_focus(trace_camera* camera, float aperture, float focus) {
+  camera->aperture = aperture;
+  camera->focus    = focus;
 }
 void clean_cameras(trace_scene* scene) { scene->cameras.clear(); }
 
