@@ -277,6 +277,8 @@ sceneio_subdiv*      add_subdiv(sceneio_model* scene);
 sceneio_texture*     add_texture(sceneio_model* scene);
 sceneio_node*        add_node(sceneio_model* scene);
 sceneio_animation*   add_animation(sceneio_model* scene);
+sceneio_object*      add_complete_object(
+         sceneio_model* scene, const string& basename = "");
 
 }  // namespace yocto
 
