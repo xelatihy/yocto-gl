@@ -77,72 +77,88 @@ namespace yocto {
 
 // Trace scene
 struct trace_scene;
+struct trace_camera;
+struct trace_environment;
+struct trace_shape;
+struct trace_texture;
+struct trace_material;
+struct trace_instance;
+struct trace_object;
 
 // Add cameras
-int  add_camera(trace_scene& scene);
-void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_camera_lens(
-    trace_scene& scene, int idx, float lens, float aspect, float film);
-void set_camera_focus(trace_scene& scene, int idx, float aperture, float focus);
-void clear_cameras(trace_scene& scene);
+trace_camera* add_camera(trace_scene* scene);
+void          set_camera_frame(trace_camera* camera, const frame3f& frame);
+void          set_camera_lens(
+             trace_camera* camera, float lens, float aspect, float film);
+void set_camera_focus(trace_camera* camera, float aperture, float focus);
+void clear_cameras(trace_scene* scene);
+
+// Add object
+trace_object* add_object(trace_scene* scene);
+void          set_frame(trace_object* object, const frame3f& frame);
+void          set_material(trace_object* object, trace_material* material);
+void          set_shape(trace_object* object, trace_shape* shape);
+void          set_instance(trace_object* object, trace_instance* instance);
 
 // Add texture
-int  add_texture(trace_scene& scene);
-void set_texture(trace_scene& scene, int idx, const image<vec4b>& img);
-void set_texture(trace_scene& scene, int idx, const image<vec4f>& img);
-void clear_textures(trace_scene& scene);
+trace_texture* add_texture(trace_scene* scene);
+void           set_texture(trace_texture* texture, const image<vec4b>& img);
+void           set_texture(trace_texture* texture, const image<vec4f>& img);
+void           clear_textures(trace_scene* scene);
+
+// Add material
+trace_material* add_material(trace_scene* scene);
+void set_shape_emission(trace_material* material, const vec3f& emission,
+    trace_texture* emission_txt = nullptr);
+void set_shape_color(trace_material* material, const vec3f& color,
+    trace_texture* color_txt = nullptr);
+void set_shape_specular(trace_material* material, float specular = 1,
+    trace_texture* specular_txt = nullptr);
+void set_shape_ior(trace_material* material, float ior);
+void set_shape_metallic(trace_material* material, float metallic,
+    trace_texture* metallic_txt = nullptr);
+void set_shape_transmission(trace_material* material, float transmission,
+    bool thin, float trdepth, trace_texture* transmission_txt = nullptr);
+void set_shape_roughness(trace_material* material, float roughness,
+    trace_texture* roughness_txt = nullptr);
+void set_shape_opacity(trace_material* material, float opacity,
+    trace_texture* opacity_txt = nullptr);
+void set_shape_thin(trace_material* material, bool thin);
+void set_shape_scattering(trace_material* material, const vec3f& scattering,
+    float scanisotropy, trace_texture* scattering_tex = nullptr);
+void set_shape_normalmap(trace_material* material, trace_texture* normal_txt);
+void set_shape_gltftextures(trace_material* material, bool gltf_textures);
 
 // Add shape
-int  add_shape(trace_scene& scene);
-void set_shape_points(trace_scene& scene, int idx, const vector<int>& points);
-void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines);
-void set_shape_triangles(
-    trace_scene& scene, int idx, const vector<vec3i>& triangles);
-void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads);
-void set_shape_fvquads(trace_scene& scene, int idx,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord);
-void set_shape_positions(
-    trace_scene& scene, int idx, const vector<vec3f>& positions);
-void set_shape_normals(
-    trace_scene& scene, int idx, const vector<vec3f>& normals);
-void set_shape_texcoords(
-    trace_scene& scene, int idx, const vector<vec2f>& texcoords);
-void set_shape_colors(trace_scene& scene, int idx, const vector<vec4f>& colors);
-void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
-void set_shape_tangents(
-    trace_scene& scene, int idx, const vector<vec4f>& tangents);
-void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_shape_frames(trace_scene& scene, int idx,
-    const vector<frame3f>& instances, const frame3f& local_frame);
-void set_shape_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_shape_color(
-    trace_scene& scene, int idx, const vec3f& color, int color_txt = -1);
-void set_shape_specular(
-    trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
-void set_shape_ior(trace_scene& scene, int idx, float ior);
-void set_shape_metallic(
-    trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_shape_transmission(trace_scene& scene, int idx, float transmission,
-    bool thin, float trdepth, int transmission_txt = -1);
-void set_shape_roughness(
-    trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_shape_opacity(
-    trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_shape_thin(trace_scene& scene, int idx, bool thin);
-void set_shape_scattering(trace_scene& scene, int idx, const vec3f& scattering,
-    float scanisotropy, int scattering_tex = -1);
-void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt);
-void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_shapes(trace_scene& scene);
+trace_shape* add_shape(trace_scene* scene);
+void         set_shape_points(trace_shape* shape, const vector<int>& points);
+void         set_shape_lines(trace_shape* shape, const vector<vec2i>& lines);
+void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles);
+void set_shape_quads(trace_shape* shape, const vector<vec4i>& quads);
+void set_shape_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
+void set_shape_positions(trace_shape* shape, const vector<vec3f>& positions);
+void set_shape_normals(trace_shape* shape, const vector<vec3f>& normals);
+void set_shape_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
+void set_shape_colors(trace_shape* shape, const vector<vec4f>& colors);
+void set_shape_radius(trace_shape* shape, const vector<float>& radius);
+void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents);
+void set_shape_frame(trace_shape* shape, const frame3f& frame);
+void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
+    const frame3f& local_frame);
+void clear_shapes(trace_scene* scene);
+
+// Add instance
+trace_instance* add_instance(trace_scene* scene);
+void set_frames(trace_instance* instance, const vector<frame3f>& frames);
 
 // Add environment
-int  add_environment(trace_scene& scene);
-void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_environment_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
-void clear_environments(trace_scene& scene);
+trace_environment* add_environment(trace_scene* scene);
+void               set_environment_frame(
+                  trace_environment* environment, const frame3f& frame);
+void set_environment_emission(trace_environment* environment,
+    const vec3f& emission, trace_texture* emission_map = nullptr);
+void clear_environments(trace_scene* scene);
 
 // Trace state
 struct trace_state;
@@ -159,7 +175,7 @@ enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
   diffuse, specular, coat, metal, transmission, refraction, roughness, 
-  shape, instance, element, highlight
+  object, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -201,7 +217,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "shape", "instance", "element", "highlight"};
+    "object", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -211,30 +227,30 @@ const auto trace_bvh_names        = vector<string>{
 
 // Initialize state of the renderer.
 void init_state(
-    trace_state& state, const trace_scene& scene, const trace_params& params);
+    trace_state* state, const trace_scene* scene, const trace_params& params);
 
 // Initialize lights.
-void init_lights(trace_scene& scene);
+void init_lights(trace_scene* scene);
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene& bvh, const trace_params& params);
+void init_bvh(trace_scene* bvh, const trace_params& params);
 
 // Refit bvh data
-void update_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+void update_bvh(trace_scene* bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
     int samples, const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.
-vec4f trace_sample(trace_state& state, const trace_scene& scene,
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params);
 
 // Check is a sampler requires lights
@@ -296,18 +312,47 @@ struct trace_texture {
   image<vec4b> ldr = {};
 };
 
-// Shape data represented as an indexed meshes of elements.
-// May contain either points, lines, triangles and quads.
-// Additionally, we support faceavarying primitives where
-// each verftex data has its own topology.
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct trace_shape {
-  // frames
-  vector<frame3f> frames = {};
+struct trace_material {
+  // material
+  vec3f emission     = {0, 0, 0};
+  vec3f color        = {0, 0, 0};
+  float specular     = 0;
+  float roughness    = 0;
+  float metallic     = 0;
+  float ior          = 1.5;
+  vec3f spectint     = {1, 1, 1};
+  float coat         = 0;
+  float transmission = 0;
+  vec3f scattering   = {0, 0, 0};
+  float scanisotropy = 0;
+  float trdepth      = 0.01;
+  float opacity      = 1;
+  bool  thin         = false;
 
+  // textures
+  trace_texture* emission_tex     = nullptr;
+  trace_texture* color_tex        = nullptr;
+  trace_texture* specular_tex     = nullptr;
+  trace_texture* metallic_tex     = nullptr;
+  trace_texture* roughness_tex    = nullptr;
+  trace_texture* transmission_tex = nullptr;
+  trace_texture* spectint_tex     = nullptr;
+  trace_texture* scattering_tex   = nullptr;
+  trace_texture* coat_tex         = nullptr;
+  trace_texture* opacity_tex      = nullptr;
+  trace_texture* normal_tex       = nullptr;
+  bool           gltf_textures    = false;  // glTF packed textures
+};
+
+// Shape data represented as an indexed meshes of elements.
+// May contain either points, lines, triangles and quads.
+// Additionally, we support faceavarying primitives where
+// each verftex data has its own topology.
+struct trace_shape {
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -327,36 +372,6 @@ struct trace_shape {
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
 
-  // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = false;
-
-  // textures
-  int  emission_tex     = -1;
-  int  color_tex        = -1;
-  int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  spectint_tex     = -1;
-  int  scattering_tex   = -1;
-  int  coat_tex         = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
-  bool gltf_textures    = false;  // glTF packed textures
-
   // computed properties
   trace_bvh bvh = {};
 #ifdef YOCTO_EMBREE
@@ -367,19 +382,32 @@ struct trace_shape {
   vector<float> elements_cdf = {};
 };
 
+// Instances.
+struct trace_instance {
+  vector<frame3f> frames = {};
+};
+
+// Object.
+struct trace_object {
+  frame3f         frame    = identity3x4f;
+  trace_shape*    shape    = nullptr;
+  trace_material* material = nullptr;
+  trace_instance* instance = nullptr;
+};
+
 // Environment map.
 struct trace_environment {
-  frame3f       frame        = identity3x4f;
-  vec3f         emission     = {0, 0, 0};
-  int           emission_tex = -1;
-  vector<float> texels_cdf   = {};
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
+  trace_texture* emission_tex = nullptr;
+  vector<float>  texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  int shape       = -1;
-  int instance_   = -1;
-  int environment = -1;
+  trace_object*      object      = nullptr;
+  int                instance    = -1;
+  trace_environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -390,18 +418,24 @@ struct trace_light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct trace_scene {
-  vector<trace_camera>      cameras      = {};
-  vector<trace_shape>       shapes       = {};
-  vector<trace_texture>     textures     = {};
-  vector<trace_environment> environments = {};
+  vector<trace_camera*>      cameras      = {};
+  vector<trace_object*>      objects      = {};
+  vector<trace_shape*>       shapes       = {};
+  vector<trace_material*>    materials    = {};
+  vector<trace_instance*>    instances    = {};
+  vector<trace_texture*>     textures     = {};
+  vector<trace_environment*> environments = {};
 
   // computed properties
-  vector<trace_light> lights = {};
-  trace_bvh           bvh    = {};
+  vector<trace_light*> lights = {};
+  trace_bvh            bvh    = {};
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh       = {};
   vector<vec2i>         embree_instances = {};
 #endif
+
+  // cleanup
+  ~trace_scene();
 };
 
 // State of a pixel during tracing
@@ -414,10 +448,6 @@ struct trace_pixel {
 
 // State of the image being renderer
 struct trace_state {
-  trace_state() {}
-  trace_state(const vec2i& size, const trace_pixel& value)
-      : _extent{size}, _pixels((size_t)size.x * (size_t)size.y, value) {}
-
   vec2i        size() const { return _extent; }
   trace_pixel& at(const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
 
@@ -436,20 +466,20 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   shape     = -1;
-  int   instance_ = -1;
-  int   element   = -1;
-  vec2f uv        = {0, 0};
-  float distance  = 0;
-  bool  hit       = false;
+  int   object   = -1;
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
 };
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
+trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 

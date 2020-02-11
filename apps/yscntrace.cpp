@@ -37,83 +37,95 @@ using namespace yocto;
 using std::make_shared;
 
 // construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model* ioscene) {
-  scene = trace_scene{};
-
+void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
-    auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera->frame);
-    set_camera_lens(
-        scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
+    auto camera = add_camera(scene);
+    set_camera_frame(camera, iocamera->frame);
+    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, int>{};
-  texture_map[nullptr] = -1;
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    auto id = add_texture(scene);
+    auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
-      set_texture(scene, id, std::move(iotexture->hdr));
+      set_texture(texture, std::move(iotexture->hdr));
     } else if (!iotexture->ldr.empty()) {
-      set_texture(scene, id, std::move(iotexture->ldr));
+      set_texture(texture, std::move(iotexture->ldr));
     }
-    texture_map[iotexture] = id;
+    texture_map[iotexture] = texture;
+  }
+
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  material_map[nullptr] = nullptr;
+  for (auto iomaterial : ioscene->materials) {
+    auto material = add_material(scene);
+    set_shape_emission(material, iomaterial->emission,
+        texture_map.at(iomaterial->emission_tex));
+    set_shape_color(
+        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
+    set_shape_specular(material, iomaterial->specular,
+        texture_map.at(iomaterial->specular_tex));
+    set_shape_ior(material, iomaterial->ior);
+    set_shape_metallic(material, iomaterial->metallic,
+        texture_map.at(iomaterial->metallic_tex));
+    set_shape_transmission(material, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_shape_roughness(material, iomaterial->roughness,
+        texture_map.at(iomaterial->roughness_tex));
+    set_shape_opacity(
+        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_thin(material, iomaterial->thin);
+    set_shape_normalmap(material, texture_map.at(iomaterial->normal_tex));
+    set_shape_scattering(material, iomaterial->scattering,
+        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    material_map[iomaterial] = material;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  shape_map[nullptr] = nullptr;
+  for (auto ioshape : ioscene->shapes) {
+    auto shape = add_shape(scene);
+    set_shape_points(shape, ioshape->points);
+    set_shape_lines(shape, ioshape->lines);
+    set_shape_triangles(shape, ioshape->triangles);
+    set_shape_quads(shape, ioshape->quads);
+    set_shape_positions(shape, ioshape->positions);
+    set_shape_normals(shape, ioshape->normals);
+    set_shape_texcoords(shape, ioshape->texcoords);
+    set_shape_colors(shape, ioshape->colors);
+    set_shape_radius(shape, ioshape->radius);
+    set_shape_tangents(shape, ioshape->tangents);
+    shape_map[ioshape] = shape;
+  }
+
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  instance_map[nullptr] = nullptr;
+  for (auto ioinstance : ioscene->instances) {
+    auto instance = add_instance(scene);
+    set_frames(instance, ioinstance->frames);
+    instance_map[ioinstance] = instance;
+  }
+
   for (auto ioobject : ioscene->objects) {
-    auto id      = add_shape(scene);
-    auto ioshape = ioobject->shape;
-    set_shape_points(scene, id, ioshape->points);
-    set_shape_lines(scene, id, ioshape->lines);
-    set_shape_triangles(scene, id, ioshape->triangles);
-    set_shape_quads(scene, id, ioshape->quads);
-    set_shape_positions(scene, id, ioshape->positions);
-    set_shape_normals(scene, id, ioshape->normals);
-    set_shape_texcoords(scene, id, ioshape->texcoords);
-    set_shape_colors(scene, id, ioshape->colors);
-    set_shape_radius(scene, id, ioshape->radius);
-    set_shape_tangents(scene, id, ioshape->tangents);
-    auto ioinstance = ioobject->instance;
-    if (ioinstance) {
-      set_shape_frames(scene, id, ioinstance->frames, ioobject->frame);
-    } else {
-      set_shape_frame(scene, id, ioobject->frame);
-    }
-    auto iomaterial = ioobject->material;
-    set_shape_emission(scene, id, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_shape_color(
-        scene, id, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(scene, id, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_shape_ior(scene, id, iomaterial->ior);
-    set_shape_metallic(scene, id, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_shape_transmission(scene, id, iomaterial->transmission,
-        iomaterial->thin, iomaterial->trdepth,
-        texture_map.at(iomaterial->transmission_tex));
-    set_shape_roughness(scene, id, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(scene, id, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
-    set_shape_thin(scene, id, iomaterial->thin);
-    set_shape_normalmap(scene, id, texture_map.at(iomaterial->normal_tex));
-    set_shape_scattering(scene, id, iomaterial->scattering,
-        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    auto object = add_object(scene);
+    set_frame(object, ioobject->frame);
+    set_shape(object, shape_map.at(ioobject->shape));
+    set_material(object, material_map.at(ioobject->material));
+    set_instance(object, instance_map.at(ioobject->instance));
   }
 
   for (auto ioenvironment : ioscene->environments) {
-    auto id = add_environment(scene);
-    set_environment_frame(scene, id, ioenvironment->frame);
-    set_environment_emission(scene, id, ioenvironment->emission,
+    auto environment = add_environment(scene);
+    set_environment_frame(environment, ioenvironment->frame);
+    set_environment_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
-
-  ioscene = {};
 }
 
 void run_app(int argc, const char* argv[]) {
@@ -167,8 +179,8 @@ void run_app(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = trace_scene{};
-  init_scene(scene, ioscene.get());
+  auto scene         = make_shared<trace_scene>();
+  init_scene(scene.get(), ioscene.get());
   print_elapsed(convert_timer);
 
   // cleanup
@@ -176,24 +188,24 @@ void run_app(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, params);
+  init_bvh(scene.get(), params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene);
+  init_lights(scene.get());
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (scene.lights.empty() && is_sampler_lit(params)) {
+  if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto state = trace_state{};
-  init_state(state, scene, params);
-  auto render = image{state.size(), zero4f};
+  auto state = make_shared<trace_state>();
+  init_state(state.get(), scene.get(), params);
+  auto render = image{state->size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
@@ -201,7 +213,7 @@ void run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render           = trace_samples(state, scene, nsamples, params);
+    render = trace_samples(state.get(), scene.get(), nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
