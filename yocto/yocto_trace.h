@@ -81,6 +81,9 @@ struct trace_camera;
 struct trace_environment;
 struct trace_shape;
 struct trace_texture;
+struct trace_material;
+struct trace_instance;
+struct trace_object;
 
 // Add cameras
 trace_camera* add_camera(trace_scene* scene);
@@ -96,8 +99,32 @@ void           set_texture(trace_texture* texture, const image<vec4b>& img);
 void           set_texture(trace_texture* texture, const image<vec4f>& img);
 void           clear_textures(trace_scene* scene);
 
+// Add material
+trace_material* add_material(trace_scene* scene);
+void set_shape_emission(trace_material* material, const vec3f& emission,
+    trace_texture* emission_txt = nullptr);
+void set_shape_color(
+    trace_material* material, const vec3f& color, trace_texture* color_txt = nullptr);
+void set_shape_specular(trace_material* material, float specular = 1,
+    trace_texture* specular_txt = nullptr);
+void set_shape_ior(trace_material* material, float ior);
+void set_shape_metallic(
+    trace_material* material, float metallic, trace_texture* metallic_txt = nullptr);
+void set_shape_transmission(trace_material* material, float transmission, bool thin,
+    float trdepth, trace_texture* transmission_txt = nullptr);
+void set_shape_roughness(trace_material* material, float roughness,
+    trace_texture* roughness_txt = nullptr);
+void set_shape_opacity(
+    trace_material* material, float opacity, trace_texture* opacity_txt = nullptr);
+void set_shape_thin(trace_material* material, bool thin);
+void set_shape_scattering(trace_material* material, const vec3f& scattering,
+    float scanisotropy, trace_texture* scattering_tex = nullptr);
+void set_shape_normalmap(trace_material* material, trace_texture* normal_txt);
+void set_shape_gltftextures(trace_material* material, bool gltf_textures);
+
 // Add shape
 trace_shape* add_shape(trace_scene* scene);
+void set_material(trace_shape* shape, trace_material* material);
 void         set_shape_points(trace_shape* shape, const vector<int>& points);
 void         set_shape_lines(trace_shape* shape, const vector<vec2i>& lines);
 void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles);
@@ -113,26 +140,6 @@ void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 void set_shape_frame(trace_shape* shape, const frame3f& frame);
 void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
     const frame3f& local_frame);
-void set_shape_emission(trace_shape* shape, const vec3f& emission,
-    trace_texture* emission_txt = nullptr);
-void set_shape_color(
-    trace_shape* shape, const vec3f& color, trace_texture* color_txt = nullptr);
-void set_shape_specular(trace_shape* shape, float specular = 1,
-    trace_texture* specular_txt = nullptr);
-void set_shape_ior(trace_shape* shape, float ior);
-void set_shape_metallic(
-    trace_shape* shape, float metallic, trace_texture* metallic_txt = nullptr);
-void set_shape_transmission(trace_shape* shape, float transmission, bool thin,
-    float trdepth, trace_texture* transmission_txt = nullptr);
-void set_shape_roughness(trace_shape* shape, float roughness,
-    trace_texture* roughness_txt = nullptr);
-void set_shape_opacity(
-    trace_shape* shape, float opacity, trace_texture* opacity_txt = nullptr);
-void set_shape_thin(trace_shape* shape, bool thin);
-void set_shape_scattering(trace_shape* shape, const vec3f& scattering,
-    float scanisotropy, trace_texture* scattering_tex = nullptr);
-void set_shape_normalmap(trace_shape* shape, trace_texture* normal_txt);
-void set_shape_gltftextures(trace_shape* shape, bool gltf_textures);
 void clear_shapes(trace_scene* scene);
 
 // Add environment
@@ -295,37 +302,11 @@ struct trace_texture {
   image<vec4b> ldr = {};
 };
 
-// Shape data represented as an indexed meshes of elements.
-// May contain either points, lines, triangles and quads.
-// Additionally, we support faceavarying primitives where
-// each verftex data has its own topology.
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct trace_shape {
-  // frames
-  vector<frame3f> frames = {};
-
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-
+struct trace_material {
   // material
   vec3f emission     = {0, 0, 0};
   vec3f color        = {0, 0, 0};
@@ -355,6 +336,35 @@ struct trace_shape {
   trace_texture* opacity_tex      = nullptr;
   trace_texture* normal_tex       = nullptr;
   bool           gltf_textures    = false;  // glTF packed textures
+};
+
+// Shape data represented as an indexed meshes of elements.
+// May contain either points, lines, triangles and quads.
+// Additionally, we support faceavarying primitives where
+// each verftex data has its own topology.
+struct trace_shape {
+  // frames
+  vector<frame3f> frames = {};
+  trace_material* material = nullptr;
+
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
 
   // computed properties
   trace_bvh bvh = {};
@@ -391,6 +401,7 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
   vector<trace_shape*>       shapes       = {};
+  vector<trace_material*>    materials       = {};
   vector<trace_texture*>     textures     = {};
   vector<trace_environment*> environments = {};
 

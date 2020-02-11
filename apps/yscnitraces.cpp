@@ -98,14 +98,40 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     texture_map[iotexture] = texture;
   }
 
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  material_map[nullptr] = nullptr;
+  for (auto iomaterial : ioscene->materials) {
+    auto material = add_material(scene);
+    set_shape_emission(
+        material, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
+    set_shape_color(
+        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
+    set_shape_specular(
+        material, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_ior(material, iomaterial->ior);
+    set_shape_metallic(
+        material, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_transmission(material, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_shape_roughness(material, iomaterial->roughness,
+        texture_map.at(iomaterial->roughness_tex));
+    set_shape_opacity(
+        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_thin(material, iomaterial->thin);
+    set_shape_normalmap(material, texture_map.at(iomaterial->normal_tex));
+    set_shape_scattering(material, iomaterial->scattering,
+        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    material_map[iomaterial] = material;
+  }
+
   for (auto iosubdiv : ioscene->subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
-    iosubdiv = {};
   }
 
   for (auto ioobject : ioscene->objects) {
     auto shape   = add_shape(scene);
     auto ioshape = ioobject->shape;
+    set_material(shape, material_map.at(ioobject->material));
     set_shape_points(shape, ioshape->points);
     set_shape_lines(shape, ioshape->lines);
     set_shape_triangles(shape, ioshape->triangles);
@@ -122,27 +148,6 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     } else {
       set_shape_frame(shape, ioobject->frame);
     }
-    auto iomaterial = ioobject->material;
-    set_shape_emission(
-        shape, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
-    set_shape_color(
-        shape, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(
-        shape, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
-    set_shape_ior(shape, iomaterial->ior);
-    set_shape_metallic(
-        shape, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
-    set_shape_transmission(shape, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_shape_roughness(shape, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(
-        shape, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_shape_thin(shape, iomaterial->thin);
-    set_shape_normalmap(shape, texture_map.at(iomaterial->normal_tex));
-    set_shape_scattering(shape, iomaterial->scattering,
-        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
-    ioshape = {};
   }
 
   for (auto ioenvironment : ioscene->environments) {
@@ -151,8 +156,6 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_environment_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
-
-  ioscene = {};
 }
 
 // Simple parallel for used since our target platforms do not yet support
