@@ -71,20 +71,22 @@ struct app_state {
   bool   animate    = false;
 
   // editing
-  int selected_camera      = -1;
-  int selected_object      = -1;
-  int selected_instance    = -1;
-  int selected_shape       = -1;
-  int selected_subdiv      = -1;
-  int selected_material    = -1;
-  int selected_environment = -1;
-  int selected_texture     = -1;
+  sceneio_camera* selected_camera      = nullptr;
+  sceneio_object* selected_object      = nullptr;
+  sceneio_instance* selected_instance    = nullptr;
+  sceneio_shape* selected_shape       = nullptr;
+  sceneio_subdiv* selected_subdiv      = nullptr;
+  sceneio_material* selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture* selected_texture     = nullptr;
 
   // editing maps
+  unordered_map<sceneio_camera*, opengl_camera*>   camera_map  = {};
   unordered_map<sceneio_texture*, opengl_texture*>   texture_map  = {};
-  unordered_map<sceneio_shape*, opengl_shape*>       shape_map    = {};
   unordered_map<sceneio_material*, opengl_material*> material_map = {};
+  unordered_map<sceneio_shape*, opengl_shape*>       shape_map    = {};
   unordered_map<sceneio_instance*, opengl_instance*> instance_map = {};
+  unordered_map<sceneio_object*, opengl_object*> object_map = {};
 
   // error
   string error = "";
@@ -147,12 +149,6 @@ void load_scene_async(app_states* apps, const string& filename) {
         load_scene(app->filename, app->ioscene);
         app->time_range           = compute_animation_range(app->ioscene);
         app->time                 = app->time_range.x;
-        app->selected_camera      = app->ioscene->cameras.empty() ? -1 : 0;
-        app->selected_shape       = app->ioscene->shapes.empty() ? -1 : 0;
-        app->selected_subdiv      = app->ioscene->subdivs.empty() ? -1 : 0;
-        app->selected_material    = app->ioscene->shapes.empty() ? -1 : 0;
-        app->selected_texture     = app->ioscene->textures.empty() ? -1 : 0;
-        app->selected_environment = app->ioscene->environments.empty() ? -1 : 0;
         return app.release();
       }));
 }
@@ -190,15 +186,12 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
 void init_scene(app_state* app) {
   auto  glscene      = app->glscene;
   auto  ioscene      = app->ioscene;
-  auto& texture_map  = app->texture_map;
-  auto& material_map = app->material_map;
-  auto& shape_map    = app->shape_map;
-  auto& instance_map = app->instance_map;
 
   // load program
   init_glscene(glscene);
 
   // camera
+  app->camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(glscene);
     set_frame(camera, iocamera->frame);
@@ -207,7 +200,7 @@ void init_scene(app_state* app) {
   }
 
   // textures
-  texture_map[nullptr] = nullptr;
+  app->texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto gltexture = add_texture(glscene);
     if (!iotexture->hdr.empty()) {
@@ -215,7 +208,7 @@ void init_scene(app_state* app) {
     } else if (!iotexture->ldr.empty()) {
       set_texture(gltexture, iotexture->ldr);
     }
-    texture_map[iotexture] = gltexture;
+    app->texture_map[iotexture] = gltexture;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
@@ -223,29 +216,29 @@ void init_scene(app_state* app) {
   }
 
   // material
-  material_map[nullptr] = nullptr;
+  app->material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto glmaterial = add_material(glscene);
     set_emission(glmaterial, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
+        app->texture_map.at(iomaterial->emission_tex));
     set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
-        texture_map.at(iomaterial->color_tex));
+        app->texture_map.at(iomaterial->color_tex));
     set_specular(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
+        app->texture_map.at(iomaterial->specular_tex));
     set_metallic(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
+        app->texture_map.at(iomaterial->metallic_tex));
     set_roughness(glmaterial, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
+        app->texture_map.at(iomaterial->roughness_tex));
     set_opacity(glmaterial, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
-    set_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
-    material_map[iomaterial] = glmaterial;
+        app->texture_map.at(iomaterial->opacity_tex));
+    set_normalmap(glmaterial, app->texture_map.at(iomaterial->normal_tex));
+    app->material_map[iomaterial] = glmaterial;
   }
 
   // shapes
-  shape_map[nullptr] = nullptr;
+  app->shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto glshape = add_shape(glscene);
     set_positions(glshape, ioshape->positions);
@@ -256,29 +249,31 @@ void init_scene(app_state* app) {
     set_lines(glshape, ioshape->lines);
     set_triangles(glshape, ioshape->triangles);
     set_quads(glshape, ioshape->quads);
-    shape_map[ioshape] = glshape;
+    app->shape_map[ioshape] = glshape;
   }
 
   // instances
-  instance_map[nullptr] = nullptr;
+  app->instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto glinstance = add_instance(glscene);
     set_frames(glinstance, ioinstance->frames);
-    instance_map[ioinstance] = glinstance;
+    app->instance_map[ioinstance] = glinstance;
   }
 
   // shapes
+  app->object_map[nullptr] = nullptr;
   for (auto ioobject : ioscene->objects) {
     auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
-    set_shape(globject, shape_map.at(ioobject->shape));
-    set_material(globject, material_map.at(ioobject->material));
-    set_instance(globject, instance_map.at(ioobject->instance));
+    set_shape(globject, app->shape_map.at(ioobject->shape));
+    set_material(globject, app->material_map.at(ioobject->material));
+    set_instance(globject, app->instance_map.at(ioobject->instance));
+    app->object_map[ioobject] = globject;
   }
 }
 
-bool draw_glwidgets_camera(opengl_window* win, app_state* app, int id) {
-  auto iocamera = app->ioscene->cameras[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
+  if(!iocamera) return false;
   auto edited   = 0;
   edited += (int)draw_gltextinput(win, "name", iocamera->name);
   edited += (int)draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
@@ -303,8 +298,8 @@ bool draw_glwidgets_camera(opengl_window* win, app_state* app, int id) {
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_texture(opengl_window* win, app_state* app, int id) {
-  auto iotexture = app->ioscene->textures[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
+  if(!iotexture) return false;
   draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
       to_string(iotexture->hdr.size().x) + " x " +
@@ -315,8 +310,8 @@ bool draw_glwidgets_texture(opengl_window* win, app_state* app, int id) {
   return false;
 }
 
-bool draw_glwidgets_material(opengl_window* win, app_state* app, int id) {
-  auto iomaterial = app->ioscene->materials[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_material* iomaterial) {
+  if(!iomaterial) return false;
   auto edited     = 0;
   edited += draw_gltextinput(win, "name", iomaterial->name);
   edited += draw_glhdrcoloredit(win, "emission", iomaterial->emission);
@@ -333,29 +328,29 @@ bool draw_glwidgets_material(opengl_window* win, app_state* app, int id) {
   edited += draw_glslider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", iomaterial->opacity, 0, 1);
   edited += draw_glcombobox(win, "emission_tex", iomaterial->emission_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(
-      win, "color_tex", iomaterial->color_tex, app->ioscene->textures, true);
+      win, "color_tex", iomaterial->color_tex, ioscene->textures, true);
   edited += draw_glcombobox(win, "metallic_tex", iomaterial->metallic_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(win, "specular_tex", iomaterial->specular_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(win, "transmission_tex",
-      iomaterial->transmission_tex, app->ioscene->textures, true);
+      iomaterial->transmission_tex, ioscene->textures, true);
   edited += draw_glcombobox(win, "scattering_tex", iomaterial->scattering_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(win, "roughness_tex", iomaterial->roughness_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(win, "spectint_tex", iomaterial->spectint_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glcombobox(
-      win, "normal_tex", iomaterial->normal_tex, app->ioscene->textures, true);
+      win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
   edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
   return edited;
 }
 
-bool draw_glwidgets_shape(opengl_window* win, app_state* app, int id) {
-  auto ioshape = app->ioscene->shapes[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_shape* ioshape) {
+  if(!ioshape) return false;
   auto edited  = 0;
   edited += draw_gltextinput(win, "name", ioshape->name);
   draw_gllabel(win, "points", to_string(ioshape->points.size()));
@@ -372,8 +367,8 @@ bool draw_glwidgets_shape(opengl_window* win, app_state* app, int id) {
   return edited;
 }
 
-bool draw_glwidgets_instance(opengl_window* win, app_state* app, int id) {
-  auto ioinstance = app->ioscene->instances[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_instance* ioinstance) {
+  if(!ioinstance) return false;
   auto edited     = 0;
   edited += draw_gltextinput(win, "name", ioinstance->name);
   draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
@@ -381,8 +376,8 @@ bool draw_glwidgets_instance(opengl_window* win, app_state* app, int id) {
   return edited;
 }
 
-bool draw_glwidgets_object(opengl_window* win, app_state* app, int id) {
-  auto ioobject = app->ioscene->objects[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_object* ioobject) {
+  if(!ioobject) return false;
   auto edited   = 0;
   edited += draw_gltextinput(win, "name", ioobject->name);
   edited += draw_glslider(win, "frame[0]", ioobject->frame.x, -1, 1);
@@ -390,17 +385,17 @@ bool draw_glwidgets_object(opengl_window* win, app_state* app, int id) {
   edited += draw_glslider(win, "frame[2]", ioobject->frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
   edited += draw_glcombobox(
-      win, "shape", ioobject->shape, app->ioscene->shapes);
+      win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_glcombobox(
-      win, "material", ioobject->material, app->ioscene->materials);
+      win, "material", ioobject->material, ioscene->materials);
   edited += draw_glcombobox(
-      win, "instance", ioobject->instance, app->ioscene->instances, true);
+      win, "instance", ioobject->instance, ioscene->instances, true);
   // TODO: load
   return edited;
 }
 
-bool draw_glwidgets_subdiv(opengl_window* win, app_state* app, int id) {
-  auto iosubdiv = app->ioscene->subdivs[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
+  if(!iosubdiv) return false;
   auto edited   = 0;
   edited += draw_gltextinput(win, "name", iosubdiv->name);
   draw_gllabel(win, "points", to_string(iosubdiv->points.size()));
@@ -421,14 +416,14 @@ bool draw_glwidgets_subdiv(opengl_window* win, app_state* app, int id) {
   edited += draw_glcheckbox(win, "catmullclark", iosubdiv->catmullclark);
   edited += draw_glcheckbox(win, "smooth", iosubdiv->smooth);
   edited += draw_glcombobox(win, "displacement_tex", iosubdiv->displacement_tex,
-      app->ioscene->textures, true);
+      ioscene->textures, true);
   edited += draw_glslider(win, "displacement", iosubdiv->displacement, 0, 1);
   // TODO: load
   return edited;
 }
 
-bool draw_glwidgets_environment(opengl_window* win, app_state* app, int id) {
-  auto ioenvironment = app->ioscene->environments[id];
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene, sceneio_environment* ioenvironment) {
+  if(!ioenvironment) return false;
   auto edited        = 0;
   edited += draw_gltextinput(win, "name", ioenvironment->name);
   edited += draw_glslider(win, "frame[0]", ioenvironment->frame.x, -1, 1);
@@ -437,7 +432,7 @@ bool draw_glwidgets_environment(opengl_window* win, app_state* app, int id) {
   edited += draw_glslider(win, "frame.o", ioenvironment->frame.o, -10, 10);
   edited += draw_glhdrcoloredit(win, "emission", ioenvironment->emission);
   edited += draw_glcombobox(win, "emission texture",
-      ioenvironment->emission_tex, app->ioscene->textures, true);
+      ioenvironment->emission_tex, ioscene->textures, true);
   return edited;
 }
 
@@ -526,12 +521,12 @@ void draw_glwidgets(
   if (app && !app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
-    if (draw_glwidgets_camera(win, app, app->selected_camera)) {
-      auto camera   = app->glscene->cameras[app->selected_camera];
-      auto iocamera = app->ioscene->cameras[app->selected_camera];
-      set_frame(camera, iocamera->frame);
-      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
-      set_nearfar(camera, 0.001, 10000);
+    if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
+      auto iocamera = app->selected_camera;
+      auto glcamera   = app->camera_map.at(iocamera);
+      set_frame(glcamera, iocamera->frame);
+      set_lens(glcamera, iocamera->lens, iocamera->aspect, iocamera->film);
+      set_nearfar(glcamera, 0.001, 10000);
     }
     end_glheader(win);
   }
@@ -539,16 +534,16 @@ void draw_glwidgets(
       begin_glheader(win, "environments")) {
     draw_glcombobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
-    if (draw_glwidgets_environment(win, app, app->selected_environment)) {
+    if (draw_glwidgets(win, app->ioscene, app->selected_environment)) {
     }
     end_glheader(win);
   }
   if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
-    if (!draw_glwidgets_shape(win, app, app->selected_object)) {
-      auto globject = app->glscene->objects[app->selected_object];
-      auto ioobject = app->ioscene->objects[app->selected_object];
+    if (!draw_glwidgets(win, app->ioscene, app->selected_object)) {
+      auto ioobject = app->selected_object;
+      auto globject   = app->object_map.at(ioobject);
       set_frame(globject, ioobject->frame);
       set_shape(globject, app->shape_map.at(ioobject->shape));
       set_material(globject, app->material_map.at(ioobject->material));
@@ -559,9 +554,9 @@ void draw_glwidgets(
   }
   if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
-    if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
-      auto glshape = app->glscene->shapes[app->selected_shape];
-      auto ioshape = app->ioscene->shapes[app->selected_shape];
+    if (!draw_glwidgets(win, app->ioscene, app->selected_shape)) {
+      auto ioshape = app->selected_shape;
+      auto glshape   = app->shape_map.at(ioshape);
       set_positions(glshape, ioshape->positions);
       set_normals(glshape, ioshape->normals);
       set_texcoords(glshape, ioshape->texcoords);
@@ -573,24 +568,13 @@ void draw_glwidgets(
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->instances.empty() &&
-      begin_glheader(win, "instances")) {
-    draw_glcombobox(
-        win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (!draw_glwidgets_shape(win, app, app->selected_instance)) {
-      auto glinstance = app->glscene->instances[app->selected_instance];
-      auto ioinstance = app->ioscene->instances[app->selected_instance];
-      set_frames(glinstance, ioinstance->frames);
-    }
-    end_glheader(win);
-  }
   if (app && !app->ioscene->materials.empty() &&
       begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
-    if (draw_glwidgets_material(win, app, app->selected_material)) {
-      auto glmaterial = app->glscene->materials[app->selected_material];
-      auto iomaterial = app->ioscene->materials[app->selected_material];
+    if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
+      auto iomaterial = app->selected_material;
+      auto glmaterial = app->material_map.at(iomaterial);
       set_emission(glmaterial, iomaterial->emission,
           app->texture_map.at(iomaterial->emission_tex));
       set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
@@ -609,12 +593,23 @@ void draw_glwidgets(
     }
     end_glheader(win);
   }
+  if (app && !app->ioscene->instances.empty() &&
+      begin_glheader(win, "instances")) {
+    draw_glcombobox(
+        win, "instance##2", app->selected_instance, app->ioscene->instances);
+    if (!draw_glwidgets(win, app->ioscene, app->selected_instance)) {
+      auto ioinstance = app->selected_instance;
+      auto glinstance = app->instance_map.at(ioinstance);
+      set_frames(glinstance, ioinstance->frames);
+    }
+    end_glheader(win);
+  }
   if (app && !app->ioscene->textures.empty() &&
       begin_glheader(win, "textures")) {
     draw_glcombobox(
         win, "texture##2", app->selected_texture, app->ioscene->textures);
-    if (draw_glwidgets_texture(win, app, app->selected_texture)) {
-      auto iotexture = app->ioscene->textures[app->selected_texture];
+    if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
+      auto iotexture = app->selected_texture;
       auto gltexture = app->texture_map.at(iotexture);
       if (!iotexture->hdr.empty()) {
         set_texture(gltexture, iotexture->hdr);
@@ -627,20 +622,20 @@ void draw_glwidgets(
   if (app && !app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
     draw_glcombobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene->subdivs);
-    if (!draw_glwidgets_subdiv(win, app, app->selected_subdiv)) {
-      auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
-      tesselate_subdiv(app->ioscene, iosubdiv);
+    if (!draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
+      // auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
+      // tesselate_subdiv(app->ioscene, iosubdiv);
       // TODO: FIX SUBDIVS
-      auto glshape = app->glscene->shapes[app->selected_shape];
-      auto ioshape = iosubdiv->shape;
-      set_positions(glshape, ioshape->positions);
-      set_normals(glshape, ioshape->normals);
-      set_texcoords(glshape, ioshape->texcoords);
-      set_colors(glshape, ioshape->colors);
-      set_points(glshape, ioshape->points);
-      set_lines(glshape, ioshape->lines);
-      set_triangles(glshape, ioshape->triangles);
-      set_quads(glshape, ioshape->quads);
+      // auto glshape = app->glscene->shapes[app->selected_shape];
+      // auto ioshape = iosubdiv->shape;
+      // set_positions(glshape, ioshape->positions);
+      // set_normals(glshape, ioshape->normals);
+      // set_texcoords(glshape, ioshape->texcoords);
+      // set_colors(glshape, ioshape->colors);
+      // set_points(glshape, ioshape->points);
+      // set_lines(glshape, ioshape->lines);
+      // set_triangles(glshape, ioshape->triangles);
+      // set_quads(glshape, ioshape->quads);
     }
     end_glheader(win);
   }
