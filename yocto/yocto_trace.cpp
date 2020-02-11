@@ -3098,22 +3098,25 @@ trace_scene::~trace_scene() {
   for (auto environment : environments) delete environment;
   for (auto shape : shapes) delete shape;
   for (auto texture : textures) delete texture;
+  for (auto object : objects) delete object;
+  for (auto instance : instances) delete instance;
+  for (auto material : materials) delete material;
+  for (auto light : lights) delete light;
 }
 
 // Add cameras
 trace_camera* add_camera(trace_scene* scene) {
   return scene->cameras.emplace_back(new trace_camera{});
 }
-void set_camera_frame(trace_camera* camera, const frame3f& frame) {
+void set_frame(trace_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_camera_lens(
-    trace_camera* camera, float lens, float aspect, float film) {
+void set_lens(trace_camera* camera, float lens, float aspect, float film) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
 }
-void set_camera_focus(trace_camera* camera, float aperture, float focus) {
+void set_focus(trace_camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
   camera->focus    = focus;
 }
@@ -3137,40 +3140,40 @@ void clean_textures(trace_scene* scene) { scene->textures.clear(); }
 trace_shape* add_shape(trace_scene* scene) {
   return scene->shapes.emplace_back(new trace_shape{});
 }
-void set_shape_points(trace_shape* shape, const vector<int>& points) {
+void set_points(trace_shape* shape, const vector<int>& points) {
   shape->points = points;
 }
-void set_shape_lines(trace_shape* shape, const vector<vec2i>& lines) {
+void set_lines(trace_shape* shape, const vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(trace_shape* shape, const vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_shape_quads(trace_shape* shape, const vector<vec4i>& quads) {
+void set_quads(trace_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_shape_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
+void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
   shape->quadspos      = quadspos;
   shape->quadsnorm     = quadsnorm;
   shape->quadstexcoord = quadstexcoord;
 }
-void set_shape_positions(trace_shape* shape, const vector<vec3f>& positions) {
+void set_positions(trace_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_shape_normals(trace_shape* shape, const vector<vec3f>& normals) {
+void set_normals(trace_shape* shape, const vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_shape_texcoords(trace_shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_shape_colors(trace_shape* shape, const vector<vec4f>& colors) {
+void set_colors(trace_shape* shape, const vector<vec4f>& colors) {
   shape->colors = colors;
 }
-void set_shape_radius(trace_shape* shape, const vector<float>& radius) {
+void set_radius(trace_shape* shape, const vector<float>& radius) {
   shape->radius = radius;
 }
-void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(trace_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 
@@ -3209,57 +3212,55 @@ void set_frames(trace_instance* instance, const vector<frame3f>& frames) {
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
 }
-void set_shape_emission(trace_material* material, const vec3f& emission,
+void set_emission(trace_material* material, const vec3f& emission,
     trace_texture* emission_txt) {
   material->emission     = emission;
   material->emission_tex = emission_txt;
 }
-void set_shape_color(
+void set_color(
     trace_material* material, const vec3f& color, trace_texture* color_txt) {
   material->color     = color;
   material->color_tex = color_txt;
 }
-void set_shape_specular(
+void set_specular(
     trace_material* material, float specular, trace_texture* specular_txt) {
   material->specular     = specular;
   material->specular_tex = specular_txt;
 }
-void set_shape_metallic(
+void set_metallic(
     trace_material* material, float metallic, trace_texture* metallic_txt) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_txt;
 }
-void set_shape_ior(trace_material* material, float ior) { material->ior = ior; }
-void set_shape_transmission(trace_material* material, float transmission,
-    bool thin, float trdepth, trace_texture* transmission_txt) {
+void set_ior(trace_material* material, float ior) { material->ior = ior; }
+void set_transmission(trace_material* material, float transmission, bool thin,
+    float trdepth, trace_texture* transmission_txt) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_txt;
 }
-void set_shape_thin(trace_material* material, bool thin) {
-  material->thin = thin;
-}
-void set_shape_roughness(
+void set_thin(trace_material* material, bool thin) { material->thin = thin; }
+void set_roughness(
     trace_material* material, float roughness, trace_texture* roughness_txt) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_txt;
 }
-void set_shape_opacity(
+void set_opacity(
     trace_material* material, float opacity, trace_texture* opacity_txt) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_txt;
 }
-void set_shape_scattering(trace_material* material, const vec3f& scattering,
+void set_scattering(trace_material* material, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex) {
   material->scattering     = scattering;
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_shape_normalmap(trace_material* material, trace_texture* normal_txt) {
+void set_normalmap(trace_material* material, trace_texture* normal_txt) {
   material->normal_tex = normal_txt;
 }
-void set_shape_gltftextures(trace_material* material, bool gltf_textures) {
+void set_gltftextures(trace_material* material, bool gltf_textures) {
   material->gltf_textures = gltf_textures;
 }
 void clean_shapes(trace_scene* scene) { scene->shapes.clear(); }
@@ -3268,15 +3269,13 @@ void clean_shapes(trace_scene* scene) { scene->shapes.clear(); }
 trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
-void set_environment_frame(
-    trace_environment* environment, const frame3f& frame) {
+void set_frame(trace_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_environment_emission(trace_environment* environment,
-    const vec3f& emission, trace_texture* emission_tex) {
+void set_emission(trace_environment* environment, const vec3f& emission,
+    trace_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }
-void clear_environments(trace_scene* scene) { scene->environments.clear(); }
 
 }  // namespace yocto

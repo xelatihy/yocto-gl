@@ -20,8 +20,8 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  opengl_scene        scene          = {};
-  draw_glscene_params opengl_options = {};
+  shared_ptr<opengl_scene> scene          = nullptr;
+  draw_glscene_params      opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -31,8 +31,22 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  int camera_id = 0;
-  int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
+  opengl_camera*   glcamera    = nullptr;
+  opengl_shape*    glshapes    = nullptr;
+  opengl_shape*    glpoints    = nullptr;
+  opengl_shape*    glvfields   = nullptr;
+  opengl_shape*    gledges     = nullptr;
+  opengl_shape*    glpolylines = nullptr;
+  opengl_material* glshapem    = nullptr;
+  opengl_material* glpointm    = nullptr;
+  opengl_material* glvfieldm   = nullptr;
+  opengl_material* gledgem     = nullptr;
+  opengl_material* glpolylinem = nullptr;
+  opengl_object*   glshapeo    = nullptr;
+  opengl_object*   glpointo    = nullptr;
+  opengl_object*   glvfieldo   = nullptr;
+  opengl_object*   gledgeo     = nullptr;
+  opengl_object*   glpolylineo = nullptr;
 };
 
 void update_glshape(shared_ptr<app_state> app) {
@@ -40,14 +54,14 @@ void update_glshape(shared_ptr<app_state> app) {
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
   auto& shape = app->shape;
-  set_shape_points(app->scene, app->glshape_id, shape.points);
-  set_shape_lines(app->scene, app->glshape_id, shape.lines);
-  set_shape_triangles(app->scene, app->glshape_id, shape.triangles);
-  set_shape_quads(app->scene, app->glshape_id, shape.quads);
-  set_shape_positions(app->scene, app->glshape_id, shape.positions);
-  set_shape_normals(app->scene, app->glshape_id, shape.normals);
-  set_shape_texcoords(app->scene, app->glshape_id, shape.texcoords);
-  set_shape_colors(app->scene, app->glshape_id, shape.colors);
+  set_points(app->glshapes, shape.points);
+  set_lines(app->glshapes, shape.lines);
+  set_triangles(app->glshapes, shape.triangles);
+  set_quads(app->glshapes, shape.quads);
+  set_positions(app->glshapes, shape.positions);
+  set_normals(app->glshapes, shape.normals);
+  set_texcoords(app->glshapes, shape.texcoords);
+  set_colors(app->glshapes, shape.colors);
 }
 
 void update_glpolyline(
@@ -55,8 +69,8 @@ void update_glpolyline(
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    set_shape_positions(app->scene, app->glpolyline_id, vertices);
-    set_shape_lines(app->scene, app->glpolyline_id, elements);
+    set_positions(app->glpolylines, vertices);
+    set_lines(app->glpolylines, elements);
   }
 }
 
@@ -65,8 +79,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     auto normals = vector<vec3f>(points.size(), {0, 0, 1});
-    set_shape_positions(app->scene, app->glpolyline_id, points);
-    set_shape_points(app->scene, app->glpolyline_id, elements);
+    set_positions(app->glpolylines, points);
+    set_points(app->glpolylines, elements);
   }
 }
 
@@ -111,8 +125,8 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-  set_shape_positions(app->scene, app->glvector_field_id, positions);
-  set_shape_lines(app->scene, app->glvector_field_id, elements);
+  set_positions(app->glvfields, positions);
+  set_lines(app->glvfields, elements);
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -132,8 +146,8 @@ void update_gledges(shared_ptr<app_state> app) {
       }
     }
   }
-  set_shape_positions(app->scene, app->gledges_id, positions);
-  set_shape_lines(app->scene, app->gledges_id, elements);
+  set_positions(app->gledges, positions);
+  set_lines(app->gledges, elements);
 }
 
 void init_camera(shared_ptr<app_state> app,
@@ -157,59 +171,77 @@ void init_bvh(shared_ptr<app_state> app) {
 
 void hide_edges(shared_ptr<app_state> app) {
   app->show_edges = false;
-  set_shape_hidden(app->scene, app->gledges_id, true);
+  set_hidden(app->gledgeo, true);
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_shape_hidden(app->scene, app->gledges_id, false);
+  set_hidden(app->gledgeo, false);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
-  init_glscene(app->scene);
-  app->camera_id = add_camera(app->scene);
-  set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-  set_camera_lens(app->scene, app->camera_id, app->camera.lens,
-      app->camera.aspect, app->camera.film);
-  set_camera_nearfar(app->scene, app->camera_id, 0.001, 10000);
+  app->scene = make_shared<opengl_scene>();
+  init_glscene(app->scene.get());
+  app->glcamera = add_camera(app->scene.get());
+  set_frame(app->glcamera, app->camera.frame);
+  set_lens(
+      app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
+  set_nearfar(app->glcamera, 0.001, 10000);
 
   // The model.
-  app->glshape_id = add_shape(app->scene);
-  set_shape_color(app->scene, app->glshape_id, {1, 0.2, 0});
-  set_shape_specular(app->scene, app->glshape_id, 1);
-  set_shape_roughness(app->scene, app->glshape_id, 0.3);
+  app->glshapes = add_shape(app->scene.get());
+  app->glshapem = add_material(app->scene.get());
+  set_color(app->glshapem, {1, 0.2, 0});
+  set_specular(app->glshapem, 1);
+  set_roughness(app->glshapem, 0.3);
+  app->glshapeo = add_object(app->scene.get());
+  set_shape(app->glshapeo, app->glshapes);
+  set_material(app->glshapeo, app->glshapem);
   update_glshape(app);
 
   // The points.
-  app->glpoints_id = add_shape(app->scene);
-  set_shape_emission(app->scene, app->glpoints_id, {1, 1, 1});
-  set_shape_roughness(app->scene, app->glpoints_id, 0.0);
+  app->glpoints = add_shape(app->scene.get());
+  app->glpointm = add_material(app->scene.get());
+  set_emission(app->glpointm, {1, 1, 1});
+  set_roughness(app->glpointm, 0.0);
+  app->glpointo = add_object(app->scene.get());
+  set_shape(app->glpointo, app->glpoints);
+  set_material(app->glpointo, app->glpointm);
 
   // The vector field.
-  app->glvector_field_id = add_shape(app->scene);
-  set_shape_emission(app->scene, app->glvector_field_id, {1, 1, 1});
-  set_shape_roughness(app->scene, app->glvector_field_id, 0.0);
+  app->glvfields = add_shape(app->scene.get());
+  app->glvfieldm = add_material(app->scene.get());
+  set_emission(app->glvfieldm, {1, 1, 1});
+  set_roughness(app->glvfieldm, 0.0);
+  app->glvfieldo = add_object(app->scene.get());
+  set_shape(app->glvfieldo, app->glvfields);
+  set_material(app->glvfieldo, app->glvfieldm);
 
   // The edges.
-  app->gledges_id = add_shape(app->scene);
-  set_shape_emission(app->scene, app->gledges_id, {1, 1, 1});
-  set_shape_roughness(app->scene, app->gledges_id, 0.0);
+  app->gledges = add_shape(app->scene.get());
+  app->gledgem = add_material(app->scene.get());
+  set_emission(app->gledgem, {1, 1, 1});
+  set_roughness(app->gledgem, 0.0);
+  app->gledgeo = add_object(app->scene.get());
+  set_shape(app->gledgeo, app->gledges);
+  set_material(app->gledgeo, app->glvfieldm);
   update_gledges(app);
 
   // The polyline.
-  app->glpolyline_id = add_shape(app->scene);
-  set_shape_emission(app->scene, app->glpolyline_id, {1, 1, 1});
-  set_shape_roughness(app->scene, app->glpolyline_id, 0.0);
+  app->glpolylines = add_shape(app->scene.get());
+  app->glpolylinem = add_material(app->scene.get());
+  set_emission(app->glpolylinem, {1, 1, 1});
+  set_roughness(app->glpolylinem, 0.0);
+  app->glpolylineo = add_object(app->scene.get());
+  set_shape(app->glpolylineo, app->glpolylines);
+  set_material(app->glpolylineo, app->glpolylinem);
 
   // Hide edges.
   if (!app->show_edges) hide_edges(app);
 
   // Add lights.
-  auto l0 = add_light(app->scene);
-  set_light(app->scene, l0, {5, 5, 5}, {30, 30, 30}, false);
-  auto l1 = add_light(app->scene);
-  set_light(app->scene, l1, {-5, 5, 5}, {30, 30, 30}, false);
-  auto l2 = add_light(app->scene);
-  set_light(app->scene, l2, {0, 5, -5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {5, 5, 5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {-5, 5, 5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {0, 5, -5}, {30, 30, 30}, false);
 }
 
 void clear(shared_ptr<app_state> app) {
@@ -220,8 +252,8 @@ void clear(shared_ptr<app_state> app) {
   //   if (i == app->gledges_id) continue;
   //   delete_glshape(app->scene.shapes[i]);
   // }
-  // delete_glarraybuffer(app->glshape().colors);
-  // init_glarraybuffer(app->glshape().colors,
+  // delete_glarraybuffer(app->glshapes().colors);
+  // init_glarraybuffer(app->glshapes().colors,
   //     vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
@@ -255,10 +287,11 @@ void yimshproc(const string&                         input_filename,
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(win, [app](const opengl_window& win,
-                               const opengl_input&    input) {
-    draw_glscene(app->scene, input.framebuffer_viewport, app->opengl_options);
-  });
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        draw_glscene(
+            app->scene.get(), input.framebuffer_viewport, app->opengl_options);
+      });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](const opengl_window& win,
                const opengl_input& input) { draw_glwidgets(app, win); });
@@ -294,9 +327,9 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-    set_camera_lens(app->scene, app->camera_id, app->camera.lens,
-        app->camera.aspect, app->camera.film);
+    set_frame(app->glcamera, app->camera.frame);
+    set_lens(
+        app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
                               bool pressing, const opengl_input& input) {
@@ -318,9 +351,9 @@ void yimshproc(const string&                         input_filename,
           pan.x    = -pan.x;
           update_turntable(
               app->camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-          set_camera_lens(app->scene, app->camera_id, app->camera.lens,
-              app->camera.aspect, app->camera.film);
+          set_frame(app->glcamera, app->camera.frame);
+          set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
+              app->camera.film);
         }
       });
 

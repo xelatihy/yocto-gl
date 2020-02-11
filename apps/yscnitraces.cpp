@@ -81,9 +81,9 @@ struct app_state {
 void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
-    set_camera_frame(camera, iocamera->frame);
-    set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
-    set_camera_focus(camera, iocamera->aperture, iocamera->focus);
+    set_frame(camera, iocamera->frame);
+    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
@@ -102,25 +102,25 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
-    set_shape_emission(material, iomaterial->emission,
+    set_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
-    set_shape_color(
+    set_color(
         material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(material, iomaterial->specular,
+    set_specular(material, iomaterial->specular,
         texture_map.at(iomaterial->specular_tex));
-    set_shape_ior(material, iomaterial->ior);
-    set_shape_metallic(material, iomaterial->metallic,
+    set_ior(material, iomaterial->ior);
+    set_metallic(material, iomaterial->metallic,
         texture_map.at(iomaterial->metallic_tex));
-    set_shape_transmission(material, iomaterial->transmission, iomaterial->thin,
+    set_transmission(material, iomaterial->transmission, iomaterial->thin,
         iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_shape_roughness(material, iomaterial->roughness,
+    set_roughness(material, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(
+    set_opacity(
         material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_shape_thin(material, iomaterial->thin);
-    set_shape_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_shape_scattering(material, iomaterial->scattering,
-        iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
+    set_thin(material, iomaterial->thin);
+    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
+    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
+        texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
   }
 
@@ -132,16 +132,16 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
-    set_shape_points(shape, ioshape->points);
-    set_shape_lines(shape, ioshape->lines);
-    set_shape_triangles(shape, ioshape->triangles);
-    set_shape_quads(shape, ioshape->quads);
-    set_shape_positions(shape, ioshape->positions);
-    set_shape_normals(shape, ioshape->normals);
-    set_shape_texcoords(shape, ioshape->texcoords);
-    set_shape_colors(shape, ioshape->colors);
-    set_shape_radius(shape, ioshape->radius);
-    set_shape_tangents(shape, ioshape->tangents);
+    set_points(shape, ioshape->points);
+    set_lines(shape, ioshape->lines);
+    set_triangles(shape, ioshape->triangles);
+    set_quads(shape, ioshape->quads);
+    set_positions(shape, ioshape->positions);
+    set_normals(shape, ioshape->normals);
+    set_texcoords(shape, ioshape->texcoords);
+    set_colors(shape, ioshape->colors);
+    set_radius(shape, ioshape->radius);
+    set_tangents(shape, ioshape->tangents);
     shape_map[ioshape] = shape;
   }
 
@@ -163,8 +163,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
 
   for (auto ioenvironment : ioscene->environments) {
     auto environment = add_environment(scene);
-    set_environment_frame(environment, ioenvironment->frame);
-    set_environment_emission(environment, ioenvironment->emission,
+    set_frame(environment, ioenvironment->frame);
+    set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
 }
