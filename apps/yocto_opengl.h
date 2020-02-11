@@ -255,32 +255,32 @@ void set_texture(
 
 // add material
 opengl_material* add_material(opengl_scene* scene);
-void set_shape_emission(opengl_material* material, const vec3f& emission,
+void set_emission(opengl_material* material, const vec3f& emission,
     opengl_texture* emission_txt = nullptr);
-void set_shape_color(opengl_material* material, const vec3f& color,
+void set_color(opengl_material* material, const vec3f& color,
     opengl_texture* color_txt = nullptr);
-void set_shape_metallic(opengl_material* material, float metallic,
+void set_metallic(opengl_material* material, float metallic,
     opengl_texture* metallic_txt = nullptr);
-void set_shape_roughness(opengl_material* material, float roughness,
+void set_roughness(opengl_material* material, float roughness,
     opengl_texture* roughness_txt = nullptr);
-void set_shape_specular(opengl_material* material, float specular,
+void set_specular(opengl_material* material, float specular,
     opengl_texture* specular_txt = nullptr);
-void set_shape_opacity(opengl_material* material, float opacity,
+void set_opacity(opengl_material* material, float opacity,
     opengl_texture* opacity_txt = nullptr);
-void set_shape_normalmap(opengl_material* material, opengl_texture* normal_txt);
-void set_shape_gltftextures(opengl_material* material, bool gltf_textures);
+void set_normalmap(opengl_material* material, opengl_texture* normal_txt);
+void set_gltftextures(opengl_material* material, bool gltf_textures);
 
 // add shape
 opengl_shape* add_shape(opengl_scene* scene);
-void          set_shape_points(opengl_shape* shape, const vector<int>& points);
-void          set_shape_lines(opengl_shape* shape, const vector<vec2i>& lines);
-void set_shape_triangles(opengl_shape* shape, const vector<vec3i>& triangles);
-void set_shape_quads(opengl_shape* shape, const vector<vec4i>& quads);
-void set_shape_positions(opengl_shape* shape, const vector<vec3f>& positions);
-void set_shape_normals(opengl_shape* shape, const vector<vec3f>& normals);
-void set_shape_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords);
-void set_shape_colors(opengl_shape* shape, const vector<vec4f>& colors);
-void set_shape_tangents(opengl_shape* shape, const vector<vec4f>& tangents);
+void          set_points(opengl_shape* shape, const vector<int>& points);
+void          set_lines(opengl_shape* shape, const vector<vec2i>& lines);
+void set_triangles(opengl_shape* shape, const vector<vec3i>& triangles);
+void set_quads(opengl_shape* shape, const vector<vec4i>& quads);
+void set_positions(opengl_shape* shape, const vector<vec3f>& positions);
+void set_normals(opengl_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(opengl_shape* shape, const vector<vec4f>& colors);
+void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents);
 
 // add instance
 opengl_instance* add_instance(opengl_scene* scene);

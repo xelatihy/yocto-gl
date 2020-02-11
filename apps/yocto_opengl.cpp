@@ -881,19 +881,19 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_shape_points(opengl_shape* shape, const vector<int>& points) {
+void set_points(opengl_shape* shape, const vector<int>& points) {
   set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
       1, (const int*)points.data());
 }
-void set_shape_lines(opengl_shape* shape, const vector<vec2i>& lines) {
+void set_lines(opengl_shape* shape, const vector<vec2i>& lines) {
   set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_shape_triangles(opengl_shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(opengl_shape* shape, const vector<vec3i>& triangles) {
   set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_shape_quads(opengl_shape* shape, const vector<vec4i>& quads) {
+void set_quads(opengl_shape* shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
@@ -903,23 +903,23 @@ void set_shape_quads(opengl_shape* shape, const vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
-void set_shape_positions(opengl_shape* shape, const vector<vec3f>& positions) {
+void set_positions(opengl_shape* shape, const vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
 }
-void set_shape_normals(opengl_shape* shape, const vector<vec3f>& normals) {
+void set_normals(opengl_shape* shape, const vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
       normals.size(), 3, (const float*)normals.data());
 }
-void set_shape_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_shape_colors(opengl_shape* shape, const vector<vec4f>& colors) {
+void set_colors(opengl_shape* shape, const vector<vec4f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       4, (const float*)colors.data());
 }
-void set_shape_tangents(opengl_shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
 }
@@ -957,40 +957,40 @@ void set_frames(opengl_instance* instance, const vector<frame3f>& frames) {
 opengl_material* add_material(opengl_scene* scene) {
   return scene->materials.emplace_back(new opengl_material{});
 }
-void set_shape_emission(opengl_material* material, const vec3f& emission,
+void set_emission(opengl_material* material, const vec3f& emission,
     opengl_texture* emission_txt) {
   material->emission     = emission;
   material->emission_map = emission_txt;
 }
-void set_shape_color(
+void set_color(
     opengl_material* material, const vec3f& color, opengl_texture* color_txt) {
   material->color     = color;
   material->color_map = color_txt;
 }
-void set_shape_specular(
+void set_specular(
     opengl_material* material, float specular, opengl_texture* specular_txt) {
   material->specular     = specular;
   material->specular_map = specular_txt;
 }
-void set_shape_roughness(
+void set_roughness(
     opengl_material* material, float roughness, opengl_texture* roughness_txt) {
   material->roughness     = roughness;
   material->roughness_map = roughness_txt;
 }
-void set_shape_opacity(
+void set_opacity(
     opengl_material* material, float opacity, opengl_texture* opacity_txt) {
   material->opacity = opacity;
 }
-void set_shape_metallic(
+void set_metallic(
     opengl_material* material, float metallic, opengl_texture* metallic_txt) {
   material->metallic     = metallic;
   material->metallic_map = metallic_txt;
 }
-void set_shape_normalmap(
+void set_normalmap(
     opengl_material* material, opengl_texture* normal_txt) {
   material->normal_map = normal_txt;
 }
-void set_shape_gltftextures(opengl_material* material, bool gltf_textures) {
+void set_gltftextures(opengl_material* material, bool gltf_textures) {
   material->gltf_textures = gltf_textures;
 }
 

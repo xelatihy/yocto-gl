@@ -54,14 +54,14 @@ void update_glshape(shared_ptr<app_state> app) {
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
   auto& shape = app->shape;
-  set_shape_points(app->glshapes, shape.points);
-  set_shape_lines(app->glshapes, shape.lines);
-  set_shape_triangles(app->glshapes, shape.triangles);
-  set_shape_quads(app->glshapes, shape.quads);
-  set_shape_positions(app->glshapes, shape.positions);
-  set_shape_normals(app->glshapes, shape.normals);
-  set_shape_texcoords(app->glshapes, shape.texcoords);
-  set_shape_colors(app->glshapes, shape.colors);
+  set_points(app->glshapes, shape.points);
+  set_lines(app->glshapes, shape.lines);
+  set_triangles(app->glshapes, shape.triangles);
+  set_quads(app->glshapes, shape.quads);
+  set_positions(app->glshapes, shape.positions);
+  set_normals(app->glshapes, shape.normals);
+  set_texcoords(app->glshapes, shape.texcoords);
+  set_colors(app->glshapes, shape.colors);
 }
 
 void update_glpolyline(
@@ -69,8 +69,8 @@ void update_glpolyline(
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    set_shape_positions(app->glpolylines, vertices);
-    set_shape_lines(app->glpolylines, elements);
+    set_positions(app->glpolylines, vertices);
+    set_lines(app->glpolylines, elements);
   }
 }
 
@@ -79,8 +79,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     auto normals = vector<vec3f>(points.size(), {0, 0, 1});
-    set_shape_positions(app->glpolylines, points);
-    set_shape_points(app->glpolylines, elements);
+    set_positions(app->glpolylines, points);
+    set_points(app->glpolylines, elements);
   }
 }
 
@@ -125,8 +125,8 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-  set_shape_positions(app->glvfields, positions);
-  set_shape_lines(app->glvfields, elements);
+  set_positions(app->glvfields, positions);
+  set_lines(app->glvfields, elements);
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -146,8 +146,8 @@ void update_gledges(shared_ptr<app_state> app) {
       }
     }
   }
-  set_shape_positions(app->gledges, positions);
-  set_shape_lines(app->gledges, elements);
+  set_positions(app->gledges, positions);
+  set_lines(app->gledges, elements);
 }
 
 void init_camera(shared_ptr<app_state> app,
@@ -190,9 +190,9 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   // The model.
   app->glshapes = add_shape(app->scene.get());
   app->glshapem = add_material(app->scene.get());
-  set_shape_color(app->glshapem, {1, 0.2, 0});
-  set_shape_specular(app->glshapem, 1);
-  set_shape_roughness(app->glshapem, 0.3);
+  set_color(app->glshapem, {1, 0.2, 0});
+  set_specular(app->glshapem, 1);
+  set_roughness(app->glshapem, 0.3);
   app->glshapeo = add_object(app->scene.get());
   set_shape(app->glshapeo, app->glshapes);
   set_material(app->glshapeo, app->glshapem);
@@ -201,8 +201,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   // The points.
   app->glpoints = add_shape(app->scene.get());
   app->glpointm = add_material(app->scene.get());
-  set_shape_emission(app->glpointm, {1, 1, 1});
-  set_shape_roughness(app->glpointm, 0.0);
+  set_emission(app->glpointm, {1, 1, 1});
+  set_roughness(app->glpointm, 0.0);
   app->glpointo = add_object(app->scene.get());
   set_shape(app->glpointo, app->glpoints);
   set_material(app->glpointo, app->glpointm);
@@ -210,8 +210,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   // The vector field.
   app->glvfields = add_shape(app->scene.get());
   app->glvfieldm = add_material(app->scene.get());
-  set_shape_emission(app->glvfieldm, {1, 1, 1});
-  set_shape_roughness(app->glvfieldm, 0.0);
+  set_emission(app->glvfieldm, {1, 1, 1});
+  set_roughness(app->glvfieldm, 0.0);
   app->glvfieldo = add_object(app->scene.get());
   set_shape(app->glvfieldo, app->glvfields);
   set_material(app->glvfieldo, app->glvfieldm);
@@ -219,8 +219,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   // The edges.
   app->gledges = add_shape(app->scene.get());
   app->gledgem = add_material(app->scene.get());
-  set_shape_emission(app->gledgem, {1, 1, 1});
-  set_shape_roughness(app->gledgem, 0.0);
+  set_emission(app->gledgem, {1, 1, 1});
+  set_roughness(app->gledgem, 0.0);
   app->gledgeo = add_object(app->scene.get());
   set_shape(app->gledgeo, app->gledges);
   set_material(app->gledgeo, app->glvfieldm);
@@ -229,8 +229,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   // The polyline.
   app->glpolylines = add_shape(app->scene.get());
   app->glpolylinem = add_material(app->scene.get());
-  set_shape_emission(app->glpolylinem, {1, 1, 1});
-  set_shape_roughness(app->glpolylinem, 0.0);
+  set_emission(app->glpolylinem, {1, 1, 1});
+  set_roughness(app->glpolylinem, 0.0);
   app->glpolylineo = add_object(app->scene.get());
   set_shape(app->glpolylineo, app->glpolylines);
   set_material(app->glpolylineo, app->glpolylinem);

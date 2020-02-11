@@ -209,22 +209,22 @@ void init_scene(shared_ptr<app_state> app) {
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto glmaterial = add_material(glscene);
-    set_shape_emission(glmaterial, iomaterial->emission,
+    set_emission(glmaterial, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
-    set_shape_color(glmaterial,
+    set_color(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->color,
         texture_map.at(iomaterial->color_tex));
-    set_shape_specular(glmaterial,
+    set_specular(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->specular,
         texture_map.at(iomaterial->specular_tex));
-    set_shape_metallic(glmaterial,
+    set_metallic(glmaterial,
         (1 - iomaterial->transmission) * iomaterial->metallic,
         texture_map.at(iomaterial->metallic_tex));
-    set_shape_roughness(glmaterial, iomaterial->roughness,
+    set_roughness(glmaterial, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(glmaterial, iomaterial->opacity,
+    set_opacity(glmaterial, iomaterial->opacity,
         texture_map.at(iomaterial->opacity_tex));
-    set_shape_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
+    set_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
     material_map[iomaterial] = glmaterial;
   }
 
@@ -232,14 +232,14 @@ void init_scene(shared_ptr<app_state> app) {
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto glshape = add_shape(glscene);
-    set_shape_positions(glshape, ioshape->positions);
-    set_shape_normals(glshape, ioshape->normals);
-    set_shape_texcoords(glshape, ioshape->texcoords);
-    set_shape_colors(glshape, ioshape->colors);
-    set_shape_points(glshape, ioshape->points);
-    set_shape_lines(glshape, ioshape->lines);
-    set_shape_triangles(glshape, ioshape->triangles);
-    set_shape_quads(glshape, ioshape->quads);
+    set_positions(glshape, ioshape->positions);
+    set_normals(glshape, ioshape->normals);
+    set_texcoords(glshape, ioshape->texcoords);
+    set_colors(glshape, ioshape->colors);
+    set_points(glshape, ioshape->points);
+    set_lines(glshape, ioshape->lines);
+    set_triangles(glshape, ioshape->triangles);
+    set_quads(glshape, ioshape->quads);
     shape_map[ioshape] = glshape;
   }
 
@@ -553,14 +553,14 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
       auto glshape = app->glscene->shapes[app->selected_shape];
       auto ioshape = app->ioscene->shapes[app->selected_shape];
-      set_shape_positions(glshape, ioshape->positions);
-      set_shape_normals(glshape, ioshape->normals);
-      set_shape_texcoords(glshape, ioshape->texcoords);
-      set_shape_colors(glshape, ioshape->colors);
-      set_shape_points(glshape, ioshape->points);
-      set_shape_lines(glshape, ioshape->lines);
-      set_shape_triangles(glshape, ioshape->triangles);
-      set_shape_quads(glshape, ioshape->quads);
+      set_positions(glshape, ioshape->positions);
+      set_normals(glshape, ioshape->normals);
+      set_texcoords(glshape, ioshape->texcoords);
+      set_colors(glshape, ioshape->colors);
+      set_points(glshape, ioshape->points);
+      set_lines(glshape, ioshape->lines);
+      set_triangles(glshape, ioshape->triangles);
+      set_quads(glshape, ioshape->quads);
     }
     end_glheader(win);
   }
@@ -582,22 +582,22 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       auto glmaterial = app->glscene->materials[app->selected_material];
       auto iomaterial = app->ioscene->materials[app->selected_material];
-      set_shape_emission(glmaterial, iomaterial->emission,
+      set_emission(glmaterial, iomaterial->emission,
           app->texture_map.at(iomaterial->emission_tex));
-      set_shape_color(glmaterial,
+      set_color(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->color,
           app->texture_map.at(iomaterial->color_tex));
-      set_shape_specular(glmaterial,
+      set_specular(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->specular,
           app->texture_map.at(iomaterial->specular_tex));
-      set_shape_metallic(glmaterial,
+      set_metallic(glmaterial,
           (1 - iomaterial->transmission) * iomaterial->metallic,
           app->texture_map.at(iomaterial->metallic_tex));
-      set_shape_roughness(glmaterial, iomaterial->roughness,
+      set_roughness(glmaterial, iomaterial->roughness,
           app->texture_map.at(iomaterial->roughness_tex));
-      set_shape_opacity(glmaterial, iomaterial->opacity,
+      set_opacity(glmaterial, iomaterial->opacity,
           app->texture_map.at(iomaterial->opacity_tex));
-      set_shape_normalmap(
+      set_normalmap(
           glmaterial, app->texture_map.at(iomaterial->normal_tex));
     }
     end_glheader(win);
@@ -626,14 +626,14 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       // TODO: FIX SUBDIVS
       auto glshape = app->glscene->shapes[app->selected_shape];
       auto ioshape = iosubdiv->shape;
-      set_shape_positions(glshape, ioshape->positions);
-      set_shape_normals(glshape, ioshape->normals);
-      set_shape_texcoords(glshape, ioshape->texcoords);
-      set_shape_colors(glshape, ioshape->colors);
-      set_shape_points(glshape, ioshape->points);
-      set_shape_lines(glshape, ioshape->lines);
-      set_shape_triangles(glshape, ioshape->triangles);
-      set_shape_quads(glshape, ioshape->quads);
+      set_positions(glshape, ioshape->positions);
+      set_normals(glshape, ioshape->normals);
+      set_texcoords(glshape, ioshape->texcoords);
+      set_colors(glshape, ioshape->colors);
+      set_points(glshape, ioshape->points);
+      set_lines(glshape, ioshape->lines);
+      set_triangles(glshape, ioshape->triangles);
+      set_quads(glshape, ioshape->quads);
     }
     end_glheader(win);
   }
