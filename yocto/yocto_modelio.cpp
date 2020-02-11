@@ -1401,6 +1401,13 @@ static void format_ply_prop(FILE* fs, ply_type type, VT value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+  obj_model::~obj_model() {
+    for(auto shape : shapes) delete shape;
+    for(auto material : materials) delete material;
+    for(auto camera : cameras) delete camera;
+    for(auto environment : environments) delete environment;
+  }
+
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
@@ -1455,12 +1462,12 @@ static void parse_value(string_view& str, obj_texture_info& info) {
 
 // Read obj
 static void load_mtl(
-    const string& filename, obj_model& obj, bool fliptr = true) {
+    const string& filename, obj_model* obj, bool fliptr = true) {
   // open file
   auto fs = open_file(filename, "rt");
 
   // init parsing
-  obj.materials.emplace_back();
+  auto material = obj->materials.emplace_back(new obj_material{});
 
   // read the file str by str
   char buffer[4096];
@@ -1477,137 +1484,138 @@ static void load_mtl(
     if (cmd == "") continue;
 
     // grab material
-    auto& material = obj.materials.back();
+    material = obj->materials.back();
 
     // possible token values
     if (cmd == "newmtl") {
-      auto& material = obj.materials.emplace_back();
-      parse_value(fs, str, material.name);
+      auto material = obj->materials.emplace_back(new obj_material{});
+      parse_value(fs, str, material->name);
     } else if (cmd == "illum") {
-      parse_value(fs, str, material.illum);
+      parse_value(fs, str, material->illum);
     } else if (cmd == "Ke") {
-      parse_value(fs, str, material.emission);
+      parse_value(fs, str, material->emission);
     } else if (cmd == "Ka") {
-      parse_value(fs, str, material.ambient);
+      parse_value(fs, str, material->ambient);
     } else if (cmd == "Kd") {
-      parse_value(fs, str, material.diffuse);
+      parse_value(fs, str, material->diffuse);
     } else if (cmd == "Ks") {
-      parse_value(fs, str, material.specular);
+      parse_value(fs, str, material->specular);
     } else if (cmd == "Kt") {
-      parse_value(fs, str, material.transmission);
+      parse_value(fs, str, material->transmission);
     } else if (cmd == "Tf") {
-      material.transmission = vec3f{-1};
-      parse_value(fs, str, material.transmission);
-      if (material.transmission.y < 0)
-        material.transmission = vec3f{material.transmission.x};
-      if (fliptr) material.transmission = 1 - material.transmission;
+      material->transmission = vec3f{-1};
+      parse_value(fs, str, material->transmission);
+      if (material->transmission.y < 0)
+        material->transmission = vec3f{material->transmission.x};
+      if (fliptr) material->transmission = 1 - material->transmission;
     } else if (cmd == "Tr") {
-      parse_value(fs, str, material.opacity);
-      if (fliptr) material.opacity = 1 - material.opacity;
+      parse_value(fs, str, material->opacity);
+      if (fliptr) material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
-      parse_value(fs, str, material.exponent);
+      parse_value(fs, str, material->exponent);
     } else if (cmd == "d") {
-      parse_value(fs, str, material.opacity);
+      parse_value(fs, str, material->opacity);
     } else if (cmd == "map_Ke") {
-      parse_value(fs, str, material.emission_map);
+      parse_value(fs, str, material->emission_map);
     } else if (cmd == "map_Ka") {
-      parse_value(fs, str, material.ambient_map);
+      parse_value(fs, str, material->ambient_map);
     } else if (cmd == "map_Kd") {
-      parse_value(fs, str, material.diffuse_map);
+      parse_value(fs, str, material->diffuse_map);
     } else if (cmd == "map_Ks") {
-      parse_value(fs, str, material.specular_map);
+      parse_value(fs, str, material->specular_map);
     } else if (cmd == "map_Tr") {
-      parse_value(fs, str, material.transmission_map);
+      parse_value(fs, str, material->transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_value(fs, str, material.opacity_map);
+      parse_value(fs, str, material->opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_value(fs, str, material.bump_map);
+      parse_value(fs, str, material->bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_value(fs, str, material.displacement_map);
+      parse_value(fs, str, material->displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_value(fs, str, material.normal_map);
+      parse_value(fs, str, material->normal_map);
     } else if (cmd == "Pe") {
-      parse_value(fs, str, material.pbr_emission);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_emission);
+      material->as_pbr = true;
     } else if (cmd == "Pb") {
-      parse_value(fs, str, material.pbr_base);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_base);
+      material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material.pbr_specular);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_specular);
+      material->as_pbr = true;
     } else if (cmd == "Pm") {
-      parse_value(fs, str, material.pbr_metallic);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_metallic);
+      material->as_pbr = true;
     } else if (cmd == "Pr") {
-      parse_value(fs, str, material.pbr_roughness);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_roughness);
+      material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material.pbr_sheen);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_sheen);
+      material->as_pbr = true;
     } else if (cmd == "Pc") {
-      parse_value(fs, str, material.pbr_coat);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_coat);
+      material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      parse_value(fs, str, material.pbr_coatroughness);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_coatroughness);
+      material->as_pbr = true;
     } else if (cmd == "Pt") {
-      parse_value(fs, str, material.pbr_transmission);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_transmission);
+      material->as_pbr = true;
     } else if (cmd == "Pn") {
-      parse_value(fs, str, material.pbr_ior);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_ior);
+      material->as_pbr = true;
     } else if (cmd == "Po") {
-      parse_value(fs, str, material.pbr_opacity);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_opacity);
+      material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      parse_value(fs, str, material.pbr_volscattering);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_volscattering);
+      material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      parse_value(fs, str, material.pbr_volanisotropy);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_volanisotropy);
+      material->as_pbr = true;
     } else if (cmd == "Pvr") {
-      parse_value(fs, str, material.pbr_volscale);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_volscale);
+      material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      parse_value(fs, str, material.pbr_emission_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_emission_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pb") {
-      parse_value(fs, str, material.pbr_base_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_base_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material.pbr_specular_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_specular_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      parse_value(fs, str, material.pbr_metallic_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_metallic_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      parse_value(fs, str, material.pbr_roughness_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_roughness_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material.pbr_sheen_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_sheen_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pc") {
-      parse_value(fs, str, material.pbr_coat_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_coat_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      parse_value(fs, str, material.pbr_coatroughness_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_coatroughness_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      parse_value(fs, str, material.pbr_opacity_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_opacity_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Pt") {
-      parse_value(fs, str, material.pbr_transmission_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_transmission_map);
+      material->as_pbr = true;
     } else if (cmd == "map_Vs") {
-      parse_value(fs, str, material.pbr_volscattering_map);
-      material.as_pbr = true;
+      parse_value(fs, str, material->pbr_volscattering_map);
+      material->as_pbr = true;
     } else {
       continue;
     }
   }
 
   // remove placeholder material
-  obj.materials.erase(obj.materials.begin());
+  delete obj->materials.front();
+  obj->materials.erase(obj->materials.begin());
 
   // convert between roughness and exponent
   auto exponent_to_roughness = [](float exponent) {
@@ -1619,39 +1627,39 @@ static void load_mtl(
   };
 
   // convert values when possible
-  for (auto& material : obj.materials) {
-    if (material.as_pbr) continue;
-    material.pbr_emission     = material.emission;
-    material.pbr_emission_map = material.emission_map;
-    material.pbr_roughness    = exponent_to_roughness(material.exponent);
-    material.pbr_ior          = material.ior;
-    material.pbr_opacity      = material.opacity;
-    material.pbr_opacity_map  = material.opacity_map;
-    if (max(material.transmission) > 0.1) {
-      material.pbr_base         = material.transmission;
-      material.pbr_transmission = 1;
-      material.pbr_specular     = 1;
-    } else if (max(material.specular) > 0.2) {
-      material.pbr_base     = material.specular;
-      material.pbr_base_map = material.specular_map;
-      material.pbr_metallic = 1;
+  for (auto material : obj->materials) {
+    if (material->as_pbr) continue;
+    material->pbr_emission     = material->emission;
+    material->pbr_emission_map = material->emission_map;
+    material->pbr_roughness    = exponent_to_roughness(material->exponent);
+    material->pbr_ior          = material->ior;
+    material->pbr_opacity      = material->opacity;
+    material->pbr_opacity_map  = material->opacity_map;
+    if (max(material->transmission) > 0.1) {
+      material->pbr_base         = material->transmission;
+      material->pbr_transmission = 1;
+      material->pbr_specular     = 1;
+    } else if (max(material->specular) > 0.2) {
+      material->pbr_base     = material->specular;
+      material->pbr_base_map = material->specular_map;
+      material->pbr_metallic = 1;
     } else {
-      material.pbr_base     = material.diffuse;
-      material.pbr_base_map = material.diffuse_map;
-      material.pbr_specular = max(material.specular) ? 1 : 0;
+      material->pbr_base     = material->diffuse;
+      material->pbr_base_map = material->diffuse_map;
+      material->pbr_specular = max(material->specular) ? 1 : 0;
     }
   }
 }
 
 // Read obj
-static void load_objx(const string& filename, obj_model& obj) {
+static void load_objx(const string& filename, obj_model* obj) {
   // open file
   auto fs = open_file(filename, "rt");
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<int>>{};
-  for (auto idx = 0; idx < obj.shapes.size(); idx++) {
-    shape_map[obj.shapes[idx].name].push_back(idx);
+  auto shape_map = unordered_map<string, vector<obj_shape*>>{};
+  for (auto shape : obj->shapes) {
+    shape_map[shape->name].push_back(shape);
   }
 
   // read the file str by str
@@ -1670,24 +1678,24 @@ static void load_objx(const string& filename, obj_model& obj) {
 
     // read values
     if (cmd == "c") {
-      auto& camera = obj.cameras.emplace_back();
-      parse_value(fs, str, camera.name);
-      parse_value(fs, str, camera.ortho);
-      parse_value(fs, str, camera.width);
-      parse_value(fs, str, camera.height);
-      parse_value(fs, str, camera.lens);
-      parse_value(fs, str, camera.focus);
-      parse_value(fs, str, camera.aperture);
-      parse_value(fs, str, camera.frame);
+      auto camera = obj->cameras.emplace_back(new obj_camera{});
+      parse_value(fs, str, camera->name);
+      parse_value(fs, str, camera->ortho);
+      parse_value(fs, str, camera->width);
+      parse_value(fs, str, camera->height);
+      parse_value(fs, str, camera->lens);
+      parse_value(fs, str, camera->focus);
+      parse_value(fs, str, camera->aperture);
+      parse_value(fs, str, camera->frame);
     } else if (cmd == "e") {
-      auto& environment = obj.environments.emplace_back();
-      parse_value(fs, str, environment.name);
-      parse_value(fs, str, environment.emission);
+      auto environment = obj->environments.emplace_back(new obj_environment{});
+      parse_value(fs, str, environment->name);
+      parse_value(fs, str, environment->emission);
       auto emission_path = ""s;
       parse_value(fs, str, emission_path);
       if (emission_path == "\"\"") emission_path = "";
-      environment.emission_map.path = emission_path;
-      parse_value(fs, str, environment.frame);
+      environment->emission_map.path = emission_path;
+      parse_value(fs, str, environment->frame);
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
@@ -1696,8 +1704,8 @@ static void load_objx(const string& filename, obj_model& obj) {
       if (shape_map.find(object) == shape_map.end()) {
         throw_parse_error(fs, "unknown object " + object);
       }
-      for (auto idx : shape_map.at(object)) {
-        obj.shapes[idx].instances.push_back(frame);
+      for (auto shape : shape_map.at(object)) {
+        shape->instances.push_back(frame);
       }
     } else {
       // unused
@@ -1706,7 +1714,7 @@ static void load_objx(const string& filename, obj_model& obj) {
 }
 
 // Read obj
-void load_obj(const string& filename, obj_model& obj, bool geom_only,
+void load_obj(const string& filename, obj_model* obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
   auto fs = open_file(filename, "rt");
@@ -1722,8 +1730,14 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   auto mtllibs    = vector<string>{};
 
   // initialize obj
-  obj = {};
-  obj.shapes.emplace_back();
+  obj->~obj_model();
+  obj->cameras.clear();
+  obj->environments.clear();
+  obj->shapes.clear();
+  obj->materials.clear();
+
+  // initialize load
+  obj->shapes.emplace_back(new obj_shape{});
 
   // read the file str by str
   char buffer[4096];
@@ -1741,48 +1755,48 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
 
     // possible token values
     if (cmd == "v") {
-      parse_value(fs, str, opositions.emplace_back());
+      parse_value(fs, str, opositions.emplace_back(zero3f));
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      parse_value(fs, str, onormals.emplace_back());
+      parse_value(fs, str, onormals.emplace_back(zero3f));
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      parse_value(fs, str, otexcoords.emplace_back());
+      parse_value(fs, str, otexcoords.emplace_back(zero2f));
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
-      if (auto& shape = obj.shapes.back();
-          split_elements && !shape.vertices.empty()) {
-        if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
-            (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
-            (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
-          obj.shapes.emplace_back();
-          obj.shapes.back().name = oname + gname;
+      if (auto shape = obj->shapes.back();
+          split_elements && !shape->vertices.empty()) {
+        if ((cmd == "f" && (!shape->lines.empty() || !shape->points.empty())) ||
+            (cmd == "l" && (!shape->faces.empty() || !shape->points.empty())) ||
+            (cmd == "p" && (!shape->faces.empty() || !shape->lines.empty()))) {
+          obj->shapes.emplace_back(new obj_shape{});
+          obj->shapes.back()->name = oname + gname;
         }
       }
       // split if splt_material and different materials
-      if (auto& shape = obj.shapes.back();
-          !geom_only && split_materials && !shape.materials.empty()) {
-        if (shape.materials.size() > 1)
+      if (auto shape = obj->shapes.back();
+          !geom_only && split_materials && !shape->materials.empty()) {
+        if (shape->materials.size() > 1)
           throw std::runtime_error("should not have happened");
-        if (shape.materials.back() != mname) {
-          obj.shapes.emplace_back();
-          obj.shapes.back().name = oname + gname;
+        if (shape->materials.back() != mname) {
+          obj->shapes.emplace_back(new obj_shape{});
+          obj->shapes.back()->name = oname + gname;
         }
       }
       // grab shape and add element
-      auto& shape   = obj.shapes.back();
-      auto& element = (cmd == "f") ? shape.faces.emplace_back()
-                                   : (cmd == "l") ? shape.lines.emplace_back()
-                                                  : shape.points.emplace_back();
+      auto shape   = obj->shapes.back();
+      auto& element = (cmd == "f") ? shape->faces.emplace_back()
+                                   : (cmd == "l") ? shape->lines.emplace_back()
+                                                  : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
         auto mat_idx = -1;
-        for (auto midx = 0; midx < shape.materials.size(); midx++)
-          if (shape.materials[midx] == mname) mat_idx = midx;
+        for (auto midx = 0; midx < shape->materials.size(); midx++)
+          if (shape->materials[midx] == mname) mat_idx = midx;
         if (mat_idx < 0) {
-          shape.materials.push_back(mname);
-          mat_idx = shape.materials.size() - 1;
+          shape->materials.push_back(mname);
+          mat_idx = shape->materials.size() - 1;
         }
         element.material = (uint8_t)mat_idx;
       }
@@ -1797,18 +1811,18 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
         if (vert.texcoord < 0)
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
-        shape.vertices.push_back(vert);
+        shape->vertices.push_back(vert);
         element.size += 1;
         skip_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
       parse_value_or_empty(str, cmd == "o" ? oname : gname);
-      if (!obj.shapes.back().vertices.empty()) {
-        obj.shapes.emplace_back();
-        obj.shapes.back().name = oname + gname;
+      if (!obj->shapes.back()->vertices.empty()) {
+        obj->shapes.emplace_back(new obj_shape{});
+        obj->shapes.back()->name = oname + gname;
       } else {
-        obj.shapes.back().name = oname + gname;
+        obj->shapes.back()->name = oname + gname;
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
@@ -1831,22 +1845,22 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   auto ipositions = vector<int>{};
   auto inormals   = vector<int>{};
   auto itexcoords = vector<int>{};
-  for (auto& shape : obj.shapes) {
+  for (auto shape : obj->shapes) {
     ipositions.assign(opositions.size() + 1, 0);
     inormals.assign(onormals.size() + 1, 0);
     itexcoords.assign(otexcoords.size() + 1, 0);
-    for (auto& vertex : shape.vertices) {
+    for (auto& vertex : shape->vertices) {
       if (vertex.position && !ipositions[vertex.position]) {
-        shape.positions.push_back(opositions[vertex.position - 1]);
-        ipositions[vertex.position] = (int)shape.positions.size();
+        shape->positions.push_back(opositions[vertex.position - 1]);
+        ipositions[vertex.position] = (int)shape->positions.size();
       }
       if (vertex.normal && !inormals[vertex.normal]) {
-        shape.normals.push_back(onormals[vertex.normal - 1]);
-        inormals[vertex.normal] = (int)shape.normals.size();
+        shape->normals.push_back(onormals[vertex.normal - 1]);
+        inormals[vertex.normal] = (int)shape->normals.size();
       }
       if (vertex.texcoord && !itexcoords[vertex.texcoord]) {
-        shape.texcoords.push_back(otexcoords[vertex.texcoord - 1]);
-        itexcoords[vertex.texcoord] = (int)shape.texcoords.size();
+        shape->texcoords.push_back(otexcoords[vertex.texcoord - 1]);
+        itexcoords[vertex.texcoord] = (int)shape->texcoords.size();
       }
       vertex.position = ipositions[vertex.position];
       vertex.normal   = inormals[vertex.normal];
@@ -1898,7 +1912,7 @@ static void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-static void save_mtl(const string& filename, const obj_model& obj) {
+static void save_mtl(const string& filename, const obj_model* obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -1907,101 +1921,101 @@ static void save_mtl(const string& filename, const obj_model& obj) {
   format_values(fs, "# Written by Yocto/GL\n");
   format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
   format_values(fs, "#\n\n");
-  for (auto& comment : obj.comments) {
+  for (auto& comment : obj->comments) {
     format_values(fs, "# {}\n", comment);
   }
   format_values(fs, "\n");
 
   // write material
-  for (auto& material : obj.materials) {
-    format_values(fs, "newmtl {}\n", material.name);
-    if (!material.as_pbr) {
-      format_values(fs, "illum {}\n", material.illum);
-      if (material.emission != zero3f)
-        format_values(fs, "Ke {}\n", material.emission);
-      if (material.ambient != zero3f)
-        format_values(fs, "Ka {}\n", material.ambient);
-      format_values(fs, "Kd {}\n", material.diffuse);
-      format_values(fs, "Ks {}\n", material.specular);
-      if (material.reflection != zero3f)
-        format_values(fs, "Kr {}\n", material.reflection);
-      if (material.transmission != zero3f)
-        format_values(fs, "Kt {}\n", material.transmission);
-      format_values(fs, "Ns {}\n", (int)material.exponent);
-      if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
-      if (!material.emission_map.path.empty())
-        format_values(fs, "map_Ke {}\n", material.emission_map);
-      if (!material.diffuse_map.path.empty())
-        format_values(fs, "map_Kd {}\n", material.diffuse_map);
-      if (!material.specular_map.path.empty())
-        format_values(fs, "map_Ks {}\n", material.specular_map);
-      if (!material.transmission_map.path.empty())
-        format_values(fs, "map_Kt {}\n", material.transmission_map);
-      if (!material.reflection_map.path.empty())
-        format_values(fs, "map_Kr {}\n", material.reflection_map);
-      if (!material.exponent_map.path.empty())
-        format_values(fs, "map_Ns {}\n", material.exponent_map);
-      if (!material.opacity_map.path.empty())
-        format_values(fs, "map_d {}\n", material.opacity_map);
-      if (!material.bump_map.path.empty())
-        format_values(fs, "map_bump {}\n", material.bump_map);
-      if (!material.displacement_map.path.empty())
-        format_values(fs, "map_disp {}\n", material.displacement_map);
-      if (!material.normal_map.path.empty())
-        format_values(fs, "map_norm {}\n", material.normal_map);
+  for (auto material : obj->materials) {
+    format_values(fs, "newmtl {}\n", material->name);
+    if (!material->as_pbr) {
+      format_values(fs, "illum {}\n", material->illum);
+      if (material->emission != zero3f)
+        format_values(fs, "Ke {}\n", material->emission);
+      if (material->ambient != zero3f)
+        format_values(fs, "Ka {}\n", material->ambient);
+      format_values(fs, "Kd {}\n", material->diffuse);
+      format_values(fs, "Ks {}\n", material->specular);
+      if (material->reflection != zero3f)
+        format_values(fs, "Kr {}\n", material->reflection);
+      if (material->transmission != zero3f)
+        format_values(fs, "Kt {}\n", material->transmission);
+      format_values(fs, "Ns {}\n", (int)material->exponent);
+      if (material->opacity != 1) format_values(fs, "d {}\n", material->opacity);
+      if (!material->emission_map.path.empty())
+        format_values(fs, "map_Ke {}\n", material->emission_map);
+      if (!material->diffuse_map.path.empty())
+        format_values(fs, "map_Kd {}\n", material->diffuse_map);
+      if (!material->specular_map.path.empty())
+        format_values(fs, "map_Ks {}\n", material->specular_map);
+      if (!material->transmission_map.path.empty())
+        format_values(fs, "map_Kt {}\n", material->transmission_map);
+      if (!material->reflection_map.path.empty())
+        format_values(fs, "map_Kr {}\n", material->reflection_map);
+      if (!material->exponent_map.path.empty())
+        format_values(fs, "map_Ns {}\n", material->exponent_map);
+      if (!material->opacity_map.path.empty())
+        format_values(fs, "map_d {}\n", material->opacity_map);
+      if (!material->bump_map.path.empty())
+        format_values(fs, "map_bump {}\n", material->bump_map);
+      if (!material->displacement_map.path.empty())
+        format_values(fs, "map_disp {}\n", material->displacement_map);
+      if (!material->normal_map.path.empty())
+        format_values(fs, "map_norm {}\n", material->normal_map);
     } else {
       format_values(fs, "illum 2\n");
-      if (material.pbr_emission != zero3f)
-        format_values(fs, "Pe {}\n", material.pbr_emission);
-      if (material.pbr_base != zero3f)
-        format_values(fs, "Pb {}\n", material.pbr_base);
-      if (material.pbr_specular)
-        format_values(fs, "Psp {}\n", material.pbr_specular);
-      if (material.pbr_roughness)
-        format_values(fs, "Pr {}\n", material.pbr_roughness);
-      if (material.pbr_metallic)
-        format_values(fs, "Pm {}\n", material.pbr_metallic);
-      if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
-      if (material.pbr_coat) format_values(fs, "Pc {}\n", material.pbr_coat);
-      if (material.pbr_coatroughness)
-        format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
-      if (material.pbr_volscattering != zero3f)
-        format_values(fs, "Pvs {}\n", material.pbr_volscattering);
-      if (material.pbr_volanisotropy)
-        format_values(fs, "Pvg {}\n", material.pbr_volanisotropy);
-      if (material.pbr_volscale)
-        format_values(fs, "Pvr {}\n", material.pbr_volscale);
-      if (!material.pbr_emission_map.path.empty())
-        format_values(fs, "map_Pe {}\n", material.pbr_emission_map);
-      if (!material.pbr_base_map.path.empty())
-        format_values(fs, "map_Pb {}\n", material.pbr_base_map);
-      if (!material.pbr_specular_map.path.empty())
-        format_values(fs, "map_Psp {}\n", material.pbr_specular_map);
-      if (!material.pbr_roughness_map.path.empty())
-        format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
-      if (!material.pbr_metallic_map.path.empty())
-        format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
-      if (!material.pbr_sheen_map.path.empty())
-        format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
-      if (!material.pbr_coat_map.path.empty())
-        format_values(fs, "map_Pc {}\n", material.pbr_coat_map);
-      if (!material.pbr_coatroughness_map.path.empty())
-        format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
-      if (!material.pbr_volscattering_map.path.empty())
-        format_values(fs, "map_Pvs {}\n", material.pbr_volscattering_map);
-      if (!material.bump_map.path.empty())
-        format_values(fs, "map_bump {}\n", material.bump_map);
-      if (!material.displacement_map.path.empty())
-        format_values(fs, "map_disp {}\n", material.displacement_map);
-      if (!material.normal_map.path.empty())
-        format_values(fs, "map_norm {}\n", material.normal_map);
+      if (material->pbr_emission != zero3f)
+        format_values(fs, "Pe {}\n", material->pbr_emission);
+      if (material->pbr_base != zero3f)
+        format_values(fs, "Pb {}\n", material->pbr_base);
+      if (material->pbr_specular)
+        format_values(fs, "Psp {}\n", material->pbr_specular);
+      if (material->pbr_roughness)
+        format_values(fs, "Pr {}\n", material->pbr_roughness);
+      if (material->pbr_metallic)
+        format_values(fs, "Pm {}\n", material->pbr_metallic);
+      if (material->pbr_sheen) format_values(fs, "Ps {}\n", material->pbr_sheen);
+      if (material->pbr_coat) format_values(fs, "Pc {}\n", material->pbr_coat);
+      if (material->pbr_coatroughness)
+        format_values(fs, "Pcr {}\n", material->pbr_coatroughness);
+      if (material->pbr_volscattering != zero3f)
+        format_values(fs, "Pvs {}\n", material->pbr_volscattering);
+      if (material->pbr_volanisotropy)
+        format_values(fs, "Pvg {}\n", material->pbr_volanisotropy);
+      if (material->pbr_volscale)
+        format_values(fs, "Pvr {}\n", material->pbr_volscale);
+      if (!material->pbr_emission_map.path.empty())
+        format_values(fs, "map_Pe {}\n", material->pbr_emission_map);
+      if (!material->pbr_base_map.path.empty())
+        format_values(fs, "map_Pb {}\n", material->pbr_base_map);
+      if (!material->pbr_specular_map.path.empty())
+        format_values(fs, "map_Psp {}\n", material->pbr_specular_map);
+      if (!material->pbr_roughness_map.path.empty())
+        format_values(fs, "map_Pr {}\n", material->pbr_roughness_map);
+      if (!material->pbr_metallic_map.path.empty())
+        format_values(fs, "map_Pm {}\n", material->pbr_metallic_map);
+      if (!material->pbr_sheen_map.path.empty())
+        format_values(fs, "map_Ps {}\n", material->pbr_sheen_map);
+      if (!material->pbr_coat_map.path.empty())
+        format_values(fs, "map_Pc {}\n", material->pbr_coat_map);
+      if (!material->pbr_coatroughness_map.path.empty())
+        format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_map);
+      if (!material->pbr_volscattering_map.path.empty())
+        format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_map);
+      if (!material->bump_map.path.empty())
+        format_values(fs, "map_bump {}\n", material->bump_map);
+      if (!material->displacement_map.path.empty())
+        format_values(fs, "map_disp {}\n", material->displacement_map);
+      if (!material->normal_map.path.empty())
+        format_values(fs, "map_norm {}\n", material->normal_map);
     }
     format_values(fs, "\n");
   }
 }
 
 // Save obj
-static void save_objx(const string& filename, const obj_model& obj) {
+static void save_objx(const string& filename, const obj_model* obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -2010,36 +2024,36 @@ static void save_objx(const string& filename, const obj_model& obj) {
   format_values(fs, "# Written by Yocto/GL\n");
   format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
   format_values(fs, "#\n\n");
-  for (auto& comment : obj.comments) {
+  for (auto& comment : obj->comments) {
     format_values(fs, "# {}\n", comment);
   }
   format_values(fs, "\n");
 
   // cameras
-  for (auto& camera : obj.cameras) {
-    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name, camera.ortho,
-        camera.width, camera.height, camera.lens, camera.focus, camera.aperture,
-        camera.frame);
+  for (auto camera : obj->cameras) {
+    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name, camera->ortho,
+        camera->width, camera->height, camera->lens, camera->focus, camera->aperture,
+        camera->frame);
   }
 
   // environments
-  for (auto& environment : obj.environments) {
-    format_values(fs, "e {} {} {} {}\n", environment.name, environment.emission,
-        environment.emission_map.path.empty() ? "\"\""s
-                                              : environment.emission_map.path,
-        environment.frame);
+  for (auto environment : obj->environments) {
+    format_values(fs, "e {} {} {} {}\n", environment->name, environment->emission,
+        environment->emission_map.path.empty() ? "\"\""s
+                                              : environment->emission_map.path,
+        environment->frame);
   }
 
   // instances
-  for (auto& shape : obj.shapes) {
-    for (auto& frame : shape.instances) {
-      format_values(fs, "i {} {}\n", shape.name, frame);
+  for (auto shape : obj->shapes) {
+    for (auto& frame : shape->instances) {
+      format_values(fs, "i {} {}\n", shape->name, frame);
     }
   }
 }
 
 // Save obj
-void save_obj(const string& filename, const obj_model& obj) {
+void save_obj(const string& filename, const obj_model* obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -2048,39 +2062,39 @@ void save_obj(const string& filename, const obj_model& obj) {
   format_values(fs, "# Written by Yocto/GL\n");
   format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
   format_values(fs, "#\n\n");
-  for (auto& comment : obj.comments) {
+  for (auto& comment : obj->comments) {
     format_values(fs, "# {}\n", comment);
   }
   format_values(fs, "\n");
 
   // save material library
-  if (!obj.materials.empty()) {
+  if (!obj->materials.empty()) {
     format_values(
         fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
   }
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
-  for (auto& shape : obj.shapes) {
-    format_values(fs, "o {}\n", shape.name);
-    for (auto& p : shape.positions) format_values(fs, "v {}\n", p);
-    for (auto& n : shape.normals) format_values(fs, "vn {}\n", n);
-    for (auto& t : shape.texcoords) format_values(fs, "vt {}\n", t);
+  for (auto shape : obj->shapes) {
+    format_values(fs, "o {}\n", shape->name);
+    for (auto& p : shape->positions) format_values(fs, "v {}\n", p);
+    for (auto& n : shape->normals) format_values(fs, "vn {}\n", n);
+    for (auto& t : shape->texcoords) format_values(fs, "vt {}\n", t);
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
-        &shape.faces, &shape.lines, &shape.points};
+        &shape->faces, &shape->lines, &shape->points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {
       auto& label        = element_labels[element_idx];
       auto& elements     = *element_groups[element_idx];
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
-        if (!shape.materials.empty() && cur_material != element.material) {
-          format_values(fs, "usemtl {}\n", shape.materials[element.material]);
+        if (!shape->materials.empty() && cur_material != element.material) {
+          format_values(fs, "usemtl {}\n", shape->materials[element.material]);
           cur_material = element.material;
         }
         format_values(fs, "{}", label);
         for (auto c = 0; c < element.size; c++) {
-          auto vert = shape.vertices[cur_vertex++];
+          auto vert = shape->vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
@@ -2090,32 +2104,32 @@ void save_obj(const string& filename, const obj_model& obj) {
       }
     }
     format_values(fs, "\n");
-    vert_size.position += (int)shape.positions.size();
-    vert_size.normal += (int)shape.normals.size();
-    vert_size.texcoord += (int)shape.texcoords.size();
+    vert_size.position += (int)shape->positions.size();
+    vert_size.normal += (int)shape->normals.size();
+    vert_size.texcoord += (int)shape->texcoords.size();
   }
 
   // save mtl
-  if (!obj.materials.empty()) {
+  if (!obj->materials.empty()) {
     save_mtl(replace_extension(filename, ".mtl"), obj);
   }
 
   // save objx
-  if (!obj.cameras.empty() || !obj.environments.empty() ||
-      std::any_of(obj.shapes.begin(), obj.shapes.end(),
-          [](auto& shape) { return !shape.instances.empty(); })) {
+  if (!obj->cameras.empty() || !obj->environments.empty() ||
+      std::any_of(obj->shapes.begin(), obj->shapes.end(),
+          [](auto shape) { return !shape->instances.empty(); })) {
     save_objx(replace_extension(filename, ".objx"), obj);
   }
 }
 
 // Get obj vertices
-static void get_vertices(const obj_shape& shape, vector<vec3f>& positions,
+static void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
   auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape.vertices.size());
-  vindex.reserve(shape.vertices.size());
-  for (auto& vert : shape.vertices) {
+  vmap.reserve(shape->vertices.size());
+  vindex.reserve(shape->vertices.size());
+  for (auto& vert : shape->vertices) {
     auto it = vmap.find(vert);
     if (it != vmap.end()) {
       vindex.push_back(it->second);
@@ -2124,12 +2138,12 @@ static void get_vertices(const obj_shape& shape, vector<vec3f>& positions,
     auto nverts = (int)positions.size();
     vindex.push_back(nverts);
     vmap.insert(it, {vert, nverts});
-    if (!shape.positions.empty() && vert.position)
-      positions.push_back(shape.positions[vert.position - 1]);
-    if (!shape.normals.empty() && vert.normal)
-      normals.push_back(shape.normals[vert.normal - 1]);
-    if (!shape.texcoords.empty() && vert.texcoord)
-      texcoords.push_back(shape.texcoords[vert.texcoord - 1]);
+    if (!shape->positions.empty() && vert.position)
+      positions.push_back(shape->positions[vert.position - 1]);
+    if (!shape->normals.empty() && vert.normal)
+      normals.push_back(shape->normals[vert.normal - 1]);
+    if (!shape->texcoords.empty() && vert.texcoord)
+      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
@@ -2142,18 +2156,18 @@ static vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_triangles(const obj_model& obj, const obj_shape& shape,
+void get_triangles(const obj_model* obj, const obj_shape* shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
-  if (shape.faces.empty()) return;
+  if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape.materials;
-  triangles.reserve(shape.faces.size());
-  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  materials = shape->materials;
+  triangles.reserve(shape->faces.size());
+  if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
+  for (auto& face : shape->faces) {
     for (auto c = 2; c < face.size; c++) {
       triangles.push_back(
           {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
@@ -2162,18 +2176,18 @@ void get_triangles(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-void get_quads(const obj_model& obj, const obj_shape& shape,
+void get_quads(const obj_model* obj, const obj_shape* shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
-  if (shape.faces.empty()) return;
+  if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape.materials;
-  quads.reserve(shape.faces.size());
-  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  materials = shape->materials;
+  quads.reserve(shape->faces.size());
+  if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
+  for (auto& face : shape->faces) {
     if (face.size == 4) {
       quads.push_back(
           {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
@@ -2188,18 +2202,18 @@ void get_quads(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-void get_lines(const obj_model& obj, const obj_shape& shape,
+void get_lines(const obj_model* obj, const obj_shape* shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
-  if (shape.lines.empty()) return;
+  if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape.materials;
-  lines.reserve(shape.lines.size());
-  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  materials = shape->materials;
+  lines.reserve(shape->lines.size());
+  if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& str : shape.lines) {
+  for (auto& str : shape->lines) {
     for (auto c = 1; c < str.size; c++) {
       lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
       if (!materials.empty()) ematerials.push_back(str.material);
@@ -2207,18 +2221,18 @@ void get_lines(const obj_model& obj, const obj_shape& shape,
     cur += str.size;
   }
 }
-void get_points(const obj_model& obj, const obj_shape& shape,
+void get_points(const obj_model* obj, const obj_shape* shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
-  if (shape.points.empty()) return;
+  if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
-  materials = shape.materials;
-  points.reserve(shape.points.size());
-  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  materials = shape->materials;
+  points.reserve(shape->points.size());
+  if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& point : shape.points) {
+  for (auto& point : shape->points) {
     for (auto c = 0; c < point.size; c++) {
       points.push_back({vindex[cur + 0]});
       if (!materials.empty()) ematerials.push_back(point.material);
@@ -2226,56 +2240,56 @@ void get_points(const obj_model& obj, const obj_shape& shape,
     cur += point.size;
   }
 }
-void get_fvquads(const obj_model& obj, const obj_shape& shape,
+void get_fvquads(const obj_model* obj, const obj_shape* shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
-  if (shape.faces.empty()) return;
-  positions = shape.positions;
-  normals   = shape.normals;
-  texcoords = flipv ? flip_obj_texcoord(shape.texcoords) : shape.texcoords;
-  materials = shape.materials;
-  if (shape.vertices[0].position) quadspos.reserve(shape.faces.size());
-  if (shape.vertices[0].normal) quadsnorm.reserve(shape.faces.size());
-  if (shape.vertices[0].texcoord) quadstexcoord.reserve(shape.faces.size());
-  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  if (shape->faces.empty()) return;
+  positions = shape->positions;
+  normals   = shape->normals;
+  texcoords = flipv ? flip_obj_texcoord(shape->texcoords) : shape->texcoords;
+  materials = shape->materials;
+  if (shape->vertices[0].position) quadspos.reserve(shape->faces.size());
+  if (shape->vertices[0].normal) quadsnorm.reserve(shape->faces.size());
+  if (shape->vertices[0].texcoord) quadstexcoord.reserve(shape->faces.size());
+  if (!materials.empty()) ematerials.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& face : shape.faces) {
+  for (auto& face : shape->faces) {
     if (face.size == 4) {
-      if (shape.vertices[0].position)
-        quadspos.push_back({shape.vertices[cur + 0].position - 1,
-            shape.vertices[cur + 1].position - 1,
-            shape.vertices[cur + 2].position - 1,
-            shape.vertices[cur + 3].position - 1});
-      if (shape.vertices[0].normal)
-        quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
-            shape.vertices[cur + 1].normal - 1,
-            shape.vertices[cur + 2].normal - 1,
-            shape.vertices[cur + 3].normal - 1});
-      if (shape.vertices[0].texcoord)
-        quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
-            shape.vertices[cur + 1].texcoord - 1,
-            shape.vertices[cur + 2].texcoord - 1,
-            shape.vertices[cur + 3].texcoord - 1});
+      if (shape->vertices[0].position)
+        quadspos.push_back({shape->vertices[cur + 0].position - 1,
+            shape->vertices[cur + 1].position - 1,
+            shape->vertices[cur + 2].position - 1,
+            shape->vertices[cur + 3].position - 1});
+      if (shape->vertices[0].normal)
+        quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
+            shape->vertices[cur + 1].normal - 1,
+            shape->vertices[cur + 2].normal - 1,
+            shape->vertices[cur + 3].normal - 1});
+      if (shape->vertices[0].texcoord)
+        quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
+            shape->vertices[cur + 1].texcoord - 1,
+            shape->vertices[cur + 2].texcoord - 1,
+            shape->vertices[cur + 3].texcoord - 1});
       if (!materials.empty()) ematerials.push_back(face.material);
     } else {
       for (auto c = 2; c < face.size; c++) {
-        if (shape.vertices[0].position)
-          quadspos.push_back({shape.vertices[cur + 0].position - 1,
-              shape.vertices[cur + c - 1].position - 1,
-              shape.vertices[cur + c].position - 1,
-              shape.vertices[cur + c].position - 1});
-        if (shape.vertices[0].normal)
-          quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
-              shape.vertices[cur + c - 1].normal - 1,
-              shape.vertices[cur + c].normal - 1,
-              shape.vertices[cur + c].normal - 1});
-        if (shape.vertices[0].texcoord)
-          quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
-              shape.vertices[cur + c - 1].texcoord - 1,
-              shape.vertices[cur + c].texcoord - 1,
-              shape.vertices[cur + c].texcoord - 1});
+        if (shape->vertices[0].position)
+          quadspos.push_back({shape->vertices[cur + 0].position - 1,
+              shape->vertices[cur + c - 1].position - 1,
+              shape->vertices[cur + c].position - 1,
+              shape->vertices[cur + c].position - 1});
+        if (shape->vertices[0].normal)
+          quadsnorm.push_back({shape->vertices[cur + 0].normal - 1,
+              shape->vertices[cur + c - 1].normal - 1,
+              shape->vertices[cur + c].normal - 1,
+              shape->vertices[cur + c].normal - 1});
+        if (shape->vertices[0].texcoord)
+          quadstexcoord.push_back({shape->vertices[cur + 0].texcoord - 1,
+              shape->vertices[cur + c - 1].texcoord - 1,
+              shape->vertices[cur + c].texcoord - 1,
+              shape->vertices[cur + c].texcoord - 1});
         if (!materials.empty()) ematerials.push_back(face.material);
       }
     }
@@ -2283,26 +2297,26 @@ void get_fvquads(const obj_model& obj, const obj_shape& shape,
   }
 }
 
-bool has_quads(const obj_shape& shape) {
-  for (auto& face : shape.faces)
+bool has_quads(const obj_shape* shape) {
+  for (auto& face : shape->faces)
     if (face.size == 4) return true;
   return false;
 }
 
 // Get obj vertices
-static void get_vertices(const obj_shape& shape, int material,
+static void get_vertices(const obj_shape* shape, int material,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
-  auto used_vertices = vector<bool>(shape.vertices.size(), false);
+  auto used_vertices = vector<bool>(shape->vertices.size(), false);
   auto count         = 0;
-  for (auto& elem : shape.faces) {
+  for (auto& elem : shape->faces) {
     if (elem.material == material) {
       for (auto vid = count; vid < count + elem.size; vid++)
         used_vertices[vid] = true;
     }
     count += elem.size;
   }
-  for (auto& elem : shape.lines) {
+  for (auto& elem : shape->lines) {
     if (elem.material == material) {
       for (auto vid = count; vid < count + elem.size; vid++)
         used_vertices[vid] = true;
@@ -2310,14 +2324,14 @@ static void get_vertices(const obj_shape& shape, int material,
     count += elem.size;
   }
   auto vmap = unordered_map<obj_vertex, int>{};
-  vmap.reserve(shape.vertices.size());
-  vindex.resize(shape.vertices.size());
-  for (auto vid = 0; vid < shape.vertices.size(); vid++) {
+  vmap.reserve(shape->vertices.size());
+  vindex.resize(shape->vertices.size());
+  for (auto vid = 0; vid < shape->vertices.size(); vid++) {
     if (!used_vertices[vid]) {
       vindex[vid] = -1;
       continue;
     }
-    auto& vert = shape.vertices[vid];
+    auto& vert = shape->vertices[vid];
     auto  it   = vmap.find(vert);
     if (it != vmap.end()) {
       vindex[vid] = it->second;
@@ -2326,12 +2340,12 @@ static void get_vertices(const obj_shape& shape, int material,
     auto nverts = (int)positions.size();
     vindex[vid] = nverts;
     vmap.insert(it, {vert, nverts});
-    if (!shape.positions.empty() && vert.position)
-      positions.push_back(shape.positions[vert.position - 1]);
-    if (!shape.normals.empty() && vert.normal)
-      normals.push_back(shape.normals[vert.normal - 1]);
-    if (!shape.texcoords.empty() && vert.texcoord)
-      texcoords.push_back(shape.texcoords[vert.texcoord - 1]);
+    if (!shape->positions.empty() && vert.position)
+      positions.push_back(shape->positions[vert.position - 1]);
+    if (!shape->normals.empty() && vert.normal)
+      normals.push_back(shape->normals[vert.normal - 1]);
+    if (!shape->texcoords.empty() && vert.texcoord)
+      texcoords.push_back(shape->texcoords[vert.texcoord - 1]);
   }
   if (flipv) {
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
@@ -2339,15 +2353,15 @@ static void get_vertices(const obj_shape& shape, int material,
 }
 
 // Get obj shape
-void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
+void get_triangles(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
-  if (shape.faces.empty()) return;
+  if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  triangles.reserve(shape.faces.size());
+  triangles.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& elem : shape.faces) {
+  for (auto& elem : shape->faces) {
     if (elem.material == material) {
       for (auto c = 2; c < elem.size; c++) {
         triangles.push_back(
@@ -2358,15 +2372,15 @@ void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
   }
   triangles.shrink_to_fit();
 }
-void get_quads(const obj_model& obj, const obj_shape& shape, int material,
+void get_quads(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
-  if (shape.faces.empty()) return;
+  if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  quads.reserve(shape.faces.size());
+  quads.reserve(shape->faces.size());
   auto cur = 0;
-  for (auto& elem : shape.faces) {
+  for (auto& elem : shape->faces) {
     if (elem.material == material) {
       if (elem.size == 4) {
         quads.push_back({vindex[cur + 0], vindex[cur + 1], vindex[cur + 2],
@@ -2382,15 +2396,15 @@ void get_quads(const obj_model& obj, const obj_shape& shape, int material,
   }
   quads.shrink_to_fit();
 }
-void get_lines(const obj_model& obj, const obj_shape& shape, int material,
+void get_lines(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
-  if (shape.lines.empty()) return;
+  if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  lines.reserve(shape.lines.size());
+  lines.reserve(shape->lines.size());
   auto cur = 0;
-  for (auto& elem : shape.lines) {
+  for (auto& elem : shape->lines) {
     if (elem.material == material) {
       for (auto c = 1; c < elem.size; c++) {
         lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
@@ -2400,15 +2414,15 @@ void get_lines(const obj_model& obj, const obj_shape& shape, int material,
   }
   lines.shrink_to_fit();
 }
-void get_points(const obj_model& obj, const obj_shape& shape, int material,
+void get_points(const obj_model* obj, const obj_shape* shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
-  if (shape.points.empty()) return;
+  if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
-  points.reserve(shape.points.size());
+  points.reserve(shape->points.size());
   auto cur = 0;
-  for (auto& elem : shape.points) {
+  for (auto& elem : shape->points) {
     if (elem.material == material) {
       for (auto c = 0; c < elem.size; c++) {
         points.push_back({vindex[cur + 0]});
@@ -2417,138 +2431,138 @@ void get_points(const obj_model& obj, const obj_shape& shape, int material,
     cur += elem.size;
   }
 }
-vector<string> get_materials(const obj_model& obj, const obj_shape& shape) {
-  return shape.materials;
+vector<string> get_materials(const obj_model* obj, const obj_shape* shape) {
+  return shape->materials;
 }
 
 // Add obj shape
-void add_triangles(obj_model& obj, const string& name,
+void add_triangles(obj_model* obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto& shape     = obj.shapes.emplace_back();
-  shape.name      = name;
-  shape.materials = materials;
-  shape.positions = positions;
-  shape.normals   = normals;
-  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape.instances = instances;
-  shape.vertices.reserve(triangles.size() * 3);
+  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  shape->name      = name;
+  shape->materials = materials;
+  shape->positions = positions;
+  shape->normals   = normals;
+  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->instances = instances;
+  shape->vertices.reserve(triangles.size() * 3);
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
-      shape.vertices.push_back({
+      shape->vertices.push_back({
           positions.empty() ? 0 : triangle[c] + 1,
           texcoords.empty() ? 0 : triangle[c] + 1,
           normals.empty() ? 0 : triangle[c] + 1,
       });
     }
-    shape.faces.push_back(
+    shape->faces.push_back(
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
+void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto& shape     = obj.shapes.emplace_back();
-  shape.name      = name;
-  shape.materials = materials;
-  shape.positions = positions;
-  shape.normals   = normals;
-  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape.instances = instances;
-  shape.vertices.reserve(quads.size() * 4);
+  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  shape->name      = name;
+  shape->materials = materials;
+  shape->positions = positions;
+  shape->normals   = normals;
+  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->instances = instances;
+  shape->vertices.reserve(quads.size() * 4);
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
     auto  nv   = quad.z == quad.w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape.vertices.push_back({
+      shape->vertices.push_back({
           positions.empty() ? 0 : quad[c] + 1,
           texcoords.empty() ? 0 : quad[c] + 1,
           normals.empty() ? 0 : quad[c] + 1,
       });
     }
-    shape.faces.push_back({(uint8_t)nv,
+    shape->faces.push_back({(uint8_t)nv,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
+void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto& shape     = obj.shapes.emplace_back();
-  shape.name      = name;
-  shape.materials = materials;
-  shape.positions = positions;
-  shape.normals   = normals;
-  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape.instances = instances;
-  shape.vertices.reserve(lines.size() * 2);
+  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  shape->name      = name;
+  shape->materials = materials;
+  shape->positions = positions;
+  shape->normals   = normals;
+  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->instances = instances;
+  shape->vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& str = lines[idx];
     for (auto c = 0; c < 2; c++) {
-      shape.vertices.push_back({
+      shape->vertices.push_back({
           positions.empty() ? 0 : str[c] + 1,
           texcoords.empty() ? 0 : str[c] + 1,
           normals.empty() ? 0 : str[c] + 1,
       });
     }
-    shape.lines.push_back(
+    shape->lines.push_back(
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_points(obj_model& obj, const string& name, const vector<int>& points,
+void add_points(obj_model* obj, const string& name, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto& shape     = obj.shapes.emplace_back();
-  shape.name      = name;
-  shape.materials = materials;
-  shape.positions = positions;
-  shape.normals   = normals;
-  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape.instances = instances;
-  shape.vertices.reserve(points.size());
+  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  shape->name      = name;
+  shape->materials = materials;
+  shape->positions = positions;
+  shape->normals   = normals;
+  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->instances = instances;
+  shape->vertices.reserve(points.size());
   for (auto idx = 0; idx < points.size(); idx++) {
     auto& point = points[idx];
-    shape.vertices.push_back({
+    shape->vertices.push_back({
         positions.empty() ? 0 : point + 1,
         texcoords.empty() ? 0 : point + 1,
         normals.empty() ? 0 : point + 1,
     });
-    shape.faces.push_back(
+    shape->faces.push_back(
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_fvquads(obj_model& obj, const string& name,
+void add_fvquads(obj_model* obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto& shape     = obj.shapes.emplace_back();
-  shape.name      = name;
-  shape.materials = materials;
-  shape.positions = positions;
-  shape.normals   = normals;
-  shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
-  shape.instances = instances;
-  shape.vertices.reserve(quadspos.size() * 4);
+  auto shape     = obj->shapes.emplace_back(new obj_shape{});
+  shape->name      = name;
+  shape->materials = materials;
+  shape->positions = positions;
+  shape->normals   = normals;
+  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->instances = instances;
+  shape->vertices.reserve(quadspos.size() * 4);
   for (auto idx = 0; idx < quadspos.size(); idx++) {
     auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
     for (auto c = 0; c < nv; c++) {
-      shape.vertices.push_back({
+      shape->vertices.push_back({
           quadspos.empty() ? 0 : quadspos[idx][c] + 1,
           quadstexcoord.empty() ? 0 : quadstexcoord[idx][c] + 1,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + 1,
       });
     }
-    shape.faces.push_back({(uint8_t)nv,
+    shape->faces.push_back({(uint8_t)nv,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
