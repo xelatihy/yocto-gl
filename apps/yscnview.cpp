@@ -82,6 +82,9 @@ struct app_state {
 
   // editing maps
   unordered_map<sceneio_texture*, opengl_texture*> texture_map = {};
+  unordered_map<sceneio_shape*, opengl_shape*> shape_map = {};
+  unordered_map<sceneio_material*, opengl_material*> material_map = {};
+  unordered_map<sceneio_instance*, opengl_instance*> instance_map = {};
 
   // error
   string error = "";
@@ -171,6 +174,9 @@ void init_scene(shared_ptr<app_state> app) {
   auto  glscene     = app->glscene.get();
   auto  ioscene     = app->ioscene.get();
   auto& texture_map = app->texture_map;
+  auto& material_map = app->material_map;
+  auto& shape_map = app->shape_map;
+  auto& instance_map = app->instance_map;
 
   // load program
   init_glscene(glscene);
@@ -199,10 +205,32 @@ void init_scene(shared_ptr<app_state> app) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
+  // material
+  material_map[nullptr] = nullptr;
+  for (auto iomaterial : ioscene->materials) {
+    auto glmaterial = add_material(glscene);
+    set_shape_emission(glmaterial, iomaterial->emission,
+        texture_map.at(iomaterial->emission_tex));
+    set_shape_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
+        texture_map.at(iomaterial->color_tex));
+    set_shape_specular(glmaterial,
+        (1 - iomaterial->transmission) * iomaterial->specular,
+        texture_map.at(iomaterial->specular_tex));
+    set_shape_metallic(glmaterial,
+        (1 - iomaterial->transmission) * iomaterial->metallic,
+        texture_map.at(iomaterial->metallic_tex));
+    set_shape_roughness(glmaterial, iomaterial->roughness,
+        texture_map.at(iomaterial->roughness_tex));
+    set_shape_opacity(
+        glmaterial, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
+    material_map[iomaterial] = glmaterial;
+  }
+
   // shapes
-  for (auto ioobject : ioscene->objects) {
+  shape_map[nullptr] = nullptr;
+  for (auto ioshape : ioscene->shapes) {
     auto glshape = add_shape(glscene);
-    auto ioshape = ioobject->shape;
     set_shape_positions(glshape, ioshape->positions);
     set_shape_normals(glshape, ioshape->normals);
     set_shape_texcoords(glshape, ioshape->texcoords);
@@ -211,25 +239,24 @@ void init_scene(shared_ptr<app_state> app) {
     set_shape_lines(glshape, ioshape->lines);
     set_shape_triangles(glshape, ioshape->triangles);
     set_shape_quads(glshape, ioshape->quads);
-    set_shape_frame(glshape, ioobject->frame);
-    auto ioinstance = ioobject->instance;
-    if (ioinstance) set_shape_instances(glshape, ioinstance->frames);
-    auto iomaterial = ioobject->material;
-    set_shape_emission(glshape, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_shape_color(glshape, (1 - iomaterial->transmission) * iomaterial->color,
-        texture_map.at(iomaterial->color_tex));
-    set_shape_specular(glshape,
-        (1 - iomaterial->transmission) * iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_shape_metallic(glshape,
-        (1 - iomaterial->transmission) * iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_shape_roughness(glshape, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(
-        glshape, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_shape_normalmap(glshape, texture_map.at(iomaterial->normal_tex));
+    shape_map[ioshape] = glshape;
+  }
+
+  // instances
+  instance_map[nullptr] = nullptr;
+  for (auto ioinstance : ioscene->instances) {
+    auto glinstance = add_instance(glscene);
+    set_frames(glinstance, ioinstance->frames);
+    instance_map[ioinstance] = glinstance;
+  }
+
+  // shapes
+  for (auto ioobject : ioscene->objects) {
+    auto globject = add_object(glscene);
+    set_frame(globject, ioobject->frame);
+    set_shape(globject, shape_map.at(ioobject->shape));
+    set_material(globject, material_map.at(ioobject->material));
+    set_instance(globject, instance_map.at(ioobject->instance));
   }
 }
 
@@ -510,9 +537,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_glwidgets_shape(win, app, app->selected_object)) {
-      auto glshape  = app->glscene->shapes[app->selected_object];
+      auto globject  = app->glscene->objects[app->selected_object];
       auto ioobject = app->ioscene->objects[app->selected_object];
-      set_shape_frame(glshape, ioobject->frame);
+      set_frame(globject, ioobject->frame);
+      set_shape(globject, app->shape_map.at(ioobject->shape));
+      set_material(globject, app->material_map.at(ioobject->material));
+      set_instance(globject, app->instance_map.at(ioobject->instance));
       // TODO: add the rest
     }
     end_glheader(win);
@@ -538,18 +568,18 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets_shape(win, app, app->selected_instance)) {
-      auto glshape    = app->glscene->shapes[app->selected_instance];
+      auto glinstance    = app->glscene->instances[app->selected_instance];
       auto ioinstance = app->ioscene->instances[app->selected_instance];
-      set_shape_instances(glshape, ioinstance->frames);
+      set_frames(glinstance, ioinstance->frames);
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->shapes.empty() &&
+  if (app && !app->ioscene->materials.empty() &&
       begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
-      auto glmaterial = app->glscene->shapes[app->selected_material];
+      auto glmaterial = app->glscene->materials[app->selected_material];
       auto iomaterial = app->ioscene->materials[app->selected_material];
       set_shape_emission(glmaterial, iomaterial->emission,
           app->texture_map.at(iomaterial->emission_tex));
