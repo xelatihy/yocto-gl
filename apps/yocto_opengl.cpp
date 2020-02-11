@@ -940,9 +940,7 @@ void set_material(opengl_object* object, opengl_material* material) {
 void set_instance(opengl_object* object, opengl_instance* instance) {
   object->instance = instance;
 }
-void set_hidden(opengl_object* object, bool hidden) {
-  object->hidden = hidden;
-}
+void set_hidden(opengl_object* object, bool hidden) { object->hidden = hidden; }
 void set_highlighted(opengl_object* object, bool highlighted) {
   object->highlighted = highlighted;
 }
@@ -951,40 +949,45 @@ void set_highlighted(opengl_object* object, bool highlighted) {
 opengl_instance* add_instance(opengl_scene* scene) {
   return scene->instances.emplace_back(new opengl_instance{});
 }
-void set_frames(
-    opengl_instance* instance, const vector<frame3f>& frames) {
-      // TODO: instances
+void set_frames(opengl_instance* instance, const vector<frame3f>& frames) {
+  // TODO: instances
 }
 
 // add material
 opengl_material* add_material(opengl_scene* scene) {
   return scene->materials.emplace_back(new opengl_material{});
 }
-void set_shape_emission(
-    opengl_material* material, const vec3f& emission, opengl_texture* emission_txt) {
+void set_shape_emission(opengl_material* material, const vec3f& emission,
+    opengl_texture* emission_txt) {
   material->emission     = emission;
   material->emission_map = emission_txt;
 }
-void set_shape_color(opengl_material* material, const vec3f& color, opengl_texture* color_txt) {
+void set_shape_color(
+    opengl_material* material, const vec3f& color, opengl_texture* color_txt) {
   material->color     = color;
   material->color_map = color_txt;
 }
-void set_shape_specular(opengl_material* material, float specular, opengl_texture* specular_txt) {
+void set_shape_specular(
+    opengl_material* material, float specular, opengl_texture* specular_txt) {
   material->specular     = specular;
   material->specular_map = specular_txt;
 }
-void set_shape_roughness(opengl_material* material, float roughness, opengl_texture* roughness_txt) {
+void set_shape_roughness(
+    opengl_material* material, float roughness, opengl_texture* roughness_txt) {
   material->roughness     = roughness;
   material->roughness_map = roughness_txt;
 }
-void set_shape_opacity(opengl_material* material, float opacity, opengl_texture* opacity_txt) {
+void set_shape_opacity(
+    opengl_material* material, float opacity, opengl_texture* opacity_txt) {
   material->opacity = opacity;
 }
-void set_shape_metallic(opengl_material* material, float metallic, opengl_texture* metallic_txt) {
+void set_shape_metallic(
+    opengl_material* material, float metallic, opengl_texture* metallic_txt) {
   material->metallic     = metallic;
   material->metallic_map = metallic_txt;
 }
-void set_shape_normalmap(opengl_material* material, opengl_texture* normal_txt) {
+void set_shape_normalmap(
+    opengl_material* material, opengl_texture* normal_txt) {
   material->normal_map = normal_txt;
 }
 void set_shape_gltftextures(opengl_material* material, bool gltf_textures) {
@@ -1031,7 +1034,7 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
   }
 
   auto material = object->material;
-  auto mtype = 2;
+  auto mtype    = 2;
   if (material->gltf_textures) mtype = 3;
   glUniform1i(glGetUniformLocation(glscene->program_id, "mat_type"), mtype);
   glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ke"),

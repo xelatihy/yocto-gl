@@ -175,19 +175,17 @@ struct opengl_shape {
 };
 
 // Opengl instance
-struct opengl_instance {
-};
+struct opengl_instance {};
 
 // Opengl object
 struct opengl_object {
   // object properties
-  frame3f         frame       = identity3x4f;
-  opengl_shape* shape   = nullptr;
-  opengl_material* material   = nullptr;
-  opengl_instance* instance   = nullptr;
-  bool            hidden      = false;
-  bool            highlighted = false;
-
+  frame3f          frame       = identity3x4f;
+  opengl_shape*    shape       = nullptr;
+  opengl_material* material    = nullptr;
+  opengl_instance* instance    = nullptr;
+  bool             hidden      = false;
+  bool             highlighted = false;
 };
 
 // Opengl light
@@ -204,13 +202,13 @@ struct opengl_scene {
   opengl_scene* operator=(const opengl_scene*) = delete;
   ~opengl_scene();
 
-  vector<opengl_camera*>  cameras  = {};
+  vector<opengl_camera*>   cameras   = {};
   vector<opengl_object*>   objects   = {};
-  vector<opengl_shape*>   shapes   = {};
-  vector<opengl_material*>   materials   = {};
-  vector<opengl_instance*>   instances   = {};
-  vector<opengl_texture*> textures = {};
-  vector<opengl_light*>   lights   = {};
+  vector<opengl_shape*>    shapes    = {};
+  vector<opengl_material*> materials = {};
+  vector<opengl_instance*> instances = {};
+  vector<opengl_texture*>  textures  = {};
+  vector<opengl_light*>    lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -267,7 +265,8 @@ void set_shape_roughness(opengl_material* material, float roughness,
     opengl_texture* roughness_txt = nullptr);
 void set_shape_specular(opengl_material* material, float specular,
     opengl_texture* specular_txt = nullptr);
-void set_shape_opacity(opengl_material* material, float opacity, opengl_texture* opacity_txt = nullptr);
+void set_shape_opacity(opengl_material* material, float opacity,
+    opengl_texture* opacity_txt = nullptr);
 void set_shape_normalmap(opengl_material* material, opengl_texture* normal_txt);
 void set_shape_gltftextures(opengl_material* material, bool gltf_textures);
 
@@ -289,12 +288,12 @@ void set_frames(opengl_instance* instance, const vector<frame3f>& frames);
 
 // add object
 opengl_object* add_object(opengl_scene* scene);
-void set_frame(opengl_object* object, const frame3f& frame);
-void set_shape(opengl_object* object, opengl_shape* shape);
-void set_material(opengl_object* object, opengl_material* material);
-void set_instance(opengl_object* object, opengl_instance* instance);
-void set_hidden(opengl_object* object, bool hidden);
-void set_highlighted(opengl_object* object, bool highlighted);
+void           set_frame(opengl_object* object, const frame3f& frame);
+void           set_shape(opengl_object* object, opengl_shape* shape);
+void           set_material(opengl_object* object, opengl_material* material);
+void           set_instance(opengl_object* object, opengl_instance* instance);
+void           set_hidden(opengl_object* object, bool hidden);
+void           set_highlighted(opengl_object* object, bool highlighted);
 
 // add light
 opengl_light* add_light(opengl_scene* scene);

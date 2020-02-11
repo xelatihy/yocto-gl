@@ -31,22 +31,22 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  opengl_camera* glcamera         = nullptr;
-  opengl_shape*  glshapes        = nullptr;
-  opengl_shape*  glpoints       = nullptr;
-  opengl_shape*  glvfields = nullptr;
-  opengl_shape*  gledges        = nullptr;
-  opengl_shape*  glpolylines     = nullptr;
-  opengl_material*  glshapem        = nullptr;
-  opengl_material*  glpointm       = nullptr;
-  opengl_material*  glvfieldm = nullptr;
-  opengl_material*  gledgem        = nullptr;
-  opengl_material*  glpolylinem     = nullptr;
-  opengl_object*  glshapeo        = nullptr;
-  opengl_object*  glpointo       = nullptr;
-  opengl_object*  glvfieldo = nullptr;
-  opengl_object*  gledgeo    = nullptr;
-  opengl_object*  glpolylineo     = nullptr;
+  opengl_camera*   glcamera    = nullptr;
+  opengl_shape*    glshapes    = nullptr;
+  opengl_shape*    glpoints    = nullptr;
+  opengl_shape*    glvfields   = nullptr;
+  opengl_shape*    gledges     = nullptr;
+  opengl_shape*    glpolylines = nullptr;
+  opengl_material* glshapem    = nullptr;
+  opengl_material* glpointm    = nullptr;
+  opengl_material* glvfieldm   = nullptr;
+  opengl_material* gledgem     = nullptr;
+  opengl_material* glpolylinem = nullptr;
+  opengl_object*   glshapeo    = nullptr;
+  opengl_object*   glpointo    = nullptr;
+  opengl_object*   glvfieldo   = nullptr;
+  opengl_object*   gledgeo     = nullptr;
+  opengl_object*   glpolylineo = nullptr;
 };
 
 void update_glshape(shared_ptr<app_state> app) {
