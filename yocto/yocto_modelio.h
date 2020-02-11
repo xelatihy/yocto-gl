@@ -2,7 +2,7 @@
 // # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt/Yaml/glTF parsing and writing
 //
 // Yocto/ModelIO is a tiny library for loading and saving
-// Ply/Obj/Pbrt/Yaml/glTF. In Yocto/ModelIO, all model data is loaded and saved
+// Ply/Obj/Pbrt/glTF. In Yocto/ModelIO, all model data is loaded and saved
 // at once. Each format is parsed in a manner that is as close as possible to
 // the original. Data can be accessed directly or via converters.
 //
@@ -79,106 +79,108 @@ struct ply_property {
 
 // Ply elements
 struct ply_element {
-  string               name       = "";
-  size_t               count      = 0;
-  vector<ply_property> properties = {};
+  string                name       = "";
+  size_t                count      = 0;
+  vector<ply_property*> properties = {};
+  ~ply_element();
 };
 
 // Ply model
 struct ply_model {
-  ply_format          format   = ply_format::binary_little_endian;
-  vector<string>      comments = {};
-  vector<ply_element> elements = {};
+  ply_format           format   = ply_format::binary_little_endian;
+  vector<string>       comments = {};
+  vector<ply_element*> elements = {};
+  ~ply_model();
 };
 
 // Load and save ply
-void load_ply(const string& filename, ply_model& ply);
-void save_ply(const string& filename, const ply_model& ply);
+void load_ply(const string& filename, ply_model* ply);
+void save_ply(const string& filename, const ply_model* ply);
 
 // Get ply properties
 bool has_property(
-    const ply_model& ply, const string& element, const string& property);
-const ply_property& get_property(
-    const ply_model& ply, const string& element, const string& property);
+    const ply_model* ply, const string& element, const string& property);
+const ply_property* get_property(
+    const ply_model* ply, const string& element, const string& property);
 
 vector<float> get_values(
-    const ply_model& ply, const string& element, const string& property);
-vector<vec2f>   get_values(const ply_model& ply, const string& element,
+    const ply_model* ply, const string& element, const string& property);
+vector<vec2f>   get_values(const ply_model* ply, const string& element,
       const string& property1, const string& property2);
-vector<vec3f>   get_values(const ply_model& ply, const string& element,
+vector<vec3f>   get_values(const ply_model* ply, const string& element,
       const string& property1, const string& property2, const string& property3);
-vector<vec4f>   get_values(const ply_model& ply, const string& element,
+vector<vec4f>   get_values(const ply_model* ply, const string& element,
       const string& property1, const string& property2, const string& property3,
       const string& property4);
-vector<vec4f>   get_values(const ply_model& ply, const string& element,
+vector<vec4f>   get_values(const ply_model* ply, const string& element,
       const string& property1, const string& property2, const string& property3,
       float property4);
-vector<frame3f> get_values(const ply_model& ply, const string& element,
+vector<frame3f> get_values(const ply_model* ply, const string& element,
     const array<string, 12>& properties);
 
 vector<vector<int>> get_lists(
-    const ply_model& ply, const string& element, const string& property);
+    const ply_model* ply, const string& element, const string& property);
 vector<byte> get_list_sizes(
-    const ply_model& ply, const string& element, const string& property);
+    const ply_model* ply, const string& element, const string& property);
 vector<int> get_list_values(
-    const ply_model& ply, const string& element, const string& property);
+    const ply_model* ply, const string& element, const string& property);
 vec2i get_list_minxmax(
-    const ply_model& ply, const string& element, const string& property);
+    const ply_model* ply, const string& element, const string& property);
 
 // Get ply properties for meshes
-vector<vec3f>       get_positions(const ply_model& ply);
-vector<vec3f>       get_normals(const ply_model& ply);
-vector<vec2f>       get_texcoords(const ply_model& ply, bool flipv = false);
-vector<vec4f>       get_colors(const ply_model& ply);
-vector<float>       get_radius(const ply_model& ply);
-vector<vector<int>> get_faces(const ply_model& ply);
-vector<vec2i>       get_lines(const ply_model& ply);
-vector<int>         get_points(const ply_model& ply);
-vector<vec3i>       get_triangles(const ply_model& ply);
-vector<vec4i>       get_quads(const ply_model& ply);
-bool                has_quads(const ply_model& ply);
+vector<vec3f>       get_positions(const ply_model* ply);
+vector<vec3f>       get_normals(const ply_model* ply);
+vector<vec2f>       get_texcoords(const ply_model* ply, bool flipv = false);
+vector<vec4f>       get_colors(const ply_model* ply);
+vector<float>       get_radius(const ply_model* ply);
+vector<vector<int>> get_faces(const ply_model* ply);
+vector<vec2i>       get_lines(const ply_model* ply);
+vector<int>         get_points(const ply_model* ply);
+vector<vec3i>       get_triangles(const ply_model* ply);
+vector<vec4i>       get_quads(const ply_model* ply);
+bool                has_quads(const ply_model* ply);
 
 // Add ply properties
-void add_values(ply_model& ply, const vector<float>& values,
+void add_values(ply_model* ply, const vector<float>& values,
     const string& element, const string& property);
-void add_values(ply_model& ply, const vector<vec2f>& values,
+void add_values(ply_model* ply, const vector<vec2f>& values,
     const string& element, const string& property1, const string& property2);
-void add_values(ply_model& ply, const vector<vec3f>& values,
+void add_values(ply_model* ply, const vector<vec3f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3);
-void add_values(ply_model& ply, const vector<vec4f>& values,
+void add_values(ply_model* ply, const vector<vec4f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3, const string& property4);
-void add_values(ply_model& ply, const vector<frame3f>& values,
+void add_values(ply_model* ply, const vector<frame3f>& values,
     const string& element, const array<string, 12>& properties);
 
-void add_lists(ply_model& ply, const vector<vector<int>>& values,
+void add_lists(ply_model* ply, const vector<vector<int>>& values,
     const string& element, const string& property);
-void add_lists(ply_model& ply, const vector<byte>& sizes,
+void add_lists(ply_model* ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property);
-void add_lists(ply_model& ply, const vector<int>& values, const string& element,
+void add_lists(ply_model* ply, const vector<int>& values, const string& element,
     const string& property);
-void add_lists(ply_model& ply, const vector<vec2i>& values,
+void add_lists(ply_model* ply, const vector<vec2i>& values,
     const string& element, const string& property);
-void add_lists(ply_model& ply, const vector<vec3i>& values,
+void add_lists(ply_model* ply, const vector<vec3i>& values,
     const string& element, const string& property);
-void add_lists(ply_model& ply, const vector<vec4i>& values,
+void add_lists(ply_model* ply, const vector<vec4i>& values,
     const string& element, const string& property);
 
 // Add ply properties for meshes
-void add_positions(ply_model& ply, const vector<vec3f>& values);
-void add_normals(ply_model& ply, const vector<vec3f>& values);
+void add_positions(ply_model* ply, const vector<vec3f>& values);
+void add_normals(ply_model* ply, const vector<vec3f>& values);
 void add_texcoords(
-    ply_model& ply, const vector<vec2f>& values, bool flipv = false);
-void add_colors(ply_model& ply, const vector<vec4f>& values);
-void add_radius(ply_model& ply, const vector<float>& values);
-void add_faces(ply_model& ply, const vector<vector<int>>& values);
+    ply_model* ply, const vector<vec2f>& values, bool flipv = false);
+void add_colors(ply_model* ply, const vector<vec4f>& values);
+void add_radius(ply_model* ply, const vector<float>& values);
+void add_faces(ply_model* ply, const vector<vector<int>>& values);
 void add_faces(
-    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-void add_triangles(ply_model& ply, const vector<vec3i>& values);
-void add_quads(ply_model& ply, const vector<vec4i>& values);
-void add_lines(ply_model& ply, const vector<vec2i>& values);
-void add_points(ply_model& ply, const vector<int>& values);
+    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
+void add_triangles(ply_model* ply, const vector<vec3i>& values);
+void add_quads(ply_model* ply, const vector<vec4i>& values);
+void add_lines(ply_model* ply, const vector<vec2i>& values);
+void add_points(ply_model* ply, const vector<int>& values);
 
 }  // namespace yocto
 
@@ -217,20 +219,6 @@ struct obj_texture_info {
 struct obj_element {
   uint8_t size     = 0;
   uint8_t material = 0;
-};
-
-// Obj shape
-struct obj_shape {
-  string              name      = "";
-  vector<vec3f>       positions = {};
-  vector<vec3f>       normals   = {};
-  vector<vec2f>       texcoords = {};
-  vector<string>      materials = {};
-  vector<obj_vertex>  vertices  = {};
-  vector<obj_element> faces     = {};
-  vector<obj_element> lines     = {};
-  vector<obj_element> points    = {};
-  vector<frame3f>     instances = {};
 };
 
 // Obj material
@@ -294,6 +282,20 @@ struct obj_material {
   obj_texture_info pbr_volscattering_map = {};
 };
 
+// Obj shape
+struct obj_shape {
+  string                name      = "";
+  vector<vec3f>         positions = {};
+  vector<vec3f>         normals   = {};
+  vector<vec2f>         texcoords = {};
+  vector<obj_material*> materials = {};
+  vector<obj_vertex>    vertices  = {};
+  vector<obj_element>   faces     = {};
+  vector<obj_element>   lines     = {};
+  vector<obj_element>   points    = {};
+  vector<frame3f>       instances = {};
+};
+
 // Obj camera
 struct obj_camera {
   string  name     = "";
@@ -316,87 +318,92 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  vector<string>          comments     = {};
-  vector<obj_shape>       shapes       = {};
-  vector<obj_material>    materials    = {};
-  vector<obj_camera>      cameras      = {};
-  vector<obj_environment> environments = {};
+  vector<string>           comments     = {};
+  vector<obj_shape*>       shapes       = {};
+  vector<obj_material*>    materials    = {};
+  vector<obj_camera*>      cameras      = {};
+  vector<obj_environment*> environments = {};
+  ~obj_model();
 };
 
 // Load and save obj
-void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
+void load_obj(const string& filename, obj_model* obj, bool geom_only = false,
     bool split_elements = true, bool split_materials = false);
-void save_obj(const string& filename, const obj_model& obj);
+void save_obj(const string& filename, const obj_model* obj);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_triangles(const obj_model& obj, const obj_shape& shape,
+void get_triangles(const obj_model* obj, const obj_shape* shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_quads(const obj_model& obj, const obj_shape& shape,
+void get_quads(const obj_model* obj, const obj_shape* shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_lines(const obj_model& obj, const obj_shape& shape,
+void get_lines(const obj_model* obj, const obj_shape* shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_points(const obj_model& obj, const obj_shape& shape,
+void get_points(const obj_model* obj, const obj_shape* shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_fvquads(const obj_model& obj, const obj_shape& shape,
+void get_fvquads(const obj_model* obj, const obj_shape* shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
-bool has_quads(const obj_shape& shape);
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
+bool has_quads(const obj_shape* shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
+void get_triangles(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_quads(const obj_model& obj, const obj_shape& shape, int material,
+void get_quads(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_lines(const obj_model& obj, const obj_shape& shape, int material,
+void get_lines(const obj_model* obj, const obj_shape* shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_points(const obj_model& obj, const obj_shape& shape, int material,
+void get_points(const obj_model* obj, const obj_shape* shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-vector<string> get_materials(const obj_model& obj, const obj_shape& shape);
+vector<obj_material*> get_materials(
+    const obj_model* obj, const obj_shape* shape);
 
 // Add obj shape
-void add_triangles(obj_model& obj, const string& name,
+void add_triangles(obj_model* obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    const vector<frame3f>& instances = {}, bool flip_texcoord = false);
-void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
+void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_points(obj_model& obj, const string& name, const vector<int>& points,
+void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_fvquads(obj_model& obj, const string& name,
+void add_points(obj_model* obj, const string& name, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+    const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
+    bool flip_texcoord = false);
+void add_fvquads(obj_model* obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    const vector<frame3f>& instances = {}, bool flip_texcoord = false);
+    const vector<obj_material*>& materials = {},
+    const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
+    bool flip_texcoord = false);
 
 }  // namespace yocto
 
@@ -421,70 +428,6 @@ struct hash<yocto::obj_vertex> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL YAML DECLARATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::string_view;
-
-// Yaml value type
-enum struct yaml_value_type { number, boolean, string, array };
-
-// Yaml value
-struct yaml_value {
-  yaml_value_type   type    = yaml_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<double, 16> array_  = {};
-};
-
-// Yaml element
-struct yaml_element {
-  string                           name       = "";
-  vector<pair<string, yaml_value>> key_values = {};
-};
-
-// Yaml model
-struct yaml_model {
-  vector<string>       comments = {};
-  vector<yaml_element> elements = {};
-};
-
-// Load/save yaml
-void load_yaml(const string& filename, yaml_model& yaml);
-void save_yaml(const string& filename, const yaml_model& yaml);
-
-// type-cheked yaml value access
-void get_yaml_value(const yaml_value& yaml, string& value);
-void get_yaml_value(const yaml_value& yaml, bool& value);
-void get_yaml_value(const yaml_value& yaml, int& value);
-void get_yaml_value(const yaml_value& yaml, float& value);
-void get_yaml_value(const yaml_value& yaml, vec2f& value);
-void get_yaml_value(const yaml_value& yaml, vec3f& value);
-void get_yaml_value(const yaml_value& yaml, mat3f& value);
-void get_yaml_value(const yaml_value& yaml, frame3f& value);
-template <typename T>
-inline void get_yaml_value(
-    const yaml_element& element, const string& name, const T& value);
-bool has_yaml_value(const yaml_element& element, const string& name);
-
-// yaml value construction
-yaml_value make_yaml_value(const string& value);
-yaml_value make_yaml_value(bool value);
-yaml_value make_yaml_value(int value);
-yaml_value make_yaml_value(float value);
-yaml_value make_yaml_value(const vec2f& value);
-yaml_value make_yaml_value(const vec3f& value);
-yaml_value make_yaml_value(const mat3f& value);
-yaml_value make_yaml_value(const frame3f& value);
-template <typename T>
-inline void add_yaml_value(
-    yaml_element& element, const string& name, const T& value);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -501,6 +444,38 @@ struct pbrt_camera {
   float   aperture   = 0;
 };
 
+// Pbrt material
+struct pbrt_material {
+  // material parameters
+  string name            = "";
+  vec3f  color           = zero3f;
+  float  specular        = 0;
+  float  metallic        = 0;
+  float  transmission    = 0;
+  float  roughness       = 0;
+  float  ior             = 1.5;
+  float  opacity         = 1;
+  string color_map       = "";
+  string opacity_map     = "";
+  bool   thin            = true;
+  vec3f  volmeanfreepath = zero3f;
+  vec3f  volscatter      = zero3f;
+  float  volscale        = 0.01;
+};
+
+// Pbrt area light
+struct pbrt_arealight {
+  // arealight parameters
+  string name     = "";
+  vec3f  emission = zero3f;
+};
+
+// Pbrt medium. Not parsed at the moment.
+struct pbrt_medium {
+  // medium parameters
+  string name = "";
+};
+
 // Pbrt shape
 struct pbrt_shape {
   // frames
@@ -515,20 +490,8 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  vec3f  emission        = zero3f;
-  vec3f  color           = zero3f;
-  float  specular        = 0;
-  float  metallic        = 0;
-  float  transmission    = 0;
-  float  roughness       = 0;
-  float  ior             = 1.5;
-  float  opacity         = 1;
-  string color_map       = "";
-  string opacity_map     = "";
-  bool   thin            = true;
-  vec3f  volmeanfreepath = zero3f;
-  vec3f  volscatter      = zero3f;
-  float  volscale        = 0.01;
+  pbrt_material*  material  = nullptr;
+  pbrt_arealight* arealight = nullptr;
 };
 
 // Pbrt lights
@@ -558,125 +521,21 @@ struct pbrt_environment {
 
 // Pbrt model
 struct pbrt_model {
-  vector<string>           comments     = {};
-  vector<pbrt_camera>      cameras      = {};
-  vector<pbrt_shape>       shapes       = {};
-  vector<pbrt_environment> environments = {};
-  vector<pbrt_light>       lights       = {};
+  vector<string>            comments     = {};
+  vector<pbrt_camera*>      cameras      = {};
+  vector<pbrt_shape*>       shapes       = {};
+  vector<pbrt_environment*> environments = {};
+  vector<pbrt_light*>       lights       = {};
+  vector<pbrt_arealight*>   arealights   = {};
+  vector<pbrt_material*>    materials    = {};
+  vector<pbrt_medium*>      mediums      = {};
+  ~pbrt_model();
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt);
+void load_pbrt(const string& filename, pbrt_model* pbrt);
 void save_pbrt(
-    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
-
-// Pbrt value type
-enum struct pbrt_value_type {
-  // clang-format off
-  real, integer, boolean, string, point, normal, vector, texture, color, 
-  point2, vector2, spectrum
-  // clang-format on
-};
-
-// Pbrt value
-struct pbrt_value {
-  string          name     = "";
-  pbrt_value_type type     = pbrt_value_type::real;
-  int             value1i  = 0;
-  float           value1f  = 0;
-  vec2f           value2f  = {0, 0};
-  vec3f           value3f  = {0, 0, 0};
-  bool            value1b  = false;
-  string          value1s  = "";
-  vector<float>   vector1f = {};
-  vector<vec2f>   vector2f = {};
-  vector<vec3f>   vector3f = {};
-  vector<int>     vector1i = {};
-};
-
-// Pbrt command
-struct pbrt_command {
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-};
-
-// Pbrt shape
-struct pbrt_shape_command {
-  // shape parameters
-  string             type      = "";
-  vector<pbrt_value> values    = {};
-  frame3f            frame     = identity3x4f;
-  frame3f            frend     = identity3x4f;
-  string             material  = "";
-  string             arealight = "";
-  string             interior  = "";
-  string             exterior  = "";
-  vector<frame3f>    instances = {};
-  vector<frame3f>    instaends = {};
-};
-
-// Low-level commands
-struct pbrt_commands {
-  vector<string>             comments     = {};
-  vector<pbrt_command>       cameras      = {};
-  vector<pbrt_command>       films        = {};
-  vector<pbrt_command>       integrators  = {};
-  vector<pbrt_command>       filters      = {};
-  vector<pbrt_command>       samplers     = {};
-  vector<pbrt_command>       accelerators = {};
-  vector<pbrt_command>       mediums      = {};
-  vector<pbrt_command>       environments = {};
-  vector<pbrt_command>       lights       = {};
-  vector<pbrt_command>       arealights   = {};
-  vector<pbrt_command>       textures     = {};
-  vector<pbrt_command>       materials    = {};
-  vector<pbrt_shape_command> shapes       = {};
-};
-
-// Low level parser
-void load_pbrt(const string& filename, pbrt_commands& pbrt);
-void save_pbrt(const string& filename, const pbrt_commands& pbrt);
-
-// type-cheked pbrt value access
-void get_pbrt_value(const pbrt_value& pbrt, string& value);
-void get_pbrt_value(const pbrt_value& pbrt, bool& value);
-void get_pbrt_value(const pbrt_value& pbrt, int& value);
-void get_pbrt_value(const pbrt_value& pbrt, float& value);
-void get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
-void get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<float>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
-void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
-void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
-template <typename T>
-inline void get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& value);
-
-// pbrt value construction
-pbrt_value make_pbrt_value(const string& name, const string& value,
-    pbrt_value_type type = pbrt_value_type::string);
-pbrt_value make_pbrt_value(const string& name, bool value,
-    pbrt_value_type type = pbrt_value_type::boolean);
-pbrt_value make_pbrt_value(const string& name, int value,
-    pbrt_value_type type = pbrt_value_type::integer);
-pbrt_value make_pbrt_value(const string& name, float value,
-    pbrt_value_type type = pbrt_value_type::real);
-pbrt_value make_pbrt_value(const string& name, const vec2f& value,
-    pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(const string& name, const vec3f& value,
-    pbrt_value_type type = pbrt_value_type::color);
-pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
-    pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
-    pbrt_value_type type = pbrt_value_type::point);
-pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
-    pbrt_value_type type = pbrt_value_type::integer);
+    const string& filename, const pbrt_model* pbrt, bool ply_meshes = false);
 
 }  // namespace yocto
 
@@ -756,39 +615,6 @@ struct gltf_model {
 
 // Load gltf file.
 void load_gltf(const string& filename, gltf_model& gltf);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-inline void get_yaml_value(
-    const yaml_element& element, const string& name, T& value) {
-  for (auto& [key, value_] : element.key_values) {
-    if (key == name) return get_yaml_value(value_, value);
-  }
-}
-
-template <typename T>
-inline void add_yaml_value(
-    yaml_element& element, const string& name, const T& value) {
-  for (auto& [key, value] : element.key_values)
-    if (key == name) throw std::invalid_argument{"value exists"};
-  element.key_values.push_back({name, make_yaml_value(value)});
-}
-
-template <typename T>
-inline void get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& value) {
-  for (auto& p : pbrt) {
-    if (p.name == name) {
-      return get_pbrt_value(p, value);
-    }
-  }
-}
 
 }  // namespace yocto
 

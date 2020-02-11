@@ -9,6 +9,8 @@
 #include "yocto_shape.h"
 
 #include <deque>
+#include <memory>
+using std::make_unique;
 
 #include "yocto_modelio.h"
 
@@ -3389,7 +3391,8 @@ void load_shape(const string& filename, vector<int>& points,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply = ply_model{};
+    auto ply_ = make_unique<ply_model>();
+    auto ply  = ply_.get();
     load_ply(filename, ply);
 
     // gets vertex
@@ -3411,30 +3414,31 @@ void load_shape(const string& filename, vector<int>& points,
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj = obj_model();
+    auto obj_ = make_unique<obj_model>();
+    auto obj  = obj_.get();
     load_obj(filename, obj, true);
 
     // get shape
-    if (obj.shapes.empty()) throw_emptyshape_error(filename);
-    if (obj.shapes.size() > 1) throw_emptyshape_error(filename);
-    auto& shape = obj.shapes.front();
-    if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
+    if (obj->shapes.empty()) throw_emptyshape_error(filename);
+    if (obj->shapes.size() > 1) throw_emptyshape_error(filename);
+    auto shape = obj->shapes.front();
+    if (shape->points.empty() && shape->lines.empty() && shape->faces.empty())
       return;
 
     // decide what to do and get properties
-    auto materials  = vector<string>{};
+    auto materials  = vector<obj_material*>{};
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
-    if (!shape.faces.empty() && !has_quads_) {
+    if (!shape->faces.empty() && !has_quads_) {
       get_triangles(obj, shape, triangles, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
-    } else if (!shape.faces.empty() && has_quads_) {
+    } else if (!shape->faces.empty() && has_quads_) {
       get_quads(obj, shape, quads, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
-    } else if (!shape.lines.empty()) {
+    } else if (!shape->lines.empty()) {
       get_lines(obj, shape, lines, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
-    } else if (!shape.points.empty()) {
+    } else if (!shape->points.empty()) {
       get_points(obj, shape, points, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else {
@@ -3457,7 +3461,8 @@ void save_shape(const string& filename, const vector<int>& points,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply = ply_model{};
+    auto ply_ = make_unique<ply_model>();
+    auto ply  = ply_.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
     add_texcoords(ply, texcoords, flip_texcoord);
@@ -3468,7 +3473,8 @@ void save_shape(const string& filename, const vector<int>& points,
     add_points(ply, points);
     save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_model{};
+    auto obj_ = make_unique<obj_model>();
+    auto obj  = obj_.get();
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
           {}, flip_texcoord);
@@ -3505,7 +3511,8 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
+    auto ply_ = make_unique<ply_model>();
+    auto ply  = ply_.get();
     load_ply(filename, ply);
     positions = get_positions(ply);
     normals   = get_normals(ply);
@@ -3515,14 +3522,15 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     if (!texcoords.empty()) quadstexcoord = quadspos;
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj = obj_model();
-    auto err = ""s;
+    auto obj_ = make_unique<obj_model>();
+    auto obj  = obj_.get();
+    auto err  = ""s;
     load_obj(filename, obj, true);
-    if (obj.shapes.empty()) throw_emptyshape_error(filename);
-    if (obj.shapes.size() > 1) throw_emptyshape_error(filename);
-    auto& shape = obj.shapes.front();
-    if (shape.faces.empty()) throw_emptyshape_error(filename);
-    auto materials  = vector<string>{};
+    if (obj->shapes.empty()) throw_emptyshape_error(filename);
+    if (obj->shapes.size() > 1) throw_emptyshape_error(filename);
+    auto shape = obj->shapes.front();
+    if (shape->faces.empty()) throw_emptyshape_error(filename);
+    auto materials  = vector<obj_material*>{};
     auto ematerials = vector<int>{};
     get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
@@ -3547,7 +3555,8 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
         split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
-    auto obj = obj_model{};
+    auto obj_ = make_unique<obj_model>();
+    auto obj  = obj_.get();
 
     // Add obj data
     add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions, normals,
