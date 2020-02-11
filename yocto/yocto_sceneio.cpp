@@ -1929,6 +1929,34 @@ static void load_pbrt_scene(
     return texture;
   };
 
+  // convert material
+  auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
+  for (auto pmaterial : pbrt->materials) {
+    auto material           = add_material(scene);
+    material->color         = pmaterial->color;
+    material->metallic      = pmaterial->metallic;
+    material->specular      = pmaterial->specular;
+    material->transmission  = pmaterial->transmission;
+    material->ior           = pmaterial->ior;
+    material->roughness     = pmaterial->roughness;
+    material->opacity       = pmaterial->opacity;
+    material->thin          = pmaterial->thin;
+    material->color_tex     = get_texture(pmaterial->color_map);
+    material->opacity_tex   = get_texture(pmaterial->opacity_map);
+    material_map[pmaterial] = material;
+  }
+    
+  // hack for pbrt empty material
+  material_map[nullptr] = add_material(scene);
+
+  // convert arealight
+  auto arealight_map = unordered_map<pbrt_arealight*, sceneio_material*>{};
+  for (auto parealight : pbrt->arealights) {
+    auto material             = add_material(scene);
+    material->emission        = parealight->emission;
+    arealight_map[parealight] = material;
+  }
+
   // convert shapes
   for (auto pshape : pbrt->shapes) {
     auto object   = add_object(scene);
@@ -1943,18 +1971,8 @@ static void load_pbrt_scene(
     object->shape->texcoords = pshape->texcoords;
     object->shape->triangles = pshape->triangles;
     for (auto& uv : object->shape->texcoords) uv.y = 1 - uv.y;
-    object->material               = add_material(scene);
-    object->material->emission     = pshape->emission;
-    object->material->color        = pshape->color;
-    object->material->metallic     = pshape->metallic;
-    object->material->specular     = pshape->specular;
-    object->material->transmission = pshape->transmission;
-    object->material->ior          = pshape->ior;
-    object->material->roughness    = pshape->roughness;
-    object->material->opacity      = pshape->opacity;
-    object->material->thin         = pshape->thin;
-    object->material->color_tex    = get_texture(pshape->color_map);
-    object->material->opacity_tex  = get_texture(pshape->opacity_map);
+    object->material = pshape->arealight ? arealight_map.at(pshape->arealight)
+                                         : material_map.at(pshape->material);
   }
 
   // convert environments
@@ -1998,26 +2016,43 @@ void save_pbrt_scene(
   pcamera->aspect     = camera->aspect;
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
+  // convert materials
+  auto material_map  = unordered_map<sceneio_material*, pbrt_material*>{};
+  auto arealight_map = unordered_map<sceneio_material*, pbrt_arealight*>{};
+  for (auto material : scene->materials) {
+    auto pmaterial          = pbrt->materials.emplace_back(new pbrt_material{});
+    pmaterial->name         = get_basename(material->name);
+    pmaterial->color        = material->color;
+    pmaterial->metallic     = material->metallic;
+    pmaterial->specular     = material->specular;
+    pmaterial->transmission = material->transmission;
+    pmaterial->roughness    = material->roughness;
+    pmaterial->ior          = material->ior;
+    pmaterial->opacity      = material->opacity;
+    pmaterial->color_map    = material->color_tex ? material->color_tex->name
+                                               : ""s;
+    material_map[material] = pmaterial;
+    if (material->emission != zero3f) {
+      auto parealight = pbrt->arealights.emplace_back(new pbrt_arealight{});
+      parealight->emission    = material->emission;
+      arealight_map[material] = parealight;
+    } else {
+      arealight_map[material] = nullptr;
+    }
+  }
+
   // convert instances
   for (auto object : scene->objects) {
     auto pshape       = pbrt->shapes.emplace_back(new pbrt_shape{});
     pshape->filename_ = replace_extension(object->shape->name, ".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
+    pshape->material  = material_map.at(object->material);
+    pshape->arealight = arealight_map.at(object->material);
     if (object->instance) {
       pshape->instances = object->instance->frames;
       pshape->instances = object->instance->frames;
     }
-    auto material        = object->material;
-    pshape->color        = material->color;
-    pshape->metallic     = material->metallic;
-    pshape->specular     = material->specular;
-    pshape->transmission = material->transmission;
-    pshape->roughness    = material->roughness;
-    pshape->ior          = material->ior;
-    pshape->opacity      = material->opacity;
-    pshape->color_map = material->color_tex ? material->color_tex->name : ""s;
-    pshape->emission  = material->emission;
   }
 
   // convert environments

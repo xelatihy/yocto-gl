@@ -3737,29 +3737,10 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
-    pbrt_arealight* arealight, pbrt_material* material, 
     const string& filename,
     const string& ply_dirname, bool verbose = false) {
   shape->frame   = command.frame;
   shape->frend   = command.frend;
-  if (arealight) {
-    shape->emission = arealight->emission;
-  }
-  if (material) {
-    shape->color           = material->color;
-    shape->specular        = material->specular;
-    shape->metallic        = material->metallic;
-    shape->transmission    = material->transmission;
-    shape->roughness       = material->roughness;
-    shape->ior             = material->ior;
-    shape->opacity         = material->opacity;
-    shape->color_map       = material->color_map;
-    shape->opacity_map     = material->opacity_map;
-    shape->thin            = material->thin;
-    shape->volmeanfreepath = material->volmeanfreepath;
-    shape->volscatter      = material->volscatter;
-    shape->volscale        = material->volscale;
-  }
   if (command.type == "trianglemesh") {
     shape->positions = {};
     shape->normals   = {};
@@ -4110,10 +4091,10 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       parse_pbrt_params(fs, str, command.values);
       command.frame     = ctx.stack.back().transform_start;
       command.frend     = ctx.stack.back().transform_end;
-      auto material  = ctx.stack.back().material;
-      auto arealight = ctx.stack.back().arealight;
       auto shape        = pbrt->shapes.emplace_back(new pbrt_shape{});
-      convert_shape(shape, command, arealight, material, filename, ply_dirname);
+      convert_shape(shape, command, filename, ply_dirname);
+      shape->material = ctx.stack.back().material;
+      shape->arealight = ctx.stack.back().arealight;
       if (ctx.cur_object != "") {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
@@ -4330,6 +4311,55 @@ void save_pbrt(
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
+  for (auto material : pbrt->materials) {
+    auto command = pbrt_command{};
+    if (material->specular != 0 && material->transmission != 0 && !material->thin) {
+      command.type = "glass";
+      command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+      command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
+      command.values.push_back(
+          make_pbrt_value("roughness", pow(material->roughness, 2)));
+      command.values.push_back(make_pbrt_value("eta", material->ior));
+      command.values.push_back(make_pbrt_value("remaproughness", false));
+    } else if (material->metallic > 0.1f) {
+      command.type = "metal";
+      command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+      command.values.push_back(
+          make_pbrt_value("roughness", pow(material->roughness, 2)));
+      command.values.push_back(
+          make_pbrt_value("eta", reflectivity_to_eta(material->color)));
+      command.values.push_back(make_pbrt_value("remaproughness", false));
+    } else {
+      command.type = "uber";
+      if (material->color_map.empty()) {
+        command.values.push_back(make_pbrt_value("Kd", material->color));
+      } else if (material->color != zero3f) {
+        command.values.push_back(
+            make_pbrt_value("Kd", material->color_map, pbrt_value_type::texture));
+      }
+      if (material->specular != 0) {
+        command.values.push_back(
+            make_pbrt_value("Ks", vec3f{material->specular}));
+        command.values.push_back(
+            make_pbrt_value("roughness", pow(material->roughness, 2)));
+        command.values.push_back(make_pbrt_value("eta", material->ior));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
+      }
+      if (material->transmission != 0) {
+        command.values.push_back(
+            make_pbrt_value("Kt", vec3f{material->transmission}));
+      }
+      if (!material->opacity_map.empty()) {
+        command.values.push_back(make_pbrt_value(
+            "opacity", material->opacity_map, pbrt_value_type::texture));
+      } else if (material->opacity != 1) {
+        command.values.push_back(make_pbrt_value("opacity", material->opacity));
+      }
+    }
+    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n", material->name, command.type,
+        command.values);
+  }
+
   auto object_id = 0;
   for (auto shape : pbrt->shapes) {
     auto command      = pbrt_command{};
@@ -4349,53 +4379,9 @@ void save_pbrt(
         command.values.push_back(make_pbrt_value("uv", shape->texcoords));
     }
     auto acommand = pbrt_command{};
-    if (shape->emission != zero3f) {
+    if (shape->arealight) {
       acommand.type = "diffuse";
-      acommand.values.push_back(make_pbrt_value("L", shape->emission));
-    }
-    auto mcommand = pbrt_command{};
-    if (shape->specular != 0 && shape->transmission != 0 && !shape->thin) {
-      mcommand.type = "glass";
-      mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-      mcommand.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
-      mcommand.values.push_back(
-          make_pbrt_value("roughness", pow(shape->roughness, 2)));
-      mcommand.values.push_back(make_pbrt_value("eta", shape->ior));
-      mcommand.values.push_back(make_pbrt_value("remaproughness", false));
-    } else if (shape->metallic > 0.1f) {
-      mcommand.type = "metal";
-      mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-      mcommand.values.push_back(
-          make_pbrt_value("roughness", pow(shape->roughness, 2)));
-      mcommand.values.push_back(
-          make_pbrt_value("eta", reflectivity_to_eta(shape->color)));
-      mcommand.values.push_back(make_pbrt_value("remaproughness", false));
-    } else {
-      mcommand.type = "uber";
-      if (shape->color_map.empty()) {
-        mcommand.values.push_back(make_pbrt_value("Kd", shape->color));
-      } else if (shape->color != zero3f) {
-        mcommand.values.push_back(
-            make_pbrt_value("Kd", shape->color_map, pbrt_value_type::texture));
-      }
-      if (shape->specular != 0) {
-        mcommand.values.push_back(
-            make_pbrt_value("Ks", vec3f{shape->specular}));
-        mcommand.values.push_back(
-            make_pbrt_value("roughness", pow(shape->roughness, 2)));
-        mcommand.values.push_back(make_pbrt_value("eta", shape->ior));
-        mcommand.values.push_back(make_pbrt_value("remaproughness", false));
-      }
-      if (shape->transmission != 0) {
-        mcommand.values.push_back(
-            make_pbrt_value("Kt", vec3f{shape->transmission}));
-      }
-      if (!shape->opacity_map.empty()) {
-        mcommand.values.push_back(make_pbrt_value(
-            "opacity", shape->opacity_map, pbrt_value_type::texture));
-      } else if (shape->opacity != 1) {
-        mcommand.values.push_back(make_pbrt_value("opacity", shape->opacity));
-      }
+      acommand.values.push_back(make_pbrt_value("L", shape->arealight->emission));
     }
     if (ply_meshes) {
       try {
@@ -4414,12 +4400,11 @@ void save_pbrt(
       format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape->frame);
-    if (shape->emission != zero3f) {
+    if (shape->arealight) {
       format_values(
           fs, "AreaLightSource \"{}\" {}\n", acommand.type, acommand.values);
     }
-    format_values(fs, "Material \"string type\" \"{}\" {}\n", mcommand.type,
-        mcommand.values);
+    format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name);
     format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
     format_values(fs, "AttributeEnd\n");
     if (!shape->instances.empty()) format_values(fs, "ObjectEnd\n");
