@@ -304,7 +304,7 @@ void run_app(int argc, const char* argv[]) {
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -317,7 +317,7 @@ void run_app(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;
