@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -133,26 +133,15 @@
       "emission_tex": "environments/sky.hdr"
     }
   ],
-  "shapes": [
+  "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png",
-      "specular": 0
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/arealight1.yaml",
+      "name": "shapes/arealight1.json",
       "shape": "shapes/arealight1.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         -0.4,
         0.8,
@@ -163,16 +152,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight1.json"
     },
     {
-      "name": "shapes/arealight2.yaml",
+      "name": "shapes/arealight2.json",
       "shape": "shapes/arealight2.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         0.4,
         0.8,
@@ -183,19 +168,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight2.json"
     },
     {
-      "name": "shapes/sphere-uvgrid.yaml",
+      "name": "shapes/sphere-uvgrid.json",
       "shape": "shapes/sphere.ply",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -209,21 +187,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-uvgrid.json"
     },
     {
-      "name": "shapes/suzanne-subdiv-plastic-rough.yaml",
+      "name": "shapes/suzanne-subdiv-plastic-rough.json",
       "shape": "shapes/suzanne-subdiv.obj",
-      "subdivisions": 2,
-      "catmullclark": true,
-      "smooth": true,
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "specular": 1,
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -237,18 +206,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/suzanne-subdiv-plastic-rough.json"
     },
     {
-      "name": "shapes/hairball1-hair.yaml",
+      "name": "shapes/hairball1-hair.json",
       "shape": "shapes/hairball1.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "specular": 0,
-      "roughness": 1,
       "frame": [
         1,
         0,
@@ -262,21 +225,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/hairball1-hair.json"
     },
     {
-      "name": "shapes/sphere-displaced-plastic-rough.yaml",
+      "name": "shapes/sphere-displaced-plastic-rough.json",
       "shape": "shapes/sphere-displaced.obj",
-      "facevarying": true,
-      "displacement": 0.025,
-      "displacement_tex": "textures/bumps-displacement.png",
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "specular": 1,
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -290,19 +244,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-displaced-plastic-rough.json"
     },
     {
-      "name": "shapes/cube-uvgrid.yaml",
+      "name": "shapes/cube-uvgrid.json",
       "shape": "shapes/cube.ply",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -316,18 +263,12 @@
         0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/cube-uvgrid.json"
     },
     {
-      "name": "shapes/hairballi-hair.yaml",
+      "name": "shapes/hairballi-hair.json",
       "shape": "shapes/hairballi.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "specular": 0,
-      "roughness": 1,
       "frame": [
         1,
         0,
@@ -341,25 +282,122 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/hairballi-hair.json"
     }
   ],
   "subdivs": [
     {
-      "name": "subdivs/sphere-displaced.yaml",
+      "name": "subdivs/sphere-displaced.json",
       "subdiv": "subdivs/sphere-displaced.obj",
-      "shape": "shapes/sphere-displaced-plastic-rough.yaml",
+      "shape": "shapes/sphere-displaced.obj",
       "facevarying": true,
       "displacement": 0.025,
       "displacement_tex": "textures/bumps-displacement.png"
     },
     {
-      "name": "subdivs/suzanne-subdiv.yaml",
+      "name": "subdivs/suzanne-subdiv.json",
       "subdiv": "subdivs/suzanne-subdiv.obj",
-      "shape": "shapes/suzanne-subdiv-plastic-rough.yaml",
+      "shape": "shapes/suzanne-subdiv.obj",
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png",
+      "specular": 0
+    },
+    {
+      "name": "materials/arealight1.json",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/arealight2.json",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/sphere-uvgrid.json",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/suzanne-subdiv-plastic-rough.json",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true,
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "specular": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/hairball1-hair.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "specular": 0,
+      "roughness": 1
+    },
+    {
+      "name": "materials/sphere-displaced-plastic-rough.json",
+      "facevarying": true,
+      "displacement": 0.025,
+      "displacement_tex": "textures/bumps-displacement.png",
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "specular": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/cube-uvgrid.json",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/hairballi-hair.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "specular": 0,
+      "roughness": 1
     }
   ]
 }

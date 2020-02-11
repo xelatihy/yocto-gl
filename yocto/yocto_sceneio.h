@@ -2,8 +2,8 @@
 // # Yocto/SceneIO: Tiny library for Yocto/Scene input and output
 //
 // Yocto/SceneIO provides loading and saving functionality for scenes
-// in Yocto/GL. We support a simple to use YAML format, PLY, OBJ and glTF.
-// The YAML serialization is a straight copy of the in-memory scene data.
+// in Yocto/GL. We support a simple to use JSON format, PLY, OBJ and glTF.
+// The JSON serialization is a straight copy of the in-memory scene data.
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
@@ -85,33 +85,13 @@ struct sceneio_texture {
   image<vec4b> ldr  = {};
 };
 
-// Shape data represented as indexed meshes of elements.
-// May contain either points, lines, triangles and quads.
-// Additionally, we support face-varying primitives where
-// each vertex data has its own topology.
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct sceneio_shape {
-  // shape data
-  string          name      = "";
-  frame3f         frame     = identity3x4f;
-  vector<frame3f> instances = {};
-
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
+struct sceneio_material {
+  // material data
+  string name = "";
 
   // material
   vec3f emission     = {0, 0, 0};
@@ -130,18 +110,41 @@ struct sceneio_shape {
   bool  thin         = true;
 
   // textures
-  int  emission_tex     = -1;
-  int  color_tex        = -1;
-  int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  spectint_tex     = -1;
-  int  scattering_tex   = -1;
-  int  coat_tex         = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
-  bool gltf_textures    = false;  // glTF packed textures
+  sceneio_texture* emission_tex     = nullptr;
+  sceneio_texture* color_tex        = nullptr;
+  sceneio_texture* specular_tex     = nullptr;
+  sceneio_texture* metallic_tex     = nullptr;
+  sceneio_texture* roughness_tex    = nullptr;
+  sceneio_texture* transmission_tex = nullptr;
+  sceneio_texture* spectint_tex     = nullptr;
+  sceneio_texture* scattering_tex   = nullptr;
+  sceneio_texture* coat_tex         = nullptr;
+  sceneio_texture* opacity_tex      = nullptr;
+  sceneio_texture* normal_tex       = nullptr;
+  bool             gltf_textures    = false;  // glTF packed textures
+};
+
+// Shape data represented as indexed meshes of elements.
+// May contain either points, lines, triangles and quads.
+// Additionally, we support face-varying primitives where
+// each vertex data has its own topology.
+struct sceneio_shape {
+  // shape data
+  string name = "";
+
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
 };
 
 // Subdiv data represented as indexed meshes of elements.
@@ -149,8 +152,8 @@ struct sceneio_shape {
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
-  string name  = "";
-  int    shape = -1;
+  string         name  = "";
+  sceneio_shape* shape = nullptr;
 
   // primitives
   vector<int>   points    = {};
@@ -177,16 +180,33 @@ struct sceneio_subdiv {
   bool smooth       = false;
 
   // displacement information
-  float displacement     = 0;
-  int   displacement_tex = -1;
+  float            displacement     = 0;
+  sceneio_texture* displacement_tex = nullptr;
+};
+
+// Instance data.
+struct sceneio_instance {
+  // instance data
+  string          name   = "";
+  vector<frame3f> frames = {};
+};
+
+// Object.
+struct sceneio_object {
+  // object data
+  string            name     = "";
+  frame3f           frame    = identity3x4f;
+  sceneio_shape*    shape    = nullptr;
+  sceneio_material* material = nullptr;
+  sceneio_instance* instance = nullptr;
 };
 
 // Environment map.
 struct sceneio_environment {
-  string  name         = "";
-  frame3f frame        = identity3x4f;
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
+  string           name         = "";
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = {0, 0, 0};
+  sceneio_texture* emission_tex = nullptr;
 };
 
 // Node in a transform hierarchy.
@@ -230,15 +250,35 @@ struct sceneio_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct sceneio_model {
-  string                      name         = "";
-  vector<sceneio_camera>      cameras      = {};
-  vector<sceneio_shape>       shapes       = {};
-  vector<sceneio_subdiv>      subdivs      = {};
-  vector<sceneio_texture>     textures     = {};
-  vector<sceneio_environment> environments = {};
-  vector<sceneio_node>        nodes        = {};
-  vector<sceneio_animation>   animations   = {};
+  string                       name         = "";
+  vector<sceneio_camera*>      cameras      = {};
+  vector<sceneio_object*>      objects      = {};
+  vector<sceneio_environment*> environments = {};
+  vector<sceneio_shape*>       shapes       = {};
+  vector<sceneio_subdiv*>      subdivs      = {};
+  vector<sceneio_texture*>     textures     = {};
+  vector<sceneio_material*>    materials    = {};
+  vector<sceneio_instance*>    instances    = {};
+  vector<sceneio_node*>        nodes        = {};
+  vector<sceneio_animation*>   animations   = {};
+
+  // cleanp
+  ~sceneio_model();
 };
+
+// add element to a scene
+sceneio_camera*      add_camera(sceneio_model* scene);
+sceneio_environment* add_environment(sceneio_model* scene);
+sceneio_object*      add_object(sceneio_model* scene);
+sceneio_instance*    add_instance(sceneio_model* scene);
+sceneio_material*    add_material(sceneio_model* scene);
+sceneio_shape*       add_shape(sceneio_model* scene);
+sceneio_subdiv*      add_subdiv(sceneio_model* scene);
+sceneio_texture*     add_texture(sceneio_model* scene);
+sceneio_node*        add_node(sceneio_model* scene);
+sceneio_animation*   add_animation(sceneio_model* scene);
+sceneio_object*      add_complete_object(
+         sceneio_model* scene, const string& basename = "");
 
 }  // namespace yocto
 
@@ -250,8 +290,8 @@ namespace yocto {
 
 // Load/save a scene in the supported formats. Throws on error.
 void load_scene(
-    const string& filename, sceneio_model& scene, bool noparallel = false);
-void save_scene(const string& filename, const sceneio_model& scene,
+    const string& filename, sceneio_model* scene, bool noparallel = false);
+void save_scene(const string& filename, const sceneio_model* scene,
     bool noparallel = false);
 
 }  // namespace yocto
@@ -262,13 +302,13 @@ void save_scene(const string& filename, const sceneio_model& scene,
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_model& scene, bool verbose = false);
+vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const sceneio_model& scene, bool notextures = false);
+    const sceneio_model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const sceneio_model& scene);
+bbox3f compute_bounds(const sceneio_model* scene);
 
 }  // namespace yocto
 
@@ -279,12 +319,12 @@ namespace yocto {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdiv(
-    sceneio_model& scene, const sceneio_subdiv& subdiv, bool no_quads = false);
+    sceneio_model* scene, const sceneio_subdiv* subdiv, bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    sceneio_model& scene, float time = 0, const string& anim_group = "");
+    sceneio_model* scene, float time = 0, const string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {

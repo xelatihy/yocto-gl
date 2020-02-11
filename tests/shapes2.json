@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -133,25 +133,15 @@
       "emission_tex": "environments/sky.hdr"
     }
   ],
-  "shapes": [
+  "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png"
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/arealight1.yaml",
+      "name": "shapes/arealight1.json",
       "shape": "shapes/arealight1.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         -0.4,
         0.8,
@@ -162,16 +152,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight1.json"
     },
     {
-      "name": "shapes/arealight2.yaml",
+      "name": "shapes/arealight2.json",
       "shape": "shapes/arealight2.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         0.4,
         0.8,
@@ -182,23 +168,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight2.json"
     },
     {
-      "name": "shapes/cube-subdiv-uvgrid.yaml",
+      "name": "shapes/cube-subdiv-uvgrid.json",
       "shape": "shapes/cube-subdiv.obj",
-      "subdivisions": 4,
-      "catmullclark": true,
-      "smooth": false,
-      "facevarying": true,
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -212,21 +187,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/cube-subdiv-uvgrid.json"
     },
     {
-      "name": "shapes/suzanne-subdiv-plastic-sharp.yaml",
+      "name": "shapes/suzanne-subdiv-plastic-sharp.json",
       "shape": "shapes/suzanne-subdiv.obj",
-      "subdivisions": 2,
-      "catmullclark": true,
-      "smooth": true,
-      "specular": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.7
-      ],
-      "roughness": 0.01,
       "frame": [
         1,
         0,
@@ -240,20 +206,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/suzanne-subdiv-plastic-sharp.json"
     },
     {
-      "name": "shapes/sphere-displaced-matte.yaml",
+      "name": "shapes/sphere-displaced-matte.json",
       "shape": "shapes/sphere-displaced.obj",
-      "facevarying": true,
-      "displacement": 0.025,
-      "displacement_tex": "textures/bumps-displacement.png",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "roughness": 1,
       "frame": [
         1,
         0,
@@ -267,19 +225,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-displaced-matte.json"
     },
     {
-      "name": "shapes/bunny-uvgrid.yaml",
+      "name": "shapes/bunny-uvgrid.json",
       "shape": "shapes/bunny.obj",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -293,19 +244,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/bunny-uvgrid.json"
     },
     {
-      "name": "shapes/teapot-uvgrid.yaml",
+      "name": "shapes/teapot-uvgrid.json",
       "shape": "shapes/teapot.obj",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -319,32 +263,122 @@
         0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/teapot-uvgrid.json"
     }
   ],
   "subdivs": [
     {
-      "name": "subdivs/sphere-displaced.yaml",
+      "name": "subdivs/sphere-displaced.json",
       "subdiv": "subdivs/sphere-displaced.obj",
-      "shape": "shapes/sphere-displaced-matte.yaml",
+      "shape": "shapes/sphere-displaced.obj",
       "displacement": 0.025,
       "displacement_tex": "textures/bumps-displacement.png"
     },
     {
-      "name": "subdivs/cube-subdiv.yaml",
+      "name": "subdivs/cube-subdiv.json",
       "fvsubdiv": "subdivs/cube-subdiv.obj",
-      "shape": "shapes/cube-subdiv-uvgrid.yaml",
+      "shape": "shapes/cube-subdiv.obj",
       "subdivisions": 4,
       "catmullclark": true,
       "smooth": false
     },
     {
-      "name": "subdivs/suzanne-subdiv.yaml",
+      "name": "subdivs/suzanne-subdiv.json",
       "subdiv": "subdivs/suzanne-subdiv.obj",
-      "shape": "shapes/suzanne-subdiv-plastic-sharp.yaml",
+      "shape": "shapes/suzanne-subdiv.obj",
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png"
+    },
+    {
+      "name": "materials/arealight1.json",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/arealight2.json",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/cube-subdiv-uvgrid.json",
+      "subdivisions": 4,
+      "catmullclark": true,
+      "smooth": false,
+      "facevarying": true,
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/suzanne-subdiv-plastic-sharp.json",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true,
+      "specular": 1,
+      "color": [
+        0.5,
+        0.5,
+        0.7
+      ],
+      "roughness": 0.01
+    },
+    {
+      "name": "materials/sphere-displaced-matte.json",
+      "facevarying": true,
+      "displacement": 0.025,
+      "displacement_tex": "textures/bumps-displacement.png",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "roughness": 1
+    },
+    {
+      "name": "materials/bunny-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/teapot-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
     }
   ]
 }

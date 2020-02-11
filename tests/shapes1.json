@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -133,25 +133,15 @@
       "emission_tex": "environments/sky.hdr"
     }
   ],
-  "shapes": [
+  "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png"
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/arealight1.yaml",
+      "name": "shapes/arealight1.json",
       "shape": "shapes/arealight1.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         -0.4,
         0.8,
@@ -162,16 +152,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight1.json"
     },
     {
-      "name": "shapes/arealight2.yaml",
+      "name": "shapes/arealight2.json",
       "shape": "shapes/arealight2.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         0.4,
         0.8,
@@ -182,19 +168,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight2.json"
     },
     {
-      "name": "shapes/sphere-uvgrid.yaml",
+      "name": "shapes/sphere-uvgrid.json",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -208,19 +187,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-uvgrid.json"
     },
     {
-      "name": "shapes/uvsphere-flipcap-uvgrid.yaml",
+      "name": "shapes/uvsphere-flipcap-uvgrid.json",
       "shape": "shapes/uvsphere-flipcap.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -234,19 +206,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/uvsphere-flipcap-uvgrid.json"
     },
     {
-      "name": "shapes/disk-uvgrid.yaml",
+      "name": "shapes/disk-uvgrid.json",
       "shape": "shapes/disk.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -260,19 +225,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/disk-uvgrid.json"
     },
     {
-      "name": "shapes/uvcylinder-uvgrid.yaml",
+      "name": "shapes/uvcylinder-uvgrid.json",
       "shape": "shapes/uvcylinder.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -286,19 +244,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/uvcylinder-uvgrid.json"
     },
     {
-      "name": "shapes/cube-uvgrid.yaml",
+      "name": "shapes/cube-uvgrid.json",
       "shape": "shapes/cube.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -312,7 +263,90 @@
         0.4,
         0,
         0
+      ],
+      "material": "materials/cube-uvgrid.json"
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png"
+    },
+    {
+      "name": "materials/arealight1.json",
+      "emission": [
+        20,
+        20,
+        20
       ]
+    },
+    {
+      "name": "materials/arealight2.json",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/sphere-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/uvsphere-flipcap-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/disk-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/uvcylinder-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/cube-uvgrid.json",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
     }
   ]
 }

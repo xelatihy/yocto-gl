@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "name": "cameras/default.yaml",
+      "name": "cameras/default.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "name": "cameras/front.yaml",
+      "name": "cameras/front.json",
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "name": "cameras/back.yaml",
+      "name": "cameras/back.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -52,7 +52,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-sharp.yaml",
+      "name": "cameras/perspective-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "name": "cameras/perspective-dof.yaml",
+      "name": "cameras/perspective-dof.json",
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -86,7 +86,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-sharp.yaml",
+      "name": "cameras/orthographic-sharp.json",
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "cameras/orthographic-dof.yaml",
+      "name": "cameras/orthographic-dof.json",
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -124,7 +124,7 @@
   ],
   "environments": [
     {
-      "name": "environments/sky.yaml",
+      "name": "environments/sky.json",
       "emission": [
         0.5,
         0.5,
@@ -133,20 +133,14 @@
       "emission_tex": "environments/sky.hdr"
     }
   ],
-  "shapes": [
+  "objects": [
     {
-      "name": "shapes/floor.yaml",
+      "name": "shapes/floor.json",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png",
-      "specular": 0
+      "material": "materials/floor.json"
     },
     {
-      "name": "shapes/bunny-uvgrid-coated.yaml",
+      "name": "shapes/bunny-uvgrid-coated.json",
       "frame": [
         1,
         0,
@@ -162,18 +156,10 @@
         0
       ],
       "shape": "shapes/bunny.obj",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.2,
-      "coat": 1,
-      "color_tex": "textures/uvgrid.png"
+      "material": "materials/bunny-uvgrid-coated.json"
     },
     {
-      "name": "shapes/bunny-volume-jade.yaml",
+      "name": "shapes/bunny-volume-jade.json",
       "frame": [
         1,
         0,
@@ -189,6 +175,123 @@
         0
       ],
       "shape": "shapes/bunny.obj",
+      "material": "materials/bunny-volume-jade.json"
+    },
+    {
+      "name": "shapes/bunny-metal-rough.json",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0.4,
+        0,
+        0
+      ],
+      "shape": "shapes/bunny.obj",
+      "material": "materials/bunny-metal-rough.json"
+    },
+    {
+      "name": "shapes/sphere-volume-glass.json",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        -0.2,
+        0,
+        0
+      ],
+      "shape": "shapes/sphere.ply",
+      "material": "materials/sphere-volume-glass.json"
+    },
+    {
+      "name": "shapes/sphere-plastic-rough-bumped.json",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0.2,
+        0,
+        0
+      ],
+      "shape": "shapes/sphere.ply",
+      "material": "materials/sphere-plastic-rough-bumped.json"
+    },
+    {
+      "name": "shapes/arealight1.json",
+      "lookat": [
+        -0.4,
+        0.8,
+        0.8,
+        0,
+        0.1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "shape": "shapes/arealight1.ply",
+      "material": "materials/arealight1.json"
+    },
+    {
+      "name": "shapes/arealight2.json",
+      "lookat": [
+        0.4,
+        0.8,
+        0.8,
+        0,
+        0.1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "shape": "shapes/arealight2.ply",
+      "material": "materials/arealight2.json"
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.json",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png",
+      "specular": 0
+    },
+    {
+      "name": "materials/bunny-uvgrid-coated.json",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.2,
+      "coat": 1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/bunny-volume-jade.json",
       "color": [
         0.5,
         0.5,
@@ -205,22 +308,7 @@
       "thin": false
     },
     {
-      "name": "shapes/bunny-metal-rough.yaml",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
-      "shape": "shapes/bunny.obj",
+      "name": "materials/bunny-metal-rough.json",
       "color": [
         0.66,
         0.45,
@@ -230,22 +318,7 @@
       "roughness": 0.2
     },
     {
-      "name": "shapes/sphere-volume-glass.yaml",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
-      "shape": "shapes/sphere.ply",
+      "name": "materials/sphere-volume-glass.json",
       "color": [
         1,
         0.5,
@@ -258,22 +331,7 @@
       "thin": false
     },
     {
-      "name": "shapes/sphere-plastic-rough-bumped.yaml",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
-      "shape": "shapes/sphere.ply",
+      "name": "materials/sphere-plastic-rough-bumped.json",
       "color": [
         0.5,
         0.7,
@@ -284,19 +342,7 @@
       "normal_tex": "textures/bumps-normal.png"
     },
     {
-      "name": "shapes/arealight1.yaml",
-      "lookat": [
-        -0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
-      "shape": "shapes/arealight1.ply",
+      "name": "materials/arealight1.json",
       "emission": [
         20,
         20,
@@ -304,19 +350,7 @@
       ]
     },
     {
-      "name": "shapes/arealight2.yaml",
-      "lookat": [
-        0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
-      "shape": "shapes/arealight2.ply",
+      "name": "materials/arealight2.json",
       "emission": [
         20,
         20,
