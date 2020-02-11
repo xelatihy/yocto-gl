@@ -1494,7 +1494,7 @@ static void load_obj_scene(
   };
 
   // handler for materials
-  auto material_map = unordered_map<string, sceneio_material*>{};
+  auto material_map = unordered_map<obj_material*, sceneio_material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1520,35 +1520,19 @@ static void load_obj_scene(
     material->coat_tex         = get_texture(omat->pbr_coat_map);
     material->opacity_tex      = get_texture(omat->pbr_opacity_map);
     material->normal_tex       = get_texture(omat->normal_map);
-    material_map[omat->name]   = material;
+    material_map[omat]         = material;
   }
-
-  // get material
-  auto get_material = [&filename, &material_map, scene](
-                          const string& name) -> sceneio_material* {
-    auto mit = material_map.find(name);
-    if (mit == material_map.end()) {
-      if (!name.empty())
-        throw_missing_reference_error(filename, "material", name);
-      auto material = add_material(scene);
-      // material->name   = make_safe_name("material", "<default>");
-      material_map[""] = material;
-      return material;
-    } else {
-      return mit->second;
-    }
-  };
 
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
   for (auto oshape : obj->shapes) {
     auto materials = get_materials(obj, oshape);
-    if (materials.empty()) materials.push_back("");
+    if (materials.empty()) materials.push_back(nullptr);
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
       auto object      = add_object(scene);
       object->shape    = add_shape(scene);
-      object->material = get_material(materials[material_idx]);
+      object->material = material_map.at(materials[material_idx]);
       // if (!oshape->name.empty()) {
       //   object->name        = make_safe_name("object", oshape->name, ".json",
       //       materials.size() > 1 ? material_idx + 1 : 0);

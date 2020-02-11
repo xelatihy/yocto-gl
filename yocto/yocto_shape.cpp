@@ -3426,7 +3426,7 @@ void load_shape(const string& filename, vector<int>& points,
       return;
 
     // decide what to do and get properties
-    auto materials  = vector<string>{};
+    auto materials  = vector<obj_material*>{};
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
@@ -3530,7 +3530,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     if (obj->shapes.size() > 1) throw_emptyshape_error(filename);
     auto shape = obj->shapes.front();
     if (shape->faces.empty()) throw_emptyshape_error(filename);
-    auto materials  = vector<string>{};
+    auto materials  = vector<obj_material*>{};
     auto ematerials = vector<int>{};
     get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
