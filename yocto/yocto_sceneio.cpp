@@ -49,6 +49,7 @@
 #include <future>
 #include <iomanip>
 #include <memory>
+using std::make_unique;
 
 #include "ext/json.hpp"
 #include "yocto_image.h"
@@ -937,7 +938,8 @@ namespace yocto {
 static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
+    auto ply_ = make_unique<ply_model>();
+    auto ply = ply_.get();
     load_ply(filename, ply);
     frames = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
@@ -952,7 +954,8 @@ static void save_instances(
     const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
+    auto ply_ = make_unique<ply_model>();
+    auto ply = ply_.get();
     add_values(ply, frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
