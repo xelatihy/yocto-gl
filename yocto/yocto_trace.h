@@ -85,27 +85,32 @@ struct trace_material;
 struct trace_instance;
 struct trace_object;
 
-// Add cameras
+// Add scene elements
 trace_camera* add_camera(trace_scene* scene);
+trace_object* add_object(trace_scene* scene);
+trace_texture* add_texture(trace_scene* scene);
+trace_material* add_material(trace_scene* scene);
+trace_shape* add_shape(trace_scene* scene);
+trace_instance* add_instance(trace_scene* scene);
+trace_environment* add_environment(trace_scene* scene);
+
+// camera properties
 void          set_frame(trace_camera* camera, const frame3f& frame);
 void          set_lens(
              trace_camera* camera, float lens, float aspect, float film);
 void set_focus(trace_camera* camera, float aperture, float focus);
 
-// Add object
-trace_object* add_object(trace_scene* scene);
+// object properties
 void          set_frame(trace_object* object, const frame3f& frame);
 void          set_material(trace_object* object, trace_material* material);
 void          set_shape(trace_object* object, trace_shape* shape);
 void          set_instance(trace_object* object, trace_instance* instance);
 
-// Add texture
-trace_texture* add_texture(trace_scene* scene);
+// texture properties
 void           set_texture(trace_texture* texture, const image<vec4b>& img);
 void           set_texture(trace_texture* texture, const image<vec4f>& img);
 
-// Add material
-trace_material* add_material(trace_scene* scene);
+// material properties
 void set_emission(trace_material* material, const vec3f& emission,
     trace_texture* emission_txt = nullptr);
 void set_color(trace_material* material, const vec3f& color,
@@ -127,8 +132,7 @@ void set_scattering(trace_material* material, const vec3f& scattering,
 void set_normalmap(trace_material* material, trace_texture* normal_txt);
 void set_gltftextures(trace_material* material, bool gltf_textures);
 
-// Add shape
-trace_shape* add_shape(trace_scene* scene);
+// shape properties
 void         set_points(trace_shape* shape, const vector<int>& points);
 void         set_lines(trace_shape* shape, const vector<vec2i>& lines);
 void set_triangles(trace_shape* shape, const vector<vec3i>& triangles);
@@ -142,12 +146,10 @@ void set_colors(trace_shape* shape, const vector<vec4f>& colors);
 void set_radius(trace_shape* shape, const vector<float>& radius);
 void set_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 
-// Add instance
-trace_instance* add_instance(trace_scene* scene);
+// instance properties
 void set_frames(trace_instance* instance, const vector<frame3f>& frames);
 
-// Add environment
-trace_environment* add_environment(trace_scene* scene);
+// environment properties
 void               set_frame(
                   trace_environment* environment, const frame3f& frame);
 void set_emission(trace_environment* environment,
