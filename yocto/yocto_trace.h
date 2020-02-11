@@ -92,9 +92,9 @@ void clear_cameras(trace_scene* scene);
 
 // Add texture
 trace_texture* add_texture(trace_scene* scene);
-void set_texture(trace_texture* texture, const image<vec4b>& img);
-void set_texture(trace_texture* texture, const image<vec4f>& img);
-void clear_textures(trace_scene* scene);
+void           set_texture(trace_texture* texture, const image<vec4b>& img);
+void           set_texture(trace_texture* texture, const image<vec4f>& img);
+void           clear_textures(trace_scene* scene);
 
 // Add shape
 trace_shape* add_shape(trace_scene* scene);
@@ -113,20 +113,21 @@ void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 void set_shape_frame(trace_shape* shape, const frame3f& frame);
 void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
     const frame3f& local_frame);
-void set_shape_emission(
-    trace_shape* shape, const vec3f& emission, trace_texture* emission_txt = nullptr);
+void set_shape_emission(trace_shape* shape, const vec3f& emission,
+    trace_texture* emission_txt = nullptr);
 void set_shape_color(
     trace_shape* shape, const vec3f& color, trace_texture* color_txt = nullptr);
-void set_shape_specular(
-    trace_shape* shape, float specular = 1, trace_texture* specular_txt = nullptr);
+void set_shape_specular(trace_shape* shape, float specular = 1,
+    trace_texture* specular_txt = nullptr);
 void set_shape_ior(trace_shape* shape, float ior);
 void set_shape_metallic(
     trace_shape* shape, float metallic, trace_texture* metallic_txt = nullptr);
 void set_shape_transmission(trace_shape* shape, float transmission, bool thin,
     float trdepth, trace_texture* transmission_txt = nullptr);
-void set_shape_roughness(
-    trace_shape* shape, float roughness, trace_texture* roughness_txt = nullptr);
-void set_shape_opacity(trace_shape* shape, float opacity, trace_texture* opacity_txt = nullptr);
+void set_shape_roughness(trace_shape* shape, float roughness,
+    trace_texture* roughness_txt = nullptr);
+void set_shape_opacity(
+    trace_shape* shape, float opacity, trace_texture* opacity_txt = nullptr);
 void set_shape_thin(trace_shape* shape, bool thin);
 void set_shape_scattering(trace_shape* shape, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex = nullptr);
@@ -342,18 +343,18 @@ struct trace_shape {
   bool  thin         = false;
 
   // textures
-  trace_texture*  emission_tex     = nullptr;
-  trace_texture*  color_tex        = nullptr;
-  trace_texture*  specular_tex     = nullptr;
-  trace_texture*  metallic_tex     = nullptr;
-  trace_texture*  roughness_tex    = nullptr;
-  trace_texture*  transmission_tex = nullptr;
-  trace_texture*  spectint_tex     = nullptr;
-  trace_texture*  scattering_tex   = nullptr;
-  trace_texture*  coat_tex         = nullptr;
-  trace_texture*  opacity_tex      = nullptr;
-  trace_texture*  normal_tex       = nullptr;
-  bool gltf_textures    = false;  // glTF packed textures
+  trace_texture* emission_tex     = nullptr;
+  trace_texture* color_tex        = nullptr;
+  trace_texture* specular_tex     = nullptr;
+  trace_texture* metallic_tex     = nullptr;
+  trace_texture* roughness_tex    = nullptr;
+  trace_texture* transmission_tex = nullptr;
+  trace_texture* spectint_tex     = nullptr;
+  trace_texture* scattering_tex   = nullptr;
+  trace_texture* coat_tex         = nullptr;
+  trace_texture* opacity_tex      = nullptr;
+  trace_texture* normal_tex       = nullptr;
+  bool           gltf_textures    = false;  // glTF packed textures
 
   // computed properties
   trace_bvh bvh = {};
@@ -367,10 +368,10 @@ struct trace_shape {
 
 // Environment map.
 struct trace_environment {
-  frame3f       frame        = identity3x4f;
-  vec3f         emission     = {0, 0, 0};
-  trace_texture*           emission_tex = nullptr;
-  vector<float> texels_cdf   = {};
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
+  trace_texture* emission_tex = nullptr;
+  vector<float>  texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
@@ -390,7 +391,7 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
   vector<trace_shape*>       shapes       = {};
-  vector<trace_texture*>      textures     = {};
+  vector<trace_texture*>     textures     = {};
   vector<trace_environment*> environments = {};
 
   // computed properties

@@ -68,14 +68,14 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // editing
-  int                                  selected_camera      = -1;
-  int                                  selected_object      = -1;
-  int                                  selected_instance    = -1;
-  int                                  selected_shape       = -1;
-  int                                  selected_subdiv      = -1;
-  int                                  selected_material    = -1;
-  int                                  selected_environment = -1;
-  int                                  selected_texture     = -1;
+  int                                             selected_camera      = -1;
+  int                                             selected_object      = -1;
+  int                                             selected_instance    = -1;
+  int                                             selected_shape       = -1;
+  int                                             selected_subdiv      = -1;
+  int                                             selected_material    = -1;
+  int                                             selected_environment = -1;
+  int                                             selected_texture     = -1;
   unordered_map<sceneio_texture*, trace_texture*> texture_map          = {};
 
   // computation
@@ -676,7 +676,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "textures##2", app->selected_texture, app->ioscene->textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
       stop_display(app);
-      auto texture = app->scene->textures[app->selected_texture];
+      auto texture   = app->scene->textures[app->selected_texture];
       auto iotexture = app->ioscene->textures[app->selected_texture];
       if (!iotexture->hdr.empty()) {
         set_texture(texture, iotexture->hdr);
