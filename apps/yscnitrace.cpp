@@ -54,11 +54,11 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene = nullptr;
-  shared_ptr<trace_scene>   scene   = nullptr;
+  sceneio_model* ioscene = new sceneio_model{};
+  trace_scene*   scene   = new trace_scene{};
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
+  trace_state* state    = new trace_state{};
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -93,6 +93,9 @@ struct app_state {
     render_stop = true;
     if (render_future.valid()) render_future.get();
     if(glimage) delete glimage;
+    if(scene) delete scene;
+    if(state) delete state;
+    if(ioscene) delete ioscene;
   }
 };
 
@@ -111,9 +114,9 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(shared_ptr<app_state> app) {
-  auto  scene        = app->scene.get();
-  auto  ioscene      = app->ioscene.get();
+void init_scene(app_state* app) {
+  auto  scene        = app->scene;
+  auto  ioscene      = app->ioscene;
   auto& texture_map  = app->texture_map;
   auto& material_map = app->material_map;
   auto& shape_map    = app->shape_map;
@@ -236,7 +239,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state.get(), app->scene.get(), app->params);
+  init_state(app->state, app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -244,7 +247,7 @@ void reset_display(shared_ptr<app_state> app) {
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene.get(), preview_prms);
+  auto preview         = trace_image(app->scene, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -263,7 +266,7 @@ void reset_display(shared_ptr<app_state> app) {
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
         app->render[ij] = trace_sample(
-            app->state.get(), app->scene.get(), ij, app->params);
+            app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -279,17 +282,14 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname   = replace_extension(filename, ".edited.yaml");
         app->name      = get_filename(app->filename);
         app->params    = app->params;
-        app->ioscene   = make_shared<sceneio_model>();
-        load_scene(app->filename, app->ioscene.get());
-        app->scene = make_shared<trace_scene>();
-        init_scene(app);
-        init_bvh(app->scene.get(), app->params);
-        init_lights(app->scene.get());
+        load_scene(app->filename, app->ioscene);
+        init_scene(app.get());
+        init_bvh(app->scene, app->params);
+        init_lights(app->scene);
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        app->state = make_shared<trace_state>();
-        init_state(app->state.get(), app->scene.get(), app->params);
+        init_state(app->state, app->scene, app->params);
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
         app->name = get_filename(app->filename) + " [" +
@@ -486,7 +486,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           "*.yaml;*.obj;*.pbrt")) {
     app->outname = save_path;
     try {
-      save_scene(app->outname, app->ioscene.get());
+      save_scene(app->outname, app->ioscene);
     } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
@@ -562,7 +562,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene.get())) print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->render.size());
@@ -604,7 +604,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_emission(app->scene->environments[app->selected_environment],
           ioenvironment->emission,
           app->texture_map.at(ioenvironment->emission_tex));
-      init_lights(app->scene.get());
+      init_lights(app->scene);
       reset_display(app);
     }
     end_glheader(win);
@@ -652,7 +652,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_colors(shape, ioshape->colors);
       set_radius(shape, ioshape->radius);
       set_tangents(shape, ioshape->tangents);
-      update_bvh(app->scene.get(), {}, {app->selected_shape}, app->params);
+      update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
     }
@@ -686,7 +686,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_normalmap(material, app->texture_map.at(iomaterial->normal_tex));
       set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
           app->texture_map.at(iomaterial->scattering_tex));
-      init_lights(app->scene.get());
+      init_lights(app->scene);
       reset_display(app);
     }
     end_glheader(win);
@@ -715,7 +715,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_subdiv(win, app, app->selected_subdiv)) {
       stop_display(app);
       auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
-      tesselate_subdiv(app->ioscene.get(), iosubdiv);
+      tesselate_subdiv(app->ioscene, iosubdiv);
       // TODO: this is bogus
       auto shape   = app->scene->shapes[app->selected_subdiv];
       auto ioshape = iosubdiv->shape;
@@ -729,7 +729,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_colors(shape, ioshape->colors);
       set_radius(shape, ioshape->radius);
       set_tangents(shape, ioshape->tangents);
-      update_bvh(app->scene.get(), {}, {app->selected_subdiv}, app->params);
+      update_bvh(app->scene, {}, {app->selected_subdiv}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
     }
@@ -873,7 +873,7 @@ void run_app(int argc, const char* argv[]) {
         auto ray    = camera_ray(camera->frame, camera->lens, camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
-        if (auto isec = intersect_scene_bvh(app->scene.get(), ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_object = isec.object;
         }
       }
