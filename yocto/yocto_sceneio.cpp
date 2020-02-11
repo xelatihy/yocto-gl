@@ -1472,6 +1472,7 @@ static void load_obj_scene(
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture  = add_texture(scene);
+    if(is_hdr_filename(path)) texture->name = replace_extension(texture->name, ".hdr");
     // texture->name = make_safe_name(
     //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" : ".png");
     try {
