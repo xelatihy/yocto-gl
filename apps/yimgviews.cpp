@@ -54,8 +54,8 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // cleanup
-  app_state() {
-    if(glimage) delete glimage;
+  ~app_state() {
+     if(glimage) delete glimage;
   }
 };
 
@@ -91,8 +91,8 @@ void update_display(app_state* app) {
 
 void run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app_      = make_unique<app_state>();
-  auto app       = app_.get();
+  auto app_ = make_unique<app_state>();
+  auto app  = app_.get();
   auto filenames = vector<string>{};
 
   // command line options

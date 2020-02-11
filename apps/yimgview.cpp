@@ -71,7 +71,7 @@ struct app_state {
   string error = "";
 
   // cleanup
-  app_state() {
+  ~app_state() {
     if(glimage) delete glimage;
   }
 };
