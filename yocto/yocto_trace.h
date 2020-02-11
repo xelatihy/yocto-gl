@@ -79,6 +79,8 @@ namespace yocto {
 struct trace_scene;
 struct trace_camera;
 struct trace_environment;
+struct trace_shape;
+struct trace_texture;
 
 // Add cameras
 trace_camera* add_camera(trace_scene* scene);
@@ -95,48 +97,41 @@ void set_texture(trace_scene* scene, int idx, const image<vec4f>& img);
 void clear_textures(trace_scene* scene);
 
 // Add shape
-int  add_shape(trace_scene* scene);
-void set_shape_points(trace_scene* scene, int idx, const vector<int>& points);
-void set_shape_lines(trace_scene* scene, int idx, const vector<vec2i>& lines);
-void set_shape_triangles(
-    trace_scene* scene, int idx, const vector<vec3i>& triangles);
-void set_shape_quads(trace_scene* scene, int idx, const vector<vec4i>& quads);
-void set_shape_fvquads(trace_scene* scene, int idx,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord);
-void set_shape_positions(
-    trace_scene* scene, int idx, const vector<vec3f>& positions);
-void set_shape_normals(
-    trace_scene* scene, int idx, const vector<vec3f>& normals);
-void set_shape_texcoords(
-    trace_scene* scene, int idx, const vector<vec2f>& texcoords);
-void set_shape_colors(trace_scene* scene, int idx, const vector<vec4f>& colors);
-void set_shape_radius(trace_scene* scene, int idx, const vector<float>& radius);
-void set_shape_tangents(
-    trace_scene* scene, int idx, const vector<vec4f>& tangents);
-void set_shape_frame(trace_scene* scene, int idx, const frame3f& frame);
-void set_shape_frames(trace_scene* scene, int idx,
-    const vector<frame3f>& instances, const frame3f& local_frame);
+trace_shape* add_shape(trace_scene* scene);
+void         set_shape_points(trace_shape* shape, const vector<int>& points);
+void         set_shape_lines(trace_shape* shape, const vector<vec2i>& lines);
+void set_shape_triangles(trace_shape* shape, const vector<vec3i>& triangles);
+void set_shape_quads(trace_shape* shape, const vector<vec4i>& quads);
+void set_shape_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
+void set_shape_positions(trace_shape* shape, const vector<vec3f>& positions);
+void set_shape_normals(trace_shape* shape, const vector<vec3f>& normals);
+void set_shape_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
+void set_shape_colors(trace_shape* shape, const vector<vec4f>& colors);
+void set_shape_radius(trace_shape* shape, const vector<float>& radius);
+void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents);
+void set_shape_frame(trace_shape* shape, const frame3f& frame);
+void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
+    const frame3f& local_frame);
 void set_shape_emission(
-    trace_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
+    trace_shape* shape, const vec3f& emission, int emission_txt = -1);
 void set_shape_color(
-    trace_scene* scene, int idx, const vec3f& color, int color_txt = -1);
+    trace_shape* shape, const vec3f& color, int color_txt = -1);
 void set_shape_specular(
-    trace_scene* scene, int idx, float specular = 1, int specular_txt = -1);
-void set_shape_ior(trace_scene* scene, int idx, float ior);
+    trace_shape* shape, float specular = 1, int specular_txt = -1);
+void set_shape_ior(trace_shape* shape, float ior);
 void set_shape_metallic(
-    trace_scene* scene, int idx, float metallic, int metallic_txt = -1);
-void set_shape_transmission(trace_scene* scene, int idx, float transmission,
-    bool thin, float trdepth, int transmission_txt = -1);
+    trace_shape* shape, float metallic, int metallic_txt = -1);
+void set_shape_transmission(trace_shape* shape, float transmission, bool thin,
+    float trdepth, int transmission_txt = -1);
 void set_shape_roughness(
-    trace_scene* scene, int idx, float roughness, int roughness_txt = -1);
-void set_shape_opacity(
-    trace_scene* scene, int idx, float opacity, int opacity_txt = -1);
-void set_shape_thin(trace_scene* scene, int idx, bool thin);
-void set_shape_scattering(trace_scene* scene, int idx, const vec3f& scattering,
+    trace_shape* shape, float roughness, int roughness_txt = -1);
+void set_shape_opacity(trace_shape* shape, float opacity, int opacity_txt = -1);
+void set_shape_thin(trace_shape* shape, bool thin);
+void set_shape_scattering(trace_shape* shape, const vec3f& scattering,
     float scanisotropy, int scattering_tex = -1);
-void set_shape_normalmap(trace_scene* scene, int idx, int normal_txt);
-void set_shape_gltftextures(trace_scene* scene, int idx, bool gltf_textures);
+void set_shape_normalmap(trace_shape* shape, int normal_txt);
+void set_shape_gltftextures(trace_shape* shape, bool gltf_textures);
 void clear_shapes(trace_scene* scene);
 
 // Add environment
@@ -394,7 +389,7 @@ struct trace_light {
 // updates node transformations only if defined.
 struct trace_scene {
   vector<trace_camera*>      cameras      = {};
-  vector<trace_shape>        shapes       = {};
+  vector<trace_shape*>       shapes       = {};
   vector<trace_texture>      textures     = {};
   vector<trace_environment*> environments = {};
 

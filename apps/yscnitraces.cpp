@@ -104,44 +104,43 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   }
 
   for (auto ioobject : ioscene->objects) {
-    auto id      = add_shape(scene);
+    auto shape   = add_shape(scene);
     auto ioshape = ioobject->shape;
-    set_shape_points(scene, id, ioshape->points);
-    set_shape_lines(scene, id, ioshape->lines);
-    set_shape_triangles(scene, id, ioshape->triangles);
-    set_shape_quads(scene, id, ioshape->quads);
-    set_shape_positions(scene, id, ioshape->positions);
-    set_shape_normals(scene, id, ioshape->normals);
-    set_shape_texcoords(scene, id, ioshape->texcoords);
-    set_shape_colors(scene, id, ioshape->colors);
-    set_shape_radius(scene, id, ioshape->radius);
-    set_shape_tangents(scene, id, ioshape->tangents);
+    set_shape_points(shape, ioshape->points);
+    set_shape_lines(shape, ioshape->lines);
+    set_shape_triangles(shape, ioshape->triangles);
+    set_shape_quads(shape, ioshape->quads);
+    set_shape_positions(shape, ioshape->positions);
+    set_shape_normals(shape, ioshape->normals);
+    set_shape_texcoords(shape, ioshape->texcoords);
+    set_shape_colors(shape, ioshape->colors);
+    set_shape_radius(shape, ioshape->radius);
+    set_shape_tangents(shape, ioshape->tangents);
     auto ioinstance = ioobject->instance;
     if (ioinstance) {
-      set_shape_frames(scene, id, ioinstance->frames, ioobject->frame);
+      set_shape_frames(shape, ioinstance->frames, ioobject->frame);
     } else {
-      set_shape_frame(scene, id, ioobject->frame);
+      set_shape_frame(shape, ioobject->frame);
     }
     auto iomaterial = ioobject->material;
-    set_shape_emission(scene, id, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
+    set_shape_emission(
+        shape, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
     set_shape_color(
-        scene, id, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(scene, id, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_shape_ior(scene, id, iomaterial->ior);
-    set_shape_metallic(scene, id, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_shape_transmission(scene, id, iomaterial->transmission,
-        iomaterial->thin, iomaterial->trdepth,
-        texture_map.at(iomaterial->transmission_tex));
-    set_shape_roughness(scene, id, iomaterial->roughness,
+        shape, iomaterial->color, texture_map.at(iomaterial->color_tex));
+    set_shape_specular(
+        shape, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_ior(shape, iomaterial->ior);
+    set_shape_metallic(
+        shape, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_transmission(shape, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_shape_roughness(shape, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(scene, id, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
-    set_shape_thin(scene, id, iomaterial->thin);
-    set_shape_normalmap(scene, id, texture_map.at(iomaterial->normal_tex));
-    set_shape_scattering(scene, id, iomaterial->scattering,
+    set_shape_opacity(
+        shape, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_thin(shape, iomaterial->thin);
+    set_shape_normalmap(shape, texture_map.at(iomaterial->normal_tex));
+    set_shape_scattering(shape, iomaterial->scattering,
         iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
     ioshape = {};
   }

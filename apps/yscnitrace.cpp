@@ -133,43 +133,42 @@ void init_scene(shared_ptr<app_state> app) {
   }
 
   for (auto ioobject : ioscene->objects) {
-    auto id      = add_shape(scene);
+    auto shape   = add_shape(scene);
     auto ioshape = ioobject->shape;
-    set_shape_points(scene, id, ioshape->points);
-    set_shape_lines(scene, id, ioshape->lines);
-    set_shape_triangles(scene, id, ioshape->triangles);
-    set_shape_quads(scene, id, ioshape->quads);
-    set_shape_positions(scene, id, ioshape->positions);
-    set_shape_normals(scene, id, ioshape->normals);
-    set_shape_texcoords(scene, id, ioshape->texcoords);
-    set_shape_colors(scene, id, ioshape->colors);
-    set_shape_radius(scene, id, ioshape->radius);
-    set_shape_tangents(scene, id, ioshape->tangents);
+    set_shape_points(shape, ioshape->points);
+    set_shape_lines(shape, ioshape->lines);
+    set_shape_triangles(shape, ioshape->triangles);
+    set_shape_quads(shape, ioshape->quads);
+    set_shape_positions(shape, ioshape->positions);
+    set_shape_normals(shape, ioshape->normals);
+    set_shape_texcoords(shape, ioshape->texcoords);
+    set_shape_colors(shape, ioshape->colors);
+    set_shape_radius(shape, ioshape->radius);
+    set_shape_tangents(shape, ioshape->tangents);
     auto ioinstances = ioobject->instance;
     if (ioinstances)
-      set_shape_frames(scene, id, ioinstances->frames, ioobject->frame);
+      set_shape_frames(shape, ioinstances->frames, ioobject->frame);
     else
-      set_shape_frame(scene, id, ioobject->frame);
+      set_shape_frame(shape, ioobject->frame);
     auto iomaterial = ioobject->material;
-    set_shape_emission(scene, id, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
+    set_shape_emission(
+        shape, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
     set_shape_color(
-        scene, id, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_shape_specular(scene, id, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_shape_ior(scene, id, iomaterial->ior);
-    set_shape_metallic(scene, id, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_shape_transmission(scene, id, iomaterial->transmission,
-        iomaterial->thin, iomaterial->trdepth,
-        texture_map.at(iomaterial->transmission_tex));
-    set_shape_roughness(scene, id, iomaterial->roughness,
+        shape, iomaterial->color, texture_map.at(iomaterial->color_tex));
+    set_shape_specular(
+        shape, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_ior(shape, iomaterial->ior);
+    set_shape_metallic(
+        shape, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_transmission(shape, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_shape_roughness(shape, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
-    set_shape_opacity(scene, id, iomaterial->opacity,
-        texture_map.at(iomaterial->opacity_tex));
-    set_shape_thin(scene, id, iomaterial->thin);
-    set_shape_normalmap(scene, id, texture_map.at(iomaterial->normal_tex));
-    set_shape_scattering(scene, id, iomaterial->scattering,
+    set_shape_opacity(
+        shape, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_thin(shape, iomaterial->thin);
+    set_shape_normalmap(shape, texture_map.at(iomaterial->normal_tex));
+    set_shape_scattering(shape, iomaterial->scattering,
         iomaterial->scanisotropy, texture_map.at(iomaterial->scattering_tex));
   }
 
@@ -618,22 +617,18 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
       stop_display(app);
-      auto& ioshape = app->ioscene->shapes[app->selected_shape];
-      set_shape_points(app->scene.get(), app->selected_shape, ioshape->points);
-      set_shape_lines(app->scene.get(), app->selected_shape, ioshape->lines);
-      set_shape_triangles(
-          app->scene.get(), app->selected_shape, ioshape->triangles);
-      set_shape_quads(app->scene.get(), app->selected_shape, ioshape->quads);
-      set_shape_positions(
-          app->scene.get(), app->selected_shape, ioshape->positions);
-      set_shape_normals(
-          app->scene.get(), app->selected_shape, ioshape->normals);
-      set_shape_texcoords(
-          app->scene.get(), app->selected_shape, ioshape->texcoords);
-      set_shape_colors(app->scene.get(), app->selected_shape, ioshape->colors);
-      set_shape_radius(app->scene.get(), app->selected_shape, ioshape->radius);
-      set_shape_tangents(
-          app->scene.get(), app->selected_shape, ioshape->tangents);
+      auto shape   = app->scene->shapes[app->selected_shape];
+      auto ioshape = app->ioscene->shapes[app->selected_shape];
+      set_shape_points(shape, ioshape->points);
+      set_shape_lines(shape, ioshape->lines);
+      set_shape_triangles(shape, ioshape->triangles);
+      set_shape_quads(shape, ioshape->quads);
+      set_shape_positions(shape, ioshape->positions);
+      set_shape_normals(shape, ioshape->normals);
+      set_shape_texcoords(shape, ioshape->texcoords);
+      set_shape_colors(shape, ioshape->colors);
+      set_shape_radius(shape, ioshape->radius);
+      set_shape_tangents(shape, ioshape->tangents);
       update_bvh(app->scene.get(), {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
@@ -646,30 +641,29 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       stop_display(app);
+      auto material   = app->scene->shapes[app->selected_shape];
       auto iomaterial = app->ioscene->materials[app->selected_material];
-      set_shape_emission(app->scene.get(), app->selected_material,
-          iomaterial->emission, app->texture_map.at(iomaterial->emission_tex));
-      set_shape_color(app->scene.get(), app->selected_material,
-          iomaterial->color, app->texture_map.at(iomaterial->color_tex));
-      set_shape_specular(app->scene.get(), app->selected_material,
-          iomaterial->specular, app->texture_map.at(iomaterial->specular_tex));
-      set_shape_ior(app->scene.get(), app->selected_material, iomaterial->ior);
-      set_shape_metallic(app->scene.get(), app->selected_material,
-          iomaterial->metallic, app->texture_map.at(iomaterial->metallic_tex));
-      set_shape_transmission(app->scene.get(), app->selected_material,
-          iomaterial->transmission, iomaterial->thin, iomaterial->trdepth,
+      set_shape_emission(material, iomaterial->emission,
+          app->texture_map.at(iomaterial->emission_tex));
+      set_shape_color(material, iomaterial->color,
+          app->texture_map.at(iomaterial->color_tex));
+      set_shape_specular(material, iomaterial->specular,
+          app->texture_map.at(iomaterial->specular_tex));
+      set_shape_ior(material, iomaterial->ior);
+      set_shape_metallic(material, iomaterial->metallic,
+          app->texture_map.at(iomaterial->metallic_tex));
+      set_shape_transmission(material, iomaterial->transmission,
+          iomaterial->thin, iomaterial->trdepth,
           app->texture_map.at(iomaterial->transmission_tex));
-      set_shape_roughness(app->scene.get(), app->selected_material,
-          iomaterial->roughness,
+      set_shape_roughness(material, iomaterial->roughness,
           app->texture_map.at(iomaterial->roughness_tex));
-      set_shape_opacity(app->scene.get(), app->selected_material,
-          iomaterial->opacity, app->texture_map.at(iomaterial->opacity_tex));
-      set_shape_thin(
-          app->scene.get(), app->selected_material, iomaterial->thin);
-      set_shape_normalmap(app->scene.get(), app->selected_material,
-          app->texture_map.at(iomaterial->normal_tex));
-      set_shape_scattering(app->scene.get(), app->selected_material,
-          iomaterial->scattering, iomaterial->scanisotropy,
+      set_shape_opacity(material, iomaterial->opacity,
+          app->texture_map.at(iomaterial->opacity_tex));
+      set_shape_thin(material, iomaterial->thin);
+      set_shape_normalmap(
+          material, app->texture_map.at(iomaterial->normal_tex));
+      set_shape_scattering(material, iomaterial->scattering,
+          iomaterial->scanisotropy,
           app->texture_map.at(iomaterial->scattering_tex));
       init_lights(app->scene.get());
       reset_display(app);
@@ -700,22 +694,19 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene.get(), iosubdiv);
+      // TODO: this is bogus
+      auto shape   = app->scene->shapes[app->selected_subdiv];
       auto ioshape = iosubdiv->shape;
-      set_shape_points(app->scene.get(), app->selected_shape, ioshape->points);
-      set_shape_lines(app->scene.get(), app->selected_shape, ioshape->lines);
-      set_shape_triangles(
-          app->scene.get(), app->selected_shape, ioshape->triangles);
-      set_shape_quads(app->scene.get(), app->selected_shape, ioshape->quads);
-      set_shape_positions(
-          app->scene.get(), app->selected_shape, ioshape->positions);
-      set_shape_normals(
-          app->scene.get(), app->selected_shape, ioshape->normals);
-      set_shape_texcoords(
-          app->scene.get(), app->selected_shape, ioshape->texcoords);
-      set_shape_colors(app->scene.get(), app->selected_shape, ioshape->colors);
-      set_shape_radius(app->scene.get(), app->selected_shape, ioshape->radius);
-      set_shape_tangents(
-          app->scene.get(), app->selected_shape, ioshape->tangents);
+      set_shape_points(shape, ioshape->points);
+      set_shape_lines(shape, ioshape->lines);
+      set_shape_triangles(shape, ioshape->triangles);
+      set_shape_quads(shape, ioshape->quads);
+      set_shape_positions(shape, ioshape->positions);
+      set_shape_normals(shape, ioshape->normals);
+      set_shape_texcoords(shape, ioshape->texcoords);
+      set_shape_colors(shape, ioshape->colors);
+      set_shape_radius(shape, ioshape->radius);
+      set_shape_tangents(shape, ioshape->tangents);
       update_bvh(app->scene.get(), {}, {app->selected_subdiv}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
