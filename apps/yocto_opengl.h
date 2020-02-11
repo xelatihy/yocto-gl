@@ -196,9 +196,9 @@ struct opengl_scene {
   ~opengl_scene();
 
   vector<opengl_camera*>  _cameras  = {};
-  vector<opengl_shape>   _shapes   = {};
+  vector<opengl_shape*>   _shapes   = {};
   vector<opengl_texture> _textures = {};
-  vector<opengl_light>   _lights   = {};
+  vector<opengl_light*>   _lights   = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -245,46 +245,32 @@ void set_texture(opengl_scene* scene, int idx, const image<vec4f>& img,
 void clear_textures(opengl_scene* scene);
 
 // add shape
-int  add_shape(opengl_scene* scene);
-void set_shape_points(opengl_scene* scene, int idx, const vector<int>& points);
-void set_shape_lines(opengl_scene* scene, int idx, const vector<vec2i>& lines);
-void set_shape_triangles(
-    opengl_scene* scene, int idx, const vector<vec3i>& triangles);
-void set_shape_quads(opengl_scene* scene, int idx, const vector<vec4i>& quads);
-void set_shape_positions(
-    opengl_scene* scene, int idx, const vector<vec3f>& positions);
-void set_shape_normals(
-    opengl_scene* scene, int idx, const vector<vec3f>& normals);
-void set_shape_texcoords(
-    opengl_scene* scene, int idx, const vector<vec2f>& texcoords);
-void set_shape_colors(
-    opengl_scene* scene, int idx, const vector<vec4f>& colors);
-void set_shape_tangents(
-    opengl_scene* scene, int idx, const vector<vec4f>& tangents);
-void set_shape_frame(opengl_scene* scene, int idx, const frame3f& frame);
-void set_shape_instances(
-    opengl_scene* scene, int idx, const vector<frame3f>& instances);
-void set_shape_emission(
-    opengl_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_shape_color(
-    opengl_scene* scene, int idx, const vec3f& color, int color_txt = -1);
-void set_shape_metallic(
-    opengl_scene* scene, int idx, float metallic, int metallic_txt = -1);
-void set_shape_roughness(
-    opengl_scene* scene, int idx, float roughness, int roughness_txt = -1);
-void set_shape_specular(
-    opengl_scene* scene, int idx, float specular, int specular_txt = -1);
-void set_shape_opacity(
-    opengl_scene* scene, int idx, float opacity, int opacity_txt = -1);
-void set_shape_normalmap(opengl_scene* scene, int idx, int normal_txt);
-void set_shape_gltftextures(opengl_scene* scene, int idx, bool gltf_textures);
-void set_shape_hidden(opengl_scene* scene, int idx, bool hidden);
-void set_shape_highlighted(opengl_scene* scene, int idx, bool highlighted);
-void clear_shapes(opengl_scene* scene);
+opengl_shape*  add_shape(opengl_scene* scene);
+void set_shape_points(opengl_shape* shape, const vector<int>& points);
+void set_shape_lines(opengl_shape* shape, const vector<vec2i>& lines);
+void set_shape_triangles(opengl_shape* shape, const vector<vec3i>& triangles);
+void set_shape_quads(opengl_shape* shape, const vector<vec4i>& quads);
+void set_shape_positions(opengl_shape* shape, const vector<vec3f>& positions);
+void set_shape_normals(opengl_shape* shape, const vector<vec3f>& normals);
+void set_shape_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords);
+void set_shape_colors(opengl_shape* shape, const vector<vec4f>& colors);
+void set_shape_tangents(opengl_shape* shape, const vector<vec4f>& tangents);
+void set_shape_frame(opengl_shape* shape, const frame3f& frame);
+void set_shape_instances(opengl_shape* shape, const vector<frame3f>& instances);
+void set_shape_emission(opengl_shape* shape, const vec3f& emission, int emission_txt = -1);
+void set_shape_color(opengl_shape* shape, const vec3f& color, int color_txt = -1);
+void set_shape_metallic(opengl_shape* shape, float metallic, int metallic_txt = -1);
+void set_shape_roughness(opengl_shape* shape, float roughness, int roughness_txt = -1);
+void set_shape_specular(opengl_shape* shape, float specular, int specular_txt = -1);
+void set_shape_opacity(opengl_shape* shape, float opacity, int opacity_txt = -1);
+void set_shape_normalmap(opengl_shape* shape, int normal_txt);
+void set_shape_gltftextures(opengl_shape* shape, bool gltf_textures);
+void set_shape_hidden(opengl_shape* shape, bool hidden);
+void set_shape_highlighted(opengl_shape* shape, bool highlighted);
 
 // add light
-int  add_light(opengl_scene* scene);
-void set_light(opengl_scene* scene, int idx, const vec3f& position,
+opengl_light*  add_light(opengl_scene* scene);
+void set_light(opengl_light* light, const vec3f& position,
     const vec3f& emission, bool directional);
 void clear_lights(opengl_scene* scene);
 bool has_max_lights(opengl_scene* scene);
