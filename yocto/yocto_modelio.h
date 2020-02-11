@@ -530,6 +530,12 @@ struct pbrt_arealight {
   vec3f  emission = zero3f;
 };
 
+// Pbrt medium. Not parsed at the moment.
+struct pbrt_medium {
+  // medium parameters
+  string name            = "";
+};
+
 // Pbrt shape
 struct pbrt_shape {
   // frames
@@ -594,6 +600,7 @@ struct pbrt_model {
   vector<pbrt_light*>       lights       = {};
   vector<pbrt_arealight*>   arealights   = {};
   vector<pbrt_material*>    materials    = {};
+  vector<pbrt_medium*>      mediums      = {};
   ~pbrt_model();
 };
 
@@ -601,114 +608,6 @@ struct pbrt_model {
 void load_pbrt(const string& filename, pbrt_model* pbrt);
 void save_pbrt(
     const string& filename, const pbrt_model* pbrt, bool ply_meshes = false);
-
-// Pbrt value type
-enum struct pbrt_value_type {
-  // clang-format off
-  real, integer, boolean, string, point, normal, vector, texture, color, 
-  point2, vector2, spectrum
-  // clang-format on
-};
-
-// Pbrt value
-struct pbrt_value {
-  string          name     = "";
-  pbrt_value_type type     = pbrt_value_type::real;
-  int             value1i  = 0;
-  float           value1f  = 0;
-  vec2f           value2f  = {0, 0};
-  vec3f           value3f  = {0, 0, 0};
-  bool            value1b  = false;
-  string          value1s  = "";
-  vector<float>   vector1f = {};
-  vector<vec2f>   vector2f = {};
-  vector<vec3f>   vector3f = {};
-  vector<int>     vector1i = {};
-};
-
-// Pbrt command
-struct pbrt_command {
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-};
-
-// Pbrt shape
-struct pbrt_shape_command {
-  // shape parameters
-  string             type      = "";
-  vector<pbrt_value> values    = {};
-  frame3f            frame     = identity3x4f;
-  frame3f            frend     = identity3x4f;
-  string             material  = "";
-  string             arealight = "";
-  string             interior  = "";
-  string             exterior  = "";
-  vector<frame3f>    instances = {};
-  vector<frame3f>    instaends = {};
-};
-
-// Low-level commands
-struct pbrt_commands {
-  vector<string>             comments     = {};
-  vector<pbrt_command>       cameras      = {};
-  vector<pbrt_command>       films        = {};
-  vector<pbrt_command>       integrators  = {};
-  vector<pbrt_command>       filters      = {};
-  vector<pbrt_command>       samplers     = {};
-  vector<pbrt_command>       accelerators = {};
-  vector<pbrt_command>       mediums      = {};
-  vector<pbrt_command>       environments = {};
-  vector<pbrt_command>       lights       = {};
-  vector<pbrt_command>       arealights   = {};
-  vector<pbrt_command>       textures     = {};
-  vector<pbrt_command>       materials    = {};
-  vector<pbrt_shape_command> shapes       = {};
-};
-
-// Low level parser
-void load_pbrt(const string& filename, pbrt_commands* pbrt);
-void save_pbrt(const string& filename, const pbrt_commands* pbrt);
-
-// type-cheked pbrt value access
-void get_pbrt_value(const pbrt_value& pbrt, string& value);
-void get_pbrt_value(const pbrt_value& pbrt, bool& value);
-void get_pbrt_value(const pbrt_value& pbrt, int& value);
-void get_pbrt_value(const pbrt_value& pbrt, float& value);
-void get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
-void get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<float>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
-void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
-void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
-void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
-template <typename T>
-inline void get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& value);
-
-// pbrt value construction
-pbrt_value make_pbrt_value(const string& name, const string& value,
-    pbrt_value_type type = pbrt_value_type::string);
-pbrt_value make_pbrt_value(const string& name, bool value,
-    pbrt_value_type type = pbrt_value_type::boolean);
-pbrt_value make_pbrt_value(const string& name, int value,
-    pbrt_value_type type = pbrt_value_type::integer);
-pbrt_value make_pbrt_value(const string& name, float value,
-    pbrt_value_type type = pbrt_value_type::real);
-pbrt_value make_pbrt_value(const string& name, const vec2f& value,
-    pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(const string& name, const vec3f& value,
-    pbrt_value_type type = pbrt_value_type::color);
-pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
-    pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
-    pbrt_value_type type = pbrt_value_type::point);
-pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
-    pbrt_value_type type = pbrt_value_type::integer);
 
 }  // namespace yocto
 
@@ -810,16 +709,6 @@ inline void add_yaml_value(
   for (auto& [key, value] : element.key_values)
     if (key == name) throw std::invalid_argument{"value exists"};
   element.key_values.push_back({name, make_yaml_value(value)});
-}
-
-template <typename T>
-inline void get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& value) {
-  for (auto& p : pbrt) {
-    if (p.name == name) {
-      return get_pbrt_value(p, value);
-    }
-  }
 }
 
 }  // namespace yocto
