@@ -1453,7 +1453,7 @@ static void load_obj_scene(
   // convert cameras
   for (auto& ocam : obj.cameras) {
     auto camera          = add_camera(scene);
-    camera->name         = make_safe_name("camera", ocam.name);
+    // camera->name         = make_safe_name("camera", ocam.name);
     camera->frame        = ocam.frame;
     camera->orthographic = ocam.ortho;
     camera->film         = max(ocam.width, ocam.height);
@@ -1472,8 +1472,8 @@ static void load_obj_scene(
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture  = add_texture(scene);
-    texture->name = make_safe_name(
-        "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" : ".png");
+    // texture->name = make_safe_name(
+    //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" : ".png");
     try {
       if (is_hdr_filename(path)) {
         load_image(get_dirname(filename) + path, texture->hdr);
@@ -1491,7 +1491,7 @@ static void load_obj_scene(
   auto material_map = unordered_map<string, sceneio_material*>{};
   for (auto& omat : obj.materials) {
     auto material              = add_material(scene);
-    material->name             = make_safe_name("material", omat.name);
+    // material->name             = make_safe_name("material", omat.name);
     material->emission         = omat.pbr_emission;
     material->color            = omat.pbr_base;
     material->specular         = omat.pbr_specular;
@@ -1525,7 +1525,7 @@ static void load_obj_scene(
       if (!name.empty())
         throw_missing_reference_error(filename, "material", name);
       auto material    = add_material(scene);
-      material->name   = make_safe_name("material", "<default>");
+      // material->name   = make_safe_name("material", "<default>");
       material_map[""] = material;
       return material;
     } else {
@@ -1543,12 +1543,12 @@ static void load_obj_scene(
       auto object      = add_object(scene);
       object->shape    = add_shape(scene);
       object->material = get_material(materials[material_idx]);
-      if (!oshape.name.empty()) {
-        object->name        = make_safe_name("object", oshape.name, ".json",
-            materials.size() > 1 ? material_idx + 1 : 0);
-        object->shape->name = make_safe_name("shape", oshape.name, ".ply",
-            materials.size() > 1 ? material_idx + 1 : 0);
-      }
+      // if (!oshape.name.empty()) {
+      //   object->name        = make_safe_name("object", oshape.name, ".json",
+      //       materials.size() > 1 ? material_idx + 1 : 0);
+      //   object->shape->name = make_safe_name("shape", oshape.name, ".ply",
+      //       materials.size() > 1 ? material_idx + 1 : 0);
+      // }
       auto has_quads_ = has_quads(oshape);
       if (!oshape.faces.empty() && !has_quads_) {
         get_triangles(obj, oshape, material_idx, object->shape->triangles,
@@ -1571,10 +1571,10 @@ static void load_obj_scene(
       }
       if (!oshape.instances.empty()) {
         object->instance = add_instance(scene);
-        if (!oshape.name.empty()) {
-          object->instance->name = make_safe_name("object", oshape.name,
-              ".json", materials.size() > 1 ? material_idx + 1 : 0);
-        }
+        // if (!oshape.name.empty()) {
+        //   object->instance->name = make_safe_name("object", oshape.name,
+        //       ".json", materials.size() > 1 ? material_idx + 1 : 0);
+        // }
         object->instance->frames = oshape.instances;
       }
     }
@@ -1583,7 +1583,7 @@ static void load_obj_scene(
   // convert environments
   for (auto& oenvironment : obj.environments) {
     auto environment      = add_environment(scene);
-    environment->name     = make_safe_name("environment", oenvironment.name);
+    // environment->name     = make_safe_name("environment", oenvironment.name);
     environment->frame    = oenvironment.frame;
     environment->emission = oenvironment.emission;
     environment->emission_tex = get_texture(oenvironment.emission_map);
