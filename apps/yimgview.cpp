@@ -295,8 +295,7 @@ void draw_glwidgets(
   }
 }
 
-void draw(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -349,7 +348,7 @@ void run_app(int argc, const char* argv[]) {
 
   // window
   auto win_ = make_unique<opengl_window>();
-  auto win = win_.get();
+  auto win  = win_.get();
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks

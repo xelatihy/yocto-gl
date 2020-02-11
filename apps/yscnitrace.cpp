@@ -457,8 +457,7 @@ bool draw_glwidgets_subdiv(opengl_window* win, app_state* app, int id) {
   return edited;
 }
 
-bool draw_glwidgets_environment(
-    opengl_window* win, app_state* app, int id) {
+bool draw_glwidgets_environment(opengl_window* win, app_state* app, int id) {
   auto ioenvironment = app->ioscene->environments[id];
   auto edited        = 0;
   edited += draw_gltextinput(win, "name", ioenvironment->name);
@@ -744,8 +743,7 @@ void draw_glwidgets(
   }
 }
 
-void draw(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -815,7 +813,7 @@ void run_app(int argc, const char* argv[]) {
 
   // window
   auto win_ = make_unique<opengl_window>();
-  auto win = win_.get();
+  auto win  = win_.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
@@ -836,8 +834,8 @@ void run_app(int argc, const char* argv[]) {
       win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](opengl_window* win,
-                                   const opengl_input&     input) {
+  set_uiupdate_glcallback(win, [apps](opengl_window*   win,
+                                   const opengl_input& input) {
     auto scene_ok = !apps->states.empty() && apps->selected >= 0;
     if (!scene_ok) return;
 

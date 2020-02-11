@@ -57,8 +57,7 @@ void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
   update_glpoints(app, positions);
 }
 
-void my_draw_glwidgets(
-    my_data& data, app_state* app, opengl_window* win) {
+void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
   if (draw_glbutton(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(

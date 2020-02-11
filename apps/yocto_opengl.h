@@ -414,25 +414,23 @@ namespace yocto {
 bool begin_glheader(opengl_window* win, const char* title);
 void end_glheader(opengl_window* win);
 
-void draw_gllabel(
-    opengl_window* win, const char* lbl, const string& text);
+void draw_gllabel(opengl_window* win, const char* lbl, const string& text);
 
 void draw_glseparator(opengl_window* win);
 void continue_glline(opengl_window* win);
 
-bool draw_glbutton(
-    opengl_window* win, const char* lbl, bool enabled = true);
+bool draw_glbutton(opengl_window* win, const char* lbl, bool enabled = true);
 
 bool draw_gltextinput(opengl_window* win, const char* lbl, string& value);
 
-bool draw_glslider(opengl_window* win, const char* lbl, float& value,
-    float min, float max);
-bool draw_glslider(opengl_window* win, const char* lbl, vec2f& value,
-    float min, float max);
-bool draw_glslider(opengl_window* win, const char* lbl, vec3f& value,
-    float min, float max);
-bool draw_glslider(opengl_window* win, const char* lbl, vec4f& value,
-    float min, float max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, float& value, float min, float max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec2f& value, float min, float max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec3f& value, float min, float max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec4f& value, float min, float max);
 
 bool draw_glslider(
     opengl_window* win, const char* lbl, int& value, int min, int max);
@@ -466,18 +464,15 @@ bool draw_glcheckbox(opengl_window* win, const char* lbl, bool& value);
 bool draw_glcoloredit(opengl_window* win, const char* lbl, vec3f& value);
 bool draw_glcoloredit(opengl_window* win, const char* lbl, vec4f& value);
 
-bool draw_glhdrcoloredit(
-    opengl_window* win, const char* lbl, vec3f& value);
-bool draw_glhdrcoloredit(
-    opengl_window* win, const char* lbl, vec4f& value);
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec3f& value);
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec4f& value);
 
 bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
     const vector<string>& labels);
 bool draw_glcombobox(opengl_window* win, const char* lbl, string& value,
     const vector<string>& labels);
-bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
-    int num, const std::function<const char*(int)>& labels,
-    bool include_null = false);
+bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx, int num,
+    const std::function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
@@ -494,8 +489,8 @@ inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(opengl_window* win, const char* lbl,
-    T*& value, const vector<T*>& vals, bool include_null = false) {
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, T*& value,
+    const vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;

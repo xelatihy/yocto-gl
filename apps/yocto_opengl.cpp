@@ -1260,8 +1260,8 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 namespace yocto {
 
 static void draw_glwindow(opengl_window* win) {
-  glClearColor(
-      win->background.x, win->background.y, win->background.z, win->background.w);
+  glClearColor(win->background.x, win->background.y, win->background.z,
+      win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win->draw_cb) win->draw_cb(win, win->input);
   if (win->widgets_cb) {
@@ -1309,7 +1309,7 @@ void init_glwindow(opengl_window* win, const vec2i& size, const string& title,
 
   // create window
   win->title = title;
-  win->win   = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
   if (!win->win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win->win);
   glfwSwapInterval(1);  // Enable vsync
@@ -1348,25 +1348,26 @@ void init_glwindow(opengl_window* win, const vec2i& size, const string& title,
         auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
-  glfwSetWindowSizeCallback(win->win, [](GLFWwindow* glfw, int width,
-                                         int height) {
-    auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
-    glfwGetWindowSize(
-        win->win, &win->input.window_size.x, &win->input.window_size.y);
-    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-        &win->input.framebuffer_viewport.w);
-    win->input.framebuffer_viewport.x = 0;
-    win->input.framebuffer_viewport.y = 0;
-    if (win->widgets_width) {
-      auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width *
-                          (float)win->input.framebuffer_viewport.z / win_size.x);
-      win->input.framebuffer_viewport.z -= offset;
-      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
-    }
-  });
+  glfwSetWindowSizeCallback(
+      win->win, [](GLFWwindow* glfw, int width, int height) {
+        auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
+        glfwGetWindowSize(
+            win->win, &win->input.window_size.x, &win->input.window_size.y);
+        if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
+        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
+            &win->input.framebuffer_viewport.w);
+        win->input.framebuffer_viewport.x = 0;
+        win->input.framebuffer_viewport.y = 0;
+        if (win->widgets_width) {
+          auto win_size = zero2i;
+          glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+          auto offset = (int)(win->widgets_width *
+                              (float)win->input.framebuffer_viewport.z /
+                              win_size.x);
+          win->input.framebuffer_viewport.z -= offset;
+          if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+        }
+      });
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1406,9 +1407,9 @@ void run_ui(opengl_window* win) {
     if (win->widgets_width && win->widgets_left)
       win->input.mouse_pos.x -= win->widgets_width;
     win->input.mouse_left = glfwGetMouseButton(
-                               win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    win->input.mouse_right = glfwGetMouseButton(
-                                win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+                                win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    win->input.mouse_right =
+        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
     win->input.modifier_alt =
         glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
         glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
@@ -1429,14 +1430,15 @@ void run_ui(opengl_window* win) {
       auto win_size = zero2i;
       glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
       auto offset = (int)(win->widgets_width *
-                          (float)win->input.framebuffer_viewport.z / win_size.x);
+                          (float)win->input.framebuffer_viewport.z /
+                          win_size.x);
       win->input.framebuffer_viewport.z -= offset;
       if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
     }
     if (win->widgets_width) {
-      auto io                  = &ImGui::GetIO();
+      auto io                   = &ImGui::GetIO();
       win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
-                                 io->WantCaptureKeyboard;
+                                  io->WantCaptureKeyboard;
     }
 
     // time
@@ -1550,7 +1552,7 @@ bool draw_glmessage(
 
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
-void push_glmessage(opengl_window* win, const string& message) {
+void               push_glmessage(opengl_window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1783,8 +1785,7 @@ bool draw_glbutton(opengl_window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_gllabel(
-    opengl_window* win, const char* lbl, const string& label) {
+void draw_gllabel(opengl_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
@@ -1792,8 +1793,7 @@ void draw_glseparator(opengl_window* win) { ImGui::Separator(); }
 
 void continue_glline(opengl_window* win) { ImGui::SameLine(); }
 
-bool draw_gltextinput(
-    opengl_window* win, const char* lbl, string& value) {
+bool draw_gltextinput(opengl_window* win, const char* lbl, string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -1803,20 +1803,20 @@ bool draw_gltextinput(
   return edited;
 }
 
-bool draw_glslider(opengl_window* win, const char* lbl, float& value,
-    float min, float max) {
+bool draw_glslider(
+    opengl_window* win, const char* lbl, float& value, float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
-bool draw_glslider(opengl_window* win, const char* lbl, vec2f& value,
-    float min, float max) {
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec2f& value, float min, float max) {
   return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
-bool draw_glslider(opengl_window* win, const char* lbl, vec3f& value,
-    float min, float max) {
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec3f& value, float min, float max) {
   return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
-bool draw_glslider(opengl_window* win, const char* lbl, vec4f& value,
-    float min, float max) {
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
@@ -1885,8 +1885,7 @@ bool draw_glcoloredit(opengl_window* win, const char* lbl, vec4f& value) {
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
-bool draw_glhdrcoloredit(
-    opengl_window* win, const char* lbl, vec3f& value) {
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -1904,8 +1903,7 @@ bool draw_glhdrcoloredit(
     return false;
   }
 }
-bool draw_glhdrcoloredit(
-    opengl_window* win, const char* lbl, vec4f& value) {
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -1954,8 +1952,8 @@ bool draw_glcombobox(opengl_window* win, const char* lbl, string& value,
   return value != old_val;
 }
 
-bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
-    int num, const std::function<const char*(int)>& labels, bool include_null) {
+bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx, int num,
+    const std::function<const char*(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
   auto old_idx = idx;

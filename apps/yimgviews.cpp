@@ -109,7 +109,7 @@ void run_app(int argc, const char* argv[]) {
 
   // create window
   auto win_ = make_unique<opengl_window>();
-  auto win = win_.get();
+  auto win  = win_.get();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
