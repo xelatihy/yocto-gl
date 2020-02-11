@@ -195,7 +195,7 @@ struct opengl_scene {
   opengl_scene* operator=(const opengl_scene*) = delete;
   ~opengl_scene();
 
-  vector<opengl_camera>  _cameras  = {};
+  vector<opengl_camera*>  _cameras  = {};
   vector<opengl_shape>   _shapes   = {};
   vector<opengl_texture> _textures = {};
   vector<opengl_light>   _lights   = {};
@@ -230,12 +230,11 @@ void init_glscene(opengl_scene* scene);
 bool is_initialized(opengl_scene* scene);
 
 // add camera
-int  add_camera(opengl_scene* scene);
-void set_camera_frame(opengl_scene* scene, int idx, const frame3f& frame);
+opengl_camera*  add_camera(opengl_scene* scene);
+void set_camera_frame(opengl_camera* camera, const frame3f& frame);
 void set_camera_lens(
-    opengl_scene* scene, int idx, float lens, float aspect, float film);
-void set_camera_nearfar(opengl_scene* scene, int idx, float near, float far);
-void clear_cameras(opengl_scene* scene);
+    opengl_camera* camera, float lens, float aspect, float film);
+void set_camera_nearfar(opengl_camera* camera, float near, float far);
 
 // add texture
 int  add_texture(opengl_scene* scene);

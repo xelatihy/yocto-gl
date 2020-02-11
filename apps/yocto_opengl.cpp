@@ -848,27 +848,22 @@ bool is_initialized(const opengl_scene* glscene) {
 }
 
 // add camera
-int add_camera(opengl_scene* scene) {
-  scene->_cameras.emplace_back();
-  return (int)scene->_cameras.size() - 1;
+opengl_camera* add_camera(opengl_scene* scene) {
+  return scene->_cameras.emplace_back(new opengl_camera{});
 }
-void set_camera_frame(opengl_scene* scene, int idx, const frame3f& frame) {
-  auto& camera = scene->_cameras[idx];
-  camera.frame = frame;
+void set_camera_frame(opengl_camera* camera, const frame3f& frame) {
+  camera->frame = frame;
 }
 void set_camera_lens(
-    opengl_scene* scene, int idx, float lens, float aspect, float film) {
-  auto& camera  = scene->_cameras[idx];
-  camera.lens   = lens;
-  camera.aspect = aspect;
-  camera.film   = film;
+    opengl_camera* camera, float lens, float aspect, float film) {
+  camera->lens   = lens;
+  camera->aspect = aspect;
+  camera->film   = film;
 }
-void set_camera_nearfar(opengl_scene* scene, int idx, float near, float far) {
-  auto& camera = scene->_cameras[idx];
-  camera.near  = near;
-  camera.far   = far;
+void set_camera_nearfar(opengl_camera* camera, float near, float far) {
+  camera->near  = near;
+  camera->far   = far;
 }
-void clear_cameras(opengl_scene* scene) { scene->_cameras.clear(); }
 
 // add texture
 int add_texture(opengl_scene* scene) {
@@ -1345,9 +1340,9 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
   auto  camera_aspect = (float)viewport.z / (float)viewport.w;
   auto  camera_yfov =
       camera_aspect >= 0
-          ? (2 * atan(glcamera.film / (camera_aspect * 2 * glcamera.lens)))
-          : (2 * atan(glcamera.film / (2 * glcamera.lens)));
-  auto camera_view = mat4f(inverse(glcamera.frame));
+          ? (2 * atan(glcamera->film / (camera_aspect * 2 * glcamera->lens)))
+          : (2 * atan(glcamera->film / (2 * glcamera->lens)));
+  auto camera_view = mat4f(inverse(glcamera->frame));
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
@@ -1359,7 +1354,7 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 
   glUseProgram(glscene->program_id);
   glUniform3f(glGetUniformLocation(glscene->program_id, "cam_pos"),
-      glcamera.frame.o.x, glcamera.frame.o.y, glcamera.frame.o.z);
+      glcamera->frame.o.x, glcamera->frame.o.y, glcamera->frame.o.z);
   glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "cam_xform_inv"),
       1, false, &camera_view.x.x);
   glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "cam_proj"), 1,

@@ -31,7 +31,7 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  int camera_id = 0;
+  opengl_camera* camera_id = nullptr;
   int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
 };
 
@@ -168,10 +168,10 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   app->scene = make_shared<opengl_scene>();
   init_glscene(app->scene.get());
   app->camera_id = add_camera(app->scene.get());
-  set_camera_frame(app->scene.get(), app->camera_id, app->camera.frame);
-  set_camera_lens(app->scene.get(), app->camera_id, app->camera.lens,
+  set_camera_frame(app->camera_id, app->camera.frame);
+  set_camera_lens(app->camera_id, app->camera.lens,
       app->camera.aspect, app->camera.film);
-  set_camera_nearfar(app->scene.get(), app->camera_id, 0.001, 10000);
+  set_camera_nearfar(app->camera_id, 0.001, 10000);
 
   // The model.
   app->glshape_id = add_shape(app->scene.get());
@@ -295,8 +295,8 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_camera_frame(app->scene.get(), app->camera_id, app->camera.frame);
-    set_camera_lens(app->scene.get(), app->camera_id, app->camera.lens,
+    set_camera_frame(app->camera_id, app->camera.frame);
+    set_camera_lens(app->camera_id, app->camera.lens,
         app->camera.aspect, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
@@ -319,8 +319,8 @@ void yimshproc(const string&                         input_filename,
           pan.x    = -pan.x;
           update_turntable(
               app->camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_camera_frame(app->scene.get(), app->camera_id, app->camera.frame);
-          set_camera_lens(app->scene.get(), app->camera_id, app->camera.lens,
+          set_camera_frame(app->camera_id, app->camera.frame);
+          set_camera_lens(app->camera_id, app->camera.lens,
               app->camera.aspect, app->camera.film);
         }
       });
