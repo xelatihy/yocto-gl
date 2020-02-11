@@ -3098,6 +3098,10 @@ trace_scene::~trace_scene() {
   for (auto environment : environments) delete environment;
   for (auto shape : shapes) delete shape;
   for (auto texture : textures) delete texture;
+  for (auto object : objects) delete object;
+  for (auto instance : instances) delete instance;
+  for (auto material : materials) delete material;
+  for (auto light : lights) delete light;
 }
 
 // Add cameras
