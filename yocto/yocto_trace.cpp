@@ -2075,10 +2075,9 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_instance_bvh(const trace_scene* scene, int shape,
+static bool intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
-  auto object = scene->objects[shape];
   auto frame   = object->instance->frames[instance] * object->frame;
   auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
   return intersect_shape_bvh(object->shape, inv_ray, element, uv, distance, find_any);
@@ -2092,14 +2091,12 @@ trace_intersection intersect_scene_bvh(const trace_scene* scene,
       intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_scene* scene, int object,
+trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection      = trace_intersection{};
-  intersection.hit       = intersect_instance_bvh(scene, object, instance, ray,
+  intersection.hit       = intersect_instance_bvh(object, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
-  intersection.object     = object;
-  intersection.instance = instance;
   return intersection;
 }
 
@@ -2498,18 +2495,18 @@ static float sample_scattering_pdf(const volume_point& point) {
 static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform(scene->lights.size(), rl);
-  auto& light    = scene->lights[light_id];
-  if (light.shape >= 0) {
-    auto  object     = scene->objects[light.shape];
+  auto light    = scene->lights[light_id];
+  if (light->object) {
+    auto  object     = light->object;
     auto shape = object->shape;
-    auto  frame     = object->instance->frames[light.instance_] * object->frame;
+    auto  frame     = object->instance->frames[light->instance] * object->frame;
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(frame,
         eval_shape_elem(shape, shape->quadspos, shape->positions, element, uv));
     return normalize(lposition - position);
-  } else if (light.environment >= 0) {
-    auto environment = scene->environments[light.environment];
+  } else if (light->environment) {
+    auto environment = light->environment;
     if (environment->emission_tex) {
       auto emission_tex = environment->emission_tex;
       auto idx          = sample_discrete(environment->texels_cdf, rel);
@@ -2531,23 +2528,23 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
 static float sample_lights_pdf(
     const trace_scene* scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto& light : scene->lights) {
-    if (light.shape >= 0) {
+  for (auto light : scene->lights) {
+    if (light->object) {
       // check all intersection
       auto  lpdf          = 0.0f;
       auto  next_position = position;
-      auto  object         = scene->objects[light.shape];
-      auto  frame         = object->instance->frames[light.instance_] * object->frame;
+      auto  object         = light->object;
+      auto  frame         = object->instance->frames[light->instance] * object->frame;
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_instance_bvh(
-            scene, light.shape, light.instance_, {next_position, direction});
-        if (!isec.hit) break;
+        auto intersection = intersect_instance_bvh(
+            light->object, light->instance, {next_position, direction});
+        if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
             frame, eval_shape_elem(object->shape, object->shape->quadspos, object->shape->positions,
-                       isec.element, isec.uv));
+                       intersection.element, intersection.uv));
         auto lnormal = transform_normal(frame,
-            eval_element_normal(object->shape, isec.element), trace_non_rigid_frames);
+            eval_element_normal(object->shape, intersection.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = object->shape->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
@@ -2556,8 +2553,8 @@ static float sample_lights_pdf(
         next_position = lposition + direction * 1e-3f;
       }
       pdf += lpdf;
-    } else if (light.environment >= 0) {
-      auto environment = scene->environments[light.environment];
+    } else if (light->environment) {
+      auto environment = light->environment;
       if (environment->emission_tex) {
         auto& cdf          = environment->texels_cdf;
         auto  emission_tex = environment->emission_tex;
@@ -2952,9 +2949,9 @@ void init_state(
 
 // Init trace lights
 void init_lights(trace_scene* scene) {
+  for(auto light : scene->lights) delete light;
   scene->lights.clear();
-  for (auto idx = 0; idx < scene->objects.size(); idx++) {
-    auto object = scene->objects[idx];
+  for (auto object : scene->objects) {
     if (object->material->emission == zero3f) continue;
     auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
@@ -2978,14 +2975,13 @@ void init_lights(trace_scene* scene) {
       }
     }
     for (auto iidx = 0; iidx < object->instance->frames.size(); iidx++) {
-      auto& light       = scene->lights.emplace_back();
-      light.shape       = idx;
-      light.instance_   = iidx;
-      light.environment = -1;
+      auto light       = scene->lights.emplace_back(new trace_light{});
+      light->object       = object;
+      light->instance   = iidx;
+      light->environment = nullptr;
     }
   }
-  for (auto idx = 0; idx < scene->environments.size(); idx++) {
-    auto environment = scene->environments[idx];
+  for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
@@ -3001,10 +2997,10 @@ void init_lights(trace_scene* scene) {
         }
       }
     }
-    auto& light       = scene->lights.emplace_back();
-    light.shape       = -1;
-    light.instance_   = -1;
-    light.environment = idx;
+    auto light       = scene->lights.emplace_back(new trace_light{});
+    light->object       = nullptr;
+    light->instance   = -1;
+    light->environment = environment;
   }
 }
 

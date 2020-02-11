@@ -405,9 +405,9 @@ struct trace_environment {
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  int shape       = -1;
-  int instance_   = -1;
-  int environment = -1;
+  trace_object* object       = nullptr;
+  int instance   = -1;
+  trace_environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -427,7 +427,7 @@ struct trace_scene {
   vector<trace_environment*> environments = {};
 
   // computed properties
-  vector<trace_light> lights = {};
+  vector<trace_light*> lights = {};
   trace_bvh           bvh    = {};
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh       = {};
@@ -479,7 +479,7 @@ struct trace_intersection {
 // the shape element index and the element barycentric coordinates.
 trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene* scene, int object,
+trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
