@@ -130,22 +130,6 @@ static bool is_space(char c) {
 static void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
-static void trim_whitespace(string_view& str) {
-  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
-}
-static bool is_digit(char c) { return c >= '0' && c <= '9'; }
-static bool is_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-static bool is_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
 
 // Parse values from a string
 static void parse_value(string_view& str, string_view& value) {
