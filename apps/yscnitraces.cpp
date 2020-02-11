@@ -49,17 +49,18 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<trace_scene> scene      = nullptr;
-  bool                    add_skyenv = false;
+  sceneio_model* ioscene    = new sceneio_model{};
+  trace_scene*   scene      = new trace_scene{};
+  bool           add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  trace_state* state    = new trace_state{};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image        glimage  = {};
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // editing
@@ -74,6 +75,10 @@ struct app_state {
   ~app_state() {
     render_stop = true;
     if (render_future.valid()) render_future.get();
+    if (glimage) delete glimage;
+    if (scene) delete scene;
+    if (state) delete state;
+    if (ioscene) delete ioscene;
   }
 };
 
@@ -188,13 +193,13 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void reset_display(shared_ptr<app_state> app) {
+void reset_display(app_state* app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state.get(), app->scene.get(), app->params);
+  init_state(app->state, app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -202,7 +207,7 @@ void reset_display(shared_ptr<app_state> app) {
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene.get(), preview_prms);
+  auto preview         = trace_image(app->scene, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -220,8 +225,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(
-            app->state.get(), app->scene.get(), ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -230,7 +234,8 @@ void reset_display(shared_ptr<app_state> app) {
 
 void run_app(int argc, const char* argv[]) {
   // application
-  auto app = make_shared<app_state>();
+  auto app_ = make_unique<app_state>();
+  auto app  = app_.get();
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
@@ -257,28 +262,27 @@ void run_app(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, ioscene.get());
+  load_scene(app->filename, app->ioscene);
   print_elapsed(load_timer);
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app->scene         = make_shared<trace_scene>();
-  init_scene(app->scene.get(), ioscene.get());
+  init_scene(app->scene, app->ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
-  ioscene = nullptr;
+  delete app->ioscene;
+  app->ioscene = nullptr;
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene.get(), app->params);
+  init_bvh(app->scene, app->params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(app->scene.get());
+  init_lights(app->scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
@@ -288,19 +292,19 @@ void run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  app->state = make_shared<trace_state>();
-  init_state(app->state.get(), app->scene.get(), app->params);
+  init_state(app->state, app->scene, app->params);
   app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);
 
   // window
-  auto win = opengl_window{};
+  auto win_ = make_unique<opengl_window>();
+  auto win  = win_.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -313,7 +317,7 @@ void run_app(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;

@@ -34,7 +34,7 @@ using namespace yocto;
 
 #include <memory>
 #include <unordered_set>
-using std::make_shared;
+using std::make_unique;
 using std::unordered_set;
 
 bool mkdir(const string& dir) {
@@ -78,15 +78,16 @@ void run_app(int argc, const char** argv) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene      = make_shared<sceneio_model>();
+  auto scene_     = make_unique<sceneio_model>();
+  auto scene      = scene_.get();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, scene.get());
+  load_scene(filename, scene);
   print_elapsed(load_timer);
 
   // validate scene
   if (validate) {
     auto validate_timer = print_timed("validating scene");
-    auto errors         = scene_validation(scene.get());
+    auto errors         = scene_validation(scene);
     print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
@@ -94,13 +95,13 @@ void run_app(int argc, const char** argv) {
   // print info
   if (info) {
     print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene.get())) print_info(stat);
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed
   if (get_extension(output) != ".yaml" && get_extension(output) != ".json") {
     for (auto& iosubdiv : scene->subdivs) {
-      tesselate_subdiv(scene.get(), iosubdiv);
+      tesselate_subdiv(scene, iosubdiv);
       iosubdiv = {};
     }
   }
@@ -131,7 +132,7 @@ void run_app(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  save_scene(output, scene.get(), obj_instances);
+  save_scene(output, scene, obj_instances);
   print_elapsed(save_timer);
 }
 

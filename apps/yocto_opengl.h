@@ -54,8 +54,8 @@ using std::unique_ptr;
 // OpenGL image data
 struct opengl_image {
   opengl_image() {}
-  opengl_image(const opengl_image&) = delete;
-  opengl_image& operator=(const opengl_image&) = delete;
+  opengl_image(const opengl_image*) = delete;
+  opengl_image* operator=(const opengl_image*) = delete;
 
   uint  program_id     = 0;
   uint  vertex_id      = 0;
@@ -72,13 +72,13 @@ struct opengl_image {
 };
 
 // create image drawing program
-void init_glimage(opengl_image& glimage);
-bool is_initialized(const opengl_image& glimage);
+void init_glimage(opengl_image* glimage);
+bool is_initialized(const opengl_image* glimage);
 
 // update image data
-void set_glimage(opengl_image& glimage, const image<vec4f>& img,
+void set_glimage(opengl_image* glimage, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(opengl_image& glimage, const image<vec4b>& img,
+void set_glimage(opengl_image* glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -94,7 +94,7 @@ struct draw_glimage_params {
 };
 
 // draw image
-void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
+void draw_glimage(opengl_image* glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 
@@ -341,29 +341,29 @@ struct opengl_input {
 
 // Draw callback called every frame and when resizing
 using draw_glcallback =
-    std::function<void(const opengl_window&, const opengl_input& input)>;
+    std::function<void(opengl_window*, const opengl_input& input)>;
 // Draw callback for drawing widgets
 using widgets_glcallback =
-    std::function<void(const opengl_window&, const opengl_input& input)>;
+    std::function<void(opengl_window*, const opengl_input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback = std::function<void(
-    const opengl_window&, const vector<string>&, const opengl_input& input)>;
+    opengl_window*, const vector<string>&, const opengl_input& input)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
 using key_glcallback = std::function<void(
-    const opengl_window&, int key, bool pressed, const opengl_input& input)>;
+    opengl_window*, int key, bool pressed, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_glcallback = std::function<void(
-    const opengl_window&, bool left, bool pressed, const opengl_input& input)>;
+    opengl_window*, bool left, bool pressed, const opengl_input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_glcallback = std::function<void(
-    const opengl_window&, float amount, const opengl_input& input)>;
+    opengl_window*, float amount, const opengl_input& input)>;
 // Update functions called every frame
 using uiupdate_glcallback =
-    std::function<void(const opengl_window&, const opengl_input& input)>;
+    std::function<void(opengl_window*, const opengl_input& input)>;
 // Update functions called every frame
 using update_glcallback =
-    std::function<void(const opengl_window&, const opengl_input& input)>;
+    std::function<void(opengl_window*, const opengl_input& input)>;
 
 // OpenGL window wrapper
 struct opengl_window {
@@ -384,25 +384,25 @@ struct opengl_window {
 };
 
 // Windows initialization
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
+void init_glwindow(opengl_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
-void clear_glwindow(opengl_window& win);
+void clear_glwindow(opengl_window* win);
 
 // Set callbacks
-void set_draw_glcallback(opengl_window& win, draw_glcallback draw_cb);
-void set_widgets_glcallback(opengl_window& win, widgets_glcallback widgets_cb);
-void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
-void set_key_glcallback(opengl_window& win, key_glcallback cb);
-void set_click_glcallback(opengl_window& win, click_glcallback cb);
-void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
-void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb);
-void set_update_glcallback(opengl_window& win, update_glcallback cb);
+void set_draw_glcallback(opengl_window* win, draw_glcallback draw_cb);
+void set_widgets_glcallback(opengl_window* win, widgets_glcallback widgets_cb);
+void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb);
+void set_key_glcallback(opengl_window* win, key_glcallback cb);
+void set_click_glcallback(opengl_window* win, click_glcallback cb);
+void set_scroll_glcallback(opengl_window* win, scroll_glcallback cb);
+void set_uiupdate_glcallback(opengl_window* win, uiupdate_glcallback cb);
+void set_update_glcallback(opengl_window* win, update_glcallback cb);
 
 // Run loop
-void run_ui(opengl_window& win);
-void set_close(const opengl_window& win, bool close);
+void run_ui(opengl_window* win);
+void set_close(opengl_window* win, bool close);
 
 }  // namespace yocto
 
@@ -411,91 +411,86 @@ void set_close(const opengl_window& win, bool close);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool begin_glheader(const opengl_window& win, const char* title);
-void end_glheader(const opengl_window& win);
+bool begin_glheader(opengl_window* win, const char* title);
+void end_glheader(opengl_window* win);
 
-void draw_gllabel(
-    const opengl_window& win, const char* lbl, const string& text);
+void draw_gllabel(opengl_window* win, const char* lbl, const string& text);
 
-void draw_glseparator(const opengl_window& win);
-void continue_glline(const opengl_window& win);
+void draw_glseparator(opengl_window* win);
+void continue_glline(opengl_window* win);
 
-bool draw_glbutton(
-    const opengl_window& win, const char* lbl, bool enabled = true);
+bool draw_glbutton(opengl_window* win, const char* lbl, bool enabled = true);
 
-bool draw_gltextinput(const opengl_window& win, const char* lbl, string& value);
-
-bool draw_glslider(const opengl_window& win, const char* lbl, float& value,
-    float min, float max);
-bool draw_glslider(const opengl_window& win, const char* lbl, vec2f& value,
-    float min, float max);
-bool draw_glslider(const opengl_window& win, const char* lbl, vec3f& value,
-    float min, float max);
-bool draw_glslider(const opengl_window& win, const char* lbl, vec4f& value,
-    float min, float max);
+bool draw_gltextinput(opengl_window* win, const char* lbl, string& value);
 
 bool draw_glslider(
-    const opengl_window& win, const char* lbl, int& value, int min, int max);
+    opengl_window* win, const char* lbl, float& value, float min, float max);
 bool draw_glslider(
-    const opengl_window& win, const char* lbl, vec2i& value, int min, int max);
+    opengl_window* win, const char* lbl, vec2f& value, float min, float max);
 bool draw_glslider(
-    const opengl_window& win, const char* lbl, vec3i& value, int min, int max);
+    opengl_window* win, const char* lbl, vec3f& value, float min, float max);
 bool draw_glslider(
-    const opengl_window& win, const char* lbl, vec4i& value, int min, int max);
+    opengl_window* win, const char* lbl, vec4f& value, float min, float max);
 
-bool draw_gldragger(const opengl_window& win, const char* lbl, float& value,
+bool draw_glslider(
+    opengl_window* win, const char* lbl, int& value, int min, int max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_glslider(
+    opengl_window* win, const char* lbl, vec4i& value, int min, int max);
+
+bool draw_gldragger(opengl_window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec2f& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec2f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec3f& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec3f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec4f& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_gldragger(const opengl_window& win, const char* lbl, int& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, int& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec2i& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec2i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec3i& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec3i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window& win, const char* lbl, vec4i& value,
+bool draw_gldragger(opengl_window* win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
-bool draw_glcheckbox(const opengl_window& win, const char* lbl, bool& value);
+bool draw_glcheckbox(opengl_window* win, const char* lbl, bool& value);
 
-bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec3f& value);
-bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec4f& value);
+bool draw_glcoloredit(opengl_window* win, const char* lbl, vec3f& value);
+bool draw_glcoloredit(opengl_window* win, const char* lbl, vec4f& value);
 
-bool draw_glhdrcoloredit(
-    const opengl_window& win, const char* lbl, vec3f& value);
-bool draw_glhdrcoloredit(
-    const opengl_window& win, const char* lbl, vec4f& value);
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec3f& value);
+bool draw_glhdrcoloredit(opengl_window* win, const char* lbl, vec4f& value);
 
-bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
+bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
     const vector<string>& labels);
-bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
+bool draw_glcombobox(opengl_window* win, const char* lbl, string& value,
     const vector<string>& labels);
-bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
-    int num, const std::function<const char*(int)>& labels,
-    bool include_null = false);
+bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx, int num,
+    const std::function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
-inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
     const vector<T*>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(const opengl_window& win, const char* lbl,
-    T*& value, const vector<T*>& vals, bool include_null = false) {
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, T*& value,
+    const vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
@@ -509,27 +504,27 @@ inline bool draw_glcombobox(const opengl_window& win, const char* lbl,
 }
 
 void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const vector<float>& values);
+    opengl_window* win, const char* lbl, const vector<float>& values);
 void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const vector<vec2f>& values);
+    opengl_window* win, const char* lbl, const vector<vec2f>& values);
 void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const vector<vec3f>& values);
+    opengl_window* win, const char* lbl, const vector<vec3f>& values);
 void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const vector<vec4f>& values);
+    opengl_window* win, const char* lbl, const vector<vec4f>& values);
 
-bool draw_glmessages(const opengl_window& win);
-void push_glmessage(const opengl_window& win, const string& message);
-bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
+bool draw_glmessages(opengl_window* win);
+void push_glmessage(opengl_window* win, const string& message);
+bool draw_glfiledialog(opengl_window* win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter);
-bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
+bool draw_glfiledialog_button(opengl_window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);
 
-void log_glinfo(const opengl_window& win, const string& msg);
-void log_glerror(const opengl_window& win, const string& msg);
-void clear_gllogs(const opengl_window& win);
-void draw_gllog(const opengl_window& win);
+void log_glinfo(opengl_window* win, const string& msg);
+void log_glerror(opengl_window* win, const string& msg);
+void clear_gllogs(opengl_window* win);
+void draw_gllog(opengl_window* win);
 
 }  // namespace yocto
 

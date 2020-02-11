@@ -50,8 +50,13 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage  = {};
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
+
+  // cleanup
+  ~app_state() {
+    if (glimage) delete glimage;
+  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -73,9 +78,9 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void update_display(shared_ptr<app_state> app) {
+void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
-  parallel_for(app->source.size(), [&app](const vec2i& ij) {
+  parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
       app->display[ij] = colorgrade(app->source[ij], true, app->params);
     } else {
@@ -86,7 +91,8 @@ void update_display(shared_ptr<app_state> app) {
 
 void run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app       = make_shared<app_state>();
+  auto app_      = make_unique<app_state>();
+  auto app       = app_.get();
   auto filenames = vector<string>{};
 
   // command line options
@@ -102,12 +108,13 @@ void run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = opengl_window{};
+  auto win_ = make_unique<opengl_window>();
+  auto win  = win_.get();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!is_initialized(app->glimage)) {
@@ -119,7 +126,7 @@ void run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

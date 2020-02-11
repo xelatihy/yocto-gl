@@ -12,7 +12,7 @@ struct my_data {
   vector<int> vertex_selection = {};
 };
 
-void my_init(my_data& data, shared_ptr<app_state> app) {
+void my_init(my_data& data, app_state* app) {
   data.face_adjacency   = face_adjacencies(app->shape.triangles);
   data.vertex_adjacency = vertex_adjacencies(
       app->shape.triangles, data.face_adjacency);
@@ -20,8 +20,7 @@ void my_init(my_data& data, shared_ptr<app_state> app) {
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
-void my_keycallback(
-    my_data& data, shared_ptr<app_state> app, int key, bool pressing) {
+void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
@@ -46,8 +45,8 @@ void my_keycallback(
   }
 }
 
-void my_click_callback(my_data& data, shared_ptr<app_state> app, int face,
-    const vec2f& uv, int vertex, float distance) {
+void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
+    int vertex, float distance) {
   printf("clicked vertex: %d\n", vertex);
   data.vertex_selection.push_back(vertex);
 
@@ -58,8 +57,7 @@ void my_click_callback(my_data& data, shared_ptr<app_state> app, int face,
   update_glpoints(app, positions);
 }
 
-void my_draw_glwidgets(
-    my_data& data, shared_ptr<app_state> app, const opengl_window& win) {
+void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
   if (draw_glbutton(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
@@ -142,21 +140,18 @@ void run_app(int argc, const char* argv[]) {
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc.
-  auto init = [&data](shared_ptr<app_state> app) {
+  auto init = [&data](app_state* app) {
     auto timer = print_timed("init my data");
     my_init(data, app);
     print_elapsed(timer);
   };
-  auto key_callback = [&data](
-                          shared_ptr<app_state> app, int key, bool pressing) {
+  auto key_callback = [&data](app_state* app, int key, bool pressing) {
     my_keycallback(data, app, key, pressing);
   };
-  auto click_callback = [&data](shared_ptr<app_state> a, int f, vec2f uv, int v,
-                            float d) {
+  auto click_callback = [&data](app_state* a, int f, vec2f uv, int v, float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](shared_ptr<app_state> app,
-                            const opengl_window&      win) {
+  auto draw_glwidgets = [&data](app_state* app, opengl_window* win) {
     my_draw_glwidgets(data, app, win);
   };
 
