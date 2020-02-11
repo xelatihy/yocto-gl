@@ -195,10 +195,10 @@ struct opengl_scene {
   opengl_scene* operator=(const opengl_scene*) = delete;
   ~opengl_scene();
 
-  vector<opengl_camera*>  _cameras  = {};
-  vector<opengl_shape*>   _shapes   = {};
-  vector<opengl_texture*> _textures = {};
-  vector<opengl_light*>   _lights   = {};
+  vector<opengl_camera*>  cameras  = {};
+  vector<opengl_shape*>   shapes   = {};
+  vector<opengl_texture*> textures = {};
+  vector<opengl_light*>   lights   = {};
 
   // OpenGL state
   uint program_id  = 0;

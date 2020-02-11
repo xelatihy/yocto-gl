@@ -829,10 +829,10 @@ opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
 }
 
 opengl_scene::~opengl_scene() {
-  for (auto camera : _cameras) delete camera;
-  for (auto texture : _textures) delete texture;
-  for (auto shape : _shapes) delete shape;
-  for (auto light : _lights) delete light;
+  for (auto camera : cameras) delete camera;
+  for (auto texture : textures) delete texture;
+  for (auto shape : shapes) delete shape;
+  for (auto light : lights) delete light;
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
@@ -853,7 +853,7 @@ bool is_initialized(const opengl_scene* glscene) {
 
 // add camera
 opengl_camera* add_camera(opengl_scene* scene) {
-  return scene->_cameras.emplace_back(new opengl_camera{});
+  return scene->cameras.emplace_back(new opengl_camera{});
 }
 void set_camera_frame(opengl_camera* camera, const frame3f& frame) {
   camera->frame = frame;
@@ -871,7 +871,7 @@ void set_camera_nearfar(opengl_camera* camera, float near, float far) {
 
 // add texture
 opengl_texture* add_texture(opengl_scene* scene) {
-  return scene->_textures.emplace_back(new opengl_texture{});
+  return scene->textures.emplace_back(new opengl_texture{});
 }
 
 void set_texture(
@@ -936,7 +936,7 @@ void set_texture(
 
 // add shape
 opengl_shape* add_shape(opengl_scene* scene) {
-  return scene->_shapes.emplace_back(new opengl_shape{});
+  return scene->shapes.emplace_back(new opengl_shape{});
 }
 
 static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
@@ -1072,7 +1072,7 @@ void set_shape_gltftextures(opengl_shape* shape, bool gltf_textures) {
 
 // add light
 opengl_light* add_light(opengl_scene* scene) {
-  return scene->_lights.emplace_back(new opengl_light{});
+  return scene->lights.emplace_back(new opengl_light{});
 }
 void set_light(opengl_light* light, const vec3f& position,
     const vec3f& emission, bool directional) {
@@ -1081,10 +1081,10 @@ void set_light(opengl_light* light, const vec3f& position,
   light->type     = directional ? 1 : 0;
 }
 void clear_lights(opengl_scene* scene) {
-  for (auto light : scene->_lights) delete light;
-  scene->_lights.clear();
+  for (auto light : scene->lights) delete light;
+  scene->lights.clear();
 }
-bool has_max_lights(opengl_scene* scene) { return scene->_lights.size() >= 16; }
+bool has_max_lights(opengl_scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
 void draw_glshape(opengl_scene* glscene, opengl_shape* shape,
@@ -1268,7 +1268,7 @@ void draw_glshape(opengl_scene* glscene, opengl_shape* shape,
 // Display a scene
 void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
     const draw_glscene_params& params) {
-  auto& glcamera      = glscene->_cameras.at(params.camera);
+  auto& glcamera      = glscene->cameras.at(params.camera);
   auto  camera_aspect = (float)viewport.z / (float)viewport.w;
   auto  camera_yfov =
       camera_aspect >= 0
@@ -1300,25 +1300,25 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
   if (!params.eyelight) {
     glUniform3f(glGetUniformLocation(glscene->program_id, "lamb"), 0, 0, 0);
     glUniform1i(glGetUniformLocation(glscene->program_id, "lnum"),
-        (int)glscene->_lights.size());
-    for (auto i = 0; i < glscene->_lights.size(); i++) {
+        (int)glscene->lights.size());
+    for (auto i = 0; i < glscene->lights.size(); i++) {
       auto is = std::to_string(i);
       glUniform3f(glGetUniformLocation(
                       glscene->program_id, ("lpos[" + is + "]").c_str()),
-          glscene->_lights[i]->position.x, glscene->_lights[i]->position.y,
-          glscene->_lights[i]->position.z);
+          glscene->lights[i]->position.x, glscene->lights[i]->position.y,
+          glscene->lights[i]->position.z);
       glUniform3f(glGetUniformLocation(
                       glscene->program_id, ("lke[" + is + "]").c_str()),
-          glscene->_lights[i]->emission.x, glscene->_lights[i]->emission.y,
-          glscene->_lights[i]->emission.z);
+          glscene->lights[i]->emission.x, glscene->lights[i]->emission.y,
+          glscene->lights[i]->emission.z);
       glUniform1i(glGetUniformLocation(
                       glscene->program_id, ("ltype[" + is + "]").c_str()),
-          (int)glscene->_lights[i]->type);
+          (int)glscene->lights[i]->type);
     }
   }
 
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  for (auto& shape : glscene->_shapes) {
+  for (auto& shape : glscene->shapes) {
     draw_glshape(glscene, shape, params);
   }
 

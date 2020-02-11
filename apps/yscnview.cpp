@@ -490,7 +490,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
-      auto camera   = app->glscene->_cameras[app->selected_camera];
+      auto camera   = app->glscene->cameras[app->selected_camera];
       auto iocamera = app->ioscene->cameras[app->selected_camera];
       set_camera_frame(camera, iocamera->frame);
       set_camera_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -510,7 +510,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_glwidgets_shape(win, app, app->selected_object)) {
-      auto glshape  = app->glscene->_shapes[app->selected_object];
+      auto glshape  = app->glscene->shapes[app->selected_object];
       auto ioobject = app->ioscene->objects[app->selected_object];
       set_shape_frame(glshape, ioobject->frame);
       // TODO: add the rest
@@ -520,7 +520,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
-      auto glshape = app->glscene->_shapes[app->selected_shape];
+      auto glshape = app->glscene->shapes[app->selected_shape];
       auto ioshape = app->ioscene->shapes[app->selected_shape];
       set_shape_positions(glshape, ioshape->positions);
       set_shape_normals(glshape, ioshape->normals);
@@ -538,7 +538,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets_shape(win, app, app->selected_instance)) {
-      auto glshape    = app->glscene->_shapes[app->selected_instance];
+      auto glshape    = app->glscene->shapes[app->selected_instance];
       auto ioinstance = app->ioscene->instances[app->selected_instance];
       set_shape_instances(glshape, ioinstance->frames);
     }
@@ -549,7 +549,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
-      auto glmaterial = app->glscene->_shapes[app->selected_material];
+      auto glmaterial = app->glscene->shapes[app->selected_material];
       auto iomaterial = app->ioscene->materials[app->selected_material];
       set_shape_emission(glmaterial, iomaterial->emission,
           app->texture_map.at(iomaterial->emission_tex));
@@ -593,7 +593,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene.get(), iosubdiv);
       // TODO: FIX SUBDIVS
-      auto glshape = app->glscene->_shapes[app->selected_shape];
+      auto glshape = app->glscene->shapes[app->selected_shape];
       auto ioshape = iosubdiv->shape;
       set_shape_positions(glshape, ioshape->positions);
       set_shape_normals(glshape, ioshape->normals);
@@ -715,7 +715,7 @@ void run_app(int argc, const char* argv[]) {
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
       set_camera_frame(
-          app->glscene->_cameras[app->drawgl_prms.camera], iocamera->frame);
+          app->glscene->cameras[app->drawgl_prms.camera], iocamera->frame);
     }
 
     // animation
