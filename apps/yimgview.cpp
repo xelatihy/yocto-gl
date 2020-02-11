@@ -182,7 +182,7 @@ void load_image_async(app_states* apps, const string& filename) {
 }
 
 void draw_glwidgets(
-    const opengl_window& win, app_states* apps, const opengl_input& input) {
+    const opengl_window* win, app_states* apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -296,7 +296,7 @@ void draw_glwidgets(
 }
 
 void draw(
-    const opengl_window& win, app_states* apps, const opengl_input& input) {
+    const opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -312,7 +312,7 @@ void draw(
   }
 }
 
-void update(const opengl_window& win, app_states* apps) {
+void update(const opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<app_state*>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -348,24 +348,25 @@ void run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = opengl_window{};
+  auto win_ = make_unique<opengl_window>();
+  auto win = win_.get();
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(
-      win, [apps](const opengl_window& win, const opengl_input& input) {
+      win, [apps](const opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
   set_draw_glcallback(
-      win, [apps](const opengl_window& win, const opengl_input& input) {
+      win, [apps](const opengl_window* win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](const opengl_window& win, const opengl_input& input) {
+      win, [apps](const opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
-      win, [apps](const opengl_window& win, const opengl_input& input) {
+      win, [apps](const opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
           auto app = apps->states[apps->selected];
@@ -378,7 +379,7 @@ void run_app(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](const opengl_window& win, const vector<string>& paths,
+      win, [apps](const opengl_window* win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
