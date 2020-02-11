@@ -3281,6 +3281,5 @@ void set_environment_emission(trace_environment* environment,
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }
-void clear_environments(trace_scene* scene) { scene->environments.clear(); }
 
 }  // namespace yocto

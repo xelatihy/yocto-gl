@@ -91,7 +91,6 @@ void          set_camera_frame(trace_camera* camera, const frame3f& frame);
 void          set_camera_lens(
              trace_camera* camera, float lens, float aspect, float film);
 void set_camera_focus(trace_camera* camera, float aperture, float focus);
-void clear_cameras(trace_scene* scene);
 
 // Add object
 trace_object* add_object(trace_scene* scene);
@@ -104,7 +103,6 @@ void          set_instance(trace_object* object, trace_instance* instance);
 trace_texture* add_texture(trace_scene* scene);
 void           set_texture(trace_texture* texture, const image<vec4b>& img);
 void           set_texture(trace_texture* texture, const image<vec4f>& img);
-void           clear_textures(trace_scene* scene);
 
 // Add material
 trace_material* add_material(trace_scene* scene);
@@ -146,7 +144,6 @@ void set_shape_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 void set_shape_frame(trace_shape* shape, const frame3f& frame);
 void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
     const frame3f& local_frame);
-void clear_shapes(trace_scene* scene);
 
 // Add instance
 trace_instance* add_instance(trace_scene* scene);
@@ -158,7 +155,6 @@ void               set_environment_frame(
                   trace_environment* environment, const frame3f& frame);
 void set_environment_emission(trace_environment* environment,
     const vec3f& emission, trace_texture* emission_map = nullptr);
-void clear_environments(trace_scene* scene);
 
 // Trace state
 struct trace_state;
