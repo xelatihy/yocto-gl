@@ -45,16 +45,16 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, int>{};
-  texture_map[nullptr] = -1;
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    auto id = add_texture(scene);
+    auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
-      set_texture(scene, id, std::move(iotexture->hdr));
+      set_texture(texture, std::move(iotexture->hdr));
     } else if (!iotexture->ldr.empty()) {
-      set_texture(scene, id, std::move(iotexture->ldr));
+      set_texture(texture, std::move(iotexture->ldr));
     }
-    texture_map[iotexture] = id;
+    texture_map[iotexture] = texture;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {

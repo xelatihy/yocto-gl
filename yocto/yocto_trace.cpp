@@ -542,12 +542,11 @@ static vec4f lookup_texture(
 }
 
 // Evaluate a texture
-static vec4f eval_texture(const trace_scene* scene, int texture_,
+static vec4f eval_texture(const trace_texture* texture,
     const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
-  if (texture_ < 0) return {1, 1, 1, 1};
-  auto& texture = scene->textures[texture_];
+  if (!texture) return {1, 1, 1, 1};
 
   // get image width/height
   auto size = texture_size(texture);
@@ -754,7 +753,7 @@ static trace_point eval_point(const trace_scene* scene,
     point.normal = point.outgoing;
   } else if (!shape->lines.empty()) {
     point.normal = orthonormalize(point.outgoing, point.normal);
-  } else if (shape->normal_tex < 0) {
+  } else if (!shape->normal_tex) {
     if (shape->thin && dot(point.outgoing, point.normal) < 0)
       point.normal = -point.normal;
   } else {
@@ -763,7 +762,7 @@ static trace_point eval_point(const trace_scene* scene,
                         : eval_shape_elem(shape, shape->quadstexcoord,
                               shape->texcoords, element, uv);
     auto normalmap =
-        -1 + 2 * xyz(eval_texture(scene, shape->normal_tex, texcoord, true));
+        -1 + 2 * xyz(eval_texture(shape->normal_tex, texcoord, true));
     auto z = shape->normals.empty()
                  ? eval_element_normal(shape, element)
                  : normalize(eval_shape_elem(
@@ -794,24 +793,24 @@ static trace_point eval_point(const trace_scene* scene,
   // initialize factors
   auto texcoord = point.texcoord;
   auto emission = shape->emission *
-                  xyz(eval_texture(scene, shape->emission_tex, texcoord));
-  auto base_tex = eval_texture(scene, shape->color_tex, texcoord);
+                  xyz(eval_texture(shape->emission_tex, texcoord));
+  auto base_tex = eval_texture(shape->color_tex, texcoord);
   auto base     = shape->color * xyz(point.color) * xyz(base_tex);
   auto specular = shape->specular *
-                  eval_texture(scene, shape->specular_tex, texcoord).x;
+                  eval_texture(shape->specular_tex, texcoord).x;
   auto metallic = shape->metallic *
-                  eval_texture(scene, shape->metallic_tex, texcoord).z;
+                  eval_texture(shape->metallic_tex, texcoord).z;
   auto roughness =
-      shape->roughness * eval_texture(scene, shape->roughness_tex, texcoord).x *
+      shape->roughness * eval_texture(shape->roughness_tex, texcoord).x *
       (shape->gltf_textures
-              ? eval_texture(scene, shape->metallic_tex, texcoord).x
+              ? eval_texture(shape->metallic_tex, texcoord).x
               : 1);
   auto ior  = shape->ior;
-  auto coat = shape->coat * eval_texture(scene, shape->coat_tex, texcoord).x;
+  auto coat = shape->coat * eval_texture(shape->coat_tex, texcoord).x;
   auto transmission = shape->transmission *
-                      eval_texture(scene, shape->emission_tex, texcoord).x;
+                      eval_texture(shape->emission_tex, texcoord).x;
   auto opacity = shape->opacity * point.color.w * base_tex.w *
-                 eval_texture(scene, shape->opacity_tex, texcoord).x;
+                 eval_texture(shape->opacity_tex, texcoord).x;
   auto thin = shape->thin || !shape->transmission;
 
   // factors
@@ -916,13 +915,13 @@ static volume_point eval_volume(const trace_scene* scene,
   auto color = shape->colors.empty()
                    ? vec4f{1, 1, 1, 1}
                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
-  auto base_tex     = eval_texture(scene, shape->color_tex, texcoord);
+  auto base_tex     = eval_texture(shape->color_tex, texcoord);
   auto base         = shape->color * xyz(color) * xyz(base_tex);
   auto transmission = shape->transmission *
-                      eval_texture(scene, shape->emission_tex, texcoord).x;
+                      eval_texture(shape->emission_tex, texcoord).x;
   auto thin       = shape->thin || !shape->transmission;
   auto scattering = shape->scattering *
-                    eval_texture(scene, shape->scattering_tex, texcoord).x;
+                    eval_texture(shape->scattering_tex, texcoord).x;
   auto scanisotropy = shape->scanisotropy;
   auto trdepth      = shape->trdepth;
 
@@ -953,7 +952,7 @@ static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (texcoord.x < 0) texcoord.x += 1;
     emission += environment->emission *
-                xyz(eval_texture(scene, environment->emission_tex, texcoord));
+                xyz(eval_texture(environment->emission_tex, texcoord));
   }
   return emission;
 }
@@ -2496,7 +2495,7 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
   auto  light_id = sample_uniform(scene->lights.size(), rl);
   auto& light    = scene->lights[light_id];
   if (light.shape >= 0) {
-    auto& shape     = scene->shapes[light.shape];
+    auto shape     = scene->shapes[light.shape];
     auto& frame     = shape->frames[light.instance_];
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
@@ -2505,8 +2504,8 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     return normalize(lposition - position);
   } else if (light.environment >= 0) {
     auto environment = scene->environments[light.environment];
-    if (environment->emission_tex >= 0) {
-      auto& emission_tex = scene->textures[environment->emission_tex];
+    if (environment->emission_tex) {
+      auto emission_tex = environment->emission_tex;
       auto  idx          = sample_discrete(environment->texels_cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  uv           = vec2f{
@@ -2553,9 +2552,9 @@ static float sample_lights_pdf(
       pdf += lpdf;
     } else if (light.environment >= 0) {
       auto environment = scene->environments[light.environment];
-      if (environment->emission_tex >= 0) {
+      if (environment->emission_tex) {
         auto& cdf          = environment->texels_cdf;
-        auto& emission_tex = scene->textures[environment->emission_tex];
+        auto emission_tex = environment->emission_tex;
         auto  size         = texture_size(emission_tex);
         auto  wl = transform_direction(inverse(environment->frame), direction);
         auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
@@ -2983,8 +2982,8 @@ void init_lights(trace_scene* scene) {
   for (auto idx = 0; idx < scene->environments.size(); idx++) {
     auto environment = scene->environments[idx];
     if (environment->emission == zero3f) continue;
-    if (environment->emission_tex >= 0) {
-      auto& texture           = scene->textures[environment->emission_tex];
+    if (environment->emission_tex) {
+      auto texture           = environment->emission_tex;
       auto  size              = texture_size(texture);
       environment->texels_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
@@ -3114,17 +3113,14 @@ void set_camera_focus(trace_camera* camera, float aperture, float focus) {
 void clean_cameras(trace_scene* scene) { scene->cameras.clear(); }
 
 // Add texture
-int add_texture(trace_scene* scene) {
-  scene->textures.emplace_back(new trace_texture{});
-  return (int)scene->textures.size() - 1;
+trace_texture* add_texture(trace_scene* scene) {
+  return scene->textures.emplace_back(new trace_texture{});
 }
-void set_texture(trace_scene* scene, int idx, const image<vec4b>& img) {
-  auto& texture = scene->textures[idx];
+void set_texture(trace_texture* texture, const image<vec4b>& img) {
   texture->ldr   = img;
   texture->hdr   = {};
 }
-void set_texture(trace_scene* scene, int idx, const image<vec4f>& img) {
-  auto& texture = scene->textures[idx];
+void set_texture(trace_texture* texture, const image<vec4f>& img) {
   texture->ldr   = {};
   texture->hdr   = img;
 }
@@ -3184,27 +3180,27 @@ void set_shape_frames(trace_shape* shape, const vector<frame3f>& frames,
   }
 }
 void set_shape_emission(
-    trace_shape* material, const vec3f& emission, int emission_txt) {
+    trace_shape* material, const vec3f& emission, trace_texture* emission_txt) {
   material->emission     = emission;
   material->emission_tex = emission_txt;
 }
-void set_shape_color(trace_shape* material, const vec3f& color, int color_txt) {
+void set_shape_color(trace_shape* material, const vec3f& color, trace_texture* color_txt) {
   material->color     = color;
   material->color_tex = color_txt;
 }
 void set_shape_specular(
-    trace_shape* material, float specular, int specular_txt) {
+    trace_shape* material, float specular, trace_texture* specular_txt) {
   material->specular     = specular;
   material->specular_tex = specular_txt;
 }
 void set_shape_metallic(
-    trace_shape* material, float metallic, int metallic_txt) {
+    trace_shape* material, float metallic, trace_texture* metallic_txt) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_txt;
 }
 void set_shape_ior(trace_shape* material, float ior) { material->ior = ior; }
 void set_shape_transmission(trace_shape* material, float transmission,
-    bool thin, float trdepth, int transmission_txt) {
+    bool thin, float trdepth, trace_texture* transmission_txt) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
@@ -3212,21 +3208,21 @@ void set_shape_transmission(trace_shape* material, float transmission,
 }
 void set_shape_thin(trace_shape* material, bool thin) { material->thin = thin; }
 void set_shape_roughness(
-    trace_shape* material, float roughness, int roughness_txt) {
+    trace_shape* material, float roughness, trace_texture* roughness_txt) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_txt;
 }
-void set_shape_opacity(trace_shape* material, float opacity, int opacity_txt) {
+void set_shape_opacity(trace_shape* material, float opacity, trace_texture* opacity_txt) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_txt;
 }
 void set_shape_scattering(trace_shape* material, const vec3f& scattering,
-    float scanisotropy, int scattering_tex) {
+    float scanisotropy, trace_texture* scattering_tex) {
   material->scattering     = scattering;
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_shape_normalmap(trace_shape* material, int normal_txt) {
+void set_shape_normalmap(trace_shape* material, trace_texture* normal_txt) {
   material->normal_tex = normal_txt;
 }
 void set_shape_gltftextures(trace_shape* material, bool gltf_textures) {
@@ -3243,7 +3239,7 @@ void set_environment_frame(
   environment->frame = frame;
 }
 void set_environment_emission(
-    trace_environment* environment, const vec3f& emission, int emission_tex) {
+    trace_environment* environment, const vec3f& emission, trace_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }

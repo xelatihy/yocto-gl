@@ -76,7 +76,7 @@ struct app_state {
   int                                  selected_material    = -1;
   int                                  selected_environment = -1;
   int                                  selected_texture     = -1;
-  unordered_map<sceneio_texture*, int> texture_map          = {};
+  unordered_map<sceneio_texture*, trace_texture*> texture_map          = {};
 
   // computation
   int          render_sample  = 0;
@@ -117,15 +117,15 @@ void init_scene(shared_ptr<app_state> app) {
     set_camera_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  texture_map[nullptr] = -1;
+  texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    auto id = add_texture(scene);
+    auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
-      set_texture(scene, id, std::move(iotexture->hdr));
+      set_texture(texture, std::move(iotexture->hdr));
     } else if (!iotexture->ldr.empty()) {
-      set_texture(scene, id, std::move(iotexture->ldr));
+      set_texture(texture, std::move(iotexture->ldr));
     }
-    texture_map[iotexture] = id;
+    texture_map[iotexture] = texture;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
@@ -676,11 +676,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "textures##2", app->selected_texture, app->ioscene->textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
       stop_display(app);
+      auto texture = app->scene->textures[app->selected_texture];
       auto iotexture = app->ioscene->textures[app->selected_texture];
       if (!iotexture->hdr.empty()) {
-        set_texture(app->scene.get(), app->selected_texture, iotexture->hdr);
+        set_texture(texture, iotexture->hdr);
       } else if (!iotexture->ldr.empty()) {
-        set_texture(app->scene.get(), app->selected_texture, iotexture->ldr);
+        set_texture(texture, iotexture->ldr);
       }
       // TODO: maybe we should update lights for this
       reset_display(app);

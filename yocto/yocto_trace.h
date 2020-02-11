@@ -91,9 +91,9 @@ void set_camera_focus(trace_camera* camera, float aperture, float focus);
 void clear_cameras(trace_scene* scene);
 
 // Add texture
-int  add_texture(trace_scene* scene);
-void set_texture(trace_scene* scene, int idx, const image<vec4b>& img);
-void set_texture(trace_scene* scene, int idx, const image<vec4f>& img);
+trace_texture* add_texture(trace_scene* scene);
+void set_texture(trace_texture* texture, const image<vec4b>& img);
+void set_texture(trace_texture* texture, const image<vec4f>& img);
 void clear_textures(trace_scene* scene);
 
 // Add shape
@@ -114,23 +114,23 @@ void set_shape_frame(trace_shape* shape, const frame3f& frame);
 void set_shape_frames(trace_shape* shape, const vector<frame3f>& instances,
     const frame3f& local_frame);
 void set_shape_emission(
-    trace_shape* shape, const vec3f& emission, int emission_txt = -1);
+    trace_shape* shape, const vec3f& emission, trace_texture* emission_txt = nullptr);
 void set_shape_color(
-    trace_shape* shape, const vec3f& color, int color_txt = -1);
+    trace_shape* shape, const vec3f& color, trace_texture* color_txt = nullptr);
 void set_shape_specular(
-    trace_shape* shape, float specular = 1, int specular_txt = -1);
+    trace_shape* shape, float specular = 1, trace_texture* specular_txt = nullptr);
 void set_shape_ior(trace_shape* shape, float ior);
 void set_shape_metallic(
-    trace_shape* shape, float metallic, int metallic_txt = -1);
+    trace_shape* shape, float metallic, trace_texture* metallic_txt = nullptr);
 void set_shape_transmission(trace_shape* shape, float transmission, bool thin,
-    float trdepth, int transmission_txt = -1);
+    float trdepth, trace_texture* transmission_txt = nullptr);
 void set_shape_roughness(
-    trace_shape* shape, float roughness, int roughness_txt = -1);
-void set_shape_opacity(trace_shape* shape, float opacity, int opacity_txt = -1);
+    trace_shape* shape, float roughness, trace_texture* roughness_txt = nullptr);
+void set_shape_opacity(trace_shape* shape, float opacity, trace_texture* opacity_txt = nullptr);
 void set_shape_thin(trace_shape* shape, bool thin);
 void set_shape_scattering(trace_shape* shape, const vec3f& scattering,
-    float scanisotropy, int scattering_tex = -1);
-void set_shape_normalmap(trace_shape* shape, int normal_txt);
+    float scanisotropy, trace_texture* scattering_tex = nullptr);
+void set_shape_normalmap(trace_shape* shape, trace_texture* normal_txt);
 void set_shape_gltftextures(trace_shape* shape, bool gltf_textures);
 void clear_shapes(trace_scene* scene);
 
@@ -139,7 +139,7 @@ trace_environment* add_environment(trace_scene* scene);
 void               set_environment_frame(
                   trace_environment* environment, const frame3f& frame);
 void set_environment_emission(trace_environment* environment,
-    const vec3f& emission, int emission_map = -1);
+    const vec3f& emission, trace_texture* emission_map = nullptr);
 void clear_environments(trace_scene* scene);
 
 // Trace state
@@ -342,17 +342,17 @@ struct trace_shape {
   bool  thin         = false;
 
   // textures
-  int  emission_tex     = -1;
-  int  color_tex        = -1;
-  int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  spectint_tex     = -1;
-  int  scattering_tex   = -1;
-  int  coat_tex         = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
+  trace_texture*  emission_tex     = nullptr;
+  trace_texture*  color_tex        = nullptr;
+  trace_texture*  specular_tex     = nullptr;
+  trace_texture*  metallic_tex     = nullptr;
+  trace_texture*  roughness_tex    = nullptr;
+  trace_texture*  transmission_tex = nullptr;
+  trace_texture*  spectint_tex     = nullptr;
+  trace_texture*  scattering_tex   = nullptr;
+  trace_texture*  coat_tex         = nullptr;
+  trace_texture*  opacity_tex      = nullptr;
+  trace_texture*  normal_tex       = nullptr;
   bool gltf_textures    = false;  // glTF packed textures
 
   // computed properties
@@ -369,7 +369,7 @@ struct trace_shape {
 struct trace_environment {
   frame3f       frame        = identity3x4f;
   vec3f         emission     = {0, 0, 0};
-  int           emission_tex = -1;
+  trace_texture*           emission_tex = nullptr;
   vector<float> texels_cdf   = {};
 };
 
