@@ -383,7 +383,7 @@ bool draw_glwidgets_shape(
 bool draw_glwidgets_instance(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto ioinstance = app->ioscene->instances[id];
-  auto edited  = 0;
+  auto edited     = 0;
   edited += draw_gltextinput(win, "name", ioinstance->name);
   draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
   return edited;
@@ -392,15 +392,18 @@ bool draw_glwidgets_instance(
 bool draw_glwidgets_object(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto ioobject = app->ioscene->objects[id];
-  auto edited  = 0;
+  auto edited   = 0;
   edited += draw_gltextinput(win, "name", ioobject->name);
   edited += draw_glslider(win, "frame.x", ioobject->frame.x, -1, 1);
   edited += draw_glslider(win, "frame.y", ioobject->frame.y, -1, 1);
   edited += draw_glslider(win, "frame.z", ioobject->frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
-  edited += draw_glcombobox(win, "shape", ioobject->shape, app->ioscene->shapes);
-  edited += draw_glcombobox(win, "material", ioobject->material, app->ioscene->materials);
-  edited += draw_glcombobox(win, "instance", ioobject->instance, app->ioscene->instances);
+  edited += draw_glcombobox(
+      win, "shape", ioobject->shape, app->ioscene->shapes);
+  edited += draw_glcombobox(
+      win, "material", ioobject->material, app->ioscene->materials);
+  edited += draw_glcombobox(
+      win, "instance", ioobject->instance, app->ioscene->instances);
   return edited;
 }
 
@@ -583,7 +586,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
-    draw_glcombobox(win, "object##2", app->selected_object, app->ioscene->objects);
+    draw_glcombobox(
+        win, "object##2", app->selected_object, app->ioscene->objects);
     if (draw_glwidgets_shape(win, app, app->selected_object)) {
       stop_display(app);
       auto ioobject = app->ioscene->shapes[app->selected_shape];
@@ -594,8 +598,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
-    draw_glcombobox(win, "instance##2", app->selected_instance, app->ioscene->instances);
+  if (app && !app->ioscene->instances.empty() &&
+      begin_glheader(win, "instances")) {
+    draw_glcombobox(
+        win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (draw_glwidgets_shape(win, app, app->selected_instance)) {
       stop_display(app);
       auto ioinstance = app->ioscene->instances[app->selected_instance];

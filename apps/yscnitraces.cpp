@@ -107,7 +107,7 @@ void init_scene(trace_scene& scene, sceneio_model* ioscene) {
   }
 
   for (auto ioobject : ioscene->objects) {
-    auto id = add_shape(scene);
+    auto id      = add_shape(scene);
     auto ioshape = ioobject->shape;
     set_shape_points(scene, id, ioshape->points);
     set_shape_lines(scene, id, ioshape->lines);
@@ -120,7 +120,7 @@ void init_scene(trace_scene& scene, sceneio_model* ioscene) {
     set_shape_radius(scene, id, ioshape->radius);
     set_shape_tangents(scene, id, ioshape->tangents);
     auto ioinstance = ioobject->instance;
-    if(ioinstance) {
+    if (ioinstance) {
       set_shape_frames(scene, id, ioinstance->frames, ioobject->frame);
     } else {
       set_shape_frame(scene, id, ioobject->frame);

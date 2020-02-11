@@ -141,7 +141,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model* ioscene) {
     if (has_max_lights(glscene)) break;
     if (ioobject->material->emission == zero3f) continue;
     auto ioshape = ioobject->shape;
-    auto bbox = invalidb3f;
+    auto bbox    = invalidb3f;
     for (auto p : ioshape->positions) bbox = merge(bbox, p);
     auto pos  = (bbox.max + bbox.min) / 2;
     auto area = 0.0f;
@@ -200,7 +200,7 @@ void init_scene(shared_ptr<app_state> app) {
 
   // shapes
   for (auto ioobject : ioscene->objects) {
-    auto id = add_shape(glscene);
+    auto id      = add_shape(glscene);
     auto ioshape = ioobject->shape;
     set_shape_positions(glscene, id, ioshape->positions);
     set_shape_normals(glscene, id, ioshape->normals);
@@ -211,8 +211,8 @@ void init_scene(shared_ptr<app_state> app) {
     set_shape_triangles(glscene, id, ioshape->triangles);
     set_shape_quads(glscene, id, ioshape->quads);
     set_shape_frame(glscene, id, ioobject->frame);
-    auto ioinstance=ioobject->instance;
-    if(ioinstance) set_shape_instances(glscene, id, ioinstance->frames);
+    auto ioinstance = ioobject->instance;
+    if (ioinstance) set_shape_instances(glscene, id, ioinstance->frames);
     auto iomaterial = ioobject->material;
     set_shape_emission(glscene, id, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -335,7 +335,7 @@ bool draw_glwidgets_shape(
 bool draw_glwidgets_instance(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto ioinstance = app->ioscene->instances[id];
-  auto edited  = 0;
+  auto edited     = 0;
   edited += draw_gltextinput(win, "name", ioinstance->name);
   draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
   // TODO: load
@@ -345,15 +345,18 @@ bool draw_glwidgets_instance(
 bool draw_glwidgets_object(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto ioobject = app->ioscene->objects[id];
-  auto edited  = 0;
+  auto edited   = 0;
   edited += draw_gltextinput(win, "name", ioobject->name);
   edited += draw_glslider(win, "frame[0]", ioobject->frame.x, -1, 1);
   edited += draw_glslider(win, "frame[1]", ioobject->frame.y, -1, 1);
   edited += draw_glslider(win, "frame[2]", ioobject->frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
-  edited += draw_glcombobox(win, "shape", ioobject->shape, app->ioscene->shapes);
-  edited += draw_glcombobox(win, "material", ioobject->material, app->ioscene->materials);
-  edited += draw_glcombobox(win, "instance", ioobject->instance, app->ioscene->instances, true);
+  edited += draw_glcombobox(
+      win, "shape", ioobject->shape, app->ioscene->shapes);
+  edited += draw_glcombobox(
+      win, "material", ioobject->material, app->ioscene->materials);
+  edited += draw_glcombobox(
+      win, "instance", ioobject->instance, app->ioscene->instances, true);
   // TODO: load
   return edited;
 }
@@ -504,10 +507,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
-    draw_glcombobox(win, "object##2", app->selected_object, app->ioscene->objects);
+    draw_glcombobox(
+        win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_glwidgets_shape(win, app, app->selected_object)) {
       auto ioobject = app->ioscene->objects[app->selected_object];
-      auto idx     = app->selected_shape;
+      auto idx      = app->selected_shape;
       set_shape_frame(app->glscene, idx, ioobject->frame);
       // TODO: add the rest
     }
@@ -529,11 +533,13 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
-    draw_glcombobox(win, "instance##2", app->selected_instance, app->ioscene->instances);
+  if (app && !app->ioscene->instances.empty() &&
+      begin_glheader(win, "instances")) {
+    draw_glcombobox(
+        win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets_shape(win, app, app->selected_instance)) {
       auto ioinstance = app->ioscene->instances[app->selected_instance];
-      auto idx     = app->selected_instance;
+      auto idx        = app->selected_instance;
       set_shape_instances(app->glscene, idx, ioinstance->frames);
     }
     end_glheader(win);
