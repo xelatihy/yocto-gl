@@ -280,19 +280,21 @@ int run_app(int argc, const char* argv[]) {
     return cli.exit(e);
   }
 
+  // progress callback
+  auto progress_cb = [](const string& message, int current, int total) {
+    if (current == total) {
+      cout << "\r" << string(60, ' ') << "\r";
+    } else {
+      auto n = (int)(30 * (float)current / (float)total);
+      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
+           << message << "\r";
+    }
+  };
+
   // scene loading
   {
     auto timer   = CLI::AutoTimer("loading scene");
-    app->ioscene = load_scene(
-        app->filename, [](const string& message, int current, int total) {
-          if (current == total) {
-            cout << "\r" << string(60, ' ') << "\r";
-          } else {
-            auto n = (int)(30 * (float)current / (float)total);
-            cout << "\r[" << left << setw(30) << string(n, '=') << "] "
-                 << setw(30) << message << "\r";
-          }
-        });
+    app->ioscene = load_scene(app->filename, progress_cb);
   }
 
   // conversion
