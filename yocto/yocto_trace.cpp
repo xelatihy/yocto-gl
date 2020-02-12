@@ -1903,19 +1903,23 @@ void update_bvh(const shared_ptr<trace_scene>& scene,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
+static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape_,
     const ray3f& ray_, int& element, vec2f& uv, float& distance,
     bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (shape->embree_bvh) {
+  if (shape_->embree_bvh) {
     return intersect_shape_embree_bvh(
-        shape, ray_, element, uv, distance, find_any);
+        shape_, ray_, element, uv, distance, find_any);
   }
 #endif
 
+  // get bvh and shape pointers for fast access
+  auto shape = shape_.get();
+  auto bvh = shape->bvh.get();
+
   // check empty
-  if (shape->bvh->nodes.empty()) return false;
+  if (bvh->nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -1936,7 +1940,7 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = shape->bvh->nodes[node_stack[--node_cur]];
+    auto& node = bvh->nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -2014,19 +2018,23 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
+static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene_,
     const ray3f& ray_, int& objecct, int& instance, int& element, vec2f& uv,
     float& distance, bool find_any, bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (scene->embree_bvh) {
+  if (scene_->embree_bvh) {
     return intersect_scene_embree_bvh(
-        scene, ray_, objecct, instance, element, uv, distance, find_any);
+        scene_, ray_, objecct, instance, element, uv, distance, find_any);
   }
 #endif
 
+  // get bvh and scene pointers for fast access
+  auto scene = scene_.get();
+  auto bvh = scene->bvh.get();
+
   // check empty
-  if (scene->bvh->nodes.empty()) return false;
+  if (bvh->nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -2047,7 +2055,7 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = scene->bvh->nodes[node_stack[--node_cur]];
+    auto& node = bvh->nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -2068,7 +2076,7 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto [object_id, instance_id] = scene->bvh->primitives[idx];
-        auto& object                  = scene->objects[object_id];
+        auto  object                  = scene->objects[object_id].get();
         auto  frame   = object->instance->frames[instance_id] * object->frame;
         auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
