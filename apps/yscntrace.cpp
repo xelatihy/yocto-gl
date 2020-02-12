@@ -34,7 +34,10 @@
 using namespace yocto;
 
 #include <memory>
-using std::make_shared;
+#include <map>
+using namespace std;
+
+#include "ext/CLI11.hpp"
 
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene) {
@@ -128,7 +131,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
   auto batch      = 16;
@@ -138,30 +141,44 @@ void run_app(int argc, const char* argv[]) {
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
 
+  // maps for getting param
+  auto trace_sampler_map = map<string, trace_sampler_type>{};
+  for(auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
+  }
+  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
+  for(auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] = (trace_falsecolor_type)idx;
+  }
+  auto trace_bvh_map = map<string, trace_bvh_type>{};
+  for(auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
+  }
+
   // parse command line
-  auto cli = make_cli("yscntrace", "Offline path tracing");
-  add_cli_option(cli, "--camera", params.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", params.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)params.sampler, "Trace type.",
-      trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_cli_option(
-      cli, "--bounces", params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--batch,-b", batch, "Samples per batch.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
+  auto cli = CLI::App{"Offline path tracing"};
+  cli.add_option("--camera", params.camera, "Camera index.");
+  cli.add_option("--resolution,-r", params.resolution, "Image resolution.");
+  cli.add_option("--samples,-s", params.samples, "Number of samples.");
+  cli.add_option("--tracer,-t", params.sampler, "Trace type.")->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option("--falsecolor,-F", params.falsecolor, "Tracer false color type.")->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option("--bounces", params.bounces, "Maximum number of bounces.");
+  cli.add_option("--clamp", params.clamp, "Final pixel clamping.");
+  cli.add_flag("--filter", params.tentfilter, "Filter image.");
+  cli.add_option("--batch,-b", batch, "Samples per batch.");
+  cli.add_flag("--env-hidden,!--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_cli_option(cli, "--bvh", (int&)params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
-  add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
-  add_cli_option(cli, "--validate", validate, "Validate scene");
-  add_cli_option(cli, "scene", filename, "Scene filename", true);
-  parse_cli(cli, argc, argv);
+  cli.add_option("--save-batch", save_batch, "Save images progressively");
+  cli.add_option("--bvh", params.bvh, "Bvh type")->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
+  cli.add_option("--output-image,-o", imfilename, "Image filename");
+  cli.add_flag("--validate", validate, "Validate scene");
+  cli.add_option("scene", filename, "Scene filename")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // scene loading
   auto ioscene    = make_shared<sceneio_model>();
@@ -226,12 +243,14 @@ void run_app(int argc, const char* argv[]) {
   auto save_timer = print_timed("saving image");
   save_image(imfilename, render);
   print_elapsed(save_timer);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

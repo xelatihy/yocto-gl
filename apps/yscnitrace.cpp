@@ -37,6 +37,8 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 namespace yocto {
 void print_obj_camera(const sceneio_camera* camera);
 };  // namespace yocto
@@ -785,33 +787,46 @@ void update(opengl_window* win, app_states* apps) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // application
   auto apps_     = make_unique<app_states>();
   auto apps      = apps_.get();
   auto filenames = vector<string>{};
 
+  // maps for getting param
+  auto trace_sampler_map = map<string, trace_sampler_type>{};
+  for(auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
+  }
+  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
+  for(auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] = (trace_falsecolor_type)idx;
+  }
+  auto trace_bvh_map = map<string, trace_bvh_type>{};
+  for(auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
+  }
+
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", apps->params.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", apps->params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)apps->params.sampler, "Tracer type.",
-      trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)apps->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_cli_option(
-      cli, "--bounces", apps->params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", apps->params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
+  auto cli = CLI::App{"progressive path tracing"};
+  cli.add_option("--camera", apps->params.camera, "Camera index.");
+  cli.add_option("--resolution,-r", apps->params.resolution, "Image resolution.");
+  cli.add_option("--samples,-s", apps->params.samples, "Number of samples.");
+  cli.add_option("--tracer,-t", apps->params.sampler, "Tracer type.")->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option("--falsecolor,-F", apps->params.falsecolor,
+      "Tracer false color type.")->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option("--bounces", apps->params.bounces, "Maximum number of bounces.");
+  cli.add_option("--clamp", apps->params.clamp, "Final pixel clamping.");
+  cli.add_flag("--filter", apps->params.tentfilter, "Filter image.");
+  cli.add_flag("--env-hidden,!--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(
-      cli, "--bvh", (int&)apps->params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
-  parse_cli(cli, argc, argv);
+  cli.add_option("--bvh", apps->params.bvh, "Bvh type")->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_option("scenes", filenames, "Scene filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
@@ -893,12 +908,14 @@ void run_app(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

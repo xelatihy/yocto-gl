@@ -34,6 +34,8 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 struct app_state {
   // original data
   string filename = "image.png";
@@ -89,17 +91,21 @@ void update_display(app_state* app) {
   });
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // prepare application
   auto app_      = make_unique<app_state>();
   auto app       = app_.get();
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "--output,-o", app->outname, "image output");
-  add_cli_option(cli, "image", app->filename, "image filename", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"view images"};
+  cli.add_option("--output,-o", app->outname, "image output");
+  cli.add_option("image", app->filename, "image filename")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // load image
   load_image(app->filename, app->source);
@@ -142,12 +148,14 @@ void run_app(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

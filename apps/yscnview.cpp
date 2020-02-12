@@ -38,6 +38,8 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 #ifdef _WIN32
 #undef near
 #undef far
@@ -683,7 +685,7 @@ void update(opengl_window* win, app_states* apps) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // initialize app
   auto apps_      = make_unique<app_states>();
   auto apps       = apps_.get();
@@ -691,16 +693,19 @@ void run_app(int argc, const char* argv[]) {
   auto noparallel = false;
 
   // parse command line
-  auto cli = make_cli("yscnview", "views scenes inteactively");
-  add_cli_option(cli, "--camera", apps->drawgl_prms.camera, "Camera index.");
-  add_cli_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
+  auto cli = CLI::App{"views scenes inteactively"};
+  cli.add_option("--camera", apps->drawgl_prms.camera, "Camera index.");
+  cli.add_option("--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
-  add_cli_option(cli, "--eyelight/--no-eyelight,-c", apps->drawgl_prms.eyelight,
+  cli.add_flag("--eyelight!,--no-eyelight,-c", apps->drawgl_prms.eyelight,
       "Eyelight rendering.");
-  add_cli_option(
-      cli, "--noparallel", noparallel, "Disable parallel execution.");
-  add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
-  parse_cli(cli, argc, argv);
+  cli.add_flag("--noparallel", noparallel, "Disable parallel execution.");
+  cli.add_option("scenes", filenames, "Scene filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
@@ -772,12 +777,14 @@ void run_app(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

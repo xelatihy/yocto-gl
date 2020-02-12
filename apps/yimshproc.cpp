@@ -129,13 +129,17 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
-  add_cli_option(cli, "model", input_filename, "model filenames", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"interactive viewer for mesh processing"};
+  cli.add_option("model", input_filename, "model filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   auto data = my_data{};
 
@@ -156,12 +160,14 @@ void run_app(int argc, const char* argv[]) {
   };
 
   yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

@@ -35,6 +35,8 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 struct image_stats {
   vec4f         min       = zero4f;
   vec4f         max       = zero4f;
@@ -332,16 +334,20 @@ void update(opengl_window* win, app_states* apps) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // prepare application
   auto apps_     = make_unique<app_states>();
   auto apps      = apps_.get();
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "images", filenames, "image filenames", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"view images"};
+  cli.add_option("images", filenames, "image filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch(CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);
@@ -388,12 +394,14 @@ void run_app(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
