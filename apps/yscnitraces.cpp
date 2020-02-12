@@ -51,7 +51,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene    = new sceneio_model{};
+  shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
   trace_scene*   scene      = new trace_scene{};
   bool           add_skyenv = false;
 
@@ -80,12 +80,11 @@ struct app_state {
     if (glimage) delete glimage;
     if (scene) delete scene;
     if (state) delete state;
-    if (ioscene) delete ioscene;
   }
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene) {
+void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -93,7 +92,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -105,7 +104,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -135,7 +134,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -152,7 +151,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
@@ -292,7 +291,6 @@ int run_app(int argc, const char* argv[]) {
   print_elapsed(convert_timer);
 
   // cleanup
-  delete app->ioscene;
   app->ioscene = nullptr;
 
   // build bvh

@@ -40,7 +40,7 @@ using namespace std;
 #include "ext/CLI11.hpp"
 
 namespace yocto {
-void print_obj_camera(const sceneio_camera* camera);
+void print_obj_camera(shared_ptr<sceneio_camera> camera);
 };  // namespace yocto
 
 // Application scene
@@ -56,7 +56,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene = new sceneio_model{};
+  shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
   trace_scene*   scene   = new trace_scene{};
 
   // rendering state
@@ -70,23 +70,23 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // editing
-  sceneio_camera*      selected_camera      = nullptr;
-  sceneio_object*      selected_object      = nullptr;
-  sceneio_instance*    selected_instance    = nullptr;
-  sceneio_shape*       selected_shape       = nullptr;
-  sceneio_subdiv*      selected_subdiv      = nullptr;
-  sceneio_material*    selected_material    = nullptr;
-  sceneio_environment* selected_environment = nullptr;
-  sceneio_texture*     selected_texture     = nullptr;
+  shared_ptr<sceneio_camera>      selected_camera      = nullptr;
+  shared_ptr<sceneio_object>      selected_object      = nullptr;
+  shared_ptr<sceneio_instance>    selected_instance    = nullptr;
+  shared_ptr<sceneio_shape>       selected_shape       = nullptr;
+  shared_ptr<sceneio_subdiv>      selected_subdiv      = nullptr;
+  shared_ptr<sceneio_material>    selected_material    = nullptr;
+  shared_ptr<sceneio_environment> selected_environment = nullptr;
+  shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
   // editing maps
-  unordered_map<sceneio_camera*, trace_camera*>           camera_map      = {};
-  unordered_map<sceneio_environment*, trace_environment*> environment_map = {};
-  unordered_map<sceneio_texture*, trace_texture*>         texture_map     = {};
-  unordered_map<sceneio_material*, trace_material*>       material_map    = {};
-  unordered_map<sceneio_shape*, trace_shape*>             shape_map       = {};
-  unordered_map<sceneio_instance*, trace_instance*>       instance_map    = {};
-  unordered_map<sceneio_object*, trace_object*>           object_map      = {};
+  unordered_map<shared_ptr<sceneio_camera>, trace_camera*>           camera_map      = {};
+  unordered_map<shared_ptr<sceneio_environment>, trace_environment*> environment_map = {};
+  unordered_map<shared_ptr<sceneio_texture>, trace_texture*>         texture_map     = {};
+  unordered_map<shared_ptr<sceneio_material>, trace_material*>       material_map    = {};
+  unordered_map<shared_ptr<sceneio_shape>, trace_shape*>             shape_map       = {};
+  unordered_map<shared_ptr<sceneio_instance>, trace_instance*>       instance_map    = {};
+  unordered_map<shared_ptr<sceneio_object>, trace_object*>           object_map      = {};
 
   // computation
   int          render_sample  = 0;
@@ -100,7 +100,6 @@ struct app_state {
     if (glimage) delete glimage;
     if (scene) delete scene;
     if (state) delete state;
-    if (ioscene) delete ioscene;
   }
 };
 
@@ -306,7 +305,7 @@ void load_scene_async(app_states* apps, const string& filename) {
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_camera> iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -332,7 +331,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_texture> iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -347,7 +346,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_material* iomaterial) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_material> iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -387,7 +386,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_shape* ioshape) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_shape> ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -405,7 +404,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_instance* ioinstance) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_instance> ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -414,7 +413,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_object* ioobject) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_object> ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -431,7 +430,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
+    opengl_window* win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_subdiv> iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -452,8 +451,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene,
-    sceneio_environment* ioenvironment) {
+bool draw_glwidgets(opengl_window* win, shared_ptr<sceneio_model> ioscene,
+    shared_ptr<sceneio_environment> ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioenvironment->name);

@@ -82,8 +82,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene_     = make_unique<sceneio_model>();
-  auto scene      = scene_.get();
+  auto scene     = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
   load_scene(filename, scene);
   print_elapsed(load_timer);

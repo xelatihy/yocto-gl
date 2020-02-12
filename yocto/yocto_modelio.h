@@ -337,45 +337,45 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_fvquads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_fvquads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<shared_ptr<obj_material>>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-bool has_quads(const shared_ptr<obj_shape> shape);
+bool has_quads(shared_ptr<obj_shape> shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
 vector<shared_ptr<obj_material>> get_materials(
-    shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape);
+    shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape);
 
 // Add obj shape
 void add_triangles(shared_ptr<obj_model> obj, const string& name,
@@ -536,7 +536,7 @@ struct pbrt_model {
 // Load/save pbrt
 void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt);
 void save_pbrt(
-    const string& filename, const shared_ptr<pbrt_model> pbrt, bool ply_meshes = false);
+    const string& filename, shared_ptr<pbrt_model> pbrt, bool ply_meshes = false);
 
 }  // namespace yocto
 

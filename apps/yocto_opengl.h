@@ -50,6 +50,7 @@ namespace yocto {
 
 // using directives
 using std::unique_ptr;
+using std::shared_ptr;
 
 // OpenGL image data
 struct opengl_image {
@@ -491,6 +492,27 @@ inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(opengl_window* win, const char* lbl, T*& value,
     const vector<T*>& vals, bool include_null = false) {
+  auto idx = -1;
+  for (auto pos = 0; pos < vals.size(); pos++)
+    if (vals[pos] == value) idx = pos;
+  auto edited = draw_glcombobox(
+      win, lbl, idx, (int)vals.size(),
+      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
+  if (edited) {
+    value = idx >= 0 ? vals[idx] : nullptr;
+  }
+  return edited;
+}
+template <typename T>
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx,
+    const vector<shared_ptr<T>>& vals, bool include_null = false) {
+  return draw_glcombobox(
+      win, lbl, idx, (int)vals.size(),
+      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
+}
+template <typename T>
+inline bool draw_glcombobox(opengl_window* win, const char* lbl, shared_ptr<T>& value,
+    const vector<shared_ptr<T>>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;

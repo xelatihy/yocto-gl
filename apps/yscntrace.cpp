@@ -40,7 +40,7 @@ using namespace std;
 #include "ext/CLI11.hpp"
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene) {
+void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -48,7 +48,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -60,7 +60,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -90,7 +90,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -107,7 +107,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
@@ -188,13 +188,13 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, ioscene.get());
+  load_scene(filename, ioscene);
   print_elapsed(load_timer);
 
   // add components
   if (validate) {
     auto validate_timer = print_timed("validating");
-    auto errors         = scene_validation(ioscene.get());
+    auto errors         = scene_validation(ioscene);
     for (auto& error : errors) print_info(error);
     print_elapsed(validate_timer);
   }
@@ -202,7 +202,7 @@ int run_app(int argc, const char* argv[]) {
   // convert scene
   auto convert_timer = print_timed("converting");
   auto scene         = make_shared<trace_scene>();
-  init_scene(scene.get(), ioscene.get());
+  init_scene(scene.get(), ioscene);
   print_elapsed(convert_timer);
 
   // cleanup

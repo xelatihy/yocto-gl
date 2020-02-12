@@ -2089,7 +2089,7 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
 }
 
 // Get obj vertices
-static void get_vertices(const shared_ptr<obj_shape> shape, vector<vec3f>& positions,
+static void get_vertices(shared_ptr<obj_shape> shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
   auto vmap = unordered_map<obj_vertex, int>{};
@@ -2122,7 +2122,7 @@ static vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -2142,7 +2142,7 @@ void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     cur += face.size;
   }
 }
-void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -2168,7 +2168,7 @@ void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     cur += face.size;
   }
 }
-void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -2187,7 +2187,7 @@ void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     cur += str.size;
   }
 }
-void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -2206,7 +2206,7 @@ void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     cur += point.size;
   }
 }
-void get_fvquads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
+void get_fvquads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -2263,14 +2263,14 @@ void get_fvquads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
   }
 }
 
-bool has_quads(const shared_ptr<obj_shape> shape) {
+bool has_quads(shared_ptr<obj_shape> shape) {
   for (auto& face : shape->faces)
     if (face.size == 4) return true;
   return false;
 }
 
 // Get obj vertices
-static void get_vertices(const shared_ptr<obj_shape> shape, int material,
+static void get_vertices(shared_ptr<obj_shape> shape, int material,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
   auto used_vertices = vector<bool>(shape->vertices.size(), false);
@@ -2319,7 +2319,7 @@ static void get_vertices(const shared_ptr<obj_shape> shape, int material,
 }
 
 // Get obj shape
-void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
@@ -2338,7 +2338,7 @@ void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
   }
   triangles.shrink_to_fit();
 }
-void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
@@ -2362,7 +2362,7 @@ void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int
   }
   quads.shrink_to_fit();
 }
-void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->lines.empty()) return;
@@ -2380,7 +2380,7 @@ void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int
   }
   lines.shrink_to_fit();
 }
-void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->points.empty()) return;
@@ -2398,7 +2398,7 @@ void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, in
   }
 }
 vector<shared_ptr<obj_material>> get_materials(
-    shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape) {
+    shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape) {
   return shape->materials;
 }
 
@@ -4204,7 +4204,7 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 void save_pbrt(
-    const string& filename, const shared_ptr<pbrt_model> pbrt, bool ply_meshes) {
+    const string& filename, shared_ptr<pbrt_model> pbrt, bool ply_meshes) {
   auto fs = open_file(filename, "wt");
 
   // save comments
