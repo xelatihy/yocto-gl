@@ -116,8 +116,6 @@ struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
   shared_ptr<app_state>                           selected = nullptr;
-
-  // loading
   deque<shared_ptr<app_state>> loading = {};
 
   // default options
