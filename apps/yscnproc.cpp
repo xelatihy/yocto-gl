@@ -38,6 +38,7 @@ using std::make_unique;
 using std::unordered_set;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -83,15 +84,15 @@ int run_app(int argc, const char** argv) {
 
   // load scene
   auto scene      = shared_ptr<sceneio_model>{};
-  auto load_timer = print_timed("loading scene");
-  scene = load_scene(filename);
-  print_elapsed(load_timer);
+  {
+    auto timer = CLI::AutoTimer{"loading scene"};
+    scene = load_scene(filename);
+  }
 
   // validate scene
   if (validate) {
-    auto validate_timer = print_timed("validating scene");
+    auto timer = CLI::AutoTimer{"validate"};
     auto errors         = scene_validation(scene);
-    print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
 
@@ -134,9 +135,10 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  auto save_timer = print_timed("saving scene");
-  save_scene(output, scene, obj_instances);
-  print_elapsed(save_timer);
+  {
+    auto timer = CLI::AutoTimer{"save"};
+    save_scene(output, scene, obj_instances);
+  }
 
   // done
   return 0;

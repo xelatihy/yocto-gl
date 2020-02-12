@@ -38,6 +38,7 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
 
 // construct a scene from io
 shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
@@ -195,35 +196,39 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   auto ioscene    = make_shared<sceneio_model>();
-  auto load_timer = print_timed("loading scene");
-  ioscene = load_scene(filename);
-  print_elapsed(load_timer);
+  {
+    auto timer = CLI::AutoTimer{"load"};
+    ioscene = load_scene(filename);
+  }
 
   // add components
   if (validate) {
-    auto validate_timer = print_timed("validating");
+    auto timer = CLI::AutoTimer{"validate"};
     auto errors         = scene_validation(ioscene);
     for (auto& error : errors) print_info(error);
-    print_elapsed(validate_timer);
   }
 
   // convert scene
-  auto convert_timer = print_timed("converting");
-  auto scene         = make_scene(ioscene);
-  print_elapsed(convert_timer);
+  auto scene = shared_ptr<trace_scene>();
+  {
+    auto timer = CLI::AutoTimer{"convert"};
+    scene         = make_scene(ioscene);
+  }
 
   // cleanup
   ioscene = nullptr;
 
   // build bvh
-  auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, params);
-  print_elapsed(bvh_timer);
+  {
+    auto timer = CLI::AutoTimer{"bvh"};
+    init_bvh(scene, params);
+  }
 
   // init renderer
-  auto lights_timer = print_timed("building lights");
-  init_lights(scene);
-  print_elapsed(lights_timer);
+  {
+    auto timer = CLI::AutoTimer{"lights"};
+    init_lights(scene);
+  }
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
@@ -238,22 +243,23 @@ int run_app(int argc, const char* argv[]) {
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
     auto nsamples    = min(batch, params.samples - sample);
-    auto batch_timer = print_timed("rendering samples " +
+    auto timer = CLI::AutoTimer{"rendering samples " +
                                    std::to_string(sample) + "/" +
-                                   std::to_string(params.samples));
+                                   std::to_string(params.samples)};
     render           = trace_samples(state, scene, nsamples, params);
-    print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
+          auto timer = CLI::AutoTimer{"saving " + outfilename};
       save_image(outfilename, render);
     }
   }
 
   // save image
-  auto save_timer = print_timed("saving image");
-  save_image(imfilename, render);
-  print_elapsed(save_timer);
+  {
+    auto timer = CLI::AutoTimer{"save"};
+    save_image(imfilename, render);
+  }
 
   // done
   return 0;

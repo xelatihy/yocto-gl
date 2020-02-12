@@ -38,6 +38,7 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
 
 // Application state
 struct app_state {
@@ -281,27 +282,31 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto load_timer = print_timed("loading scene");
-  app->ioscene = load_scene(app->filename);
-  print_elapsed(load_timer);
+  {
+    auto timer = CLI::AutoTimer{"loading scene"};
+    app->ioscene = load_scene(app->filename);
+  }
 
   // conversion
-  auto convert_timer = print_timed("converting");
-  app->scene = make_scene(app->ioscene);
-  print_elapsed(convert_timer);
+  {
+    auto timer = CLI::AutoTimer{"converting scene"};
+    app->scene = make_scene(app->ioscene);
+  }
 
   // cleanup
   app->ioscene = nullptr;
 
   // build bvh
-  auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene, app->params);
-  print_elapsed(bvh_timer);
+  {
+    auto timer = CLI::AutoTimer{"building bvh"};
+    init_bvh(app->scene, app->params);
+  }
 
   // init renderer
-  auto lights_timer = print_timed("building lights");
-  init_lights(app->scene);
-  print_elapsed(lights_timer);
+  {
+    auto timer = CLI::AutoTimer{"building lights"};
+    init_lights(app->scene);
+  }
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
