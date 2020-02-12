@@ -74,6 +74,7 @@ struct app_state {
   atomic<bool> ok     = false;
   future<void> loader = {};
   string       status = "";
+  string       error = "";
 };
 
 // app states
@@ -208,7 +209,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
       [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
   if (apps->selected < 0) return;
   auto app = apps->states[apps->selected];
-  draw_gllabel(win, "status", app->status);
+  if(app->status != "") draw_gllabel(win, "status", app->status);
+  if(app->error != "") draw_gllabel(win, "error", app->error);
   if (!app->ok) return;
   if (begin_glheader(win, "tonemap")) {
     auto edited = 0;
@@ -314,7 +316,8 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
       app->status = "ok";
     } catch (std::exception& e) {
       apps->loading.pop_front();
-      app->status = "error: "s + e.what();
+      app->status = "";
+      app->error = e.what();
     }
   }
 }
