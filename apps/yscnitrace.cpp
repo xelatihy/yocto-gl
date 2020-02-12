@@ -102,6 +102,12 @@ struct app_state {
   future<void> render_future  = {};
   int          render_counter = 0;
 
+  // loading status
+  atomic<bool> ok     = false;
+  future<void> loader = {};
+  string       status = "";
+  string       error = "";
+
   ~app_state() { render_stop = true; }
 };
 
@@ -112,7 +118,7 @@ struct app_states {
   shared_ptr<app_state>                           selected = nullptr;
 
   // loading
-  deque<future<shared_ptr<app_state>>> loaders = {};
+  deque<shared_ptr<app_state>> loading = {};
 
   // default options
   trace_params params     = {};
@@ -282,14 +288,15 @@ void reset_display(shared_ptr<app_state> app) {
 }
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
-  apps->loaders.push_back(
-      async(launch::async, [filename]() -> shared_ptr<app_state> {
-        auto app       = make_shared<app_state>();
-        app->filename  = filename;
-        app->imagename = fs::path(filename).replace_extension(".png");
-        app->outname   = fs::path(filename).replace_extension(".edited.yaml");
-        app->name      = fs::path(filename).filename();
-        app->params    = app->params;
+  auto app       = make_shared<app_state>();
+  app->name      = fs::path(app->filename).filename().string();
+  app->filename  = filename;
+  app->imagename = fs::path(filename).replace_extension(".png");
+  app->outname   = fs::path(filename).replace_extension(".edited.yaml");
+  app->name      = fs::path(filename).filename();
+  app->params    = app->params;
+  app->loader =
+      async(launch::async, [app]() {
         app->ioscene   = load_scene(app->filename);
         init_scene(app);
         init_bvh(app->scene, app->params);
@@ -300,11 +307,10 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->state = make_state(app->scene, app->params);
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
-        app->name = fs::path(app->filename).filename().string() + " [" +
-                    to_string(app->render.size().x) + "x" +
-                    to_string(app->render.size().y) + " @ 0]";
-        return app;
-      }));
+      });
+  apps->states.push_back(app);
+  apps->loading.push_back(app);
+  if(!apps->selected) apps->selected = app;
 }
 
 bool draw_glwidgets(shared_ptr<opengl_window> win,
@@ -475,16 +481,16 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  auto          app = apps->selected;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
+  if (draw_glfiledialog_button(win, "save", apps->selected && apps->selected->ok, "save", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.yaml;*.obj;*.pbrt")) {
+    auto app = apps->selected;
     app->outname = save_path;
     try {
       save_scene(app->outname, app->ioscene);
@@ -495,10 +501,11 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save image", (bool)app, "save image",
+  if (draw_glfiledialog_button(win, "save image", apps->selected && apps->selected->ok, "save image",
           save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+    auto app = apps->selected;
     app->outname = save_path;
     try {
       save_image(app->imagename, app->display);
@@ -509,10 +516,10 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", (bool)app)) {
+  if (draw_glbutton(win, "close", (bool)apps->selected)) {
+    if(apps->selected->loader.valid()) return;
     apps->states.erase(std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
-    app            = apps->selected;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -520,7 +527,11 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   draw_glcombobox(
       win, "scene", apps->selected, apps->states, false);
-  if(!app) return;
+  if(!apps->selected) return;
+  auto app = apps->selected;
+  if(app->status != "") draw_gllabel(win, "status", app->status);
+  if(app->error != "") draw_gllabel(win, "error", app->error);
+  if (!app->ok) return;
   if (begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto& tparams = app->params;
@@ -738,7 +749,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
 
 void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
-  if(!apps->selected) return;
+  if(!apps->selected || !apps->selected->ok) return;
     auto app                  = apps->selected;
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
@@ -753,22 +764,23 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
 }
 
 void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
-  while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
+  while (!apps->loading.empty()) {
+    auto app = apps->loading.front();
+    if (!is_ready(app->loader)) break;
+    apps->loading.pop_front();
     try {
-      auto app = apps->loaders.front().get();
-      apps->loaders.pop_front();
-      apps->states.push_back(app);
+      app->loader.get();
       reset_display(app);
-      if (!apps->selected) apps->selected = app;
+      app->ok     = true;
+      app->status = "ok";
     } catch (std::exception& e) {
-      apps->loaders.pop_front();
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
+      app->status = "";
+      app->error = e.what();
     }
   }
 }

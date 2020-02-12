@@ -182,7 +182,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
           true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app     = apps->selected;
+    auto app = apps->selected;
     app->outname = save_path;
     try {
       save_image(app->outname, app->display);
@@ -303,14 +303,13 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
   while (!apps->loading.empty()) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
+    apps->loading.pop_front();
     try {
       app->loader.get();
-      apps->loading.pop_front();
       update_display(app);
       app->ok     = true;
       app->status = "ok";
     } catch (std::exception& e) {
-      apps->loading.pop_front();
       app->status = "";
       app->error = e.what();
     }
