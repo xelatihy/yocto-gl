@@ -39,81 +39,8 @@
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
 
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-static string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
-// Get filename without directory.
-static string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Replaces extensions
-static string replace_extension(const string& filename, const string& ext) {
-  return get_noextension(filename) + ext;
-}
-
-// Check if a file can be opened for reading.
-static bool exists_file(const string& filename) {
-  auto fs = fopen(filename.c_str(), "r");
-  if (fs) {
-    fclose(fs);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
@@ -1422,7 +1349,8 @@ static void parse_value(string_view& str, obj_texture_info& info) {
   if (tokens.empty()) throw std::invalid_argument{"empty name"};
 
   // texture name
-  info.path = normalize_path(tokens.back());
+  info.path = tokens.back();
+  for(auto& c : info.path) if(c == '\\') c = '/';
 
   // texture params
   auto last = string();
@@ -1819,7 +1747,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         try {
-          load_mtl(get_dirname(filename) + mtllib, obj);
+          load_mtl(fs::path(filename).parent_path() / mtllib, obj);
         } catch (std::exception& e) {
           throw_dependent_error(fs, e.what());
         }
@@ -1862,8 +1790,8 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
   if (geom_only) return;
 
   // load extensions
-  auto extfilename = replace_extension(filename, ".objx");
-  if (exists_file(extfilename)) {
+  auto extfilename = fs::path(filename).replace_extension(".objx");
+  if (fs::exists(fs::path(extfilename))) {
     try {
       load_objx(extfilename, obj);
     } catch (std::exception& e) {
@@ -2053,7 +1981,7 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
   // save material library
   if (!obj->materials.empty()) {
     format_values(
-        fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
+        fs, "mtllib {}\n\n", fs::path(filename).filename().replace_extension(".mtl"));
   }
 
   // save objects
@@ -2095,14 +2023,14 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    save_mtl(replace_extension(filename, ".mtl"), obj);
+    save_mtl(fs::path(filename).replace_extension(".mtl"), obj);
   }
 
   // save objx
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    save_objx(replace_extension(filename, ".objx"), obj);
+    save_objx(fs::path(filename).replace_extension(".objx"), obj);
   }
 }
 
@@ -3221,16 +3149,16 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
         auto filenames = vector<string>{};
         parse_value(str, filename);
         if (!str.data()) throw std::invalid_argument{"bad pbrt value"};
-        auto filenamep = get_filename(filename);
-        if (get_extension(filenamep) == ".spd") {
-          filenamep = replace_extension(filenamep, "");
+        auto filenamep = fs::path(filename).filename();
+        if (fs::path(filenamep).extension() == ".spd") {
+          filenamep = fs::path(filenamep).replace_extension("").string();
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (get_extension(filenamep) == ".eta") {
-            auto eta = get_pbrt_etak(replace_extension(filenamep, "")).first;
+          } else if (fs::path(filenamep).extension() == ".eta") {
+            auto eta = get_pbrt_etak(fs::path(filenamep).replace_extension("")).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (get_extension(filenamep) == ".k") {
-            auto k = get_pbrt_etak(replace_extension(filenamep, "")).second;
+          } else if (fs::path(filenamep).extension() == ".k") {
+            auto k = get_pbrt_etak(fs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             throw std::invalid_argument{"bad pbrt value"};
@@ -4130,7 +4058,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       auto includename = ""s;
       parse_pbrt_param(fs, str, includename);
       try {
-        load_pbrt(get_dirname(filename) + includename, pbrt, ctx, material_map,
+        load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx, material_map,
             medium_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
         throw_dependent_error(fs, e.what());
@@ -4156,8 +4084,9 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt) {
       {"", {}}};
   auto medium_map  = unordered_map<string, shared_ptr<pbrt_medium>>{{"", {}}};
   auto texture_map = unordered_map<string, pbrt_texture>{{"", {}}};
-  load_pbrt(filename, pbrt, ctx, material_map, medium_map, texture_map,
-      get_dirname(filename));
+  auto dirname = fs::path(filename).parent_path().string();
+  if(dirname != "") dirname += "/";
+  load_pbrt(filename, pbrt, ctx, material_map, medium_map, texture_map, dirname);
 }
 
 static void format_value(string& str, const pbrt_value& value) {
@@ -4389,7 +4318,7 @@ void save_pbrt(
         add_normals(ply, shape->normals);
         add_texcoords(ply, shape->texcoords);
         add_triangles(ply, shape->triangles);
-        save_ply(get_dirname(filename) + shape->filename_, ply);
+        save_ply(fs::path(filename).parent_path() / shape->filename_, ply);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -4445,7 +4374,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
-  auto dirname = get_dirname(filename);
+  auto dirname = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success) {
