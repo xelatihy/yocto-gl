@@ -66,7 +66,7 @@ struct app_state {
   float                   exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 
   // editing
@@ -749,7 +749,7 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+    if (!app->glimage) app->glimage = make_glimage();
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
     update_imview(app->glparams.center, app->glparams.scale,
@@ -831,8 +831,7 @@ int run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename);
 
   // window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
   set_draw_glcallback(

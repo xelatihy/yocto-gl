@@ -23,7 +23,7 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  shared_ptr<opengl_scene> scene          = make_shared<opengl_scene>();
+  shared_ptr<opengl_scene> scene          = nullptr;
   draw_glscene_params      opengl_options = {};
 
   // Interaction data
@@ -182,7 +182,7 @@ void show_edges(shared_ptr<app_state> app) {
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
-  init_glscene(app->scene);
+  app->scene = make_glscene();
   app->glcamera = add_camera(app->scene);
   set_frame(app->glcamera, app->camera.frame);
   set_lens(
@@ -284,8 +284,7 @@ void yimshproc(const string&                         input_filename,
   app->init(app);
 
   // Init window.
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yimshproc", true);
+  auto win = make_glwindow({1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks

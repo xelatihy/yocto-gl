@@ -64,7 +64,7 @@ struct app_state {
   shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
 
   // rendering state
-  shared_ptr<opengl_scene> glscene = make_shared<opengl_scene>();
+  shared_ptr<opengl_scene> glscene = nullptr;
 
   // view image
   float  time       = 0;
@@ -172,11 +172,11 @@ void update_lights(
 }
 
 void init_scene(shared_ptr<app_state> app) {
+  // create scene
+  app->glscene = make_glscene();
+
   auto glscene = app->glscene;
   auto ioscene = app->ioscene;
-
-  // load program
-  init_glscene(glscene);
 
   // camera
   app->camera_map[nullptr] = nullptr;
@@ -698,8 +698,7 @@ int run_app(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", true);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
 
   // callbacks
   set_draw_glcallback(

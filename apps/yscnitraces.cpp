@@ -52,7 +52,7 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>   scene      = make_shared<trace_scene>();
+  shared_ptr<trace_scene>   scene      = nullptr;
   bool                      add_skyenv = false;
 
   // rendering state
@@ -62,7 +62,7 @@ struct app_state {
   float                   exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 
   // computation
@@ -316,13 +316,12 @@ int run_app(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
       win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
-        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+        if (!app->glimage) app->glimage = make_glimage();
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
