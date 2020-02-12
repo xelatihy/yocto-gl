@@ -492,8 +492,8 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material*  material  = nullptr;
-  pbrt_arealight* arealight = nullptr;
+  shared_ptr<pbrt_material>  material  = nullptr;
+  shared_ptr<pbrt_arealight> arealight = nullptr;
 };
 
 // Pbrt lights
@@ -524,20 +524,19 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_model {
   vector<string>            comments     = {};
-  vector<pbrt_camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_arealight*>   arealights   = {};
-  vector<pbrt_material*>    materials    = {};
-  vector<pbrt_medium*>      mediums      = {};
-  ~pbrt_model();
+  vector<shared_ptr<pbrt_camera>>      cameras      = {};
+  vector<shared_ptr<pbrt_shape>>       shapes       = {};
+  vector<shared_ptr<pbrt_environment>> environments = {};
+  vector<shared_ptr<pbrt_light>>       lights       = {};
+  vector<shared_ptr<pbrt_arealight>>   arealights   = {};
+  vector<shared_ptr<pbrt_material>>    materials    = {};
+  vector<shared_ptr<pbrt_medium>>      mediums      = {};
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model* pbrt);
+void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt);
 void save_pbrt(
-    const string& filename, const pbrt_model* pbrt, bool ply_meshes = false);
+    const string& filename, const shared_ptr<pbrt_model> pbrt, bool ply_meshes = false);
 
 }  // namespace yocto
 

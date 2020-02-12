@@ -1868,8 +1868,7 @@ namespace yocto {
 static void load_pbrt_scene(
     const string& filename, sceneio_model* scene, bool noparallel) {
   // load pbrt
-  auto pbrt_ = make_unique<pbrt_model>();
-  auto pbrt  = pbrt_.get();
+  auto pbrt = make_shared<pbrt_model>();
   load_pbrt(filename, pbrt);
 
   // convert cameras
@@ -1906,7 +1905,7 @@ static void load_pbrt_scene(
   };
 
   // convert material
-  auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
+  auto material_map = unordered_map<shared_ptr<pbrt_material>, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material           = add_material(scene);
     material->color         = pmaterial->color;
@@ -1926,7 +1925,7 @@ static void load_pbrt_scene(
   material_map[nullptr] = add_material(scene);
 
   // convert arealight
-  auto arealight_map = unordered_map<pbrt_arealight*, sceneio_material*>{};
+  auto arealight_map = unordered_map<shared_ptr<pbrt_arealight>, sceneio_material*>{};
   for (auto parealight : pbrt->arealights) {
     auto material             = add_material(scene);
     material->emission        = parealight->emission;
@@ -1981,22 +1980,21 @@ static void load_pbrt_scene(
 void save_pbrt_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   // save pbrt
-  auto pbrt_ = make_unique<pbrt_model>();
-  auto pbrt  = pbrt_.get();
+  auto pbrt = make_shared<pbrt_model>();
 
   // convert camera
   auto camera         = scene->cameras.front();
-  auto pcamera        = pbrt->cameras.emplace_back(new pbrt_camera{});
+  auto pcamera        = pbrt->cameras.emplace_back(make_shared<pbrt_camera>());
   pcamera->frame      = camera->frame;
   pcamera->lens       = camera->lens;
   pcamera->aspect     = camera->aspect;
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // convert materials
-  auto material_map  = unordered_map<sceneio_material*, pbrt_material*>{};
-  auto arealight_map = unordered_map<sceneio_material*, pbrt_arealight*>{};
+  auto material_map  = unordered_map<sceneio_material*, shared_ptr<pbrt_material>>{};
+  auto arealight_map = unordered_map<sceneio_material*, shared_ptr<pbrt_arealight>>{};
   for (auto material : scene->materials) {
-    auto pmaterial          = pbrt->materials.emplace_back(new pbrt_material{});
+    auto pmaterial          = pbrt->materials.emplace_back(make_shared<pbrt_material>());
     pmaterial->name         = get_basename(material->name);
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -2009,7 +2007,7 @@ void save_pbrt_scene(
                                                : ""s;
     material_map[material] = pmaterial;
     if (material->emission != zero3f) {
-      auto parealight = pbrt->arealights.emplace_back(new pbrt_arealight{});
+      auto parealight = pbrt->arealights.emplace_back(make_shared<pbrt_arealight>());
       parealight->emission    = material->emission;
       arealight_map[material] = parealight;
     } else {
@@ -2019,7 +2017,7 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto object : scene->objects) {
-    auto pshape       = pbrt->shapes.emplace_back(new pbrt_shape{});
+    auto pshape       = pbrt->shapes.emplace_back(make_shared<pbrt_shape>());
     pshape->filename_ = replace_extension(object->shape->name, ".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
@@ -2033,7 +2031,7 @@ void save_pbrt_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment = pbrt->environments.emplace_back(new pbrt_environment{});
+    auto penvironment = pbrt->environments.emplace_back(make_shared<pbrt_environment>());
     penvironment->emission = environment->emission;
     if (environment->emission_tex) {
       penvironment->emission_map = environment->emission_tex->name;

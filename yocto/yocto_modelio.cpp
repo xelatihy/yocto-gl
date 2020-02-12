@@ -3250,8 +3250,8 @@ struct pbrt_texture {
 };
 
 // convert pbrt films
-static void convert_film(
-    pbrt_film* film, const pbrt_command& command, bool verbose = false) {
+static shared_ptr<pbrt_film> convert_film(const pbrt_command& command, bool verbose = false) {
+  auto film = make_shared<pbrt_film>();
   if (command.type == "image") {
     film->resolution = {512, 512};
     get_pbrt_value(command.values, "xresolution", film->resolution.x);
@@ -3261,11 +3261,13 @@ static void convert_film(
   } else {
     throw std::invalid_argument{"unknown film " + command.type};
   }
+  return film;
 }
 
 // convert pbrt elements
-static void convert_camera(pbrt_camera* camera, const pbrt_command& command,
+static shared_ptr<pbrt_camera> convert_camera(const pbrt_command& command,
     const vec2i& resolution, bool verbose = false) {
+  auto camera = make_shared<pbrt_camera>();
   camera->frame      = command.frame;
   camera->frend      = command.frend;
   camera->frame      = inverse((frame3f)camera->frame);
@@ -3302,6 +3304,7 @@ static void convert_camera(pbrt_camera* camera, const pbrt_command& command,
   } else {
     throw std::invalid_argument{"unknown camera " + command.type};
   }
+  return camera;
 }
 
 // convert pbrt textures
@@ -3374,9 +3377,9 @@ static void convert_texture(pbrt_texture& texture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-static void convert_material(pbrt_material*      material,
+static shared_ptr<pbrt_material> convert_material(
     const pbrt_command&                          command,
-    const unordered_map<string, pbrt_material*>& material_map,
+    const unordered_map<string, shared_ptr<pbrt_material>>& material_map,
     const unordered_map<string, pbrt_texture>&   texture_map,
     bool                                         verbose = false) {
   // helpers
@@ -3459,6 +3462,7 @@ static void convert_material(pbrt_material*      material,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
+  auto material = make_shared<pbrt_material>();
   material->name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
@@ -3625,6 +3629,7 @@ static void convert_material(pbrt_material*      material,
   } else {
     throw std::invalid_argument{"unknown material type " + command.type};
   }
+  return material;
 }
 
 // Make a triangle shape from a quad grid
@@ -3697,8 +3702,9 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // Convert pbrt shapes
-static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
+static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
     const string& filename, const string& ply_dirname, bool verbose = false) {
+      auto shape = make_shared<pbrt_shape>();
   shape->frame = command.frame;
   shape->frend = command.frend;
   if (command.type == "trianglemesh") {
@@ -3744,11 +3750,13 @@ static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
   } else {
     throw std::invalid_argument{"unknown shape " + command.type};
   }
+  return shape;
 }
 
 // Convert pbrt arealights
-static void convert_arealight(
-    pbrt_arealight* light, const pbrt_command& command, bool verbose = false) {
+static shared_ptr<pbrt_arealight> convert_arealight(
+     const pbrt_command& command, bool verbose = false) {
+       auto light = make_shared<pbrt_arealight>();
   light->name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1}, scale = vec3f{1};
@@ -3758,11 +3766,12 @@ static void convert_arealight(
   } else {
     throw std::invalid_argument{"unknown arealight " + command.type};
   }
+  return light;
 }
 
 // Convert pbrt lights
-static void convert_light(
-    pbrt_light* light, const pbrt_command& command, bool verbose = false) {
+static shared_ptr<pbrt_light>  convert_light(const pbrt_command& command, bool verbose = false) {
+       auto light = make_shared<pbrt_light>();
   light->frame = command.frame;
   light->frend = command.frend;
   if (command.type == "distant") {
@@ -3807,10 +3816,12 @@ static void convert_light(
   } else {
     throw std::invalid_argument{"unknown light " + command.type};
   }
+  return light;
 }
 
-static void convert_environment(pbrt_environment* environment,
+static shared_ptr<pbrt_environment> convert_environment(
     const pbrt_command& command, bool verbose = false) {
+      auto environment = make_shared<pbrt_environment>();
   environment->frame = command.frame;
   environment->frend = command.frend;
   environment->frame = environment->frame *
@@ -3827,25 +3838,17 @@ static void convert_environment(pbrt_environment* environment,
   } else {
     throw std::invalid_argument{"unknown light " + command.type};
   }
-}
-
-pbrt_model::~pbrt_model() {
-  for (auto camera : cameras) delete camera;
-  for (auto shape : shapes) delete shape;
-  for (auto environment : environments) delete environment;
-  for (auto light : lights) delete light;
-  for (auto arealight : arealights) delete arealight;
-  for (auto material : materials) delete material;
+  return environment;
 }
 
 // pbrt stack ctm
 struct pbrt_stack_element {
   frame3f         transform_start        = identity3x4f;
   frame3f         transform_end          = identity3x4f;
-  pbrt_material*  material               = nullptr;
-  pbrt_arealight* arealight              = nullptr;
-  pbrt_medium*    interior               = nullptr;
-  pbrt_medium*    exterior               = nullptr;
+  shared_ptr<pbrt_material>  material               = nullptr;
+  shared_ptr<pbrt_arealight> arealight              = nullptr;
+  shared_ptr<pbrt_medium>    interior               = nullptr;
+  shared_ptr<pbrt_medium>    exterior               = nullptr;
   bool            reverse                = false;
   bool            active_transform_start = true;
   bool            active_transform_end   = true;
@@ -3855,15 +3858,15 @@ struct pbrt_stack_element {
 struct pbrt_context {
   vector<pbrt_stack_element>                 stack           = {};
   unordered_map<string, pbrt_stack_element>  coordsys        = {};
-  unordered_map<string, vector<pbrt_shape*>> objects         = {};
+  unordered_map<string, vector<shared_ptr<pbrt_shape>>> objects         = {};
   string                                     cur_object      = "";
   vec2i                                      film_resolution = {512, 512};
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
-    unordered_map<string, pbrt_material*>& material_map,
-    unordered_map<string, pbrt_medium*>&   medium_map,
+void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context& ctx,
+    unordered_map<string, shared_ptr<pbrt_material>>& material_map,
+    unordered_map<string, shared_ptr<pbrt_medium>>&   medium_map,
     unordered_map<string, pbrt_texture>&   texture_map,
     const string&                          ply_dirname) {
   auto fs = open_file(filename, "rt");
@@ -3994,9 +3997,8 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       auto command = pbrt_command{};
       parse_pbrt_param(fs, str, command.type);
       parse_pbrt_params(fs, str, command.values);
-      auto cfilm = pbrt_film{};
-      convert_film(&cfilm, command);
-      ctx.film_resolution = cfilm.resolution;
+      auto cfilm = convert_film(command);
+      ctx.film_resolution = cfilm->resolution;
     } else if (cmd == "Accelerator") {
       auto command = pbrt_command{};
       parse_pbrt_param(fs, str, command.type);
@@ -4007,8 +4009,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       parse_pbrt_params(fs, str, command.values);
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto camera   = pbrt->cameras.emplace_back(new pbrt_camera{});
-      convert_camera(camera, command, ctx.film_resolution);
+      auto camera   = convert_camera(command, ctx.film_resolution);
+      pbrt->cameras.push_back(camera);
+      
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
@@ -4027,8 +4030,8 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       if (command.type == "") {
         ctx.stack.back().material = nullptr;
       } else {
-        auto material = pbrt->materials.emplace_back(new pbrt_material{});
-        convert_material(material, command, material_map, texture_map);
+        auto material = convert_material(command, material_map, texture_map);
+        pbrt->materials.push_back(material);
         ctx.stack.back().material = material;
       }
     } else if (cmd == "MakeNamedMaterial") {
@@ -4038,9 +4041,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
-      auto material = pbrt->materials.emplace_back(new pbrt_material{});
+      auto material = convert_material(command, material_map, texture_map);
+      pbrt->materials.push_back(material);
       material_map[command.name] = material;
-      convert_material(material, command, material_map, texture_map);
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       parse_pbrt_param(fs, str, name);
@@ -4051,8 +4054,8 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       parse_pbrt_params(fs, str, command.values);
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto shape    = pbrt->shapes.emplace_back(new pbrt_shape{});
-      convert_shape(shape, command, filename, ply_dirname);
+      auto shape = convert_shape(command, filename, ply_dirname);
+      pbrt->shapes.push_back(shape);
       shape->material  = ctx.stack.back().material;
       shape->arealight = ctx.stack.back().arealight;
       if (ctx.cur_object != "") {
@@ -4066,8 +4069,9 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       parse_pbrt_params(fs, str, command.values);
       command.frame  = ctx.stack.back().transform_start;
       command.frend  = ctx.stack.back().transform_end;
-      auto arealight = pbrt->arealights.emplace_back(new pbrt_arealight{});
-      convert_arealight(arealight, command);
+      auto arealight = 
+      convert_arealight(command);
+      pbrt->arealights.push_back(arealight);
       ctx.stack.back().arealight = arealight;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
@@ -4076,12 +4080,11 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
-        auto environment = pbrt->environments.emplace_back(
-            new pbrt_environment{});
-        convert_environment(environment, command);
+        auto environment = convert_environment(command);
+        pbrt->environments.push_back(environment);
       } else {
-        auto light = pbrt->lights.emplace_back(new pbrt_light{});
-        convert_light(light, command);
+        auto light = convert_light(command);
+        pbrt->lights.push_back(light);
       }
     } else if (cmd == "MakeNamedMedium") {
       auto command = pbrt_command{};
@@ -4090,7 +4093,7 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium              = pbrt->mediums.emplace_back(new pbrt_medium{});
+      auto medium              = pbrt->mediums.emplace_back(make_shared<pbrt_medium>());
       medium_map[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -4114,10 +4117,10 @@ void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
 }
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model* pbrt) {
+void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt) {
   auto ctx          = pbrt_context{};
-  auto material_map = unordered_map<string, pbrt_material*>{{"", {}}};
-  auto medium_map   = unordered_map<string, pbrt_medium*>{{"", {}}};
+  auto material_map = unordered_map<string, shared_ptr<pbrt_material>>{{"", {}}};
+  auto medium_map   = unordered_map<string, shared_ptr<pbrt_medium>>{{"", {}}};
   auto texture_map  = unordered_map<string, pbrt_texture>{{"", {}}};
   load_pbrt(filename, pbrt, ctx, material_map, medium_map, texture_map,
       get_dirname(filename));
@@ -4201,7 +4204,7 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 void save_pbrt(
-    const string& filename, const pbrt_model* pbrt, bool ply_meshes) {
+    const string& filename, const shared_ptr<pbrt_model> pbrt, bool ply_meshes) {
   auto fs = open_file(filename, "wt");
 
   // save comments
