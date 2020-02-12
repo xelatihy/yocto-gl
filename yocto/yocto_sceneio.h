@@ -269,6 +269,9 @@ struct sceneio_model {
   vector<shared_ptr<sceneio_animation>>   animations   = {};
 };
 
+// create a scene
+shared_ptr<sceneio_model> make_sceneio_model();
+
 // add element to a scene
 shared_ptr<sceneio_camera>      add_camera(shared_ptr<sceneio_model> scene);
 shared_ptr<sceneio_environment> add_environment(
