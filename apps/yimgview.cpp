@@ -74,14 +74,14 @@ struct app_state {
   atomic<bool> ok     = false;
   future<void> loader = {};
   string       status = "";
-  string       error = "";
+  string       error  = "";
 };
 
 // app states
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  shared_ptr<app_state> selected = nullptr;
+  shared_ptr<app_state>         selected = nullptr;
   deque<shared_ptr<app_state>>  loading  = {};
 
   // default options
@@ -178,11 +178,11 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", apps->selected && apps->selected->ok, "save image", save_path,
-          true, fs::path(save_path).parent_path(),
-          fs::path(save_path).filename(),
+  if (draw_glfiledialog_button(win, "save",
+          apps->selected && apps->selected->ok, "save image", save_path, true,
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app = apps->selected;
+    auto app     = apps->selected;
     app->outname = save_path;
     try {
       save_image(app->outname, app->display);
@@ -195,8 +195,9 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)apps->selected)) {
-    if(apps->selected->loader.valid()) return;
-    apps->states.erase(std::find(apps->states.begin(), apps->states.end(), apps->selected));
+    if (apps->selected->loader.valid()) return;
+    apps->states.erase(
+        std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
   continue_glline(win);
@@ -204,10 +205,10 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     set_close(win, true);
   }
   draw_glcombobox(win, "image", apps->selected, apps->states, false);
-  if(!apps->selected) return;
+  if (!apps->selected) return;
   auto app = apps->selected;
-  if(app->status != "") draw_gllabel(win, "status", app->status);
-  if(app->error != "") draw_gllabel(win, "error", app->error);
+  if (app->status != "") draw_gllabel(win, "status", app->status);
+  if (app->error != "") draw_gllabel(win, "error", app->error);
   if (!app->ok) return;
   if (begin_glheader(win, "tonemap")) {
     auto edited = 0;
@@ -311,7 +312,7 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
       app->status = "ok";
     } catch (std::exception& e) {
       app->status = "";
-      app->error = e.what();
+      app->error  = e.what();
     }
   }
 }
@@ -351,7 +352,7 @@ int run_app(int argc, const char* argv[]) {
       });
   set_uiupdate_glcallback(
       win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
-        if(!apps->selected) return;
+        if (!apps->selected) return;
         auto app = apps->selected;
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
