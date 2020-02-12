@@ -52,13 +52,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = new opengl_image{};
+  shared_ptr<opengl_image>       glimage  = make_shared<opengl_image>();
   draw_glimage_params glparams = {};
-
-  // cleanup
-  ~app_state() {
-    if (glimage) delete glimage;
-  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -113,13 +108,12 @@ int run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_ = make_unique<opengl_window>();
-  auto win  = win_.get();
+  auto win = make_shared<opengl_window>();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!is_initialized(app->glimage)) {
@@ -131,7 +125,7 @@ int run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

@@ -62,7 +62,7 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = new opengl_image{};
+  shared_ptr<opengl_image>       glimage  = make_shared<opengl_image>();
   draw_glimage_params glparams = {};
 
   // editing
@@ -77,7 +77,6 @@ struct app_state {
   ~app_state() {
     render_stop = true;
     if (render_future.valid()) render_future.get();
-    if (glimage) delete glimage;
     if (scene) delete scene;
     if (state) delete state;
   }
@@ -316,13 +315,12 @@ int run_app(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win_ = make_unique<opengl_window>();
-  auto win  = win_.get();
+  auto win = make_shared<opengl_window>();
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -335,7 +333,7 @@ int run_app(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;
