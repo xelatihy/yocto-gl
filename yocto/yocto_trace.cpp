@@ -2945,7 +2945,7 @@ vec4f trace_sample(const shared_ptr<trace_state>& state,
 // Init a sequence of random number generators.
 shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
-  auto state = make_shared<trace_state>();
+  auto  state  = make_shared<trace_state>();
   auto& camera = scene->cameras[params.camera];
   auto  image_size =
       (camera->film.x > camera->film.y)
@@ -3050,7 +3050,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
-  auto state = make_state(scene, params);
+  auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   if (params.noparallel) {

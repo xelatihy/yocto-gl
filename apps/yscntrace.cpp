@@ -195,16 +195,16 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene    = make_shared<sceneio_model>();
+  auto ioscene = make_shared<sceneio_model>();
   {
     auto timer = CLI::AutoTimer{"load"};
-    ioscene = load_scene(filename);
+    ioscene    = load_scene(filename);
   }
 
   // add components
   if (validate) {
-    auto timer = CLI::AutoTimer{"validate"};
-    auto errors         = scene_validation(ioscene);
+    auto timer  = CLI::AutoTimer{"validate"};
+    auto errors = scene_validation(ioscene);
     for (auto& error : errors) print_info(error);
   }
 
@@ -212,7 +212,7 @@ int run_app(int argc, const char* argv[]) {
   auto scene = shared_ptr<trace_scene>();
   {
     auto timer = CLI::AutoTimer{"convert"};
-    scene         = make_scene(ioscene);
+    scene      = make_scene(ioscene);
   }
 
   // cleanup
@@ -237,20 +237,19 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto state = make_state(scene, params);
+  auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
-    auto nsamples    = min(batch, params.samples - sample);
-    auto timer = CLI::AutoTimer{"rendering samples " +
-                                   std::to_string(sample) + "/" +
-                                   std::to_string(params.samples)};
-    render           = trace_samples(state, scene, nsamples, params);
+    auto nsamples = min(batch, params.samples - sample);
+    auto timer = CLI::AutoTimer{"rendering samples " + std::to_string(sample) +
+                                "/" + std::to_string(params.samples)};
+    render     = trace_samples(state, scene, nsamples, params);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-          auto timer = CLI::AutoTimer{"saving " + outfilename};
+      auto timer       = CLI::AutoTimer{"saving " + outfilename};
       save_image(outfilename, render);
     }
   }

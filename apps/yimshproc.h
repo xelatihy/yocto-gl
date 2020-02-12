@@ -182,7 +182,7 @@ void show_edges(shared_ptr<app_state> app) {
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
-  app->scene = make_glscene();
+  app->scene    = make_glscene();
   app->glcamera = add_camera(app->scene);
   set_frame(app->glcamera, app->camera.frame);
   set_lens(

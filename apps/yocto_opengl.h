@@ -396,9 +396,8 @@ struct opengl_window {
 };
 
 // Windows initialization
-shared_ptr<opengl_window> make_glwindow(const vec2i& size,
-    const string& title, bool widgets, int widgets_width = 320,
-    bool widgets_left = true);
+shared_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
 void clear_glwindow(shared_ptr<opengl_window> win);

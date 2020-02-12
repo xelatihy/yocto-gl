@@ -76,8 +76,7 @@ struct app_state {
 };
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(
-     shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
   auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
@@ -283,7 +282,7 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   {
-    auto timer = CLI::AutoTimer{"loading scene"};
+    auto timer   = CLI::AutoTimer{"loading scene"};
     app->ioscene = load_scene(app->filename);
   }
 
@@ -315,7 +314,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  app->state = make_state(app->scene, app->params);
+  app->state   = make_state(app->scene, app->params);
   app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);

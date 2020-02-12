@@ -120,7 +120,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(shared_ptr<app_state> app) {
-  app->scene = make_trace_scene();
+  app->scene   = make_trace_scene();
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
@@ -289,7 +289,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname   = replace_extension(filename, ".edited.yaml");
         app->name      = get_filename(app->filename);
         app->params    = app->params;
-        app->ioscene = load_scene(app->filename);
+        app->ioscene   = load_scene(app->filename);
         init_scene(app);
         init_bvh(app->scene, app->params);
         init_lights(app->scene);

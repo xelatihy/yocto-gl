@@ -872,8 +872,7 @@ static void save_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
 
 // Load a scene
-shared_ptr<sceneio_model> load_scene(const string& filename,
-    bool noparallel) {
+shared_ptr<sceneio_model> load_scene(const string& filename, bool noparallel) {
   auto scene = make_shared<sceneio_model>();
   load_scene(filename, scene, noparallel);
   return scene;
@@ -941,7 +940,7 @@ static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = load_ply(filename);
-    frames = get_values(ply, "frame",
+    frames   = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
   } else {

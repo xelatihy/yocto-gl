@@ -308,7 +308,7 @@ shared_ptr<opengl_image> make_glimage() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
       triangles.data(), GL_STATIC_DRAW);
 
-      return glimage;
+  return glimage;
 }
 
 // update image data
@@ -1298,9 +1298,9 @@ static void draw_glwindow(shared_ptr<opengl_window> win) {
 unordered_map<GLFWwindow*, shared_ptr<opengl_window>> opengl_window::registry =
     {};
 
-shared_ptr<opengl_window> make_glwindow(const vec2i& size,
-    const string& title, bool widgets, int widgets_width, bool widgets_left) {
-    auto win = make_shared<opengl_window>();
+shared_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width, bool widgets_left) {
+  auto win = make_shared<opengl_window>();
 
   // init glfw
   if (!glfwInit())

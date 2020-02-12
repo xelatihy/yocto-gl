@@ -333,9 +333,8 @@ struct obj_model {
 };
 
 // Load and save obj
-shared_ptr<obj_model> load_obj(const string& filename,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
+shared_ptr<obj_model> load_obj(const string& filename, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
 void load_obj(const string& filename, shared_ptr<obj_model> obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);

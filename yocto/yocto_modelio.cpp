@@ -526,9 +526,7 @@ static void remove_ply_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read ply
-shared_ptr<ply_model> make_ply() {
-  return make_shared<ply_model>();
-}
+shared_ptr<ply_model> make_ply() { return make_shared<ply_model>(); }
 shared_ptr<ply_model> load_ply(const string& filename) {
   auto ply = make_ply();
   load_ply(filename, ply);
@@ -1688,10 +1686,8 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
 }
 
 // Read obj
-shared_ptr<obj_model> make_obj() {
-  return make_shared<obj_model>();
-}
-shared_ptr<obj_model> load_obj(const string& filename,  bool geom_only,
+shared_ptr<obj_model> make_obj() { return make_shared<obj_model>(); }
+shared_ptr<obj_model> load_obj(const string& filename, bool geom_only,
     bool split_elements, bool split_materials) {
   auto obj = make_obj();
   load_obj(filename, obj, geom_only, split_elements, split_materials);
@@ -4146,9 +4142,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
 }
 
 // Read obj
-shared_ptr<pbrt_model> make_pbrt() {
-  return make_shared<pbrt_model>();
-}
+shared_ptr<pbrt_model> make_pbrt() { return make_shared<pbrt_model>(); }
 shared_ptr<pbrt_model> load_pbrt(const string& filename) {
   auto pbrt = make_pbrt();
   load_pbrt(filename, pbrt);

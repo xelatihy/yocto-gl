@@ -3505,7 +3505,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = load_ply(filename);
+    auto ply  = load_ply(filename);
     positions = get_positions(ply);
     normals   = get_normals(ply);
     texcoords = get_texcoords(ply, flip_texcoord);
