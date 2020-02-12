@@ -33,8 +33,8 @@ using namespace yocto;
 
 #include <memory>
 #include <set>
-using std::make_unique;
-using std::set;
+#include <iomanip>
+using namespace std;
 
 #include "ext/CLI11.hpp"
 #include "ext/Timer.hpp"
@@ -81,11 +81,23 @@ int run_app(int argc, const char** argv) {
     return cli.exit(e);
   }
 
+  // progress callback
+  auto progress_cb = [](const string& message, int current, int total) {
+    if (current == total) {
+      cout << "\r" << string(60, ' ') << "\r";
+    } else {
+      auto n = (int)(30 * (float)current / (float)total);
+      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
+           << message << "\r";
+      cout.flush();
+    }
+  };
+
   // load scene
   auto scene = shared_ptr<sceneio_model>{};
   {
     auto timer = CLI::AutoTimer("loading scene");
-    scene      = load_scene(filename);
+    scene      = load_scene(filename, progress_cb);
   }
 
   // validate scene
@@ -133,8 +145,8 @@ int run_app(int argc, const char** argv) {
 
   // save scene
   {
-    auto timer = CLI::AutoTimer("save");
-    save_scene(output, scene);
+    auto timer = CLI::AutoTimer("saving scene");
+    save_scene(output, scene, progress_cb);
   }
 
   // done
