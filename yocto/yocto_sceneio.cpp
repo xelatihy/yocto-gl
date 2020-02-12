@@ -872,6 +872,14 @@ static void save_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
 
 // Load a scene
+shared_ptr<sceneio_model> load_scene(const string& filename,
+    bool noparallel) {
+  auto scene = make_shared<sceneio_model>();
+  load_scene(filename, scene, noparallel);
+  return scene;
+}
+
+// Load a scene
 void load_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   auto ext = get_extension(filename);
@@ -1002,6 +1010,11 @@ static void save_json(const string& filename, const json& js) {
     throw std::runtime_error{filename + ": error writing json"};
   }
 }
+static json load_json(const string& filename) {
+  auto js = json{};
+  load_json(filename, js);
+  return js;
+}
 
 // Save a scene in the builtin JSON format.
 static void load_json_scene(
@@ -1009,8 +1022,7 @@ static void load_json_scene(
   *scene = {};
 
   // open file
-  auto js = json{};
-  load_json(filename, js);
+  auto js = load_json(filename);
 
   // gets a json value
   auto get_value = [](const json& ejs, const string& name, auto& value) {

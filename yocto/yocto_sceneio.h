@@ -296,6 +296,8 @@ shared_ptr<sceneio_object>    add_complete_object(
 namespace yocto {
 
 // Load/save a scene in the supported formats. Throws on error.
+shared_ptr<sceneio_model> load_scene(const string& filename,
+    bool noparallel = false);
 void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
     bool noparallel = false);
 void save_scene(const string& filename, shared_ptr<sceneio_model> scene,

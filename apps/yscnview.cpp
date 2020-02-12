@@ -133,7 +133,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname     = replace_extension(filename, ".edited.yaml");
         app->name        = get_filename(app->filename);
         app->drawgl_prms = apps->drawgl_prms;
-        load_scene(app->filename, app->ioscene);
+        app->ioscene = load_scene(app->filename);
         app->time_range = compute_animation_range(app->ioscene);
         app->time       = app->time_range.x;
         return app;

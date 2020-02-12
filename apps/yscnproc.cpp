@@ -82,9 +82,9 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene      = make_shared<sceneio_model>();
+  auto scene      = shared_ptr<sceneio_model>{};
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, scene);
+  scene = load_scene(filename);
   print_elapsed(load_timer);
 
   // validate scene

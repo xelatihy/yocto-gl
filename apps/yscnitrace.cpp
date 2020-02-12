@@ -56,7 +56,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
+  shared_ptr<sceneio_model> ioscene = nullptr;
   shared_ptr<trace_scene>   scene   = nullptr;
 
   // rendering state
@@ -289,7 +289,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname   = replace_extension(filename, ".edited.yaml");
         app->name      = get_filename(app->filename);
         app->params    = app->params;
-        load_scene(app->filename, app->ioscene);
+        app->ioscene = load_scene(app->filename);
         init_scene(app);
         init_bvh(app->scene, app->params);
         init_lights(app->scene);

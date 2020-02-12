@@ -51,7 +51,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
+  shared_ptr<sceneio_model> ioscene    = nullptr;
   shared_ptr<trace_scene>   scene      = nullptr;
   bool                      add_skyenv = false;
 
@@ -282,7 +282,7 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, app->ioscene);
+  app->ioscene = load_scene(app->filename);
   print_elapsed(load_timer);
 
   // conversion

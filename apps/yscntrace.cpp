@@ -196,7 +196,7 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, ioscene);
+  ioscene = load_scene(filename);
   print_elapsed(load_timer);
 
   // add components
