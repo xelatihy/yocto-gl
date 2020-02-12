@@ -457,7 +457,7 @@ struct trace_scene {
 
   // computed properties
   vector<shared_ptr<trace_light>> lights = {};
-  std::shared_ptr<trace_bvh> bvh    = nullptr;
+  std::shared_ptr<trace_bvh>      bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh       = nullptr;
   vector<vec2i>         embree_instances = {};

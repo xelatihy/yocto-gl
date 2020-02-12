@@ -1694,7 +1694,8 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(const shared_ptr<trace_bvh>& bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(
+    const shared_ptr<trace_bvh>& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh->nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -1916,7 +1917,7 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape_,
 
   // get bvh and shape pointers for fast access
   auto shape = shape_.get();
-  auto bvh = shape->bvh.get();
+  auto bvh   = shape->bvh.get();
 
   // check empty
   if (bvh->nodes.empty()) return false;
@@ -2031,7 +2032,7 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene_,
 
   // get bvh and scene pointers for fast access
   auto scene = scene_.get();
-  auto bvh = scene->bvh.get();
+  auto bvh   = scene->bvh.get();
 
   // check empty
   if (bvh->nodes.empty()) return false;
@@ -2076,9 +2077,9 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto [object_id, instance_id] = scene->bvh->primitives[idx];
-        auto  object                  = scene->objects[object_id].get();
-        auto  frame   = object->instance->frames[instance_id] * object->frame;
-        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
+        auto object                   = scene->objects[object_id].get();
+        auto frame   = object->instance->frames[instance_id] * object->frame;
+        auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
