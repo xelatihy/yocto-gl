@@ -66,9 +66,7 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#ifdef YOCTO_EMBREE
 #include <memory>
-#endif
 
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
