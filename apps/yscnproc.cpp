@@ -31,10 +31,10 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
+#include <iomanip>
 #include <memory>
 #include <set>
-using std::make_unique;
-using std::set;
+using namespace std;
 
 #include "ext/CLI11.hpp"
 #include "ext/Timer.hpp"
@@ -59,7 +59,6 @@ int run_app(int argc, const char** argv) {
   auto shape_directory    = "shapes/"s;
   auto subdiv_directory   = "subdivs/"s;
   auto instance_directory = "instances/"s;
-  auto obj_instances      = false;
   auto validate           = false;
   auto info               = false;
   auto output             = "out.json"s;
@@ -72,7 +71,6 @@ int run_app(int argc, const char** argv) {
       "Shape directory when adding names.");
   cli.add_option("--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  cli.add_flag("--obj-instances", obj_instances, "preserve instances in obj");
   cli.add_option("--info,-i", info, "print scene info");
   cli.add_flag("--validate", validate, "Validate scene");
   cli.add_option("--output,-o", output, "output scene", true);
@@ -83,11 +81,23 @@ int run_app(int argc, const char** argv) {
     return cli.exit(e);
   }
 
+  // progress callback
+  auto progress_cb = [](const string& message, int current, int total) {
+    if (current == total) {
+      cout << "\r" << string(60, ' ') << "\r";
+    } else {
+      auto n = (int)(30 * (float)current / (float)total);
+      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
+           << message << "\r";
+      cout.flush();
+    }
+  };
+
   // load scene
   auto scene = shared_ptr<sceneio_model>{};
   {
     auto timer = CLI::AutoTimer("loading scene");
-    scene      = load_scene(filename);
+    scene      = load_scene(filename, progress_cb);
   }
 
   // validate scene
@@ -135,8 +145,8 @@ int run_app(int argc, const char** argv) {
 
   // save scene
   {
-    auto timer = CLI::AutoTimer("save");
-    save_scene(output, scene, obj_instances);
+    auto timer = CLI::AutoTimer("saving scene");
+    save_scene(output, scene, progress_cb);
   }
 
   // done
