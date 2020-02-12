@@ -285,9 +285,13 @@ int run_app(int argc, const char* argv[]) {
     auto timer   = CLI::AutoTimer("loading scene");
     app->ioscene = load_scene(
         app->filename, [](const string& message, int current, int total) {
-          auto n = (int)(30 * (float)current / (float)total);
-          cout << "\r[" << left << setw(30) << string(n, '=') << "] "
-               << setw(30) << message << (current == total ? "\n" : " ");
+          if (current == total) {
+            cout << "\r" << string(60, ' ') << "\r";
+          } else {
+            auto n = (int)(30 * (float)current / (float)total);
+            cout << "\r[" << left << setw(30) << string(n, '=') << "] "
+                 << setw(30) << message << "\r";
+          }
         });
   }
 
