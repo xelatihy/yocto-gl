@@ -564,7 +564,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) std::cout << stat << "\n";
     }
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->render.size());
@@ -914,7 +914,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

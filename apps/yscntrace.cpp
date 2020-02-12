@@ -204,8 +204,7 @@ int run_app(int argc, const char* argv[]) {
   // add components
   if (validate) {
     auto timer  = CLI::AutoTimer{"validate"};
-    auto errors = scene_validation(ioscene);
-    for (auto& error : errors) print_info(error);
+    for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
   }
 
   // convert scene
@@ -232,7 +231,7 @@ int run_app(int argc, const char* argv[]) {
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    std::cout << "no lights presents, switching to eyelight shader\n";
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -268,7 +267,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

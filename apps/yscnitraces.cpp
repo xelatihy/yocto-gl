@@ -309,7 +309,7 @@ int run_app(int argc, const char* argv[]) {
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    std::cout << "no lights presents, switching to eyelight shader\n";
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -369,7 +369,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

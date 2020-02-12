@@ -92,14 +92,13 @@ int run_app(int argc, const char** argv) {
   // validate scene
   if (validate) {
     auto timer  = CLI::AutoTimer{"validate"};
-    auto errors = scene_validation(scene);
-    for (auto& error : errors) print_info(error);
+    for (auto& error : scene_validation(scene)) std::cout << error << "\n";
   }
 
   // print info
   if (info) {
-    print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    std::cout << "scene stats ------------\n";
+    for (auto stat : scene_stats(scene)) std::cout << stat << "\n";
   }
 
   // tesselate if needed
@@ -130,7 +129,7 @@ int run_app(int argc, const char** argv) {
     dirnames.insert(dirname + get_dirname(instance->name));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
-      print_fatal("cannot create directory " + output);
+      throw std::runtime_error{"cannot create directory " + output};
     }
   }
 
@@ -148,7 +147,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

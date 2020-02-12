@@ -319,7 +319,8 @@ int main(int argc, const char** argv) {
   // convert data
   if (trianglesonly) {
     if (!quadspos.empty()) {
-      print_fatal("cannot convert facevarying data to triangles");
+      std::cerr << "cannot convert facevarying data to triangles" << "\n";
+      exit(1);
     }
     if (!quads.empty()) {
       triangles = quads_to_triangles(quads);
@@ -329,11 +330,11 @@ int main(int argc, const char** argv) {
 
   // print info
   if (info) {
-    print_info("shape stats ------------");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) std::cout << stat << "\n";
   }
 
   // transform
@@ -442,11 +443,11 @@ int main(int argc, const char** argv) {
   }
 
   if (info) {
-    print_info("shape stats ------------");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) std::cout << stat << "\n";
   }
 
   // save mesh

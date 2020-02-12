@@ -76,7 +76,11 @@
     "utility": "cpp",
     "vector": "cpp",
     "__functional_base_03": "cpp",
-    "forward_list": "cpp"
+    "forward_list": "cpp",
+    "iostream": "cpp",
+    "numeric": "cpp",
+    "set": "cpp",
+    "valarray": "cpp"
   },
   "json.schemas": [
     {

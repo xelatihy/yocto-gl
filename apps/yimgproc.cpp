@@ -31,6 +31,7 @@
 #include "../yocto/yocto_math.h"
 using namespace yocto;
 
+#include <iostream>
 #include "ext/CLI11.hpp"
 
 namespace yocto {
@@ -333,7 +334,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }
