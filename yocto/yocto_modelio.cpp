@@ -38,7 +38,6 @@
 
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
-
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -1350,7 +1349,8 @@ static void parse_value(string_view& str, obj_texture_info& info) {
 
   // texture name
   info.path = tokens.back();
-  for(auto& c : info.path) if(c == '\\') c = '/';
+  for (auto& c : info.path)
+    if (c == '\\') c = '/';
 
   // texture params
   auto last = string();
@@ -1980,8 +1980,8 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
 
   // save material library
   if (!obj->materials.empty()) {
-    format_values(
-        fs, "mtllib {}\n\n", fs::path(filename).filename().replace_extension(".mtl"));
+    format_values(fs, "mtllib {}\n\n",
+        fs::path(filename).filename().replace_extension(".mtl"));
   }
 
   // save objects
@@ -3155,10 +3155,12 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
           } else if (fs::path(filenamep).extension() == ".eta") {
-            auto eta = get_pbrt_etak(fs::path(filenamep).replace_extension("")).first;
+            auto eta =
+                get_pbrt_etak(fs::path(filenamep).replace_extension("")).first;
             value.value3f = {eta.x, eta.y, eta.z};
           } else if (fs::path(filenamep).extension() == ".k") {
-            auto k = get_pbrt_etak(fs::path(filenamep).replace_extension("")).second;
+            auto k =
+                get_pbrt_etak(fs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             throw std::invalid_argument{"bad pbrt value"};
@@ -4058,8 +4060,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       auto includename = ""s;
       parse_pbrt_param(fs, str, includename);
       try {
-        load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx, material_map,
-            medium_map, texture_map, ply_dirname);
+        load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx,
+            material_map, medium_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
         throw_dependent_error(fs, e.what());
       }
@@ -4084,9 +4086,10 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt) {
       {"", {}}};
   auto medium_map  = unordered_map<string, shared_ptr<pbrt_medium>>{{"", {}}};
   auto texture_map = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname = fs::path(filename).parent_path().string();
-  if(dirname != "") dirname += "/";
-  load_pbrt(filename, pbrt, ctx, material_map, medium_map, texture_map, dirname);
+  auto dirname     = fs::path(filename).parent_path().string();
+  if (dirname != "") dirname += "/";
+  load_pbrt(
+      filename, pbrt, ctx, material_map, medium_map, texture_map, dirname);
 }
 
 static void format_value(string& str, const pbrt_value& value) {

@@ -69,6 +69,10 @@ struct app_state {
   shared_ptr<opengl_image> glimage   = nullptr;
   draw_glimage_params      glparams  = {};
   bool                     glupdated = true;
+
+  // loading status
+  atomic<bool> ok     = false;
+  future<void> loader = {};
 };
 
 // app states
@@ -76,9 +80,7 @@ struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
   int                           selected = -1;
-
-  // loading
-  deque<future<shared_ptr<app_state>>> loaders = {};
+  deque<shared_ptr<app_state>>  loading  = {};
 
   // default options
   float             exposure = 0;
@@ -141,34 +143,34 @@ void update_display(shared_ptr<app_state> app) {
 
 // add a new image
 void load_image_async(shared_ptr<app_states> apps, const string& filename) {
-  apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
-        auto app      = make_shared<app_state>();
-        app->filename = filename;
-        app->outname =
-            fs::path(filename).replace_extension(".display.png").string();
-        app->name      = fs::path(filename).filename();
-        app->exposure  = apps->exposure;
-        app->filmic    = apps->filmic;
-        app->params    = apps->params;
-        apps->selected = (int)apps->states.size() - 1;
-        load_image(app->filename, app->source);
-        compute_stats(
-            app->source_stats, app->source, is_hdr_filename(app->filename));
-        if (app->colorgrade) {
-          app->display = colorgrade_image(app->display, true, app->params);
-        } else {
-          app->display = tonemap_image(app->source, app->exposure, app->filmic);
-        }
-        compute_stats(app->display_stats, app->display, false);
-        return app;
-      }));
+  auto app      = make_shared<app_state>();
+  app->filename = filename;
+  app->outname  = fs::path(filename).replace_extension(".display.png").string();
+  app->name     = fs::path(filename).filename();
+  app->exposure = apps->exposure;
+  app->filmic   = apps->filmic;
+  app->params   = apps->params;
+  app->loader   = async(launch::async, [app]() {
+    load_image(app->filename, app->source);
+    compute_stats(
+        app->source_stats, app->source, is_hdr_filename(app->filename));
+    if (app->colorgrade) {
+      app->display = colorgrade_image(app->display, true, app->params);
+    } else {
+      app->display = tonemap_image(app->source, app->exposure, app->filmic);
+    }
+    compute_stats(app->display_stats, app->display, false);
+  });
+  apps->states.push_back(app);
+  apps->loading.push_back(app);
+  if (apps->selected < 0) apps->selected = 0;
 }
 
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  auto          image_ok = !apps->states.empty() && apps->selected >= 0;
+  auto          image_ok = !apps->states.empty() && apps->selected >= 0 &&
+                  apps->states[apps->selected]->ok;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -201,9 +203,13 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   draw_glcombobox(
       win, "image", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
-      false);
-  if (image_ok && begin_glheader(win, "tonemap")) {
+      [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
+  if (begin_glheader(win, "log")) {
+    draw_gllog(win);
+    end_glheader(win);
+  }
+  if (!image_ok) return;
+  if (begin_glheader(win, "tonemap")) {
     auto app    = apps->states[apps->selected];
     auto edited = 0;
     edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
@@ -211,7 +217,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (edited) update_display(app);
     end_glheader(win);
   }
-  if (image_ok && begin_glheader(win, "colorgrade")) {
+  if (begin_glheader(win, "colorgrade")) {
     auto  app    = apps->states[apps->selected];
     auto& params = app->params;
     auto  edited = 0;
@@ -242,7 +248,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (edited) update_display(app);
     end_glheader(win);
   }
-  if (image_ok && begin_glheader(win, "inspect")) {
+  if (begin_glheader(win, "inspect")) {
     auto app = apps->states[apps->selected];
     draw_gllabel(win, "image", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
@@ -273,44 +279,42 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_glhistogram(win, "display histo", app->display_stats.histogram);
     end_glheader(win);
   }
-  if (begin_glheader(win, "log")) {
-    draw_gllog(win);
-    end_glheader(win);
-  }
 }
 
 void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
-  if (!apps->states.empty() && apps->selected >= 0) {
-    auto app                  = apps->states[apps->selected];
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!app->glimage) app->glimage = make_glimage();
-    if (app->glupdated) {
-      set_glimage(app->glimage, app->display, false, false);
-      app->glupdated = false;
-    }
-    update_imview(app->glparams.center, app->glparams.scale,
-        app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage, app->glparams);
+  if (apps->states.empty() || apps->selected < 0 ||
+      !apps->states[apps->selected]->ok)
+    return;
+  auto app                  = apps->states[apps->selected];
+  app->glparams.window      = input.window_size;
+  app->glparams.framebuffer = input.framebuffer_viewport;
+  if (!app->glimage) app->glimage = make_glimage();
+  if (app->glupdated) {
+    set_glimage(app->glimage, app->display, false, false);
+    app->glupdated = false;
   }
+  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
+      app->glparams.window, app->glparams.fit);
+  draw_glimage(app->glimage, app->glparams);
 }
 
 void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
-  while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
+  while (!apps->loading.empty()) {
+    auto app = apps->loading.front();
+    if (!is_ready(app->loader)) break;
     try {
-      auto app = apps->loaders.front().get();
-      apps->loaders.pop_front();
-      apps->states.push_back(app);
+      app->loader.get();
+      apps->loading.pop_front();
       update_display(app);
-      if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+      app->ok = true;
     } catch (std::exception& e) {
-      apps->loaders.pop_front();
+      apps->loading.pop_front();
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
