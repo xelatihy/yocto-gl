@@ -77,7 +77,7 @@ int run_app(int argc, const char** argv) {
   cli.add_option("scene", filename, "input scene", true);
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

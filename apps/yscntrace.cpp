@@ -33,8 +33,8 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
-#include <memory>
 #include <map>
+#include <memory>
 using namespace std;
 
 #include "ext/CLI11.hpp"
@@ -143,15 +143,16 @@ int run_app(int argc, const char* argv[]) {
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for(auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
     trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
   }
   auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for(auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] = (trace_falsecolor_type)idx;
+  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] =
+        (trace_falsecolor_type)idx;
   }
   auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for(auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
     trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
   }
 
@@ -160,8 +161,11 @@ int run_app(int argc, const char* argv[]) {
   cli.add_option("--camera", params.camera, "Camera index.");
   cli.add_option("--resolution,-r", params.resolution, "Image resolution.");
   cli.add_option("--samples,-s", params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", params.sampler, "Trace type.")->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option("--falsecolor,-F", params.falsecolor, "Tracer false color type.")->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option("--tracer,-t", params.sampler, "Trace type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option(
+         "--falsecolor,-F", params.falsecolor, "Tracer false color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
   cli.add_option("--bounces", params.bounces, "Maximum number of bounces.");
   cli.add_option("--clamp", params.clamp, "Final pixel clamping.");
   cli.add_flag("--filter", params.tentfilter, "Filter image.");
@@ -169,14 +173,15 @@ int run_app(int argc, const char* argv[]) {
   cli.add_flag("--env-hidden,!--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   cli.add_option("--save-batch", save_batch, "Save images progressively");
-  cli.add_option("--bvh", params.bvh, "Bvh type")->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_option("--bvh", params.bvh, "Bvh type")
+      ->transform(CLI::CheckedTransformer(trace_bvh_map));
   cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
   cli.add_option("--output-image,-o", imfilename, "Image filename");
   cli.add_flag("--validate", validate, "Validate scene");
   cli.add_option("scene", filename, "Scene filename")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

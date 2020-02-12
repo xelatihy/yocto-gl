@@ -263,7 +263,7 @@ int main(int argc, const char** argv) {
   cli.add_option("mesh", filename, "input mesh")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

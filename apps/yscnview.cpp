@@ -103,11 +103,11 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector< shared_ptr<app_state>> states   = {};
-  int                selected = -1;
+  vector<shared_ptr<app_state>> states   = {};
+  int                           selected = -1;
 
   // loading
-  deque<future< shared_ptr<app_state>>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
@@ -129,7 +129,7 @@ vec2f compute_animation_range(
 
 void load_scene_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() ->  shared_ptr<app_state> {
+      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
         auto app         = make_shared<app_state>();
         app->filename    = filename;
         app->imagename   = replace_extension(filename, ".png");
@@ -173,7 +173,7 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
   }
 }
 
-void init_scene( shared_ptr<app_state> app) {
+void init_scene(shared_ptr<app_state> app) {
   auto glscene = app->glscene;
   auto ioscene = app->ioscene;
 
@@ -651,7 +651,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 
 // update
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
@@ -682,15 +682,15 @@ int run_app(int argc, const char* argv[]) {
   // parse command line
   auto cli = CLI::App{"views scenes inteactively"};
   cli.add_option("--camera", apps->drawgl_prms.camera, "Camera index.");
-  cli.add_option("--resolution,-r", apps->drawgl_prms.resolution,
-      "Image resolution.");
+  cli.add_option(
+      "--resolution,-r", apps->drawgl_prms.resolution, "Image resolution.");
   cli.add_flag("--eyelight!,--no-eyelight,-c", apps->drawgl_prms.eyelight,
       "Eyelight rendering.");
   cli.add_flag("--noparallel", noparallel, "Disable parallel execution.");
   cli.add_option("scenes", filenames, "Scene filenames")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

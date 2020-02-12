@@ -107,11 +107,11 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector< shared_ptr<app_state>> states   = {};
-  int                selected = -1;
+  vector<shared_ptr<app_state>> states   = {};
+  int                           selected = -1;
 
   // loading
-  deque<future< shared_ptr<app_state>>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   trace_params params     = {};
@@ -119,7 +119,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene( shared_ptr<app_state> app) {
+void init_scene(shared_ptr<app_state> app) {
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
@@ -234,13 +234,13 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void stop_display( shared_ptr<app_state> app) {
+void stop_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
 }
 
-void reset_display( shared_ptr<app_state> app) {
+void reset_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -280,28 +280,29 @@ void reset_display( shared_ptr<app_state> app) {
 }
 
 void load_scene_async(app_states* apps, const string& filename) {
-  apps->loaders.push_back(async(launch::async, [filename]() ->  shared_ptr<app_state> {
-    auto app       = make_shared<app_state>();
-    app->filename  = filename;
-    app->imagename = replace_extension(filename, ".png");
-    app->outname   = replace_extension(filename, ".edited.yaml");
-    app->name      = get_filename(app->filename);
-    app->params    = app->params;
-    load_scene(app->filename, app->ioscene);
-    init_scene(app);
-    init_bvh(app->scene, app->params);
-    init_lights(app->scene);
-    if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-      app->params.sampler = trace_sampler_type::eyelight;
-    }
-    init_state(app->state, app->scene, app->params);
-    app->render.resize(app->state->size());
-    app->display.resize(app->state->size());
-    app->name = get_filename(app->filename) + " [" +
-                to_string(app->render.size().x) + "x" +
-                to_string(app->render.size().y) + " @ 0]";
-    return app;
-  }));
+  apps->loaders.push_back(
+      async(launch::async, [filename]() -> shared_ptr<app_state> {
+        auto app       = make_shared<app_state>();
+        app->filename  = filename;
+        app->imagename = replace_extension(filename, ".png");
+        app->outname   = replace_extension(filename, ".edited.yaml");
+        app->name      = get_filename(app->filename);
+        app->params    = app->params;
+        load_scene(app->filename, app->ioscene);
+        init_scene(app);
+        init_bvh(app->scene, app->params);
+        init_lights(app->scene);
+        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+          app->params.sampler = trace_sampler_type::eyelight;
+        }
+        init_state(app->state, app->scene, app->params);
+        app->render.resize(app->state->size());
+        app->display.resize(app->state->size());
+        app->name = get_filename(app->filename) + " [" +
+                    to_string(app->render.size().x) + "x" +
+                    to_string(app->render.size().y) + " @ 0]";
+        return app;
+      }));
 }
 
 bool draw_glwidgets(
@@ -755,7 +756,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 }
 
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
@@ -783,36 +784,42 @@ int run_app(int argc, const char* argv[]) {
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for(auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
     trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
   }
   auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for(auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] = (trace_falsecolor_type)idx;
+  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] =
+        (trace_falsecolor_type)idx;
   }
   auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for(auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
     trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
   }
 
   // parse command line
   auto cli = CLI::App{"progressive path tracing"};
   cli.add_option("--camera", apps->params.camera, "Camera index.");
-  cli.add_option("--resolution,-r", apps->params.resolution, "Image resolution.");
+  cli.add_option(
+      "--resolution,-r", apps->params.resolution, "Image resolution.");
   cli.add_option("--samples,-s", apps->params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", apps->params.sampler, "Tracer type.")->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option("--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.")->transform(CLI::CheckedTransformer(trace_falsecolor_map));
-  cli.add_option("--bounces", apps->params.bounces, "Maximum number of bounces.");
+  cli.add_option("--tracer,-t", apps->params.sampler, "Tracer type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option(
+         "--falsecolor,-F", apps->params.falsecolor, "Tracer false color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option(
+      "--bounces", apps->params.bounces, "Maximum number of bounces.");
   cli.add_option("--clamp", apps->params.clamp, "Final pixel clamping.");
   cli.add_flag("--filter", apps->params.tentfilter, "Filter image.");
   cli.add_flag("--env-hidden,!--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  cli.add_option("--bvh", apps->params.bvh, "Bvh type")->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_option("--bvh", apps->params.bvh, "Bvh type")
+      ->transform(CLI::CheckedTransformer(trace_bvh_map));
   cli.add_option("scenes", filenames, "Scene filenames")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

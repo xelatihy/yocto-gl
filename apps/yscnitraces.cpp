@@ -195,7 +195,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void reset_display( shared_ptr<app_state> app) {
+void reset_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -240,38 +240,44 @@ int run_app(int argc, const char* argv[]) {
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for(auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
     trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
   }
   auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for(auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] = (trace_falsecolor_type)idx;
+  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] =
+        (trace_falsecolor_type)idx;
   }
   auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for(auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
     trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
   }
 
   // parse command line
   auto cli = CLI::App{"progressive path tracing"};
   cli.add_option("--camera", app->params.camera, "Camera index.");
-  cli.add_option("--resolution,-r", app->params.resolution, "Image resolution.");
+  cli.add_option(
+      "--resolution,-r", app->params.resolution, "Image resolution.");
   cli.add_option("--samples,-s", app->params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", app->params.sampler, "Tracer type.")->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option("--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.")->transform(CLI::CheckedTransformer(trace_falsecolor_map));
-  cli.add_option("--bounces", app->params.bounces, "Maximum number of bounces.");
+  cli.add_option("--tracer,-t", app->params.sampler, "Tracer type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option(
+         "--falsecolor,-F", app->params.falsecolor, "Tracer false color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option(
+      "--bounces", app->params.bounces, "Maximum number of bounces.");
   cli.add_option("--clamp", app->params.clamp, "Final pixel clamping.");
   cli.add_flag("--filter", app->params.tentfilter, "Filter image.");
   cli.add_flag("--env-hidden,!--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  cli.add_option("--bvh", app->params.bvh, "Bvh type")->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_option("--bvh", app->params.bvh, "Bvh type")
+      ->transform(CLI::CheckedTransformer(trace_bvh_map));
   cli.add_flag("--add-skyenv", app->add_skyenv, "Add sky envmap");
   cli.add_option("--output,-o", app->imagename, "Image output", false);
   cli.add_option("scene", app->filename, "Scene filename")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

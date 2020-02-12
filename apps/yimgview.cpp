@@ -82,7 +82,7 @@ struct app_state {
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  int                selected = -1;
+  int                           selected = -1;
 
   // loading
   deque<future<shared_ptr<app_state>>> loaders = {};
@@ -133,7 +133,7 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display( shared_ptr<app_state> app) {
+void update_display(shared_ptr<app_state> app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -301,7 +301,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 }
 
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
@@ -332,7 +332,7 @@ int run_app(int argc, const char* argv[]) {
   cli.add_option("images", filenames, "image filenames")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 

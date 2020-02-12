@@ -242,15 +242,16 @@ int run_app(int argc, const char* argv[]) {
   auto cli = CLI::App{"Transform images"};
   cli.add_option("--tonemap/--no-tonemap,-t", tonemap_on, "Tonemap image");
   cli.add_option("--exposure,-e", tonemap_exposure, "Tonemap exposure");
-  cli.add_flag("--filmic,!--no-filmic,-f", tonemap_filmic,
-      "Tonemap uses filmic curve");
-  cli.add_option("--resize-width", resize_width,
-      "resize size (0 to maintain aspect)");
-  cli.add_option("--resize-height", resize_height,
-      "resize size (0 to maintain aspect)");
+  cli.add_flag(
+      "--filmic,!--no-filmic,-f", tonemap_filmic, "Tonemap uses filmic curve");
+  cli.add_option(
+      "--resize-width", resize_width, "resize size (0 to maintain aspect)");
+  cli.add_option(
+      "--resize-height", resize_height, "resize size (0 to maintain aspect)");
   cli.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
   cli.add_option("--range-sigma", range_sigma, "bilateral blur range sigma");
-  cli.add_option("--set-alpha", alpha_filename, "set alpha as this image alpha");
+  cli.add_option(
+      "--set-alpha", alpha_filename, "set alpha as this image alpha");
   cli.add_option("--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
   cli.add_flag("--logo", logo, "Add logo");
@@ -261,7 +262,7 @@ int run_app(int argc, const char* argv[]) {
   cli.add_option("filename", filename, "input image filename")->required();
   try {
     cli.parse(argc, argv);
-  } catch(CLI::ParseError& e) {
+  } catch (CLI::ParseError& e) {
     return cli.exit(e);
   }
 
