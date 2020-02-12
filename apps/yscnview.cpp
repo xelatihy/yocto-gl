@@ -103,26 +103,14 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  vector< shared_ptr<app_state>> states   = {};
   int                selected = -1;
 
   // loading
-  deque<future<app_state*>> loaders = {};
+  deque<future< shared_ptr<app_state>>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
-
-  // cleanup
-  ~app_states() {
-    while (!loaders.empty()) {
-      try {
-        states.push_back(loaders.front().get());
-      } catch (std::exception&) {
-      }
-      loaders.pop_front();
-    }
-    for (auto app : states) delete app;
-  }
 };
 
 // Compute animation range
@@ -141,8 +129,8 @@ vec2f compute_animation_range(
 
 void load_scene_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> app_state* {
-        auto app         = make_unique<app_state>();
+      async(launch::async, [apps, filename]() ->  shared_ptr<app_state> {
+        auto app         = make_shared<app_state>();
         app->filename    = filename;
         app->imagename   = replace_extension(filename, ".png");
         app->outname     = replace_extension(filename, ".edited.yaml");
@@ -151,7 +139,7 @@ void load_scene_async(app_states* apps, const string& filename) {
         load_scene(app->filename, app->ioscene);
         app->time_range = compute_animation_range(app->ioscene);
         app->time       = app->time_range.x;
-        return app.release();
+        return app;
       }));
 }
 
@@ -185,7 +173,7 @@ void update_lights(opengl_scene* glscene, const sceneio_model* ioscene) {
   }
 }
 
-void init_scene(app_state* app) {
+void init_scene( shared_ptr<app_state> app) {
   auto glscene = app->glscene;
   auto ioscene = app->ioscene;
 
@@ -472,7 +460,6 @@ void draw_glwidgets(
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)app)) {
-    delete apps->states[apps->selected];
     apps->states.erase(apps->states.begin() + apps->selected);
     apps->selected = apps->states.empty() ? -1 : 0;
     app            = (!apps->states.empty() && apps->selected >= 0)
@@ -664,7 +651,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 
 // update
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future<app_state*>& result) -> bool {
+  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };

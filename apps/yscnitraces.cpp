@@ -195,7 +195,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void reset_display(app_state* app) {
+void reset_display( shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -236,8 +236,7 @@ void reset_display(app_state* app) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto app_ = make_unique<app_state>();
-  auto app  = app_.get();
+  auto app = make_shared<app_state>();
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};

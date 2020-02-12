@@ -81,28 +81,16 @@ struct app_state {
 // app states
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  vector<shared_ptr<app_state>> states   = {};
   int                selected = -1;
 
   // loading
-  deque<future<app_state*>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   float             exposure = 0;
   bool              filmic   = false;
   colorgrade_params params   = {};
-
-  // cleanup
-  ~app_states() {
-    while (!loaders.empty()) {
-      try {
-        states.push_back(loaders.front().get());
-      } catch (std::exception&) {
-      }
-      loaders.pop_front();
-    }
-    for (auto app : states) delete app;
-  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -145,7 +133,7 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(app_state* app) {
+void update_display( shared_ptr<app_state> app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -161,8 +149,8 @@ void update_display(app_state* app) {
 // add a new image
 void load_image_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> app_state* {
-        auto app       = make_unique<app_state>();
+      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
+        auto app       = make_shared<app_state>();
         app->filename  = filename;
         app->outname   = replace_extension(filename, ".display.png");
         app->name      = get_filename(filename);
@@ -179,7 +167,7 @@ void load_image_async(app_states* apps, const string& filename) {
           app->display = tonemap_image(app->source, app->exposure, app->filmic);
         }
         compute_stats(app->display_stats, app->display, false);
-        return app.release();
+        return app;
       }));
 }
 
@@ -209,7 +197,6 @@ void draw_glwidgets(
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    delete apps->states[apps->selected];
     apps->states.erase(apps->states.begin() + apps->selected);
     apps->selected = apps->states.empty() ? -1 : 0;
   }
@@ -314,7 +301,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 }
 
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future<app_state*>& result) -> bool {
+  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };

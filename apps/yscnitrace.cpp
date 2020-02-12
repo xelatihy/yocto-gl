@@ -107,31 +107,19 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  vector< shared_ptr<app_state>> states   = {};
   int                selected = -1;
 
   // loading
-  deque<future<app_state*>> loaders = {};
+  deque<future< shared_ptr<app_state>>> loaders = {};
 
   // default options
   trace_params params     = {};
   bool         add_skyenv = false;
-
-  // cleanup
-  ~app_states() {
-    while (!loaders.empty()) {
-      try {
-        states.push_back(loaders.front().get());
-      } catch (std::exception&) {
-      }
-      loaders.pop_front();
-    }
-    for (auto app : states) delete app;
-  }
 };
 
 // Construct a scene from io
-void init_scene(app_state* app) {
+void init_scene( shared_ptr<app_state> app) {
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
@@ -246,13 +234,13 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void stop_display(app_state* app) {
+void stop_display( shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
 }
 
-void reset_display(app_state* app) {
+void reset_display( shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -292,15 +280,15 @@ void reset_display(app_state* app) {
 }
 
 void load_scene_async(app_states* apps, const string& filename) {
-  apps->loaders.push_back(async(launch::async, [filename]() -> app_state* {
-    auto app       = make_unique<app_state>();
+  apps->loaders.push_back(async(launch::async, [filename]() ->  shared_ptr<app_state> {
+    auto app       = make_shared<app_state>();
     app->filename  = filename;
     app->imagename = replace_extension(filename, ".png");
     app->outname   = replace_extension(filename, ".edited.yaml");
     app->name      = get_filename(app->filename);
     app->params    = app->params;
     load_scene(app->filename, app->ioscene);
-    init_scene(app.get());
+    init_scene(app);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -312,7 +300,7 @@ void load_scene_async(app_states* apps, const string& filename) {
     app->name = get_filename(app->filename) + " [" +
                 to_string(app->render.size().x) + "x" +
                 to_string(app->render.size().y) + " @ 0]";
-    return app.release();
+    return app;
   }));
 }
 
@@ -767,7 +755,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 }
 
 void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future<app_state*>& result) -> bool {
+  auto is_ready = [](const future< shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
