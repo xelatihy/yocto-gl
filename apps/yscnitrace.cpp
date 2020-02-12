@@ -109,7 +109,7 @@ struct app_state {
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  int                           selected = -1;
+  shared_ptr<app_state>                           selected = nullptr;
 
   // loading
   deque<future<shared_ptr<app_state>>> loaders = {};
@@ -475,9 +475,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  auto          app = (!apps->states.empty() && apps->selected >= 0)
-                 ? apps->states[apps->selected]
-                 : nullptr;
+  auto          app = apps->selected;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
@@ -512,21 +510,18 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)app)) {
-    apps->states.erase(apps->states.begin() + apps->selected);
-    apps->selected = apps->states.empty() ? -1 : 0;
-    app            = (!apps->states.empty() && apps->selected >= 0)
-              ? apps->states[apps->selected]
-              : nullptr;
+    apps->states.erase(std::find(apps->states.begin(), apps->states.end(), apps->selected));
+    apps->selected = apps->states.empty() ? nullptr : apps->states.front();
+    app            = apps->selected;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
   draw_glcombobox(
-      win, "scene", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
-      false);
-  if (app && begin_glheader(win, "trace")) {
+      win, "scene", apps->selected, apps->states, false);
+  if(!app) return;
+  if (begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto& tparams = app->params;
     edited += draw_glcombobox(
@@ -547,7 +542,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (edited) reset_display(app);
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "inspect")) {
+  if (begin_glheader(win, "inspect")) {
     draw_gllabel(win, "scene", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
@@ -580,7 +575,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
+  if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
@@ -594,7 +589,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->environments.empty() &&
+  if (!app->ioscene->environments.empty() &&
       begin_glheader(win, "environments")) {
     draw_glcombobox(win, "environment##2", app->selected_environment,
         app->ioscene->environments, true);
@@ -610,7 +605,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
+  if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_object)) {
@@ -623,7 +618,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
+  if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(
         win, "shape##2", app->selected_shape, app->ioscene->shapes, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_shape)) {
@@ -647,7 +642,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->materials.empty() &&
+  if (!app->ioscene->materials.empty() &&
       begin_glheader(win, "materials")) {
     draw_glcombobox(win, "material##2", app->selected_material,
         app->ioscene->materials, true);
@@ -680,7 +675,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->textures.empty() &&
+  if (!app->ioscene->textures.empty() &&
       begin_glheader(win, "textures")) {
     draw_glcombobox(win, "textures##2", app->selected_texture,
         app->ioscene->textures, true);
@@ -697,7 +692,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->instances.empty() &&
+  if (!app->ioscene->instances.empty() &&
       begin_glheader(win, "instances")) {
     draw_glcombobox(win, "instance##2", app->selected_instance,
         app->ioscene->instances, true);
@@ -711,7 +706,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
+  if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
     draw_glcombobox(
         win, "selection##2", app->selected_subdiv, app->ioscene->subdivs, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
@@ -739,16 +734,12 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (begin_glheader(win, "log")) {
-    draw_gllog(win);
-    end_glheader(win);
-  }
 }
 
 void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
-  if (!apps->states.empty() && apps->selected >= 0) {
-    auto app                  = apps->states[apps->selected];
+  if(!apps->selected) return;
+    auto app                  = apps->selected;
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!app->glimage) app->glimage = make_glimage();
@@ -759,7 +750,6 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_glimage(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
-  }
 }
 
 void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
@@ -774,7 +764,7 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
       apps->loaders.pop_front();
       apps->states.push_back(app);
       reset_display(app);
-      if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+      if (!apps->selected) apps->selected = app;
     } catch (std::exception& e) {
       apps->loaders.pop_front();
       push_glmessage(win, e.what());
@@ -855,13 +845,12 @@ int run_app(int argc, const char* argv[]) {
       });
   set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window> win,
                                    const opengl_input&          input) {
-    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
-    if (!scene_ok) return;
+    if (!apps->selected) return;
+      auto app      = apps->selected;
 
     // handle mouse and keyboard for navigation
-    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+    if ((input.mouse_left || input.mouse_right) &&
         !input.modifier_alt && !input.widgets_active) {
-      auto app      = apps->states[apps->selected];
       auto iocamera = app->ioscene->cameras.at(app->params.camera);
       auto dolly    = 0.0f;
       auto pan      = zero2f;
@@ -884,9 +873,8 @@ int run_app(int argc, const char* argv[]) {
     }
 
     // selection
-    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+    if ((input.mouse_left || input.mouse_right) &&
         input.modifier_alt && !input.widgets_active) {
-      auto app = apps->states[apps->selected];
       auto ij  = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
