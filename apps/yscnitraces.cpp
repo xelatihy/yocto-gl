@@ -288,6 +288,7 @@ int run_app(int argc, const char* argv[]) {
       auto n = (int)(30 * (float)current / (float)total);
       cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
            << message << "\r";
+      cout.flush();
     }
   };
 
