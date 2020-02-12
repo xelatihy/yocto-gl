@@ -843,10 +843,6 @@ static void throw_dependent_error(const string& filename, const string& err) {
 static void throw_emptyshape_error(const string& filename, const string& name) {
   throw std::runtime_error{filename + ": empty shape " + name};
 }
-static void throw_missing_reference_error(
-    const string& filename, const string& type, const string& name) {
-  throw std::runtime_error{filename + ": missing " + type + " " + name};
-}
 
 // Load/save a scene in the builtin JSON format.
 static void load_json_scene(
