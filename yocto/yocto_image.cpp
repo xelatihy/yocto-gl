@@ -1453,7 +1453,7 @@ static inline bool save_pfm(
 
 // Get extension (not including '.').
 static string get_extension(const string& filename) {
-  auto pos      = filename.rfind('.');
+  auto pos = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
 }

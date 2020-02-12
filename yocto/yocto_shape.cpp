@@ -3346,7 +3346,7 @@ static void throw_emptyshape_error(const string& filename) {
 
 // Get extension (not including '.').
 static string get_extension(const string& filename) {
-  auto pos      = filename.rfind('.');
+  auto pos = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
 }

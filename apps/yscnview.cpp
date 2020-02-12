@@ -96,16 +96,20 @@ struct app_state {
       instance_map = {};
   unordered_map<shared_ptr<sceneio_object>, shared_ptr<opengl_object>>
       object_map = {};
+
+  // loading status
+  atomic<bool> ok     = false;
+  future<void> loader = {};
+  string       status = "";
+  string       error  = "";
 };
 
 // Application state
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  int                           selected = -1;
-
-  // loading
-  deque<future<shared_ptr<app_state>>> loaders = {};
+  shared_ptr<app_state>         selected = nullptr;
+  deque<shared_ptr<app_state>>  loading  = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
@@ -126,19 +130,20 @@ vec2f compute_animation_range(
 }
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
-  apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
-        auto app         = make_shared<app_state>();
-        app->filename    = filename;
-        app->imagename   = fs::path(filename).replace_extension(".png");
-        app->outname     = fs::path(filename).replace_extension(".edited.yaml");
-        app->name        = fs::path(app->filename).filename();
-        app->drawgl_prms = apps->drawgl_prms;
-        app->ioscene     = load_scene(app->filename);
-        app->time_range  = compute_animation_range(app->ioscene);
-        app->time        = app->time_range.x;
-        return app;
-      }));
+  auto app         = make_shared<app_state>();
+  app->filename    = filename;
+  app->imagename   = fs::path(filename).replace_extension(".png");
+  app->outname     = fs::path(filename).replace_extension(".edited.yaml");
+  app->name        = fs::path(app->filename).filename();
+  app->drawgl_prms = apps->drawgl_prms;
+  app->loader      = async(launch::async, [app]() {
+    app->ioscene    = load_scene(app->filename);
+    app->time_range = compute_animation_range(app->ioscene);
+    app->time       = app->time_range.x;
+  });
+  apps->states.push_back(app);
+  apps->loading.push_back(app);
+  if (!apps->selected) apps->selected = app;
 }
 
 void update_lights(
@@ -439,18 +444,17 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  auto        app = (!apps->states.empty() && apps->selected >= 0)
-                 ? apps->states[apps->selected]
-                 : nullptr;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
+  if (draw_glfiledialog_button(win, "save",
+          apps->selected && apps->selected->ok, "save", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.yaml;*.obj;*.pbrt")) {
+    auto app     = apps->selected;
     app->outname = save_path;
     try {
       save_scene(app->outname, app->ioscene);
@@ -461,23 +465,24 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", (bool)app)) {
-    apps->states.erase(apps->states.begin() + apps->selected);
-    apps->selected = apps->states.empty() ? -1 : 0;
-    app            = (!apps->states.empty() && apps->selected >= 0)
-              ? apps->states[apps->selected]
-              : nullptr;
+  if (draw_glbutton(win, "close", (bool)apps->selected)) {
+    if (apps->selected->loader.valid()) return;
+    apps->states.erase(
+        std::find(apps->states.begin(), apps->states.end(), apps->selected));
+    apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
   if (apps->states.empty()) return;
-  draw_glcombobox(
-      win, "scene", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
-  if (app && begin_glheader(win, "view")) {
-    auto  app    = apps->states[apps->selected];
+  draw_glcombobox(win, "scene", apps->selected, apps->states, false);
+  if (!apps->selected) return;
+  auto app = apps->selected;
+  if (app->status != "") draw_gllabel(win, "status", app->status);
+  if (app->error != "") draw_gllabel(win, "error", app->error);
+  if (!app->ok) return;
+  if (begin_glheader(win, "view")) {
     auto& params = app->drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app->ioscene->cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -499,7 +504,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_glslider(win, "far", params.far, 1000.0f, 10000.0f);
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "inspect")) {
+  if (begin_glheader(win, "inspect")) {
     draw_gllabel(win, "scene", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
@@ -516,7 +521,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
+  if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
@@ -528,7 +533,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->environments.empty() &&
+  if (!app->ioscene->environments.empty() &&
       begin_glheader(win, "environments")) {
     draw_glcombobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
@@ -536,7 +541,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
+  if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_glwidgets(win, app->ioscene, app->selected_object)) {
@@ -550,7 +555,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
+  if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (!draw_glwidgets(win, app->ioscene, app->selected_shape)) {
       auto ioshape = app->selected_shape;
@@ -566,8 +571,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->materials.empty() &&
-      begin_glheader(win, "materials")) {
+  if (!app->ioscene->materials.empty() && begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
@@ -591,8 +595,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->instances.empty() &&
-      begin_glheader(win, "instances")) {
+  if (!app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
     draw_glcombobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets(win, app->ioscene, app->selected_instance)) {
@@ -602,8 +605,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->textures.empty() &&
-      begin_glheader(win, "textures")) {
+  if (!app->ioscene->textures.empty() && begin_glheader(win, "textures")) {
     draw_glcombobox(
         win, "texture##2", app->selected_texture, app->ioscene->textures);
     if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
@@ -617,7 +619,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
+  if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
     draw_glcombobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene->subdivs);
     if (!draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
@@ -637,40 +639,36 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (begin_glheader(win, "log")) {
-    draw_gllog(win);
-    end_glheader(win);
-  }
 }
 
 // draw with shading
 void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
-  if (!apps->states.empty() && apps->selected >= 0) {
-    auto app = apps->states[apps->selected];
-    draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
-  }
+  if (!apps->selected || !apps->selected->ok) return;
+  auto app = apps->selected;
+  draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
 }
 
 // update
 void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
+  auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
-  while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
+  while (!apps->loading.empty()) {
+    auto app = apps->loading.front();
+    if (!is_ready(app->loader)) break;
+    apps->loading.pop_front();
     try {
-      auto app = apps->loaders.front().get();
-      apps->loaders.pop_front();
-      apps->states.push_back(app);
+      app->loader.get();
       init_scene(app);
       update_lights(app->glscene, app->ioscene);
-      if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+      app->ok     = true;
+      app->status = "ok";
     } catch (std::exception& e) {
-      apps->loaders.pop_front();
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
+      app->status = "";
+      app->error  = e.what();
     }
   }
 }
@@ -721,19 +719,15 @@ int run_app(int argc, const char* argv[]) {
       });
   set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window> win,
                                    const opengl_input&          input) {
-    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
-    if (!scene_ok) return;
+    if (!apps->selected || !apps->selected->ok) return;
+    auto app = apps->selected;
 
     // update trasforms
-    if (scene_ok) {
-      auto app = apps->states[apps->selected];
-      update_transforms(app->ioscene, app->time);
-    }
+    update_transforms(app->ioscene, app->time);
 
     // handle mouse and keyboard for navigation
-    if (scene_ok && (input.mouse_left || input.mouse_right) &&
-        !input.modifier_alt && !input.widgets_active) {
-      auto app      = apps->states[apps->selected];
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
       auto iocamera = app->ioscene->cameras.at(app->drawgl_prms.camera);
       auto dolly    = 0.0f;
       auto pan      = zero2f;
@@ -750,8 +744,7 @@ int run_app(int argc, const char* argv[]) {
     }
 
     // animation
-    if (scene_ok && apps->states[apps->selected]->animate) {
-      auto app = apps->states[apps->selected];
+    if (app->animate) {
       app->time += min(1 / 60.0f, (float)input.time_delta);
       if (app->time < app->time_range.x || app->time > app->time_range.y)
         app->time = app->time_range.x;
