@@ -197,20 +197,20 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = make_shared<sceneio_model>();
   {
-    auto timer = CLI::AutoTimer{"load"};
+    auto timer = CLI::AutoTimer("load");
     ioscene    = load_scene(filename);
   }
 
   // add components
   if (validate) {
-    auto timer  = CLI::AutoTimer{"validate"};
+    auto timer  = CLI::AutoTimer("validate");
     for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
   }
 
   // convert scene
   auto scene = shared_ptr<trace_scene>();
   {
-    auto timer = CLI::AutoTimer{"convert"};
+    auto timer = CLI::AutoTimer("convert");
     scene      = make_scene(ioscene);
   }
 
@@ -219,13 +219,13 @@ int run_app(int argc, const char* argv[]) {
 
   // build bvh
   {
-    auto timer = CLI::AutoTimer{"bvh"};
+    auto timer = CLI::AutoTimer("bvh");
     init_bvh(scene, params);
   }
 
   // init renderer
   {
-    auto timer = CLI::AutoTimer{"lights"};
+    auto timer = CLI::AutoTimer("lights");
     init_lights(scene);
   }
 
@@ -255,7 +255,7 @@ int run_app(int argc, const char* argv[]) {
 
   // save image
   {
-    auto timer = CLI::AutoTimer{"save"};
+    auto timer = CLI::AutoTimer("save");
     save_image(imfilename, render);
   }
 

@@ -282,13 +282,13 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   {
-    auto timer   = CLI::AutoTimer{"loading scene"};
+    auto timer   = CLI::AutoTimer("loading scene");
     app->ioscene = load_scene(app->filename);
   }
 
   // conversion
   {
-    auto timer = CLI::AutoTimer{"converting scene"};
+    auto timer = CLI::AutoTimer("converting scene");
     app->scene = make_scene(app->ioscene);
   }
 
@@ -297,13 +297,13 @@ int run_app(int argc, const char* argv[]) {
 
   // build bvh
   {
-    auto timer = CLI::AutoTimer{"building bvh"};
+    auto timer = CLI::AutoTimer("building bvh");
     init_bvh(app->scene, app->params);
   }
 
   // init renderer
   {
-    auto timer = CLI::AutoTimer{"building lights"};
+    auto timer = CLI::AutoTimer("building lights");
     init_lights(app->scene);
   }
 

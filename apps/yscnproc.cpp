@@ -85,13 +85,13 @@ int run_app(int argc, const char** argv) {
   // load scene
   auto scene = shared_ptr<sceneio_model>{};
   {
-    auto timer = CLI::AutoTimer{"loading scene"};
+    auto timer = CLI::AutoTimer("loading scene");
     scene      = load_scene(filename);
   }
 
   // validate scene
   if (validate) {
-    auto timer  = CLI::AutoTimer{"validate"};
+    auto timer  = CLI::AutoTimer("validate");
     for (auto& error : scene_validation(scene)) std::cout << error << "\n";
   }
 
@@ -135,7 +135,7 @@ int run_app(int argc, const char** argv) {
 
   // save scene
   {
-    auto timer = CLI::AutoTimer{"save"};
+    auto timer = CLI::AutoTimer("save");
     save_scene(output, scene, obj_instances);
   }
 

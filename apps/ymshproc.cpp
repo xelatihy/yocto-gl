@@ -285,7 +285,7 @@ int main(int argc, const char** argv) {
 
   // load mesh
   if (!facevarying) {
-    auto timer = CLI::AutoTimer{"load"};
+    auto timer = CLI::AutoTimer("load");
     auto ext   = fs::path(filename).extension().string();
     auto basename   = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
@@ -296,7 +296,7 @@ int main(int argc, const char** argv) {
           texcoords, colors, radius);
     }
   } else {
-    auto timer = CLI::AutoTimer{"load"};
+    auto timer = CLI::AutoTimer("load");
     auto ext   = fs::path(filename).extension().string();
     auto basename   = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
@@ -343,7 +343,7 @@ int main(int argc, const char** argv) {
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    auto timer = CLI::AutoTimer{"transform"};
+    auto timer = CLI::AutoTimer("transform");
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -355,7 +355,7 @@ int main(int argc, const char** argv) {
 
   // compute normals
   if (smooth) {
-    auto timer = CLI::AutoTimer{"smooth"};
+    auto timer = CLI::AutoTimer("smooth");
     if (!points.empty()) {
       normals = vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
@@ -372,7 +372,7 @@ int main(int argc, const char** argv) {
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    auto timer       = CLI::AutoTimer{"geodesic"};
+    auto timer       = CLI::AutoTimer("geodesic");
     auto adjacencies = face_adjacencies(triangles);
     auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
     auto sources     = vector<int>();
@@ -455,11 +455,11 @@ int main(int argc, const char** argv) {
 
   // save mesh
   if (!quadspos.empty()) {
-    auto timer = CLI::AutoTimer{"save"};
+    auto timer = CLI::AutoTimer("save");
     save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords);
   } else {
-    auto timer = CLI::AutoTimer{"save"};
+    auto timer = CLI::AutoTimer("save");
     save_shape(output, points, lines, triangles, quads, positions, normals,
         texcoords, colors, radius);
   }
