@@ -10,6 +10,7 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
