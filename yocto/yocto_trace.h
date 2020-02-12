@@ -402,9 +402,9 @@ struct trace_shape {
   vector<vec4f> tangents  = {};
 
   // computed properties
-  trace_bvh bvh = {};
+  std::shared_ptr<trace_bvh> bvh = nullptr;
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
+  std::shared_ptr<void> embree_bvh = nullptr;
 #endif
 
   // element cdf for sampling
@@ -457,9 +457,9 @@ struct trace_scene {
 
   // computed properties
   vector<shared_ptr<trace_light>> lights = {};
-  trace_bvh                       bvh    = {};
+  std::shared_ptr<trace_bvh> bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh       = {};
+  std::shared_ptr<void> embree_bvh       = nullptr;
   vector<vec2i>         embree_instances = {};
 #endif
 };
