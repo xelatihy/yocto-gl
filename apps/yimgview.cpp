@@ -81,7 +81,7 @@ struct app_state {
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  int                           selected = -1;
+  shared_ptr<app_state> selected = nullptr;
   deque<shared_ptr<app_state>>  loading  = {};
 
   // default options
@@ -166,25 +166,23 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   });
   apps->states.push_back(app);
   apps->loading.push_back(app);
-  if (apps->selected < 0) apps->selected = 0;
+  if (!apps->selected) apps->selected = apps->states.front();
 }
 
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  auto          image_ok = !apps->states.empty() && apps->selected >= 0 &&
-                  apps->states[apps->selected]->ok;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
+  if (draw_glfiledialog_button(win, "save", apps->selected && apps->selected->ok, "save image", save_path,
           true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app     = apps->states[apps->selected];
+    auto app     = apps->selected;
     app->outname = save_path;
     try {
       save_image(app->outname, app->display);
@@ -196,19 +194,17 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", image_ok)) {
-    apps->states.erase(apps->states.begin() + apps->selected);
-    apps->selected = apps->states.empty() ? -1 : 0;
+  if (draw_glbutton(win, "close", (bool)apps->selected)) {
+    apps->states.erase(std::find(apps->states.begin(), apps->states.end(), apps->selected));
+    apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(
-      win, "image", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
-  if (apps->selected < 0) return;
-  auto app = apps->states[apps->selected];
+  draw_glcombobox(win, "image", apps->selected, apps->states, false);
+  if(!apps->selected) return;
+  auto app = apps->selected;
   if(app->status != "") draw_gllabel(win, "status", app->status);
   if(app->error != "") draw_gllabel(win, "error", app->error);
   if (!app->ok) return;
@@ -283,10 +279,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
 
 void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
-  if (apps->states.empty() || apps->selected < 0 ||
-      !apps->states[apps->selected]->ok)
-    return;
-  auto app                  = apps->states[apps->selected];
+  if (!apps->selected || !apps->selected->ok) return;
+  auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
   app->glparams.framebuffer = input.framebuffer_viewport;
   if (!app->glimage) app->glimage = make_glimage();
@@ -357,13 +351,13 @@ int run_app(int argc, const char* argv[]) {
       });
   set_uiupdate_glcallback(
       win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+        if(!apps->selected) return;
+        auto app = apps->selected;
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
-          auto app = apps->states[apps->selected];
           app->glparams.center += input.mouse_pos - input.mouse_last;
         }
         if (input.mouse_right && !input.widgets_active) {
-          auto app = apps->states[apps->selected];
           app->glparams.scale *= powf(
               2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
         }
