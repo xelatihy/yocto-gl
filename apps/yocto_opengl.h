@@ -49,9 +49,9 @@ struct GLFWwindow;
 namespace yocto {
 
 // using directives
-using std::unique_ptr;
-using std::shared_ptr;
 using std::make_shared;
+using std::shared_ptr;
+using std::unique_ptr;
 
 // OpenGL image data
 struct opengl_image {
@@ -96,7 +96,8 @@ struct draw_glimage_params {
 };
 
 // draw image
-void draw_glimage(shared_ptr<opengl_image> glimage, const draw_glimage_params& params);
+void draw_glimage(
+    shared_ptr<opengl_image> glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 
@@ -131,19 +132,19 @@ struct opengl_texture {
 // Opengl material
 struct opengl_material {
   // material
-  vec3f           emission      = {0, 0, 0};
-  vec3f           color         = {0, 0, 0};
-  float           specular      = 0;
-  float           metallic      = 0;
-  float           roughness     = 0;
-  float           opacity       = 1;
+  vec3f                      emission      = {0, 0, 0};
+  vec3f                      color         = {0, 0, 0};
+  float                      specular      = 0;
+  float                      metallic      = 0;
+  float                      roughness     = 0;
+  float                      opacity       = 1;
   shared_ptr<opengl_texture> emission_map  = nullptr;
   shared_ptr<opengl_texture> color_map     = nullptr;
   shared_ptr<opengl_texture> specular_map  = nullptr;
   shared_ptr<opengl_texture> metallic_map  = nullptr;
   shared_ptr<opengl_texture> roughness_map = nullptr;
   shared_ptr<opengl_texture> normal_map    = nullptr;
-  bool            gltf_textures = false;
+  bool                       gltf_textures = false;
 };
 
 // Opengl shape
@@ -182,12 +183,12 @@ struct opengl_instance {};
 // Opengl object
 struct opengl_object {
   // object properties
-  frame3f          frame       = identity3x4f;
+  frame3f                     frame       = identity3x4f;
   shared_ptr<opengl_shape>    shape       = nullptr;
   shared_ptr<opengl_material> material    = nullptr;
   shared_ptr<opengl_instance> instance    = nullptr;
-  bool             hidden      = false;
-  bool             highlighted = false;
+  bool                        hidden      = false;
+  bool                        highlighted = false;
 };
 
 // Opengl light
@@ -252,14 +253,15 @@ shared_ptr<opengl_light>    add_light(shared_ptr<opengl_scene> scene);
 
 // camera properties
 void set_frame(shared_ptr<opengl_camera> camera, const frame3f& frame);
-void set_lens(shared_ptr<opengl_camera> camera, float lens, float aspect, float film);
+void set_lens(
+    shared_ptr<opengl_camera> camera, float lens, float aspect, float film);
 void set_nearfar(shared_ptr<opengl_camera> camera, float near, float far);
 
 // texture properties
-void set_texture(
-    shared_ptr<opengl_texture> texture, const image<vec4b>& img, bool as_srgb = true);
-void set_texture(
-    shared_ptr<opengl_texture> texture, const image<vec4f>& img, bool as_float = false);
+void set_texture(shared_ptr<opengl_texture> texture, const image<vec4b>& img,
+    bool as_srgb = true);
+void set_texture(shared_ptr<opengl_texture> texture, const image<vec4f>& img,
+    bool as_float = false);
 
 // material properties
 void set_emission(shared_ptr<opengl_material> material, const vec3f& emission,
@@ -274,28 +276,37 @@ void set_specular(shared_ptr<opengl_material> material, float specular,
     shared_ptr<opengl_texture> specular_txt = nullptr);
 void set_opacity(shared_ptr<opengl_material> material, float opacity,
     shared_ptr<opengl_texture> opacity_txt = nullptr);
-void set_normalmap(shared_ptr<opengl_material> material, shared_ptr<opengl_texture> normal_txt);
+void set_normalmap(shared_ptr<opengl_material> material,
+    shared_ptr<opengl_texture>                 normal_txt);
 void set_gltftextures(shared_ptr<opengl_material> material, bool gltf_textures);
 
 // shape properties
 void set_points(shared_ptr<opengl_shape> shape, const vector<int>& points);
 void set_lines(shared_ptr<opengl_shape> shape, const vector<vec2i>& lines);
-void set_triangles(shared_ptr<opengl_shape> shape, const vector<vec3i>& triangles);
+void set_triangles(
+    shared_ptr<opengl_shape> shape, const vector<vec3i>& triangles);
 void set_quads(shared_ptr<opengl_shape> shape, const vector<vec4i>& quads);
-void set_positions(shared_ptr<opengl_shape> shape, const vector<vec3f>& positions);
+void set_positions(
+    shared_ptr<opengl_shape> shape, const vector<vec3f>& positions);
 void set_normals(shared_ptr<opengl_shape> shape, const vector<vec3f>& normals);
-void set_texcoords(shared_ptr<opengl_shape> shape, const vector<vec2f>& texcoords);
+void set_texcoords(
+    shared_ptr<opengl_shape> shape, const vector<vec2f>& texcoords);
 void set_colors(shared_ptr<opengl_shape> shape, const vector<vec4f>& colors);
-void set_tangents(shared_ptr<opengl_shape> shape, const vector<vec4f>& tangents);
+void set_tangents(
+    shared_ptr<opengl_shape> shape, const vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(shared_ptr<opengl_instance> instance, const vector<frame3f>& frames);
+void set_frames(
+    shared_ptr<opengl_instance> instance, const vector<frame3f>& frames);
 
 // object properties
 void set_frame(shared_ptr<opengl_object> object, const frame3f& frame);
-void set_shape(shared_ptr<opengl_object> object, shared_ptr<opengl_shape> shape);
-void set_material(shared_ptr<opengl_object> object, shared_ptr<opengl_material> material);
-void set_instance(shared_ptr<opengl_object> object, shared_ptr<opengl_instance> instance);
+void set_shape(
+    shared_ptr<opengl_object> object, shared_ptr<opengl_shape> shape);
+void set_material(
+    shared_ptr<opengl_object> object, shared_ptr<opengl_material> material);
+void set_instance(
+    shared_ptr<opengl_object> object, shared_ptr<opengl_instance> instance);
 void set_hidden(shared_ptr<opengl_object> object, bool hidden);
 void set_highlighted(shared_ptr<opengl_object> object, bool highlighted);
 
@@ -348,15 +359,15 @@ using draw_glcallback =
 using widgets_glcallback =
     std::function<void(shared_ptr<opengl_window>, const opengl_input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_glcallback = std::function<void(
-    shared_ptr<opengl_window>, const vector<string>&, const opengl_input& input)>;
+using drop_glcallback = std::function<void(shared_ptr<opengl_window>,
+    const vector<string>&, const opengl_input& input)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
-using key_glcallback = std::function<void(
-    shared_ptr<opengl_window>, int key, bool pressed, const opengl_input& input)>;
+using key_glcallback = std::function<void(shared_ptr<opengl_window>, int key,
+    bool pressed, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_glcallback = std::function<void(
-    shared_ptr<opengl_window>, bool left, bool pressed, const opengl_input& input)>;
+using click_glcallback = std::function<void(shared_ptr<opengl_window>,
+    bool left, bool pressed, const opengl_input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_glcallback = std::function<void(
     shared_ptr<opengl_window>, float amount, const opengl_input& input)>;
@@ -370,37 +381,42 @@ using update_glcallback =
 // OpenGL window wrapper
 struct opengl_window {
   static unordered_map<GLFWwindow*, shared_ptr<opengl_window>> registry;
-  GLFWwindow*         win           = nullptr;
-  string              title         = "";
-  draw_glcallback     draw_cb       = {};
-  widgets_glcallback  widgets_cb    = {};
-  drop_glcallback     drop_cb       = {};
-  key_glcallback      key_cb        = {};
-  click_glcallback    click_cb      = {};
-  scroll_glcallback   scroll_cb     = {};
-  update_glcallback   update_cb     = {};
-  uiupdate_glcallback uiupdate_cb   = {};
-  int                 widgets_width = 0;
-  bool                widgets_left  = true;
-  opengl_input        input         = {};
-  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
+  GLFWwindow*                                                  win   = nullptr;
+  string                                                       title = "";
+  draw_glcallback                                              draw_cb     = {};
+  widgets_glcallback                                           widgets_cb  = {};
+  drop_glcallback                                              drop_cb     = {};
+  key_glcallback                                               key_cb      = {};
+  click_glcallback                                             click_cb    = {};
+  scroll_glcallback                                            scroll_cb   = {};
+  update_glcallback                                            update_cb   = {};
+  uiupdate_glcallback                                          uiupdate_cb = {};
+  int          widgets_width                                               = 0;
+  bool         widgets_left = true;
+  opengl_input input        = {};
+  vec4f        background   = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Windows initialization
-void init_glwindow(shared_ptr<opengl_window> win, const vec2i& size, const string& title,
-    bool widgets, int widgets_width = 320, bool widgets_left = true);
+void init_glwindow(shared_ptr<opengl_window> win, const vec2i& size,
+    const string& title, bool widgets, int widgets_width = 320,
+    bool widgets_left = true);
 
 // Window cleanup
 void clear_glwindow(shared_ptr<opengl_window> win);
 
 // Set callbacks
-void set_draw_glcallback(shared_ptr<opengl_window> win, draw_glcallback draw_cb);
-void set_widgets_glcallback(shared_ptr<opengl_window> win, widgets_glcallback widgets_cb);
-void set_drop_glcallback(shared_ptr<opengl_window> win, drop_glcallback drop_cb);
+void set_draw_glcallback(
+    shared_ptr<opengl_window> win, draw_glcallback draw_cb);
+void set_widgets_glcallback(
+    shared_ptr<opengl_window> win, widgets_glcallback widgets_cb);
+void set_drop_glcallback(
+    shared_ptr<opengl_window> win, drop_glcallback drop_cb);
 void set_key_glcallback(shared_ptr<opengl_window> win, key_glcallback cb);
 void set_click_glcallback(shared_ptr<opengl_window> win, click_glcallback cb);
 void set_scroll_glcallback(shared_ptr<opengl_window> win, scroll_glcallback cb);
-void set_uiupdate_glcallback(shared_ptr<opengl_window> win, uiupdate_glcallback cb);
+void set_uiupdate_glcallback(
+    shared_ptr<opengl_window> win, uiupdate_glcallback cb);
 void set_update_glcallback(shared_ptr<opengl_window> win, update_glcallback cb);
 
 // Run loop
@@ -417,83 +433,92 @@ namespace yocto {
 bool begin_glheader(shared_ptr<opengl_window> win, const char* title);
 void end_glheader(shared_ptr<opengl_window> win);
 
-void draw_gllabel(shared_ptr<opengl_window> win, const char* lbl, const string& text);
+void draw_gllabel(
+    shared_ptr<opengl_window> win, const char* lbl, const string& text);
 
 void draw_glseparator(shared_ptr<opengl_window> win);
 void continue_glline(shared_ptr<opengl_window> win);
 
-bool draw_glbutton(shared_ptr<opengl_window> win, const char* lbl, bool enabled = true);
+bool draw_glbutton(
+    shared_ptr<opengl_window> win, const char* lbl, bool enabled = true);
 
-bool draw_gltextinput(shared_ptr<opengl_window> win, const char* lbl, string& value);
+bool draw_gltextinput(
+    shared_ptr<opengl_window> win, const char* lbl, string& value);
 
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, float& value, float min, float max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec2f& value, float min, float max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec3f& value, float min, float max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec4f& value, float min, float max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, float& value,
+    float min, float max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec2f& value,
+    float min, float max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec3f& value,
+    float min, float max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec4f& value,
+    float min, float max);
 
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, int& value, int min, int max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec2i& value, int min, int max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec3i& value, int min, int max);
-bool draw_glslider(
-    shared_ptr<opengl_window> win, const char* lbl, vec4i& value, int min, int max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, int& value,
+    int min, int max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec2i& value,
+    int min, int max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec3i& value,
+    int min, int max);
+bool draw_glslider(shared_ptr<opengl_window> win, const char* lbl, vec4i& value,
+    int min, int max);
 
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, float& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec2f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec3f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec4f& value,
-    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec2f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec3f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec4f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
 bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, int& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec2i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec3i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl, vec4i& value,
-    float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec2i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec3i& value, float speed = 1, int min = 0, int max = 0);
+bool draw_gldragger(shared_ptr<opengl_window> win, const char* lbl,
+    vec4i& value, float speed = 1, int min = 0, int max = 0);
 
-bool draw_glcheckbox(shared_ptr<opengl_window> win, const char* lbl, bool& value);
+bool draw_glcheckbox(
+    shared_ptr<opengl_window> win, const char* lbl, bool& value);
 
-bool draw_glcoloredit(shared_ptr<opengl_window> win, const char* lbl, vec3f& value);
-bool draw_glcoloredit(shared_ptr<opengl_window> win, const char* lbl, vec4f& value);
+bool draw_glcoloredit(
+    shared_ptr<opengl_window> win, const char* lbl, vec3f& value);
+bool draw_glcoloredit(
+    shared_ptr<opengl_window> win, const char* lbl, vec4f& value);
 
-bool draw_glhdrcoloredit(shared_ptr<opengl_window> win, const char* lbl, vec3f& value);
-bool draw_glhdrcoloredit(shared_ptr<opengl_window> win, const char* lbl, vec4f& value);
+bool draw_glhdrcoloredit(
+    shared_ptr<opengl_window> win, const char* lbl, vec3f& value);
+bool draw_glhdrcoloredit(
+    shared_ptr<opengl_window> win, const char* lbl, vec4f& value);
 
 bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
     const vector<string>& labels);
-bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, string& value,
-    const vector<string>& labels);
-bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx, int num,
-    const std::function<const char*(int)>& labels, bool include_null = false);
+bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    string& value, const vector<string>& labels);
+bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
+    int num, const std::function<const char*(int)>& labels,
+    bool include_null = false);
 
 template <typename T>
-inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
-    const vector<T>& vals, bool include_null = false) {
+inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    int& idx, const vector<T>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
-    const vector<T*>& vals, bool include_null = false) {
+inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    int& idx, const vector<T*>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, T*& value,
-    const vector<T*>& vals, bool include_null = false) {
+inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    T*& value, const vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
@@ -506,15 +531,16 @@ inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, T*& 
   return edited;
 }
 template <typename T>
-inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
-    const vector<shared_ptr<T>>& vals, bool include_null = false) {
+inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    int& idx, const vector<shared_ptr<T>>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, shared_ptr<T>& value,
-    const vector<shared_ptr<T>>& vals, bool include_null = false) {
+inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
+    shared_ptr<T>& value, const vector<shared_ptr<T>>& vals,
+    bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
@@ -527,23 +553,24 @@ inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, shar
   return edited;
 }
 
-void draw_glhistogram(
-    shared_ptr<opengl_window> win, const char* lbl, const vector<float>& values);
-void draw_glhistogram(
-    shared_ptr<opengl_window> win, const char* lbl, const vector<vec2f>& values);
-void draw_glhistogram(
-    shared_ptr<opengl_window> win, const char* lbl, const vector<vec3f>& values);
-void draw_glhistogram(
-    shared_ptr<opengl_window> win, const char* lbl, const vector<vec4f>& values);
+void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
+    const vector<float>& values);
+void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
+    const vector<vec2f>& values);
+void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
+    const vector<vec3f>& values);
+void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
+    const vector<vec4f>& values);
 
 bool draw_glmessages(shared_ptr<opengl_window> win);
 void push_glmessage(shared_ptr<opengl_window> win, const string& message);
-bool draw_glfiledialog(shared_ptr<opengl_window> win, const char* lbl, string& path,
+bool draw_glfiledialog(shared_ptr<opengl_window> win, const char* lbl,
+    string& path, bool save, const string& dirname, const string& filename,
+    const string& filter);
+bool draw_glfiledialog_button(shared_ptr<opengl_window> win,
+    const char* button_lbl, bool button_active, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter);
-bool draw_glfiledialog_button(shared_ptr<opengl_window> win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
 
 void log_glinfo(shared_ptr<opengl_window> win, const string& msg);
 void log_glerror(shared_ptr<opengl_window> win, const string& msg);

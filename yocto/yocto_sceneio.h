@@ -45,10 +45,10 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <memory>
+
 #include "yocto_image.h"
 #include "yocto_math.h"
-
-#include <memory>
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -56,8 +56,8 @@
 namespace yocto {
 
 // Using directives.
-using std::shared_ptr;
 using std::make_shared;
+using std::shared_ptr;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -127,7 +127,7 @@ struct sceneio_material {
   shared_ptr<sceneio_texture> coat_tex         = nullptr;
   shared_ptr<sceneio_texture> opacity_tex      = nullptr;
   shared_ptr<sceneio_texture> normal_tex       = nullptr;
-  bool             gltf_textures    = false;  // glTF packed textures
+  bool                        gltf_textures    = false;  // glTF packed textures
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -158,7 +158,7 @@ struct sceneio_shape {
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
-  string         name  = "";
+  string                    name  = "";
   shared_ptr<sceneio_shape> shape = nullptr;
 
   // primitives
@@ -186,7 +186,7 @@ struct sceneio_subdiv {
   bool smooth       = false;
 
   // displacement information
-  float            displacement     = 0;
+  float                       displacement     = 0;
   shared_ptr<sceneio_texture> displacement_tex = nullptr;
 };
 
@@ -200,8 +200,8 @@ struct sceneio_instance {
 // Object.
 struct sceneio_object {
   // object data
-  string            name     = "";
-  frame3f           frame    = identity3x4f;
+  string                       name     = "";
+  frame3f                      frame    = identity3x4f;
   shared_ptr<sceneio_shape>    shape    = nullptr;
   shared_ptr<sceneio_material> material = nullptr;
   shared_ptr<sceneio_instance> instance = nullptr;
@@ -209,9 +209,9 @@ struct sceneio_object {
 
 // Environment map.
 struct sceneio_environment {
-  string           name         = "";
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = {0, 0, 0};
+  string                      name         = "";
+  frame3f                     frame        = identity3x4f;
+  vec3f                       emission     = {0, 0, 0};
   shared_ptr<sceneio_texture> emission_tex = nullptr;
 };
 
@@ -256,7 +256,7 @@ struct sceneio_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct sceneio_model {
-  string                       name         = "";
+  string                                  name         = "";
   vector<shared_ptr<sceneio_camera>>      cameras      = {};
   vector<shared_ptr<sceneio_object>>      objects      = {};
   vector<shared_ptr<sceneio_environment>> environments = {};
@@ -271,17 +271,18 @@ struct sceneio_model {
 
 // add element to a scene
 shared_ptr<sceneio_camera>      add_camera(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_environment> add_environment(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>      add_object(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_instance>    add_instance(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_material>    add_material(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_shape>       add_shape(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_subdiv>      add_subdiv(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_texture>     add_texture(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_node>        add_node(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_animation>   add_animation(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>      add_complete_object(
-         shared_ptr<sceneio_model> scene, const string& basename = "");
+shared_ptr<sceneio_environment> add_environment(
+    shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_object>    add_object(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_instance>  add_instance(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_material>  add_material(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_shape>     add_shape(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_subdiv>    add_subdiv(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_texture>   add_texture(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_node>      add_node(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_animation> add_animation(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_object>    add_complete_object(
+       shared_ptr<sceneio_model> scene, const string& basename = "");
 
 }  // namespace yocto
 
@@ -292,8 +293,8 @@ shared_ptr<sceneio_object>      add_complete_object(
 namespace yocto {
 
 // Load/save a scene in the supported formats. Throws on error.
-void load_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel = false);
+void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
+    bool noparallel = false);
 void save_scene(const string& filename, shared_ptr<sceneio_model> scene,
     bool noparallel = false);
 
@@ -305,7 +306,8 @@ void save_scene(const string& filename, shared_ptr<sceneio_model> scene,
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(shared_ptr<sceneio_model> scene, bool verbose = false);
+vector<string> scene_stats(
+    shared_ptr<sceneio_model> scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
     shared_ptr<sceneio_model> scene, bool notextures = false);
@@ -321,13 +323,13 @@ bbox3f compute_bounds(shared_ptr<sceneio_model> scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdiv(
-    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv, bool no_quads = false);
+void tesselate_subdiv(shared_ptr<sceneio_model> scene,
+    shared_ptr<sceneio_subdiv> subdiv, bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
-void update_transforms(
-    shared_ptr<sceneio_model> scene, float time = 0, const string& anim_group = "");
+void update_transforms(shared_ptr<sceneio_model> scene, float time = 0,
+    const string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {

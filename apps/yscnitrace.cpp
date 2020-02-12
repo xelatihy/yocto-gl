@@ -57,7 +57,7 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
-  trace_scene*   scene   = new trace_scene{};
+  trace_scene*              scene   = new trace_scene{};
 
   // rendering state
   trace_state* state    = new trace_state{};
@@ -66,8 +66,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image>       glimage  = make_shared<opengl_image>();
-  draw_glimage_params glparams = {};
+  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  draw_glimage_params      glparams = {};
 
   // editing
   shared_ptr<sceneio_camera>      selected_camera      = nullptr;
@@ -80,13 +80,16 @@ struct app_state {
   shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
   // editing maps
-  unordered_map<shared_ptr<sceneio_camera>, trace_camera*>           camera_map      = {};
-  unordered_map<shared_ptr<sceneio_environment>, trace_environment*> environment_map = {};
-  unordered_map<shared_ptr<sceneio_texture>, trace_texture*>         texture_map     = {};
-  unordered_map<shared_ptr<sceneio_material>, trace_material*>       material_map    = {};
-  unordered_map<shared_ptr<sceneio_shape>, trace_shape*>             shape_map       = {};
-  unordered_map<shared_ptr<sceneio_instance>, trace_instance*>       instance_map    = {};
-  unordered_map<shared_ptr<sceneio_object>, trace_object*>           object_map      = {};
+  unordered_map<shared_ptr<sceneio_camera>, trace_camera*> camera_map = {};
+  unordered_map<shared_ptr<sceneio_environment>, trace_environment*>
+                                                               environment_map = {};
+  unordered_map<shared_ptr<sceneio_texture>, trace_texture*>   texture_map = {};
+  unordered_map<shared_ptr<sceneio_material>, trace_material*> material_map =
+      {};
+  unordered_map<shared_ptr<sceneio_shape>, trace_shape*>       shape_map = {};
+  unordered_map<shared_ptr<sceneio_instance>, trace_instance*> instance_map =
+      {};
+  unordered_map<shared_ptr<sceneio_object>, trace_object*> object_map = {};
 
   // computation
   int          render_sample  = 0;
@@ -303,8 +306,8 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_camera> iocamera) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_camera> iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -329,8 +332,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_texture> iotexture) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_texture> iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -344,8 +347,9 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_material> iomaterial) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model>                 ioscene,
+    shared_ptr<sceneio_material>              iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -384,8 +388,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_shape> ioshape) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_shape> ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -402,8 +406,9 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_instance> ioinstance) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model>                 ioscene,
+    shared_ptr<sceneio_instance>              ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -411,8 +416,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_object> ioobject) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_object> ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -428,8 +433,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_subdiv> iosubdiv) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_subdiv> iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -450,8 +455,9 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ioscene,
-    shared_ptr<sceneio_environment> ioenvironment) {
+bool draw_glwidgets(shared_ptr<opengl_window> win,
+    shared_ptr<sceneio_model>                 ioscene,
+    shared_ptr<sceneio_environment>           ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioenvironment->name);
@@ -465,8 +471,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<sceneio_model> ios
   return edited;
 }
 
-void draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          app = (!apps->states.empty() && apps->selected >= 0)
                  ? apps->states[apps->selected]
@@ -737,7 +743,8 @@ void draw_glwidgets(
   }
 }
 
-void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -776,7 +783,7 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto apps     = make_shared<app_states>();
+  auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
 
   // maps for getting param
@@ -845,8 +852,8 @@ int run_app(int argc, const char* argv[]) {
       win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window>   win,
-                                   const opengl_input& input) {
+  set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window> win,
+                                   const opengl_input&          input) {
     auto scene_ok = !apps->states.empty() && apps->selected >= 0;
     if (!scene_ok) return;
 

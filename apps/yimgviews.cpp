@@ -52,8 +52,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image>       glimage  = make_shared<opengl_image>();
-  draw_glimage_params glparams = {};
+  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  draw_glimage_params      glparams = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support

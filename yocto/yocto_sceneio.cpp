@@ -304,7 +304,8 @@ vector<string> scene_stats(shared_ptr<sceneio_model> scene, bool verbose) {
 }
 
 // Checks for validity of the scene->
-vector<string> scene_validation(shared_ptr<sceneio_model> scene, bool notextures) {
+vector<string> scene_validation(
+    shared_ptr<sceneio_model> scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -318,13 +319,14 @@ vector<string> scene_validation(shared_ptr<sceneio_model> scene, bool notextures
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<shared_ptr<sceneio_texture>>& vals) {
-    for (auto value : vals) {
-      if (value->hdr.empty() && value->ldr.empty()) {
-        errs.push_back("empty texture " + value->name);
-      }
-    }
-  };
+  auto check_empty_textures =
+      [&errs](const vector<shared_ptr<sceneio_texture>>& vals) {
+        for (auto value : vals) {
+          if (value->hdr.empty() && value->ldr.empty()) {
+            errs.push_back("empty texture " + value->name);
+          }
+        }
+      };
 
   check_names(scene->cameras, "camera");
   check_names(scene->shapes, "shape");
@@ -354,7 +356,8 @@ shared_ptr<sceneio_camera> add_camera(shared_ptr<sceneio_model> scene) {
                  ".json";
   return camera;
 }
-shared_ptr<sceneio_environment> add_environment(shared_ptr<sceneio_model> scene) {
+shared_ptr<sceneio_environment> add_environment(
+    shared_ptr<sceneio_model> scene) {
   auto environment = scene->environments.emplace_back(
       make_shared<sceneio_environment>());
   environment->name = "environments/environment" +
@@ -385,13 +388,15 @@ shared_ptr<sceneio_object> add_object(shared_ptr<sceneio_model> scene) {
   return object;
 }
 shared_ptr<sceneio_instance> add_instance(shared_ptr<sceneio_model> scene) {
-  auto instance  = scene->instances.emplace_back(make_shared<sceneio_instance>());
+  auto instance = scene->instances.emplace_back(
+      make_shared<sceneio_instance>());
   instance->name = "instances/instance" +
                    std::to_string(scene->instances.size()) + ".ply";
   return instance;
 }
 shared_ptr<sceneio_material> add_material(shared_ptr<sceneio_model> scene) {
-  auto material  = scene->materials.emplace_back(make_shared<sceneio_material>());
+  auto material = scene->materials.emplace_back(
+      make_shared<sceneio_material>());
   material->name = "materials/material" +
                    std::to_string(scene->materials.size()) + ".json";
   return material;
@@ -617,11 +622,11 @@ shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape) {
   return tesselated;
 }
 // Apply displacement to a shape
-shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_subdiv> subdiv) {
+shared_ptr<sceneio_subdiv> displace_subdiv(
+    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv) {
   // Evaluate a texture
   auto eval_texture = [](shared_ptr<sceneio_texture> texture,
-                          const vec2f&          texcoord) -> vec4f {
+                          const vec2f&               texcoord) -> vec4f {
     if (!texture->hdr.empty()) {
       return eval_image(texture->hdr, texcoord, false, false);
     } else if (!texture->ldr.empty()) {
@@ -697,10 +702,10 @@ shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_model> scene,
   return displaced;
 }
 
-void tesselate_subdiv(
-    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv, bool no_quads) {
+void tesselate_subdiv(shared_ptr<sceneio_model> scene,
+    shared_ptr<sceneio_subdiv> subdiv, bool no_quads) {
   auto tesselated = subdivide_subdiv(subdiv);
-  auto displaced = displace_subdiv(scene, tesselated);
+  auto displaced  = displace_subdiv(scene, tesselated);
   if (!subdiv->quadspos.empty()) {
     std::tie(displaced->quads, displaced->positions, displaced->normals,
         displaced->texcoords) = split_facevarying(displaced->quadspos,
@@ -727,8 +732,9 @@ void tesselate_subdiv(
 }
 
 // Update animation transforms
-void update_transforms(shared_ptr<sceneio_model> scene, shared_ptr<sceneio_animation> animation,
-    float time, const string& anim_group) {
+void update_transforms(shared_ptr<sceneio_model> scene,
+    shared_ptr<sceneio_animation> animation, float time,
+    const string& anim_group) {
   if (anim_group != "" && anim_group != animation->group) return;
 
   if (!animation->translations.empty()) {
@@ -784,8 +790,8 @@ void update_transforms(shared_ptr<sceneio_model> scene, shared_ptr<sceneio_anima
 }
 
 // Update node transforms
-void update_transforms(shared_ptr<sceneio_model> scene, shared_ptr<sceneio_node> node,
-    const frame3f& parent = identity3x4f) {
+void update_transforms(shared_ptr<sceneio_model> scene,
+    shared_ptr<sceneio_node> node, const frame3f& parent = identity3x4f) {
   auto frame = parent * node->local * translation_frame(node->translation) *
                rotation_frame(node->rotation) * scaling_frame(node->scale);
   if (node->shape >= 0) scene->objects[node->shape]->frame = frame;
@@ -862,7 +868,8 @@ static void save_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
 
 // Load a scene
-void load_scene(const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+void load_scene(
+    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, noparallel);
@@ -1024,11 +1031,12 @@ static void load_json_scene(
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{{"", nullptr}};
+  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
+      {"", nullptr}};
   auto get_texture =
       [scene, &texture_map](const json& ejs, const string& name,
           shared_ptr<sceneio_texture>& value,
-          const string&     dirname = "textures/") -> shared_ptr<sceneio_texture> {
+          const string& dirname = "textures/") -> shared_ptr<sceneio_texture> {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -1046,10 +1054,12 @@ static void load_json_scene(
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, shared_ptr<sceneio_shape>>{{"", nullptr}};
-  auto get_shape = [scene, &shape_map](const json& ejs, const string& name,
-                       shared_ptr<sceneio_shape>& value,
-                       const string&   dirname = "shapes/") -> shared_ptr<sceneio_shape> {
+  auto shape_map = unordered_map<string, shared_ptr<sceneio_shape>>{
+      {"", nullptr}};
+  auto get_shape =
+      [scene, &shape_map](const json& ejs, const string& name,
+          shared_ptr<sceneio_shape>& value,
+          const string& dirname = "shapes/") -> shared_ptr<sceneio_shape> {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -1067,11 +1077,13 @@ static void load_json_scene(
   };
 
   // load json instance
-  auto instance_map = unordered_map<string, shared_ptr<sceneio_instance>>{{"", nullptr}};
-  auto get_instance =
-      [scene, &instance_map](const json& ejs, const string& name,
-          shared_ptr<sceneio_instance>& value,
-          const string&      dirname = "instances/") -> shared_ptr<sceneio_instance> {
+  auto instance_map = unordered_map<string, shared_ptr<sceneio_instance>>{
+      {"", nullptr}};
+  auto get_instance = [scene, &instance_map](const json& ejs,
+                          const string&                  name,
+                          shared_ptr<sceneio_instance>&  value,
+                          const string&                  dirname =
+                              "instances/") -> shared_ptr<sceneio_instance> {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -1089,7 +1101,8 @@ static void load_json_scene(
   };
 
   // material map
-  auto material_map = unordered_map<string, shared_ptr<sceneio_material>>{{"", nullptr}};
+  auto material_map = unordered_map<string, shared_ptr<sceneio_material>>{
+      {"", nullptr}};
 
   // check for conversion errors
   try {
@@ -1447,9 +1460,11 @@ static void load_obj_scene(
   }
 
   // helper to create texture maps
-  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{{"", nullptr}};
-  auto get_texture = [&filename, &texture_map, scene](
-                         const obj_texture_info& info) -> shared_ptr<sceneio_texture> {
+  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
+      {"", nullptr}};
+  auto get_texture =
+      [&filename, &texture_map, scene](
+          const obj_texture_info& info) -> shared_ptr<sceneio_texture> {
     auto path = info.path;
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
@@ -1474,7 +1489,8 @@ static void load_obj_scene(
   };
 
   // handler for materials
-  auto material_map = unordered_map<shared_ptr<obj_material>, shared_ptr<sceneio_material>>{};
+  auto material_map =
+      unordered_map<shared_ptr<obj_material>, shared_ptr<sceneio_material>>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1592,16 +1608,16 @@ static void save_obj_scene(
 
   // convert materials and textures
   for (auto material : scene->materials) {
-    auto omaterial           = obj->materials.emplace_back(make_shared<obj_material>());
-    omaterial->name          = get_basename(material->name);
-    omaterial->illum         = 2;
-    omaterial->as_pbr        = true;
-    omaterial->pbr_emission  = material->emission;
-    omaterial->pbr_base      = material->color;
-    omaterial->pbr_specular  = material->specular;
-    omaterial->pbr_roughness = material->roughness;
-    omaterial->pbr_metallic  = material->metallic;
-    omaterial->pbr_coat      = material->coat;
+    auto omaterial   = obj->materials.emplace_back(make_shared<obj_material>());
+    omaterial->name  = get_basename(material->name);
+    omaterial->illum = 2;
+    omaterial->as_pbr               = true;
+    omaterial->pbr_emission         = material->emission;
+    omaterial->pbr_base             = material->color;
+    omaterial->pbr_specular         = material->specular;
+    omaterial->pbr_roughness        = material->roughness;
+    omaterial->pbr_metallic         = material->metallic;
+    omaterial->pbr_coat             = material->coat;
     omaterial->pbr_transmission     = material->transmission;
     omaterial->pbr_opacity          = material->opacity;
     omaterial->pbr_emission_map     = get_texture(material->emission_tex);
@@ -1650,9 +1666,10 @@ static void save_obj_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto oenvironment   = obj->environments.emplace_back(make_shared<obj_environment>());
-    oenvironment->name  = get_basename(environment->name);
-    oenvironment->frame = environment->frame;
+    auto oenvironment = obj->environments.emplace_back(
+        make_shared<obj_environment>());
+    oenvironment->name         = get_basename(environment->name);
+    oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_map = get_texture(environment->emission_tex);
   }
@@ -1736,7 +1753,8 @@ static void load_gltf_scene(
   load_gltf(filename, gltf);
 
   // convert textures
-  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{{"", nullptr}};
+  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
+      {"", nullptr}};
   auto get_texture = [&filename, &scene, &gltf, &texture_map](
                          int ref) -> shared_ptr<sceneio_texture> {
     if (ref < 0) return nullptr;
@@ -1869,7 +1887,8 @@ static void load_pbrt_scene(
   }
 
   // convert materials
-  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{{"", nullptr}};
+  auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
+      {"", nullptr}};
   auto get_texture = [&filename, &scene, &texture_map](
                          const string& path) -> shared_ptr<sceneio_texture> {
     if (path == "") return nullptr;
@@ -1892,7 +1911,8 @@ static void load_pbrt_scene(
   };
 
   // convert material
-  auto material_map = unordered_map<shared_ptr<pbrt_material>, shared_ptr<sceneio_material>>{};
+  auto material_map =
+      unordered_map<shared_ptr<pbrt_material>, shared_ptr<sceneio_material>>{};
   for (auto pmaterial : pbrt->materials) {
     auto material           = add_material(scene);
     material->color         = pmaterial->color;
@@ -1912,7 +1932,8 @@ static void load_pbrt_scene(
   material_map[nullptr] = add_material(scene);
 
   // convert arealight
-  auto arealight_map = unordered_map<shared_ptr<pbrt_arealight>, shared_ptr<sceneio_material>>{};
+  auto arealight_map =
+      unordered_map<shared_ptr<pbrt_arealight>, shared_ptr<sceneio_material>>{};
   for (auto parealight : pbrt->arealights) {
     auto material             = add_material(scene);
     material->emission        = parealight->emission;
@@ -1978,10 +1999,12 @@ void save_pbrt_scene(
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // convert materials
-  auto material_map  = unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_material>>{};
-  auto arealight_map = unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_arealight>>{};
+  auto material_map =
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_material>>{};
+  auto arealight_map =
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_arealight>>{};
   for (auto material : scene->materials) {
-    auto pmaterial          = pbrt->materials.emplace_back(make_shared<pbrt_material>());
+    auto pmaterial = pbrt->materials.emplace_back(make_shared<pbrt_material>());
     pmaterial->name         = get_basename(material->name);
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -1994,7 +2017,8 @@ void save_pbrt_scene(
                                                : ""s;
     material_map[material] = pmaterial;
     if (material->emission != zero3f) {
-      auto parealight = pbrt->arealights.emplace_back(make_shared<pbrt_arealight>());
+      auto parealight = pbrt->arealights.emplace_back(
+          make_shared<pbrt_arealight>());
       parealight->emission    = material->emission;
       arealight_map[material] = parealight;
     } else {
@@ -2018,7 +2042,8 @@ void save_pbrt_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment = pbrt->environments.emplace_back(make_shared<pbrt_environment>());
+    auto penvironment = pbrt->environments.emplace_back(
+        make_shared<pbrt_environment>());
     penvironment->emission = environment->emission;
     if (environment->emission_tex) {
       penvironment->emission_map = environment->emission_tex->name;

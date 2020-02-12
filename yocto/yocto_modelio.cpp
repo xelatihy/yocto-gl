@@ -1651,7 +1651,8 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
       parse_value(fs, str, camera->aperture);
       parse_value(fs, str, camera->frame);
     } else if (cmd == "e") {
-      auto environment = obj->environments.emplace_back(make_shared<obj_environment>());
+      auto environment = obj->environments.emplace_back(
+          make_shared<obj_environment>());
       parse_value(fs, str, environment->name);
       parse_value(fs, str, environment->emission);
       auto emission_path = ""s;
@@ -2210,7 +2211,8 @@ void get_fvquads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<shared_ptr<obj_material>>& materials, vector<int>& ematerials, bool flipv) {
+    vector<shared_ptr<obj_material>>& materials, vector<int>& ematerials,
+    bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
@@ -2319,9 +2321,9 @@ static void get_vertices(shared_ptr<obj_shape> shape, int material,
 }
 
 // Get obj shape
-void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2338,9 +2340,9 @@ void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int m
   }
   triangles.shrink_to_fit();
 }
-void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2362,9 +2364,9 @@ void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int mater
   }
   quads.shrink_to_fit();
 }
-void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2380,9 +2382,9 @@ void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int mater
   }
   lines.shrink_to_fit();
 }
-void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape, int material,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2406,8 +2408,9 @@ vector<shared_ptr<obj_material>> get_materials(
 void add_triangles(shared_ptr<obj_model> obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<shared_ptr<obj_material>>& materials, const vector<int>& ematerials,
-    const vector<frame3f>& instances, bool flipv) {
+    const vector<shared_ptr<obj_material>>& materials,
+    const vector<int>& ematerials, const vector<frame3f>& instances,
+    bool flipv) {
   auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
@@ -2429,9 +2432,10 @@ void add_triangles(shared_ptr<obj_model> obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_quads(shared_ptr<obj_model> obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
+void add_quads(shared_ptr<obj_model> obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
@@ -2456,9 +2460,10 @@ void add_quads(shared_ptr<obj_model> obj, const string& name, const vector<vec4i
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_lines(shared_ptr<obj_model> obj, const string& name, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
+void add_lines(shared_ptr<obj_model> obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
@@ -2482,9 +2487,10 @@ void add_lines(shared_ptr<obj_model> obj, const string& name, const vector<vec2i
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_points(shared_ptr<obj_model> obj, const string& name, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
+void add_points(shared_ptr<obj_model> obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
@@ -2510,8 +2516,9 @@ void add_fvquads(shared_ptr<obj_model> obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<shared_ptr<obj_material>>& materials, const vector<int>& ematerials,
-    const vector<frame3f>& instances, bool flipv) {
+    const vector<shared_ptr<obj_material>>& materials,
+    const vector<int>& ematerials, const vector<frame3f>& instances,
+    bool flipv) {
   auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
@@ -3250,7 +3257,8 @@ struct pbrt_texture {
 };
 
 // convert pbrt films
-static shared_ptr<pbrt_film> convert_film(const pbrt_command& command, bool verbose = false) {
+static shared_ptr<pbrt_film> convert_film(
+    const pbrt_command& command, bool verbose = false) {
   auto film = make_shared<pbrt_film>();
   if (command.type == "image") {
     film->resolution = {512, 512};
@@ -3267,7 +3275,7 @@ static shared_ptr<pbrt_film> convert_film(const pbrt_command& command, bool verb
 // convert pbrt elements
 static shared_ptr<pbrt_camera> convert_camera(const pbrt_command& command,
     const vec2i& resolution, bool verbose = false) {
-  auto camera = make_shared<pbrt_camera>();
+  auto camera        = make_shared<pbrt_camera>();
   camera->frame      = command.frame;
   camera->frend      = command.frend;
   camera->frame      = inverse((frame3f)camera->frame);
@@ -3377,11 +3385,10 @@ static void convert_texture(pbrt_texture& texture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-static shared_ptr<pbrt_material> convert_material(
-    const pbrt_command&                          command,
+static shared_ptr<pbrt_material> convert_material(const pbrt_command& command,
     const unordered_map<string, shared_ptr<pbrt_material>>& material_map,
-    const unordered_map<string, pbrt_texture>&   texture_map,
-    bool                                         verbose = false) {
+    const unordered_map<string, pbrt_texture>&              texture_map,
+    bool                                                    verbose = false) {
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
@@ -3462,7 +3469,7 @@ static shared_ptr<pbrt_material> convert_material(
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
-  auto material = make_shared<pbrt_material>();
+  auto material  = make_shared<pbrt_material>();
   material->name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
@@ -3704,7 +3711,7 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
     const string& filename, const string& ply_dirname, bool verbose = false) {
-      auto shape = make_shared<pbrt_shape>();
+  auto shape   = make_shared<pbrt_shape>();
   shape->frame = command.frame;
   shape->frend = command.frend;
   if (command.type == "trianglemesh") {
@@ -3755,8 +3762,8 @@ static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
 
 // Convert pbrt arealights
 static shared_ptr<pbrt_arealight> convert_arealight(
-     const pbrt_command& command, bool verbose = false) {
-       auto light = make_shared<pbrt_arealight>();
+    const pbrt_command& command, bool verbose = false) {
+  auto light  = make_shared<pbrt_arealight>();
   light->name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1}, scale = vec3f{1};
@@ -3770,8 +3777,9 @@ static shared_ptr<pbrt_arealight> convert_arealight(
 }
 
 // Convert pbrt lights
-static shared_ptr<pbrt_light>  convert_light(const pbrt_command& command, bool verbose = false) {
-       auto light = make_shared<pbrt_light>();
+static shared_ptr<pbrt_light> convert_light(
+    const pbrt_command& command, bool verbose = false) {
+  auto light   = make_shared<pbrt_light>();
   light->frame = command.frame;
   light->frend = command.frend;
   if (command.type == "distant") {
@@ -3821,7 +3829,7 @@ static shared_ptr<pbrt_light>  convert_light(const pbrt_command& command, bool v
 
 static shared_ptr<pbrt_environment> convert_environment(
     const pbrt_command& command, bool verbose = false) {
-      auto environment = make_shared<pbrt_environment>();
+  auto environment   = make_shared<pbrt_environment>();
   environment->frame = command.frame;
   environment->frend = command.frend;
   environment->frame = environment->frame *
@@ -3843,32 +3851,33 @@ static shared_ptr<pbrt_environment> convert_environment(
 
 // pbrt stack ctm
 struct pbrt_stack_element {
-  frame3f         transform_start        = identity3x4f;
-  frame3f         transform_end          = identity3x4f;
+  frame3f                    transform_start        = identity3x4f;
+  frame3f                    transform_end          = identity3x4f;
   shared_ptr<pbrt_material>  material               = nullptr;
   shared_ptr<pbrt_arealight> arealight              = nullptr;
   shared_ptr<pbrt_medium>    interior               = nullptr;
   shared_ptr<pbrt_medium>    exterior               = nullptr;
-  bool            reverse                = false;
-  bool            active_transform_start = true;
-  bool            active_transform_end   = true;
+  bool                       reverse                = false;
+  bool                       active_transform_start = true;
+  bool                       active_transform_end   = true;
 };
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element>                 stack           = {};
-  unordered_map<string, pbrt_stack_element>  coordsys        = {};
-  unordered_map<string, vector<shared_ptr<pbrt_shape>>> objects         = {};
-  string                                     cur_object      = "";
-  vec2i                                      film_resolution = {512, 512};
+  vector<pbrt_stack_element>                            stack      = {};
+  unordered_map<string, pbrt_stack_element>             coordsys   = {};
+  unordered_map<string, vector<shared_ptr<pbrt_shape>>> objects    = {};
+  string                                                cur_object = "";
+  vec2i film_resolution                                            = {512, 512};
 };
 
 // load pbrt
-void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context& ctx,
+void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
+    pbrt_context&                                     ctx,
     unordered_map<string, shared_ptr<pbrt_material>>& material_map,
     unordered_map<string, shared_ptr<pbrt_medium>>&   medium_map,
-    unordered_map<string, pbrt_texture>&   texture_map,
-    const string&                          ply_dirname) {
+    unordered_map<string, pbrt_texture>&              texture_map,
+    const string&                                     ply_dirname) {
   auto fs = open_file(filename, "rt");
 
   // helpers
@@ -3997,7 +4006,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
       auto command = pbrt_command{};
       parse_pbrt_param(fs, str, command.type);
       parse_pbrt_params(fs, str, command.values);
-      auto cfilm = convert_film(command);
+      auto cfilm          = convert_film(command);
       ctx.film_resolution = cfilm->resolution;
     } else if (cmd == "Accelerator") {
       auto command = pbrt_command{};
@@ -4011,7 +4020,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
       command.frend = ctx.stack.back().transform_end;
       auto camera   = convert_camera(command, ctx.film_resolution);
       pbrt->cameras.push_back(camera);
-      
+
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
@@ -4054,7 +4063,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
       parse_pbrt_params(fs, str, command.values);
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto shape = convert_shape(command, filename, ply_dirname);
+      auto shape    = convert_shape(command, filename, ply_dirname);
       pbrt->shapes.push_back(shape);
       shape->material  = ctx.stack.back().material;
       shape->arealight = ctx.stack.back().arealight;
@@ -4069,8 +4078,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
       parse_pbrt_params(fs, str, command.values);
       command.frame  = ctx.stack.back().transform_start;
       command.frend  = ctx.stack.back().transform_end;
-      auto arealight = 
-      convert_arealight(command);
+      auto arealight = convert_arealight(command);
       pbrt->arealights.push_back(arealight);
       ctx.stack.back().arealight = arealight;
     } else if (cmd == "LightSource") {
@@ -4093,7 +4101,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium              = pbrt->mediums.emplace_back(make_shared<pbrt_medium>());
+      auto medium = pbrt->mediums.emplace_back(make_shared<pbrt_medium>());
       medium_map[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -4119,9 +4127,10 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt, pbrt_context
 // load pbrt
 void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt) {
   auto ctx          = pbrt_context{};
-  auto material_map = unordered_map<string, shared_ptr<pbrt_material>>{{"", {}}};
-  auto medium_map   = unordered_map<string, shared_ptr<pbrt_medium>>{{"", {}}};
-  auto texture_map  = unordered_map<string, pbrt_texture>{{"", {}}};
+  auto material_map = unordered_map<string, shared_ptr<pbrt_material>>{
+      {"", {}}};
+  auto medium_map  = unordered_map<string, shared_ptr<pbrt_medium>>{{"", {}}};
+  auto texture_map = unordered_map<string, pbrt_texture>{{"", {}}};
   load_pbrt(filename, pbrt, ctx, material_map, medium_map, texture_map,
       get_dirname(filename));
 }

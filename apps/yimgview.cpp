@@ -65,9 +65,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image>       glimage   = make_shared<opengl_image>();
-  draw_glimage_params glparams  = {};
-  bool                glupdated = true;
+  shared_ptr<opengl_image> glimage   = make_shared<opengl_image>();
+  draw_glimage_params      glparams  = {};
+  bool                     glupdated = true;
 };
 
 // app states
@@ -163,8 +163,8 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void draw_glwidgets(
-    shared_ptr<opengl_window> win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -276,7 +276,8 @@ void draw_glwidgets(
   }
 }
 
-void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -315,7 +316,7 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto apps     = make_shared<app_states>();
+  auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
 
   // command line options

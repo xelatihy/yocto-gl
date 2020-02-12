@@ -159,7 +159,8 @@ int run_app(int argc, const char* argv[]) {
                             float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](shared_ptr<app_state> app, shared_ptr<opengl_window> win) {
+  auto draw_glwidgets = [&data](shared_ptr<app_state> app,
+                            shared_ptr<opengl_window> win) {
     my_draw_glwidgets(data, app, win);
   };
 

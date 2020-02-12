@@ -3518,7 +3518,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = make_shared<obj_model>();
-    auto err  = ""s;
+    auto err = ""s;
     load_obj(filename, obj, true);
     if (obj->shapes.empty()) throw_emptyshape_error(filename);
     if (obj->shapes.size() > 1) throw_emptyshape_error(filename);

@@ -52,8 +52,8 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
-  trace_scene*   scene      = new trace_scene{};
-  bool           add_skyenv = false;
+  trace_scene*              scene      = new trace_scene{};
+  bool                      add_skyenv = false;
 
   // rendering state
   trace_state* state    = new trace_state{};
@@ -62,8 +62,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image>       glimage  = make_shared<opengl_image>();
-  draw_glimage_params glparams = {};
+  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  draw_glimage_params      glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -91,7 +91,8 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
+  auto texture_map =
+      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -103,7 +104,8 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
+  auto material_map =
+      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -150,7 +152,8 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
+  auto instance_map =
+      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
