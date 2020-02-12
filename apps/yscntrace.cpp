@@ -40,7 +40,7 @@ using namespace std;
 #include "ext/CLI11.hpp"
 
 // construct a scene from io
-void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
+void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -49,7 +49,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
+      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -62,7 +62,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -92,7 +92,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
+  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -110,7 +110,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
+      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
@@ -205,7 +205,7 @@ int run_app(int argc, const char* argv[]) {
   // convert scene
   auto convert_timer = print_timed("converting");
   auto scene         = make_shared<trace_scene>();
-  init_scene(scene.get(), ioscene);
+  init_scene(scene, ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
@@ -213,12 +213,12 @@ int run_app(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene.get(), params);
+  init_bvh(scene, params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene.get());
+  init_lights(scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
@@ -229,7 +229,7 @@ int run_app(int argc, const char* argv[]) {
 
   // allocate buffers
   auto state = make_shared<trace_state>();
-  init_state(state.get(), scene.get(), params);
+  init_state(state, scene, params);
   auto render = image{state->size(), zero4f};
 
   // render
@@ -238,7 +238,7 @@ int run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render = trace_samples(state.get(), scene.get(), nsamples, params);
+    render = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

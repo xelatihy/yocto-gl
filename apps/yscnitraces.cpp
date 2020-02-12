@@ -52,11 +52,11 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
-  trace_scene*              scene      = new trace_scene{};
+  shared_ptr<trace_scene>              scene      = make_shared<trace_scene>();
   bool                      add_skyenv = false;
 
   // rendering state
-  trace_state* state    = new trace_state{};
+  shared_ptr<trace_state> state    = make_shared<trace_state>();
   image<vec4f> render   = {};
   image<vec4f> display  = {};
   float        exposure = 0;
@@ -76,14 +76,11 @@ struct app_state {
 
   ~app_state() {
     render_stop = true;
-    if (render_future.valid()) render_future.get();
-    if (scene) delete scene;
-    if (state) delete state;
   }
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
+void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -92,7 +89,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
+      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -105,7 +102,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -135,7 +132,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
+  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -153,7 +150,7 @@ void init_scene(trace_scene* scene, shared_ptr<sceneio_model> ioscene) {
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
+      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
