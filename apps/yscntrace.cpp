@@ -40,7 +40,8 @@ using namespace std;
 #include "ext/CLI11.hpp"
 
 // construct a scene from io
-void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+void init_scene(
+    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -92,7 +93,8 @@ void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  auto shape_map =
+      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -238,7 +240,7 @@ int run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render = trace_samples(state, scene, nsamples, params);
+    render           = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

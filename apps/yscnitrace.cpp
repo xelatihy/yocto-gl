@@ -57,13 +57,13 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>              scene   = make_shared<trace_scene>();
+  shared_ptr<trace_scene>   scene   = make_shared<trace_scene>();
 
   // rendering state
   shared_ptr<trace_state> state    = make_shared<trace_state>();
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  image<vec4f>            render   = {};
+  image<vec4f>            display  = {};
+  float                   exposure = 0;
 
   // view scene
   shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
@@ -80,16 +80,20 @@ struct app_state {
   shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
   // editing maps
-  unordered_map<shared_ptr<sceneio_camera>, shared_ptr<trace_camera>> camera_map = {};
+  unordered_map<shared_ptr<sceneio_camera>, shared_ptr<trace_camera>>
+      camera_map = {};
   unordered_map<shared_ptr<sceneio_environment>, shared_ptr<trace_environment>>
-                                                               environment_map = {};
-  unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>   texture_map = {};
-  unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>> material_map =
+      environment_map = {};
+  unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>
+      texture_map = {};
+  unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>
+                                                                    material_map = {};
+  unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>> shape_map =
       {};
-  unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>       shape_map = {};
-  unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>> instance_map =
-      {};
-  unordered_map<shared_ptr<sceneio_object>, shared_ptr<trace_object>> object_map = {};
+  unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>
+      instance_map = {};
+  unordered_map<shared_ptr<sceneio_object>, shared_ptr<trace_object>>
+      object_map = {};
 
   // computation
   int          render_sample  = 0;
@@ -97,9 +101,7 @@ struct app_state {
   future<void> render_future  = {};
   int          render_counter = 0;
 
-  ~app_state() {
-    render_stop = true;
-  }
+  ~app_state() { render_stop = true; }
 };
 
 // Application state

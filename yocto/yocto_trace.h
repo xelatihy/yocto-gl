@@ -76,8 +76,8 @@
 namespace yocto {
 
 // Using directives
-using std::shared_ptr;
 using std::make_shared;
+using std::shared_ptr;
 
 // Trace scene
 struct trace_scene;
@@ -90,72 +90,97 @@ struct trace_instance;
 struct trace_object;
 
 // Add scene elements
-shared_ptr<trace_camera>      add_camera(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_object>      add_object(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_texture>     add_texture(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_material>    add_material(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_shape>       add_shape(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_instance>    add_instance(const shared_ptr<trace_scene>& scene);
-shared_ptr<trace_environment> add_environment(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_camera>   add_camera(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_object>   add_object(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_texture>  add_texture(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_material> add_material(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_shape>    add_shape(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_instance> add_instance(const shared_ptr<trace_scene>& scene);
+shared_ptr<trace_environment> add_environment(
+    const shared_ptr<trace_scene>& scene);
 
 // camera properties
 void set_frame(const shared_ptr<trace_camera>& camera, const frame3f& frame);
-void set_lens(const shared_ptr<trace_camera>& camera, float lens, float aspect, float film);
-void set_focus(const shared_ptr<trace_camera>& camera, float aperture, float focus);
+void set_lens(const shared_ptr<trace_camera>& camera, float lens, float aspect,
+    float film);
+void set_focus(
+    const shared_ptr<trace_camera>& camera, float aperture, float focus);
 
 // object properties
 void set_frame(const shared_ptr<trace_object>& object, const frame3f& frame);
-void set_material(const shared_ptr<trace_object>& object, shared_ptr<trace_material> material);
-void set_shape(const shared_ptr<trace_object>& object, shared_ptr<trace_shape> shape);
-void set_instance(const shared_ptr<trace_object>& object, shared_ptr<trace_instance> instance);
+void set_material(const shared_ptr<trace_object>& object,
+    shared_ptr<trace_material>                    material);
+void set_shape(
+    const shared_ptr<trace_object>& object, shared_ptr<trace_shape> shape);
+void set_instance(const shared_ptr<trace_object>& object,
+    shared_ptr<trace_instance>                    instance);
 
 // texture properties
-void set_texture(const shared_ptr<trace_texture>& texture, const image<vec4b>& img);
-void set_texture(const shared_ptr<trace_texture>& texture, const image<vec4f>& img);
+void set_texture(
+    const shared_ptr<trace_texture>& texture, const image<vec4b>& img);
+void set_texture(
+    const shared_ptr<trace_texture>& texture, const image<vec4f>& img);
 
 // material properties
-void set_emission(const shared_ptr<trace_material>& material, const vec3f& emission,
-    shared_ptr<trace_texture> emission_txt = nullptr);
+void set_emission(const shared_ptr<trace_material>& material,
+    const vec3f& emission, shared_ptr<trace_texture> emission_txt = nullptr);
 void set_color(const shared_ptr<trace_material>& material, const vec3f& color,
     shared_ptr<trace_texture> color_txt = nullptr);
-void set_specular(const shared_ptr<trace_material>& material, float specular = 1,
-    shared_ptr<trace_texture> specular_txt = nullptr);
+void set_specular(const shared_ptr<trace_material>& material,
+    float specular = 1, shared_ptr<trace_texture> specular_txt = nullptr);
 void set_ior(const shared_ptr<trace_material>& material, float ior);
 void set_metallic(const shared_ptr<trace_material>& material, float metallic,
     shared_ptr<trace_texture> metallic_txt = nullptr);
-void set_transmission(const shared_ptr<trace_material>& material, float transmission, bool thin,
-    float trdepth, shared_ptr<trace_texture> transmission_txt = nullptr);
+void set_transmission(const shared_ptr<trace_material>& material,
+    float transmission, bool thin, float trdepth,
+    shared_ptr<trace_texture> transmission_txt = nullptr);
 void set_roughness(const shared_ptr<trace_material>& material, float roughness,
     shared_ptr<trace_texture> roughness_txt = nullptr);
 void set_opacity(const shared_ptr<trace_material>& material, float opacity,
     shared_ptr<trace_texture> opacity_txt = nullptr);
 void set_thin(const shared_ptr<trace_material>& material, bool thin);
-void set_scattering(const shared_ptr<trace_material>& material, const vec3f& scattering,
-    float scanisotropy, shared_ptr<trace_texture> scattering_tex = nullptr);
-void set_normalmap(const shared_ptr<trace_material>& material, shared_ptr<trace_texture> normal_txt);
-void set_gltftextures(const shared_ptr<trace_material>& material, bool gltf_textures);
+void set_scattering(const shared_ptr<trace_material>& material,
+    const vec3f& scattering, float scanisotropy,
+    shared_ptr<trace_texture> scattering_tex = nullptr);
+void set_normalmap(const shared_ptr<trace_material>& material,
+    shared_ptr<trace_texture>                        normal_txt);
+void set_gltftextures(
+    const shared_ptr<trace_material>& material, bool gltf_textures);
 
 // shape properties
-void set_points(const shared_ptr<trace_shape>& shape, const vector<int>& points);
-void set_lines(const shared_ptr<trace_shape>& shape, const vector<vec2i>& lines);
-void set_triangles(const shared_ptr<trace_shape>& shape, const vector<vec3i>& triangles);
-void set_quads(const shared_ptr<trace_shape>& shape, const vector<vec4i>& quads);
-void set_fvquads(const shared_ptr<trace_shape>& shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_positions(const shared_ptr<trace_shape>& shape, const vector<vec3f>& positions);
-void set_normals(const shared_ptr<trace_shape>& shape, const vector<vec3f>& normals);
-void set_texcoords(const shared_ptr<trace_shape>& shape, const vector<vec2f>& texcoords);
-void set_colors(const shared_ptr<trace_shape>& shape, const vector<vec4f>& colors);
-void set_radius(const shared_ptr<trace_shape>& shape, const vector<float>& radius);
-void set_tangents(const shared_ptr<trace_shape>& shape, const vector<vec4f>& tangents);
+void set_points(
+    const shared_ptr<trace_shape>& shape, const vector<int>& points);
+void set_lines(
+    const shared_ptr<trace_shape>& shape, const vector<vec2i>& lines);
+void set_triangles(
+    const shared_ptr<trace_shape>& shape, const vector<vec3i>& triangles);
+void set_quads(
+    const shared_ptr<trace_shape>& shape, const vector<vec4i>& quads);
+void set_fvquads(const shared_ptr<trace_shape>& shape,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord);
+void set_positions(
+    const shared_ptr<trace_shape>& shape, const vector<vec3f>& positions);
+void set_normals(
+    const shared_ptr<trace_shape>& shape, const vector<vec3f>& normals);
+void set_texcoords(
+    const shared_ptr<trace_shape>& shape, const vector<vec2f>& texcoords);
+void set_colors(
+    const shared_ptr<trace_shape>& shape, const vector<vec4f>& colors);
+void set_radius(
+    const shared_ptr<trace_shape>& shape, const vector<float>& radius);
+void set_tangents(
+    const shared_ptr<trace_shape>& shape, const vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(const shared_ptr<trace_instance>& instance, const vector<frame3f>& frames);
+void set_frames(
+    const shared_ptr<trace_instance>& instance, const vector<frame3f>& frames);
 
 // environment properties
-void set_frame(const shared_ptr<trace_environment>& environment, const frame3f& frame);
-void set_emission(const shared_ptr<trace_environment>& environment, const vec3f& emission,
-    shared_ptr<trace_texture> emission_map = nullptr);
+void set_frame(
+    const shared_ptr<trace_environment>& environment, const frame3f& frame);
+void set_emission(const shared_ptr<trace_environment>& environment,
+    const vec3f& emission, shared_ptr<trace_texture> emission_map = nullptr);
 
 // Trace state
 struct trace_state;
@@ -223,8 +248,8 @@ const auto trace_bvh_names        = vector<string>{
 };
 
 // Initialize state of the renderer.
-void init_state(
-    shared_ptr<trace_state> state, const shared_ptr<trace_scene>& scene, const trace_params& params);
+void init_state(shared_ptr<trace_state> state,
+    const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Initialize lights.
 void init_lights(const shared_ptr<trace_scene>& scene);
@@ -233,22 +258,26 @@ void init_lights(const shared_ptr<trace_scene>& scene);
 void init_bvh(const shared_ptr<trace_scene>& bvh, const trace_params& params);
 
 // Refit bvh data
-void update_bvh(const shared_ptr<trace_state>& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const trace_params& params);
+void update_bvh(const shared_ptr<trace_state>& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const shared_ptr<trace_scene>& scene, const trace_params& params);
+image<vec4f> trace_image(
+    const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(const shared_ptr<trace_state>& state, const shared_ptr<trace_scene>& scene,
-    int samples, const trace_params& params);
+image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
+    const shared_ptr<trace_scene>& scene, int samples,
+    const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.
-vec4f trace_sample(const shared_ptr<trace_state>& state, const shared_ptr<trace_scene>& scene,
-    const vec2i& ij, const trace_params& params);
+vec4f trace_sample(const shared_ptr<trace_state>& state,
+    const shared_ptr<trace_scene>& scene, const vec2i& ij,
+    const trace_params& params);
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -342,7 +371,7 @@ struct trace_material {
   shared_ptr<trace_texture> coat_tex         = nullptr;
   shared_ptr<trace_texture> opacity_tex      = nullptr;
   shared_ptr<trace_texture> normal_tex       = nullptr;
-  bool           gltf_textures    = false;  // glTF packed textures
+  bool                      gltf_textures    = false;  // glTF packed textures
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -386,7 +415,7 @@ struct trace_instance {
 
 // Object.
 struct trace_object {
-  frame3f         frame    = identity3x4f;
+  frame3f                    frame    = identity3x4f;
   shared_ptr<trace_shape>    shape    = nullptr;
   shared_ptr<trace_material> material = nullptr;
   shared_ptr<trace_instance> instance = nullptr;
@@ -394,16 +423,16 @@ struct trace_object {
 
 // Environment map.
 struct trace_environment {
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
+  frame3f                   frame        = identity3x4f;
+  vec3f                     emission     = {0, 0, 0};
   shared_ptr<trace_texture> emission_tex = nullptr;
-  vector<float>  texels_cdf   = {};
+  vector<float>             texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
   shared_ptr<trace_object>      object      = nullptr;
-  int                instance    = -1;
+  int                           instance    = -1;
   shared_ptr<trace_environment> environment = nullptr;
 };
 
@@ -425,7 +454,7 @@ struct trace_scene {
 
   // computed properties
   vector<shared_ptr<trace_light>> lights = {};
-  trace_bvh            bvh    = {};
+  trace_bvh                       bvh    = {};
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh       = {};
   vector<vec2i>         embree_instances = {};
@@ -473,9 +502,9 @@ struct trace_intersection {
 // the shape element index and the element barycentric coordinates.
 trace_intersection intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const shared_ptr<trace_object>& object,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(
+    const shared_ptr<trace_object>& object, int instance, const ray3f& ray,
+    bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 

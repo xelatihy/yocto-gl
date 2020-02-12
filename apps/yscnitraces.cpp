@@ -52,14 +52,14 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>              scene      = make_shared<trace_scene>();
+  shared_ptr<trace_scene>   scene      = make_shared<trace_scene>();
   bool                      add_skyenv = false;
 
   // rendering state
   shared_ptr<trace_state> state    = make_shared<trace_state>();
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  image<vec4f>            render   = {};
+  image<vec4f>            display  = {};
+  float                   exposure = 0;
 
   // view scene
   shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
@@ -74,13 +74,12 @@ struct app_state {
   future<void> render_future  = {};
   int          render_counter = 0;
 
-  ~app_state() {
-    render_stop = true;
-  }
+  ~app_state() { render_stop = true; }
 };
 
 // construct a scene from io
-void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+void init_scene(
+    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -132,7 +131,8 @@ void init_scene(shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  auto shape_map =
+      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
