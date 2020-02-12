@@ -593,13 +593,13 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
-      auto elem = ply->elements.emplace_back(new ply_element{});
+      auto elem = ply->elements.emplace_back(make_shared<ply_element>());
       parse_value(fs, str, elem->name);
       parse_value(fs, str, elem->count);
     } else if (cmd == "property") {
       if (ply->elements.empty()) throw_parse_error(fs, "bad header");
       auto prop = ply->elements.back()->properties.emplace_back(
-          new ply_property{});
+          make_shared<ply_property>());
       auto tname = ""s;
       parse_value(fs, str, tname);
       if (tname == "list") {
@@ -1114,7 +1114,7 @@ static void add_element(
   for (auto elem : ply->elements) {
     if (elem->name == element) return;
   }
-  auto elem   = ply->elements.emplace_back(new ply_element{});
+  auto elem   = ply->elements.emplace_back(make_shared<ply_element>());
   elem->name  = element;
   elem->count = count;
 }
@@ -1127,7 +1127,7 @@ static void add_property(shared_ptr<ply_model> ply, const string& element,
       if (prop->name == property)
         throw std::runtime_error("property already added");
     }
-    auto prop     = elem->properties.emplace_back(new ply_property{});
+    auto prop     = elem->properties.emplace_back(make_shared<ply_property>());
     prop->name    = property;
     prop->type    = type;
     prop->is_list = is_list;
