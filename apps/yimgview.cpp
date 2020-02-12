@@ -73,6 +73,7 @@ struct app_state {
   // loading status
   atomic<bool> ok     = false;
   future<void> loader = {};
+  string       status = "";
 };
 
 // app states
@@ -150,6 +151,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;
+  app->status   = "loading";
   app->loader   = async(launch::async, [app]() {
     load_image(app->filename, app->source);
     compute_stats(
@@ -204,13 +206,11 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   draw_glcombobox(
       win, "image", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
-  if (begin_glheader(win, "log")) {
-    draw_gllog(win);
-    end_glheader(win);
-  }
-  if (!image_ok) return;
+  if (apps->selected < 0) return;
+  auto app = apps->states[apps->selected];
+  draw_gllabel(win, "status", app->status);
+  if (!app->ok) return;
   if (begin_glheader(win, "tonemap")) {
-    auto app    = apps->states[apps->selected];
     auto edited = 0;
     edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
     edited += draw_glcheckbox(win, "filmic", app->filmic);
@@ -218,7 +218,6 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (begin_glheader(win, "colorgrade")) {
-    auto  app    = apps->states[apps->selected];
     auto& params = app->params;
     auto  edited = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", app->colorgrade);
@@ -249,7 +248,6 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    auto app = apps->states[apps->selected];
     draw_gllabel(win, "image", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
@@ -312,11 +310,11 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
       app->loader.get();
       apps->loading.pop_front();
       update_display(app);
-      app->ok = true;
+      app->ok     = true;
+      app->status = "ok";
     } catch (std::exception& e) {
       apps->loading.pop_front();
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
+      app->status = "error: "s + e.what();
     }
   }
 }
