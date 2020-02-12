@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -39,6 +38,8 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 #ifdef _WIN32
 #undef near
@@ -129,9 +130,9 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
         auto app         = make_shared<app_state>();
         app->filename    = filename;
-        app->imagename   = replace_extension(filename, ".png");
-        app->outname     = replace_extension(filename, ".edited.yaml");
-        app->name        = get_filename(app->filename);
+        app->imagename   = fs::path(filename).replace_extension(".png");
+        app->outname     = fs::path(filename).replace_extension(".edited.yaml");
+        app->name        = fs::path(app->filename).filename();
         app->drawgl_prms = apps->drawgl_prms;
         app->ioscene     = load_scene(app->filename);
         app->time_range  = compute_animation_range(app->ioscene);
@@ -448,7 +449,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.yaml;*.obj;*.pbrt")) {
     app->outname = save_path;
     try {
@@ -499,7 +500,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", get_filename(app->filename));
+    draw_gllabel(win, "scene", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "imagename", app->imagename);

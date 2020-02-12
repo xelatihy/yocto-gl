@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -38,6 +37,8 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 namespace yocto {
 void print_obj_camera(shared_ptr<sceneio_camera> camera);
@@ -285,9 +286,9 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       async(launch::async, [filename]() -> shared_ptr<app_state> {
         auto app       = make_shared<app_state>();
         app->filename  = filename;
-        app->imagename = replace_extension(filename, ".png");
-        app->outname   = replace_extension(filename, ".edited.yaml");
-        app->name      = get_filename(app->filename);
+        app->imagename = fs::path(filename).replace_extension(".png");
+        app->outname   = fs::path(filename).replace_extension(".edited.yaml");
+        app->name      = fs::path(filename).filename();
         app->params    = app->params;
         app->ioscene   = load_scene(app->filename);
         init_scene(app);
@@ -299,7 +300,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->state = make_state(app->scene, app->params);
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
-        app->name = get_filename(app->filename) + " [" +
+        app->name = fs::path(app->filename).filename().string() + " [" +
                     to_string(app->render.size().x) + "x" +
                     to_string(app->render.size().y) + " @ 0]";
         return app;
@@ -484,7 +485,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.yaml;*.obj;*.pbrt")) {
     app->outname = save_path;
     try {
@@ -497,7 +498,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save image", (bool)app, "save image",
-          save_path, true, get_dirname(save_path), get_filename(save_path),
+          save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app->outname = save_path;
     try {
@@ -546,7 +548,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", get_filename(app->filename));
+    draw_gllabel(win, "scene", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "imagename", app->imagename);

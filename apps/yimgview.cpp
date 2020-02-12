@@ -143,9 +143,10 @@ void update_display(shared_ptr<app_state> app) {
 void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
       async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
-        auto app       = make_shared<app_state>();
-        app->filename  = filename;
-        app->outname   = fs::path(filename).replace_extension(".display.png").string();
+        auto app      = make_shared<app_state>();
+        app->filename = filename;
+        app->outname =
+            fs::path(filename).replace_extension(".display.png").string();
         app->name      = fs::path(filename).filename();
         app->exposure  = apps->exposure;
         app->filmic    = apps->filmic;
@@ -175,7 +176,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
-          true, fs::path(save_path).parent_path(), fs::path(save_path).filename(),
+          true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;

@@ -26,19 +26,20 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 using std::make_unique;
-using std::unordered_set;
+using std::set;
 
 #include "ext/CLI11.hpp"
 #include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -91,7 +92,7 @@ int run_app(int argc, const char** argv) {
 
   // validate scene
   if (validate) {
-    auto timer  = CLI::AutoTimer("validate");
+    auto timer = CLI::AutoTimer("validate");
     for (auto& error : scene_validation(scene)) std::cout << error << "\n";
   }
 
@@ -102,10 +103,9 @@ int run_app(int argc, const char** argv) {
   }
 
   // tesselate if needed
-  if (get_extension(output) != ".yaml" && get_extension(output) != ".json") {
-    for (auto& iosubdiv : scene->subdivs) {
+  if (fs::path(output).extension() != ".json") {
+    for (auto iosubdiv : scene->subdivs) {
       tesselate_subdiv(scene, iosubdiv);
-      iosubdiv = {};
     }
   }
 
@@ -118,15 +118,15 @@ int run_app(int argc, const char** argv) {
     instance_directory += '/';
 
   // make a directory if needed
-  auto dirname  = get_dirname(output);
-  auto dirnames = unordered_set<string>{};
+  auto dirname  = fs::path(output).parent_path();
+  auto dirnames = set<fs::path>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene->shapes)
-    dirnames.insert(dirname + get_dirname(shape->name));
+    dirnames.insert(dirname / fs::path(shape->name).parent_path());
   for (auto texture : scene->textures)
-    dirnames.insert(dirname + get_dirname(texture->name));
+    dirnames.insert(dirname / fs::path(texture->name).parent_path());
   for (auto instance : scene->instances)
-    dirnames.insert(dirname + get_dirname(instance->name));
+    dirnames.insert(dirname / fs::path(instance->name).parent_path());
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       throw std::runtime_error{"cannot create directory " + output};

@@ -285,9 +285,9 @@ int main(int argc, const char** argv) {
 
   // load mesh
   if (!facevarying) {
-    auto timer = CLI::AutoTimer("load");
-    auto ext   = fs::path(filename).extension().string();
-    auto basename   = fs::path(filename).stem().string();
+    auto timer    = CLI::AutoTimer("load");
+    auto ext      = fs::path(filename).extension().string();
+    auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius, basename);
@@ -296,9 +296,9 @@ int main(int argc, const char** argv) {
           texcoords, colors, radius);
     }
   } else {
-    auto timer = CLI::AutoTimer("load");
-    auto ext   = fs::path(filename).extension().string();
-    auto basename   = fs::path(filename).stem().string();
+    auto timer    = CLI::AutoTimer("load");
+    auto ext      = fs::path(filename).extension().string();
+    auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
           texcoords, basename);
@@ -322,7 +322,8 @@ int main(int argc, const char** argv) {
   // convert data
   if (trianglesonly) {
     if (!quadspos.empty()) {
-      std::cerr << "cannot convert facevarying data to triangles" << "\n";
+      std::cerr << "cannot convert facevarying data to triangles"
+                << "\n";
       exit(1);
     }
     if (!quads.empty()) {

@@ -273,9 +273,9 @@ int run_app(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext = fs::path(filename).extension().string();
+  auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
-  auto img = (ext == ".ypreset") ? make_image_preset(basename)
+  auto img      = (ext == ".ypreset") ? make_image_preset(basename)
                                  : load_image(filename);
 
   // set alpha

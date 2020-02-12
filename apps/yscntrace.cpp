@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -39,6 +38,8 @@ using namespace std;
 
 #include "ext/CLI11.hpp"
 #include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // construct a scene from io
 shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
@@ -203,7 +204,7 @@ int run_app(int argc, const char* argv[]) {
 
   // add components
   if (validate) {
-    auto timer  = CLI::AutoTimer("validate");
+    auto timer = CLI::AutoTimer("validate");
     for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
   }
 
@@ -246,9 +247,12 @@ int run_app(int argc, const char* argv[]) {
                                 "/" + std::to_string(params.samples)};
     render     = trace_samples(state, scene, nsamples, params);
     if (save_batch) {
-      auto outfilename = replace_extension(imfilename,
-          "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      auto timer       = CLI::AutoTimer{"saving " + outfilename};
+      auto outfilename = fs::path(imfilename)
+                             .replace_extension(
+                                 "-s" + std::to_string(sample + nsamples) +
+                                 fs::path(imfilename).extension().string())
+                             .string();
+      auto timer = CLI::AutoTimer{"saving " + outfilename};
       save_image(outfilename, render);
     }
   }
