@@ -56,76 +56,8 @@ using std::make_unique;
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
 
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
-}
-
-// Replaces extensions
-static inline string replace_extension(
-    const string& filename, const string& ext) {
-  return get_noextension(filename) + ext;
-}
-
-}  // namespace yocto
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONCURRENCY UTILITIES
@@ -908,7 +840,7 @@ shared_ptr<sceneio_model> load_scene(
 // Load a scene
 void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
     sceneio_progress progress_cb, bool noparallel) {
-  auto ext = get_extension(filename);
+  auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -928,7 +860,7 @@ void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
 // Save a scene
 void save_scene(const string& filename, shared_ptr<sceneio_model> scene,
     sceneio_progress progress_cb, bool noparallel) {
-  auto ext = get_extension(filename);
+  auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -961,6 +893,13 @@ static string make_safe_name(const string& prefix, const string& name,
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Get extension (not including '.').
+static string get_extension(const string& filename) {
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos);
+}
 
 // load instances
 static void load_instances(const string& filename, vector<frame3f>& frames) {
@@ -1250,7 +1189,7 @@ static void load_json_scene(const string& filename,
           auto path = ""s;
           get_value(ejs, "subdiv", path);
           try {
-            load_shape(get_dirname(filename) + path, subdiv->points,
+            load_shape(fs::path(filename).parent_path() / path, subdiv->points,
                 subdiv->lines, subdiv->triangles, subdiv->quads,
                 subdiv->positions, subdiv->normals, subdiv->texcoords,
                 subdiv->colors, subdiv->radius);
@@ -1262,7 +1201,7 @@ static void load_json_scene(const string& filename,
           auto path = ""s;
           get_value(ejs, "fvsubdiv", path);
           try {
-            load_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+            load_fvshape(fs::path(filename).parent_path() / path, subdiv->quadspos,
                 subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
                 subdiv->normals, subdiv->texcoords);
           } catch (std::exception& e) {
@@ -1284,7 +1223,7 @@ static void load_json_scene(const string& filename,
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("loading shapes", progress.x++, progress.y);
     try {
-      load_shape(get_dirname(filename) + shape->name, shape->points,
+      load_shape(fs::path(filename).parent_path() / shape->name, shape->points,
           shape->lines, shape->triangles, shape->quads, shape->positions,
           shape->normals, shape->texcoords, shape->colors, shape->radius);
     } catch (std::exception& e) {
@@ -1296,9 +1235,9 @@ static void load_json_scene(const string& filename,
     if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
     try {
       if (is_hdr_filename(texture->name)) {
-        load_image(get_dirname(filename) + texture->name, texture->hdr);
+        load_image(fs::path(filename).parent_path() / texture->name, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + texture->name, texture->ldr);
+        load_imageb(fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1308,14 +1247,14 @@ static void load_json_scene(const string& filename,
   for (auto instance : scene->instances) {
     if (progress_cb) progress_cb("loading instances", progress.x++, progress.y);
     try {
-      load_instances(get_dirname(filename) + instance->name, instance->frames);
+      load_instances(fs::path(filename).parent_path() / instance->name, instance->frames);
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
   }
 
   // fix scene
-  scene->name = get_basename(filename);
+  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
   trim_memory(scene);
@@ -1438,10 +1377,10 @@ static void save_json_scene(const string& filename,
     add_tex(ejs, "displacement_tex", subdiv->displacement_tex);
     add_opt(ejs, "displacement", subdiv->displacement, def_subdiv.subdivisions);
     if (!subdiv->positions.empty() && subdiv->quadspos.empty()) {
-      auto path = replace_extension(subdiv->name, ".ply");
+      auto path = fs::path(subdiv->name).replace_extension(".ply");
       add_val(ejs, "subdiv", path);
       try {
-        save_shape(get_dirname(filename) + path, subdiv->points, subdiv->lines,
+        save_shape(fs::path(filename).parent_path() / path, subdiv->points, subdiv->lines,
             subdiv->triangles, subdiv->quads, subdiv->positions,
             subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
@@ -1449,10 +1388,10 @@ static void save_json_scene(const string& filename,
       }
     }
     if (!subdiv->positions.empty() && !subdiv->quadspos.empty()) {
-      auto path = replace_extension(subdiv->name, ".obj");
+      auto path = fs::path(subdiv->name).replace_extension(".obj");
       add_val(ejs, "fvsubdiv", path);
       try {
-        save_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+        save_fvshape(fs::path(filename).parent_path() / path, subdiv->quadspos,
             subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
             subdiv->normals, subdiv->texcoords);
       } catch (std::exception& e) {
@@ -1472,7 +1411,7 @@ static void save_json_scene(const string& filename,
     if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
     if (!shape->positions.empty()) {
       try {
-        save_shape(get_dirname(filename) + shape->name, shape->points,
+        save_shape(fs::path(filename).parent_path() / shape->name, shape->points,
             shape->lines, shape->triangles, shape->quads, shape->positions,
             shape->normals, shape->texcoords, shape->colors, shape->radius);
       } catch (std::exception& e) {
@@ -1487,7 +1426,7 @@ static void save_json_scene(const string& filename,
     if (!instance->frames.empty()) {
       try {
         save_instances(
-            get_dirname(filename) + instance->name, instance->frames);
+            fs::path(filename).parent_path() / instance->name, instance->frames);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1500,9 +1439,9 @@ static void save_json_scene(const string& filename,
     if (!texture->ldr.empty() || !texture->hdr.empty()) {
       try {
         if (!texture->hdr.empty()) {
-          save_image(get_dirname(filename) + texture->name, texture->hdr);
+          save_image(fs::path(filename).parent_path() / texture->name, texture->hdr);
         } else {
-          save_imageb(get_dirname(filename) + texture->name, texture->ldr);
+          save_imageb(fs::path(filename).parent_path() / texture->name, texture->ldr);
         }
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
@@ -1560,7 +1499,7 @@ static void load_obj_scene(const string& filename,
     if (it != texture_map.end()) return it->second;
     auto texture = add_texture(scene);
     if (is_hdr_filename(path))
-      texture->name = replace_extension(texture->name, ".hdr");
+      texture->name = fs::path(texture->name).replace_extension(".hdr");
     // texture->name = make_safe_name(
     //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" :
     //     ".png");
@@ -1664,9 +1603,9 @@ static void load_obj_scene(const string& filename,
     if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture->hdr);
+        load_image(fs::path(filename).parent_path() / path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture->ldr);
+        load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1674,7 +1613,7 @@ static void load_obj_scene(const string& filename,
   }
 
   // fix scene
-  scene->name = get_basename(filename);
+  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
 
@@ -1694,7 +1633,7 @@ static void save_obj_scene(const string& filename,
   // convert cameras
   for (auto camera : scene->cameras) {
     auto ocamera      = obj->cameras.emplace_back(make_shared<obj_camera>());
-    ocamera->name     = get_basename(camera->name);
+    ocamera->name     = fs::path(camera->name).stem();
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
     ocamera->width    = camera->film;
@@ -1715,7 +1654,7 @@ static void save_obj_scene(const string& filename,
   // convert materials and textures
   for (auto material : scene->materials) {
     auto omaterial   = obj->materials.emplace_back(make_shared<obj_material>());
-    omaterial->name  = get_basename(material->name);
+    omaterial->name  = fs::path(material->name).stem();
     omaterial->illum = 2;
     omaterial->as_pbr               = true;
     omaterial->pbr_emission         = material->emission;
@@ -1740,7 +1679,7 @@ static void save_obj_scene(const string& filename,
   // convert objects
   for (auto object : scene->objects) {
     auto oshape    = obj->shapes.emplace_back(make_shared<obj_shape>());
-    oshape->name   = get_basename(object->name);
+    oshape->name   = fs::path(object->name).stem();
     auto shape     = object->shape;
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
@@ -1774,7 +1713,7 @@ static void save_obj_scene(const string& filename,
   for (auto environment : scene->environments) {
     auto oenvironment = obj->environments.emplace_back(
         make_shared<obj_environment>());
-    oenvironment->name         = get_basename(environment->name);
+    oenvironment->name         = fs::path(environment->name).stem();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_map = get_texture(environment->emission_tex);
@@ -1792,9 +1731,9 @@ static void save_obj_scene(const string& filename,
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
       if (!texture->hdr.empty()) {
-        save_image(get_dirname(filename) + texture->name, texture->hdr);
+        save_image(fs::path(filename).parent_path() / texture->name, texture->hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture->name, texture->ldr);
+        save_imageb(fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1838,7 +1777,7 @@ static void load_ply_scene(const string& filename,
       shape->colors, shape->radius);
 
   // fix scene
-  scene->name = get_basename(filename);
+  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
 
@@ -1899,7 +1838,7 @@ static void load_gltf_scene(const string& filename,
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture      = add_texture(scene);
-    texture->name     = make_safe_name("texture", get_basename(path),
+    texture->name     = make_safe_name("texture", fs::path(path).stem(),
         (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
@@ -1983,9 +1922,9 @@ static void load_gltf_scene(const string& filename,
     if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture->hdr);
+        load_image(fs::path(filename).parent_path() / path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture->ldr);
+        load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1993,7 +1932,7 @@ static void load_gltf_scene(const string& filename,
   }
 
   // fix scene
-  scene->name = get_basename(filename);
+  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
 
@@ -2049,7 +1988,7 @@ static void load_pbrt_scene(const string& filename,
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto texture      = add_texture(scene);
-    texture->name     = make_safe_name("texture", get_basename(path),
+    texture->name     = make_safe_name("texture", fs::path(path).stem(),
         (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
@@ -2132,9 +2071,9 @@ static void load_pbrt_scene(const string& filename,
     if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture->hdr);
+        load_image(fs::path(filename).parent_path() / path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture->ldr);
+        load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -2142,7 +2081,7 @@ static void load_pbrt_scene(const string& filename,
   }
 
   // fix scene
-  scene->name = get_basename(filename);
+  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
 
@@ -2175,7 +2114,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
       unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_arealight>>{};
   for (auto material : scene->materials) {
     auto pmaterial = pbrt->materials.emplace_back(make_shared<pbrt_material>());
-    pmaterial->name         = get_basename(material->name);
+    pmaterial->name         = fs::path(material->name).stem();
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
     pmaterial->specular     = material->specular;
@@ -2199,7 +2138,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
   // convert instances
   for (auto object : scene->objects) {
     auto pshape       = pbrt->shapes.emplace_back(make_shared<pbrt_shape>());
-    pshape->filename_ = replace_extension(object->shape->name, ".ply");
+    pshape->filename_ = fs::path(object->shape->name).replace_extension(".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
     pshape->material  = material_map.at(object->material);
@@ -2230,12 +2169,11 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
   progress.y += (int)scene->shapes.size() + (int)scene->textures.size();
 
   // save meshes
-  auto dirname = get_dirname(filename);
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
     if (shape->positions.empty()) continue;
     try {
-      save_shape(replace_extension(dirname + shape->name, ".ply"),
+      save_shape((fs::path(filename).parent_path() / shape->name).replace_extension(".ply"),
           shape->points, shape->lines, shape->triangles, shape->quads,
           shape->positions, shape->normals, shape->texcoords, shape->colors,
           shape->radius);
@@ -2250,9 +2188,9 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
       if (!texture->hdr.empty()) {
-        save_image(get_dirname(filename) + texture->name, texture->hdr);
+        save_image(fs::path(filename).parent_path() / texture->name, texture->hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture->name, texture->ldr);
+        save_imageb(fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
