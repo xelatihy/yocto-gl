@@ -147,9 +147,8 @@ int run_app(int argc, const char* argv[]) {
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](shared_ptr<app_state> app) {
-    auto timer = print_timed("init my data");
+    auto timer = CLI::AutoTimer("init my data");
     my_init(data, app);
-    print_elapsed(timer);
   };
   auto key_callback = [&data](
                           shared_ptr<app_state> app, int key, bool pressing) {
@@ -174,7 +173,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

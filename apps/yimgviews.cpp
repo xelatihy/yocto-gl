@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -52,7 +51,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 };
 
@@ -108,16 +107,15 @@ int run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280, 720}, "yimgviews", false);
+  auto win = make_glwindow({1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
       win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
-        if (!is_initialized(app->glimage)) {
-          init_glimage(app->glimage);
+        if (!app->glimage) {
+          app->glimage = make_glimage();
           set_glimage(app->glimage, app->display, false, false);
         }
         update_imview(app->glparams.center, app->glparams.scale,
@@ -150,7 +148,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

@@ -26,12 +26,15 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 using namespace yocto;
 
+#include <iostream>
+
 #include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 namespace yocto {
 
@@ -240,7 +243,7 @@ int run_app(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = CLI::App{"Transform images"};
-  cli.add_option("--tonemap/--no-tonemap,-t", tonemap_on, "Tonemap image");
+  cli.add_flag("--tonemap,!--no-tonemap,-t", tonemap_on, "Tonemap image");
   cli.add_option("--exposure,-e", tonemap_exposure, "Tonemap exposure");
   cli.add_flag(
       "--filmic,!--no-filmic,-f", tonemap_filmic, "Tonemap uses filmic curve");
@@ -270,8 +273,9 @@ int run_app(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext = get_extension(filename);
-  auto img = (ext == ".ypreset") ? make_image_preset(get_basename(filename))
+  auto ext      = fs::path(filename).extension().string();
+  auto basename = fs::path(filename).stem().string();
+  auto img      = (ext == ".ypreset") ? make_image_preset(basename)
                                  : load_image(filename);
 
   // set alpha
@@ -333,7 +337,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

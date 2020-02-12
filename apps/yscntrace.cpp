@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -38,10 +37,14 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(
-    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
+  auto scene = make_trace_scene();
+
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -134,6 +137,8 @@ void init_scene(
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
+
+  return scene;
 }
 
 int run_app(int argc, const char* argv[]) {
@@ -191,68 +196,72 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene    = make_shared<sceneio_model>();
-  auto load_timer = print_timed("loading scene");
-  load_scene(filename, ioscene);
-  print_elapsed(load_timer);
+  auto ioscene = make_shared<sceneio_model>();
+  {
+    auto timer = CLI::AutoTimer("load");
+    ioscene    = load_scene(filename);
+  }
 
   // add components
   if (validate) {
-    auto validate_timer = print_timed("validating");
-    auto errors         = scene_validation(ioscene);
-    for (auto& error : errors) print_info(error);
-    print_elapsed(validate_timer);
+    auto timer = CLI::AutoTimer("validate");
+    for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
   }
 
   // convert scene
-  auto convert_timer = print_timed("converting");
-  auto scene         = make_shared<trace_scene>();
-  init_scene(scene, ioscene);
-  print_elapsed(convert_timer);
+  auto scene = shared_ptr<trace_scene>();
+  {
+    auto timer = CLI::AutoTimer("convert");
+    scene      = make_scene(ioscene);
+  }
 
   // cleanup
   ioscene = nullptr;
 
   // build bvh
-  auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, params);
-  print_elapsed(bvh_timer);
+  {
+    auto timer = CLI::AutoTimer("bvh");
+    init_bvh(scene, params);
+  }
 
   // init renderer
-  auto lights_timer = print_timed("building lights");
-  init_lights(scene);
-  print_elapsed(lights_timer);
+  {
+    auto timer = CLI::AutoTimer("lights");
+    init_lights(scene);
+  }
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    std::cout << "no lights presents, switching to eyelight shader\n";
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto state = make_shared<trace_state>();
-  init_state(state, scene, params);
+  auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
-    auto nsamples    = min(batch, params.samples - sample);
-    auto batch_timer = print_timed("rendering samples " +
-                                   std::to_string(sample) + "/" +
-                                   std::to_string(params.samples));
-    render           = trace_samples(state, scene, nsamples, params);
-    print_elapsed(batch_timer);
+    auto nsamples = min(batch, params.samples - sample);
+    auto timer = CLI::AutoTimer{"rendering samples " + std::to_string(sample) +
+                                "/" + std::to_string(params.samples)};
+    render     = trace_samples(state, scene, nsamples, params);
     if (save_batch) {
-      auto outfilename = replace_extension(imfilename,
-          "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
+      auto outfilename = fs::path(imfilename)
+                             .replace_extension(
+                                 "-s" + std::to_string(sample + nsamples) +
+                                 fs::path(imfilename).extension().string())
+                             .string();
+      auto timer = CLI::AutoTimer{"saving " + outfilename};
       save_image(outfilename, render);
     }
   }
 
   // save image
-  auto save_timer = print_timed("saving image");
-  save_image(imfilename, render);
-  print_elapsed(save_timer);
+  {
+    auto timer = CLI::AutoTimer("save");
+    save_image(imfilename, render);
+  }
 
   // done
   return 0;
@@ -262,7 +271,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

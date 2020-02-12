@@ -74,8 +74,7 @@ struct opengl_image {
 };
 
 // create image drawing program
-void init_glimage(shared_ptr<opengl_image> glimage);
-bool is_initialized(shared_ptr<opengl_image> glimage);
+shared_ptr<opengl_image> make_glimage();
 
 // update image data
 void set_glimage(shared_ptr<opengl_image> glimage, const image<vec4f>& img,
@@ -239,8 +238,7 @@ struct draw_glscene_params {
 };
 
 // Initialize an OpenGL scene
-void init_glscene(shared_ptr<opengl_scene> scene);
-bool is_initialized(shared_ptr<opengl_scene> scene);
+shared_ptr<opengl_scene> make_glscene();
 
 // add scene elements
 shared_ptr<opengl_camera>   add_camera(shared_ptr<opengl_scene> scene);
@@ -398,9 +396,8 @@ struct opengl_window {
 };
 
 // Windows initialization
-void init_glwindow(shared_ptr<opengl_window> win, const vec2i& size,
-    const string& title, bool widgets, int widgets_width = 320,
-    bool widgets_left = true);
+shared_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
 void clear_glwindow(shared_ptr<opengl_window> win);

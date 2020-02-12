@@ -97,6 +97,7 @@ struct ply_model {
 };
 
 // Load and save ply
+shared_ptr<ply_model> load_ply(const string& filename);
 void load_ply(const string& filename, shared_ptr<ply_model> ply);
 void save_ply(const string& filename, shared_ptr<ply_model> ply);
 
@@ -142,6 +143,9 @@ vector<int>         get_points(shared_ptr<ply_model> ply);
 vector<vec3i>       get_triangles(shared_ptr<ply_model> ply);
 vector<vec4i>       get_quads(shared_ptr<ply_model> ply);
 bool                has_quads(shared_ptr<ply_model> ply);
+
+// Create PLY
+shared_ptr<ply_model> make_ply();
 
 // Add ply properties
 void add_values(shared_ptr<ply_model> ply, const vector<float>& values,
@@ -329,6 +333,8 @@ struct obj_model {
 };
 
 // Load and save obj
+shared_ptr<obj_model> load_obj(const string& filename, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
 void load_obj(const string& filename, shared_ptr<obj_model> obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
@@ -381,6 +387,9 @@ void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     bool flip_texcoord = false);
 vector<shared_ptr<obj_material>> get_materials(
     shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape);
+
+// Create OBJ
+shared_ptr<obj_model> make_obj();
 
 // Add obj shape
 void add_triangles(shared_ptr<obj_model> obj, const string& name,
@@ -542,9 +551,13 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
+shared_ptr<pbrt_model> load_pbrt(const string& filename);
 void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt);
 void save_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     bool ply_meshes = false);
+
+// Create pbrt
+shared_ptr<pbrt_model> make_pbrt();
 
 }  // namespace yocto
 

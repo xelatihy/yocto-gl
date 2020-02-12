@@ -54,8 +54,6 @@
 #undef far
 #endif
 
-using std::make_unique;
-
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
@@ -235,7 +233,7 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
 namespace yocto {
 
 // init image program
-void init_glimage(shared_ptr<opengl_image> glimage) {
+shared_ptr<opengl_image> make_glimage() {
   auto vert =
       R"(
       #version 330
@@ -294,7 +292,7 @@ void init_glimage(shared_ptr<opengl_image> glimage) {
         )";
 #endif
 
-  if (glimage->program_id) return;
+  auto glimage = make_shared<opengl_image>();
 
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
@@ -309,6 +307,8 @@ void init_glimage(shared_ptr<opengl_image> glimage) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage->triangles_id);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
       triangles.data(), GL_STATIC_DRAW);
+
+  return glimage;
 }
 
 // update image data
@@ -739,15 +739,11 @@ opengl_scene::~opengl_scene() {
 }
 
 // Initialize an OpenGL scene
-void init_glscene(shared_ptr<opengl_scene> glscene) {
-  if (glscene->program_id) return;
-  // load program
+shared_ptr<opengl_scene> make_glscene() {
+  auto glscene = make_shared<opengl_scene>();
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
       glscene->array_id, glscene_vertex, glscene_fragment);
-}
-
-bool is_initialized(shared_ptr<opengl_scene> glscene) {
-  return (bool)glscene->program_id;
+  return glscene;
 }
 
 // add camera
@@ -1302,9 +1298,9 @@ static void draw_glwindow(shared_ptr<opengl_window> win) {
 unordered_map<GLFWwindow*, shared_ptr<opengl_window>> opengl_window::registry =
     {};
 
-void init_glwindow(shared_ptr<opengl_window> win, const vec2i& size,
-    const string& title, bool widgets, int widgets_width, bool widgets_left) {
-  if (win->win) return;
+shared_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width, bool widgets_left) {
+  auto win = make_shared<opengl_window>();
 
   // init glfw
   if (!glfwInit())
@@ -1397,6 +1393,8 @@ void init_glwindow(shared_ptr<opengl_window> win, const vec2i& size,
     win->widgets_width = widgets_width;
     win->widgets_left  = widgets_left;
   }
+
+  return win;
 }
 
 void clear_glwindow(shared_ptr<opengl_window> win) {

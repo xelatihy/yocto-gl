@@ -89,6 +89,9 @@ struct trace_material;
 struct trace_instance;
 struct trace_object;
 
+// Create scene.
+shared_ptr<trace_scene> make_trace_scene();
+
 // Add scene elements
 shared_ptr<trace_camera>   add_camera(const shared_ptr<trace_scene>& scene);
 shared_ptr<trace_object>   add_object(const shared_ptr<trace_scene>& scene);
@@ -248,7 +251,7 @@ const auto trace_bvh_names        = vector<string>{
 };
 
 // Initialize state of the renderer.
-void init_state(shared_ptr<trace_state> state,
+shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Initialize lights.
@@ -399,9 +402,9 @@ struct trace_shape {
   vector<vec4f> tangents  = {};
 
   // computed properties
-  trace_bvh bvh = {};
+  std::shared_ptr<trace_bvh> bvh = nullptr;
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
+  std::shared_ptr<void> embree_bvh = nullptr;
 #endif
 
   // element cdf for sampling
@@ -454,9 +457,9 @@ struct trace_scene {
 
   // computed properties
   vector<shared_ptr<trace_light>> lights = {};
-  trace_bvh                       bvh    = {};
+  std::shared_ptr<trace_bvh>      bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh       = {};
+  std::shared_ptr<void> embree_bvh       = nullptr;
   vector<vec2i>         embree_instances = {};
 #endif
 };

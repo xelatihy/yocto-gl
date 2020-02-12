@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -38,6 +37,8 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 namespace yocto {
 void print_obj_camera(shared_ptr<sceneio_camera> camera);
@@ -56,17 +57,17 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>   scene   = make_shared<trace_scene>();
+  shared_ptr<sceneio_model> ioscene = nullptr;
+  shared_ptr<trace_scene>   scene   = nullptr;
 
   // rendering state
-  shared_ptr<trace_state> state    = make_shared<trace_state>();
+  shared_ptr<trace_state> state    = nullptr;
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 
   // editing
@@ -120,6 +121,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(shared_ptr<app_state> app) {
+  app->scene   = make_trace_scene();
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
@@ -246,7 +248,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene, app->params);
+  app->state = make_state(app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -284,21 +286,21 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       async(launch::async, [filename]() -> shared_ptr<app_state> {
         auto app       = make_shared<app_state>();
         app->filename  = filename;
-        app->imagename = replace_extension(filename, ".png");
-        app->outname   = replace_extension(filename, ".edited.yaml");
-        app->name      = get_filename(app->filename);
+        app->imagename = fs::path(filename).replace_extension(".png");
+        app->outname   = fs::path(filename).replace_extension(".edited.yaml");
+        app->name      = fs::path(filename).filename();
         app->params    = app->params;
-        load_scene(app->filename, app->ioscene);
+        app->ioscene   = load_scene(app->filename);
         init_scene(app);
         init_bvh(app->scene, app->params);
         init_lights(app->scene);
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        init_state(app->state, app->scene, app->params);
+        app->state = make_state(app->scene, app->params);
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
-        app->name = get_filename(app->filename) + " [" +
+        app->name = fs::path(app->filename).filename().string() + " [" +
                     to_string(app->render.size().x) + "x" +
                     to_string(app->render.size().y) + " @ 0]";
         return app;
@@ -483,7 +485,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.yaml;*.obj;*.pbrt")) {
     app->outname = save_path;
     try {
@@ -496,7 +498,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save image", (bool)app, "save image",
-          save_path, true, get_dirname(save_path), get_filename(save_path),
+          save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app->outname = save_path;
     try {
@@ -545,7 +548,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", get_filename(app->filename));
+    draw_gllabel(win, "scene", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "imagename", app->imagename);
@@ -563,7 +566,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) std::cout << stat << "\n";
     }
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->render.size());
@@ -748,7 +751,7 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+    if (!app->glimage) app->glimage = make_glimage();
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
     update_imview(app->glparams.center, app->glparams.scale,
@@ -830,8 +833,7 @@ int run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename);
 
   // window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
   set_draw_glcallback(
@@ -914,7 +916,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

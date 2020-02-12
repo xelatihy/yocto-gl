@@ -26,12 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
@@ -282,27 +284,29 @@ int main(int argc, const char** argv) {
   auto quadstexcoord = vector<vec4i>{};
 
   // load mesh
-  auto load_timer = print_timed("loading shape");
   if (!facevarying) {
-    auto ext = get_extension(filename);
+    auto timer    = CLI::AutoTimer("load");
+    auto ext      = fs::path(filename).extension().string();
+    auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, get_basename(filename));
+          texcoords, colors, radius, basename);
     } else {
       load_shape(filename, points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius);
     }
   } else {
-    auto ext = get_extension(filename);
+    auto timer    = CLI::AutoTimer("load");
+    auto ext      = fs::path(filename).extension().string();
+    auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, get_basename(filename));
+          texcoords, basename);
     } else {
       load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
           normals, texcoords);
     }
   }
-  print_elapsed(load_timer);
 
   // remove data
   if (positiononly) {
@@ -318,7 +322,9 @@ int main(int argc, const char** argv) {
   // convert data
   if (trianglesonly) {
     if (!quadspos.empty()) {
-      print_fatal("cannot convert facevarying data to triangles");
+      std::cerr << "cannot convert facevarying data to triangles"
+                << "\n";
+      exit(1);
     }
     if (!quads.empty()) {
       triangles = quads_to_triangles(quads);
@@ -328,30 +334,29 @@ int main(int argc, const char** argv) {
 
   // print info
   if (info) {
-    print_info("shape stats ------------");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) std::cout << stat << "\n";
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    auto transform_timer = print_timed("transforming shape");
-    auto xform           = translation_frame(translate) * scaling_frame(scale) *
+    auto timer = CLI::AutoTimer("transform");
+    auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    print_elapsed(transform_timer);
   }
 
   // compute normals
   if (smooth) {
-    auto smooth_timer = print_timed("computing normals");
+    auto timer = CLI::AutoTimer("smooth");
     if (!points.empty()) {
       normals = vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
@@ -364,15 +369,14 @@ int main(int argc, const char** argv) {
       normals = compute_normals(quadspos, positions);
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
-    print_elapsed(smooth_timer);
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    auto geodesic_timer = print_timed("computing geodesics");
-    auto adjacencies    = face_adjacencies(triangles);
-    auto solver  = make_geodesic_solver(triangles, adjacencies, positions);
-    auto sources = vector<int>();
+    auto timer       = CLI::AutoTimer("geodesic");
+    auto adjacencies = face_adjacencies(triangles);
+    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
+    auto sources     = vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {
@@ -394,7 +398,6 @@ int main(int argc, const char** argv) {
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }
-    print_elapsed(geodesic_timer);
   }
 
   if (p0 != -1) {
@@ -444,23 +447,23 @@ int main(int argc, const char** argv) {
   }
 
   if (info) {
-    print_info("shape stats ------------");
+    std::cout << "shape stats ------------\n";
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) std::cout << stat << "\n";
   }
 
   // save mesh
-  auto save_timer = print_timed("saving shape");
   if (!quadspos.empty()) {
+    auto timer = CLI::AutoTimer("save");
     save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords);
   } else {
+    auto timer = CLI::AutoTimer("save");
     save_shape(output, points, lines, triangles, quads, positions, normals,
         texcoords, colors, radius);
   }
-  print_elapsed(save_timer);
 
   // done
   return 0;

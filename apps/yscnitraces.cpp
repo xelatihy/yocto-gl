@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -38,6 +37,7 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
 
 // Application state
 struct app_state {
@@ -51,22 +51,19 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>   scene      = make_shared<trace_scene>();
+  shared_ptr<sceneio_model> ioscene    = nullptr;
+  shared_ptr<trace_scene>   scene      = nullptr;
   bool                      add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state> state    = make_shared<trace_state>();
+  shared_ptr<trace_state> state    = nullptr;
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
-
-  // editing
-  pair<string, int> selection = {"camera", 0};
 
   // computation
   int          render_sample  = 0;
@@ -78,8 +75,9 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(
-    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
+  auto scene = make_trace_scene();
+
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -172,6 +170,8 @@ void init_scene(
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
+
+  return scene;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -199,7 +199,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene, app->params);
+  app->state = make_state(app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -280,48 +280,51 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, app->ioscene);
-  print_elapsed(load_timer);
+  {
+    auto timer   = CLI::AutoTimer("loading scene");
+    app->ioscene = load_scene(app->filename);
+  }
 
   // conversion
-  auto convert_timer = print_timed("converting");
-  init_scene(app->scene, app->ioscene);
-  print_elapsed(convert_timer);
+  {
+    auto timer = CLI::AutoTimer("converting scene");
+    app->scene = make_scene(app->ioscene);
+  }
 
   // cleanup
   app->ioscene = nullptr;
 
   // build bvh
-  auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene, app->params);
-  print_elapsed(bvh_timer);
+  {
+    auto timer = CLI::AutoTimer("building bvh");
+    init_bvh(app->scene, app->params);
+  }
 
   // init renderer
-  auto lights_timer = print_timed("building lights");
-  init_lights(app->scene);
-  print_elapsed(lights_timer);
+  {
+    auto timer = CLI::AutoTimer("building lights");
+    init_lights(app->scene);
+  }
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    std::cout << "no lights presents, switching to eyelight shader\n";
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  init_state(app->state, app->scene, app->params);
+  app->state   = make_state(app->scene, app->params);
   app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);
 
   // window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
       win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
-        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+        if (!app->glimage) app->glimage = make_glimage();
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
@@ -365,7 +368,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

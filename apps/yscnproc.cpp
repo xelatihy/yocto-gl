@@ -26,18 +26,20 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 using std::make_unique;
-using std::unordered_set;
+using std::set;
 
 #include "ext/CLI11.hpp"
+#include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -82,30 +84,28 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene      = make_shared<sceneio_model>();
-  auto load_timer = print_timed("loading scene");
-  load_scene(filename, scene);
-  print_elapsed(load_timer);
+  auto scene = shared_ptr<sceneio_model>{};
+  {
+    auto timer = CLI::AutoTimer("loading scene");
+    scene      = load_scene(filename);
+  }
 
   // validate scene
   if (validate) {
-    auto validate_timer = print_timed("validating scene");
-    auto errors         = scene_validation(scene);
-    print_elapsed(validate_timer);
-    for (auto& error : errors) print_info(error);
+    auto timer = CLI::AutoTimer("validate");
+    for (auto& error : scene_validation(scene)) std::cout << error << "\n";
   }
 
   // print info
   if (info) {
-    print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    std::cout << "scene stats ------------\n";
+    for (auto stat : scene_stats(scene)) std::cout << stat << "\n";
   }
 
   // tesselate if needed
-  if (get_extension(output) != ".yaml" && get_extension(output) != ".json") {
-    for (auto& iosubdiv : scene->subdivs) {
+  if (fs::path(output).extension() != ".json") {
+    for (auto iosubdiv : scene->subdivs) {
       tesselate_subdiv(scene, iosubdiv);
-      iosubdiv = {};
     }
   }
 
@@ -118,25 +118,26 @@ int run_app(int argc, const char** argv) {
     instance_directory += '/';
 
   // make a directory if needed
-  auto dirname  = get_dirname(output);
-  auto dirnames = unordered_set<string>{};
+  auto dirname  = fs::path(output).parent_path();
+  auto dirnames = set<fs::path>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene->shapes)
-    dirnames.insert(dirname + get_dirname(shape->name));
+    dirnames.insert(dirname / fs::path(shape->name).parent_path());
   for (auto texture : scene->textures)
-    dirnames.insert(dirname + get_dirname(texture->name));
+    dirnames.insert(dirname / fs::path(texture->name).parent_path());
   for (auto instance : scene->instances)
-    dirnames.insert(dirname + get_dirname(instance->name));
+    dirnames.insert(dirname / fs::path(instance->name).parent_path());
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
-      print_fatal("cannot create directory " + output);
+      throw std::runtime_error{"cannot create directory " + output};
     }
   }
 
   // save scene
-  auto save_timer = print_timed("saving scene");
-  save_scene(output, scene, obj_instances);
-  print_elapsed(save_timer);
+  {
+    auto timer = CLI::AutoTimer("save");
+    save_scene(output, scene, obj_instances);
+  }
 
   // done
   return 0;
@@ -146,7 +147,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

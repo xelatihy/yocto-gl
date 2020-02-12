@@ -349,6 +349,10 @@ vector<string> scene_validation(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+shared_ptr<sceneio_model> make_sceneio_model() {
+  return make_shared<sceneio_model>();
+}
+
 // add element
 shared_ptr<sceneio_camera> add_camera(shared_ptr<sceneio_model> scene) {
   auto camera  = scene->cameras.emplace_back(make_shared<sceneio_camera>());
@@ -868,6 +872,13 @@ static void save_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
 
 // Load a scene
+shared_ptr<sceneio_model> load_scene(const string& filename, bool noparallel) {
+  auto scene = make_shared<sceneio_model>();
+  load_scene(filename, scene, noparallel);
+  return scene;
+}
+
+// Load a scene
 void load_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   auto ext = get_extension(filename);
@@ -928,9 +939,8 @@ namespace yocto {
 static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = make_shared<ply_model>();
-    load_ply(filename, ply);
-    frames = get_values(ply, "frame",
+    auto ply = load_ply(filename);
+    frames   = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
   } else {
@@ -943,7 +953,7 @@ static void save_instances(
     const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = make_shared<ply_model>();
+    auto ply = make_ply();
     add_values(ply, frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
@@ -999,6 +1009,11 @@ static void save_json(const string& filename, const json& js) {
     throw std::runtime_error{filename + ": error writing json"};
   }
 }
+static json load_json(const string& filename) {
+  auto js = json{};
+  load_json(filename, js);
+  return js;
+}
 
 // Save a scene in the builtin JSON format.
 static void load_json_scene(
@@ -1006,8 +1021,7 @@ static void load_json_scene(
   *scene = {};
 
   // open file
-  auto js = json{};
-  load_json(filename, js);
+  auto js = load_json(filename);
 
   // gets a json value
   auto get_value = [](const json& ejs, const string& name, auto& value) {
@@ -1443,8 +1457,7 @@ namespace yocto {
 static void load_obj_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   // load obj
-  auto obj = make_shared<obj_model>();
-  load_obj(filename, obj, false, true, false);
+  auto obj = load_obj(filename, false, true, false);
 
   // convert cameras
   for (auto ocam : obj->cameras) {
@@ -1583,7 +1596,7 @@ static void load_obj_scene(
 
 static void save_obj_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
-  auto obj = make_shared<obj_model>();
+  auto obj = make_obj();
 
   // convert cameras
   for (auto camera : scene->cameras) {
@@ -1873,8 +1886,7 @@ namespace yocto {
 static void load_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   // load pbrt
-  auto pbrt = make_shared<pbrt_model>();
-  load_pbrt(filename, pbrt);
+  auto pbrt = load_pbrt(filename);
 
   // convert cameras
   for (auto pcamera : pbrt->cameras) {
@@ -1988,7 +2000,7 @@ static void load_pbrt_scene(
 void save_pbrt_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
   // save pbrt
-  auto pbrt = make_shared<pbrt_model>();
+  auto pbrt = make_pbrt();
 
   // convert camera
   auto camera         = scene->cameras.front();

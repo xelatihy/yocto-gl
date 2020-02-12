@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -36,6 +35,8 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -65,7 +66,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image> glimage   = make_shared<opengl_image>();
+  shared_ptr<opengl_image> glimage   = nullptr;
   draw_glimage_params      glparams  = {};
   bool                     glupdated = true;
 };
@@ -142,10 +143,11 @@ void update_display(shared_ptr<app_state> app) {
 void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
       async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
-        auto app       = make_shared<app_state>();
-        app->filename  = filename;
-        app->outname   = replace_extension(filename, ".display.png");
-        app->name      = get_filename(filename);
+        auto app      = make_shared<app_state>();
+        app->filename = filename;
+        app->outname =
+            fs::path(filename).replace_extension(".display.png").string();
+        app->name      = fs::path(filename).filename();
         app->exposure  = apps->exposure;
         app->filmic    = apps->filmic;
         app->params    = apps->params;
@@ -174,7 +176,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
-          true, get_dirname(save_path), get_filename(save_path),
+          true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;
@@ -241,7 +244,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   if (image_ok && begin_glheader(win, "inspect")) {
     auto app = apps->states[apps->selected];
-    draw_gllabel(win, "image", get_filename(app->filename));
+    draw_gllabel(win, "image", fs::path(app->filename).filename());
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "image",
@@ -282,7 +285,7 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+    if (!app->glimage) app->glimage = make_glimage();
     if (app->glupdated) {
       set_glimage(app->glimage, app->display, false, false);
       app->glupdated = false;
@@ -332,8 +335,7 @@ int run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = make_shared<opengl_window>();
-  init_glwindow(win, {1280 + 320, 720}, "yimview", true);
+  auto win = make_glwindow({1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(
@@ -381,7 +383,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    std::cerr << e.what() << "\n";
     return 1;
   }
 }

@@ -1595,18 +1595,18 @@ static void build_bvh_serial(vector<trace_bvh_node>& nodes,
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    trace_bvh& bvh, vector<bbox3f>& bboxes, trace_bvh_type type) {
+    const shared_ptr<trace_bvh>& bvh, vector<bbox3f>& bboxes, trace_bvh_type type) {
   // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
+  auto& nodes      = bvh->nodes;
+  auto& primitives = bvh->primitives;
 
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(bboxes.size() * 2);
 
   // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+  bvh->primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) bvh->primitives[idx] = idx;
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
@@ -1694,13 +1694,14 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
-  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh.nodes[nodeid];
+static void update_bvh(
+    const shared_ptr<trace_bvh>& bvh, const vector<bbox3f>& bboxes) {
+  for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = bvh->nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto idx = 0; idx < 2; idx++) {
-        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+        node.bbox = merge(node.bbox, bvh->nodes[node.start + idx].bbox);
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
@@ -1770,12 +1771,13 @@ static void init_bvh(
   }
 
   // build nodes
-  build_bvh_serial(shape->bvh.nodes, primitives, params.bvh);
+  shape->bvh = make_shared<trace_bvh>();
+  build_bvh_serial(shape->bvh->nodes, primitives, params.bvh);
 
   // set bvh primitives
-  shape->bvh.primitives.reserve(primitives.size());
+  shape->bvh->primitives.reserve(primitives.size());
   for (auto& primitive : primitives) {
-    shape->bvh.primitives.push_back(primitive.primitive);
+    shape->bvh->primitives.push_back(primitive.primitive);
   }
 }
 
@@ -1802,10 +1804,10 @@ void init_bvh(
     auto instance_id = 0;
     for (auto& frame : object->instance->frames) {
       auto& primitive = primitives.emplace_back();
-      primitive.bbox  = object->shape->bvh.nodes.empty()
+      primitive.bbox  = object->shape->bvh->nodes.empty()
                            ? invalidb3f
                            : transform_bbox(frame * object->frame,
-                                 object->shape->bvh.nodes[0].bbox);
+                                 object->shape->bvh->nodes[0].bbox);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {object_id, instance_id};
       instance_id += 1;
@@ -1814,12 +1816,13 @@ void init_bvh(
   }
 
   // build nodes
-  build_bvh_serial(scene->bvh.nodes, primitives, params.bvh);
+  scene->bvh = make_shared<trace_bvh>();
+  build_bvh_serial(scene->bvh->nodes, primitives, params.bvh);
 
   // set bvh primitives
-  scene->bvh.primitives.reserve(primitives.size());
+  scene->bvh->primitives.reserve(primitives.size());
   for (auto& primitive : primitives) {
-    scene->bvh.primitives.push_back(primitive.primitive);
+    scene->bvh->primitives.push_back(primitive.primitive);
   }
 }
 
@@ -1832,37 +1835,37 @@ static void update_bvh(
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(shape->bvh.primitives.size());
+  auto bboxes = vector<bbox3f>(shape->bvh->primitives.size());
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape->points[shape->bvh.primitives[idx].x];
+      auto& p     = shape->points[shape->bvh->primitives[idx].x];
       bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
     }
   } else if (!shape->lines.empty()) {
     bboxes = vector<bbox3f>(shape->lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape->lines[shape->bvh.primitives[idx].x];
+      auto& l     = shape->lines[shape->bvh->primitives[idx].x];
       bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
           shape->radius[l.x], shape->radius[l.y]);
     }
   } else if (!shape->triangles.empty()) {
     bboxes = vector<bbox3f>(shape->triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape->triangles[shape->bvh.primitives[idx].x];
+      auto& t     = shape->triangles[shape->bvh->primitives[idx].x];
       bboxes[idx] = triangle_bounds(
           shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
     }
   } else if (!shape->quads.empty()) {
     bboxes = vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh.primitives[idx].x];
+      auto& q     = shape->quads[shape->bvh->primitives[idx].x];
       bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
           shape->positions[q.z], shape->positions[q.w]);
     }
   } else if (!shape->quadspos.empty()) {
     bboxes = vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh.primitives[idx].x];
+      auto& q     = shape->quads[shape->bvh->primitives[idx].x];
       bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
           shape->positions[q.z], shape->positions[q.w]);
     }
@@ -1886,34 +1889,38 @@ void update_bvh(const shared_ptr<trace_scene>& scene,
 
   // build primitives
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
-  auto bboxes                = vector<bbox3f>(scene->bvh.primitives.size());
+  auto bboxes                = vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene->bvh.primitives[idx];
+    auto& instance = scene->bvh->primitives[idx];
     auto  object   = scene->objects[instance.x];
     auto& sbvh     = scene->shapes[instance.x]->bvh;
     bboxes[idx]    = transform_bbox(
         object->instance->frames[instance.y] * object->frame,
-        sbvh.nodes[0].bbox);
+        sbvh->nodes[0].bbox);
   }
 
   // update nodes
   update_bvh(scene->bvh, bboxes);
 }
 
-// Intersect ray with a bvh.
-static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
+// Intersect ray with a bvh->
+static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape_,
     const ray3f& ray_, int& element, vec2f& uv, float& distance,
     bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (shape->embree_bvh) {
+  if (shape_->embree_bvh) {
     return intersect_shape_embree_bvh(
-        shape, ray_, element, uv, distance, find_any);
+        shape_, ray_, element, uv, distance, find_any);
   }
 #endif
 
+  // get bvh and shape pointers for fast access
+  auto shape = shape_.get();
+  auto bvh   = shape->bvh.get();
+
   // check empty
-  if (shape->bvh.nodes.empty()) return false;
+  if (bvh->nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -1934,7 +1941,7 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = shape->bvh.nodes[node_stack[--node_cur]];
+    auto& node = bvh->nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -1954,51 +1961,51 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
       }
     } else if (!shape->points.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& p = shape->points[shape->bvh.primitives[idx].x];
+        auto& p = shape->points[shape->bvh->primitives[idx].x];
         if (intersect_point(
                 ray, shape->positions[p], shape->radius[p], uv, distance)) {
           hit      = true;
-          element  = shape->bvh.primitives[idx].x;
+          element  = shape->bvh->primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape->lines.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& l = shape->lines[shape->bvh.primitives[idx].x];
+        auto& l = shape->lines[shape->bvh->primitives[idx].x];
         if (intersect_line(ray, shape->positions[l.x], shape->positions[l.y],
                 shape->radius[l.x], shape->radius[l.y], uv, distance)) {
           hit      = true;
-          element  = shape->bvh.primitives[idx].x;
+          element  = shape->bvh->primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape->triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& t = shape->triangles[shape->bvh.primitives[idx].x];
+        auto& t = shape->triangles[shape->bvh->primitives[idx].x];
         if (intersect_triangle(ray, shape->positions[t.x],
                 shape->positions[t.y], shape->positions[t.z], uv, distance)) {
           hit      = true;
-          element  = shape->bvh.primitives[idx].x;
+          element  = shape->bvh->primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape->quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape->quads[shape->bvh.primitives[idx].x];
+        auto& q = shape->quads[shape->bvh->primitives[idx].x];
         if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
                 shape->positions[q.z], shape->positions[q.w], uv, distance)) {
           hit      = true;
-          element  = shape->bvh.primitives[idx].x;
+          element  = shape->bvh->primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape->quadspos.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape->quadspos[shape->bvh.primitives[idx].x];
+        auto& q = shape->quadspos[shape->bvh->primitives[idx].x];
         if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
                 shape->positions[q.z], shape->positions[q.w], uv, distance)) {
           hit      = true;
-          element  = shape->bvh.primitives[idx].x;
+          element  = shape->bvh->primitives[idx].x;
           ray.tmax = distance;
         }
       }
@@ -2011,20 +2018,24 @@ static bool intersect_shape_bvh(const shared_ptr<trace_shape>& shape,
   return hit;
 }
 
-// Intersect ray with a bvh.
-static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
+// Intersect ray with a bvh->
+static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene_,
     const ray3f& ray_, int& objecct, int& instance, int& element, vec2f& uv,
     float& distance, bool find_any, bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (scene->embree_bvh) {
+  if (scene_->embree_bvh) {
     return intersect_scene_embree_bvh(
-        scene, ray_, objecct, instance, element, uv, distance, find_any);
+        scene_, ray_, objecct, instance, element, uv, distance, find_any);
   }
 #endif
 
+  // get bvh and scene pointers for fast access
+  auto scene = scene_.get();
+  auto bvh   = scene->bvh.get();
+
   // check empty
-  if (scene->bvh.nodes.empty()) return false;
+  if (bvh->nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -2045,7 +2056,7 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = scene->bvh.nodes[node_stack[--node_cur]];
+    auto& node = bvh->nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -2065,10 +2076,10 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto [object_id, instance_id] = scene->bvh.primitives[idx];
-        auto& object                  = scene->objects[object_id];
-        auto  frame   = object->instance->frames[instance_id] * object->frame;
-        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
+        auto [object_id, instance_id] = scene->bvh->primitives[idx];
+        auto object                   = scene->objects[object_id].get();
+        auto frame   = object->instance->frames[instance_id] * object->frame;
+        auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
@@ -2086,7 +2097,7 @@ static bool intersect_scene_bvh(const shared_ptr<trace_scene>& scene,
   return hit;
 }
 
-// Intersect ray with a bvh.
+// Intersect ray with a bvh->
 static bool intersect_instance_bvh(const shared_ptr<trace_object>& object,
     int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
@@ -2943,8 +2954,9 @@ vec4f trace_sample(const shared_ptr<trace_state>& state,
 }
 
 // Init a sequence of random number generators.
-void init_state(shared_ptr<trace_state> state,
+shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
+  auto  state  = make_shared<trace_state>();
   auto& camera = scene->cameras[params.camera];
   auto  image_size =
       (camera->film.x > camera->film.y)
@@ -2963,6 +2975,7 @@ void init_state(shared_ptr<trace_state> state,
           params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
+  return state;
 }
 
 // Init trace lights
@@ -3048,8 +3061,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
-  auto state = std::make_shared<trace_state>();
-  init_state(state, scene, params);
+  auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   if (params.noparallel) {
@@ -3104,6 +3116,11 @@ image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
 // SCENE CREATION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// create scene
+shared_ptr<trace_scene> make_trace_scene() {
+  return make_shared<trace_scene>();
+}
 
 // Add cameras
 shared_ptr<trace_camera> add_camera(const shared_ptr<trace_scene>& scene) {
