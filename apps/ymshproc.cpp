@@ -26,13 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"
 #include "ext/Timer.hpp"
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
@@ -285,20 +286,22 @@ int main(int argc, const char** argv) {
   // load mesh
   if (!facevarying) {
     auto timer = CLI::AutoTimer{"load"};
-    auto ext   = get_extension(filename);
+    auto ext   = fs::path(filename).extension().string();
+    auto basename   = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, get_basename(filename));
+          texcoords, colors, radius, basename);
     } else {
       load_shape(filename, points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius);
     }
   } else {
     auto timer = CLI::AutoTimer{"load"};
-    auto ext   = get_extension(filename);
+    auto ext   = fs::path(filename).extension().string();
+    auto basename   = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, get_basename(filename));
+          texcoords, basename);
     } else {
       load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
           normals, texcoords);
