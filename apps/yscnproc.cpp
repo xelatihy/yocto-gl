@@ -37,6 +37,8 @@ using namespace yocto;
 using std::make_unique;
 using std::unordered_set;
 
+#include "ext/CLI11.hpp"
+
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
     return true;
@@ -49,7 +51,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-void run_app(int argc, const char** argv) {
+int run_app(int argc, const char** argv) {
   // command line parameters
   auto mesh_filenames     = false;
   auto shape_directory    = "shapes/"s;
@@ -62,24 +64,25 @@ void run_app(int argc, const char** argv) {
   auto filename           = "scene->json"s;
 
   // parse command line
-  auto cli = make_cli("yscnproc", "Process scene");
-  add_cli_option(
-      cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  add_cli_option(cli, "--shape-directory", shape_directory,
+  auto cli = CLI::App{"Process scene"};
+  cli.add_option("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  cli.add_option("--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  add_cli_option(cli, "--subdiv-directory", subdiv_directory,
+  cli.add_option("--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  add_cli_option(
-      cli, "--obj-instances", obj_instances, "preserve instances in obj");
-  add_cli_option(cli, "--info,-i", info, "print scene info");
-  add_cli_option(cli, "--validate", validate, "Validate scene");
-  add_cli_option(cli, "--output,-o", output, "output scene", true);
-  add_cli_option(cli, "scene", filename, "input scene", true);
-  parse_cli(cli, argc, argv);
+  cli.add_flag("--obj-instances", obj_instances, "preserve instances in obj");
+  cli.add_option("--info,-i", info, "print scene info");
+  cli.add_flag("--validate", validate, "Validate scene");
+  cli.add_option("--output,-o", output, "output scene", true);
+  cli.add_option("scene", filename, "input scene", true);
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // load scene
-  auto scene_     = make_unique<sceneio_model>();
-  auto scene      = scene_.get();
+  auto scene      = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
   load_scene(filename, scene);
   print_elapsed(load_timer);
@@ -134,12 +137,14 @@ void run_app(int argc, const char** argv) {
   auto save_timer = print_timed("saving scene");
   save_scene(output, scene, obj_instances);
   print_elapsed(save_timer);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

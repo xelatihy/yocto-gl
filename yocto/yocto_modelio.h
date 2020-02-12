@@ -39,6 +39,7 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <memory>
 
 #include "yocto_math.h"
 
@@ -46,6 +47,10 @@
 // SIMPLE PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Using directives
+using std::make_shared;
+using std::shared_ptr;
 
 // Type of ply file. For best performance, choose binary_little_endian when
 // writing ply files.
@@ -79,108 +84,106 @@ struct ply_property {
 
 // Ply elements
 struct ply_element {
-  string                name       = "";
-  size_t                count      = 0;
-  vector<ply_property*> properties = {};
-  ~ply_element();
+  string                           name       = "";
+  size_t                           count      = 0;
+  vector<shared_ptr<ply_property>> properties = {};
 };
 
 // Ply model
 struct ply_model {
-  ply_format           format   = ply_format::binary_little_endian;
-  vector<string>       comments = {};
-  vector<ply_element*> elements = {};
-  ~ply_model();
+  ply_format                      format   = ply_format::binary_little_endian;
+  vector<string>                  comments = {};
+  vector<shared_ptr<ply_element>> elements = {};
 };
 
 // Load and save ply
-void load_ply(const string& filename, ply_model* ply);
-void save_ply(const string& filename, const ply_model* ply);
+void load_ply(const string& filename, shared_ptr<ply_model> ply);
+void save_ply(const string& filename, shared_ptr<ply_model> ply);
 
 // Get ply properties
 bool has_property(
-    const ply_model* ply, const string& element, const string& property);
-const ply_property* get_property(
-    const ply_model* ply, const string& element, const string& property);
+    shared_ptr<ply_model> ply, const string& element, const string& property);
+shared_ptr<ply_property> get_property(
+    shared_ptr<ply_model> ply, const string& element, const string& property);
 
 vector<float> get_values(
-    const ply_model* ply, const string& element, const string& property);
-vector<vec2f>   get_values(const ply_model* ply, const string& element,
+    shared_ptr<ply_model> ply, const string& element, const string& property);
+vector<vec2f>   get_values(shared_ptr<ply_model> ply, const string& element,
       const string& property1, const string& property2);
-vector<vec3f>   get_values(const ply_model* ply, const string& element,
+vector<vec3f>   get_values(shared_ptr<ply_model> ply, const string& element,
       const string& property1, const string& property2, const string& property3);
-vector<vec4f>   get_values(const ply_model* ply, const string& element,
+vector<vec4f>   get_values(shared_ptr<ply_model> ply, const string& element,
       const string& property1, const string& property2, const string& property3,
       const string& property4);
-vector<vec4f>   get_values(const ply_model* ply, const string& element,
+vector<vec4f>   get_values(shared_ptr<ply_model> ply, const string& element,
       const string& property1, const string& property2, const string& property3,
       float property4);
-vector<frame3f> get_values(const ply_model* ply, const string& element,
+vector<frame3f> get_values(shared_ptr<ply_model> ply, const string& element,
     const array<string, 12>& properties);
 
 vector<vector<int>> get_lists(
-    const ply_model* ply, const string& element, const string& property);
+    shared_ptr<ply_model> ply, const string& element, const string& property);
 vector<byte> get_list_sizes(
-    const ply_model* ply, const string& element, const string& property);
+    shared_ptr<ply_model> ply, const string& element, const string& property);
 vector<int> get_list_values(
-    const ply_model* ply, const string& element, const string& property);
+    shared_ptr<ply_model> ply, const string& element, const string& property);
 vec2i get_list_minxmax(
-    const ply_model* ply, const string& element, const string& property);
+    shared_ptr<ply_model> ply, const string& element, const string& property);
 
 // Get ply properties for meshes
-vector<vec3f>       get_positions(const ply_model* ply);
-vector<vec3f>       get_normals(const ply_model* ply);
-vector<vec2f>       get_texcoords(const ply_model* ply, bool flipv = false);
-vector<vec4f>       get_colors(const ply_model* ply);
-vector<float>       get_radius(const ply_model* ply);
-vector<vector<int>> get_faces(const ply_model* ply);
-vector<vec2i>       get_lines(const ply_model* ply);
-vector<int>         get_points(const ply_model* ply);
-vector<vec3i>       get_triangles(const ply_model* ply);
-vector<vec4i>       get_quads(const ply_model* ply);
-bool                has_quads(const ply_model* ply);
+vector<vec3f> get_positions(shared_ptr<ply_model> ply);
+vector<vec3f> get_normals(shared_ptr<ply_model> ply);
+vector<vec2f> get_texcoords(shared_ptr<ply_model> ply, bool flipv = false);
+vector<vec4f> get_colors(shared_ptr<ply_model> ply);
+vector<float> get_radius(shared_ptr<ply_model> ply);
+vector<vector<int>> get_faces(shared_ptr<ply_model> ply);
+vector<vec2i>       get_lines(shared_ptr<ply_model> ply);
+vector<int>         get_points(shared_ptr<ply_model> ply);
+vector<vec3i>       get_triangles(shared_ptr<ply_model> ply);
+vector<vec4i>       get_quads(shared_ptr<ply_model> ply);
+bool                has_quads(shared_ptr<ply_model> ply);
 
 // Add ply properties
-void add_values(ply_model* ply, const vector<float>& values,
+void add_values(shared_ptr<ply_model> ply, const vector<float>& values,
     const string& element, const string& property);
-void add_values(ply_model* ply, const vector<vec2f>& values,
+void add_values(shared_ptr<ply_model> ply, const vector<vec2f>& values,
     const string& element, const string& property1, const string& property2);
-void add_values(ply_model* ply, const vector<vec3f>& values,
+void add_values(shared_ptr<ply_model> ply, const vector<vec3f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3);
-void add_values(ply_model* ply, const vector<vec4f>& values,
+void add_values(shared_ptr<ply_model> ply, const vector<vec4f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3, const string& property4);
-void add_values(ply_model* ply, const vector<frame3f>& values,
+void add_values(shared_ptr<ply_model> ply, const vector<frame3f>& values,
     const string& element, const array<string, 12>& properties);
 
-void add_lists(ply_model* ply, const vector<vector<int>>& values,
+void add_lists(shared_ptr<ply_model> ply, const vector<vector<int>>& values,
     const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<byte>& sizes,
+void add_lists(shared_ptr<ply_model> ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<int>& values, const string& element,
-    const string& property);
-void add_lists(ply_model* ply, const vector<vec2i>& values,
+void add_lists(shared_ptr<ply_model> ply, const vector<int>& values,
     const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<vec3i>& values,
+void add_lists(shared_ptr<ply_model> ply, const vector<vec2i>& values,
     const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<vec4i>& values,
+void add_lists(shared_ptr<ply_model> ply, const vector<vec3i>& values,
+    const string& element, const string& property);
+void add_lists(shared_ptr<ply_model> ply, const vector<vec4i>& values,
     const string& element, const string& property);
 
 // Add ply properties for meshes
-void add_positions(ply_model* ply, const vector<vec3f>& values);
-void add_normals(ply_model* ply, const vector<vec3f>& values);
+void add_positions(shared_ptr<ply_model> ply, const vector<vec3f>& values);
+void add_normals(shared_ptr<ply_model> ply, const vector<vec3f>& values);
 void add_texcoords(
-    ply_model* ply, const vector<vec2f>& values, bool flipv = false);
-void add_colors(ply_model* ply, const vector<vec4f>& values);
-void add_radius(ply_model* ply, const vector<float>& values);
-void add_faces(ply_model* ply, const vector<vector<int>>& values);
-void add_faces(
-    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-void add_triangles(ply_model* ply, const vector<vec3i>& values);
-void add_quads(ply_model* ply, const vector<vec4i>& values);
-void add_lines(ply_model* ply, const vector<vec2i>& values);
-void add_points(ply_model* ply, const vector<int>& values);
+    shared_ptr<ply_model> ply, const vector<vec2f>& values, bool flipv = false);
+void add_colors(shared_ptr<ply_model> ply, const vector<vec4f>& values);
+void add_radius(shared_ptr<ply_model> ply, const vector<float>& values);
+void add_faces(shared_ptr<ply_model> ply, const vector<vector<int>>& values);
+void add_faces(shared_ptr<ply_model> ply, const vector<vec3i>& tvalues,
+    const vector<vec4i>& qvalues);
+void add_triangles(shared_ptr<ply_model> ply, const vector<vec3i>& values);
+void add_quads(shared_ptr<ply_model> ply, const vector<vec4i>& values);
+void add_lines(shared_ptr<ply_model> ply, const vector<vec2i>& values);
+void add_points(shared_ptr<ply_model> ply, const vector<int>& values);
 
 }  // namespace yocto
 
@@ -284,16 +287,16 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  string                name      = "";
-  vector<vec3f>         positions = {};
-  vector<vec3f>         normals   = {};
-  vector<vec2f>         texcoords = {};
-  vector<obj_material*> materials = {};
-  vector<obj_vertex>    vertices  = {};
-  vector<obj_element>   faces     = {};
-  vector<obj_element>   lines     = {};
-  vector<obj_element>   points    = {};
-  vector<frame3f>       instances = {};
+  string                           name      = "";
+  vector<vec3f>                    positions = {};
+  vector<vec3f>                    normals   = {};
+  vector<vec2f>                    texcoords = {};
+  vector<shared_ptr<obj_material>> materials = {};
+  vector<obj_vertex>               vertices  = {};
+  vector<obj_element>              faces     = {};
+  vector<obj_element>              lines     = {};
+  vector<obj_element>              points    = {};
+  vector<frame3f>                  instances = {};
 };
 
 // Obj camera
@@ -318,90 +321,97 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  vector<string>           comments     = {};
-  vector<obj_shape*>       shapes       = {};
-  vector<obj_material*>    materials    = {};
-  vector<obj_camera*>      cameras      = {};
-  vector<obj_environment*> environments = {};
-  ~obj_model();
+  vector<string>                      comments     = {};
+  vector<shared_ptr<obj_shape>>       shapes       = {};
+  vector<shared_ptr<obj_material>>    materials    = {};
+  vector<shared_ptr<obj_camera>>      cameras      = {};
+  vector<shared_ptr<obj_environment>> environments = {};
 };
 
 // Load and save obj
-void load_obj(const string& filename, obj_model* obj, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
-void save_obj(const string& filename, const obj_model* obj);
+void load_obj(const string& filename, shared_ptr<obj_model> obj,
+    bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
+void save_obj(const string& filename, shared_ptr<obj_model> obj);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_triangles(const obj_model* obj, const obj_shape* shape,
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_quads(const obj_model* obj, const obj_shape* shape,
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_lines(const obj_model* obj, const obj_shape* shape,
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_points(const obj_model* obj, const obj_shape* shape,
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-void get_fvquads(const obj_model* obj, const obj_shape* shape,
+void get_fvquads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
+    vector<shared_ptr<obj_material>>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-bool has_quads(const obj_shape* shape);
+bool has_quads(shared_ptr<obj_shape> shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(const obj_model* obj, const obj_shape* shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_quads(const obj_model* obj, const obj_shape* shape, int material,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_lines(const obj_model* obj, const obj_shape* shape, int material,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_points(const obj_model* obj, const obj_shape* shape, int material,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-vector<obj_material*> get_materials(
-    const obj_model* obj, const obj_shape* shape);
+void get_triangles(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+void get_quads(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+void get_lines(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+void get_points(shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape,
+    int material, vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+vector<shared_ptr<obj_material>> get_materials(
+    shared_ptr<obj_model> obj, shared_ptr<obj_shape> shape);
 
 // Add obj shape
-void add_triangles(obj_model* obj, const string& name,
+void add_triangles(shared_ptr<obj_model> obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials = {},
+    const vector<shared_ptr<obj_material>>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+void add_quads(shared_ptr<obj_model> obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+void add_lines(shared_ptr<obj_model> obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_points(obj_model* obj, const string& name, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+void add_points(shared_ptr<obj_model> obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<shared_ptr<obj_material>>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_fvquads(obj_model* obj, const string& name,
+void add_fvquads(shared_ptr<obj_model> obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials = {},
+    const vector<shared_ptr<obj_material>>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
 
@@ -490,8 +500,8 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material*  material  = nullptr;
-  pbrt_arealight* arealight = nullptr;
+  shared_ptr<pbrt_material>  material  = nullptr;
+  shared_ptr<pbrt_arealight> arealight = nullptr;
 };
 
 // Pbrt lights
@@ -521,21 +531,20 @@ struct pbrt_environment {
 
 // Pbrt model
 struct pbrt_model {
-  vector<string>            comments     = {};
-  vector<pbrt_camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_arealight*>   arealights   = {};
-  vector<pbrt_material*>    materials    = {};
-  vector<pbrt_medium*>      mediums      = {};
-  ~pbrt_model();
+  vector<string>                       comments     = {};
+  vector<shared_ptr<pbrt_camera>>      cameras      = {};
+  vector<shared_ptr<pbrt_shape>>       shapes       = {};
+  vector<shared_ptr<pbrt_environment>> environments = {};
+  vector<shared_ptr<pbrt_light>>       lights       = {};
+  vector<shared_ptr<pbrt_arealight>>   arealights   = {};
+  vector<shared_ptr<pbrt_material>>    materials    = {};
+  vector<shared_ptr<pbrt_medium>>      mediums      = {};
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model* pbrt);
-void save_pbrt(
-    const string& filename, const pbrt_model* pbrt, bool ply_meshes = false);
+void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt);
+void save_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
+    bool ply_meshes = false);
 
 }  // namespace yocto
 

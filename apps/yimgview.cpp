@@ -35,6 +35,8 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 struct image_stats {
   vec4f         min       = zero4f;
   vec4f         max       = zero4f;
@@ -63,44 +65,24 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage   = new opengl_image{};
-  draw_glimage_params glparams  = {};
-  bool                glupdated = true;
-
-  // error
-  string error = "";
-
-  // cleanup
-  ~app_state() {
-    if (glimage) delete glimage;
-  }
+  shared_ptr<opengl_image> glimage   = make_shared<opengl_image>();
+  draw_glimage_params      glparams  = {};
+  bool                     glupdated = true;
 };
 
 // app states
 struct app_states {
   // data
-  vector<app_state*> states   = {};
-  int                selected = -1;
+  vector<shared_ptr<app_state>> states   = {};
+  int                           selected = -1;
 
   // loading
-  deque<future<app_state*>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   float             exposure = 0;
   bool              filmic   = false;
   colorgrade_params params   = {};
-
-  // cleanup
-  ~app_states() {
-    while (!loaders.empty()) {
-      try {
-        states.push_back(loaders.front().get());
-      } catch (std::exception&) {
-      }
-      loaders.pop_front();
-    }
-    for (auto app : states) delete app;
-  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -143,7 +125,7 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(app_state* app) {
+void update_display(shared_ptr<app_state> app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -157,10 +139,10 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const string& filename) {
+void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> app_state* {
-        auto app       = make_unique<app_state>();
+      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
+        auto app       = make_shared<app_state>();
         app->filename  = filename;
         app->outname   = replace_extension(filename, ".display.png");
         app->name      = get_filename(filename);
@@ -177,12 +159,12 @@ void load_image_async(app_states* apps, const string& filename) {
           app->display = tonemap_image(app->source, app->exposure, app->filmic);
         }
         compute_stats(app->display_stats, app->display, false);
-        return app.release();
+        return app;
       }));
 }
 
-void draw_glwidgets(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -207,7 +189,6 @@ void draw_glwidgets(
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    delete apps->states[apps->selected];
     apps->states.erase(apps->states.begin() + apps->selected);
     apps->selected = apps->states.empty() ? -1 : 0;
   }
@@ -295,7 +276,8 @@ void draw_glwidgets(
   }
 }
 
-void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
@@ -311,8 +293,8 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   }
 }
 
-void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future<app_state*>& result) -> bool {
+void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
@@ -332,40 +314,42 @@ void update(opengl_window* win, app_states* apps) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto apps_     = make_unique<app_states>();
-  auto apps      = apps_.get();
+  auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "images", filenames, "image filenames", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"view images"};
+  cli.add_option("images", filenames, "image filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win_ = make_unique<opengl_window>();
-  auto win  = win_.get();
+  auto win = make_shared<opengl_window>();
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
         update(win, apps);
       });
   set_draw_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
           auto app = apps->states[apps->selected];
@@ -378,7 +362,7 @@ void run_app(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](opengl_window* win, const vector<string>& paths,
+      win, [apps](shared_ptr<opengl_window> win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
@@ -388,12 +372,14 @@ void run_app(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

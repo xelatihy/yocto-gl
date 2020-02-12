@@ -34,6 +34,8 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 struct app_state {
   // original data
   string filename = "image.png";
@@ -50,13 +52,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
-
-  // cleanup
-  ~app_state() {
-    if (glimage) delete glimage;
-  }
+  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  draw_glimage_params      glparams = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -78,7 +75,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void update_display(app_state* app) {
+void update_display(shared_ptr<app_state> app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -89,17 +86,20 @@ void update_display(app_state* app) {
   });
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app_      = make_unique<app_state>();
-  auto app       = app_.get();
+  auto app       = make_shared<app_state>();
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "--output,-o", app->outname, "image output");
-  add_cli_option(cli, "image", app->filename, "image filename", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"view images"};
+  cli.add_option("--output,-o", app->outname, "image output");
+  cli.add_option("image", app->filename, "image filename")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // load image
   load_image(app->filename, app->source);
@@ -108,13 +108,12 @@ void run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_ = make_unique<opengl_window>();
-  auto win  = win_.get();
+  auto win = make_shared<opengl_window>();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!is_initialized(app->glimage)) {
@@ -126,7 +125,7 @@ void run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;
@@ -142,12 +141,14 @@ void run_app(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

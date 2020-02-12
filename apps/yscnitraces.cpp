@@ -37,6 +37,8 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
+#include "ext/CLI11.hpp"
+
 // Application state
 struct app_state {
   // loading options
@@ -49,19 +51,19 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene    = new sceneio_model{};
-  trace_scene*   scene      = new trace_scene{};
-  bool           add_skyenv = false;
+  shared_ptr<sceneio_model> ioscene    = make_shared<sceneio_model>();
+  shared_ptr<trace_scene>   scene      = make_shared<trace_scene>();
+  bool                      add_skyenv = false;
 
   // rendering state
-  trace_state* state    = new trace_state{};
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  shared_ptr<trace_state> state    = make_shared<trace_state>();
+  image<vec4f>            render   = {};
+  image<vec4f>            display  = {};
+  float                   exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
+  shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
+  draw_glimage_params      glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -72,18 +74,12 @@ struct app_state {
   future<void> render_future  = {};
   int          render_counter = 0;
 
-  ~app_state() {
-    render_stop = true;
-    if (render_future.valid()) render_future.get();
-    if (glimage) delete glimage;
-    if (scene) delete scene;
-    if (state) delete state;
-    if (ioscene) delete ioscene;
-  }
+  ~app_state() { render_stop = true; }
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene) {
+void init_scene(
+    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -91,7 +87,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map =
+      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -103,7 +100,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map =
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -133,7 +131,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map =
+      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -150,7 +149,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map =
+      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
@@ -193,7 +193,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void reset_display(app_state* app) {
+void reset_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -232,34 +232,52 @@ void reset_display(app_state* app) {
   });
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // application
-  auto app_ = make_unique<app_state>();
-  auto app  = app_.get();
+  auto app = make_shared<app_state>();
+
+  // maps for getting param
+  auto trace_sampler_map = map<string, trace_sampler_type>{};
+  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
+  }
+  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
+  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] =
+        (trace_falsecolor_type)idx;
+  }
+  auto trace_bvh_map = map<string, trace_bvh_type>{};
+  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
+  }
 
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app->params.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", app->params.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app->params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app->params.sampler, "Tracer type.",
-      trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_cli_option(
-      cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app->params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
+  auto cli = CLI::App{"progressive path tracing"};
+  cli.add_option("--camera", app->params.camera, "Camera index.");
+  cli.add_option(
+      "--resolution,-r", app->params.resolution, "Image resolution.");
+  cli.add_option("--samples,-s", app->params.samples, "Number of samples.");
+  cli.add_option("--tracer,-t", app->params.sampler, "Tracer type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option(
+         "--falsecolor,-F", app->params.falsecolor, "Tracer false color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option(
+      "--bounces", app->params.bounces, "Maximum number of bounces.");
+  cli.add_option("--clamp", app->params.clamp, "Final pixel clamping.");
+  cli.add_flag("--filter", app->params.tentfilter, "Filter image.");
+  cli.add_flag("--env-hidden,!--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(
-      cli, "--bvh", (int&)app->params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
-  add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
-  add_cli_option(cli, "scene", app->filename, "Scene filename", true);
-  parse_cli(cli, argc, argv);
+  cli.add_option("--bvh", app->params.bvh, "Bvh type")
+      ->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_flag("--add-skyenv", app->add_skyenv, "Add sky envmap");
+  cli.add_option("--output,-o", app->imagename, "Image output", false);
+  cli.add_option("scene", app->filename, "Scene filename")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // scene loading
   auto load_timer = print_timed("loading scene");
@@ -272,7 +290,6 @@ void run_app(int argc, const char* argv[]) {
   print_elapsed(convert_timer);
 
   // cleanup
-  delete app->ioscene;
   app->ioscene = nullptr;
 
   // build bvh
@@ -298,13 +315,12 @@ void run_app(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win_ = make_unique<opengl_window>();
-  auto win  = win_.get();
+  auto win = make_shared<opengl_window>();
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -317,7 +333,7 @@ void run_app(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;
@@ -340,12 +356,14 @@ void run_app(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

@@ -33,11 +33,15 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
+#include <map>
 #include <memory>
-using std::make_shared;
+using namespace std;
+
+#include "ext/CLI11.hpp"
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene) {
+void init_scene(
+    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -45,7 +49,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map =
+      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     auto texture = add_texture(scene);
@@ -57,7 +62,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map =
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     auto material = add_material(scene);
@@ -87,7 +93,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map =
+      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     auto shape = add_shape(scene);
@@ -104,7 +111,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map =
+      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     auto instance = add_instance(scene);
@@ -128,7 +136,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
   auto batch      = 16;
@@ -138,41 +146,60 @@ void run_app(int argc, const char* argv[]) {
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
 
+  // maps for getting param
+  auto trace_sampler_map = map<string, trace_sampler_type>{};
+  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
+    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
+  }
+  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
+  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
+    trace_falsecolor_map[trace_falsecolor_names[idx]] =
+        (trace_falsecolor_type)idx;
+  }
+  auto trace_bvh_map = map<string, trace_bvh_type>{};
+  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
+    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
+  }
+
   // parse command line
-  auto cli = make_cli("yscntrace", "Offline path tracing");
-  add_cli_option(cli, "--camera", params.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", params.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)params.sampler, "Trace type.",
-      trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
-  add_cli_option(
-      cli, "--bounces", params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--batch,-b", batch, "Samples per batch.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
+  auto cli = CLI::App{"Offline path tracing"};
+  cli.add_option("--camera", params.camera, "Camera index.");
+  cli.add_option("--resolution,-r", params.resolution, "Image resolution.");
+  cli.add_option("--samples,-s", params.samples, "Number of samples.");
+  cli.add_option("--tracer,-t", params.sampler, "Trace type.")
+      ->transform(CLI::CheckedTransformer(trace_sampler_map));
+  cli.add_option(
+         "--falsecolor,-F", params.falsecolor, "Tracer false color type.")
+      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
+  cli.add_option("--bounces", params.bounces, "Maximum number of bounces.");
+  cli.add_option("--clamp", params.clamp, "Final pixel clamping.");
+  cli.add_flag("--filter", params.tentfilter, "Filter image.");
+  cli.add_option("--batch,-b", batch, "Samples per batch.");
+  cli.add_flag("--env-hidden,!--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_cli_option(cli, "--bvh", (int&)params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
-  add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
-  add_cli_option(cli, "--validate", validate, "Validate scene");
-  add_cli_option(cli, "scene", filename, "Scene filename", true);
-  parse_cli(cli, argc, argv);
+  cli.add_option("--save-batch", save_batch, "Save images progressively");
+  cli.add_option("--bvh", params.bvh, "Bvh type")
+      ->transform(CLI::CheckedTransformer(trace_bvh_map));
+  cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
+  cli.add_option("--output-image,-o", imfilename, "Image filename");
+  cli.add_flag("--validate", validate, "Validate scene");
+  cli.add_option("scene", filename, "Scene filename")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   // scene loading
   auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, ioscene.get());
+  load_scene(filename, ioscene);
   print_elapsed(load_timer);
 
   // add components
   if (validate) {
     auto validate_timer = print_timed("validating");
-    auto errors         = scene_validation(ioscene.get());
+    auto errors         = scene_validation(ioscene);
     for (auto& error : errors) print_info(error);
     print_elapsed(validate_timer);
   }
@@ -180,7 +207,7 @@ void run_app(int argc, const char* argv[]) {
   // convert scene
   auto convert_timer = print_timed("converting");
   auto scene         = make_shared<trace_scene>();
-  init_scene(scene.get(), ioscene.get());
+  init_scene(scene, ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
@@ -188,12 +215,12 @@ void run_app(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene.get(), params);
+  init_bvh(scene, params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene.get());
+  init_lights(scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
@@ -204,7 +231,7 @@ void run_app(int argc, const char* argv[]) {
 
   // allocate buffers
   auto state = make_shared<trace_state>();
-  init_state(state.get(), scene.get(), params);
+  init_state(state, scene, params);
   auto render = image{state->size(), zero4f};
 
   // render
@@ -213,7 +240,7 @@ void run_app(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render = trace_samples(state.get(), scene.get(), nsamples, params);
+    render           = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
@@ -226,12 +253,14 @@ void run_app(int argc, const char* argv[]) {
   auto save_timer = print_timed("saving image");
   save_image(imfilename, render);
   print_elapsed(save_timer);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;

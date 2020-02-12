@@ -12,7 +12,7 @@ struct my_data {
   vector<int> vertex_selection = {};
 };
 
-void my_init(my_data& data, app_state* app) {
+void my_init(my_data& data, shared_ptr<app_state> app) {
   data.face_adjacency   = face_adjacencies(app->shape.triangles);
   data.vertex_adjacency = vertex_adjacencies(
       app->shape.triangles, data.face_adjacency);
@@ -20,7 +20,8 @@ void my_init(my_data& data, app_state* app) {
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
-void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
+void my_keycallback(
+    my_data& data, shared_ptr<app_state> app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
@@ -45,8 +46,8 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   }
 }
 
-void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
-    int vertex, float distance) {
+void my_click_callback(my_data& data, shared_ptr<app_state> app, int face,
+    const vec2f& uv, int vertex, float distance) {
   printf("clicked vertex: %d\n", vertex);
   data.vertex_selection.push_back(vertex);
 
@@ -57,7 +58,8 @@ void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
   update_glpoints(app, positions);
 }
 
-void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
+void my_draw_glwidgets(
+    my_data& data, shared_ptr<app_state> app, shared_ptr<opengl_window> win) {
   if (draw_glbutton(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
@@ -129,39 +131,48 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
   }
 }
 
-void run_app(int argc, const char* argv[]) {
+int run_app(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
-  add_cli_option(cli, "model", input_filename, "model filenames", true);
-  parse_cli(cli, argc, argv);
+  auto cli = CLI::App{"interactive viewer for mesh processing"};
+  cli.add_option("model", input_filename, "model filenames")->required();
+  try {
+    cli.parse(argc, argv);
+  } catch (CLI::ParseError& e) {
+    return cli.exit(e);
+  }
 
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc.
-  auto init = [&data](app_state* app) {
+  auto init = [&data](shared_ptr<app_state> app) {
     auto timer = print_timed("init my data");
     my_init(data, app);
     print_elapsed(timer);
   };
-  auto key_callback = [&data](app_state* app, int key, bool pressing) {
+  auto key_callback = [&data](
+                          shared_ptr<app_state> app, int key, bool pressing) {
     my_keycallback(data, app, key, pressing);
   };
-  auto click_callback = [&data](app_state* a, int f, vec2f uv, int v, float d) {
+  auto click_callback = [&data](shared_ptr<app_state> a, int f, vec2f uv, int v,
+                            float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](app_state* app, opengl_window* win) {
+  auto draw_glwidgets = [&data](shared_ptr<app_state> app,
+                            shared_ptr<opengl_window> win) {
     my_draw_glwidgets(data, app, win);
   };
 
   yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+
+  // done
+  return 0;
 }
 
 int main(int argc, const char* argv[]) {
   try {
-    run_app(argc, argv);
-    return 0;
+    return run_app(argc, argv);
   } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
