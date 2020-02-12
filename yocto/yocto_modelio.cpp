@@ -1372,13 +1372,6 @@ static void format_ply_prop(FILE* fs, ply_type type, VT value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-obj_model::~obj_model() {
-  for (auto shape : shapes) delete shape;
-  for (auto material : materials) delete material;
-  for (auto camera : cameras) delete camera;
-  for (auto environment : environments) delete environment;
-}
-
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
@@ -1433,12 +1426,12 @@ static void parse_value(string_view& str, obj_texture_info& info) {
 
 // Read obj
 static void load_mtl(
-    const string& filename, obj_model* obj, bool fliptr = true) {
+    const string& filename, shared_ptr<obj_model> obj, bool fliptr = true) {
   // open file
   auto fs = open_file(filename, "rt");
 
   // init parsing
-  auto material = obj->materials.emplace_back(new obj_material{});
+  auto material = obj->materials.emplace_back(make_shared<obj_material>());
 
   // read the file str by str
   char buffer[4096];
@@ -1459,7 +1452,7 @@ static void load_mtl(
 
     // possible token values
     if (cmd == "newmtl") {
-      auto material = obj->materials.emplace_back(new obj_material{});
+      auto material = obj->materials.emplace_back(make_shared<obj_material>());
       parse_value(fs, str, material->name);
     } else if (cmd == "illum") {
       parse_value(fs, str, material->illum);
@@ -1585,7 +1578,6 @@ static void load_mtl(
   }
 
   // remove placeholder material
-  delete obj->materials.front();
   obj->materials.erase(obj->materials.begin());
 
   // convert between roughness and exponent
@@ -1623,12 +1615,12 @@ static void load_mtl(
 }
 
 // Read obj
-static void load_objx(const string& filename, obj_model* obj) {
+static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
   // open file
   auto fs = open_file(filename, "rt");
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<obj_shape*>>{};
+  auto shape_map = unordered_map<string, vector<shared_ptr<obj_shape>>>{};
   for (auto shape : obj->shapes) {
     shape_map[shape->name].push_back(shape);
   }
@@ -1649,7 +1641,7 @@ static void load_objx(const string& filename, obj_model* obj) {
 
     // read values
     if (cmd == "c") {
-      auto camera = obj->cameras.emplace_back(new obj_camera{});
+      auto camera = obj->cameras.emplace_back(make_shared<obj_camera>());
       parse_value(fs, str, camera->name);
       parse_value(fs, str, camera->ortho);
       parse_value(fs, str, camera->width);
@@ -1659,7 +1651,7 @@ static void load_objx(const string& filename, obj_model* obj) {
       parse_value(fs, str, camera->aperture);
       parse_value(fs, str, camera->frame);
     } else if (cmd == "e") {
-      auto environment = obj->environments.emplace_back(new obj_environment{});
+      auto environment = obj->environments.emplace_back(make_shared<obj_environment>());
       parse_value(fs, str, environment->name);
       parse_value(fs, str, environment->emission);
       auto emission_path = ""s;
@@ -1685,7 +1677,7 @@ static void load_objx(const string& filename, obj_model* obj) {
 }
 
 // Read obj
-void load_obj(const string& filename, obj_model* obj, bool geom_only,
+void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
   auto fs = open_file(filename, "rt");
@@ -1699,7 +1691,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
   auto gname        = ""s;
   auto mname        = ""s;
   auto mtllibs      = vector<string>{};
-  auto material_map = unordered_map<string, obj_material*>{};
+  auto material_map = unordered_map<string, shared_ptr<obj_material>>{};
 
   // initialize obj
   obj->~obj_model();
@@ -1709,7 +1701,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
   obj->materials.clear();
 
   // initialize load
-  obj->shapes.emplace_back(new obj_shape{});
+  obj->shapes.emplace_back(make_shared<obj_shape>());
 
   // read the file str by str
   char buffer[4096];
@@ -1742,7 +1734,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
         if ((cmd == "f" && (!shape->lines.empty() || !shape->points.empty())) ||
             (cmd == "l" && (!shape->faces.empty() || !shape->points.empty())) ||
             (cmd == "p" && (!shape->faces.empty() || !shape->lines.empty()))) {
-          obj->shapes.emplace_back(new obj_shape{});
+          obj->shapes.emplace_back(make_shared<obj_shape>());
           obj->shapes.back()->name = oname + gname;
         }
       }
@@ -1752,7 +1744,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
         if (shape->materials.size() > 1)
           throw std::runtime_error("should not have happened");
         if (shape->materials.back()->name != mname) {
-          obj->shapes.emplace_back(new obj_shape{});
+          obj->shapes.emplace_back(make_shared<obj_shape>());
           obj->shapes.back()->name = oname + gname;
         }
       }
@@ -1792,7 +1784,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
       if (geom_only) continue;
       parse_value_or_empty(str, cmd == "o" ? oname : gname);
       if (!obj->shapes.back()->vertices.empty()) {
-        obj->shapes.emplace_back(new obj_shape{});
+        obj->shapes.emplace_back(make_shared<obj_shape>());
         obj->shapes.back()->name = oname + gname;
       } else {
         obj->shapes.back()->name = oname + gname;
@@ -1882,7 +1874,7 @@ static void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-static void save_mtl(const string& filename, const obj_model* obj) {
+static void save_mtl(const string& filename, shared_ptr<obj_model> obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -1987,7 +1979,7 @@ static void save_mtl(const string& filename, const obj_model* obj) {
 }
 
 // Save obj
-static void save_objx(const string& filename, const obj_model* obj) {
+static void save_objx(const string& filename, shared_ptr<obj_model> obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -2026,7 +2018,7 @@ static void save_objx(const string& filename, const obj_model* obj) {
 }
 
 // Save obj
-void save_obj(const string& filename, const obj_model* obj) {
+void save_obj(const string& filename, shared_ptr<obj_model> obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -2097,7 +2089,7 @@ void save_obj(const string& filename, const obj_model* obj) {
 }
 
 // Get obj vertices
-static void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
+static void get_vertices(const shared_ptr<obj_shape> shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
   auto vmap = unordered_map<obj_vertex, int>{};
@@ -2130,9 +2122,9 @@ static vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_triangles(const obj_model* obj, const obj_shape* shape,
+void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
@@ -2150,9 +2142,9 @@ void get_triangles(const obj_model* obj, const obj_shape* shape,
     cur += face.size;
   }
 }
-void get_quads(const obj_model* obj, const obj_shape* shape,
+void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
@@ -2176,9 +2168,9 @@ void get_quads(const obj_model* obj, const obj_shape* shape,
     cur += face.size;
   }
 }
-void get_lines(const obj_model* obj, const obj_shape* shape,
+void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
@@ -2195,9 +2187,9 @@ void get_lines(const obj_model* obj, const obj_shape* shape,
     cur += str.size;
   }
 }
-void get_points(const obj_model* obj, const obj_shape* shape,
+void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<vec2f>& texcoords, vector<shared_ptr<obj_material>>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
@@ -2214,11 +2206,11 @@ void get_points(const obj_model* obj, const obj_shape* shape,
     cur += point.size;
   }
 }
-void get_fvquads(const obj_model* obj, const obj_shape* shape,
+void get_fvquads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+    vector<shared_ptr<obj_material>>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
@@ -2271,14 +2263,14 @@ void get_fvquads(const obj_model* obj, const obj_shape* shape,
   }
 }
 
-bool has_quads(const obj_shape* shape) {
+bool has_quads(const shared_ptr<obj_shape> shape) {
   for (auto& face : shape->faces)
     if (face.size == 4) return true;
   return false;
 }
 
 // Get obj vertices
-static void get_vertices(const obj_shape* shape, int material,
+static void get_vertices(const shared_ptr<obj_shape> shape, int material,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
   auto used_vertices = vector<bool>(shape->vertices.size(), false);
@@ -2327,7 +2319,7 @@ static void get_vertices(const obj_shape* shape, int material,
 }
 
 // Get obj shape
-void get_triangles(const obj_model* obj, const obj_shape* shape, int material,
+void get_triangles(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
@@ -2346,7 +2338,7 @@ void get_triangles(const obj_model* obj, const obj_shape* shape, int material,
   }
   triangles.shrink_to_fit();
 }
-void get_quads(const obj_model* obj, const obj_shape* shape, int material,
+void get_quads(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
@@ -2370,7 +2362,7 @@ void get_quads(const obj_model* obj, const obj_shape* shape, int material,
   }
   quads.shrink_to_fit();
 }
-void get_lines(const obj_model* obj, const obj_shape* shape, int material,
+void get_lines(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->lines.empty()) return;
@@ -2388,7 +2380,7 @@ void get_lines(const obj_model* obj, const obj_shape* shape, int material,
   }
   lines.shrink_to_fit();
 }
-void get_points(const obj_model* obj, const obj_shape* shape, int material,
+void get_points(shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flipv) {
   if (shape->points.empty()) return;
@@ -2405,18 +2397,18 @@ void get_points(const obj_model* obj, const obj_shape* shape, int material,
     cur += elem.size;
   }
 }
-vector<obj_material*> get_materials(
-    const obj_model* obj, const obj_shape* shape) {
+vector<shared_ptr<obj_material>> get_materials(
+    shared_ptr<obj_model> obj, const shared_ptr<obj_shape> shape) {
   return shape->materials;
 }
 
 // Add obj shape
-void add_triangles(obj_model* obj, const string& name,
+void add_triangles(shared_ptr<obj_model> obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<shared_ptr<obj_material>>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto shape       = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2437,12 +2429,12 @@ void add_triangles(obj_model* obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
+void add_quads(shared_ptr<obj_model> obj, const string& name, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
+    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape       = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2464,12 +2456,12 @@ void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
+void add_lines(shared_ptr<obj_model> obj, const string& name, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
+    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape       = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2490,12 +2482,12 @@ void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_points(obj_model* obj, const string& name, const vector<int>& points,
+void add_points(shared_ptr<obj_model> obj, const string& name, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
+    const vector<vec2f>& texcoords, const vector<shared_ptr<obj_material>>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
-  auto shape       = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;
@@ -2514,13 +2506,13 @@ void add_points(obj_model* obj, const string& name, const vector<int>& points,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_fvquads(obj_model* obj, const string& name,
+void add_fvquads(shared_ptr<obj_model> obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<shared_ptr<obj_material>>& materials, const vector<int>& ematerials,
     const vector<frame3f>& instances, bool flipv) {
-  auto shape       = obj->shapes.emplace_back(new obj_shape{});
+  auto shape       = obj->shapes.emplace_back(make_shared<obj_shape>());
   shape->name      = name;
   shape->materials = materials;
   shape->positions = positions;

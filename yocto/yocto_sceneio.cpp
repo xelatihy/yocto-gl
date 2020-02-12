@@ -1443,8 +1443,7 @@ namespace yocto {
 static void load_obj_scene(
     const string& filename, sceneio_model* scene, bool noparallel) {
   // load obj
-  auto obj_ = make_unique<obj_model>();
-  auto obj  = obj_.get();
+  auto obj = make_shared<obj_model>();
   load_obj(filename, obj, false, true, false);
 
   // convert cameras
@@ -1488,7 +1487,7 @@ static void load_obj_scene(
   };
 
   // handler for materials
-  auto material_map = unordered_map<obj_material*, sceneio_material*>{};
+  auto material_map = unordered_map<shared_ptr<obj_material>, sceneio_material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1581,12 +1580,11 @@ static void load_obj_scene(
 
 static void save_obj_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
-  auto obj_ = make_unique<obj_model>();
-  auto obj  = obj_.get();
+  auto obj = make_shared<obj_model>();
 
   // convert cameras
   for (auto camera : scene->cameras) {
-    auto ocamera      = obj->cameras.emplace_back(new obj_camera{});
+    auto ocamera      = obj->cameras.emplace_back(make_shared<obj_camera>());
     ocamera->name     = get_basename(camera->name);
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
@@ -1607,7 +1605,7 @@ static void save_obj_scene(
 
   // convert materials and textures
   for (auto material : scene->materials) {
-    auto omaterial           = obj->materials.emplace_back(new obj_material{});
+    auto omaterial           = obj->materials.emplace_back(make_shared<obj_material>());
     omaterial->name          = get_basename(material->name);
     omaterial->illum         = 2;
     omaterial->as_pbr        = true;
@@ -1632,7 +1630,7 @@ static void save_obj_scene(
 
   // convert objects
   for (auto object : scene->objects) {
-    auto oshape    = obj->shapes.emplace_back(new obj_shape{});
+    auto oshape    = obj->shapes.emplace_back(make_shared<obj_shape>());
     oshape->name   = get_basename(object->name);
     auto shape     = object->shape;
     auto positions = shape->positions, normals = shape->normals;
@@ -1665,7 +1663,7 @@ static void save_obj_scene(
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto oenvironment   = obj->environments.emplace_back(new obj_environment{});
+    auto oenvironment   = obj->environments.emplace_back(make_shared<obj_environment>());
     oenvironment->name  = get_basename(environment->name);
     oenvironment->frame = environment->frame;
     oenvironment->emission     = environment->emission;
