@@ -2943,8 +2943,9 @@ vec4f trace_sample(const shared_ptr<trace_state>& state,
 }
 
 // Init a sequence of random number generators.
-void init_state(shared_ptr<trace_state> state,
+shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
+  auto state = make_shared<trace_state>();
   auto& camera = scene->cameras[params.camera];
   auto  image_size =
       (camera->film.x > camera->film.y)
@@ -2963,6 +2964,7 @@ void init_state(shared_ptr<trace_state> state,
           params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
+  return state;
 }
 
 // Init trace lights
@@ -3048,8 +3050,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(
     const shared_ptr<trace_scene>& scene, const trace_params& params) {
-  auto state = std::make_shared<trace_state>();
-  init_state(state, scene, params);
+  auto state = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   if (params.noparallel) {
@@ -3104,6 +3105,11 @@ image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
 // SCENE CREATION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// create scene
+shared_ptr<trace_scene> make_trace_scene() {
+  return make_shared<trace_scene>();
+}
 
 // Add cameras
 shared_ptr<trace_camera> add_camera(const shared_ptr<trace_scene>& scene) {

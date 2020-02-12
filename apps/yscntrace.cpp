@@ -40,8 +40,9 @@ using namespace std;
 #include "ext/CLI11.hpp"
 
 // construct a scene from io
-void init_scene(
-    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
+  auto scene = make_trace_scene();
+
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -134,6 +135,8 @@ void init_scene(
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
+
+  return scene;
 }
 
 int run_app(int argc, const char* argv[]) {
@@ -206,8 +209,7 @@ int run_app(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = make_shared<trace_scene>();
-  init_scene(scene, ioscene);
+  auto scene         = make_scene(ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
@@ -230,8 +232,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto state = make_shared<trace_state>();
-  init_state(state, scene, params);
+  auto state = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
   // render

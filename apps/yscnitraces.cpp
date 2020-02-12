@@ -56,7 +56,7 @@ struct app_state {
   bool                      add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state> state    = make_shared<trace_state>();
+  shared_ptr<trace_state> state    = nullptr;
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -64,9 +64,6 @@ struct app_state {
   // view scene
   shared_ptr<opengl_image> glimage  = make_shared<opengl_image>();
   draw_glimage_params      glparams = {};
-
-  // editing
-  pair<string, int> selection = {"camera", 0};
 
   // computation
   int          render_sample  = 0;
@@ -78,8 +75,10 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(
-    shared_ptr<trace_scene> scene, shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(
+     shared_ptr<sceneio_model> ioscene) {
+  auto scene = make_trace_scene();
+
   for (auto iocamera : ioscene->cameras) {
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
@@ -172,6 +171,8 @@ void init_scene(
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
+
+  return scene;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -199,7 +200,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene, app->params);
+  app->state = make_state(app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -286,7 +287,7 @@ int run_app(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  init_scene(app->scene, app->ioscene);
+  app->scene = make_scene(app->ioscene);
   print_elapsed(convert_timer);
 
   // cleanup
@@ -309,7 +310,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  init_state(app->state, app->scene, app->params);
+  app->state = make_state(app->scene, app->params);
   app->render  = image{app->state->size(), zero4f};
   app->display = app->render;
   reset_display(app);

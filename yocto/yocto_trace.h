@@ -89,6 +89,9 @@ struct trace_material;
 struct trace_instance;
 struct trace_object;
 
+// Create scene.
+shared_ptr<trace_scene> make_trace_scene();
+
 // Add scene elements
 shared_ptr<trace_camera>   add_camera(const shared_ptr<trace_scene>& scene);
 shared_ptr<trace_object>   add_object(const shared_ptr<trace_scene>& scene);
@@ -248,7 +251,7 @@ const auto trace_bvh_names        = vector<string>{
 };
 
 // Initialize state of the renderer.
-void init_state(shared_ptr<trace_state> state,
+shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Initialize lights.

@@ -57,10 +57,10 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene = make_shared<sceneio_model>();
-  shared_ptr<trace_scene>   scene   = make_shared<trace_scene>();
+  shared_ptr<trace_scene>   scene   = nullptr;
 
   // rendering state
-  shared_ptr<trace_state> state    = make_shared<trace_state>();
+  shared_ptr<trace_state> state    = nullptr;
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -120,6 +120,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(shared_ptr<app_state> app) {
+  app->scene = make_trace_scene();
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
@@ -246,7 +247,7 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  init_state(app->state, app->scene, app->params);
+  app->state = make_state(app->scene, app->params);
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -295,7 +296,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        init_state(app->state, app->scene, app->params);
+        app->state = make_state(app->scene, app->params);
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
         app->name = get_filename(app->filename) + " [" +
