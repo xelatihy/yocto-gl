@@ -59,7 +59,6 @@ int run_app(int argc, const char** argv) {
   auto shape_directory    = "shapes/"s;
   auto subdiv_directory   = "subdivs/"s;
   auto instance_directory = "instances/"s;
-  auto obj_instances      = false;
   auto validate           = false;
   auto info               = false;
   auto output             = "out.json"s;
@@ -72,7 +71,6 @@ int run_app(int argc, const char** argv) {
       "Shape directory when adding names.");
   cli.add_option("--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  cli.add_flag("--obj-instances", obj_instances, "preserve instances in obj");
   cli.add_option("--info,-i", info, "print scene info");
   cli.add_flag("--validate", validate, "Validate scene");
   cli.add_option("--output,-o", output, "output scene", true);
@@ -136,7 +134,7 @@ int run_app(int argc, const char** argv) {
   // save scene
   {
     auto timer = CLI::AutoTimer("save");
-    save_scene(output, scene, obj_instances);
+    save_scene(output, scene);
   }
 
   // done

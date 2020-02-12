@@ -842,56 +842,83 @@ static void throw_emptyshape_error(const string& filename, const string& name) {
 }
 
 // Load/save a scene in the builtin JSON format.
-static void load_json_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
-static void save_json_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
+static void load_json_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
+static void save_json_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
-static void save_obj_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
+static void load_obj_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
+static void save_obj_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
-static void save_ply_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
+static void load_ply_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
+static void save_ply_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
+static void load_gltf_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
-static void save_pbrt_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel);
+static void load_pbrt_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
+static void save_pbrt_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel);
 
 // Load a scene
 shared_ptr<sceneio_model> load_scene(const string& filename, bool noparallel) {
-  auto scene = make_shared<sceneio_model>();
-  load_scene(filename, scene, noparallel);
-  return scene;
+  return load_scene(filename, sceneio_progress{}, noparallel);
 }
 
 // Load a scene
 void load_scene(
     const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+  return load_scene(filename, scene, sceneio_progress{}, noparallel);
+}
+
+// Save a scene
+void save_scene(
+    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+  return save_scene(filename, scene, sceneio_progress{}, noparallel);
+}
+
+// Load a scene
+shared_ptr<sceneio_model> load_scene(
+    const string& filename, sceneio_progress progress_cb, bool noparallel) {
+  auto scene = make_shared<sceneio_model>();
+  load_scene(filename, scene, progress_cb, noparallel);
+  return scene;
+}
+
+// Load a scene
+void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
+    sceneio_progress progress_cb, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return load_json_scene(filename, scene, noparallel);
+    return load_json_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, noparallel);
+    return load_obj_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, noparallel);
+    return load_gltf_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, noparallel);
+    return load_pbrt_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, noparallel);
+    return load_ply_scene(filename, scene, progress_cb, noparallel);
   } else {
     *scene = {};
     throw_format_error(filename);
@@ -899,17 +926,17 @@ void load_scene(
 }
 
 // Save a scene
-void save_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+void save_scene(const string& filename, shared_ptr<sceneio_model> scene,
+    sceneio_progress progress_cb, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
-    return save_json_scene(filename, scene, noparallel);
+    return save_json_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, noparallel);
+    return save_obj_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, noparallel);
+    return save_pbrt_scene(filename, scene, progress_cb, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_scene(filename, scene, noparallel);
+    return save_ply_scene(filename, scene, progress_cb, noparallel);
   } else {
     throw_format_error(filename);
   }
@@ -1016,11 +1043,16 @@ static json load_json(const string& filename) {
 }
 
 // Save a scene in the builtin JSON format.
-static void load_json_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void load_json_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   *scene = {};
 
+  // handle progress
+  auto progress = vec2i{0, 2};
+
   // open file
+  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
   auto js = load_json(filename);
 
   // gets a json value
@@ -1117,6 +1149,8 @@ static void load_json_scene(
   // material map
   auto material_map = unordered_map<string, shared_ptr<sceneio_material>>{
       {"", nullptr}};
+
+  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
 
   // check for conversion errors
   try {
@@ -1240,16 +1274,23 @@ static void load_json_scene(
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
 
+  progress.y += scene->shapes.size();
+  progress.y += scene->textures.size();
+  progress.y += scene->instances.size();
+
   // load resources
   try {
     // load shapes
     for (auto shape : scene->shapes) {
+      if (progress_cb) progress_cb("loading shapes", progress.x++, progress.y);
       load_shape(get_dirname(filename) + shape->name, shape->points,
           shape->lines, shape->triangles, shape->quads, shape->positions,
           shape->normals, shape->texcoords, shape->colors, shape->radius);
     }
     // load textures
     for (auto texture : scene->textures) {
+      if (progress_cb)
+        progress_cb("loading textures", progress.x++, progress.y);
       if (is_hdr_filename(texture->name)) {
         load_image(get_dirname(filename) + texture->name, texture->hdr);
       } else {
@@ -1258,6 +1299,8 @@ static void load_json_scene(
     }
     // load instances
     for (auto instance : scene->instances) {
+      if (progress_cb)
+        progress_cb("loading instances", progress.x++, progress.y);
       load_instances(get_dirname(filename) + instance->name, instance->frames);
     }
   } catch (std::exception& e) {
@@ -1269,11 +1312,15 @@ static void load_json_scene(
   add_cameras(scene);
   add_radius(scene);
   trim_memory(scene);
+
+  // done
+  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
 }
 
 // Save a scene in the builtin JSON format.
-static void save_json_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void save_json_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   // helper
   auto add_val = [](json& ejs, const string& name, const auto& value) {
     ejs[name] = value;
@@ -1454,8 +1501,9 @@ static void save_json_scene(
 namespace yocto {
 
 // Loads an OBJ
-static void load_obj_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void load_obj_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   // load obj
   auto obj = load_obj(filename, false, true, false);
 
@@ -1594,8 +1642,9 @@ static void load_obj_scene(
   add_radius(scene);
 }
 
-static void save_obj_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void save_obj_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   auto obj = make_obj();
 
   // convert cameras
@@ -1722,8 +1771,9 @@ void print_obj_camera(shared_ptr<sceneio_camera> camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void load_ply_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   *scene = {};
 
   // load ply mesh
@@ -1742,8 +1792,9 @@ static void load_ply_scene(
   add_radius(scene);
 }
 
-static void save_ply_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void save_ply_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   if (scene->shapes.empty()) throw_emptyshape_error(filename, "");
   auto shape = scene->shapes.front();
   save_shape(filename, shape->points, shape->lines, shape->triangles,
@@ -1759,8 +1810,9 @@ static void save_ply_scene(
 namespace yocto {
 
 // Load a scene
-static void load_gltf_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void load_gltf_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   // load gltf
   auto gltf = gltf_model{};
   load_gltf(filename, gltf);
@@ -1883,8 +1935,9 @@ static void load_gltf_scene(
 namespace yocto {
 
 // load pbrt scenes
-static void load_pbrt_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+static void load_pbrt_scene(const string& filename,
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
+    bool noparallel) {
   // load pbrt
   auto pbrt = load_pbrt(filename);
 
@@ -1997,8 +2050,8 @@ static void load_pbrt_scene(
 }
 
 // Save a pbrt scene
-void save_pbrt_scene(
-    const string& filename, shared_ptr<sceneio_model> scene, bool noparallel) {
+void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // save pbrt
   auto pbrt = make_pbrt();
 

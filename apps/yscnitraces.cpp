@@ -33,6 +33,7 @@
 using namespace yocto;
 
 #include <future>
+#include <iomanip>
 #include <memory>
 using namespace std;
 
@@ -282,7 +283,12 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   {
     auto timer   = CLI::AutoTimer("loading scene");
-    app->ioscene = load_scene(app->filename);
+    app->ioscene = load_scene(
+        app->filename, [](const string& message, int current, int total) {
+          auto n = (int)(30 * (float)current / (float)total);
+          cout << "\r[" << left << setw(30) << string(n, '=') << "] "
+               << setw(30) << message << (current == total ? "\n" : " ");
+        });
   }
 
   // conversion

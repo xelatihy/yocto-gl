@@ -45,6 +45,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <functional>
 #include <memory>
 
 #include "yocto_image.h"
@@ -56,6 +57,7 @@
 namespace yocto {
 
 // Using directives.
+using std::function;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -295,13 +297,18 @@ shared_ptr<sceneio_object>    add_complete_object(
 
 namespace yocto {
 
+// Progress callback called when loading.
+using sceneio_progress =
+    function<void(const string& message, int current, int total)>;
+
 // Load/save a scene in the supported formats. Throws on error.
-shared_ptr<sceneio_model> load_scene(
-    const string& filename, bool noparallel = false);
+// Calls the progress callback, if defined, as we process more data.
+shared_ptr<sceneio_model> load_scene(const string& filename,
+    sceneio_progress progress = {}, bool noparallel = false);
 void load_scene(const string& filename, shared_ptr<sceneio_model> scene,
-    bool noparallel = false);
+    sceneio_progress progress_cb = {}, bool noparallel = false);
 void save_scene(const string& filename, shared_ptr<sceneio_model> scene,
-    bool noparallel = false);
+    sceneio_progress progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto
 
