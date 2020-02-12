@@ -31,9 +31,9 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
+#include <iomanip>
 #include <memory>
 #include <set>
-#include <iomanip>
 using namespace std;
 
 #include "ext/CLI11.hpp"

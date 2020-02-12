@@ -2048,8 +2048,8 @@ static void load_pbrt_scene(const string& filename,
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto texture  = add_texture(scene);
-    texture->name = make_safe_name("texture", get_basename(path),
+    auto texture      = add_texture(scene);
+    texture->name     = make_safe_name("texture", get_basename(path),
         (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
@@ -2128,7 +2128,7 @@ static void load_pbrt_scene(const string& filename,
 
   // loading textures
   texture_map.erase("");
-  for(auto [path, texture] : texture_map) {
+  for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
@@ -2232,7 +2232,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto shape : scene->shapes) {
-  if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
     if (shape->positions.empty()) continue;
     try {
       save_shape(replace_extension(dirname + shape->name, ".ply"),
@@ -2246,7 +2246,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // save textures
   for (auto texture : scene->textures) {
-  if (progress_cb) progress_cb("saving textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("saving textures", progress.x++, progress.y);
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
       if (!texture->hdr.empty()) {
