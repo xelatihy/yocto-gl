@@ -179,7 +179,9 @@ void print_progress(const string& message, int current, int total) {
   if (current == total) cout << "\n";
   cout.flush();
 }
-void print_start(const string& message) { return print_progress(message, 0, 1); }
+void print_start(const string& message) {
+  return print_progress(message, 0, 1);
+}
 void print_end(const string& message) { return print_progress(message, 1, 1); }
 
 int run_app(int argc, const char* argv[]) {
@@ -237,7 +239,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-    auto ioscene    = load_scene(filename, print_progress);
+  auto ioscene = load_scene(filename, print_progress);
 
   // add components
   if (validate) {
@@ -264,26 +266,16 @@ int run_app(int argc, const char* argv[]) {
     params.sampler = trace_sampler_type::eyelight;
   }
 
-  // allocate buffers
-  auto state  = make_state(scene, params);
-  auto render = image{state->size(), zero4f};
-
   // render
-  for (auto sample = 0; sample < params.samples; sample += batch) {
-    auto nsamples = min(batch, params.samples - sample);
-    auto timer = CLI::AutoTimer{"rendering samples " + std::to_string(sample) +
-                                "/" + std::to_string(params.samples)};
-    render     = trace_samples(state, scene, nsamples, params);
-    if (save_batch) {
-      auto outfilename = fs::path(imfilename)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample + nsamples) +
-                                 fs::path(imfilename).extension().string())
-                             .string();
-      auto timer = CLI::AutoTimer{"saving " + outfilename};
-      save_image(outfilename, render);
-    }
-  }
+  auto render = trace_image(scene, params, print_progress,
+      [save_batch, imfilename](const image<vec4f>& render, int sample, int samples) {
+        if (!save_batch) return;
+        auto ext = "-s" + std::to_string(sample + samples) +
+                   fs::path(imfilename).extension().string();
+        auto outfilename = fs::path(imfilename).replace_extension(ext).string();
+        print_progress("save image", sample, samples);
+        save_image(outfilename, render);
+      });
 
   // save image
   print_start("save image");

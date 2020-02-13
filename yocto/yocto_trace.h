@@ -252,6 +252,8 @@ const auto trace_bvh_names        = vector<string>{
 // Progress report callback
 using trace_progress =
     function<void(const string& message, int current, int total)>;
+// Callback used to report partially computed image
+using trace_progress_image = function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize state of the renderer.
 shared_ptr<trace_state> make_state(
@@ -270,19 +272,12 @@ void update_bvh(const shared_ptr<trace_state>& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const trace_params& params);
 
-// Progressively compute an image by calling trace_samples multiple times.
+// Progressively computes an image.
 image<vec4f> trace_image(
-    const shared_ptr<trace_scene>& scene, const trace_params& params);
+    const shared_ptr<trace_scene>& scene, const trace_params& params,
+    trace_progress progress_cb = {}, trace_progress_image progress_image_cb = {});
 
-// Progressively compute an image by calling trace_samples multiple times.
-// Start with an empty state and then successively call this function to
-// render the next batch of samples.
-image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
-    const shared_ptr<trace_scene>& scene, int samples,
-    const trace_params& params);
-
-// Progressively compute an image by calling trace_sample multiple times.
-// This is helpful when building async applications.
+// Traces a single sample. This is helpful when building async applications.
 vec4f trace_sample(const shared_ptr<trace_state>& state,
     const shared_ptr<trace_scene>& scene, const vec2i& ij,
     const trace_params& params);
