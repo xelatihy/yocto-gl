@@ -3108,6 +3108,57 @@ image<vec4f> trace_image(const shared_ptr<trace_scene>& scene,
   return render;
 }
 
+// [experimental] Asynchronous interface
+shared_ptr<trace_async_state> trace_async_start(
+    const shared_ptr<trace_scene>& scene, const trace_params& params,
+    trace_progress progress_cb, trace_progress_image progress_image_cb,
+    trace_process_async progress_async_cb) {
+  auto astate = make_shared<trace_async_state>();
+  auto state  = make_state(scene, params);
+  astate->render.resize(state->size());
+
+  // render preview
+  if (progress_cb) progress_cb("trace preview", 0, params.samples);
+  auto pprms = params;
+  pprms.resolution /= params.pratio;
+  pprms.samples = 1;
+  auto preview  = trace_image(scene, pprms);
+  for (auto j = 0; j < astate->render.size().y; j++) {
+    for (auto i = 0; i < astate->render.size().x; i++) {
+      auto pi = clamp(i / params.pratio, 0, preview.size().x - 1),
+           pj = clamp(j / params.pratio, 0, preview.size().y - 1);
+      astate->render[{i, j}] = preview[{pi, pj}];
+    }
+  }
+  if (progress_image_cb) progress_image_cb(astate->render, 0, params.samples);
+
+  // start renderer
+  astate->worker = std::async(std::launch::async, [=, astate = astate.get()]() {
+    for (auto sample = 0; sample < params.samples; sample++) {
+      if (astate->stop) return;
+      if (progress_cb) progress_cb("trace image", sample, params.samples);
+      parallel_for(astate->render.size(), [&](const vec2i& ij) {
+        if (astate->stop) return;
+        astate->render[ij] = trace_sample(state, scene, ij, params);
+        if (progress_async_cb)
+          progress_async_cb(astate->render, sample, params.samples, ij);
+      });
+      if (progress_image_cb)
+        progress_image_cb(astate->render, sample + 1, params.samples);
+    }
+    if (progress_cb) progress_cb("trace image", params.samples, params.samples);
+    if (progress_image_cb)
+      progress_image_cb(astate->render, params.samples, params.samples);
+  });
+
+  return astate;
+}
+void trace_async_stop(shared_ptr<trace_async_state> state) {
+  if (!state) return;
+  state->stop = true;
+  if (state->worker.valid()) state->worker.get();
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -61,7 +61,10 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include <atomic>
+#include <future>
 #include <memory>
+#include <thread>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -516,6 +519,26 @@ inline void get_region(image<T>& clipped, const image<T>& img,
   }
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
   auto fl = image<vec4f>{bt.size()};
@@ -612,6 +635,11 @@ image<vec4b> tonemap_imageb(
   return ldr;
 }
 
+void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
+    float exposure, bool filmic, bool srgb) {
+  parallel_for(hdr.size(),
+      [&](const vec2i& ij) { ldr[ij] = tonemap(hdr[ij], exposure, filmic); });
+}
 vec3f colorgrade(
     const vec3f& rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;
@@ -657,6 +685,14 @@ image<vec4f> colorgrade_image(
   for (auto i = 0ull; i < img.count(); i++)
     corrected[i] = colorgrade(img[i], linear, params);
   return corrected;
+}
+
+// Apply exposure and filmic tone mapping
+void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
+    bool linear, const colorgrade_params& params) {
+  parallel_for(img.size(), [&](const vec2i& ij) {
+    corrected[ij] = colorgrade(img[ij], linear, params);
+  });
 }
 
 // compute white balance

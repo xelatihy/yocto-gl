@@ -55,22 +55,20 @@ struct app_state {
   bool                      add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
   shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 
   // computation
-  int          render_sample  = 0;
-  atomic<bool> render_stop    = {};
-  future<void> render_future  = {};
-  int          render_counter = 0;
+  int                           render_sample  = 0;
+  int                           render_counter = 0;
+  shared_ptr<trace_async_state> render_state   = nullptr;
 
-  ~app_state() { render_stop = true; }
+  ~app_state() { trace_async_stop(render_state); }
 };
 
 // construct a scene from io
@@ -200,62 +198,24 @@ shared_ptr<trace_scene> make_scene(
   return scene;
 }
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
-      while (true) {
-        auto j = next_idx.fetch_add(1);
-        if (j >= size.y) break;
-        for (auto i = 0; i < size.x; i++) func({i, j});
-      }
-    }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 void reset_display(shared_ptr<app_state> app) {
   // stop render
-  app->render_stop = true;
-  if (app->render_future.valid()) app->render_future.get();
+  trace_async_stop(app->render_state);
 
-  // reset state
-  app->state = make_state(app->scene, app->params);
-  app->render.resize(app->state->size());
-  app->display.resize(app->state->size());
-
-  // render preview
-  auto preview_prms = app->params;
-  preview_prms.resolution /= app->pratio;
-  preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene, preview_prms);
-  preview              = tonemap_image(preview, app->exposure);
-  for (auto j = 0; j < app->display.size().y; j++) {
-    for (auto i = 0; i < app->display.size().x; i++) {
-      auto pi              = clamp(i / app->pratio, 0, preview.size().x - 1),
-           pj              = clamp(j / app->pratio, 0, preview.size().y - 1);
-      app->display[{i, j}] = preview[{pi, pj}];
-    }
-  }
-
-  // start renderer
+  // start render
   app->render_counter = 0;
-  app->render_stop    = false;
-  app->render_future  = async(launch::async, [app]() {
-    for (auto sample = 0; sample < app->params.samples; sample++) {
-      if (app->render_stop) return;
-      parallel_for(app->render.size(), [app](const vec2i& ij) {
-        if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
+  app->render_state   = trace_async_start(
+      app->scene, app->params, {},
+      [app = app.get()](const image<vec4f>& render, int current, int total) {
+        if (current > 0) return;
+        app->render  = render;
+        app->display = tonemap_image(app->render, app->exposure);
+      },
+      [app = app.get()](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+        app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
-    }
-  });
 }
 
 // progress callback
@@ -352,9 +312,6 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  app->state   = make_state(app->scene, app->params);
-  app->render  = image{app->state->size(), zero4f};
-  app->display = app->render;
   reset_display(app);
 
   // window

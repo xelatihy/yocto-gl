@@ -63,6 +63,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <atomic>
+#include <future>
 #include <memory>
 
 #include "yocto_image.h"
@@ -233,6 +235,8 @@ struct trace_params {
   uint64_t              seed       = trace_default_seed;
   trace_bvh_type        bvh        = trace_bvh_type::default_;
   bool                  noparallel = false;
+  int                   pratio     = 8;
+  float                 exposure   = 0;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -285,6 +289,25 @@ vec4f trace_sample(const shared_ptr<trace_state>& state,
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
+
+// [experimental] Asynchronous state
+struct trace_async_state {
+  std::future<void> worker = {};
+  std::atomic<bool> stop   = {};
+  image<vec4f>      render = {};
+};
+
+// [experimental] Callback used to report partially computed image
+using trace_process_async = function<void(
+    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
+
+// [experimental] Asynchronous interface
+shared_ptr<trace_async_state> trace_async_start(
+    const shared_ptr<trace_scene>& scene, const trace_params& params,
+    trace_progress       progress_cb       = {},
+    trace_progress_image progress_image_cb = {},
+    trace_process_async  progress_async_cb = {});
+void trace_async_stop(shared_ptr<trace_async_state> state);
 
 }  // namespace yocto
 
