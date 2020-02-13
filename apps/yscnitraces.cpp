@@ -76,7 +76,8 @@ struct app_state {
 };
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
+shared_ptr<trace_scene> make_scene(
+    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -87,8 +88,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
   auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
-    if (progress_cb)
-      progress_cb("converting cameras", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -99,8 +99,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
       unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    if (progress_cb)
-      progress_cb("converting textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(texture, std::move(iotexture->hdr));
@@ -114,8 +113,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
       unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
-    if (progress_cb)
-      progress_cb("converting materials", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -140,8 +138,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb)
-      progress_cb("converting subdivs", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -149,8 +146,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
       unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
-    if (progress_cb)
-      progress_cb("converting shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
     auto shape = add_shape(scene);
     set_points(shape, ioshape->points);
     set_lines(shape, ioshape->lines);
@@ -169,16 +165,14 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
       unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
-    if (progress_cb)
-      progress_cb("converting instances", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     instance_map[ioinstance] = instance;
   }
 
   for (auto ioobject : ioscene->objects) {
-    if (progress_cb)
-      progress_cb("converting objects", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
@@ -188,7 +182,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
 
   for (auto ioenvironment : ioscene->environments) {
     if (progress_cb)
-      progress_cb("converting environments", progress.x++, progress.y);
+      progress_cb("convert environment", progress.x++, progress.y);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
@@ -196,8 +190,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_pr
   }
 
   // done
-    if (progress_cb)
-      progress_cb("converting done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 
   return scene;
 }

@@ -988,7 +988,7 @@ static void load_json_scene(const string& filename,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
   auto js = load_json(filename);
@@ -1220,7 +1220,7 @@ static void load_json_scene(const string& filename,
 
   // load shapes
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("loading shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     try {
       load_shape(fs::path(filename).parent_path() / shape->name, shape->points,
           shape->lines, shape->triangles, shape->quads, shape->positions,
@@ -1231,7 +1231,7 @@ static void load_json_scene(const string& filename,
   }
   // load textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(texture->name)) {
         load_image(
@@ -1246,7 +1246,7 @@ static void load_json_scene(const string& filename,
   }
   // load instances
   for (auto instance : scene->instances) {
-    if (progress_cb) progress_cb("loading instances", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
     try {
       load_instances(
           fs::path(filename).parent_path() / instance->name, instance->frames);
@@ -1471,7 +1471,7 @@ static void load_obj_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
   auto obj = load_obj(filename, false, true, false);
@@ -1605,7 +1605,7 @@ static void load_obj_scene(const string& filename,
   // load textures
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);
@@ -1775,7 +1775,7 @@ static void load_ply_scene(const string& filename,
 
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
   auto shape = add_shape(scene);
@@ -1824,7 +1824,7 @@ static void load_gltf_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
   auto gltf = gltf_model{};
@@ -1923,10 +1923,10 @@ static void load_gltf_scene(const string& filename,
   // handle progress
   progress.y += (int)scene->textures.size();
 
-  // loading textures
+  // load texture
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);
@@ -1968,7 +1968,7 @@ static void load_pbrt_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
   auto pbrt = load_pbrt(filename);
@@ -2072,10 +2072,10 @@ static void load_pbrt_scene(const string& filename,
   // handle progress
   progress.y += (int)scene->textures.size();
 
-  // loading textures
+  // load texture
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);

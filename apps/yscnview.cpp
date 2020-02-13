@@ -181,7 +181,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   // camera
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
-      progress_cb("converting cameras", progress.x++, progress.y);
+      progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(glscene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -194,7 +194,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
-      progress_cb("converting textures", progress.x++, progress.y);
+      progress_cb("convert texture", progress.x++, progress.y);
     auto gltexture = add_texture(glscene);
     if (!iotexture->hdr.empty()) {
       set_texture(gltexture, iotexture->hdr);
@@ -210,7 +210,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
-      progress_cb("converting materials", progress.x++, progress.y);
+      progress_cb("convert material", progress.x++, progress.y);
     auto glmaterial = add_material(glscene);
     set_emission(glmaterial, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -232,7 +232,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
 
   for (auto iosubdiv : ioscene->subdivs) {
     if (progress_cb)
-      progress_cb("converting subdivs", progress.x++, progress.y);
+      progress_cb("convert subdiv", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -242,7 +242,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb)
-      progress_cb("converting shapes", progress.x++, progress.y);
+      progress_cb("convert shape", progress.x++, progress.y);
     auto glshape = add_shape(glscene);
     set_positions(glshape, ioshape->positions);
     set_normals(glshape, ioshape->normals);
@@ -261,7 +261,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
-      progress_cb("converting instances", progress.x++, progress.y);
+      progress_cb("convert instance", progress.x++, progress.y);
     auto glinstance = add_instance(glscene);
     set_frames(glinstance, ioinstance->frames);
     instance_map[ioinstance] = glinstance;
@@ -270,7 +270,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   // shapes
   for (auto ioobject : ioscene->objects) {
     if (progress_cb)
-      progress_cb("converting objects", progress.x++, progress.y);
+      progress_cb("convert object", progress.x++, progress.y);
     auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
@@ -280,7 +280,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
 
   // done
     if (progress_cb)
-      progress_cb("converting done", progress.x++, progress.y);
+      progress_cb("convert done", progress.x++, progress.y);
 
   return glscene;
 }
