@@ -1781,9 +1781,14 @@ static void init_bvh(
   }
 }
 
-void init_bvh(
-    const shared_ptr<trace_scene>& scene, const trace_params& params) {
+void init_bvh(const shared_ptr<trace_scene>& scene, const trace_params& params,
+    trace_progress progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+
+  // shapes
   for (auto idx = 0; idx < scene->shapes.size(); idx++) {
+    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
     init_bvh(scene->shapes[idx], params);
   }
 
@@ -1795,6 +1800,9 @@ void init_bvh(
     return init_embree_bvh(scene, params);
   }
 #endif
+
+  // handle progress
+  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
   auto primitives            = vector<trace_bvh_primitive>{};
@@ -1824,6 +1832,9 @@ void init_bvh(
   for (auto& primitive : primitives) {
     scene->bvh->primitives.push_back(primitive.primitive);
   }
+
+  // handle progress
+  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
 static void update_bvh(
@@ -2979,12 +2990,18 @@ shared_ptr<trace_state> make_state(
 }
 
 // Init trace lights
-void init_lights(const shared_ptr<trace_scene>& scene) {
+void init_lights(const shared_ptr<trace_scene>& scene,
+    trace_progress progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1};
+  if(progress_cb) progress_cb("build light", progress.x++, progress.y);
+
   scene->lights.clear();
   for (auto& object : scene->objects) {
     if (object->material->emission == zero3f) continue;
     auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
+    if(progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (!shape->triangles.empty()) {
       shape->elements_cdf = vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
@@ -3013,6 +3030,7 @@ void init_lights(const shared_ptr<trace_scene>& scene) {
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
+    if(progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
@@ -3032,6 +3050,9 @@ void init_lights(const shared_ptr<trace_scene>& scene) {
     light->instance    = -1;
     light->environment = environment;
   }
+
+  // handle progress
+  if(progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
 using std::atomic;

@@ -336,16 +336,10 @@ int run_app(int argc, const char* argv[]) {
   app->ioscene = nullptr;
 
   // build bvh
-  {
-    auto timer = CLI::AutoTimer("building bvh");
-    init_bvh(app->scene, app->params);
-  }
+    init_bvh(app->scene, app->params, print_progress);
 
   // init renderer
-  {
-    auto timer = CLI::AutoTimer("building lights");
-    init_lights(app->scene);
-  }
+    init_lights(app->scene, print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {

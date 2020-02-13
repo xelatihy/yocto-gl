@@ -76,6 +76,7 @@ namespace yocto {
 // Using directives
 using std::make_shared;
 using std::shared_ptr;
+using std::function;
 
 // Trace scene
 struct trace_scene;
@@ -248,15 +249,21 @@ const auto trace_bvh_names        = vector<string>{
 #endif
 };
 
+// Progress report callback
+using trace_progress =
+    function<void(const string& message, int current, int total)>;
+
 // Initialize state of the renderer.
 shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Initialize lights.
-void init_lights(const shared_ptr<trace_scene>& scene);
+void init_lights(
+    const shared_ptr<trace_scene>& scene, trace_progress progress_cb = {});
 
 // Build the bvh acceleration structure.
-void init_bvh(const shared_ptr<trace_scene>& bvh, const trace_params& params);
+void init_bvh(const shared_ptr<trace_scene>& bvh, const trace_params& params,
+    trace_progress progress_cb = {});
 
 // Refit bvh data
 void update_bvh(const shared_ptr<trace_state>& bvh,
