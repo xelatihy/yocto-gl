@@ -81,10 +81,9 @@ struct app_state {
   shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
   // computation
-  int          render_sample  = 0;
-  atomic<bool> render_stop    = {};
-  future<void> render_future  = {};
-  int          render_counter = 0;
+  int                           render_sample  = 0;
+  int                           render_counter = 0;
+  shared_ptr<trace_async_state> render_state   = {};
 
   // loading status
   atomic<bool>       ok       = false;
@@ -92,7 +91,7 @@ struct app_state {
   string             error    = "";
   std::atomic<float> progress = 0.5;
 
-  ~app_state() { render_stop = true; }
+  ~app_state() { trace_async_stop(render_state); }
 };
 
 // Application state
@@ -255,47 +254,28 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 
 void stop_display(shared_ptr<app_state> app) {
   // stop render
-  app->render_stop = true;
-  if (app->render_future.valid()) app->render_future.get();
+  trace_async_stop(app->render_state);
+  app->render_state = nullptr;
 }
 
 void reset_display(shared_ptr<app_state> app) {
   // stop render
-  app->render_stop = true;
-  if (app->render_future.valid()) app->render_future.get();
+  trace_async_stop(app->render_state);
 
-  // reset state
-  app->state = make_state(app->scene, app->params);
-  app->render.resize(app->state->size());
-  app->display.resize(app->state->size());
-
-  // render preview
-  auto preview_prms = app->params;
-  preview_prms.resolution /= app->pratio;
-  preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene, preview_prms);
-  preview              = tonemap_image(preview, app->exposure);
-  for (auto j = 0; j < app->display.size().y; j++) {
-    for (auto i = 0; i < app->display.size().x; i++) {
-      auto pi              = clamp(i / app->pratio, 0, preview.size().x - 1),
-           pj              = clamp(j / app->pratio, 0, preview.size().y - 1);
-      app->display[{i, j}] = preview[{pi, pj}];
-    }
-  }
-
-  // start renderer
+  // start render
   app->render_counter = 0;
-  app->render_stop    = false;
-  app->render_future  = async(launch::async, [app]() {
-    for (auto sample = 0; sample < app->params.samples; sample++) {
-      if (app->render_stop) return;
-      parallel_for(app->render.size(), [app](const vec2i& ij) {
-        if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
+  app->render_state   = trace_async_start(
+      app->scene, app->params, {},
+      [app = app.get()](const image<vec4f>& render, int current, int total) {
+        if (current > 0) return;
+        app->render  = render;
+        app->display = tonemap_image(app->render, app->exposure);
+      },
+      [app = app.get()](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+        app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
-    }
-  });
 }
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {

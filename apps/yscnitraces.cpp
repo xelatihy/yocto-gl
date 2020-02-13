@@ -55,20 +55,20 @@ struct app_state {
   bool                      add_skyenv = false;
 
   // rendering state
-  shared_ptr<trace_async_state> astate    = nullptr;
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
   shared_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 
   // computation
-  int          render_sample  = 0;
-  int          render_counter = 0;
+  int                           render_sample  = 0;
+  int                           render_counter = 0;
+  shared_ptr<trace_async_state> render_state   = nullptr;
 
-  ~app_state() { trace_async_stop(astate); }
+  ~app_state() { trace_async_stop(render_state); }
 };
 
 // construct a scene from io
@@ -200,21 +200,22 @@ shared_ptr<trace_scene> make_scene(
 
 void reset_display(shared_ptr<app_state> app) {
   // stop render
-  trace_async_stop(app->astate);
+  trace_async_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  app->astate = trace_async_start(app->scene, app->params, {}, 
-    [app = app.get()](const image<vec4f>& render,
-    int current, int total){
-      if(current > 0) return;
-      app->render = render;
-      app->display = tonemap_image(app->render, app->exposure);
-    }, 
-    [app = app.get()](const image<vec4f>& render, int current, int total, const vec2i& ij) {
-        app->render[ij] = render[ij];
+  app->render_state   = trace_async_start(
+      app->scene, app->params, {},
+      [app = app.get()](const image<vec4f>& render, int current, int total) {
+        if (current > 0) return;
+        app->render  = render;
+        app->display = tonemap_image(app->render, app->exposure);
+      },
+      [app = app.get()](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+        app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
-    });
+      });
 }
 
 // progress callback
