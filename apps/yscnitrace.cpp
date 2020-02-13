@@ -287,11 +287,10 @@ void reset_display(shared_ptr<app_state> app) {
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
   auto app       = make_shared<app_state>();
-  app->name      = fs::path(app->filename).filename().string();
+  app->name      = fs::path(app->filename).filename().string() + " [loading]";
   app->filename  = filename;
   app->imagename = fs::path(filename).replace_extension(".png");
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
-  app->name      = fs::path(filename).filename();
   app->params    = app->params;
   app->loader    = async(launch::async, [app]() {
     app->ioscene = load_scene(app->filename);
@@ -772,9 +771,11 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
       app->loader.get();
       reset_display(app);
       app->ok     = true;
+      app->name   = fs::path(app->filename).filename().string();
       app->status = "ok";
     } catch (std::exception& e) {
-      app->status = "";
+      app->name = fs::path(app->filename).filename().string() + " [!error]";
+      app->status = "error";
       app->error  = e.what();
     }
   }
