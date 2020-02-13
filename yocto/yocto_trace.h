@@ -74,6 +74,7 @@
 namespace yocto {
 
 // Using directives
+using std::function;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -248,34 +249,36 @@ const auto trace_bvh_names        = vector<string>{
 #endif
 };
 
+// Progress report callback
+using trace_progress =
+    function<void(const string& message, int current, int total)>;
+// Callback used to report partially computed image
+using trace_progress_image =
+    function<void(const image<vec4f>& render, int current, int total)>;
+
 // Initialize state of the renderer.
 shared_ptr<trace_state> make_state(
     const shared_ptr<trace_scene>& scene, const trace_params& params);
 
 // Initialize lights.
-void init_lights(const shared_ptr<trace_scene>& scene);
+void init_lights(
+    const shared_ptr<trace_scene>& scene, trace_progress progress_cb = {});
 
 // Build the bvh acceleration structure.
-void init_bvh(const shared_ptr<trace_scene>& bvh, const trace_params& params);
+void init_bvh(const shared_ptr<trace_scene>& bvh, const trace_params& params,
+    trace_progress progress_cb = {});
 
 // Refit bvh data
 void update_bvh(const shared_ptr<trace_state>& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const trace_params& params);
 
-// Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(
-    const shared_ptr<trace_scene>& scene, const trace_params& params);
+// Progressively computes an image.
+image<vec4f> trace_image(const shared_ptr<trace_scene>& scene,
+    const trace_params& params, trace_progress progress_cb = {},
+    trace_progress_image progress_image_cb = {});
 
-// Progressively compute an image by calling trace_samples multiple times.
-// Start with an empty state and then successively call this function to
-// render the next batch of samples.
-image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
-    const shared_ptr<trace_scene>& scene, int samples,
-    const trace_params& params);
-
-// Progressively compute an image by calling trace_sample multiple times.
-// This is helpful when building async applications.
+// Traces a single sample. This is helpful when building async applications.
 vec4f trace_sample(const shared_ptr<trace_state>& state,
     const shared_ptr<trace_scene>& scene, const vec2i& ij,
     const trace_params& params);

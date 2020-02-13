@@ -988,7 +988,7 @@ static void load_json_scene(const string& filename,
 
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // open file
   auto js = load_json(filename);
@@ -1089,7 +1089,7 @@ static void load_json_scene(const string& filename,
       {"", nullptr}};
 
   // handle progress
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // check for conversion errors
   try {
@@ -1220,7 +1220,7 @@ static void load_json_scene(const string& filename,
 
   // load shapes
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("loading shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     try {
       load_shape(fs::path(filename).parent_path() / shape->name, shape->points,
           shape->lines, shape->triangles, shape->quads, shape->positions,
@@ -1231,7 +1231,7 @@ static void load_json_scene(const string& filename,
   }
   // load textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(texture->name)) {
         load_image(
@@ -1246,7 +1246,7 @@ static void load_json_scene(const string& filename,
   }
   // load instances
   for (auto instance : scene->instances) {
-    if (progress_cb) progress_cb("loading instances", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
     try {
       load_instances(
           fs::path(filename).parent_path() / instance->name, instance->frames);
@@ -1262,7 +1262,7 @@ static void load_json_scene(const string& filename,
   trim_memory(scene);
 
   // done
-  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
 // Save a scene in the builtin JSON format.
@@ -1292,7 +1292,7 @@ static void save_json_scene(const string& filename,
   auto progress = vec2i{0, 2 + (int)scene->shapes.size() +
                                (int)scene->textures.size() +
                                (int)scene->instances.size()};
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save yaml file
   auto js     = json::object();
@@ -1403,14 +1403,14 @@ static void save_json_scene(const string& filename,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("saving scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save json
   save_json(filename, js);
 
   // save shapes
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     if (!shape->positions.empty()) {
       try {
         save_shape(fs::path(filename).parent_path() / shape->name,
@@ -1425,7 +1425,7 @@ static void save_json_scene(const string& filename,
 
   // save instances
   for (auto instance : scene->instances) {
-    if (progress_cb) progress_cb("saving instances", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save instance", progress.x++, progress.y);
     if (!instance->frames.empty()) {
       try {
         save_instances(fs::path(filename).parent_path() / instance->name,
@@ -1438,7 +1438,7 @@ static void save_json_scene(const string& filename,
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("saving textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     if (!texture->ldr.empty() || !texture->hdr.empty()) {
       try {
         if (!texture->hdr.empty()) {
@@ -1471,13 +1471,13 @@ static void load_obj_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
   auto obj = load_obj(filename, false, true, false);
 
   // handle progress
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto ocam : obj->cameras) {
@@ -1605,7 +1605,7 @@ static void load_obj_scene(const string& filename,
   // load textures
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);
@@ -1623,7 +1623,7 @@ static void load_obj_scene(const string& filename,
   add_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
 static void save_obj_scene(const string& filename,
@@ -1631,7 +1631,7 @@ static void save_obj_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   auto obj = make_obj();
 
@@ -1725,14 +1725,14 @@ static void save_obj_scene(const string& filename,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("saving scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save obj
   save_obj(filename, obj);
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("saving textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
       if (!texture->hdr.empty()) {
@@ -1748,7 +1748,7 @@ static void save_obj_scene(const string& filename,
   }
 
   // done
-  if (progress_cb) progress_cb("saving done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 }
 
 void print_obj_camera(shared_ptr<sceneio_camera> camera) {
@@ -1775,7 +1775,7 @@ static void load_ply_scene(const string& filename,
 
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
   auto shape = add_shape(scene);
@@ -1789,7 +1789,7 @@ static void load_ply_scene(const string& filename,
   add_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
 static void save_ply_scene(const string& filename,
@@ -1799,7 +1799,7 @@ static void save_ply_scene(const string& filename,
 
   // handle progress
   auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("saving scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save shape
   auto shape = scene->shapes.front();
@@ -1824,14 +1824,14 @@ static void load_gltf_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
   auto gltf = gltf_model{};
   load_gltf(filename, gltf);
 
   // handle progress
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // convert textures
   auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
@@ -1923,10 +1923,10 @@ static void load_gltf_scene(const string& filename,
   // handle progress
   progress.y += (int)scene->textures.size();
 
-  // loading textures
+  // load texture
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);
@@ -1952,7 +1952,7 @@ static void load_gltf_scene(const string& filename,
   }
 
   // load done
-  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
 }  // namespace yocto
@@ -1968,13 +1968,13 @@ static void load_pbrt_scene(const string& filename,
     bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("loading scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
   auto pbrt = load_pbrt(filename);
 
   // handle progress
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // convert cameras
   for (auto pcamera : pbrt->cameras) {
@@ -2072,10 +2072,10 @@ static void load_pbrt_scene(const string& filename,
   // handle progress
   progress.y += (int)scene->textures.size();
 
-  // loading textures
+  // load texture
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
-    if (progress_cb) progress_cb("loading textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     try {
       if (is_hdr_filename(path)) {
         load_image(fs::path(filename).parent_path() / path, texture->hdr);
@@ -2093,7 +2093,7 @@ static void load_pbrt_scene(const string& filename,
   add_radius(scene);
 
   // done
-  if (progress_cb) progress_cb("load done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
 // Save a pbrt scene
@@ -2101,7 +2101,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
     sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("converting scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
   auto pbrt = make_pbrt();
@@ -2167,7 +2167,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("saving scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
   save_pbrt(filename, pbrt);
@@ -2177,7 +2177,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // save meshes
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("saving shapes", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     if (shape->positions.empty()) continue;
     try {
       save_shape((fs::path(filename).parent_path() / shape->name)
@@ -2192,7 +2192,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("saving textures", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
       if (!texture->hdr.empty()) {

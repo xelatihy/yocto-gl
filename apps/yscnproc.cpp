@@ -31,13 +31,11 @@
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
-#include <iomanip>
 #include <memory>
 #include <set>
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -51,6 +49,31 @@ bool mkdir(const string& dir) {
   system(("mkdir " + dir).c_str());
   return true;
 #endif
+}
+
+// progress callback
+void print_progress(const string& message, int current, int total) {
+  static auto pad = [](const string& str, int n) -> string {
+    return string(max(0, n - str.size()), '0') + str;
+  };
+  static auto pade = [](const string& str, int n) -> string {
+    return str + string(max(0, n - str.size()), ' ');
+  };
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = pad(to_string(elapsed / 60000), 2);
+  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
+  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
+  auto n     = (int)(30 * (float)current / (float)total);
+  auto bar   = "[" + pade(string(n, '='), 30) + "]";
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
+  printf("\r%s\r", line.c_str());
+  if (current == total) printf("\n");
+  fflush(stdout);
 }
 
 int run_app(int argc, const char** argv) {
@@ -81,35 +104,19 @@ int run_app(int argc, const char** argv) {
     return cli.exit(e);
   }
 
-  // progress callback
-  auto progress_cb = [](const string& message, int current, int total) {
-    if (current == total) {
-      cout << "\r" << string(60, ' ') << "\r";
-    } else {
-      auto n = (int)(30 * (float)current / (float)total);
-      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
-           << message << "\r";
-      cout.flush();
-    }
-  };
-
   // load scene
-  auto scene = shared_ptr<sceneio_model>{};
-  {
-    auto timer = CLI::AutoTimer("loading scene");
-    scene      = load_scene(filename, progress_cb);
-  }
+  auto scene = load_scene(filename, print_progress);
 
   // validate scene
   if (validate) {
-    auto timer = CLI::AutoTimer("validate");
-    for (auto& error : scene_validation(scene)) std::cout << error << "\n";
+    for (auto& error : scene_validation(scene))
+      printf("error: %s\n", error.c_str());
   }
 
   // print info
   if (info) {
-    std::cout << "scene stats ------------\n";
-    for (auto stat : scene_stats(scene)) std::cout << stat << "\n";
+    printf("scene stats ------------\n");
+    for (auto stat : scene_stats(scene)) printf("%s\n", stat.c_str());
   }
 
   // tesselate if needed
@@ -144,10 +151,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  {
-    auto timer = CLI::AutoTimer("saving scene");
-    save_scene(output, scene, progress_cb);
-  }
+  save_scene(output, scene, print_progress);
 
   // done
   return 0;
@@ -157,7 +161,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << e.what() << "\n";
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }

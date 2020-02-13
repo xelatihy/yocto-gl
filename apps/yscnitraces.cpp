@@ -33,12 +33,10 @@
 using namespace yocto;
 
 #include <future>
-#include <iomanip>
 #include <memory>
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 
 // Application state
 struct app_state {
@@ -76,10 +74,20 @@ struct app_state {
 };
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(
+    shared_ptr<sceneio_model> ioscene, sceneio_progress print_progress = {}) {
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
+             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
+             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+
   auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
+    if (print_progress)
+      print_progress("convert camera", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -90,6 +98,8 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
+    if (print_progress)
+      print_progress("convert texture", progress.x++, progress.y);
     auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(texture, std::move(iotexture->hdr));
@@ -103,6 +113,8 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
+    if (print_progress)
+      print_progress("convert material", progress.x++, progress.y);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -127,6 +139,8 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
+    if (print_progress)
+      print_progress("convert subdiv", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -134,6 +148,8 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
+    if (print_progress)
+      print_progress("convert shape", progress.x++, progress.y);
     auto shape = add_shape(scene);
     set_points(shape, ioshape->points);
     set_lines(shape, ioshape->lines);
@@ -152,12 +168,16 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
+    if (print_progress)
+      print_progress("convert instance", progress.x++, progress.y);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     instance_map[ioinstance] = instance;
   }
 
   for (auto ioobject : ioscene->objects) {
+    if (print_progress)
+      print_progress("convert object", progress.x++, progress.y);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
@@ -166,11 +186,16 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
   }
 
   for (auto ioenvironment : ioscene->environments) {
+    if (print_progress)
+      print_progress("convert environment", progress.x++, progress.y);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
+
+  // done
+  if (print_progress) print_progress("convert done", progress.x++, progress.y);
 
   return scene;
 }
@@ -233,6 +258,31 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
+// progress callback
+void print_progress(const string& message, int current, int total) {
+  static auto pad = [](const string& str, int n) -> string {
+    return string(max(0, n - str.size()), '0') + str;
+  };
+  static auto pade = [](const string& str, int n) -> string {
+    return str + string(max(0, n - str.size()), ' ');
+  };
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = pad(to_string(elapsed / 60000), 2);
+  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
+  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
+  auto n     = (int)(30 * (float)current / (float)total);
+  auto bar   = "[" + pade(string(n, '='), 30) + "]";
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
+  printf("\r%s\r", line.c_str());
+  if (current == total) printf("\n");
+  fflush(stdout);
+}
+
 int run_app(int argc, const char* argv[]) {
   // application
   auto app = make_shared<app_state>();
@@ -280,48 +330,24 @@ int run_app(int argc, const char* argv[]) {
     return cli.exit(e);
   }
 
-  // progress callback
-  auto progress_cb = [](const string& message, int current, int total) {
-    if (current == total) {
-      cout << "\r" << string(60, ' ') << "\r";
-    } else {
-      auto n = (int)(30 * (float)current / (float)total);
-      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
-           << message << "\r";
-      cout.flush();
-    }
-  };
-
   // scene loading
-  {
-    auto timer   = CLI::AutoTimer("loading scene");
-    app->ioscene = load_scene(app->filename, progress_cb);
-  }
+  app->ioscene = load_scene(app->filename, print_progress);
 
   // conversion
-  {
-    auto timer = CLI::AutoTimer("converting scene");
-    app->scene = make_scene(app->ioscene);
-  }
+  app->scene = make_scene(app->ioscene, print_progress);
 
   // cleanup
   app->ioscene = nullptr;
 
   // build bvh
-  {
-    auto timer = CLI::AutoTimer("building bvh");
-    init_bvh(app->scene, app->params);
-  }
+  init_bvh(app->scene, app->params, print_progress);
 
   // init renderer
-  {
-    auto timer = CLI::AutoTimer("building lights");
-    init_lights(app->scene);
-  }
+  init_lights(app->scene, print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    std::cout << "no lights presents, switching to eyelight shader\n";
+    printf("no lights presents, switching to eyelight shader\n");
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -381,7 +407,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << e.what() << "\n";
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }

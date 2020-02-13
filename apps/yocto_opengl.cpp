@@ -1997,6 +1997,10 @@ bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
   return idx != old_idx;
 }
 
+void draw_glprogressbar(shared_ptr<opengl_window> win, float fraction) {
+  ImGui::ProgressBar(fraction);
+}
+
 void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
     const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);

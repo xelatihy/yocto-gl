@@ -1781,9 +1781,14 @@ static void init_bvh(
   }
 }
 
-void init_bvh(
-    const shared_ptr<trace_scene>& scene, const trace_params& params) {
+void init_bvh(const shared_ptr<trace_scene>& scene, const trace_params& params,
+    trace_progress progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+
+  // shapes
   for (auto idx = 0; idx < scene->shapes.size(); idx++) {
+    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
     init_bvh(scene->shapes[idx], params);
   }
 
@@ -1795,6 +1800,9 @@ void init_bvh(
     return init_embree_bvh(scene, params);
   }
 #endif
+
+  // handle progress
+  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
   auto primitives            = vector<trace_bvh_primitive>{};
@@ -1824,6 +1832,9 @@ void init_bvh(
   for (auto& primitive : primitives) {
     scene->bvh->primitives.push_back(primitive.primitive);
   }
+
+  // handle progress
+  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
 }
 
 static void update_bvh(
@@ -2979,12 +2990,18 @@ shared_ptr<trace_state> make_state(
 }
 
 // Init trace lights
-void init_lights(const shared_ptr<trace_scene>& scene) {
+void init_lights(
+    const shared_ptr<trace_scene>& scene, trace_progress progress_cb) {
+  // handle progress
+  auto progress = vec2i{0, 1};
+  if (progress_cb) progress_cb("build light", progress.x++, progress.y);
+
   scene->lights.clear();
   for (auto& object : scene->objects) {
     if (object->material->emission == zero3f) continue;
     auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
+    if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (!shape->triangles.empty()) {
       shape->elements_cdf = vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
@@ -3013,6 +3030,7 @@ void init_lights(const shared_ptr<trace_scene>& scene) {
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
+    if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
@@ -3032,6 +3050,9 @@ void init_lights(const shared_ptr<trace_scene>& scene) {
     light->instance    = -1;
     light->environment = environment;
   }
+
+  // handle progress
+  if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
 using std::atomic;
@@ -3059,54 +3080,31 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(
-    const shared_ptr<trace_scene>& scene, const trace_params& params) {
+image<vec4f> trace_image(const shared_ptr<trace_scene>& scene,
+    const trace_params& params, trace_progress progress_cb,
+    trace_progress_image progress_image_cb) {
   auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
-  if (params.noparallel) {
-    for (auto j = 0; j < render.size().y; j++) {
-      for (auto i = 0; i < render.size().x; i++) {
-        for (auto s = 0; s < params.samples; s++) {
+  for (auto sample = 0; sample < params.samples; sample++) {
+    if (progress_cb) progress_cb("trace image", sample, params.samples);
+    if (params.noparallel) {
+      for (auto j = 0; j < render.size().y; j++) {
+        for (auto i = 0; i < render.size().x; i++) {
           render[{i, j}] = trace_sample(state, scene, {i, j}, params);
         }
       }
-    }
-  } else {
-    parallel_for(
-        render.size(), [&render, state, scene, &params](const vec2i& ij) {
-          for (auto s = 0; s < params.samples; s++) {
+    } else {
+      parallel_for(
+          render.size(), [&render, state, scene, &params](const vec2i& ij) {
             render[ij] = trace_sample(state, scene, ij, params);
-          }
-        });
+          });
+    }
+    if (progress_image_cb)
+      progress_image_cb(render, sample + 1, params.samples);
   }
 
-  return render;
-}
-
-// Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_samples(const shared_ptr<trace_state>& state,
-    const shared_ptr<trace_scene>& scene, int samples,
-    const trace_params& params) {
-  auto render         = image<vec4f>{state->size()};
-  auto current_sample = state->at(zero2i).samples;
-  samples             = min(samples, params.samples - current_sample);
-  if (params.noparallel) {
-    for (auto j = 0; j < render.size().y; j++) {
-      for (auto i = 0; i < render.size().x; i++) {
-        for (auto s = 0; s < samples; s++) {
-          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
-        }
-      }
-    }
-  } else {
-    parallel_for(render.size(),
-        [&render, state, scene, &params, samples](const vec2i& ij) {
-          for (auto s = 0; s < samples; s++) {
-            render[ij] = trace_sample(state, scene, ij, params);
-          }
-        });
-  }
+  if (progress_cb) progress_cb("trace image", params.samples, params.samples);
   return render;
 }
 

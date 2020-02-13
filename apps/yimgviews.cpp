@@ -148,7 +148,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << e.what() << "\n";
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }

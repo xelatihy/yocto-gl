@@ -37,15 +37,23 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
+shared_ptr<trace_scene> make_scene(
+    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
+             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
+             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+
   auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
+    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -56,6 +64,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
+    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(texture, std::move(iotexture->hdr));
@@ -69,6 +78,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
+    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -93,6 +103,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
+    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -100,6 +111,7 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
+    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
     auto shape = add_shape(scene);
     set_points(shape, ioshape->points);
     set_lines(shape, ioshape->lines);
@@ -118,12 +130,14 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
       unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     instance_map[ioinstance] = instance;
   }
 
   for (auto ioobject : ioscene->objects) {
+    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
@@ -132,13 +146,43 @@ shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene) {
   }
 
   for (auto ioenvironment : ioscene->environments) {
+    if (progress_cb)
+      progress_cb("convert environment", progress.x++, progress.y);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
 
+  // done
+  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+
   return scene;
+}
+
+// progress callback
+void print_progress(const string& message, int current, int total) {
+  static auto pad = [](const string& str, int n) -> string {
+    return string(max(0, n - str.size()), '0') + str;
+  };
+  static auto pade = [](const string& str, int n) -> string {
+    return str + string(max(0, n - str.size()), ' ');
+  };
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = pad(to_string(elapsed / 60000), 2);
+  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
+  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
+  auto n     = (int)(30 * (float)current / (float)total);
+  auto bar   = "[" + pade(string(n, '='), 30) + "]";
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
+  printf("\r%s\r", line.c_str());
+  if (current == total) printf("\n");
+  fflush(stdout);
 }
 
 int run_app(int argc, const char* argv[]) {
@@ -147,7 +191,6 @@ int run_app(int argc, const char* argv[]) {
   auto batch      = 16;
   auto save_batch = false;
   auto add_skyenv = false;
-  auto validate   = false;
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
 
@@ -187,7 +230,6 @@ int run_app(int argc, const char* argv[]) {
       ->transform(CLI::CheckedTransformer(trace_bvh_map));
   cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
   cli.add_option("--output-image,-o", imfilename, "Image filename");
-  cli.add_flag("--validate", validate, "Validate scene");
   cli.add_option("scene", filename, "Scene filename")->required();
   try {
     cli.parse(argc, argv);
@@ -196,72 +238,42 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene = make_shared<sceneio_model>();
-  {
-    auto timer = CLI::AutoTimer("load");
-    ioscene    = load_scene(filename);
-  }
-
-  // add components
-  if (validate) {
-    auto timer = CLI::AutoTimer("validate");
-    for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
-  }
+  auto ioscene = load_scene(filename, print_progress);
 
   // convert scene
-  auto scene = shared_ptr<trace_scene>();
-  {
-    auto timer = CLI::AutoTimer("convert");
-    scene      = make_scene(ioscene);
-  }
+  auto scene = make_scene(ioscene, print_progress);
 
   // cleanup
   ioscene = nullptr;
 
   // build bvh
-  {
-    auto timer = CLI::AutoTimer("bvh");
-    init_bvh(scene, params);
-  }
+  init_bvh(scene, params, print_progress);
 
   // init renderer
-  {
-    auto timer = CLI::AutoTimer("lights");
-    init_lights(scene);
-  }
+  init_lights(scene, print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    std::cout << "no lights presents, switching to eyelight shader\n";
+    printf("no lights presents, switching to eyelight shader\n");
     params.sampler = trace_sampler_type::eyelight;
   }
 
-  // allocate buffers
-  auto state  = make_state(scene, params);
-  auto render = image{state->size(), zero4f};
-
   // render
-  for (auto sample = 0; sample < params.samples; sample += batch) {
-    auto nsamples = min(batch, params.samples - sample);
-    auto timer = CLI::AutoTimer{"rendering samples " + std::to_string(sample) +
-                                "/" + std::to_string(params.samples)};
-    render     = trace_samples(state, scene, nsamples, params);
-    if (save_batch) {
-      auto outfilename = fs::path(imfilename)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample + nsamples) +
-                                 fs::path(imfilename).extension().string())
-                             .string();
-      auto timer = CLI::AutoTimer{"saving " + outfilename};
-      save_image(outfilename, render);
-    }
-  }
+  auto render = trace_image(scene, params, print_progress,
+      [save_batch, imfilename](
+          const image<vec4f>& render, int sample, int samples) {
+        if (!save_batch) return;
+        auto ext = "-s" + std::to_string(sample + samples) +
+                   fs::path(imfilename).extension().string();
+        auto outfilename = fs::path(imfilename).replace_extension(ext).string();
+        print_progress("save image", sample, samples);
+        save_image(outfilename, render);
+      });
 
   // save image
-  {
-    auto timer = CLI::AutoTimer("save");
-    save_image(imfilename, render);
-  }
+  print_progress("save image", 0, 1);
+  save_image(imfilename, render);
+  print_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -271,7 +283,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << e.what() << "\n";
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }

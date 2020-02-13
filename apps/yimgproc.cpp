@@ -30,8 +30,6 @@
 #include "../yocto/yocto_math.h"
 using namespace yocto;
 
-#include <iostream>
-
 #include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -337,7 +335,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    std::cerr << e.what() << "\n";
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }
