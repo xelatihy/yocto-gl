@@ -550,6 +550,8 @@ inline bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl,
   return edited;
 }
 
+void draw_glprogressbar(shared_ptr<opengl_window> win, float fraction);
+
 void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
     const vector<float>& values);
 void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,

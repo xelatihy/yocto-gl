@@ -106,6 +106,7 @@ struct app_state {
   atomic<bool> ok     = false;
   future<void> loader = {};
   string       error  = "";
+  std::atomic<float> progress = 0.5;
 
   ~app_state() { render_stop = true; }
 };
@@ -527,6 +528,9 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   if (apps->selected->error != "") {
     draw_gllabel(win, "error", apps->selected->error);
     return;
+  }
+  if (apps->selected->progress) {
+    draw_glprogressbar(win, apps->selected->progress);
   }
   if (!apps->selected->ok) return;
   auto app = apps->selected;
