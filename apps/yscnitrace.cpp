@@ -105,7 +105,6 @@ struct app_state {
   // loading status
   atomic<bool> ok     = false;
   future<void> loader = {};
-  string       status = "";
   string       error  = "";
 
   ~app_state() { render_stop = true; }
@@ -287,12 +286,11 @@ void reset_display(shared_ptr<app_state> app) {
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
   auto app       = make_shared<app_state>();
-  app->name      = fs::path(filename).filename().string();
+  app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
   app->imagename = fs::path(filename).replace_extension(".png");
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
   app->params    = app->params;
-  app->status    = "loading";
   app->loader    = async(launch::async, [app]() {
     app->ioscene = load_scene(app->filename);
     init_scene(app);
@@ -526,11 +524,35 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
   draw_glcombobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
+  if (apps->selected->error != "") {
+    draw_gllabel(win, "error", apps->selected->error);
+    return;
+  }
+  if (!apps->selected->ok) return;
   auto app = apps->selected;
+  if (begin_glheader(win, "trace")) {
+    auto  edited  = 0;
+    auto& tparams = app->params;
+    edited += draw_glcombobox(
+        win, "camera", tparams.camera, app->ioscene->cameras);
+    edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
+    edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
+    edited += draw_glcombobox(
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
+    edited += draw_glcombobox(
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+    edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
+    edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
+    continue_glline(win);
+    edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
+    edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
+    edited += draw_glslider(win, "pratio", app->pratio, 1, 64);
+    edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
+    if (edited) reset_display(app);
+    end_glheader(win);
+  }
   if (begin_glheader(win, "inspect")) {
     draw_gllabel(win, "scene", fs::path(app->filename).filename());
-    draw_gllabel(win, "status", app->status);
-    if(app->error != "") draw_gllabel(win, "error", app->error);
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "imagename", app->imagename);
@@ -562,28 +584,6 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
         draw_glcoloredit(win, "pixel", zero4f_);
       }
     }
-    end_glheader(win);
-  }
-  if (!app->ok) return;
-  if (begin_glheader(win, "trace")) {
-    auto  edited  = 0;
-    auto& tparams = app->params;
-    edited += draw_glcombobox(
-        win, "camera", tparams.camera, app->ioscene->cameras);
-    edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
-    edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
-    edited += draw_glcombobox(
-        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited += draw_glcombobox(
-        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-    edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
-    edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
-    continue_glline(win);
-    edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
-    edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_glslider(win, "pratio", app->pratio, 1, 64);
-    edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
-    if (edited) reset_display(app);
     end_glheader(win);
   }
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
@@ -773,11 +773,10 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
     try {
       app->loader.get();
       reset_display(app);
+      app->name      = fs::path(app->filename).filename().string() + " [ok]";
       app->ok     = true;
-      app->status = "ok";
     } catch (std::exception& e) {
-      app->name += " [error]";
-      app->status = "error";
+      app->name      = fs::path(app->filename).filename().string() + " [error]";
       app->error  = e.what();
     }
   }
