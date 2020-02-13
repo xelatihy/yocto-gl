@@ -424,19 +424,6 @@ static void format_value(file_wrapper& fs, const T& value) {
     throw std::runtime_error{fs.filename + ": write error"};
 }
 
-static void throw_dependent_error(const string& filename, const string& err) {
-  throw std::runtime_error{filename + ": error in resource (" + err + ")"};
-}
-static void throw_dependent_error(file_wrapper& fs, const string& err) {
-  throw std::runtime_error{fs.filename + ": error in resource (" + err + ")"};
-}
-static void throw_parse_error(file_wrapper& fs, const string& err) {
-  throw std::runtime_error{fs.filename + ": parse error [" + err + "]"};
-}
-static void throw_read_error(file_wrapper& fs) {
-  throw std::runtime_error{fs.filename + ": read error"};
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -500,14 +487,14 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") throw_parse_error(fs, "bad header");
+      if (cmd != "ply") throw std::runtime_error{filename + ": parse error [bad header]"};
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) throw_parse_error(fs, "bad header");
+      if (!first_line) throw std::runtime_error{filename + ": parse error [bad header]"};
     } else if (cmd == "format") {
       auto fmt = ""s;
       parse_value(fs, str, fmt);
@@ -518,7 +505,7 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       } else if (fmt == "binary_big_endian") {
         ply->format = ply_format::binary_big_endian;
       } else {
-        throw_parse_error(fs, "bad header");
+        throw std::runtime_error{filename + ": parse error [bad header]"};
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
@@ -531,7 +518,7 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       parse_value(fs, str, elem->name);
       parse_value(fs, str, elem->count);
     } else if (cmd == "property") {
-      if (ply->elements.empty()) throw_parse_error(fs, "bad header");
+      if (ply->elements.empty()) throw std::runtime_error{filename + ": parse error [bad header]"};
       auto prop = ply->elements.back()->properties.emplace_back(
           make_shared<ply_property>());
       auto tname = ""s;
@@ -541,15 +528,15 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
         parse_value(fs, str, tname);
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
-          throw_parse_error(fs, "unknown type" + tname);
+          throw std::runtime_error{filename + ": parse error [unknown type]"};
         parse_value(fs, str, tname);
         if (type_map.find(tname) == type_map.end())
-          throw_parse_error(fs, "unknown type" + tname);
+          throw std::runtime_error{filename + ": parse error [unknown type]"};
         prop->type = type_map.at(tname);
       } else {
         prop->is_list = false;
         if (type_map.find(tname) == type_map.end())
-          throw_parse_error(fs, "unknown type" + tname);
+          throw std::runtime_error{filename + ": parse error [unknown type]"};
         prop->type = type_map.at(tname);
       }
       parse_value(fs, str, prop->name);
@@ -557,12 +544,12 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       end_header = true;
       break;
     } else {
-      throw_parse_error(fs, "unknown command " + cmd);
+          throw std::runtime_error{filename + ": parse error [unknown command]"};
     }
   }
 
   // check exit
-  if (!end_header) throw std::invalid_argument{"bad header"};
+  if (!end_header) throw std::runtime_error{filename + ": parse error [bad header]"};
 
   // allocate data ---------------------------------
   for (auto element : ply->elements) {
@@ -589,7 +576,7 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer))) throw_read_error(fs);
+        if (!read_line(fs, buffer, sizeof(buffer))) throw std::runtime_error{filename + ": read error"};
         auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
@@ -1602,7 +1589,7 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
       parse_value(fs, str, object);
       parse_value(fs, str, frame);
       if (shape_map.find(object) == shape_map.end()) {
-        throw_parse_error(fs, "unknown object " + object);
+        throw std::runtime_error{filename + ": parse error [unknown object]"};
       }
       for (auto shape : shape_map.at(object)) {
         shape->instances.push_back(frame);
@@ -1749,7 +1736,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
         try {
           load_mtl(fs::path(filename).parent_path() / mtllib, obj);
         } catch (std::exception& e) {
-          throw_dependent_error(fs, e.what());
+          throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
         }
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1795,7 +1782,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     try {
       load_objx(extfilename, obj);
     } catch (std::exception& e) {
-      throw_dependent_error(fs, e.what());
+      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
     }
   }
 }
@@ -3689,7 +3676,7 @@ static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
       shape->texcoords = get_texcoords(ply);
       shape->triangles = get_triangles(ply);
     } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
+      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -3850,18 +3837,18 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
-      if (ctx.stack.size() != 1) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.size() != 1) throw std::runtime_error{filename + ": parse error [bad stack]"};
     } else if (cmd == "AttributeBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "AttributeEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "TransformBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "TransformEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
@@ -3874,7 +3861,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       auto object = ""s;
       parse_pbrt_param(fs, str, object);
       if (ctx.objects.find(object) == ctx.objects.end())
-        throw_parse_error(fs, "unknown object " + object);
+        throw std::runtime_error{filename + ": parse error [unknown object]"};
       for (auto shape : ctx.objects.at(object)) {
         shape->instances.push_back(ctx.stack.back().transform_start);
         shape->instaends.push_back(ctx.stack.back().transform_end);
@@ -3892,7 +3879,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = true;
       } else {
-        throw_parse_error(fs, "bad coordsys");
+        throw std::runtime_error{filename + ": parse error [bad coordsys]"};
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
@@ -4063,10 +4050,10 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
         load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx,
             material_map, medium_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
-        throw_dependent_error(fs, e.what());
+        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
       }
     } else {
-      throw_parse_error(fs, "unknown command " + cmd);
+        throw std::runtime_error{filename + ": parse error [unknown command]"};
     }
   }
 }
@@ -4323,7 +4310,7 @@ void save_pbrt(
         add_triangles(ply, shape->triangles);
         save_ply(fs::path(filename).parent_path() / shape->filename_, ply);
       } catch (std::exception& e) {
-        throw_dependent_error(filename, e.what());
+        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
       }
     }
     auto object = "object" + std::to_string(object_id++);
