@@ -1355,6 +1355,56 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
+[[nodiscard]] static bool parse_value_(string_view& str, obj_vertex& value) {
+  value = obj_vertex{0, 0, 0};
+  if(!parse_value_(str, value.position)) return false;
+  if (!str.empty() && str.front() == '/') {
+    str.remove_prefix(1);
+    if (!str.empty() && str.front() == '/') {
+      str.remove_prefix(1);
+      if(!parse_value_(str, value.normal)) return false;
+    } else {
+      if(!parse_value_(str, value.texcoord)) return false;
+      if (!str.empty() && str.front() == '/') {
+        str.remove_prefix(1);
+        if(!parse_value_(str, value.normal)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+// Input for OBJ textures
+[[nodiscard]] static bool parse_value_(string_view& str, obj_texture_info& info) {
+  // initialize
+  info = obj_texture_info();
+
+  // get tokens
+  auto tokens = vector<string>();
+  skip_whitespace(str);
+  while (!str.empty()) {
+    auto token = ""s;
+    if(!parse_value_(str, token)) return false;
+    tokens.push_back(token);
+    skip_whitespace(str);
+  }
+  if (tokens.empty()) return false;
+
+  // texture name
+  info.path = tokens.back();
+  for (auto& c : info.path)
+    if (c == '\\') c = '/';
+
+  // texture params
+  auto last = string();
+  for (auto i = 0; i < tokens.size() - 1; i++) {
+    if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+    if (tokens[i] == "-clamp") info.clamp = true;
+  }
+
+  return true;
+}
+
 static void parse_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
   parse_value(str, value.position);
@@ -1373,47 +1423,28 @@ static void parse_value(string_view& str, obj_vertex& value) {
   }
 }
 
-// Input for OBJ textures
-static void parse_value(string_view& str, obj_texture_info& info) {
-  // initialize
-  info = obj_texture_info();
-
-  // get tokens
-  auto tokens = vector<string>();
-  skip_whitespace(str);
-  while (!str.empty()) {
-    auto token = ""s;
-    parse_value(str, token);
-    tokens.push_back(token);
-    skip_whitespace(str);
-  }
-  if (tokens.empty()) throw std::invalid_argument{"empty name"};
-
-  // texture name
-  info.path = tokens.back();
-  for (auto& c : info.path)
-    if (c == '\\') c = '/';
-
-  // texture params
-  auto last = string();
-  for (auto i = 0; i < tokens.size() - 1; i++) {
-    if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
-    if (tokens[i] == "-clamp") info.clamp = true;
-  }
-}
-
 // Read obj
 static void load_mtl(
     const string& filename, shared_ptr<obj_model> obj, bool fliptr = true) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // init parsing
   auto material = obj->materials.emplace_back(make_shared<obj_material>());
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1422,137 +1453,142 @@ static void load_mtl(
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if(!parse_value_(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // grab material
     material = obj->materials.back();
 
+    // error
+    auto ok = false;
+
     // possible token values
     if (cmd == "newmtl") {
       auto material = obj->materials.emplace_back(make_shared<obj_material>());
-      parse_value(fs, str, material->name);
+      ok = parse_value_(str, material->name);
     } else if (cmd == "illum") {
-      parse_value(fs, str, material->illum);
+      ok = parse_value_(str, material->illum);
     } else if (cmd == "Ke") {
-      parse_value(fs, str, material->emission);
+      ok = parse_value_(str, material->emission);
     } else if (cmd == "Ka") {
-      parse_value(fs, str, material->ambient);
+      ok = parse_value_(str, material->ambient);
     } else if (cmd == "Kd") {
-      parse_value(fs, str, material->diffuse);
+      ok = parse_value_(str, material->diffuse);
     } else if (cmd == "Ks") {
-      parse_value(fs, str, material->specular);
+      ok = parse_value_(str, material->specular);
     } else if (cmd == "Kt") {
-      parse_value(fs, str, material->transmission);
+      ok = parse_value_(str, material->transmission);
     } else if (cmd == "Tf") {
       material->transmission = vec3f{-1};
-      parse_value(fs, str, material->transmission);
+      ok = parse_value_(str, material->transmission);
       if (material->transmission.y < 0)
         material->transmission = vec3f{material->transmission.x};
       if (fliptr) material->transmission = 1 - material->transmission;
     } else if (cmd == "Tr") {
-      parse_value(fs, str, material->opacity);
+      ok = parse_value_(str, material->opacity);
       if (fliptr) material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
-      parse_value(fs, str, material->exponent);
+      ok = parse_value_(str, material->exponent);
     } else if (cmd == "d") {
-      parse_value(fs, str, material->opacity);
+      ok = parse_value_(str, material->opacity);
     } else if (cmd == "map_Ke") {
-      parse_value(fs, str, material->emission_map);
+      ok = parse_value_(str, material->emission_map);
     } else if (cmd == "map_Ka") {
-      parse_value(fs, str, material->ambient_map);
+      ok = parse_value_(str, material->ambient_map);
     } else if (cmd == "map_Kd") {
-      parse_value(fs, str, material->diffuse_map);
+      ok = parse_value_(str, material->diffuse_map);
     } else if (cmd == "map_Ks") {
-      parse_value(fs, str, material->specular_map);
+      ok = parse_value_(str, material->specular_map);
     } else if (cmd == "map_Tr") {
-      parse_value(fs, str, material->transmission_map);
+      ok = parse_value_(str, material->transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_value(fs, str, material->opacity_map);
+      ok = parse_value_(str, material->opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_value(fs, str, material->bump_map);
+      ok = parse_value_(str, material->bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_value(fs, str, material->displacement_map);
+      ok = parse_value_(str, material->displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_value(fs, str, material->normal_map);
+      ok = parse_value_(str, material->normal_map);
     } else if (cmd == "Pe") {
-      parse_value(fs, str, material->pbr_emission);
+      ok = parse_value_(str, material->pbr_emission);
       material->as_pbr = true;
     } else if (cmd == "Pb") {
-      parse_value(fs, str, material->pbr_base);
+      ok = parse_value_(str, material->pbr_base);
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material->pbr_specular);
+      ok = parse_value_(str, material->pbr_specular);
       material->as_pbr = true;
     } else if (cmd == "Pm") {
-      parse_value(fs, str, material->pbr_metallic);
+      ok = parse_value_(str, material->pbr_metallic);
       material->as_pbr = true;
     } else if (cmd == "Pr") {
-      parse_value(fs, str, material->pbr_roughness);
+      ok = parse_value_(str, material->pbr_roughness);
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material->pbr_sheen);
+      ok = parse_value_(str, material->pbr_sheen);
       material->as_pbr = true;
     } else if (cmd == "Pc") {
-      parse_value(fs, str, material->pbr_coat);
+      ok = parse_value_(str, material->pbr_coat);
       material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      parse_value(fs, str, material->pbr_coatroughness);
+      ok = parse_value_(str, material->pbr_coatroughness);
       material->as_pbr = true;
     } else if (cmd == "Pt") {
-      parse_value(fs, str, material->pbr_transmission);
+      ok = parse_value_(str, material->pbr_transmission);
       material->as_pbr = true;
     } else if (cmd == "Pn") {
-      parse_value(fs, str, material->pbr_ior);
+      ok = parse_value_(str, material->pbr_ior);
       material->as_pbr = true;
     } else if (cmd == "Po") {
-      parse_value(fs, str, material->pbr_opacity);
+      ok = parse_value_(str, material->pbr_opacity);
       material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      parse_value(fs, str, material->pbr_volscattering);
+      ok = parse_value_(str, material->pbr_volscattering);
       material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      parse_value(fs, str, material->pbr_volanisotropy);
+      ok = parse_value_(str, material->pbr_volanisotropy);
       material->as_pbr = true;
     } else if (cmd == "Pvr") {
-      parse_value(fs, str, material->pbr_volscale);
+      ok = parse_value_(str, material->pbr_volscale);
       material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      parse_value(fs, str, material->pbr_emission_map);
+      ok = parse_value_(str, material->pbr_emission_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pb") {
-      parse_value(fs, str, material->pbr_base_map);
+      ok = parse_value_(str, material->pbr_base_map);
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material->pbr_specular_map);
+      ok = parse_value_(str, material->pbr_specular_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      parse_value(fs, str, material->pbr_metallic_map);
+      ok = parse_value_(str, material->pbr_metallic_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      parse_value(fs, str, material->pbr_roughness_map);
+      ok = parse_value_(str, material->pbr_roughness_map);
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material->pbr_sheen_map);
+      ok = parse_value_(str, material->pbr_sheen_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pc") {
-      parse_value(fs, str, material->pbr_coat_map);
+      ok = parse_value_(str, material->pbr_coat_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      parse_value(fs, str, material->pbr_coatroughness_map);
+      ok = parse_value_(str, material->pbr_coatroughness_map);
       material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      parse_value(fs, str, material->pbr_opacity_map);
+      ok = parse_value_(str, material->pbr_opacity_map);
       material->as_pbr = true;
     } else if (cmd == "map_Pt") {
-      parse_value(fs, str, material->pbr_transmission_map);
+      ok = parse_value_(str, material->pbr_transmission_map);
       material->as_pbr = true;
     } else if (cmd == "map_Vs") {
-      parse_value(fs, str, material->pbr_volscattering_map);
+      ok = parse_value_(str, material->pbr_volscattering_map);
       material->as_pbr = true;
     } else {
-      continue;
+      ok = true;
     }
+
+    if(!ok) throw_parse_error();
   }
 
   // remove placeholder material
