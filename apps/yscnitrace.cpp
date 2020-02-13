@@ -80,22 +80,6 @@ struct app_state {
   shared_ptr<sceneio_environment> selected_environment = nullptr;
   shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
-  // editing maps
-  unordered_map<shared_ptr<sceneio_camera>, shared_ptr<trace_camera>>
-      camera_map = {};
-  unordered_map<shared_ptr<sceneio_environment>, shared_ptr<trace_environment>>
-      environment_map = {};
-  unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>
-      texture_map = {};
-  unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>
-                                                                    material_map = {};
-  unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>> shape_map =
-      {};
-  unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>
-      instance_map = {};
-  unordered_map<shared_ptr<sceneio_object>, shared_ptr<trace_object>>
-      object_map = {};
-
   // computation
   int          render_sample  = 0;
   atomic<bool> render_stop    = {};
@@ -124,19 +108,17 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
-  app->scene   = make_trace_scene();
-  auto scene   = app->scene;
-  auto ioscene = app->ioscene;
+shared_ptr<trace_scene> make_scene(shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb) {
+  auto scene = make_trace_scene();
 
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
+             (int)ioscene->instances.size() +
              (int)ioscene->objects.size()};
 
-  app->camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
@@ -144,10 +126,11 @@ void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_focus(camera, iocamera->aperture, iocamera->focus);
-    app->camera_map[iocamera] = camera;
   }
 
-  app->texture_map[nullptr] = nullptr;
+  auto texture_map =
+      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+  texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
@@ -157,34 +140,36 @@ void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
     } else if (!iotexture->ldr.empty()) {
       set_texture(texture, std::move(iotexture->ldr));
     }
-    app->texture_map[iotexture] = texture;
+    texture_map[iotexture] = texture;
   }
 
-  app->material_map[nullptr] = nullptr;
+  auto material_map =
+      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+  material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
       progress_cb("converting materials", progress.x++, progress.y);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
-        app->texture_map.at(iomaterial->emission_tex));
+        texture_map.at(iomaterial->emission_tex));
     set_color(material, iomaterial->color,
-        app->texture_map.at(iomaterial->color_tex));
+        texture_map.at(iomaterial->color_tex));
     set_specular(material, iomaterial->specular,
-        app->texture_map.at(iomaterial->specular_tex));
+        texture_map.at(iomaterial->specular_tex));
     set_ior(material, iomaterial->ior);
     set_metallic(material, iomaterial->metallic,
-        app->texture_map.at(iomaterial->metallic_tex));
+        texture_map.at(iomaterial->metallic_tex));
     set_transmission(material, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, app->texture_map.at(iomaterial->transmission_tex));
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
     set_roughness(material, iomaterial->roughness,
-        app->texture_map.at(iomaterial->roughness_tex));
+        texture_map.at(iomaterial->roughness_tex));
     set_opacity(material, iomaterial->opacity,
-        app->texture_map.at(iomaterial->opacity_tex));
+        texture_map.at(iomaterial->opacity_tex));
     set_thin(material, iomaterial->thin);
-    set_normalmap(material, app->texture_map.at(iomaterial->normal_tex));
+    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
     set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-        app->texture_map.at(iomaterial->scattering_tex));
-    app->material_map[iomaterial] = material;
+        texture_map.at(iomaterial->scattering_tex));
+    material_map[iomaterial] = material;
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
@@ -193,7 +178,9 @@ void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  app->shape_map[nullptr] = nullptr;
+  auto shape_map =
+      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
     auto shape = add_shape(scene);
@@ -207,40 +194,40 @@ void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
     set_colors(shape, ioshape->colors);
     set_radius(shape, ioshape->radius);
     set_tangents(shape, ioshape->tangents);
-    app->shape_map[ioshape] = shape;
+    shape_map[ioshape] = shape;
   }
 
-  app->instance_map[nullptr] = nullptr;
+  auto instance_map =
+      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+  instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
       progress_cb("converting instances", progress.x++, progress.y);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
-    app->instance_map[ioinstance] = instance;
+    instance_map[ioinstance] = instance;
   }
 
-  app->object_map[nullptr] = nullptr;
   for (auto ioobject : ioscene->objects) {
     if (progress_cb)
       progress_cb("converting objects", progress.x++, progress.y);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
-    set_shape(object, app->shape_map.at(ioobject->shape));
-    set_material(object, app->material_map.at(ioobject->material));
-    set_instance(object, app->instance_map.at(ioobject->instance));
-    app->object_map[ioobject] = object;
+    set_shape(object, shape_map.at(ioobject->shape));
+    set_material(object, material_map.at(ioobject->material));
+    set_instance(object, instance_map.at(ioobject->instance));
   }
 
-  app->environment_map[nullptr] = nullptr;
   for (auto ioenvironment : ioscene->environments) {
     if (progress_cb)
       progress_cb("converting environments", progress.x++, progress.y);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
-        app->texture_map.at(ioenvironment->emission_tex));
-    app->environment_map[ioenvironment] = environment;
+        texture_map.at(ioenvironment->emission_tex));
   }
+
+  return scene;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -320,7 +307,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     };
     app->ioscene  = load_scene(app->filename, progress_cb);
     app->progress = 1;
-    init_scene(app, progress_cb);
+    app->scene = make_scene(app->ioscene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -500,6 +487,16 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
+template<typename T, typename T1>
+shared_ptr<T1> get_element(shared_ptr<T> ioelement, 
+  const vector<shared_ptr<T>>& ioelements, const vector<shared_ptr<T1>>& elements) {
+  if(!ioelement) return nullptr;
+  for(auto pos = 0; pos < ioelements.size(); pos++) {
+    if(ioelements[pos] == ioelement) return elements[pos];
+  }
+  throw std::runtime_error("element not found");
+}
+
 void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
@@ -616,13 +613,16 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
+  auto get_texture = [app](shared_ptr<sceneio_texture> iotexture) {
+    return get_element(iotexture, app->ioscene->textures, app->scene->textures);
+  };
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
       stop_display(app);
       auto iocamera = app->selected_camera;
-      auto camera   = app->camera_map.at(iocamera);
+      auto camera   = get_element(iocamera, app->ioscene->cameras, app->scene->cameras);
       set_frame(camera, iocamera->frame);
       set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_focus(camera, iocamera->aperture, iocamera->focus);
@@ -637,10 +637,10 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (draw_glwidgets(win, app->ioscene, app->selected_environment)) {
       stop_display(app);
       auto ioenvironment = app->selected_environment;
-      auto environment   = app->environment_map.at(ioenvironment);
+      auto environment   = get_element(ioenvironment, app->ioscene->environments, app->scene->environments);
       set_frame(environment, ioenvironment->frame);
       set_emission(environment, ioenvironment->emission,
-          app->texture_map.at(ioenvironment->emission_tex));
+          get_texture(ioenvironment->emission_tex));
       init_lights(app->scene);
       reset_display(app);
     }
@@ -665,7 +665,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (draw_glwidgets(win, app->ioscene, app->selected_shape)) {
       stop_display(app);
       auto ioshape = app->selected_shape;
-      auto shape   = app->shape_map.at(ioshape);
+      auto shape   = get_element(ioshape, app->ioscene->shapes, app->scene->shapes);
       set_points(shape, ioshape->points);
       set_lines(shape, ioshape->lines);
       set_triangles(shape, ioshape->triangles);
@@ -689,27 +689,27 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
       stop_display(app);
       auto iomaterial = app->selected_material;
-      auto material   = app->material_map.at(app->selected_material);
+      auto material   = get_element(iomaterial, app->ioscene->materials, app->scene->materials);
       set_emission(material, iomaterial->emission,
-          app->texture_map.at(iomaterial->emission_tex));
+          get_texture(iomaterial->emission_tex));
       set_color(material, iomaterial->color,
-          app->texture_map.at(iomaterial->color_tex));
+          get_texture(iomaterial->color_tex));
       set_specular(material, iomaterial->specular,
-          app->texture_map.at(iomaterial->specular_tex));
+          get_texture(iomaterial->specular_tex));
       set_ior(material, iomaterial->ior);
       set_metallic(material, iomaterial->metallic,
-          app->texture_map.at(iomaterial->metallic_tex));
+          get_texture(iomaterial->metallic_tex));
       set_transmission(material, iomaterial->transmission, iomaterial->thin,
           iomaterial->trdepth,
-          app->texture_map.at(iomaterial->transmission_tex));
+          get_texture(iomaterial->transmission_tex));
       set_roughness(material, iomaterial->roughness,
-          app->texture_map.at(iomaterial->roughness_tex));
+          get_texture(iomaterial->roughness_tex));
       set_opacity(material, iomaterial->opacity,
-          app->texture_map.at(iomaterial->opacity_tex));
+          get_texture(iomaterial->opacity_tex));
       set_thin(material, iomaterial->thin);
-      set_normalmap(material, app->texture_map.at(iomaterial->normal_tex));
+      set_normalmap(material, get_texture(iomaterial->normal_tex));
       set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-          app->texture_map.at(iomaterial->scattering_tex));
+          get_texture(iomaterial->scattering_tex));
       init_lights(app->scene);
       reset_display(app);
     }
@@ -721,7 +721,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
       stop_display(app);
       auto iotexture = app->selected_texture;
-      auto texture   = app->texture_map.at(app->selected_texture);
+      auto texture   = get_element(iotexture, app->ioscene->textures, app->scene->textures);
       if (!iotexture->hdr.empty()) {
         set_texture(texture, iotexture->hdr);
       } else if (!iotexture->ldr.empty()) {
