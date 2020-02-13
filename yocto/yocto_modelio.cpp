@@ -693,40 +693,38 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
-            auto ok = false;
             switch (prop->type) {
               case ply_type::i8:
-                ok = parse_value_(str, prop->data_i8.emplace_back());
+                if(!parse_value_(str, prop->data_i8.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i16:
-                ok = parse_value_(str, prop->data_i16.emplace_back());
+                if(!parse_value_(str, prop->data_i16.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i32:
-                ok = parse_value_(str, prop->data_i32.emplace_back());
+                if(!parse_value_(str, prop->data_i32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i64:
-                ok = parse_value_(str, prop->data_i64.emplace_back());
+                if(!parse_value_(str, prop->data_i64.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u8:
-                ok = parse_value_(str, prop->data_u8.emplace_back());
+                if(!parse_value_(str, prop->data_u8.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u16:
-                ok = parse_value_(str, prop->data_u16.emplace_back());
+                if(!parse_value_(str, prop->data_u16.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u32:
-                ok = parse_value_(str, prop->data_u32.emplace_back());
+                if(!parse_value_(str, prop->data_u32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u64:
-                ok = parse_value_(str, prop->data_u64.emplace_back());
+                if(!parse_value_(str, prop->data_u64.emplace_back())) throw_parse_error();
                 break;
               case ply_type::f32:
-                ok = parse_value_(str, prop->data_f32.emplace_back());
+                if(!parse_value_(str, prop->data_f32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::f64:
-                ok = parse_value_(str, prop->data_f64.emplace_back());
+                if(!parse_value_(str, prop->data_f64.emplace_back())) throw_parse_error();
                 break;
             }
-            if(!ok) throw_parse_error();
           }
         }
       }
@@ -741,40 +739,38 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
-            auto ok = false;
             switch (prop->type) {
               case ply_type::i8:
-                ok = read_value(fs, prop->data_i8.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i8.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i16:
-                ok = read_value(fs, prop->data_i16.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i16.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i32:
-                ok = read_value(fs, prop->data_i32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i64:
-                ok = read_value(fs, prop->data_i64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i64.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u8:
-                ok = read_value(fs, prop->data_u8.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u8.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u16:
-                ok = read_value(fs, prop->data_u16.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u16.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u32:
-                ok = read_value(fs, prop->data_u32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u64:
-                ok = read_value(fs, prop->data_u64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u64.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::f32:
-                ok = read_value(fs, prop->data_f32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_f32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::f64:
-                ok = read_value(fs, prop->data_f64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_f64.emplace_back(), big_endian)) throw_read_error();
                 break;
             }
-            if(!ok) throw_read_error();
           }
         }
       }
@@ -1459,136 +1455,131 @@ static void load_mtl(
     // grab material
     material = obj->materials.back();
 
-    // error
-    auto ok = false;
-
     // possible token values
     if (cmd == "newmtl") {
       auto material = obj->materials.emplace_back(make_shared<obj_material>());
-      ok = parse_value_(str, material->name);
+      if(!parse_value_(str, material->name)) throw_parse_error();
     } else if (cmd == "illum") {
-      ok = parse_value_(str, material->illum);
+      if(!parse_value_(str, material->illum)) throw_parse_error();
     } else if (cmd == "Ke") {
-      ok = parse_value_(str, material->emission);
+      if(!parse_value_(str, material->emission)) throw_parse_error();
     } else if (cmd == "Ka") {
-      ok = parse_value_(str, material->ambient);
+      if(!parse_value_(str, material->ambient)) throw_parse_error();
     } else if (cmd == "Kd") {
-      ok = parse_value_(str, material->diffuse);
+      if(!parse_value_(str, material->diffuse)) throw_parse_error();
     } else if (cmd == "Ks") {
-      ok = parse_value_(str, material->specular);
+      if(!parse_value_(str, material->specular)) throw_parse_error();
     } else if (cmd == "Kt") {
-      ok = parse_value_(str, material->transmission);
+      if(!parse_value_(str, material->transmission)) throw_parse_error();
     } else if (cmd == "Tf") {
       material->transmission = vec3f{-1};
-      ok = parse_value_(str, material->transmission);
+      if(!parse_value_(str, material->transmission)) throw_parse_error();
       if (material->transmission.y < 0)
         material->transmission = vec3f{material->transmission.x};
       if (fliptr) material->transmission = 1 - material->transmission;
     } else if (cmd == "Tr") {
-      ok = parse_value_(str, material->opacity);
+      if(!parse_value_(str, material->opacity)) throw_parse_error();
       if (fliptr) material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
-      ok = parse_value_(str, material->exponent);
+      if(!parse_value_(str, material->exponent)) throw_parse_error();
     } else if (cmd == "d") {
-      ok = parse_value_(str, material->opacity);
+      if(!parse_value_(str, material->opacity)) throw_parse_error();
     } else if (cmd == "map_Ke") {
-      ok = parse_value_(str, material->emission_map);
+      if(!parse_value_(str, material->emission_map)) throw_parse_error();
     } else if (cmd == "map_Ka") {
-      ok = parse_value_(str, material->ambient_map);
+      if(!parse_value_(str, material->ambient_map)) throw_parse_error();
     } else if (cmd == "map_Kd") {
-      ok = parse_value_(str, material->diffuse_map);
+      if(!parse_value_(str, material->diffuse_map)) throw_parse_error();
     } else if (cmd == "map_Ks") {
-      ok = parse_value_(str, material->specular_map);
+      if(!parse_value_(str, material->specular_map)) throw_parse_error();
     } else if (cmd == "map_Tr") {
-      ok = parse_value_(str, material->transmission_map);
+      if(!parse_value_(str, material->transmission_map)) throw_parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      ok = parse_value_(str, material->opacity_map);
+      if(!parse_value_(str, material->opacity_map)) throw_parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      ok = parse_value_(str, material->bump_map);
+      if(!parse_value_(str, material->bump_map)) throw_parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      ok = parse_value_(str, material->displacement_map);
+      if(!parse_value_(str, material->displacement_map)) throw_parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      ok = parse_value_(str, material->normal_map);
+      if(!parse_value_(str, material->normal_map)) throw_parse_error();
     } else if (cmd == "Pe") {
-      ok = parse_value_(str, material->pbr_emission);
+      if(!parse_value_(str, material->pbr_emission)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pb") {
-      ok = parse_value_(str, material->pbr_base);
+      if(!parse_value_(str, material->pbr_base)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      ok = parse_value_(str, material->pbr_specular);
+      if(!parse_value_(str, material->pbr_specular)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pm") {
-      ok = parse_value_(str, material->pbr_metallic);
+      if(!parse_value_(str, material->pbr_metallic)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pr") {
-      ok = parse_value_(str, material->pbr_roughness);
+      if(!parse_value_(str, material->pbr_roughness)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      ok = parse_value_(str, material->pbr_sheen);
+      if(!parse_value_(str, material->pbr_sheen)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pc") {
-      ok = parse_value_(str, material->pbr_coat);
+      if(!parse_value_(str, material->pbr_coat)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      ok = parse_value_(str, material->pbr_coatroughness);
+      if(!parse_value_(str, material->pbr_coatroughness)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pt") {
-      ok = parse_value_(str, material->pbr_transmission);
+      if(!parse_value_(str, material->pbr_transmission)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pn") {
-      ok = parse_value_(str, material->pbr_ior);
+      if(!parse_value_(str, material->pbr_ior)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Po") {
-      ok = parse_value_(str, material->pbr_opacity);
+      if(!parse_value_(str, material->pbr_opacity)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      ok = parse_value_(str, material->pbr_volscattering);
+      if(!parse_value_(str, material->pbr_volscattering)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      ok = parse_value_(str, material->pbr_volanisotropy);
+      if(!parse_value_(str, material->pbr_volanisotropy)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvr") {
-      ok = parse_value_(str, material->pbr_volscale);
+      if(!parse_value_(str, material->pbr_volscale)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      ok = parse_value_(str, material->pbr_emission_map);
+      if(!parse_value_(str, material->pbr_emission_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pb") {
-      ok = parse_value_(str, material->pbr_base_map);
+      if(!parse_value_(str, material->pbr_base_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      ok = parse_value_(str, material->pbr_specular_map);
+      if(!parse_value_(str, material->pbr_specular_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      ok = parse_value_(str, material->pbr_metallic_map);
+      if(!parse_value_(str, material->pbr_metallic_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      ok = parse_value_(str, material->pbr_roughness_map);
+      if(!parse_value_(str, material->pbr_roughness_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      ok = parse_value_(str, material->pbr_sheen_map);
+      if(!parse_value_(str, material->pbr_sheen_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pc") {
-      ok = parse_value_(str, material->pbr_coat_map);
+      if(!parse_value_(str, material->pbr_coat_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      ok = parse_value_(str, material->pbr_coatroughness_map);
+      if(!parse_value_(str, material->pbr_coatroughness_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      ok = parse_value_(str, material->pbr_opacity_map);
+      if(!parse_value_(str, material->pbr_opacity_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pt") {
-      ok = parse_value_(str, material->pbr_transmission_map);
+      if(!parse_value_(str, material->pbr_transmission_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Vs") {
-      ok = parse_value_(str, material->pbr_volscattering_map);
+      if(!parse_value_(str, material->pbr_volscattering_map)) throw_parse_error();
       material->as_pbr = true;
     } else {
-      ok = true;
+      continue;
     }
-
-    if(!ok) throw_parse_error();
   }
 
   // remove placeholder material
@@ -1631,7 +1622,17 @@ static void load_mtl(
 // Read obj
 static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<shared_ptr<obj_shape>>>{};
@@ -1641,7 +1642,7 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1650,35 +1651,35 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if(!parse_value_(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto camera = obj->cameras.emplace_back(make_shared<obj_camera>());
-      parse_value(fs, str, camera->name);
-      parse_value(fs, str, camera->ortho);
-      parse_value(fs, str, camera->width);
-      parse_value(fs, str, camera->height);
-      parse_value(fs, str, camera->lens);
-      parse_value(fs, str, camera->focus);
-      parse_value(fs, str, camera->aperture);
-      parse_value(fs, str, camera->frame);
+      if(!parse_value_(str, camera->name)) throw_parse_error();
+      if(!parse_value_(str, camera->ortho)) throw_parse_error();
+      if(!parse_value_(str, camera->width)) throw_parse_error();
+      if(!parse_value_(str, camera->height)) throw_parse_error();
+      if(!parse_value_(str, camera->lens)) throw_parse_error();
+      if(!parse_value_(str, camera->focus)) throw_parse_error();
+      if(!parse_value_(str, camera->aperture)) throw_parse_error();
+      if(!parse_value_(str, camera->frame)) throw_parse_error();
     } else if (cmd == "e") {
       auto environment = obj->environments.emplace_back(
           make_shared<obj_environment>());
-      parse_value(fs, str, environment->name);
-      parse_value(fs, str, environment->emission);
+      if(!parse_value_(str, environment->name)) throw_parse_error();
+      if(!parse_value_(str, environment->emission)) throw_parse_error();
       auto emission_path = ""s;
-      parse_value(fs, str, emission_path);
+      if(!parse_value_(str, emission_path)) throw_parse_error();
       if (emission_path == "\"\"") emission_path = "";
       environment->emission_map.path = emission_path;
-      parse_value(fs, str, environment->frame);
+      if(!parse_value_(str, environment->frame)) throw_parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      parse_value(fs, str, object);
-      parse_value(fs, str, frame);
+      if(!parse_value_(str, object)) throw_parse_error();
+      if(!parse_value_(str, frame)) throw_parse_error();
       if (shape_map.find(object) == shape_map.end()) {
         throw std::runtime_error{filename + ": parse error [unknown object]"};
       }
