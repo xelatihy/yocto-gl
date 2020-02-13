@@ -1741,6 +1741,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
   if(empty_material) {
     empty_material->name = "empty_material";
     empty_material->diffuse = {0.8, 0.8, 0.8};
+    empty_material->pbr_base = {0.8, 0.8, 0.8};
   }
 
   // convert vertex data

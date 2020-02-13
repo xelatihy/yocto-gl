@@ -374,8 +374,7 @@ bbox3f compute_bounds(shared_ptr<sceneio_model> scene) {
 void add_cameras(shared_ptr<sceneio_model> scene) {
   if (!scene->cameras.empty()) return;
   auto camera  = add_camera(scene);
-  camera->name = "cameras/default.yaml";
-  // TODO: error in camera.lens and camera.film
+  camera->name = "cameras/default.json";
   camera->orthographic = false;
   camera->film         = 0.036;
   camera->aperture     = 0;
@@ -383,8 +382,7 @@ void add_cameras(shared_ptr<sceneio_model> scene) {
   auto bbox            = compute_bounds(scene);
   auto center          = (bbox.max + bbox.min) / 2;
   auto bbox_radius     = length(bbox.max - bbox.min) / 2;
-  auto camera_dir      = camera->frame.o - center;
-  if (camera_dir == zero3f) camera_dir = {0, 0, 1};
+  auto camera_dir      = vec3f{0,0,1};
   auto camera_dist = bbox_radius / camera->film;
   auto from        = camera_dir * (camera_dist * 1) + center;
   auto to          = center;
