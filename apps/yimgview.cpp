@@ -113,10 +113,10 @@ void compute_stats(
 
 void update_display(shared_ptr<app_state> app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
-  if(app->colorgrade) {
-      colorgrade_image_mt(app->display, app->source, true, app->params);
+  if (app->colorgrade) {
+    colorgrade_image_mt(app->display, app->source, true, app->params);
   } else {
-      tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
+    tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
   }
   compute_stats(app->display_stats, app->display, false);
   app->glupdated = true;

@@ -198,7 +198,7 @@ image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure,
     bool filmic = false, bool srgb = true);
 
 // Apply tone mapping using multithreading for speed
-void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr, 
+void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic = false, bool srgb = true);
 
 // minimal color grading
@@ -230,10 +230,10 @@ vec4f colorgrade(
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, bool linear, const colorgrade_params& params);
 
-// Color grade a linear or srgb image to an srgb image. 
+// Color grade a linear or srgb image to an srgb image.
 // Uses multithreading for speed.
-void colorgrade_image_mt(image<vec4f>& corrected,
-    const image<vec4f>& img, bool linear, const colorgrade_params& params);
+void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
+    bool linear, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
