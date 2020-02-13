@@ -262,18 +262,19 @@ void reset_display(shared_ptr<app_state> app) {
 
 // progress callback
 void print_progress(const string& message, int current, int total) {
-  using clock = std::chrono::high_resolution_clock;
+  using clock               = std::chrono::high_resolution_clock;
   static int64_t start_time = 0;
   if (current == 0) start_time = clock::now().time_since_epoch().count();
   auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000; // millisecs
-  auto mins    = (int)(elapsed / 60000);
-  auto secs = (int)((elapsed % 60000) / 1000);
+  elapsed /= 1000000;  // millisecs
+  auto mins  = (int)(elapsed / 60000);
+  auto secs  = (int)((elapsed % 60000) / 1000);
   auto msecs = (int)((elapsed % 60000) % 1000);
-  auto n    = (int)(30 * (float)current / (float)total);
-  cout << "\r[" << left << setw(30) << string(n, '=') << "] " << right << setfill('0') << setw(2) << mins
-       << ":" << setw(2) << secs << "." << setw(3) << msecs << " " << setfill(' ') << 
-       left << setw(30) << message << "\r";
+  auto n     = (int)(30 * (float)current / (float)total);
+  cout << "\r[" << left << setw(30) << string(n, '=') << "] " << right
+       << setfill('0') << setw(2) << mins << ":" << setw(2) << secs << "."
+       << setw(3) << msecs << " " << setfill(' ') << left << setw(30) << message
+       << "\r";
   if (current == total) cout << "\n";
   cout.flush();
 }
@@ -326,16 +327,10 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  {
-    auto timer   = CLI::AutoTimer("loading scene");
-    app->ioscene = load_scene(app->filename, print_progress);
-  }
+  app->ioscene = load_scene(app->filename, print_progress);
 
   // conversion
-  {
-    auto timer = CLI::AutoTimer("converting scene");
-    app->scene = make_scene(app->ioscene, print_progress);
-  }
+  app->scene = make_scene(app->ioscene, print_progress);
 
   // cleanup
   app->ioscene = nullptr;
