@@ -58,6 +58,148 @@ static void skip_whitespace(string_view& str) {
 }
 
 // Parse values from a string
+[[nodiscard]] static bool parse_value_(string_view& str, string_view& value) {
+  skip_whitespace(str);
+  if (str.empty()) return false;
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') return false;
+    str.remove_prefix(1);
+    if (str.empty()) return false;
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) return false;
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, string& value) {
+  auto valuev = string_view{};
+  if (!parse_value_(str, valuev)) return false;
+  value = string{valuev};
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, int8_t& value) {
+  char* end = nullptr;
+  value     = (int8_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, int16_t& value) {
+  char* end = nullptr;
+  value     = (int16_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, int32_t& value) {
+  char* end = nullptr;
+  value     = (int32_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, int64_t& value) {
+  char* end = nullptr;
+  value     = (int64_t)strtoll(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, uint8_t& value) {
+  char* end = nullptr;
+  value     = (uint8_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, uint16_t& value) {
+  char* end = nullptr;
+  value     = (uint16_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, uint32_t& value) {
+  char* end = nullptr;
+  value     = (uint32_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, uint64_t& value) {
+  char* end = nullptr;
+  value     = (uint64_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, bool& value) {
+  auto valuei = 0;
+  if (!parse_value_(str, valuei)) return false;
+  value = (bool)valuei;
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, float& value) {
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, double& value) {
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#ifdef __APPLE__
+[[nodiscard]] static bool parse_value_(string_view& str, size_t& value) {
+  char* end = nullptr;
+  value     = (size_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#endif
+
+[[nodiscard]] static bool parse_value_(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++)
+    if (!parse_value_(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value_(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value_(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value_(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value_(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value_(str, value[i])) return false;
+  return true;
+}
+
+// Parse values from a string
 static void parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) throw std::invalid_argument{"string expected"};
@@ -395,6 +537,13 @@ static T swap_endian(T value) {
 }
 
 template <typename T>
+[[nodiscard]] bool read_value(FILE* fs, T& value, bool big_endian) {
+  if (fread(&value, sizeof(value), 1, fs) != 1) return false;
+  if (big_endian) value = swap_endian(value);
+  return true;
+}
+
+template <typename T>
 void read_value(file_wrapper& fs, T& value, bool big_endian) {
   if (fread(&value, sizeof(value), 1, fs.fs) != 1)
     throw std::runtime_error{fs.filename + ": read error"};
@@ -469,11 +618,21 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
   auto end_header = false;
 
   // open file
-  auto fs = open_file(filename, "rb");
+  auto fs = fopen(filename.c_str(), "rb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // read header ---------------------------------------------
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -482,22 +641,22 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if (!parse_value_(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") throw std::runtime_error{filename + ": parse error [bad header]"};
+      if (cmd != "ply") throw_parse_error();
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) throw std::runtime_error{filename + ": parse error [bad header]"};
+      if (!first_line) throw_parse_error();
     } else if (cmd == "format") {
       auto fmt = ""s;
-      parse_value(fs, str, fmt);
+      if (!parse_value_(str, fmt)) throw_parse_error();
       if (fmt == "ascii") {
         ply->format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -515,41 +674,38 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto elem = ply->elements.emplace_back(make_shared<ply_element>());
-      parse_value(fs, str, elem->name);
-      parse_value(fs, str, elem->count);
+      if (!parse_value_(str, elem->name)) throw_parse_error();
+      if (!parse_value_(str, elem->count)) throw_parse_error();
     } else if (cmd == "property") {
-      if (ply->elements.empty()) throw std::runtime_error{filename + ": parse error [bad header]"};
+      if (ply->elements.empty()) throw_parse_error();
       auto prop = ply->elements.back()->properties.emplace_back(
           make_shared<ply_property>());
       auto tname = ""s;
-      parse_value(fs, str, tname);
+      if (!parse_value_(str, tname)) throw_parse_error();
       if (tname == "list") {
         prop->is_list = true;
-        parse_value(fs, str, tname);
+        if (!parse_value_(str, tname)) throw_parse_error();
         auto itype = type_map.at(tname);
-        if (itype != ply_type::u8)
-          throw std::runtime_error{filename + ": parse error [unknown type]"};
-        parse_value(fs, str, tname);
-        if (type_map.find(tname) == type_map.end())
-          throw std::runtime_error{filename + ": parse error [unknown type]"};
+        if (itype != ply_type::u8) throw_parse_error();
+        if (!parse_value_(str, tname)) throw_parse_error();
+        if (type_map.find(tname) == type_map.end()) throw_parse_error();
         prop->type = type_map.at(tname);
       } else {
         prop->is_list = false;
-        if (type_map.find(tname) == type_map.end())
-          throw std::runtime_error{filename + ": parse error [unknown type]"};
+        if (type_map.find(tname) == type_map.end()) throw_parse_error();
         prop->type = type_map.at(tname);
       }
-      parse_value(fs, str, prop->name);
+      if(!parse_value_(str, prop->name))throw_parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
     } else {
-          throw std::runtime_error{filename + ": parse error [unknown command]"};
+      throw_parse_error();
     }
   }
 
   // check exit
-  if (!end_header) throw std::runtime_error{filename + ": parse error [bad header]"};
+  if (!end_header) throw_parse_error();
 
   // allocate data ---------------------------------
   for (auto element : ply->elements) {
@@ -576,44 +732,44 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer))) throw std::runtime_error{filename + ": read error"};
+        if (!fgets(buffer, sizeof(buffer), fs)) throw_read_error();
         auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            parse_value(fs, str, prop->ldata_u8.emplace_back());
+            if(!parse_value_(str, prop->ldata_u8.emplace_back())) throw_parse_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                parse_value(fs, str, prop->data_i8.emplace_back());
+                if(!parse_value_(str, prop->data_i8.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i16:
-                parse_value(fs, str, prop->data_i16.emplace_back());
+                if(!parse_value_(str, prop->data_i16.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i32:
-                parse_value(fs, str, prop->data_i32.emplace_back());
+                if(!parse_value_(str, prop->data_i32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::i64:
-                parse_value(fs, str, prop->data_i64.emplace_back());
+                if(!parse_value_(str, prop->data_i64.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u8:
-                parse_value(fs, str, prop->data_u8.emplace_back());
+                if(!parse_value_(str, prop->data_u8.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u16:
-                parse_value(fs, str, prop->data_u16.emplace_back());
+                if(!parse_value_(str, prop->data_u16.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u32:
-                parse_value(fs, str, prop->data_u32.emplace_back());
+                if(!parse_value_(str, prop->data_u32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::u64:
-                parse_value(fs, str, prop->data_u64.emplace_back());
+                if(!parse_value_(str, prop->data_u64.emplace_back())) throw_parse_error();
                 break;
               case ply_type::f32:
-                parse_value(fs, str, prop->data_f32.emplace_back());
+                if(!parse_value_(str, prop->data_f32.emplace_back())) throw_parse_error();
                 break;
               case ply_type::f64:
-                parse_value(fs, str, prop->data_f64.emplace_back());
+                if(!parse_value_(str, prop->data_f64.emplace_back())) throw_parse_error();
                 break;
             }
           }
@@ -626,40 +782,40 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            read_value(fs, prop->ldata_u8.emplace_back(), big_endian);
+            if(!read_value(fs, prop->ldata_u8.emplace_back(), big_endian)) throw_read_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                read_value(fs, prop->data_i8.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i8.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i16:
-                read_value(fs, prop->data_i16.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i16.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i32:
-                read_value(fs, prop->data_i32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::i64:
-                read_value(fs, prop->data_i64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_i64.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u8:
-                read_value(fs, prop->data_u8.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u8.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u16:
-                read_value(fs, prop->data_u16.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u16.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u32:
-                read_value(fs, prop->data_u32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::u64:
-                read_value(fs, prop->data_u64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_u64.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::f32:
-                read_value(fs, prop->data_f32.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_f32.emplace_back(), big_endian)) throw_read_error();
                 break;
               case ply_type::f64:
-                read_value(fs, prop->data_f64.emplace_back(), big_endian);
+                if(!read_value(fs, prop->data_f64.emplace_back(), big_endian)) throw_read_error();
                 break;
             }
           }
@@ -1736,7 +1892,8 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
         try {
           load_mtl(fs::path(filename).parent_path() / mtllib, obj);
         } catch (std::exception& e) {
-          throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+          throw std::runtime_error{
+              filename + ": error in resource (" + e.what() + ")"};
         }
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1782,7 +1939,8 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     try {
       load_objx(extfilename, obj);
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 }
@@ -2755,7 +2913,7 @@ static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
+[[nodiscard]] static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
@@ -3676,7 +3834,8 @@ static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
       shape->texcoords = get_texcoords(ply);
       shape->triangles = get_triangles(ply);
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -3837,18 +3996,22 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
-      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
-      if (ctx.stack.size() != 1) throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.size() != 1)
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
     } else if (cmd == "AttributeBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "AttributeEnd") {
-      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "TransformBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "TransformEnd") {
-      if (ctx.stack.empty()) throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
@@ -4050,10 +4213,11 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
         load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx,
             material_map, medium_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     } else {
-        throw std::runtime_error{filename + ": parse error [unknown command]"};
+      throw std::runtime_error{filename + ": parse error [unknown command]"};
     }
   }
 }
@@ -4310,7 +4474,8 @@ void save_pbrt(
         add_triangles(ply, shape->triangles);
         save_ply(fs::path(filename).parent_path() / shape->filename_, ply);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
     auto object = "object" + std::to_string(object_id++);
