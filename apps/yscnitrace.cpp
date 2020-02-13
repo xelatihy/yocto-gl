@@ -103,9 +103,9 @@ struct app_state {
   int          render_counter = 0;
 
   // loading status
-  atomic<bool> ok     = false;
-  future<void> loader = {};
-  string       error  = "";
+  atomic<bool>       ok       = false;
+  future<void>       loader   = {};
+  string             error    = "";
   std::atomic<float> progress = 0.5;
 
   ~app_state() { render_stop = true; }
@@ -124,13 +124,22 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(shared_ptr<app_state> app) {
+void init_scene(shared_ptr<app_state> app, sceneio_progress progress_cb) {
   app->scene   = make_trace_scene();
   auto scene   = app->scene;
   auto ioscene = app->ioscene;
 
+  // handle progress
+  auto progress = vec2i{
+      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
+             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
+             (int)ioscene->objects.size()};
+
   app->camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
+    if (progress_cb)
+      progress_cb("converting cameras", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -140,6 +149,8 @@ void init_scene(shared_ptr<app_state> app) {
 
   app->texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
+    if (progress_cb)
+      progress_cb("converting textures", progress.x++, progress.y);
     auto texture = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(texture, std::move(iotexture->hdr));
@@ -151,6 +162,8 @@ void init_scene(shared_ptr<app_state> app) {
 
   app->material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
+    if (progress_cb)
+      progress_cb("converting materials", progress.x++, progress.y);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
         app->texture_map.at(iomaterial->emission_tex));
@@ -175,11 +188,14 @@ void init_scene(shared_ptr<app_state> app) {
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
+    if (progress_cb)
+      progress_cb("converting subdivs", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
   app->shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
+    if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
     auto shape = add_shape(scene);
     set_points(shape, ioshape->points);
     set_lines(shape, ioshape->lines);
@@ -196,6 +212,8 @@ void init_scene(shared_ptr<app_state> app) {
 
   app->instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
+    if (progress_cb)
+      progress_cb("converting instances", progress.x++, progress.y);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     app->instance_map[ioinstance] = instance;
@@ -203,6 +221,8 @@ void init_scene(shared_ptr<app_state> app) {
 
   app->object_map[nullptr] = nullptr;
   for (auto ioobject : ioscene->objects) {
+    if (progress_cb)
+      progress_cb("converting objects", progress.x++, progress.y);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, app->shape_map.at(ioobject->shape));
@@ -213,6 +233,8 @@ void init_scene(shared_ptr<app_state> app) {
 
   app->environment_map[nullptr] = nullptr;
   for (auto ioenvironment : ioscene->environments) {
+    if (progress_cb)
+      progress_cb("converting environments", progress.x++, progress.y);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
@@ -296,9 +318,9 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene = load_scene(app->filename, progress_cb);
+    app->ioscene  = load_scene(app->filename, progress_cb);
     app->progress = 1;
-    init_scene(app);
+    init_scene(app, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -564,7 +586,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "imagename", app->imagename);
-    if(app->ok) {
+    if (app->ok) {
       draw_gllabel(win, "image",
           to_string(app->render.size().x) + " x " +
               to_string(app->render.size().y) + " @ " +
@@ -781,11 +803,11 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
     try {
       app->loader.get();
       reset_display(app);
-      app->name      = fs::path(app->filename).filename().string() + " [ok]";
-      app->ok     = true;
+      app->name = fs::path(app->filename).filename().string() + " [ok]";
+      app->ok   = true;
     } catch (std::exception& e) {
-      app->name      = fs::path(app->filename).filename().string() + " [error]";
-      app->error  = e.what();
+      app->name  = fs::path(app->filename).filename().string() + " [error]";
+      app->error = e.what();
     }
   }
 }
