@@ -45,9 +45,7 @@
 #include <climits>
 #include <cstdlib>
 #include <deque>
-#include <fstream>
 #include <future>
-#include <iomanip>
 #include <memory>
 using std::make_unique;
 
@@ -935,46 +933,107 @@ static void save_instances(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Load a text file
+inline void load_text(const string& filename, string& str) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  str.resize(length);
+  if (fread(str.data(), 1, length, fs) != length)
+    throw std::runtime_error{filename + ": read error"};
+}
+
+// Save a text file
+inline void save_text(
+    const string& filename, const string& str) {
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fprintf(fs, "%s", str.c_str()) < 0)
+    throw std::runtime_error{filename + ": write error"};
+}
+
+// Load a binary file
+inline string load_text(const string& filename) {
+  auto text = string{};
+  load_text(filename, text);
+  return text;
+}
+
+// Load a binary file
+inline void load_binary(
+    const string& filename, vector<byte>& data) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+  auto fs = fopen(filename.c_str(), "rb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  fseek(fs, 0, SEEK_END);
+  auto length = ftell(fs);
+  fseek(fs, 0, SEEK_SET);
+  data.resize(length);
+  if (fread(data.data(), 1, length, fs) != length) 
+    throw std::runtime_error{filename + ": read error"};
+}
+
+// Save a binary file
+inline void save_binary(
+    const string& filename, const vector<byte>& data) {
+  auto fs = fopen(filename.c_str(), "wb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    fclose(fs);
+    throw std::runtime_error{filename + ": write error"};
+  }
+  fclose(fs);
+}
+
+// Load a binary file
+inline vector<byte> load_binary(const string& filename) {
+  auto data = vector<byte>{};
+  load_binary(filename, data);
+  return data;
+}
+
 using json = nlohmann::json;
 
 // support for json conversions
-static inline void to_json(json& j, const vec3f& value) {
+inline void to_json(json& j, const vec3f& value) {
   nlohmann::to_json(j, (const array<float, 3>&)value);
 }
-static inline void to_json(json& j, const frame3f& value) {
+inline void to_json(json& j, const frame3f& value) {
   nlohmann::to_json(j, (const array<float, 12>&)value);
 }
 
-static inline void from_json(const json& j, vec3f& value) {
+inline void from_json(const json& j, vec3f& value) {
   nlohmann::from_json(j, (array<float, 3>&)value);
 }
-static inline void from_json(const json& j, mat3f& value) {
+inline void from_json(const json& j, mat3f& value) {
   nlohmann::from_json(j, (array<float, 9>&)value);
 }
-static inline void from_json(const json& j, frame3f& value) {
+inline void from_json(const json& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
 // load/save json
-static void load_json(const string& filename, json& js) {
-  auto stream = std::ifstream(filename);
-  if (!stream) throw std::runtime_error{filename + ": file not found"};
+inline void load_json(const string& filename, json& js) {
+  auto text = load_text(filename);
   try {
-    stream >> js;
+    js = json::parse(text);
   } catch (std::exception& e) {
     throw std::runtime_error{filename + ": error parsing json"};
   }
 }
-static void save_json(const string& filename, const json& js) {
-  auto stream = std::ofstream(filename);
-  if (!stream) throw std::runtime_error{filename + ": file not found"};
-  try {
-    stream << std::setw(2) << js << std::endl;
-  } catch (std::exception& e) {
-    throw std::runtime_error{filename + ": error writing json"};
-  }
+
+inline void save_json(const string& filename, const json& js) {
+  save_text(filename, js.dump(2));
 }
-static json load_json(const string& filename) {
+
+inline json load_json(const string& filename) {
   auto js = json{};
   load_json(filename, js);
   return js;
