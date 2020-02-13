@@ -37,7 +37,6 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -184,15 +183,6 @@ void print_progress(const string& message, int current, int total) {
   if (current == total) printf("\n");
   fflush(stdout);
 }
-void print_start(const string& message) {
-  return print_progress(message, 0, 1);
-}
-void print_end(const string& message) { return print_progress(message, 1, 1); }
-void print_info(const string& message) { printf("%s\n", message.c_str()); }
-void print_fatal(const string& message) {
-  printf("%s\n", message.c_str());
-  exit(1);
-}
 
 int run_app(int argc, const char* argv[]) {
   // options
@@ -253,9 +243,9 @@ int run_app(int argc, const char* argv[]) {
 
   // add components
   if (validate) {
-    print_start("validate scene");
+    print_progress("validate scene", 0, 1);
     for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
-    print_end("validate scene");
+    print_progress("validate scene", 1, 1);
   }
 
   // convert scene
@@ -272,7 +262,7 @@ int run_app(int argc, const char* argv[]) {
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    printf("no lights presents, switching to eyelight shader\n");
     params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -289,9 +279,9 @@ int run_app(int argc, const char* argv[]) {
       });
 
   // save image
-  print_start("save image");
+  print_progress("save image", 0, 1);
   save_image(imfilename, render);
-  print_end("save image");
+  print_progress("save image", 1, 1);
 
   // done
   return 0;
@@ -301,7 +291,7 @@ int main(int argc, const char* argv[]) {
   try {
     return run_app(argc, argv);
   } catch (std::exception& e) {
-    print_fatal(e.what());
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 }
