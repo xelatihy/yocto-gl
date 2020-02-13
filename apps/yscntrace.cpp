@@ -161,6 +161,27 @@ shared_ptr<trace_scene> make_scene(
   return scene;
 }
 
+// progress callback
+void print_progress(const string& message, int current, int total) {
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = (int)(elapsed / 60000);
+  auto secs  = (int)((elapsed % 60000) / 1000);
+  auto msecs = (int)((elapsed % 60000) % 1000);
+  auto n     = (int)(30 * (float)current / (float)total);
+  cout << "\r[" << left << setw(30) << string(n, '=') << "] " << right
+       << setfill('0') << setw(2) << mins << ":" << setw(2) << secs << "."
+       << setw(3) << msecs << " " << setfill(' ') << left << setw(30) << message
+       << "\r";
+  if (current == total) cout << "\n";
+  cout.flush();
+}
+void print_start(const string& message) { return print_progress(message, 0, 1); }
+void print_end(const string& message) { return print_progress(message, 1, 1); }
+
 int run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
@@ -215,52 +236,27 @@ int run_app(int argc, const char* argv[]) {
     return cli.exit(e);
   }
 
-  // progress callback
-  auto progress_cb = [](const string& message, int current, int total) {
-    if (current == total) {
-      cout << "\r" << string(60, ' ') << "\r";
-    } else {
-      auto n = (int)(30 * (float)current / (float)total);
-      cout << "\r[" << left << setw(30) << string(n, '=') << "] " << setw(30)
-           << message << "\r";
-      cout.flush();
-    }
-  };
-
   // scene loading
-  auto ioscene = make_shared<sceneio_model>();
-  {
-    auto timer = CLI::AutoTimer("load");
-    ioscene    = load_scene(filename, progress_cb);
-  }
+    auto ioscene    = load_scene(filename, print_progress);
 
   // add components
   if (validate) {
-    auto timer = CLI::AutoTimer("validate");
+    print_start("validate scene");
     for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
+    print_end("validate scene");
   }
 
   // convert scene
-  auto scene = shared_ptr<trace_scene>();
-  {
-    auto timer = CLI::AutoTimer("convert");
-    scene      = make_scene(ioscene, progress_cb);
-  }
+  auto scene = make_scene(ioscene, print_progress);
 
   // cleanup
   ioscene = nullptr;
 
   // build bvh
-  {
-    auto timer = CLI::AutoTimer("bvh");
-    init_bvh(scene, params);
-  }
+  init_bvh(scene, params, print_progress);
 
   // init renderer
-  {
-    auto timer = CLI::AutoTimer("lights");
-    init_lights(scene);
-  }
+  init_lights(scene, print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
@@ -290,10 +286,9 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // save image
-  {
-    auto timer = CLI::AutoTimer("save");
-    save_image(imfilename, render);
-  }
+  print_start("save image");
+  save_image(imfilename, render);
+  print_end("save image");
 
   // done
   return 0;
