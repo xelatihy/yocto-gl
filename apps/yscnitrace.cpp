@@ -109,7 +109,7 @@ struct app_states {
 
 // Construct a scene from io
 shared_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb) {
+    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -227,7 +227,6 @@ shared_ptr<trace_scene> make_scene(
     set_emission(environment, ioenvironment->emission,
         texture_map.at(ioenvironment->emission_tex));
   }
-
 
   // done
     if (progress_cb)
