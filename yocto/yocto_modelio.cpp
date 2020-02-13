@@ -801,29 +801,26 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
     throw std::runtime_error{filename + ": write error"};
   };
 
-  // error handling
-  auto ok = true;
-
   // header
-  ok = ok && format_values(fs, "ply\n");
-  ok = ok && format_values(fs, "format {} 1.0\n", format_map.at(ply->format));
-  ok = ok && format_values(fs, "comment Written by Yocto/GL\n");
-  ok = ok && format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+  if(!format_values(fs, "ply\n")) throw_write_error();
+  if(!format_values(fs, "format {} 1.0\n", format_map.at(ply->format))) throw_write_error();
+  if(!format_values(fs, "comment Written by Yocto/GL\n")) throw_write_error();
+  if(!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n")) throw_write_error();
   for (auto& comment : ply->comments)
-    ok = ok && format_values(fs, "comment {}\n", comment);
+    if(!format_values(fs, "comment {}\n", comment)) throw_write_error();
   for (auto elem : ply->elements) {
-    ok = ok && format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count);
+    if(!format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count)) throw_write_error();
     for (auto prop : elem->properties) {
       if (prop->is_list) {
-        ok = ok && format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
-            prop->name);
+        if(!format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
+            prop->name)) throw_write_error();
       } else {
-        ok = ok && format_values(fs, "property {} {}\n", type_map[prop->type], prop->name);
+        if(!format_values(fs, "property {} {}\n", type_map[prop->type], prop->name)) throw_write_error();
       }
     }
   }
 
-  ok = ok && format_values(fs, "end_header\n");
+  if(!format_values(fs, "end_header\n")) throw_write_error();
 
   // properties
   if (ply->format == ply_format::ascii) {
@@ -832,43 +829,43 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) ok = ok && format_values(fs, "{} ", (int)prop->ldata_u8[idx]);
+          if (prop->is_list) if(!format_values(fs, "{} ", (int)prop->ldata_u8[idx])) throw_write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                ok = ok && format_values(fs, "{} ", prop->data_i8[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_i8[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::i16:
-                ok = ok && format_values(fs, "{} ", prop->data_i16[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_i16[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::i32:
-                ok = ok && format_values(fs, "{} ", prop->data_i32[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_i32[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::i64:
-                ok = ok && format_values(fs, "{} ", prop->data_i64[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_i64[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::u8:
-                ok = ok && format_values(fs, "{} ", prop->data_u8[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_u8[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::u16:
-                ok = ok && format_values(fs, "{} ", prop->data_u16[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_u16[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::u32:
-                ok = ok && format_values(fs, "{} ", prop->data_u32[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_u32[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::u64:
-                ok = ok && format_values(fs, "{} ", prop->data_u64[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_u64[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::f32:
-                ok = ok && format_values(fs, "{} ", prop->data_f32[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_f32[cur[idx]++])) throw_write_error();
                 break;
               case ply_type::f64:
-                ok = ok && format_values(fs, "{} ", prop->data_f64[cur[idx]++]);
+                if(!format_values(fs, "{} ", prop->data_f64[cur[idx]++])) throw_write_error();
                 break;
             }
           }
-          ok = ok && format_values(fs, "\n");
+          if(!format_values(fs, "\n")) throw_write_error();
         }
       }
     }
@@ -879,39 +876,39 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) ok = ok && write_value(fs, prop->ldata_u8[idx], big_endian);
+          if (prop->is_list) if(!write_value(fs, prop->ldata_u8[idx], big_endian)) throw_write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                ok = ok && write_value(fs, prop->data_i8[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_i8[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::i16:
-                ok = ok && write_value(fs, prop->data_i16[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_i16[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::i32:
-                ok = ok && write_value(fs, prop->data_i32[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_i32[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::i64:
-                ok = ok && write_value(fs, prop->data_i64[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_i64[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::u8:
-                ok = ok && write_value(fs, prop->data_u8[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_u8[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::u16:
-                ok = ok && write_value(fs, prop->data_u16[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_u16[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::u32:
-                ok = ok && write_value(fs, prop->data_u32[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_u32[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::u64:
-                ok = ok && write_value(fs, prop->data_u64[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_u64[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::f32:
-                ok = ok && write_value(fs, prop->data_f32[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_f32[cur[pidx]++], big_endian)) throw_write_error();
                 break;
               case ply_type::f64:
-                ok = ok && write_value(fs, prop->data_f64[cur[pidx]++], big_endian);
+                if(!write_value(fs, prop->data_f64[cur[pidx]++], big_endian)) throw_write_error();
                 break;
             }
           }
