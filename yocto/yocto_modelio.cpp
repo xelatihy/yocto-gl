@@ -1626,8 +1626,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
         throw_parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if (!parse_value(str, onormals.emplace_back(zero3f)))
-        throw_parse_error();
+      if (!parse_value(str, onormals.emplace_back(zero3f))) throw_parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
       if (!parse_value(str, otexcoords.emplace_back(zero2f)))
@@ -1801,109 +1800,151 @@ static void save_mtl(const string& filename, shared_ptr<obj_model> obj) {
   if (!fs) throw std::runtime_error{filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-
   // throw helpers
   auto throw_write_error = [filename]() {
     throw std::runtime_error{filename + ": write error"};
   };
 
   // save comments
- if(!format_values(fs,"#\n")) throw_write_error();
- if(!format_values(fs,"# Written by Yocto/GL\n")) throw_write_error();
- if(!format_values(fs,"# https://github.com/xelatihy/yocto-gl\n")) throw_write_error();
- if(!format_values(fs,"#\n\n")) throw_write_error();
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-   if(!format_values(fs,"# {}\n", comment)) throw_write_error();
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
- if(!format_values(fs,"\n")) throw_write_error();
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // write material
   for (auto material : obj->materials) {
-   if(!format_values(fs,"newmtl {}\n", material->name)) throw_write_error();
+    if (!format_values(fs, "newmtl {}\n", material->name)) throw_write_error();
     if (!material->as_pbr) {
-     if(!format_values(fs,"illum {}\n", material->illum)) throw_write_error();
+      if (!format_values(fs, "illum {}\n", material->illum))
+        throw_write_error();
       if (material->emission != zero3f)
-       if(!format_values(fs,"Ke {}\n", material->emission)) throw_write_error();
+        if (!format_values(fs, "Ke {}\n", material->emission))
+          throw_write_error();
       if (material->ambient != zero3f)
-       if(!format_values(fs,"Ka {}\n", material->ambient)) throw_write_error();
-     if(!format_values(fs,"Kd {}\n", material->diffuse)) throw_write_error();
-     if(!format_values(fs,"Ks {}\n", material->specular)) throw_write_error();
+        if (!format_values(fs, "Ka {}\n", material->ambient))
+          throw_write_error();
+      if (!format_values(fs, "Kd {}\n", material->diffuse)) throw_write_error();
+      if (!format_values(fs, "Ks {}\n", material->specular))
+        throw_write_error();
       if (material->reflection != zero3f)
-       if(!format_values(fs,"Kr {}\n", material->reflection)) throw_write_error();
+        if (!format_values(fs, "Kr {}\n", material->reflection))
+          throw_write_error();
       if (material->transmission != zero3f)
-       if(!format_values(fs,"Kt {}\n", material->transmission)) throw_write_error();
-     if(!format_values(fs,"Ns {}\n", (int)material->exponent)) throw_write_error();
+        if (!format_values(fs, "Kt {}\n", material->transmission))
+          throw_write_error();
+      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
+        throw_write_error();
       if (material->opacity != 1)
-       if(!format_values(fs,"d {}\n", material->opacity)) throw_write_error();
+        if (!format_values(fs, "d {}\n", material->opacity))
+          throw_write_error();
       if (!material->emission_map.path.empty())
-       if(!format_values(fs,"map_Ke {}\n", material->emission_map)) throw_write_error();
+        if (!format_values(fs, "map_Ke {}\n", material->emission_map))
+          throw_write_error();
       if (!material->diffuse_map.path.empty())
-       if(!format_values(fs,"map_Kd {}\n", material->diffuse_map)) throw_write_error();
+        if (!format_values(fs, "map_Kd {}\n", material->diffuse_map))
+          throw_write_error();
       if (!material->specular_map.path.empty())
-       if(!format_values(fs,"map_Ks {}\n", material->specular_map)) throw_write_error();
+        if (!format_values(fs, "map_Ks {}\n", material->specular_map))
+          throw_write_error();
       if (!material->transmission_map.path.empty())
-       if(!format_values(fs,"map_Kt {}\n", material->transmission_map)) throw_write_error();
+        if (!format_values(fs, "map_Kt {}\n", material->transmission_map))
+          throw_write_error();
       if (!material->reflection_map.path.empty())
-       if(!format_values(fs,"map_Kr {}\n", material->reflection_map)) throw_write_error();
+        if (!format_values(fs, "map_Kr {}\n", material->reflection_map))
+          throw_write_error();
       if (!material->exponent_map.path.empty())
-       if(!format_values(fs,"map_Ns {}\n", material->exponent_map)) throw_write_error();
+        if (!format_values(fs, "map_Ns {}\n", material->exponent_map))
+          throw_write_error();
       if (!material->opacity_map.path.empty())
-       if(!format_values(fs,"map_d {}\n", material->opacity_map)) throw_write_error();
+        if (!format_values(fs, "map_d {}\n", material->opacity_map))
+          throw_write_error();
       if (!material->bump_map.path.empty())
-       if(!format_values(fs,"map_bump {}\n", material->bump_map)) throw_write_error();
+        if (!format_values(fs, "map_bump {}\n", material->bump_map))
+          throw_write_error();
       if (!material->displacement_map.path.empty())
-       if(!format_values(fs,"map_disp {}\n", material->displacement_map)) throw_write_error();
+        if (!format_values(fs, "map_disp {}\n", material->displacement_map))
+          throw_write_error();
       if (!material->normal_map.path.empty())
-       if(!format_values(fs,"map_norm {}\n", material->normal_map)) throw_write_error();
+        if (!format_values(fs, "map_norm {}\n", material->normal_map))
+          throw_write_error();
     } else {
-     if(!format_values(fs,"illum 2\n")) throw_write_error();
+      if (!format_values(fs, "illum 2\n")) throw_write_error();
       if (material->pbr_emission != zero3f)
-       if(!format_values(fs,"Pe {}\n", material->pbr_emission)) throw_write_error();
+        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
+          throw_write_error();
       if (material->pbr_base != zero3f)
-       if(!format_values(fs,"Pb {}\n", material->pbr_base)) throw_write_error();
+        if (!format_values(fs, "Pb {}\n", material->pbr_base))
+          throw_write_error();
       if (material->pbr_specular)
-       if(!format_values(fs,"Psp {}\n", material->pbr_specular)) throw_write_error();
+        if (!format_values(fs, "Psp {}\n", material->pbr_specular))
+          throw_write_error();
       if (material->pbr_roughness)
-       if(!format_values(fs,"Pr {}\n", material->pbr_roughness)) throw_write_error();
+        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
+          throw_write_error();
       if (material->pbr_metallic)
-       if(!format_values(fs,"Pm {}\n", material->pbr_metallic)) throw_write_error();
+        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
+          throw_write_error();
       if (material->pbr_sheen)
-       if(!format_values(fs,"Ps {}\n", material->pbr_sheen)) throw_write_error();
-      if (material->pbr_coat)if(!format_values(fs,"Pc {}\n", material->pbr_coat)) throw_write_error();
+        if (!format_values(fs, "Ps {}\n", material->pbr_sheen))
+          throw_write_error();
+      if (material->pbr_coat)
+        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
+          throw_write_error();
       if (material->pbr_coatroughness)
-       if(!format_values(fs,"Pcr {}\n", material->pbr_coatroughness)) throw_write_error();
+        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
+          throw_write_error();
       if (material->pbr_volscattering != zero3f)
-       if(!format_values(fs,"Pvs {}\n", material->pbr_volscattering)) throw_write_error();
+        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
+          throw_write_error();
       if (material->pbr_volanisotropy)
-       if(!format_values(fs,"Pvg {}\n", material->pbr_volanisotropy)) throw_write_error();
+        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
+          throw_write_error();
       if (material->pbr_volscale)
-       if(!format_values(fs,"Pvr {}\n", material->pbr_volscale)) throw_write_error();
+        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
+          throw_write_error();
       if (!material->pbr_emission_map.path.empty())
-       if(!format_values(fs,"map_Pe {}\n", material->pbr_emission_map)) throw_write_error();
+        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_map))
+          throw_write_error();
       if (!material->pbr_base_map.path.empty())
-       if(!format_values(fs,"map_Pb {}\n", material->pbr_base_map)) throw_write_error();
+        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_map))
+          throw_write_error();
       if (!material->pbr_specular_map.path.empty())
-       if(!format_values(fs,"map_Psp {}\n", material->pbr_specular_map)) throw_write_error();
+        if (!format_values(fs, "map_Psp {}\n", material->pbr_specular_map))
+          throw_write_error();
       if (!material->pbr_roughness_map.path.empty())
-       if(!format_values(fs,"map_Pr {}\n", material->pbr_roughness_map)) throw_write_error();
+        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_map))
+          throw_write_error();
       if (!material->pbr_metallic_map.path.empty())
-       if(!format_values(fs,"map_Pm {}\n", material->pbr_metallic_map)) throw_write_error();
+        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_map))
+          throw_write_error();
       if (!material->pbr_sheen_map.path.empty())
-       if(!format_values(fs,"map_Ps {}\n", material->pbr_sheen_map)) throw_write_error();
+        if (!format_values(fs, "map_Ps {}\n", material->pbr_sheen_map))
+          throw_write_error();
       if (!material->pbr_coat_map.path.empty())
-       if(!format_values(fs,"map_Pc {}\n", material->pbr_coat_map)) throw_write_error();
+        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_map))
+          throw_write_error();
       if (!material->pbr_coatroughness_map.path.empty())
-       if(!format_values(fs,"map_Pcr {}\n", material->pbr_coatroughness_map)) throw_write_error();
+        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_map))
+          throw_write_error();
       if (!material->pbr_volscattering_map.path.empty())
-       if(!format_values(fs,"map_Pvs {}\n", material->pbr_volscattering_map)) throw_write_error();
+        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_map))
+          throw_write_error();
       if (!material->bump_map.path.empty())
-       if(!format_values(fs,"map_bump {}\n", material->bump_map)) throw_write_error();
+        if (!format_values(fs, "map_bump {}\n", material->bump_map))
+          throw_write_error();
       if (!material->displacement_map.path.empty())
-       if(!format_values(fs,"map_disp {}\n", material->displacement_map)) throw_write_error();
+        if (!format_values(fs, "map_disp {}\n", material->displacement_map))
+          throw_write_error();
       if (!material->normal_map.path.empty())
-       if(!format_values(fs,"map_norm {}\n", material->normal_map)) throw_write_error();
+        if (!format_values(fs, "map_norm {}\n", material->normal_map))
+          throw_write_error();
     }
-   if(!format_values(fs,"\n")) throw_write_error();
+    if (!format_values(fs, "\n")) throw_write_error();
   }
 }
 
@@ -1914,42 +1955,46 @@ static void save_objx(const string& filename, shared_ptr<obj_model> obj) {
   if (!fs) throw std::runtime_error{filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-
   // throw helpers
   auto throw_write_error = [filename]() {
     throw std::runtime_error{filename + ": write error"};
   };
 
   // save comments
- if(!format_values(fs,"#\n")) throw_write_error();
- if(!format_values(fs,"# Written by Yocto/GL\n")) throw_write_error();
- if(!format_values(fs,"# https://github.com/xelatihy/yocto-gl\n")) throw_write_error();
- if(!format_values(fs,"#\n\n")) throw_write_error();
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-   if(!format_values(fs,"# {}\n", comment)) throw_write_error();
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
- if(!format_values(fs,"\n")) throw_write_error();
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // cameras
   for (auto camera : obj->cameras) {
-   if(!format_values(fs,"c {} {} {} {} {} {} {} {}\n", camera->name,
-        camera->ortho, camera->width, camera->height, camera->lens,
-        camera->focus, camera->aperture, camera->frame)) throw_write_error();
+    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
+            camera->ortho, camera->width, camera->height, camera->lens,
+            camera->focus, camera->aperture, camera->frame))
+      throw_write_error();
   }
 
   // environments
   for (auto environment : obj->environments) {
-   if(!format_values(fs,"e {} {} {} {}\n", environment->name,
-        environment->emission,
-        environment->emission_map.path.empty() ? "\"\""s
-                                               : environment->emission_map.path,
-        environment->frame)) throw_write_error();
+    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
+            environment->emission,
+            environment->emission_map.path.empty()
+                ? "\"\""s
+                : environment->emission_map.path,
+            environment->frame))
+      throw_write_error();
   }
 
   // instances
   for (auto shape : obj->shapes) {
     for (auto& frame : shape->instances) {
-     if(!format_values(fs,"i {} {}\n", shape->name, frame)) throw_write_error();
+      if (!format_values(fs, "i {} {}\n", shape->name, frame))
+        throw_write_error();
     }
   }
 }
@@ -1967,28 +2012,33 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
   };
 
   // save comments
- if(!format_values(fs,"#\n")) throw_write_error();
- if(!format_values(fs,"# Written by Yocto/GL\n")) throw_write_error();
- if(!format_values(fs,"# https://github.com/xelatihy/yocto-gl\n")) throw_write_error();
- if(!format_values(fs,"#\n\n")) throw_write_error();
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-   if(!format_values(fs,"# {}\n", comment)) throw_write_error();
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
- if(!format_values(fs,"\n")) throw_write_error();
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // save material library
   if (!obj->materials.empty()) {
-   if(!format_values(fs,"mtllib {}\n\n",
-        fs::path(filename).filename().replace_extension(".mtl"))) throw_write_error();
+    if (!format_values(fs, "mtllib {}\n\n",
+            fs::path(filename).filename().replace_extension(".mtl")))
+      throw_write_error();
   }
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto shape : obj->shapes) {
-   if(!format_values(fs,"o {}\n", shape->name)) throw_write_error();
-    for (auto& p : shape->positions)if(!format_values(fs,"v {}\n", p)) throw_write_error();
-    for (auto& n : shape->normals)if(!format_values(fs,"vn {}\n", n)) throw_write_error();
-    for (auto& t : shape->texcoords)if(!format_values(fs,"vt {}\n", t)) throw_write_error();
+    if (!format_values(fs, "o {}\n", shape->name)) throw_write_error();
+    for (auto& p : shape->positions)
+      if (!format_values(fs, "v {}\n", p)) throw_write_error();
+    for (auto& n : shape->normals)
+      if (!format_values(fs, "vn {}\n", n)) throw_write_error();
+    for (auto& t : shape->texcoords)
+      if (!format_values(fs, "vt {}\n", t)) throw_write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape->faces, &shape->lines, &shape->points};
@@ -1998,22 +2048,23 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape->materials.empty() && cur_material != element.material) {
-          if(!format_values(
-              fs, "usemtl {}\n", shape->materials[element.material]->name)) throw_write_error();
+          if (!format_values(
+                  fs, "usemtl {}\n", shape->materials[element.material]->name))
+            throw_write_error();
           cur_material = element.material;
         }
-       if(!format_values(fs,"{}", label)) throw_write_error();
+        if (!format_values(fs, "{}", label)) throw_write_error();
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape->vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-         if(!format_values(fs," {}", vert)) throw_write_error();
+          if (!format_values(fs, " {}", vert)) throw_write_error();
         }
-       if(!format_values(fs,"\n")) throw_write_error();
+        if (!format_values(fs, "\n")) throw_write_error();
       }
     }
-   if(!format_values(fs,"\n")) throw_write_error();
+    if (!format_values(fs, "\n")) throw_write_error();
     vert_size.position += (int)shape->positions.size();
     vert_size.normal += (int)shape->normals.size();
     vert_size.texcoord += (int)shape->texcoords.size();
@@ -2820,20 +2871,21 @@ template <typename T>
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
-  if(!parse_value(str, value)) return false;
+  if (!parse_value(str, value)) return false;
   if (!str.data()) return false;
   if (parens) {
     skip_whitespace(str);
-    if (!str.empty() && str.front() == '[')return false;
+    if (!str.empty() && str.front() == '[') return false;
     str.remove_prefix(1);
   }
   return true;
 }
 
 // parse a quoted string
-[[nodiscard]] static bool parse_pbrt_nametype(string_view& str_, string& name, string& type) {
+[[nodiscard]] static bool parse_pbrt_nametype(
+    string_view& str_, string& name, string& type) {
   auto value = ""s;
-  if(!parse_value(str_, value)) return false;
+  if (!parse_value(str_, value)) return false;
   if (!str_.data()) return false;
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
@@ -3025,7 +3077,8 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
   return params.at(name);
 }
 
-[[nodiscard]] static bool parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
+[[nodiscard]] static bool parse_pbrt_params(
+    string_view& str, vector<pbrt_value>& values) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value,
                                 auto& values) -> bool {
     values.clear();
@@ -3037,7 +3090,7 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
       if (str.empty()) return false;
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
-        if(!parse_value(str, val)) return false;
+        if (!parse_value(str, val)) return false;
         if (!str.data()) return false;
         skip_whitespace(str);
         if (str.empty()) break;
@@ -3058,31 +3111,31 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
-    if(!parse_pbrt_nametype(str, value.name, type)) return false;
+    if (!parse_pbrt_nametype(str, value.name, type)) return false;
     skip_whitespace(str);
     if (str.empty()) return false;
     if (type == "float") {
       value.type = pbrt_value_type::real;
-      if(!parse_pbrt_pvalues(str, value.value1f, value.vector1f)) return false;
+      if (!parse_pbrt_pvalues(str, value.value1f, value.vector1f)) return false;
     } else if (type == "integer") {
       value.type = pbrt_value_type::integer;
-      if(!parse_pbrt_pvalues(str, value.value1i, value.vector1i)) return false;
+      if (!parse_pbrt_pvalues(str, value.value1i, value.vector1i)) return false;
     } else if (type == "string") {
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::string;
-      if(!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
+      if (!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::boolean;
-      if(!parse_pbrt_pvalues(str, value1s, vector1s)) return false;
+      if (!parse_pbrt_pvalues(str, value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::texture;
-      if(!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
+      if (!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "point" || type == "point3") {
       value.type = pbrt_value_type::point;
@@ -3108,10 +3161,10 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
       value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_value_type::color;
-      if(!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
+      if (!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
     } else if (type == "xyz") {
       value.type = pbrt_value_type::color;
-      if(!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
+      if (!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
       // xyz conversion
       return false;
     } else if (type == "spectrum") {
@@ -3129,7 +3182,7 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
         value.type     = pbrt_value_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
-        if(!parse_value(str, filename)) return false;
+        if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
         auto filenamep = fs::path(filename).filename();
         if (fs::path(filenamep).extension() == ".spd") {
@@ -3152,7 +3205,8 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
         }
       } else {
         value.type = pbrt_value_type::spectrum;
-        if(!parse_pbrt_pvalues(str, value.value1f, value.vector1f)) return false;
+        if (!parse_pbrt_pvalues(str, value.value1f, value.vector1f))
+          return false;
       }
     } else {
       return false;
@@ -3832,7 +3886,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     auto str = string_view{line};
     // get command
     auto cmd = ""s;
-    if(!parse_pbrt_command(str, cmd)) throw_parse_error();
+    if (!parse_pbrt_command(str, cmd)) throw_parse_error();
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
@@ -3855,14 +3909,14 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
-      if(!parse_pbrt_param(str, ctx.cur_object)) throw_parse_error();
+      if (!parse_pbrt_param(str, ctx.cur_object)) throw_parse_error();
       ctx.objects[ctx.cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
       auto object = ""s;
-      if(!parse_pbrt_param(str, object)) throw_parse_error();
+      if (!parse_pbrt_param(str, object)) throw_parse_error();
       if (ctx.objects.find(object) == ctx.objects.end())
         throw std::runtime_error{filename + ": parse error [unknown object]"};
       for (auto shape : ctx.objects.at(object)) {
@@ -3871,7 +3925,7 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
-      if(!parse_pbrt_command(str, name)) throw_parse_error();
+      if (!parse_pbrt_command(str, name)) throw_parse_error();
       if (name == "StartTime") {
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = false;
@@ -3886,42 +3940,42 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
-      if(!parse_pbrt_param(str, xf)) throw_parse_error();
+      if (!parse_pbrt_param(str, xf)) throw_parse_error();
       set_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
-      if(!parse_pbrt_param(str, xf)) throw_parse_error();
+      if (!parse_pbrt_param(str, xf)) throw_parse_error();
       concat_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "Scale") {
       auto v = zero3f;
-      if(!parse_pbrt_param(str, v)) throw_parse_error();
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(ctx.stack.back(), scaling_frame(v));
     } else if (cmd == "Translate") {
       auto v = zero3f;
-      if(!parse_pbrt_param(str, v)) throw_parse_error();
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(ctx.stack.back(), translation_frame(v));
     } else if (cmd == "Rotate") {
       auto v = zero4f;
-      if(!parse_pbrt_param(str, v)) throw_parse_error();
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(
           ctx.stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
-      if(!parse_pbrt_param(str, from)) throw_parse_error();
-      if(!parse_pbrt_param(str, to)) throw_parse_error();
-      if(!parse_pbrt_param(str, up)) throw_parse_error();
+      if (!parse_pbrt_param(str, from)) throw_parse_error();
+      if (!parse_pbrt_param(str, to)) throw_parse_error();
+      if (!parse_pbrt_param(str, up)) throw_parse_error();
       auto frame = lookat_frame(from, to, up, true);
       concat_transform(ctx.stack.back(), inverse(frame));
     } else if (cmd == "ReverseOrientation") {
       ctx.stack.back().reverse = !ctx.stack.back().reverse;
     } else if (cmd == "CoordinateSystem") {
       auto name = ""s;
-      if(!parse_pbrt_param(str, name)) throw_parse_error();
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       ctx.coordsys[name].transform_start = ctx.stack.back().transform_start;
       ctx.coordsys[name].transform_end   = ctx.stack.back().transform_end;
     } else if (cmd == "CoordSysTransform") {
       auto name = ""s;
-      if(!parse_pbrt_param(str, name)) throw_parse_error();
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       if (ctx.coordsys.find(name) != ctx.coordsys.end()) {
         ctx.stack.back().transform_start =
             ctx.coordsys.at(name).transform_start;
@@ -3929,30 +3983,30 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "Integrator") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Sampler") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "PixelFilter") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Film") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       auto cfilm          = convert_film(command);
       ctx.film_resolution = cfilm->resolution;
     } else if (cmd == "Accelerator") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Camera") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       auto camera   = convert_camera(command, ctx.film_resolution);
@@ -3961,18 +4015,18 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
-      if(!parse_pbrt_param(str, command.name)) throw_parse_error();
-      if(!parse_pbrt_param(str, comptype)) throw_parse_error();
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_param(str, comptype)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       texture_map[command.name] = {};
       convert_texture(texture_map[command.name], command, texture_map);
     } else if (cmd == "Material") {
       static auto material_id = 0;
       auto        command     = pbrt_command{};
       command.name            = "material_" + std::to_string(material_id++);
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       if (command.type == "") {
         ctx.stack.back().material = nullptr;
       } else {
@@ -3982,8 +4036,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.name)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
@@ -3992,12 +4046,12 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       material_map[command.name] = material;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
-      if(!parse_pbrt_param(str, name)) throw_parse_error();
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       ctx.stack.back().material = material_map.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       auto shape    = convert_shape(command, filename, ply_dirname);
@@ -4011,8 +4065,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       static auto arealight_id = 0;
       auto        command      = pbrt_command{};
       command.name             = "arealight_" + std::to_string(arealight_id++);
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame  = ctx.stack.back().transform_start;
       command.frend  = ctx.stack.back().transform_end;
       auto arealight = convert_arealight(command);
@@ -4020,8 +4074,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       ctx.stack.back().arealight = arealight;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.type)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
@@ -4033,8 +4087,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "MakeNamedMedium") {
       auto command = pbrt_command{};
-      if(!parse_pbrt_param(str, command.name)) throw_parse_error();
-      if(!parse_pbrt_params(str, command.values)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
@@ -4042,13 +4096,13 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       medium_map[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
-      if(!parse_pbrt_param(str, interior)) throw_parse_error();
-      if(!parse_pbrt_param(str, exterior)) throw_parse_error();
+      if (!parse_pbrt_param(str, interior)) throw_parse_error();
+      if (!parse_pbrt_param(str, exterior)) throw_parse_error();
       ctx.stack.back().interior = medium_map.at(interior);
       ctx.stack.back().exterior = medium_map.at(exterior);
     } else if (cmd == "Include") {
       auto includename = ""s;
-      if(!parse_pbrt_param(str, includename)) throw_parse_error();
+      if (!parse_pbrt_param(str, includename)) throw_parse_error();
       try {
         load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx,
             material_map, medium_map, texture_map, ply_dirname);
@@ -4173,14 +4227,15 @@ void save_pbrt(
   };
 
   // save comments
- if(!format_values(fs,"#\n")) throw_write_error();
- if(!format_values(fs,"# Written by Yocto/GL\n")) throw_write_error();
- if(!format_values(fs,"# https://github.com/xelatihy/yocto-gl\n")) throw_write_error();
- if(!format_values(fs,"#\n\n")) throw_write_error();
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : pbrt->comments) {
-   if(!format_values(fs,"# {}\n", comment)) throw_write_error();
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
- if(!format_values(fs,"\n")) throw_write_error();
+  if (!format_values(fs, "\n")) throw_write_error();
 
   for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
@@ -4190,7 +4245,8 @@ void save_pbrt(
     command.values.push_back(
         make_pbrt_value("yresolution", camera->resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
-   if(!format_values(fs,"Film \"{}\" {}\n", command.type, command.values)) throw_write_error();
+    if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
   }
 
   for (auto camera : pbrt->cameras) {
@@ -4199,12 +4255,14 @@ void save_pbrt(
     command.frame = camera->frame;
     command.values.push_back(make_pbrt_value(
         "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
-   if(!format_values(fs,"LookAt {} {} {}\n", command.frame.o,
-        command.frame.o - command.frame.z, command.frame.y)) throw_write_error();
-   if(!format_values(fs,"Camera \"{}\" {}\n", command.type, command.values)) throw_write_error();
+    if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
+            command.frame.o - command.frame.z, command.frame.y))
+      throw_write_error();
+    if (!format_values(fs, "Camera \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
   }
 
- if(!format_values(fs,"\nWorldBegin\n\n")) throw_write_error();
+  if (!format_values(fs, "\nWorldBegin\n\n")) throw_write_error();
 
   for (auto light : pbrt->lights) {
     auto command  = pbrt_command{};
@@ -4216,10 +4274,13 @@ void save_pbrt(
       command.type = "point";
       command.values.push_back(make_pbrt_value("I", light->emission));
     }
-   if(!format_values(fs,"AttributeBegin\n")) throw_write_error();
-   if(!format_values(fs,"Transform {}\n", (mat4f)command.frame)) throw_write_error();
-   if(!format_values(fs,"LightSource \"{}\" {}\n", command.type, command.values)) throw_write_error();
-   if(!format_values(fs,"AttributeEnd\n")) throw_write_error();
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)command.frame))
+      throw_write_error();
+    if (!format_values(
+            fs, "LightSource \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
   }
 
   for (auto environment : pbrt->environments) {
@@ -4229,10 +4290,13 @@ void save_pbrt(
     command.values.push_back(make_pbrt_value("L", environment->emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment->emission_map));
-   if(!format_values(fs,"AttributeBegin\n")) throw_write_error();
-   if(!format_values(fs,"Transform {}\n", (mat4f)command.frame)) throw_write_error();
-   if(!format_values(fs,"LightSource \"{}\" {}\n", command.type, command.values)) throw_write_error();
-   if(!format_values(fs,"AttributeEnd\n")) throw_write_error();
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)command.frame))
+      throw_write_error();
+    if (!format_values(
+            fs, "LightSource \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
   }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
@@ -4285,8 +4349,10 @@ void save_pbrt(
         command.values.push_back(make_pbrt_value("opacity", material->opacity));
       }
     }
-   if(!format_values(fs,"MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        material->name, command.type, command.values)) throw_write_error();
+    if (!format_values(fs,
+            "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+            material->name, command.type, command.values))
+      throw_write_error();
   }
 
   auto object_id = 0;
@@ -4328,26 +4394,34 @@ void save_pbrt(
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape->instances.empty())
-     if(!format_values(fs,"ObjectBegin \"{}\"\n", object)) throw_write_error();
-   if(!format_values(fs,"AttributeBegin\n")) throw_write_error();
-   if(!format_values(fs,"Transform {}\n", (mat4f)shape->frame)) throw_write_error();
+      if (!format_values(fs, "ObjectBegin \"{}\"\n", object))
+        throw_write_error();
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)shape->frame))
+      throw_write_error();
     if (shape->arealight) {
-      if(!format_values(
-          fs, "AreaLightSource \"{}\" {}\n", acommand.type, acommand.values)) throw_write_error();
+      if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
+              acommand.values))
+        throw_write_error();
     }
-   if(!format_values(fs,"NamedMaterial \"{}\"\n", shape->material->name)) throw_write_error();
-   if(!format_values(fs,"Shape \"{}\" {}\n", command.type, command.values)) throw_write_error();
-   if(!format_values(fs,"AttributeEnd\n")) throw_write_error();
-    if (!shape->instances.empty())if(!format_values(fs,"ObjectEnd\n")) throw_write_error();
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
+      throw_write_error();
+    if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
+    if (!shape->instances.empty())
+      if (!format_values(fs, "ObjectEnd\n")) throw_write_error();
     for (auto& iframe : shape->instances) {
-     if(!format_values(fs,"AttributeBegin\n")) throw_write_error();
-     if(!format_values(fs,"Transform {}\n", (mat4f)iframe)) throw_write_error();
-     if(!format_values(fs,"ObjectInstance \"{}\"\n", object)) throw_write_error();
-     if(!format_values(fs,"AttributeEnd\n")) throw_write_error();
+      if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+      if (!format_values(fs, "Transform {}\n", (mat4f)iframe))
+        throw_write_error();
+      if (!format_values(fs, "ObjectInstance \"{}\"\n", object))
+        throw_write_error();
+      if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
     }
   }
 
- if(!format_values(fs,"\nWorldEnd\n\n")) throw_write_error();
+  if (!format_values(fs, "\nWorldEnd\n\n")) throw_write_error();
 }
 
 }  // namespace yocto
