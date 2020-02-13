@@ -227,52 +227,10 @@ static void parse_value(string_view& str, string& value) {
   parse_value(str, valuev);
   value = string{valuev};
 }
-static void parse_value(string_view& str, int8_t& value) {
-  char* end = nullptr;
-  value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, int16_t& value) {
-  char* end = nullptr;
-  value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
-  str.remove_prefix(end - str.data());
-}
 static void parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) throw std::invalid_argument{"int expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, uint8_t& value) {
-  char* end = nullptr;
-  value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, uint16_t& value) {
-  char* end = nullptr;
-  value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
-  str.remove_prefix(end - str.data());
-}
-static void parse_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
   str.remove_prefix(end - str.data());
 }
 static void parse_value(string_view& str, bool& value) {
@@ -286,20 +244,6 @@ static void parse_value(string_view& str, float& value) {
   if (str.data() == end) throw std::invalid_argument{"float expected"};
   str.remove_prefix(end - str.data());
 }
-static void parse_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) throw std::invalid_argument{"double expected"};
-  str.remove_prefix(end - str.data());
-}
-#ifdef __APPLE__
-static void parse_value(string_view& str, size_t& value) {
-  char* end = nullptr;
-  value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
-  str.remove_prefix(end - str.data());
-}
-#endif
 
 static void parse_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++) parse_value(str, value[i]);
@@ -446,16 +390,18 @@ static void format_values(
 }
 
 template <typename... Args>
-static void format_values(FILE* fs, const string& fmt, const Args&... args) {
+[[nodiscard]] static bool format_values(FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
 }
 template <typename T>
-static void format_value(FILE* fs, const T& value) {
+[[nodiscard]] static bool format_value(FILE* fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
 }
 
 }  // namespace yocto
@@ -544,6 +490,13 @@ template <typename T>
 }
 
 template <typename T>
+[[nodiscard]] bool write_value(FILE* fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  if (fwrite(&value, sizeof(value), 1, fs) != 1) return false;
+  return true;
+}
+
+template <typename T>
 void read_value(file_wrapper& fs, T& value, bool big_endian) {
   if (fread(&value, sizeof(value), 1, fs.fs) != 1)
     throw std::runtime_error{fs.filename + ": read error"};
@@ -613,10 +566,6 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
   ply->comments.clear();
   ply->elements.clear();
 
-  // parsing checks
-  auto first_line = true;
-  auto end_header = false;
-
   // open file
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
@@ -629,6 +578,10 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
   auto throw_read_error = [filename]() {
     throw std::runtime_error{filename + ": read error"};
   };
+
+  // parsing checks
+  auto first_line = true;
+  auto end_header = false;
 
   // read header ---------------------------------------------
   char buffer[4096];
@@ -740,38 +693,40 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
+            auto ok = false;
             switch (prop->type) {
               case ply_type::i8:
-                if(!parse_value_(str, prop->data_i8.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_i8.emplace_back());
                 break;
               case ply_type::i16:
-                if(!parse_value_(str, prop->data_i16.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_i16.emplace_back());
                 break;
               case ply_type::i32:
-                if(!parse_value_(str, prop->data_i32.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_i32.emplace_back());
                 break;
               case ply_type::i64:
-                if(!parse_value_(str, prop->data_i64.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_i64.emplace_back());
                 break;
               case ply_type::u8:
-                if(!parse_value_(str, prop->data_u8.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_u8.emplace_back());
                 break;
               case ply_type::u16:
-                if(!parse_value_(str, prop->data_u16.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_u16.emplace_back());
                 break;
               case ply_type::u32:
-                if(!parse_value_(str, prop->data_u32.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_u32.emplace_back());
                 break;
               case ply_type::u64:
-                if(!parse_value_(str, prop->data_u64.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_u64.emplace_back());
                 break;
               case ply_type::f32:
-                if(!parse_value_(str, prop->data_f32.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_f32.emplace_back());
                 break;
               case ply_type::f64:
-                if(!parse_value_(str, prop->data_f64.emplace_back())) throw_parse_error();
+                ok = parse_value_(str, prop->data_f64.emplace_back());
                 break;
             }
+            if(!ok) throw_parse_error();
           }
         }
       }
@@ -786,38 +741,40 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
+            auto ok = false;
             switch (prop->type) {
               case ply_type::i8:
-                if(!read_value(fs, prop->data_i8.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_i8.emplace_back(), big_endian);
                 break;
               case ply_type::i16:
-                if(!read_value(fs, prop->data_i16.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_i16.emplace_back(), big_endian);
                 break;
               case ply_type::i32:
-                if(!read_value(fs, prop->data_i32.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_i32.emplace_back(), big_endian);
                 break;
               case ply_type::i64:
-                if(!read_value(fs, prop->data_i64.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_i64.emplace_back(), big_endian);
                 break;
               case ply_type::u8:
-                if(!read_value(fs, prop->data_u8.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_u8.emplace_back(), big_endian);
                 break;
               case ply_type::u16:
-                if(!read_value(fs, prop->data_u16.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_u16.emplace_back(), big_endian);
                 break;
               case ply_type::u32:
-                if(!read_value(fs, prop->data_u32.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_u32.emplace_back(), big_endian);
                 break;
               case ply_type::u64:
-                if(!read_value(fs, prop->data_u64.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_u64.emplace_back(), big_endian);
                 break;
               case ply_type::f32:
-                if(!read_value(fs, prop->data_f32.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_f32.emplace_back(), big_endian);
                 break;
               case ply_type::f64:
-                if(!read_value(fs, prop->data_f64.emplace_back(), big_endian)) throw_read_error();
+                ok = read_value(fs, prop->data_f64.emplace_back(), big_endian);
                 break;
             }
+            if(!ok) throw_read_error();
           }
         }
       }
@@ -827,8 +784,6 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
 
 // Save ply
 void save_ply(const string& filename, shared_ptr<ply_model> ply) {
-  auto fs = open_file(filename, "wb");
-
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -840,26 +795,39 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
+  // open file
+  auto fs = fopen(filename.c_str(), "wb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
+
+  // error handling
+  auto ok = true;
+
   // header
-  format_values(fs, "ply\n");
-  format_values(fs, "format {} 1.0\n", format_map.at(ply->format));
-  format_values(fs, "comment Written by Yocto/GL\n");
-  format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+  ok = ok && format_values(fs, "ply\n");
+  ok = ok && format_values(fs, "format {} 1.0\n", format_map.at(ply->format));
+  ok = ok && format_values(fs, "comment Written by Yocto/GL\n");
+  ok = ok && format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
   for (auto& comment : ply->comments)
-    format_values(fs, "comment {}\n", comment);
+    ok = ok && format_values(fs, "comment {}\n", comment);
   for (auto elem : ply->elements) {
-    format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count);
+    ok = ok && format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count);
     for (auto prop : elem->properties) {
       if (prop->is_list) {
-        format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
+        ok = ok && format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
             prop->name);
       } else {
-        format_values(fs, "property {} {}\n", type_map[prop->type], prop->name);
+        ok = ok && format_values(fs, "property {} {}\n", type_map[prop->type], prop->name);
       }
     }
   }
 
-  format_values(fs, "end_header\n");
+  ok = ok && format_values(fs, "end_header\n");
 
   // properties
   if (ply->format == ply_format::ascii) {
@@ -868,43 +836,43 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) format_values(fs, "{} ", (int)prop->ldata_u8[idx]);
+          if (prop->is_list) ok = ok && format_values(fs, "{} ", (int)prop->ldata_u8[idx]);
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                format_values(fs, "{} ", prop->data_i8[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_i8[cur[idx]++]);
                 break;
               case ply_type::i16:
-                format_values(fs, "{} ", prop->data_i16[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_i16[cur[idx]++]);
                 break;
               case ply_type::i32:
-                format_values(fs, "{} ", prop->data_i32[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_i32[cur[idx]++]);
                 break;
               case ply_type::i64:
-                format_values(fs, "{} ", prop->data_i64[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_i64[cur[idx]++]);
                 break;
               case ply_type::u8:
-                format_values(fs, "{} ", prop->data_u8[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_u8[cur[idx]++]);
                 break;
               case ply_type::u16:
-                format_values(fs, "{} ", prop->data_u16[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_u16[cur[idx]++]);
                 break;
               case ply_type::u32:
-                format_values(fs, "{} ", prop->data_u32[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_u32[cur[idx]++]);
                 break;
               case ply_type::u64:
-                format_values(fs, "{} ", prop->data_u64[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_u64[cur[idx]++]);
                 break;
               case ply_type::f32:
-                format_values(fs, "{} ", prop->data_f32[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_f32[cur[idx]++]);
                 break;
               case ply_type::f64:
-                format_values(fs, "{} ", prop->data_f64[cur[idx]++]);
+                ok = ok && format_values(fs, "{} ", prop->data_f64[cur[idx]++]);
                 break;
             }
           }
-          format_values(fs, "\n");
+          ok = ok && format_values(fs, "\n");
         }
       }
     }
@@ -915,39 +883,39 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) write_value(fs, prop->ldata_u8[idx], big_endian);
+          if (prop->is_list) ok = ok && write_value(fs, prop->ldata_u8[idx], big_endian);
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                write_value(fs, prop->data_i8[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_i8[cur[pidx]++], big_endian);
                 break;
               case ply_type::i16:
-                write_value(fs, prop->data_i16[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_i16[cur[pidx]++], big_endian);
                 break;
               case ply_type::i32:
-                write_value(fs, prop->data_i32[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_i32[cur[pidx]++], big_endian);
                 break;
               case ply_type::i64:
-                write_value(fs, prop->data_i64[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_i64[cur[pidx]++], big_endian);
                 break;
               case ply_type::u8:
-                write_value(fs, prop->data_u8[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_u8[cur[pidx]++], big_endian);
                 break;
               case ply_type::u16:
-                write_value(fs, prop->data_u16[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_u16[cur[pidx]++], big_endian);
                 break;
               case ply_type::u32:
-                write_value(fs, prop->data_u32[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_u32[cur[pidx]++], big_endian);
                 break;
               case ply_type::u64:
-                write_value(fs, prop->data_u64[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_u64[cur[pidx]++], big_endian);
                 break;
               case ply_type::f32:
-                write_value(fs, prop->data_f32[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_f32[cur[pidx]++], big_endian);
                 break;
               case ply_type::f64:
-                write_value(fs, prop->data_f64[cur[pidx]++], big_endian);
+                ok = ok && write_value(fs, prop->data_f64[cur[pidx]++], big_endian);
                 break;
             }
           }
@@ -1409,7 +1377,7 @@ static void parse_ply_prop(string_view& str, VT& value) {
   value = (VT)tvalue;
 }
 template <typename VT>
-static void parse_ply_prop(string_view& str, ply_type type, VT& value) {
+static bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
   switch (type) {
     case ply_type::i8: return parse_ply_prop<int8_t>(str, value);
     case ply_type::i16: return parse_ply_prop<int16_t>(str, value);
@@ -1426,7 +1394,7 @@ static void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 template <typename VT>
-static void format_ply_prop(FILE* fs, ply_type type, VT value) {
+static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_value(fs, (int8_t)value);
     case ply_type::i16: return format_value(fs, (int16_t)value);
