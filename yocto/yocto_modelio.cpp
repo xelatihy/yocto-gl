@@ -58,9 +58,9 @@ static void skip_whitespace(string_view& str) {
 }
 
 // Parse values from a string
-static void parse_value(string_view& str, string_view& value) {
+[[nodiscard]] static bool parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
-  if (str.empty()) throw std::invalid_argument{"string expected"};
+  if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
     while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
@@ -68,131 +68,135 @@ static void parse_value(string_view& str, string_view& value) {
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
   } else {
-    if (str.front() != '"') throw std::invalid_argument{"string expected"};
+    if (str.front() != '"') return false;
     str.remove_prefix(1);
-    if (str.empty()) throw std::invalid_argument{"string expected"};
+    if (str.empty()) return false;
     auto cpy = str;
     while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw std::invalid_argument{"string expected"};
+    if (cpy.empty()) return false;
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
     str.remove_prefix(1);
   }
+  return true;
 }
-static void parse_value(string_view& str, string& value) {
+[[nodiscard]] static bool parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  parse_value(str, valuev);
+  if (!parse_value(str, valuev)) return false;
   value = string{valuev};
+  return true;
 }
-static void parse_value(string_view& str, int8_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, int16_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, int32_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, int64_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"int expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, uint8_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, uint16_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, uint32_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, uint64_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, bool& value) {
+[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
   auto valuei = 0;
-  parse_value(str, valuei);
+  if (!parse_value(str, valuei)) return false;
   value = (bool)valuei;
+  return true;
 }
-static void parse_value(string_view& str, float& value) {
+[[nodiscard]] static bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
-  if (str.data() == end) throw std::invalid_argument{"float expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
-static void parse_value(string_view& str, double& value) {
+[[nodiscard]] static bool parse_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
-  if (str.data() == end) throw std::invalid_argument{"double expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
 #ifdef __APPLE__
-static void parse_value(string_view& str, size_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) throw std::invalid_argument{"uint expected"};
+  if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
+  return true;
 }
 #endif
 
-static void parse_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++) parse_value(str, value[i]);
+[[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
 }
-static void parse_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++) parse_value(str, value[i]);
+[[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
 }
-static void parse_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++) parse_value(str, value[i]);
+[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
 }
-static void parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++) parse_value(str, value[i]);
+[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
 }
-static void parse_value(string_view& str, mat4f& value) {
-  for (auto i = 0; i < 4; i++) parse_value(str, value[i]);
-}
-
-// Parse values from a string
-static void parse_value_or_empty(string_view& str, string& value) {
-  skip_whitespace(str);
-  if (str.empty()) {
-    value = "";
-  } else {
-    parse_value(str, value);
-  }
-}
-
-template <typename T>
-static void parse_value(
-    string_view& str, T& value, unordered_map<string, T>& value_names) {
-  auto value_name = ""s;
-  parse_value(str, value_name);
-  if (value_names.find(value_name) == value_names.end())
-    throw std::invalid_argument{"wrong value"};
-  value = value_names.at(value_name);
+[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
 }
 
 }  // namespace yocto
@@ -304,81 +308,27 @@ static void format_values(
 }
 
 template <typename... Args>
-static void format_values(FILE* fs, const string& fmt, const Args&... args) {
+[[nodiscard]] static bool format_values(
+    FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
 }
 template <typename T>
-static void format_value(FILE* fs, const T& value) {
+[[nodiscard]] static bool format_value(FILE* fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
 }
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE WRAPPER
+// LOW-LEVEL BINARY HANDLING
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// file wrapper with RIIA
-struct file_wrapper {
-  file_wrapper() {}
-  ~file_wrapper() {
-    if (fs) fclose(fs);
-  }
-  file_wrapper(const file_wrapper&) = delete;
-  file_wrapper& operator=(const file_wrapper&) = delete;
-  file_wrapper(file_wrapper&& other) {
-    if (this == &other) return;
-    std::swap(filename, other.filename);
-    std::swap(filename, other.filename);
-  }
-  file_wrapper& operator=(file_wrapper&& other) {
-    if (this == &other) return *this;
-    std::swap(filename, other.filename);
-    std::swap(filename, other.filename);
-    return *this;
-  }
-
-  string filename = ""s;
-  FILE*  fs       = nullptr;
-};
-
-file_wrapper open_file(const string& filename, const string& mode) {
-  auto fs = file_wrapper{};
-  fs.fs   = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error{filename + ": file not found"};
-  fs.filename = filename;
-  return fs;
-}
-
-bool read_line(file_wrapper& fs, char* buffer, int size) {
-  return (bool)fgets(buffer, size, fs.fs);
-}
-
-template <typename T>
-void parse_value(file_wrapper& fs, string_view& str, T& value) {
-  try {
-    parse_value(str, value);
-  } catch (std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error [" + e.what() + "]"};
-  }
-}
-
-template <typename T>
-void read_value(file_wrapper& fs, T& value) {
-  if (fread(&value, sizeof(value), 1, fs.fs) != 1)
-    throw std::runtime_error{fs.filename + ": read error"};
-}
-
-template <typename T>
-void write_value(file_wrapper& fs, const T& value) {
-  if (fwrite(&value, sizeof(value), 1, fs) != 1)
-    throw std::runtime_error{fs.filename + ": write error"};
-}
 
 template <typename T>
 static T swap_endian(T value) {
@@ -395,46 +345,17 @@ static T swap_endian(T value) {
 }
 
 template <typename T>
-void read_value(file_wrapper& fs, T& value, bool big_endian) {
-  if (fread(&value, sizeof(value), 1, fs.fs) != 1)
-    throw std::runtime_error{fs.filename + ": read error"};
+[[nodiscard]] bool read_value(FILE* fs, T& value, bool big_endian) {
+  if (fread(&value, sizeof(value), 1, fs) != 1) return false;
   if (big_endian) value = swap_endian(value);
+  return true;
 }
 
 template <typename T>
-void write_value(file_wrapper& fs, const T& value_, bool big_endian) {
+[[nodiscard]] bool write_value(FILE* fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_endian(value_) : value_;
-  if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
-    throw std::runtime_error{fs.filename + ": write error"};
-}
-
-template <typename... Args>
-static void format_values(
-    file_wrapper& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error{fs.filename + ": write error"};
-}
-template <typename T>
-static void format_value(file_wrapper& fs, const T& value) {
-  auto str = ""s;
-  format_value(str, value);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error{fs.filename + ": write error"};
-}
-
-static void throw_dependent_error(const string& filename, const string& err) {
-  throw std::runtime_error{filename + ": error in resource (" + err + ")"};
-}
-static void throw_dependent_error(file_wrapper& fs, const string& err) {
-  throw std::runtime_error{fs.filename + ": error in resource (" + err + ")"};
-}
-static void throw_parse_error(file_wrapper& fs, const string& err) {
-  throw std::runtime_error{fs.filename + ": parse error [" + err + "]"};
-}
-static void throw_read_error(file_wrapper& fs) {
-  throw std::runtime_error{fs.filename + ": read error"};
+  if (fwrite(&value, sizeof(value), 1, fs) != 1) return false;
+  return true;
 }
 
 }  // namespace yocto
@@ -477,16 +398,26 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
   ply->comments.clear();
   ply->elements.clear();
 
+  // open file
+  auto fs = fopen(filename.c_str(), "rb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
+
   // parsing checks
   auto first_line = true;
   auto end_header = false;
 
-  // open file
-  auto fs = open_file(filename, "rb");
-
   // read header ---------------------------------------------
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -495,22 +426,22 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if (!parse_value(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") throw_parse_error(fs, "bad header");
+      if (cmd != "ply") throw_parse_error();
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) throw_parse_error(fs, "bad header");
+      if (!first_line) throw_parse_error();
     } else if (cmd == "format") {
       auto fmt = ""s;
-      parse_value(fs, str, fmt);
+      if (!parse_value(str, fmt)) throw_parse_error();
       if (fmt == "ascii") {
         ply->format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -518,7 +449,7 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       } else if (fmt == "binary_big_endian") {
         ply->format = ply_format::binary_big_endian;
       } else {
-        throw_parse_error(fs, "bad header");
+        throw std::runtime_error{filename + ": parse error [bad header]"};
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
@@ -528,41 +459,38 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto elem = ply->elements.emplace_back(make_shared<ply_element>());
-      parse_value(fs, str, elem->name);
-      parse_value(fs, str, elem->count);
+      if (!parse_value(str, elem->name)) throw_parse_error();
+      if (!parse_value(str, elem->count)) throw_parse_error();
     } else if (cmd == "property") {
-      if (ply->elements.empty()) throw_parse_error(fs, "bad header");
+      if (ply->elements.empty()) throw_parse_error();
       auto prop = ply->elements.back()->properties.emplace_back(
           make_shared<ply_property>());
       auto tname = ""s;
-      parse_value(fs, str, tname);
+      if (!parse_value(str, tname)) throw_parse_error();
       if (tname == "list") {
         prop->is_list = true;
-        parse_value(fs, str, tname);
+        if (!parse_value(str, tname)) throw_parse_error();
         auto itype = type_map.at(tname);
-        if (itype != ply_type::u8)
-          throw_parse_error(fs, "unknown type" + tname);
-        parse_value(fs, str, tname);
-        if (type_map.find(tname) == type_map.end())
-          throw_parse_error(fs, "unknown type" + tname);
+        if (itype != ply_type::u8) throw_parse_error();
+        if (!parse_value(str, tname)) throw_parse_error();
+        if (type_map.find(tname) == type_map.end()) throw_parse_error();
         prop->type = type_map.at(tname);
       } else {
         prop->is_list = false;
-        if (type_map.find(tname) == type_map.end())
-          throw_parse_error(fs, "unknown type" + tname);
+        if (type_map.find(tname) == type_map.end()) throw_parse_error();
         prop->type = type_map.at(tname);
       }
-      parse_value(fs, str, prop->name);
+      if (!parse_value(str, prop->name)) throw_parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
     } else {
-      throw_parse_error(fs, "unknown command " + cmd);
+      throw_parse_error();
     }
   }
 
   // check exit
-  if (!end_header) throw std::invalid_argument{"bad header"};
+  if (!end_header) throw_parse_error();
 
   // allocate data ---------------------------------
   for (auto element : ply->elements) {
@@ -589,44 +517,55 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer))) throw_read_error(fs);
+        if (!fgets(buffer, sizeof(buffer), fs)) throw_read_error();
         auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            parse_value(fs, str, prop->ldata_u8.emplace_back());
+            if (!parse_value(str, prop->ldata_u8.emplace_back()))
+              throw_parse_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                parse_value(fs, str, prop->data_i8.emplace_back());
+                if (!parse_value(str, prop->data_i8.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::i16:
-                parse_value(fs, str, prop->data_i16.emplace_back());
+                if (!parse_value(str, prop->data_i16.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::i32:
-                parse_value(fs, str, prop->data_i32.emplace_back());
+                if (!parse_value(str, prop->data_i32.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::i64:
-                parse_value(fs, str, prop->data_i64.emplace_back());
+                if (!parse_value(str, prop->data_i64.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::u8:
-                parse_value(fs, str, prop->data_u8.emplace_back());
+                if (!parse_value(str, prop->data_u8.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::u16:
-                parse_value(fs, str, prop->data_u16.emplace_back());
+                if (!parse_value(str, prop->data_u16.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::u32:
-                parse_value(fs, str, prop->data_u32.emplace_back());
+                if (!parse_value(str, prop->data_u32.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::u64:
-                parse_value(fs, str, prop->data_u64.emplace_back());
+                if (!parse_value(str, prop->data_u64.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::f32:
-                parse_value(fs, str, prop->data_f32.emplace_back());
+                if (!parse_value(str, prop->data_f32.emplace_back()))
+                  throw_parse_error();
                 break;
               case ply_type::f64:
-                parse_value(fs, str, prop->data_f64.emplace_back());
+                if (!parse_value(str, prop->data_f64.emplace_back()))
+                  throw_parse_error();
                 break;
             }
           }
@@ -639,40 +578,51 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            read_value(fs, prop->ldata_u8.emplace_back(), big_endian);
+            if (!read_value(fs, prop->ldata_u8.emplace_back(), big_endian))
+              throw_read_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                read_value(fs, prop->data_i8.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_i8.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::i16:
-                read_value(fs, prop->data_i16.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_i16.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::i32:
-                read_value(fs, prop->data_i32.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_i32.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::i64:
-                read_value(fs, prop->data_i64.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_i64.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::u8:
-                read_value(fs, prop->data_u8.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_u8.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::u16:
-                read_value(fs, prop->data_u16.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_u16.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::u32:
-                read_value(fs, prop->data_u32.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_u32.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::u64:
-                read_value(fs, prop->data_u64.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_u64.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::f32:
-                read_value(fs, prop->data_f32.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_f32.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
               case ply_type::f64:
-                read_value(fs, prop->data_f64.emplace_back(), big_endian);
+                if (!read_value(fs, prop->data_f64.emplace_back(), big_endian))
+                  throw_read_error();
                 break;
             }
           }
@@ -684,8 +634,6 @@ void load_ply(const string& filename, shared_ptr<ply_model> ply) {
 
 // Save ply
 void save_ply(const string& filename, shared_ptr<ply_model> ply) {
-  auto fs = open_file(filename, "wb");
-
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -697,26 +645,43 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
+  // open file
+  auto fs = fopen(filename.c_str(), "wb");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
+
   // header
-  format_values(fs, "ply\n");
-  format_values(fs, "format {} 1.0\n", format_map.at(ply->format));
-  format_values(fs, "comment Written by Yocto/GL\n");
-  format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+  if (!format_values(fs, "ply\n")) throw_write_error();
+  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply->format)))
+    throw_write_error();
+  if (!format_values(fs, "comment Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
   for (auto& comment : ply->comments)
-    format_values(fs, "comment {}\n", comment);
+    if (!format_values(fs, "comment {}\n", comment)) throw_write_error();
   for (auto elem : ply->elements) {
-    format_values(fs, "element {} {}\n", elem->name, (uint64_t)elem->count);
+    if (!format_values(
+            fs, "element {} {}\n", elem->name, (uint64_t)elem->count))
+      throw_write_error();
     for (auto prop : elem->properties) {
       if (prop->is_list) {
-        format_values(fs, "property list uchar {} {}\n", type_map[prop->type],
-            prop->name);
+        if (!format_values(fs, "property list uchar {} {}\n",
+                type_map[prop->type], prop->name))
+          throw_write_error();
       } else {
-        format_values(fs, "property {} {}\n", type_map[prop->type], prop->name);
+        if (!format_values(
+                fs, "property {} {}\n", type_map[prop->type], prop->name))
+          throw_write_error();
       }
     }
   }
 
-  format_values(fs, "end_header\n");
+  if (!format_values(fs, "end_header\n")) throw_write_error();
 
   // properties
   if (ply->format == ply_format::ascii) {
@@ -725,43 +690,55 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) format_values(fs, "{} ", (int)prop->ldata_u8[idx]);
+          if (prop->is_list)
+            if (!format_values(fs, "{} ", (int)prop->ldata_u8[idx]))
+              throw_write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                format_values(fs, "{} ", prop->data_i8[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_i8[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::i16:
-                format_values(fs, "{} ", prop->data_i16[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_i16[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::i32:
-                format_values(fs, "{} ", prop->data_i32[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_i32[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::i64:
-                format_values(fs, "{} ", prop->data_i64[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_i64[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::u8:
-                format_values(fs, "{} ", prop->data_u8[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_u8[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::u16:
-                format_values(fs, "{} ", prop->data_u16[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_u16[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::u32:
-                format_values(fs, "{} ", prop->data_u32[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_u32[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::u64:
-                format_values(fs, "{} ", prop->data_u64[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_u64[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::f32:
-                format_values(fs, "{} ", prop->data_f32[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_f32[cur[idx]++]))
+                  throw_write_error();
                 break;
               case ply_type::f64:
-                format_values(fs, "{} ", prop->data_f64[cur[idx]++]);
+                if (!format_values(fs, "{} ", prop->data_f64[cur[idx]++]))
+                  throw_write_error();
                 break;
             }
           }
-          format_values(fs, "\n");
+          if (!format_values(fs, "\n")) throw_write_error();
         }
       }
     }
@@ -772,39 +749,51 @@ void save_ply(const string& filename, shared_ptr<ply_model> ply) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
-          if (prop->is_list) write_value(fs, prop->ldata_u8[idx], big_endian);
+          if (prop->is_list)
+            if (!write_value(fs, prop->ldata_u8[idx], big_endian))
+              throw_write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                write_value(fs, prop->data_i8[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_i8[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::i16:
-                write_value(fs, prop->data_i16[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_i16[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::i32:
-                write_value(fs, prop->data_i32[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_i32[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::i64:
-                write_value(fs, prop->data_i64[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_i64[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::u8:
-                write_value(fs, prop->data_u8[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_u8[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::u16:
-                write_value(fs, prop->data_u16[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_u16[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::u32:
-                write_value(fs, prop->data_u32[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_u32[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::u64:
-                write_value(fs, prop->data_u64[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_u64[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::f32:
-                write_value(fs, prop->data_f32[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_f32[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
               case ply_type::f64:
-                write_value(fs, prop->data_f64[cur[pidx]++], big_endian);
+                if (!write_value(fs, prop->data_f64[cur[pidx]++], big_endian))
+                  throw_write_error();
                 break;
             }
           }
@@ -1230,75 +1219,6 @@ void add_points(shared_ptr<ply_model> ply, const vector<int>& values) {
   return add_lists(ply, values, "point", "vertex_indices");
 }
 
-// get ply value either ascii or binary
-template <typename T, typename VT>
-static void read_ply_prop(FILE* fs, VT& value, bool big_endian) {
-  auto read_value = [](FILE* fs, auto& value, bool big_endian) -> void {
-    if (fread(&value, sizeof(value), 1, fs) != 1)
-      throw std::invalid_argument{"read error"};
-    if (big_endian) value = swap_endian(value);
-  };
-
-  auto tvalue = T{};
-  read_value(fs, tvalue, big_endian);
-  value = (VT)tvalue;
-}
-template <typename VT>
-static void read_ply_prop(FILE* fs, ply_type type, VT& value, bool big_endian) {
-  switch (type) {
-    case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
-    case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
-    case ply_type::i32: return read_ply_prop<int32_t>(fs, value, big_endian);
-    case ply_type::i64: return read_ply_prop<int64_t>(fs, value, big_endian);
-    case ply_type::u8: return read_ply_prop<uint8_t>(fs, value, big_endian);
-    case ply_type::u16: return read_ply_prop<uint16_t>(fs, value, big_endian);
-    case ply_type::u32: return read_ply_prop<uint32_t>(fs, value, big_endian);
-    case ply_type::u64: return read_ply_prop<uint64_t>(fs, value, big_endian);
-    case ply_type::f32: return read_ply_prop<float>(fs, value, big_endian);
-    case ply_type::f64: return read_ply_prop<double>(fs, value, big_endian);
-  }
-}
-
-template <typename T, typename VT>
-static void parse_ply_prop(string_view& str, VT& value) {
-  auto tvalue = T{};
-  parse_value(str, tvalue);
-  value = (VT)tvalue;
-}
-template <typename VT>
-static void parse_ply_prop(string_view& str, ply_type type, VT& value) {
-  switch (type) {
-    case ply_type::i8: return parse_ply_prop<int8_t>(str, value);
-    case ply_type::i16: return parse_ply_prop<int16_t>(str, value);
-    case ply_type::i32: return parse_ply_prop<int32_t>(str, value);
-    case ply_type::i64: return parse_ply_prop<int64_t>(str, value);
-    case ply_type::u8: return parse_ply_prop<uint8_t>(str, value);
-    case ply_type::u16: return parse_ply_prop<uint16_t>(str, value);
-    case ply_type::u32: return parse_ply_prop<uint32_t>(str, value);
-    case ply_type::u64: return parse_ply_prop<uint64_t>(str, value);
-    case ply_type::f32: return parse_ply_prop<float>(str, value);
-    case ply_type::f64: return parse_ply_prop<double>(str, value);
-  }
-  throw std::invalid_argument{"unknown type"};
-}
-
-template <typename VT>
-static void format_ply_prop(FILE* fs, ply_type type, VT value) {
-  switch (type) {
-    case ply_type::i8: return format_value(fs, (int8_t)value);
-    case ply_type::i16: return format_value(fs, (int16_t)value);
-    case ply_type::i32: return format_value(fs, (int32_t)value);
-    case ply_type::i64: return format_value(fs, (int64_t)value);
-    case ply_type::u8: return format_value(fs, (uint8_t)value);
-    case ply_type::u16: return format_value(fs, (uint16_t)value);
-    case ply_type::u32: return format_value(fs, (uint32_t)value);
-    case ply_type::u64: return format_value(fs, (uint64_t)value);
-    case ply_type::f32: return format_value(fs, (float)value);
-    case ply_type::f64: return format_value(fs, (double)value);
-  }
-  throw std::invalid_argument{"unknown type"};
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1313,26 +1233,28 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
-static void parse_value(string_view& str, obj_vertex& value) {
+[[nodiscard]] static bool parse_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
-  parse_value(str, value.position);
+  if (!parse_value(str, value.position)) return false;
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
     if (!str.empty() && str.front() == '/') {
       str.remove_prefix(1);
-      parse_value(str, value.normal);
+      if (!parse_value(str, value.normal)) return false;
     } else {
-      parse_value(str, value.texcoord);
+      if (!parse_value(str, value.texcoord)) return false;
       if (!str.empty() && str.front() == '/') {
         str.remove_prefix(1);
-        parse_value(str, value.normal);
+        if (!parse_value(str, value.normal)) return false;
       }
     }
   }
+  return true;
 }
 
 // Input for OBJ textures
-static void parse_value(string_view& str, obj_texture_info& info) {
+[[nodiscard]] static bool parse_value(
+    string_view& str, obj_texture_info& info) {
   // initialize
   info = obj_texture_info();
 
@@ -1341,11 +1263,11 @@ static void parse_value(string_view& str, obj_texture_info& info) {
   skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
-    parse_value(str, token);
+    if (!parse_value(str, token)) return false;
     tokens.push_back(token);
     skip_whitespace(str);
   }
-  if (tokens.empty()) throw std::invalid_argument{"empty name"};
+  if (tokens.empty()) return false;
 
   // texture name
   info.path = tokens.back();
@@ -1358,20 +1280,32 @@ static void parse_value(string_view& str, obj_texture_info& info) {
     if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
   }
+
+  return true;
 }
 
 // Read obj
 static void load_mtl(
     const string& filename, shared_ptr<obj_model> obj, bool fliptr = true) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // init parsing
   auto material = obj->materials.emplace_back(make_shared<obj_material>());
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1380,7 +1314,7 @@ static void load_mtl(
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if (!parse_value(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // grab material
@@ -1389,124 +1323,127 @@ static void load_mtl(
     // possible token values
     if (cmd == "newmtl") {
       auto material = obj->materials.emplace_back(make_shared<obj_material>());
-      parse_value(fs, str, material->name);
+      if (!parse_value(str, material->name)) throw_parse_error();
     } else if (cmd == "illum") {
-      parse_value(fs, str, material->illum);
+      if (!parse_value(str, material->illum)) throw_parse_error();
     } else if (cmd == "Ke") {
-      parse_value(fs, str, material->emission);
+      if (!parse_value(str, material->emission)) throw_parse_error();
     } else if (cmd == "Ka") {
-      parse_value(fs, str, material->ambient);
+      if (!parse_value(str, material->ambient)) throw_parse_error();
     } else if (cmd == "Kd") {
-      parse_value(fs, str, material->diffuse);
+      if (!parse_value(str, material->diffuse)) throw_parse_error();
     } else if (cmd == "Ks") {
-      parse_value(fs, str, material->specular);
+      if (!parse_value(str, material->specular)) throw_parse_error();
     } else if (cmd == "Kt") {
-      parse_value(fs, str, material->transmission);
+      if (!parse_value(str, material->transmission)) throw_parse_error();
     } else if (cmd == "Tf") {
       material->transmission = vec3f{-1};
-      parse_value(fs, str, material->transmission);
+      if (!parse_value(str, material->transmission)) throw_parse_error();
       if (material->transmission.y < 0)
         material->transmission = vec3f{material->transmission.x};
       if (fliptr) material->transmission = 1 - material->transmission;
     } else if (cmd == "Tr") {
-      parse_value(fs, str, material->opacity);
+      if (!parse_value(str, material->opacity)) throw_parse_error();
       if (fliptr) material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
-      parse_value(fs, str, material->exponent);
+      if (!parse_value(str, material->exponent)) throw_parse_error();
     } else if (cmd == "d") {
-      parse_value(fs, str, material->opacity);
+      if (!parse_value(str, material->opacity)) throw_parse_error();
     } else if (cmd == "map_Ke") {
-      parse_value(fs, str, material->emission_map);
+      if (!parse_value(str, material->emission_map)) throw_parse_error();
     } else if (cmd == "map_Ka") {
-      parse_value(fs, str, material->ambient_map);
+      if (!parse_value(str, material->ambient_map)) throw_parse_error();
     } else if (cmd == "map_Kd") {
-      parse_value(fs, str, material->diffuse_map);
+      if (!parse_value(str, material->diffuse_map)) throw_parse_error();
     } else if (cmd == "map_Ks") {
-      parse_value(fs, str, material->specular_map);
+      if (!parse_value(str, material->specular_map)) throw_parse_error();
     } else if (cmd == "map_Tr") {
-      parse_value(fs, str, material->transmission_map);
+      if (!parse_value(str, material->transmission_map)) throw_parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_value(fs, str, material->opacity_map);
+      if (!parse_value(str, material->opacity_map)) throw_parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_value(fs, str, material->bump_map);
+      if (!parse_value(str, material->bump_map)) throw_parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_value(fs, str, material->displacement_map);
+      if (!parse_value(str, material->displacement_map)) throw_parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_value(fs, str, material->normal_map);
+      if (!parse_value(str, material->normal_map)) throw_parse_error();
     } else if (cmd == "Pe") {
-      parse_value(fs, str, material->pbr_emission);
+      if (!parse_value(str, material->pbr_emission)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pb") {
-      parse_value(fs, str, material->pbr_base);
+      if (!parse_value(str, material->pbr_base)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material->pbr_specular);
+      if (!parse_value(str, material->pbr_specular)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pm") {
-      parse_value(fs, str, material->pbr_metallic);
+      if (!parse_value(str, material->pbr_metallic)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pr") {
-      parse_value(fs, str, material->pbr_roughness);
+      if (!parse_value(str, material->pbr_roughness)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      parse_value(fs, str, material->pbr_sheen);
+      if (!parse_value(str, material->pbr_sheen)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pc") {
-      parse_value(fs, str, material->pbr_coat);
+      if (!parse_value(str, material->pbr_coat)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      parse_value(fs, str, material->pbr_coatroughness);
+      if (!parse_value(str, material->pbr_coatroughness)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pt") {
-      parse_value(fs, str, material->pbr_transmission);
+      if (!parse_value(str, material->pbr_transmission)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pn") {
-      parse_value(fs, str, material->pbr_ior);
+      if (!parse_value(str, material->pbr_ior)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Po") {
-      parse_value(fs, str, material->pbr_opacity);
+      if (!parse_value(str, material->pbr_opacity)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      parse_value(fs, str, material->pbr_volscattering);
+      if (!parse_value(str, material->pbr_volscattering)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      parse_value(fs, str, material->pbr_volanisotropy);
+      if (!parse_value(str, material->pbr_volanisotropy)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvr") {
-      parse_value(fs, str, material->pbr_volscale);
+      if (!parse_value(str, material->pbr_volscale)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      parse_value(fs, str, material->pbr_emission_map);
+      if (!parse_value(str, material->pbr_emission_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pb") {
-      parse_value(fs, str, material->pbr_base_map);
+      if (!parse_value(str, material->pbr_base_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material->pbr_specular_map);
+      if (!parse_value(str, material->pbr_specular_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      parse_value(fs, str, material->pbr_metallic_map);
+      if (!parse_value(str, material->pbr_metallic_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      parse_value(fs, str, material->pbr_roughness_map);
+      if (!parse_value(str, material->pbr_roughness_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      parse_value(fs, str, material->pbr_sheen_map);
+      if (!parse_value(str, material->pbr_sheen_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pc") {
-      parse_value(fs, str, material->pbr_coat_map);
+      if (!parse_value(str, material->pbr_coat_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      parse_value(fs, str, material->pbr_coatroughness_map);
+      if (!parse_value(str, material->pbr_coatroughness_map))
+        throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      parse_value(fs, str, material->pbr_opacity_map);
+      if (!parse_value(str, material->pbr_opacity_map)) throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pt") {
-      parse_value(fs, str, material->pbr_transmission_map);
+      if (!parse_value(str, material->pbr_transmission_map))
+        throw_parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Vs") {
-      parse_value(fs, str, material->pbr_volscattering_map);
+      if (!parse_value(str, material->pbr_volscattering_map))
+        throw_parse_error();
       material->as_pbr = true;
     } else {
       continue;
@@ -1553,7 +1490,17 @@ static void load_mtl(
 // Read obj
 static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<shared_ptr<obj_shape>>>{};
@@ -1563,7 +1510,7 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1572,37 +1519,37 @@ static void load_objx(const string& filename, shared_ptr<obj_model> obj) {
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if (!parse_value(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto camera = obj->cameras.emplace_back(make_shared<obj_camera>());
-      parse_value(fs, str, camera->name);
-      parse_value(fs, str, camera->ortho);
-      parse_value(fs, str, camera->width);
-      parse_value(fs, str, camera->height);
-      parse_value(fs, str, camera->lens);
-      parse_value(fs, str, camera->focus);
-      parse_value(fs, str, camera->aperture);
-      parse_value(fs, str, camera->frame);
+      if (!parse_value(str, camera->name)) throw_parse_error();
+      if (!parse_value(str, camera->ortho)) throw_parse_error();
+      if (!parse_value(str, camera->width)) throw_parse_error();
+      if (!parse_value(str, camera->height)) throw_parse_error();
+      if (!parse_value(str, camera->lens)) throw_parse_error();
+      if (!parse_value(str, camera->focus)) throw_parse_error();
+      if (!parse_value(str, camera->aperture)) throw_parse_error();
+      if (!parse_value(str, camera->frame)) throw_parse_error();
     } else if (cmd == "e") {
       auto environment = obj->environments.emplace_back(
           make_shared<obj_environment>());
-      parse_value(fs, str, environment->name);
-      parse_value(fs, str, environment->emission);
+      if (!parse_value(str, environment->name)) throw_parse_error();
+      if (!parse_value(str, environment->emission)) throw_parse_error();
       auto emission_path = ""s;
-      parse_value(fs, str, emission_path);
+      if (!parse_value(str, emission_path)) throw_parse_error();
       if (emission_path == "\"\"") emission_path = "";
       environment->emission_map.path = emission_path;
-      parse_value(fs, str, environment->frame);
+      if (!parse_value(str, environment->frame)) throw_parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      parse_value(fs, str, object);
-      parse_value(fs, str, frame);
+      if (!parse_value(str, object)) throw_parse_error();
+      if (!parse_value(str, frame)) throw_parse_error();
       if (shape_map.find(object) == shape_map.end()) {
-        throw_parse_error(fs, "unknown object " + object);
+        throw std::runtime_error{filename + ": parse error [unknown object]"};
       }
       for (auto shape : shape_map.at(object)) {
         shape->instances.push_back(frame);
@@ -1626,7 +1573,17 @@ shared_ptr<obj_model> load_obj(const string& filename, bool geom_only,
 void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1651,7 +1608,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1660,18 +1617,20 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if (!parse_value(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      parse_value(fs, str, opositions.emplace_back(zero3f));
+      if (!parse_value(str, opositions.emplace_back(zero3f)))
+        throw_parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      parse_value(fs, str, onormals.emplace_back(zero3f));
+      if (!parse_value(str, onormals.emplace_back(zero3f))) throw_parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      parse_value(fs, str, otexcoords.emplace_back(zero2f));
+      if (!parse_value(str, otexcoords.emplace_back(zero2f)))
+        throw_parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -1715,7 +1674,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       skip_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
-        parse_value(fs, str, vert);
+        if (!parse_value(str, vert)) throw_parse_error();
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -1728,7 +1687,20 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      parse_value_or_empty(str, cmd == "o" ? oname : gname);
+      skip_whitespace(str);
+      if (cmd == "o") {
+        if (str.empty()) {
+          oname = "";
+        } else {
+          if (!parse_value(str, oname)) throw_parse_error();
+        }
+      } else {
+        if (str.empty()) {
+          gname = "";
+        } else {
+          if (!parse_value(str, gname)) throw_parse_error();
+        }
+      }
       if (!obj->shapes.back()->vertices.empty()) {
         obj->shapes.emplace_back(make_shared<obj_shape>());
         obj->shapes.back()->name = oname + gname;
@@ -1737,19 +1709,20 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      parse_value_or_empty(str, mname);
+      if (!parse_value(str, mname)) throw_parse_error();
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      parse_value(fs, str, mtllib);
+      if (!parse_value(str, mtllib)) throw_parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         try {
           load_mtl(fs::path(filename).parent_path() / mtllib, obj);
         } catch (std::exception& e) {
-          throw_dependent_error(fs, e.what());
+          throw std::runtime_error{
+              filename + ": error in resource (" + e.what() + ")"};
         }
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1795,7 +1768,8 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     try {
       load_objx(extfilename, obj);
     } catch (std::exception& e) {
-      throw_dependent_error(fs, e.what());
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 }
@@ -1822,143 +1796,205 @@ static void format_value(string& str, const obj_vertex& value) {
 // Save obj
 static void save_mtl(const string& filename, shared_ptr<obj_model> obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-    format_values(fs, "# {}\n", comment);
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
-  format_values(fs, "\n");
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // write material
   for (auto material : obj->materials) {
-    format_values(fs, "newmtl {}\n", material->name);
+    if (!format_values(fs, "newmtl {}\n", material->name)) throw_write_error();
     if (!material->as_pbr) {
-      format_values(fs, "illum {}\n", material->illum);
+      if (!format_values(fs, "illum {}\n", material->illum))
+        throw_write_error();
       if (material->emission != zero3f)
-        format_values(fs, "Ke {}\n", material->emission);
+        if (!format_values(fs, "Ke {}\n", material->emission))
+          throw_write_error();
       if (material->ambient != zero3f)
-        format_values(fs, "Ka {}\n", material->ambient);
-      format_values(fs, "Kd {}\n", material->diffuse);
-      format_values(fs, "Ks {}\n", material->specular);
+        if (!format_values(fs, "Ka {}\n", material->ambient))
+          throw_write_error();
+      if (!format_values(fs, "Kd {}\n", material->diffuse)) throw_write_error();
+      if (!format_values(fs, "Ks {}\n", material->specular))
+        throw_write_error();
       if (material->reflection != zero3f)
-        format_values(fs, "Kr {}\n", material->reflection);
+        if (!format_values(fs, "Kr {}\n", material->reflection))
+          throw_write_error();
       if (material->transmission != zero3f)
-        format_values(fs, "Kt {}\n", material->transmission);
-      format_values(fs, "Ns {}\n", (int)material->exponent);
+        if (!format_values(fs, "Kt {}\n", material->transmission))
+          throw_write_error();
+      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
+        throw_write_error();
       if (material->opacity != 1)
-        format_values(fs, "d {}\n", material->opacity);
+        if (!format_values(fs, "d {}\n", material->opacity))
+          throw_write_error();
       if (!material->emission_map.path.empty())
-        format_values(fs, "map_Ke {}\n", material->emission_map);
+        if (!format_values(fs, "map_Ke {}\n", material->emission_map))
+          throw_write_error();
       if (!material->diffuse_map.path.empty())
-        format_values(fs, "map_Kd {}\n", material->diffuse_map);
+        if (!format_values(fs, "map_Kd {}\n", material->diffuse_map))
+          throw_write_error();
       if (!material->specular_map.path.empty())
-        format_values(fs, "map_Ks {}\n", material->specular_map);
+        if (!format_values(fs, "map_Ks {}\n", material->specular_map))
+          throw_write_error();
       if (!material->transmission_map.path.empty())
-        format_values(fs, "map_Kt {}\n", material->transmission_map);
+        if (!format_values(fs, "map_Kt {}\n", material->transmission_map))
+          throw_write_error();
       if (!material->reflection_map.path.empty())
-        format_values(fs, "map_Kr {}\n", material->reflection_map);
+        if (!format_values(fs, "map_Kr {}\n", material->reflection_map))
+          throw_write_error();
       if (!material->exponent_map.path.empty())
-        format_values(fs, "map_Ns {}\n", material->exponent_map);
+        if (!format_values(fs, "map_Ns {}\n", material->exponent_map))
+          throw_write_error();
       if (!material->opacity_map.path.empty())
-        format_values(fs, "map_d {}\n", material->opacity_map);
+        if (!format_values(fs, "map_d {}\n", material->opacity_map))
+          throw_write_error();
       if (!material->bump_map.path.empty())
-        format_values(fs, "map_bump {}\n", material->bump_map);
+        if (!format_values(fs, "map_bump {}\n", material->bump_map))
+          throw_write_error();
       if (!material->displacement_map.path.empty())
-        format_values(fs, "map_disp {}\n", material->displacement_map);
+        if (!format_values(fs, "map_disp {}\n", material->displacement_map))
+          throw_write_error();
       if (!material->normal_map.path.empty())
-        format_values(fs, "map_norm {}\n", material->normal_map);
+        if (!format_values(fs, "map_norm {}\n", material->normal_map))
+          throw_write_error();
     } else {
-      format_values(fs, "illum 2\n");
+      if (!format_values(fs, "illum 2\n")) throw_write_error();
       if (material->pbr_emission != zero3f)
-        format_values(fs, "Pe {}\n", material->pbr_emission);
+        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
+          throw_write_error();
       if (material->pbr_base != zero3f)
-        format_values(fs, "Pb {}\n", material->pbr_base);
+        if (!format_values(fs, "Pb {}\n", material->pbr_base))
+          throw_write_error();
       if (material->pbr_specular)
-        format_values(fs, "Psp {}\n", material->pbr_specular);
+        if (!format_values(fs, "Psp {}\n", material->pbr_specular))
+          throw_write_error();
       if (material->pbr_roughness)
-        format_values(fs, "Pr {}\n", material->pbr_roughness);
+        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
+          throw_write_error();
       if (material->pbr_metallic)
-        format_values(fs, "Pm {}\n", material->pbr_metallic);
+        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
+          throw_write_error();
       if (material->pbr_sheen)
-        format_values(fs, "Ps {}\n", material->pbr_sheen);
-      if (material->pbr_coat) format_values(fs, "Pc {}\n", material->pbr_coat);
+        if (!format_values(fs, "Ps {}\n", material->pbr_sheen))
+          throw_write_error();
+      if (material->pbr_coat)
+        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
+          throw_write_error();
       if (material->pbr_coatroughness)
-        format_values(fs, "Pcr {}\n", material->pbr_coatroughness);
+        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
+          throw_write_error();
       if (material->pbr_volscattering != zero3f)
-        format_values(fs, "Pvs {}\n", material->pbr_volscattering);
+        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
+          throw_write_error();
       if (material->pbr_volanisotropy)
-        format_values(fs, "Pvg {}\n", material->pbr_volanisotropy);
+        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
+          throw_write_error();
       if (material->pbr_volscale)
-        format_values(fs, "Pvr {}\n", material->pbr_volscale);
+        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
+          throw_write_error();
       if (!material->pbr_emission_map.path.empty())
-        format_values(fs, "map_Pe {}\n", material->pbr_emission_map);
+        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_map))
+          throw_write_error();
       if (!material->pbr_base_map.path.empty())
-        format_values(fs, "map_Pb {}\n", material->pbr_base_map);
+        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_map))
+          throw_write_error();
       if (!material->pbr_specular_map.path.empty())
-        format_values(fs, "map_Psp {}\n", material->pbr_specular_map);
+        if (!format_values(fs, "map_Psp {}\n", material->pbr_specular_map))
+          throw_write_error();
       if (!material->pbr_roughness_map.path.empty())
-        format_values(fs, "map_Pr {}\n", material->pbr_roughness_map);
+        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_map))
+          throw_write_error();
       if (!material->pbr_metallic_map.path.empty())
-        format_values(fs, "map_Pm {}\n", material->pbr_metallic_map);
+        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_map))
+          throw_write_error();
       if (!material->pbr_sheen_map.path.empty())
-        format_values(fs, "map_Ps {}\n", material->pbr_sheen_map);
+        if (!format_values(fs, "map_Ps {}\n", material->pbr_sheen_map))
+          throw_write_error();
       if (!material->pbr_coat_map.path.empty())
-        format_values(fs, "map_Pc {}\n", material->pbr_coat_map);
+        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_map))
+          throw_write_error();
       if (!material->pbr_coatroughness_map.path.empty())
-        format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_map);
+        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_map))
+          throw_write_error();
       if (!material->pbr_volscattering_map.path.empty())
-        format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_map);
+        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_map))
+          throw_write_error();
       if (!material->bump_map.path.empty())
-        format_values(fs, "map_bump {}\n", material->bump_map);
+        if (!format_values(fs, "map_bump {}\n", material->bump_map))
+          throw_write_error();
       if (!material->displacement_map.path.empty())
-        format_values(fs, "map_disp {}\n", material->displacement_map);
+        if (!format_values(fs, "map_disp {}\n", material->displacement_map))
+          throw_write_error();
       if (!material->normal_map.path.empty())
-        format_values(fs, "map_norm {}\n", material->normal_map);
+        if (!format_values(fs, "map_norm {}\n", material->normal_map))
+          throw_write_error();
     }
-    format_values(fs, "\n");
+    if (!format_values(fs, "\n")) throw_write_error();
   }
 }
 
 // Save obj
 static void save_objx(const string& filename, shared_ptr<obj_model> obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-    format_values(fs, "# {}\n", comment);
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
-  format_values(fs, "\n");
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // cameras
   for (auto camera : obj->cameras) {
-    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
-        camera->ortho, camera->width, camera->height, camera->lens,
-        camera->focus, camera->aperture, camera->frame);
+    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
+            camera->ortho, camera->width, camera->height, camera->lens,
+            camera->focus, camera->aperture, camera->frame))
+      throw_write_error();
   }
 
   // environments
   for (auto environment : obj->environments) {
-    format_values(fs, "e {} {} {} {}\n", environment->name,
-        environment->emission,
-        environment->emission_map.path.empty() ? "\"\""s
-                                               : environment->emission_map.path,
-        environment->frame);
+    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
+            environment->emission,
+            environment->emission_map.path.empty()
+                ? "\"\""s
+                : environment->emission_map.path,
+            environment->frame))
+      throw_write_error();
   }
 
   // instances
   for (auto shape : obj->shapes) {
     for (auto& frame : shape->instances) {
-      format_values(fs, "i {} {}\n", shape->name, frame);
+      if (!format_values(fs, "i {} {}\n", shape->name, frame))
+        throw_write_error();
     }
   }
 }
@@ -1966,31 +2002,43 @@ static void save_objx(const string& filename, shared_ptr<obj_model> obj) {
 // Save obj
 void save_obj(const string& filename, shared_ptr<obj_model> obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : obj->comments) {
-    format_values(fs, "# {}\n", comment);
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
-  format_values(fs, "\n");
+  if (!format_values(fs, "\n")) throw_write_error();
 
   // save material library
   if (!obj->materials.empty()) {
-    format_values(fs, "mtllib {}\n\n",
-        fs::path(filename).filename().replace_extension(".mtl"));
+    if (!format_values(fs, "mtllib {}\n\n",
+            fs::path(filename).filename().replace_extension(".mtl")))
+      throw_write_error();
   }
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto shape : obj->shapes) {
-    format_values(fs, "o {}\n", shape->name);
-    for (auto& p : shape->positions) format_values(fs, "v {}\n", p);
-    for (auto& n : shape->normals) format_values(fs, "vn {}\n", n);
-    for (auto& t : shape->texcoords) format_values(fs, "vt {}\n", t);
+    if (!format_values(fs, "o {}\n", shape->name)) throw_write_error();
+    for (auto& p : shape->positions)
+      if (!format_values(fs, "v {}\n", p)) throw_write_error();
+    for (auto& n : shape->normals)
+      if (!format_values(fs, "vn {}\n", n)) throw_write_error();
+    for (auto& t : shape->texcoords)
+      if (!format_values(fs, "vt {}\n", t)) throw_write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape->faces, &shape->lines, &shape->points};
@@ -2000,22 +2048,23 @@ void save_obj(const string& filename, shared_ptr<obj_model> obj) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape->materials.empty() && cur_material != element.material) {
-          format_values(
-              fs, "usemtl {}\n", shape->materials[element.material]->name);
+          if (!format_values(
+                  fs, "usemtl {}\n", shape->materials[element.material]->name))
+            throw_write_error();
           cur_material = element.material;
         }
-        format_values(fs, "{}", label);
+        if (!format_values(fs, "{}", label)) throw_write_error();
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape->vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          format_values(fs, " {}", vert);
+          if (!format_values(fs, " {}", vert)) throw_write_error();
         }
-        format_values(fs, "\n");
+        if (!format_values(fs, "\n")) throw_write_error();
       }
     }
-    format_values(fs, "\n");
+    if (!format_values(fs, "\n")) throw_write_error();
     vert_size.position += (int)shape->positions.size();
     vert_size.normal += (int)shape->normals.size();
     vert_size.texcoord += (int)shape->texcoords.size();
@@ -2768,12 +2817,12 @@ static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
+[[nodiscard]] static bool read_pbrt_cmdline(FILE* fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
-  auto pos   = ftell(fs.fs);
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  auto pos   = ftell(fs);
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // line
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
@@ -2784,7 +2833,7 @@ static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
     auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
     if (is_cmd) {
       if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
+        fseek(fs, pos, SEEK_SET);
         // line_num -= 1;
         return true;
       } else {
@@ -2795,16 +2844,15 @@ static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
     }
     cmd += line;
     cmd += " ";
-    pos = ftell(fs.fs);
+    pos = ftell(fs);
   }
   return found;
 }
 
 // parse a quoted string
-static void parse_pbrt_command(string_view& str, string& value) {
+[[nodiscard]] static bool parse_pbrt_command(string_view& str, string& value) {
   skip_whitespace(str);
-  if (!isalpha((int)str.front()))
-    throw std::invalid_argument{"expected command"};
+  if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
   if (pos == string_view::npos) {
@@ -2814,57 +2862,41 @@ static void parse_pbrt_command(string_view& str, string& value) {
     value.assign(str.substr(0, pos));
     str.remove_prefix(pos + 1);
   }
-}
-
-static void parse_pbrt_command(
-    file_wrapper& fs, string_view& str, string& value) {
-  try {
-    parse_pbrt_command(str, value);
-  } catch (std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error"};
-  }
+  return true;
 }
 
 // parse pbrt value with optional parens
 template <typename T>
-static void parse_pbrt_param(string_view& str, T& value) {
+[[nodiscard]] static bool parse_pbrt_param(string_view& str, T& value) {
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
-  parse_value(str, value);
-  if (!str.data()) throw std::invalid_argument{"invalid param"};
+  if (!parse_value(str, value)) return false;
+  if (!str.data()) return false;
   if (parens) {
     skip_whitespace(str);
-    if (!str.empty() && str.front() == '[')
-      throw std::invalid_argument{"invalid param"};
+    if (!str.empty() && str.front() == '[') return false;
     str.remove_prefix(1);
   }
-}
-
-// parse pbrt value with optional parens
-template <typename T>
-static void parse_pbrt_param(file_wrapper& fs, string_view& str, T& value) {
-  try {
-    parse_pbrt_param(str, value);
-  } catch (std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error"};
-  }
+  return true;
 }
 
 // parse a quoted string
-static void parse_pbrt_nametype(string_view& str_, string& name, string& type) {
+[[nodiscard]] static bool parse_pbrt_nametype(
+    string_view& str_, string& name, string& type) {
   auto value = ""s;
-  parse_value(str_, value);
-  if (!str_.data()) throw std::invalid_argument{"string expected"};
+  if (!parse_value(str_, value)) return false;
+  if (!str_.data()) return false;
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
-  if (pos1 == string_view::npos) throw std::invalid_argument{"string expected"};
+  if (pos1 == string_view::npos) return false;
   type = string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
-  if (pos2 == string_view::npos) throw std::invalid_argument{"string expected"};
+  if (pos2 == string_view::npos) return false;
   str.remove_prefix(pos2);
   name = string(str);
+  return true;
 }
 
 static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
@@ -3045,30 +3077,32 @@ pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
   return params.at(name);
 }
 
-static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
+[[nodiscard]] static bool parse_pbrt_params(
+    string_view& str, vector<pbrt_value>& values) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value,
-                                auto& values) -> void {
+                                auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
-    if (str.empty()) throw std::invalid_argument("bad pbrt value");
+    if (str.empty()) return false;
     if (str.front() == '[') {
       str.remove_prefix(1);
       skip_whitespace(str);
-      if (str.empty()) throw std::invalid_argument{"bad pbrt value"};
+      if (str.empty()) return false;
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
-        parse_value(str, val);
-        if (!str.data()) throw std::invalid_argument{"bad pbrt value"};
+        if (!parse_value(str, val)) return false;
+        if (!str.data()) return false;
         skip_whitespace(str);
         if (str.empty()) break;
         if (str.front() == ']') break;
         if (values.empty()) values.push_back(value);
       }
-      if (str.empty()) throw std::invalid_argument{"bad pbrt value"};
-      if (str.front() != ']') throw std::invalid_argument{"bad pbrt value"};
+      if (str.empty()) return false;
+      if (str.front() != ']') return false;
       str.remove_prefix(1);
+      return true;
     } else {
-      parse_value(str, value);
+      return parse_value(str, value);
     }
   };
 
@@ -3077,32 +3111,32 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
-    parse_pbrt_nametype(str, value.name, type);
+    if (!parse_pbrt_nametype(str, value.name, type)) return false;
     skip_whitespace(str);
-    if (str.empty()) throw std::invalid_argument{"bad pbrt value"};
+    if (str.empty()) return false;
     if (type == "float") {
       value.type = pbrt_value_type::real;
-      parse_pbrt_pvalues(str, value.value1f, value.vector1f);
+      if (!parse_pbrt_pvalues(str, value.value1f, value.vector1f)) return false;
     } else if (type == "integer") {
       value.type = pbrt_value_type::integer;
-      parse_pbrt_pvalues(str, value.value1i, value.vector1i);
+      if (!parse_pbrt_pvalues(str, value.value1i, value.vector1i)) return false;
     } else if (type == "string") {
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::string;
-      parse_pbrt_pvalues(str, value.value1s, vector1s);
-      if (!vector1s.empty()) throw std::invalid_argument{"bad pbrt value"};
+      if (!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
+      if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::boolean;
-      parse_pbrt_pvalues(str, value1s, vector1s);
-      if (!vector1s.empty()) throw std::invalid_argument{"bad pbrt value"};
+      if (!parse_pbrt_pvalues(str, value1s, vector1s)) return false;
+      if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::texture;
-      parse_pbrt_pvalues(str, value.value1s, vector1s);
-      if (!vector1s.empty()) throw std::invalid_argument{"bad pbrt value"};
+      if (!parse_pbrt_pvalues(str, value.value1s, vector1s)) return false;
+      if (!vector1s.empty()) return false;
     } else if (type == "point" || type == "point3") {
       value.type = pbrt_value_type::point;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
@@ -3123,15 +3157,16 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
       auto blackbody = zero2f;
       auto vector2f  = vector<vec2f>{};
       parse_pbrt_pvalues(str, blackbody, vector2f);
-      if (!vector2f.empty()) throw std::invalid_argument{"bad pbrt value"};
+      if (!vector2f.empty()) return false;
       value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_value_type::color;
-      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+      if (!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
     } else if (type == "xyz") {
       value.type = pbrt_value_type::color;
-      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-      throw std::invalid_argument("xyz conversion");
+      if (!parse_pbrt_pvalues(str, value.value3f, value.vector3f)) return false;
+      // xyz conversion
+      return false;
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
@@ -3147,8 +3182,8 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
         value.type     = pbrt_value_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
-        parse_value(str, filename);
-        if (!str.data()) throw std::invalid_argument{"bad pbrt value"};
+        if (!parse_value(str, filename)) return false;
+        if (!str.data()) return false;
         auto filenamep = fs::path(filename).filename();
         if (fs::path(filenamep).extension() == ".spd") {
           filenamep = fs::path(filenamep).replace_extension("").string();
@@ -3163,29 +3198,22 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
                 get_pbrt_etak(fs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
-            throw std::invalid_argument{"bad pbrt value"};
+            return false;
           }
         } else {
-          throw std::invalid_argument{"bad pbrt value"};
+          return false;
         }
       } else {
         value.type = pbrt_value_type::spectrum;
-        parse_pbrt_pvalues(str, value.value1f, value.vector1f);
+        if (!parse_pbrt_pvalues(str, value.value1f, value.vector1f))
+          return false;
       }
     } else {
-      throw std::invalid_argument{"bad pbrt value"};
+      return false;
     }
     skip_whitespace(str);
   }
-}
-
-static void parse_pbrt_params(
-    file_wrapper& fs, string_view& str, vector<pbrt_value>& values) {
-  try {
-    parse_pbrt_params(str, values);
-  } catch (std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error"};
-  }
+  return true;
 }
 
 // Other pbrt elements
@@ -3689,7 +3717,8 @@ static shared_ptr<pbrt_shape> convert_shape(const pbrt_command& command,
       shape->texcoords = get_texcoords(ply);
       shape->triangles = get_triangles(ply);
     } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
@@ -3825,7 +3854,10 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     unordered_map<string, shared_ptr<pbrt_medium>>&   medium_map,
     unordered_map<string, pbrt_texture>&              texture_map,
     const string&                                     ply_dirname) {
-  auto fs = open_file(filename, "rt");
+  // open file
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -3837,6 +3869,14 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     if (ctx.active_transform_end) ctx.transform_end *= xform;
   };
 
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
+
   // init stack
   if (ctx.stack.empty()) ctx.stack.emplace_back();
 
@@ -3846,42 +3886,46 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     auto str = string_view{line};
     // get command
     auto cmd = ""s;
-    parse_pbrt_command(fs, str, cmd);
+    if (!parse_pbrt_command(str, cmd)) throw_parse_error();
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
-      if (ctx.stack.size() != 1) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.size() != 1)
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
     } else if (cmd == "AttributeBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "AttributeEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "TransformBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "TransformEnd") {
-      if (ctx.stack.empty()) throw_parse_error(fs, "bad stack");
+      if (ctx.stack.empty())
+        throw std::runtime_error{filename + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
-      parse_pbrt_param(fs, str, ctx.cur_object);
+      if (!parse_pbrt_param(str, ctx.cur_object)) throw_parse_error();
       ctx.objects[ctx.cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
       auto object = ""s;
-      parse_pbrt_param(fs, str, object);
+      if (!parse_pbrt_param(str, object)) throw_parse_error();
       if (ctx.objects.find(object) == ctx.objects.end())
-        throw_parse_error(fs, "unknown object " + object);
+        throw std::runtime_error{filename + ": parse error [unknown object]"};
       for (auto shape : ctx.objects.at(object)) {
         shape->instances.push_back(ctx.stack.back().transform_start);
         shape->instaends.push_back(ctx.stack.back().transform_end);
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
-      parse_pbrt_command(str, name);
+      if (!parse_pbrt_command(str, name)) throw_parse_error();
       if (name == "StartTime") {
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = false;
@@ -3892,46 +3936,46 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = true;
       } else {
-        throw_parse_error(fs, "bad coordsys");
+        throw std::runtime_error{filename + ": parse error [bad coordsys]"};
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
-      parse_pbrt_param(fs, str, xf);
+      if (!parse_pbrt_param(str, xf)) throw_parse_error();
       set_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
-      parse_pbrt_param(fs, str, xf);
+      if (!parse_pbrt_param(str, xf)) throw_parse_error();
       concat_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "Scale") {
       auto v = zero3f;
-      parse_pbrt_param(fs, str, v);
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(ctx.stack.back(), scaling_frame(v));
     } else if (cmd == "Translate") {
       auto v = zero3f;
-      parse_pbrt_param(fs, str, v);
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(ctx.stack.back(), translation_frame(v));
     } else if (cmd == "Rotate") {
       auto v = zero4f;
-      parse_pbrt_param(fs, str, v);
+      if (!parse_pbrt_param(str, v)) throw_parse_error();
       concat_transform(
           ctx.stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
-      parse_pbrt_param(fs, str, from);
-      parse_pbrt_param(fs, str, to);
-      parse_pbrt_param(fs, str, up);
+      if (!parse_pbrt_param(str, from)) throw_parse_error();
+      if (!parse_pbrt_param(str, to)) throw_parse_error();
+      if (!parse_pbrt_param(str, up)) throw_parse_error();
       auto frame = lookat_frame(from, to, up, true);
       concat_transform(ctx.stack.back(), inverse(frame));
     } else if (cmd == "ReverseOrientation") {
       ctx.stack.back().reverse = !ctx.stack.back().reverse;
     } else if (cmd == "CoordinateSystem") {
       auto name = ""s;
-      parse_pbrt_param(fs, str, name);
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       ctx.coordsys[name].transform_start = ctx.stack.back().transform_start;
       ctx.coordsys[name].transform_end   = ctx.stack.back().transform_end;
     } else if (cmd == "CoordSysTransform") {
       auto name = ""s;
-      parse_pbrt_param(fs, str, name);
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       if (ctx.coordsys.find(name) != ctx.coordsys.end()) {
         ctx.stack.back().transform_start =
             ctx.coordsys.at(name).transform_start;
@@ -3939,30 +3983,30 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "Integrator") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Sampler") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "PixelFilter") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Film") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       auto cfilm          = convert_film(command);
       ctx.film_resolution = cfilm->resolution;
     } else if (cmd == "Accelerator") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
     } else if (cmd == "Camera") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       auto camera   = convert_camera(command, ctx.film_resolution);
@@ -3971,18 +4015,18 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
       auto comptype = ""s;
-      parse_pbrt_param(fs, str, command.name);
-      parse_pbrt_param(fs, str, comptype);
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_param(str, comptype)) throw_parse_error();
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       texture_map[command.name] = {};
       convert_texture(texture_map[command.name], command, texture_map);
     } else if (cmd == "Material") {
       static auto material_id = 0;
       auto        command     = pbrt_command{};
       command.name            = "material_" + std::to_string(material_id++);
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       if (command.type == "") {
         ctx.stack.back().material = nullptr;
       } else {
@@ -3992,8 +4036,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.name);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
@@ -4002,12 +4046,12 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       material_map[command.name] = material;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
-      parse_pbrt_param(fs, str, name);
+      if (!parse_pbrt_param(str, name)) throw_parse_error();
       ctx.stack.back().material = material_map.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       auto shape    = convert_shape(command, filename, ply_dirname);
@@ -4021,8 +4065,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       static auto arealight_id = 0;
       auto        command      = pbrt_command{};
       command.name             = "arealight_" + std::to_string(arealight_id++);
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame  = ctx.stack.back().transform_start;
       command.frend  = ctx.stack.back().transform_end;
       auto arealight = convert_arealight(command);
@@ -4030,8 +4074,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       ctx.stack.back().arealight = arealight;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.type);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.type)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       if (command.type == "infinite") {
@@ -4043,8 +4087,8 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       }
     } else if (cmd == "MakeNamedMedium") {
       auto command = pbrt_command{};
-      parse_pbrt_param(fs, str, command.name);
-      parse_pbrt_params(fs, str, command.values);
+      if (!parse_pbrt_param(str, command.name)) throw_parse_error();
+      if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
@@ -4052,21 +4096,22 @@ void load_pbrt(const string& filename, shared_ptr<pbrt_model> pbrt,
       medium_map[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
-      parse_pbrt_param(fs, str, interior);
-      parse_pbrt_param(fs, str, exterior);
+      if (!parse_pbrt_param(str, interior)) throw_parse_error();
+      if (!parse_pbrt_param(str, exterior)) throw_parse_error();
       ctx.stack.back().interior = medium_map.at(interior);
       ctx.stack.back().exterior = medium_map.at(exterior);
     } else if (cmd == "Include") {
       auto includename = ""s;
-      parse_pbrt_param(fs, str, includename);
+      if (!parse_pbrt_param(str, includename)) throw_parse_error();
       try {
         load_pbrt(fs::path(filename).parent_path() / includename, pbrt, ctx,
             material_map, medium_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
-        throw_dependent_error(fs, e.what());
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     } else {
-      throw_parse_error(fs, "unknown command " + cmd);
+      throw std::runtime_error{filename + ": parse error [unknown command]"};
     }
   }
 }
@@ -4171,17 +4216,26 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
 
 void save_pbrt(
     const string& filename, shared_ptr<pbrt_model> pbrt, bool ply_meshes) {
-  auto fs = open_file(filename, "wt");
+  // open file
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_write_error = [filename]() {
+    throw std::runtime_error{filename + ": write error"};
+  };
 
   // save comments
-  format_values(fs, "#\n");
-  format_values(fs, "# Written by Yocto/GL\n");
-  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_values(fs, "#\n\n");
+  if (!format_values(fs, "#\n")) throw_write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) throw_write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    throw_write_error();
+  if (!format_values(fs, "#\n\n")) throw_write_error();
   for (auto& comment : pbrt->comments) {
-    format_values(fs, "# {}\n", comment);
+    if (!format_values(fs, "# {}\n", comment)) throw_write_error();
   }
-  format_values(fs, "\n");
+  if (!format_values(fs, "\n")) throw_write_error();
 
   for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
@@ -4191,7 +4245,8 @@ void save_pbrt(
     command.values.push_back(
         make_pbrt_value("yresolution", camera->resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
-    format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
+    if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
   }
 
   for (auto camera : pbrt->cameras) {
@@ -4200,12 +4255,14 @@ void save_pbrt(
     command.frame = camera->frame;
     command.values.push_back(make_pbrt_value(
         "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
-    format_values(fs, "LookAt {} {} {}\n", command.frame.o,
-        command.frame.o - command.frame.z, command.frame.y);
-    format_values(fs, "Camera \"{}\" {}\n", command.type, command.values);
+    if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
+            command.frame.o - command.frame.z, command.frame.y))
+      throw_write_error();
+    if (!format_values(fs, "Camera \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
   }
 
-  format_values(fs, "\nWorldBegin\n\n");
+  if (!format_values(fs, "\nWorldBegin\n\n")) throw_write_error();
 
   for (auto light : pbrt->lights) {
     auto command  = pbrt_command{};
@@ -4217,10 +4274,13 @@ void save_pbrt(
       command.type = "point";
       command.values.push_back(make_pbrt_value("I", light->emission));
     }
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)command.frame);
-    format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)command.frame))
+      throw_write_error();
+    if (!format_values(
+            fs, "LightSource \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
   }
 
   for (auto environment : pbrt->environments) {
@@ -4230,10 +4290,13 @@ void save_pbrt(
     command.values.push_back(make_pbrt_value("L", environment->emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment->emission_map));
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)command.frame);
-    format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)command.frame))
+      throw_write_error();
+    if (!format_values(
+            fs, "LightSource \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
   }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
@@ -4286,8 +4349,10 @@ void save_pbrt(
         command.values.push_back(make_pbrt_value("opacity", material->opacity));
       }
     }
-    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        material->name, command.type, command.values);
+    if (!format_values(fs,
+            "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+            material->name, command.type, command.values))
+      throw_write_error();
   }
 
   auto object_id = 0;
@@ -4323,31 +4388,40 @@ void save_pbrt(
         add_triangles(ply, shape->triangles);
         save_ply(fs::path(filename).parent_path() / shape->filename_, ply);
       } catch (std::exception& e) {
-        throw_dependent_error(filename, e.what());
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape->instances.empty())
-      format_values(fs, "ObjectBegin \"{}\"\n", object);
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)shape->frame);
+      if (!format_values(fs, "ObjectBegin \"{}\"\n", object))
+        throw_write_error();
+    if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+    if (!format_values(fs, "Transform {}\n", (mat4f)shape->frame))
+      throw_write_error();
     if (shape->arealight) {
-      format_values(
-          fs, "AreaLightSource \"{}\" {}\n", acommand.type, acommand.values);
+      if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
+              acommand.values))
+        throw_write_error();
     }
-    format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name);
-    format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
-    if (!shape->instances.empty()) format_values(fs, "ObjectEnd\n");
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
+      throw_write_error();
+    if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
+      throw_write_error();
+    if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
+    if (!shape->instances.empty())
+      if (!format_values(fs, "ObjectEnd\n")) throw_write_error();
     for (auto& iframe : shape->instances) {
-      format_values(fs, "AttributeBegin\n");
-      format_values(fs, "Transform {}\n", (mat4f)iframe);
-      format_values(fs, "ObjectInstance \"{}\"\n", object);
-      format_values(fs, "AttributeEnd\n");
+      if (!format_values(fs, "AttributeBegin\n")) throw_write_error();
+      if (!format_values(fs, "Transform {}\n", (mat4f)iframe))
+        throw_write_error();
+      if (!format_values(fs, "ObjectInstance \"{}\"\n", object))
+        throw_write_error();
+      if (!format_values(fs, "AttributeEnd\n")) throw_write_error();
     }
   }
 
-  format_values(fs, "\nWorldEnd\n\n");
+  if (!format_values(fs, "\nWorldEnd\n\n")) throw_write_error();
 }
 
 }  // namespace yocto

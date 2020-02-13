@@ -480,6 +480,7 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
   auto error = string{};
   if (!save_binary(filename, data, error)) throw std::runtime_error(error);
 }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
