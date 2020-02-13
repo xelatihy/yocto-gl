@@ -190,7 +190,6 @@ int run_app(int argc, const char* argv[]) {
   auto batch      = 16;
   auto save_batch = false;
   auto add_skyenv = false;
-  auto validate   = false;
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
 
@@ -230,7 +229,6 @@ int run_app(int argc, const char* argv[]) {
       ->transform(CLI::CheckedTransformer(trace_bvh_map));
   cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
   cli.add_option("--output-image,-o", imfilename, "Image filename");
-  cli.add_flag("--validate", validate, "Validate scene");
   cli.add_option("scene", filename, "Scene filename")->required();
   try {
     cli.parse(argc, argv);
@@ -240,13 +238,6 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   auto ioscene = load_scene(filename, print_progress);
-
-  // add components
-  if (validate) {
-    print_progress("validate scene", 0, 1);
-    for (auto& error : scene_validation(ioscene)) std::cout << error << "\n";
-    print_progress("validate scene", 1, 1);
-  }
 
   // convert scene
   auto scene = make_scene(ioscene, print_progress);

@@ -36,7 +36,6 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -105,22 +104,17 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene = shared_ptr<sceneio_model>{};
-  {
-    auto timer = CLI::AutoTimer("loading scene");
-    scene      = load_scene(filename, print_progress);
-  }
+    auto scene      = load_scene(filename, print_progress);
 
   // validate scene
   if (validate) {
-    auto timer = CLI::AutoTimer("validate");
-    for (auto& error : scene_validation(scene)) std::cout << error << "\n";
+    for (auto& error : scene_validation(scene)) printf("error: %s\n", error.c_str());
   }
 
   // print info
   if (info) {
-    std::cout << "scene stats ------------\n";
-    for (auto stat : scene_stats(scene)) std::cout << stat << "\n";
+    printf("scene stats ------------\n");
+    for (auto stat : scene_stats(scene)) printf("%s\n", stat.c_str());
   }
 
   // tesselate if needed
@@ -155,10 +149,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  {
-    auto timer = CLI::AutoTimer("saving scene");
     save_scene(output, scene, print_progress);
-  }
 
   // done
   return 0;

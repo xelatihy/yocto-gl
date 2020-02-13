@@ -37,7 +37,6 @@ using namespace yocto;
 using namespace std;
 
 #include "ext/CLI11.hpp"
-#include "ext/Timer.hpp"
 
 // Application state
 struct app_state {
