@@ -84,10 +84,10 @@ struct app_state {
   shared_ptr<sceneio_texture>     selected_texture     = nullptr;
 
   // loading status
-  atomic<bool> ok     = false;
-  future<void> loader = {};
-  string       status = "";
-  string       error  = "";
+  atomic<bool>       ok       = false;
+  future<void>       loader   = {};
+  string             status   = "";
+  string             error    = "";
   std::atomic<float> progress = 0.5;
 };
 
@@ -167,21 +167,21 @@ void update_lights(
   }
 }
 
-shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb) {
+shared_ptr<opengl_scene> make_glscene(
+    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + 
-             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+      0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
+             (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
+             (int)ioscene->subdivs.size() + (int)ioscene->instances.size() +
+             (int)ioscene->objects.size()};
 
   // create scene
   auto glscene = make_glscene();
 
   // camera
   for (auto iocamera : ioscene->cameras) {
-    if (progress_cb)
-      progress_cb("convert camera", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(glscene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -193,8 +193,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
       unordered_map<shared_ptr<sceneio_texture>, shared_ptr<opengl_texture>>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    if (progress_cb)
-      progress_cb("convert texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto gltexture = add_texture(glscene);
     if (!iotexture->hdr.empty()) {
       set_texture(gltexture, iotexture->hdr);
@@ -205,12 +204,11 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   }
 
   // material
-  auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<opengl_material>>{};
+  auto material_map     = unordered_map<shared_ptr<sceneio_material>,
+      shared_ptr<opengl_material>>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
-    if (progress_cb)
-      progress_cb("convert material", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
     auto glmaterial = add_material(glscene);
     set_emission(glmaterial, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -231,8 +229,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb)
-      progress_cb("convert subdiv", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -241,8 +238,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
       unordered_map<shared_ptr<sceneio_shape>, shared_ptr<opengl_shape>>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
-    if (progress_cb)
-      progress_cb("convert shape", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
     auto glshape = add_shape(glscene);
     set_positions(glshape, ioshape->positions);
     set_normals(glshape, ioshape->normals);
@@ -256,12 +252,11 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   }
 
   // instances
-  auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<opengl_instance>>{};
+  auto instance_map     = unordered_map<shared_ptr<sceneio_instance>,
+      shared_ptr<opengl_instance>>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
-    if (progress_cb)
-      progress_cb("convert instance", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
     auto glinstance = add_instance(glscene);
     set_frames(glinstance, ioinstance->frames);
     instance_map[ioinstance] = glinstance;
@@ -269,8 +264,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
 
   // shapes
   for (auto ioobject : ioscene->objects) {
-    if (progress_cb)
-      progress_cb("convert object", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
     auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
@@ -279,8 +273,7 @@ shared_ptr<opengl_scene> make_glscene(shared_ptr<sceneio_model> ioscene, sceneio
   }
 
   // done
-    if (progress_cb)
-      progress_cb("convert done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 
   return glscene;
 }
@@ -552,14 +545,16 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   auto get_texture = [app](shared_ptr<sceneio_texture> iotexture) {
-    return get_element(iotexture, app->ioscene->textures, app->glscene->textures);
+    return get_element(
+        iotexture, app->ioscene->textures, app->glscene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
       auto iocamera = app->selected_camera;
-      auto glcamera = get_element(iocamera, app->ioscene->cameras, app->glscene->cameras);
+      auto glcamera = get_element(
+          iocamera, app->ioscene->cameras, app->glscene->cameras);
       set_frame(glcamera, iocamera->frame);
       set_lens(glcamera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_nearfar(glcamera, 0.001, 10000);
@@ -579,11 +574,17 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_glwidgets(win, app->ioscene, app->selected_object)) {
       auto ioobject = app->selected_object;
-      auto globject = get_element(ioobject, app->ioscene->objects, app->glscene->objects);
+      auto globject = get_element(
+          ioobject, app->ioscene->objects, app->glscene->objects);
       set_frame(globject, ioobject->frame);
-      set_shape(globject, get_element(ioobject->shape, app->ioscene->shapes, app->glscene->shapes));
-      set_material(globject, get_element(ioobject->material, app->ioscene->materials, app->glscene->materials));
-      set_instance(globject, get_element(ioobject->instance, app->ioscene->instances, app->glscene->instances));
+      set_shape(globject, get_element(ioobject->shape, app->ioscene->shapes,
+                              app->glscene->shapes));
+      set_material(
+          globject, get_element(ioobject->material, app->ioscene->materials,
+                        app->glscene->materials));
+      set_instance(
+          globject, get_element(ioobject->instance, app->ioscene->instances,
+                        app->glscene->instances));
     }
     end_glheader(win);
   }
@@ -591,7 +592,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (!draw_glwidgets(win, app->ioscene, app->selected_shape)) {
       auto ioshape = app->selected_shape;
-      auto glshape = get_element(ioshape, app->ioscene->shapes, app->glscene->shapes);
+      auto glshape = get_element(
+          ioshape, app->ioscene->shapes, app->glscene->shapes);
       set_positions(glshape, ioshape->positions);
       set_normals(glshape, ioshape->normals);
       set_texcoords(glshape, ioshape->texcoords);
@@ -608,7 +610,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
       auto iomaterial = app->selected_material;
-      auto glmaterial = get_element(iomaterial, app->ioscene->materials, app->glscene->materials);
+      auto glmaterial = get_element(
+          iomaterial, app->ioscene->materials, app->glscene->materials);
       set_emission(glmaterial, iomaterial->emission,
           get_texture(iomaterial->emission_tex));
       set_color(glmaterial, (1 - iomaterial->transmission) * iomaterial->color,
@@ -632,7 +635,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_glwidgets(win, app->ioscene, app->selected_instance)) {
       auto ioinstance = app->selected_instance;
-      auto glinstance = get_element(ioinstance, app->ioscene->instances, app->glscene->instances);
+      auto glinstance = get_element(
+          ioinstance, app->ioscene->instances, app->glscene->instances);
       set_frames(glinstance, ioinstance->frames);
     }
     end_glheader(win);
@@ -642,7 +646,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
         win, "texture##2", app->selected_texture, app->ioscene->textures);
     if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
       auto iotexture = app->selected_texture;
-      auto gltexture = get_element(iotexture, app->ioscene->textures, app->glscene->textures);
+      auto gltexture = get_element(
+          iotexture, app->ioscene->textures, app->glscene->textures);
       if (!iotexture->hdr.empty()) {
         set_texture(gltexture, iotexture->hdr);
       } else if (!iotexture->hdr.empty()) {

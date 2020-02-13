@@ -3100,7 +3100,8 @@ image<vec4f> trace_image(const shared_ptr<trace_scene>& scene,
             render[ij] = trace_sample(state, scene, ij, params);
           });
     }
-    if (progress_image_cb) progress_image_cb(render, sample + 1, params.samples);
+    if (progress_image_cb)
+      progress_image_cb(render, sample + 1, params.samples);
   }
 
   if (progress_cb) progress_cb("trace image", params.samples, params.samples);

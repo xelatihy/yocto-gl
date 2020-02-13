@@ -69,7 +69,8 @@ void print_progress(const string& message, int current, int total) {
   auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
   auto n     = (int)(30 * (float)current / (float)total);
   auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line = bar + " " + mins + ":" + secs + "." + msecs + " " + pade(message, 30);
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
   printf("\r%s\r", line.c_str());
   if (current == total) printf("\n");
   fflush(stdout);
@@ -104,11 +105,12 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-    auto scene      = load_scene(filename, print_progress);
+  auto scene = load_scene(filename, print_progress);
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene)) printf("error: %s\n", error.c_str());
+    for (auto& error : scene_validation(scene))
+      printf("error: %s\n", error.c_str());
   }
 
   // print info
@@ -149,7 +151,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-    save_scene(output, scene, print_progress);
+  save_scene(output, scene, print_progress);
 
   // done
   return 0;

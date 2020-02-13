@@ -229,8 +229,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   // done
-    if (progress_cb)
-      progress_cb("converting done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
 
   return scene;
 }
@@ -604,7 +603,8 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
       }
       continue_glline(win);
       if (draw_glbutton(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene)) printf("%s\n", stat.c_str());
+        for (auto stat : scene_stats(app->ioscene))
+          printf("%s\n", stat.c_str());
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());

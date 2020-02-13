@@ -178,7 +178,8 @@ void print_progress(const string& message, int current, int total) {
   auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
   auto n     = (int)(30 * (float)current / (float)total);
   auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line = bar + " " + mins + ":" + secs + "." + msecs + " " + pade(message, 30);
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
   printf("\r%s\r", line.c_str());
   if (current == total) printf("\n");
   fflush(stdout);

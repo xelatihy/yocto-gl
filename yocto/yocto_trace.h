@@ -74,9 +74,9 @@
 namespace yocto {
 
 // Using directives
+using std::function;
 using std::make_shared;
 using std::shared_ptr;
-using std::function;
 
 // Trace scene
 struct trace_scene;
@@ -253,7 +253,8 @@ const auto trace_bvh_names        = vector<string>{
 using trace_progress =
     function<void(const string& message, int current, int total)>;
 // Callback used to report partially computed image
-using trace_progress_image = function<void(const image<vec4f>& render, int current, int total)>;
+using trace_progress_image =
+    function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize state of the renderer.
 shared_ptr<trace_state> make_state(
@@ -273,9 +274,9 @@ void update_bvh(const shared_ptr<trace_state>& bvh,
     const trace_params& params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(
-    const shared_ptr<trace_scene>& scene, const trace_params& params,
-    trace_progress progress_cb = {}, trace_progress_image progress_image_cb = {});
+image<vec4f> trace_image(const shared_ptr<trace_scene>& scene,
+    const trace_params& params, trace_progress progress_cb = {},
+    trace_progress_image progress_image_cb = {});
 
 // Traces a single sample. This is helpful when building async applications.
 vec4f trace_sample(const shared_ptr<trace_state>& state,

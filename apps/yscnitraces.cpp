@@ -276,12 +276,12 @@ void print_progress(const string& message, int current, int total) {
   auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
   auto n     = (int)(30 * (float)current / (float)total);
   auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line = bar + " " + mins + ":" + secs + "." + msecs + " " + pade(message, 30);
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
   printf("\r%s\r", line.c_str());
   if (current == total) printf("\n");
   fflush(stdout);
 }
-
 
 int run_app(int argc, const char* argv[]) {
   // application
@@ -340,10 +340,10 @@ int run_app(int argc, const char* argv[]) {
   app->ioscene = nullptr;
 
   // build bvh
-    init_bvh(app->scene, app->params, print_progress);
+  init_bvh(app->scene, app->params, print_progress);
 
   // init renderer
-    init_lights(app->scene, print_progress);
+  init_lights(app->scene, print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
