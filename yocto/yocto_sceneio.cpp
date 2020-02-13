@@ -402,6 +402,19 @@ void add_radius(shared_ptr<sceneio_model> scene, float radius = 0.001f) {
   }
 }
 
+// Add missing materials.
+void add_materials(shared_ptr<sceneio_model> scene) {
+  auto default_material = shared_ptr<sceneio_material>{};
+  for(auto& object : scene->objects) {
+    if(object->material) continue;
+    if(!default_material) {
+      default_material = add_material(scene);
+      default_material->color = {0.8, 0.8, 0.8};
+    }
+    object->material = default_material;
+  }
+}
+
 // Add a sky environment
 void add_sky(shared_ptr<sceneio_model> scene, float sun_angle) {
   auto texture              = add_texture(scene);
@@ -1309,6 +1322,7 @@ static void load_json_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
   trim_memory(scene);
 
   // done
@@ -1677,6 +1691,7 @@ static void load_obj_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -2001,6 +2016,7 @@ static void load_gltf_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // fix cameras
   auto bbox = compute_bounds(scene);
@@ -2151,6 +2167,7 @@ static void load_pbrt_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
