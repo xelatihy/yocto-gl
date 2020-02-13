@@ -261,16 +261,6 @@ static void parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++) parse_value(str, value[i]);
 }
 
-// Parse values from a string
-static void parse_value_or_empty(string_view& str, string& value) {
-  skip_whitespace(str);
-  if (str.empty()) {
-    value = "";
-  } else {
-    parse_value(str, value);
-  }
-}
-
 template <typename T>
 static void parse_value(
     string_view& str, T& value, unordered_map<string, T>& value_names) {
@@ -1702,7 +1692,17 @@ shared_ptr<obj_model> load_obj(const string& filename, bool geom_only,
 void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
+  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+
+  // throw helpers
+  auto throw_parse_error = [filename]() {
+    throw std::runtime_error{filename + ": parse error"};
+  };
+  auto throw_read_error = [filename]() {
+    throw std::runtime_error{filename + ": read error"};
+  };
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1727,7 +1727,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1736,18 +1736,18 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
 
     // get command
     auto cmd = ""s;
-    parse_value(fs, str, cmd);
+    if(!parse_value_(str, cmd)) throw_parse_error();
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      parse_value(fs, str, opositions.emplace_back(zero3f));
+      if(!parse_value_(str, opositions.emplace_back(zero3f))) throw_parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      parse_value(fs, str, onormals.emplace_back(zero3f));
+      if(!parse_value_(str, onormals.emplace_back(zero3f))) throw_parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      parse_value(fs, str, otexcoords.emplace_back(zero2f));
+      if(!parse_value_(str, otexcoords.emplace_back(zero2f))) throw_parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -1791,7 +1791,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       skip_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
-        parse_value(fs, str, vert);
+        if(!parse_value_(str, vert)) throw_parse_error();
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -1804,7 +1804,20 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      parse_value_or_empty(str, cmd == "o" ? oname : gname);
+      skip_whitespace(str);
+      if(cmd == "o") {
+      if (str.empty()) {
+        oname = "";
+      } else {
+        if(!parse_value_(str, oname)) throw_parse_error();
+      }
+      } else {
+      if (str.empty()) {
+        gname = "";
+      } else {
+        if(!parse_value_(str, gname)) throw_parse_error();
+      }
+      }
       if (!obj->shapes.back()->vertices.empty()) {
         obj->shapes.emplace_back(make_shared<obj_shape>());
         obj->shapes.back()->name = oname + gname;
@@ -1813,13 +1826,13 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      parse_value_or_empty(str, mname);
+      if(!parse_value_(str, mname)) throw_parse_error();
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      parse_value(fs, str, mtllib);
+      if(!parse_value_(str, mtllib)) throw_parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         try {
