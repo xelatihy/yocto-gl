@@ -1605,6 +1605,7 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
 
   // initialize load
   obj->shapes.emplace_back(make_shared<obj_shape>());
+  auto empty_material = shared_ptr<obj_material>{};
 
   // read the file str by str
   char buffer[4096];
@@ -1661,6 +1662,10 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
                                          : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
+        if(mname.empty() && !empty_material) {
+          empty_material = obj->materials.emplace_back(make_shared<obj_material>());
+          material_map[""] = empty_material;
+        } 
         auto mat_idx = -1;
         for (auto midx = 0; midx < shape->materials.size(); midx++)
           if (shape->materials[midx]->name == mname) mat_idx = midx;
@@ -1730,6 +1735,12 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
     } else {
       // unused
     }
+  }
+
+  // fix empty material
+  if(empty_material) {
+    empty_material->name = "empty_material";
+    empty_material->diffuse = {0.8, 0.8, 0.8};
   }
 
   // convert vertex data
