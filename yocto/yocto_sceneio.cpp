@@ -937,8 +937,7 @@ inline void load_text(const string& filename, string& str) {
 }
 
 // Save a text file
-inline void save_text(
-    const string& filename, const string& str) {
+inline void save_text(const string& filename, const string& str) {
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -954,8 +953,7 @@ inline string load_text(const string& filename) {
 }
 
 // Load a binary file
-inline void load_binary(
-    const string& filename, vector<byte>& data) {
+inline void load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
@@ -964,13 +962,12 @@ inline void load_binary(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) 
+  if (fread(data.data(), 1, length, fs) != length)
     throw std::runtime_error{filename + ": read error"};
 }
 
 // Save a binary file
-inline void save_binary(
-    const string& filename, const vector<byte>& data) {
+inline void save_binary(const string& filename, const vector<byte>& data) {
   auto fs = fopen(filename.c_str(), "wb");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -1241,7 +1238,8 @@ static void load_json_scene(const string& filename,
                 subdiv->positions, subdiv->normals, subdiv->texcoords,
                 subdiv->colors, subdiv->radius);
           } catch (std::exception& e) {
-            throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+            throw std::runtime_error{
+                filename + ": error in resource (" + e.what() + ")"};
           }
         }
         if (ejs.contains("fvsubdiv")) {
@@ -1252,7 +1250,8 @@ static void load_json_scene(const string& filename,
                 subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
                 subdiv->positions, subdiv->normals, subdiv->texcoords);
           } catch (std::exception& e) {
-            throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+            throw std::runtime_error{
+                filename + ": error in resource (" + e.what() + ")"};
           }
         }
       }
@@ -1274,7 +1273,8 @@ static void load_json_scene(const string& filename,
           shape->lines, shape->triangles, shape->quads, shape->positions,
           shape->normals, shape->texcoords, shape->colors, shape->radius);
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
   // load textures
@@ -1289,7 +1289,8 @@ static void load_json_scene(const string& filename,
             fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
   // load instances
@@ -1299,7 +1300,8 @@ static void load_json_scene(const string& filename,
       load_instances(
           fs::path(filename).parent_path() / instance->name, instance->frames);
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -1434,7 +1436,8 @@ static void save_json_scene(const string& filename,
             subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
             subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
     if (!subdiv->positions.empty() && !subdiv->quadspos.empty()) {
@@ -1445,7 +1448,8 @@ static void save_json_scene(const string& filename,
             subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
             subdiv->normals, subdiv->texcoords);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
   }
@@ -1466,7 +1470,8 @@ static void save_json_scene(const string& filename,
             shape->positions, shape->normals, shape->texcoords, shape->colors,
             shape->radius);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
   }
@@ -1479,7 +1484,8 @@ static void save_json_scene(const string& filename,
         save_instances(fs::path(filename).parent_path() / instance->name,
             instance->frames);
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
   }
@@ -1497,7 +1503,8 @@ static void save_json_scene(const string& filename,
               fs::path(filename).parent_path() / texture->name, texture->ldr);
         }
       } catch (std::exception& e) {
-        throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
       }
     }
   }
@@ -1661,7 +1668,8 @@ static void load_obj_scene(const string& filename,
         load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -1791,7 +1799,8 @@ static void save_obj_scene(const string& filename,
             fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -1843,7 +1852,8 @@ static void load_ply_scene(const string& filename,
 static void save_ply_scene(const string& filename,
     shared_ptr<sceneio_model> scene, sceneio_progress progress_cb,
     bool noparallel) {
-  if (scene->shapes.empty()) throw std::runtime_error{filename + ": empty shape"};
+  if (scene->shapes.empty())
+    throw std::runtime_error{filename + ": empty shape"};
 
   // handle progress
   auto progress = vec2i{0, 1};
@@ -1982,7 +1992,8 @@ static void load_gltf_scene(const string& filename,
         load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -2131,7 +2142,8 @@ static void load_pbrt_scene(const string& filename,
         load_imageb(fs::path(filename).parent_path() / path, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -2234,7 +2246,8 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
           shape->positions, shape->normals, shape->texcoords, shape->colors,
           shape->radius);
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 
@@ -2251,7 +2264,8 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
             fs::path(filename).parent_path() / texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
-      throw std::runtime_error{filename + ": error in resource (" + e.what() + ")"};
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
     }
   }
 }
