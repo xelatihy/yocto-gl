@@ -526,8 +526,43 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   draw_glcombobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
   auto app = apps->selected;
-  if (app->status != "") draw_gllabel(win, "status", app->status);
-  if (app->error != "") draw_gllabel(win, "error", app->error);
+  if (begin_glheader(win, "inspect")) {
+    draw_gllabel(win, "scene", fs::path(app->filename).filename());
+    draw_gllabel(win, "status", app->status);
+    if(app->error != "") draw_gllabel(win, "error", app->error);
+    draw_gllabel(win, "filename", app->filename);
+    draw_gllabel(win, "outname", app->outname);
+    draw_gllabel(win, "imagename", app->imagename);
+    if(app->ok) {
+      draw_gllabel(win, "image",
+          to_string(app->render.size().x) + " x " +
+              to_string(app->render.size().y) + " @ " +
+              to_string(app->render_sample));
+      draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
+      draw_glcheckbox(win, "zoom to fit", app->glparams.fit);
+      continue_glline(win);
+      if (draw_glbutton(win, "print cams")) {
+        for (auto iocamera : app->ioscene->cameras) {
+          print_obj_camera(iocamera);
+        }
+      }
+      continue_glline(win);
+      if (draw_glbutton(win, "print stats")) {
+        for (auto stat : scene_stats(app->ioscene)) std::cout << stat << "\n";
+      }
+      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+          app->glparams.scale, app->render.size());
+      draw_gldragger(win, "mouse", ij);
+      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
+          ij.y < app->render.size().y) {
+        draw_glcoloredit(win, "pixel", app->render[{ij.x, ij.y}]);
+      } else {
+        auto zero4f_ = zero4f;
+        draw_glcoloredit(win, "pixel", zero4f_);
+      }
+    }
+    end_glheader(win);
+  }
   if (!app->ok) return;
   if (begin_glheader(win, "trace")) {
     auto  edited  = 0;
@@ -548,39 +583,6 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     edited += draw_glslider(win, "pratio", app->pratio, 1, 64);
     edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
-    end_glheader(win);
-  }
-  if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", fs::path(app->filename).filename());
-    draw_gllabel(win, "filename", app->filename);
-    draw_gllabel(win, "outname", app->outname);
-    draw_gllabel(win, "imagename", app->imagename);
-    draw_gllabel(win, "image",
-        to_string(app->render.size().x) + " x " +
-            to_string(app->render.size().y) + " @ " +
-            to_string(app->render_sample));
-    draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", app->glparams.fit);
-    continue_glline(win);
-    if (draw_glbutton(win, "print cams")) {
-      for (auto iocamera : app->ioscene->cameras) {
-        print_obj_camera(iocamera);
-      }
-    }
-    continue_glline(win);
-    if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) std::cout << stat << "\n";
-    }
-    auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
-        app->glparams.scale, app->render.size());
-    draw_gldragger(win, "mouse", ij);
-    if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-        ij.y < app->render.size().y) {
-      draw_glcoloredit(win, "pixel", app->render[{ij.x, ij.y}]);
-    } else {
-      auto zero4f_ = zero4f;
-      draw_glcoloredit(win, "pixel", zero4f_);
-    }
     end_glheader(win);
   }
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
