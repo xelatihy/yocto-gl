@@ -384,8 +384,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_glcombobox(win, "displacement_tex", iomaterial->displacement_tex,
-      ioscene->textures, true);
+  edited += draw_glcombobox(win, "displacement_tex",
+      iomaterial->displacement_tex, ioscene->textures, true);
   edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
   edited += draw_glslider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
   edited += draw_glcheckbox(win, "smooth", iomaterial->smooth);
@@ -445,7 +445,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   draw_gllabel(win, "name", iosubdiv->name);
   draw_gllabel(win, "quads pos", to_string(iosubdiv->quadspos.size()));
   draw_gllabel(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
+  draw_gllabel(
+      win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
   draw_gllabel(win, "pos", to_string(iosubdiv->positions.size()));
   draw_gllabel(win, "norm", to_string(iosubdiv->normals.size()));
   draw_gllabel(win, "texcoord", to_string(iosubdiv->texcoords.size()));

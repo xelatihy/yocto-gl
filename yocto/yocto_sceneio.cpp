@@ -444,32 +444,33 @@ void trim_memory(shared_ptr<sceneio_model> scene) {
 }
 
 // Apply subdivision and displacement rules.
-shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape, int subdivisions, bool smooth) {
+shared_ptr<sceneio_subdiv> subdivide_subdiv(
+    shared_ptr<sceneio_subdiv> shape, int subdivisions, bool smooth) {
   using std::ignore;
   auto tesselated = make_shared<sceneio_subdiv>(*shape);
   if (!subdivisions) return tesselated;
-    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-        subdivide_catmullclark(tesselated->quadstexcoord, tesselated->texcoords,
-            subdivisions, true);
-    std::tie(tesselated->quadsnorm, tesselated->normals) =
-        subdivide_catmullclark(tesselated->quadsnorm, tesselated->normals,
-            subdivisions, true);
-    std::tie(tesselated->quadspos, tesselated->positions) =
-        subdivide_catmullclark(
-            tesselated->quadspos, tesselated->positions, subdivisions);
-    if (smooth) {
-      tesselated->normals = compute_normals(
-          tesselated->quadspos, tesselated->positions);
-      tesselated->quadsnorm = tesselated->quadspos;
-    } else {
-      tesselated->normals   = {};
-      tesselated->quadsnorm = {};
-    }
+  std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
+      subdivide_catmullclark(
+          tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
+  std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
+      tesselated->quadsnorm, tesselated->normals, subdivisions, true);
+  std::tie(tesselated->quadspos, tesselated->positions) =
+      subdivide_catmullclark(
+          tesselated->quadspos, tesselated->positions, subdivisions);
+  if (smooth) {
+    tesselated->normals = compute_normals(
+        tesselated->quadspos, tesselated->positions);
+    tesselated->quadsnorm = tesselated->quadspos;
+  } else {
+    tesselated->normals   = {};
+    tesselated->quadsnorm = {};
+  }
   return tesselated;
 }
 // Apply displacement to a shape
 shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
-    float displacement, shared_ptr<sceneio_texture> displacement_tex, bool smooth) {
+    float displacement, shared_ptr<sceneio_texture> displacement_tex,
+    bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](shared_ptr<sceneio_texture> texture,
                           const vec2f&               texcoord) -> vec4f {
@@ -526,9 +527,10 @@ void tesselate_subdiv(shared_ptr<sceneio_model> scene,
       break;
     }
   }
-  auto tesselated = subdivide_subdiv(subdiv, material->subdivisions, material->smooth);
-  auto displaced  = displace_subdiv(
-      tesselated, material->displacement, material->displacement_tex, material->smooth);
+  auto tesselated = subdivide_subdiv(
+      subdiv, material->subdivisions, material->smooth);
+  auto displaced = displace_subdiv(tesselated, material->displacement,
+      material->displacement_tex, material->smooth);
   std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
       split_facevarying(displaced->quadspos, displaced->quadsnorm,
           displaced->quadstexcoord, displaced->positions, displaced->normals,
@@ -1017,8 +1019,9 @@ static void load_json_scene(const string& filename,
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "displacement_tex", material->displacement_tex);
-        get_value(ejs, "subdivisions", material->subdivisions); // hack fir subd
-        get_value(ejs, "smooth", material->smooth);// hack for subd
+        get_value(
+            ejs, "subdivisions", material->subdivisions);  // hack fir subd
+        get_value(ejs, "smooth", material->smooth);        // hack for subd
         get_value(ejs, "gltf_textures", material->gltf_textures);
         material_map[material->name] = material;
       }
@@ -1136,10 +1139,9 @@ static void save_json_scene(const string& filename,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2 + (int)scene->shapes.size() +
-                               (int)scene->subdivs.size() +
-                               (int)scene->textures.size() +
-                               (int)scene->instances.size()};
+  auto progress = vec2i{
+      0, 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
+             (int)scene->textures.size() + (int)scene->instances.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save yaml file
@@ -1202,8 +1204,10 @@ static void save_json_scene(const string& filename,
     add_tex(ejs, "opacity_tex", material->opacity_tex);
     add_tex(ejs, "normal_tex", material->normal_tex);
     add_tex(ejs, "displacement_tex", material->displacement_tex);
-    add_opt(ejs, "subdivisions", material->subdivisions, def_material.subdivisions); // hack fir subd
-    add_opt(ejs, "smooth", material->smooth, def_material.smooth);// hack for subd
+    add_opt(ejs, "subdivisions", material->subdivisions,
+        def_material.subdivisions);  // hack fir subd
+    add_opt(
+        ejs, "smooth", material->smooth, def_material.smooth);  // hack for subd
     add_opt(ejs, "gltf_textures", material->gltf_textures,
         def_material.gltf_textures);
   }

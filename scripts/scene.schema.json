@@ -78,30 +78,15 @@
         }
       }
     },
-    "shapes": {
-      "description": "List of shapes",
+    "materials": {
+      "description": "List of materials",
       "type": "array",
       "items": {
-        "description": "Shape",
+        "description": "Object",
         "type": "object",
         "properties": {
           "name": {
             "description": "Name",
-            "type": "string"
-          },
-          "frame": {
-            "description": "Frame",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "shape": {
-            "description": "Geometry filename",
-            "type": "string"
-          },
-          "instances": {
-            "description": "Instances filename",
             "type": "string"
           },
           "emission": {
@@ -168,6 +153,10 @@
             "description": "Opacity",
             "type": "number"
           },
+          "displacement": {
+            "description": "Displacement",
+            "type": "number"
+          },
           "thin": {
             "description": "Thin",
             "type": "boolean"
@@ -192,10 +181,6 @@
             "description": "Metallic",
             "type": "string"
           },
-          "ior_tex": {
-            "description": "Ior",
-            "type": "string"
-          },
           "spectint_tex": {
             "description": "Specular tint",
             "type": "string"
@@ -216,9 +201,46 @@
             "description": "Opacity map",
             "type": "string"
           },
+          "displacement_tex": {
+            "description": "Displacement map",
+            "type": "string"
+          },
           "gltf_textures": {
             "description": "glTF Textures",
             "type": "boolean"
+          }
+        }
+      }
+    },
+    "objects": {
+      "description": "List of objects",
+      "type": "array",
+      "items": {
+        "description": "Object",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "shape": {
+            "description": "Geometry filename",
+            "type": "string"
+          },
+          "subdiv": {
+            "description": "Geometry filename",
+            "type": "string"
+          },
+          "instance": {
+            "description": "Instances filename",
+            "type": "string"
           }
         }
       }

@@ -334,8 +334,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_glcombobox(win, "displacement_tex", iomaterial->displacement_tex,
-      ioscene->textures, true);
+  edited += draw_glcombobox(win, "displacement_tex",
+      iomaterial->displacement_tex, ioscene->textures, true);
   edited += draw_glslider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
   edited += draw_glcheckbox(win, "smooth", iomaterial->smooth);
   edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
