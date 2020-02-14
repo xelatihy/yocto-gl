@@ -265,7 +265,8 @@ void reset_display(shared_ptr<app_state> app) {
   // start render
   app->render_counter = 0;
   app->render_state   = trace_async_start(
-      app->scene, app->params, [app = app.get()](const string& message, int sample, int nsamples){
+      app->scene, app->params,
+      [app = app.get()](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
       [app = app.get()](const image<vec4f>& render, int current, int total) {
