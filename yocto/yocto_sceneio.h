@@ -115,6 +115,7 @@ struct sceneio_material {
   float scanisotropy = 0;
   float trdepth      = 0.01;
   float opacity      = 1;
+  float                       displacement     = 0;
   bool  thin         = true;
 
   // textures
@@ -129,6 +130,7 @@ struct sceneio_material {
   shared_ptr<sceneio_texture> coat_tex         = nullptr;
   shared_ptr<sceneio_texture> opacity_tex      = nullptr;
   shared_ptr<sceneio_texture> normal_tex       = nullptr;
+  shared_ptr<sceneio_texture> displacement_tex = nullptr;
   bool                        gltf_textures    = false;  // glTF packed textures
 };
 
@@ -161,13 +163,11 @@ struct sceneio_shape {
 struct sceneio_subdiv {
   // shape data
   string                    name  = "";
-  shared_ptr<sceneio_shape> shape = nullptr;
 
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  // subdision properties
+  int  subdivisions = 0;
+  bool catmullclark = false;
+  bool smooth       = false;
 
   // face-varying primitives
   vector<vec4i> quadspos      = {};
@@ -178,18 +178,6 @@ struct sceneio_subdiv {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-
-  // subdision properties
-  int  subdivisions = 0;
-  bool catmullclark = false;
-  bool smooth       = false;
-
-  // displacement information
-  float                       displacement     = 0;
-  shared_ptr<sceneio_texture> displacement_tex = nullptr;
 };
 
 // Instance data.
@@ -207,6 +195,7 @@ struct sceneio_object {
   shared_ptr<sceneio_shape>    shape    = nullptr;
   shared_ptr<sceneio_material> material = nullptr;
   shared_ptr<sceneio_instance> instance = nullptr;
+  shared_ptr<sceneio_subdiv>   subdiv   = nullptr;
 };
 
 // Environment map.

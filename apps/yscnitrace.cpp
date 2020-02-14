@@ -438,20 +438,12 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
-  draw_gllabel(win, "points", to_string(iosubdiv->points.size()));
-  draw_gllabel(win, "lines", to_string(iosubdiv->lines.size()));
-  draw_gllabel(win, "triangles", to_string(iosubdiv->triangles.size()));
-  draw_gllabel(win, "quads", to_string(iosubdiv->quads.size()));
   draw_gllabel(win, "quads pos", to_string(iosubdiv->quadspos.size()));
   draw_gllabel(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_gllabel(
-      win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
+  draw_gllabel(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
   draw_gllabel(win, "pos", to_string(iosubdiv->positions.size()));
   draw_gllabel(win, "norm", to_string(iosubdiv->normals.size()));
   draw_gllabel(win, "texcoord", to_string(iosubdiv->texcoords.size()));
-  draw_gllabel(win, "color", to_string(iosubdiv->colors.size()));
-  draw_gllabel(win, "radius", to_string(iosubdiv->radius.size()));
-  draw_gllabel(win, "tangsp", to_string(iosubdiv->tangents.size()));
   return edited;
 }
 
