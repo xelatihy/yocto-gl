@@ -201,18 +201,6 @@ vector<string> scene_stats(shared_ptr<sceneio_model> scene, bool verbose) {
   stats.push_back(
       "quads:        " + format(accumulate(scene->shapes,
                              [](auto shape) { return shape->quads.size(); })));
-  stats.push_back(
-      "spoints:      " + format(accumulate(scene->subdivs,
-                             [](auto shape) { return shape->points.size(); })));
-  stats.push_back(
-      "slines:       " + format(accumulate(scene->subdivs,
-                             [](auto shape) { return shape->lines.size(); })));
-  stats.push_back("striangles:   " +
-                  format(accumulate(scene->subdivs,
-                      [](auto shape) { return shape->triangles.size(); })));
-  stats.push_back(
-      "squads:       " + format(accumulate(scene->subdivs,
-                             [](auto shape) { return shape->quads.size(); })));
   stats.push_back("sfvquads:     " +
                   format(accumulate(scene->subdivs,
                       [](auto shape) { return shape->quadspos.size(); })));
@@ -438,19 +426,12 @@ void trim_memory(shared_ptr<sceneio_model> scene) {
     shape->tangents.shrink_to_fit();
   }
   for (auto subdiv : scene->subdivs) {
-    subdiv->points.shrink_to_fit();
-    subdiv->lines.shrink_to_fit();
-    subdiv->triangles.shrink_to_fit();
-    subdiv->quads.shrink_to_fit();
     subdiv->quadspos.shrink_to_fit();
     subdiv->quadsnorm.shrink_to_fit();
     subdiv->quadstexcoord.shrink_to_fit();
     subdiv->positions.shrink_to_fit();
     subdiv->normals.shrink_to_fit();
     subdiv->texcoords.shrink_to_fit();
-    subdiv->colors.shrink_to_fit();
-    subdiv->radius.shrink_to_fit();
-    subdiv->tangents.shrink_to_fit();
   }
   for (auto texture : scene->textures) {
     texture->ldr.shrink_to_fit();
@@ -463,108 +444,33 @@ void trim_memory(shared_ptr<sceneio_model> scene) {
 }
 
 // Apply subdivision and displacement rules.
-shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape) {
+shared_ptr<sceneio_subdiv> subdivide_subdiv(
+    shared_ptr<sceneio_subdiv> shape, int subdivisions, bool smooth) {
   using std::ignore;
   auto tesselated = make_shared<sceneio_subdiv>(*shape);
-  if (!shape->subdivisions) return tesselated;
-  tesselated->subdivisions = 0;
-  if (!shape->points.empty()) {
-    throw std::runtime_error("point subdivision not supported");
-  } else if (!shape->lines.empty()) {
-    tie(ignore, tesselated->normals) = subdivide_lines(
-        tesselated->lines, tesselated->normals, shape->subdivisions);
-    tie(ignore, tesselated->texcoords) = subdivide_lines(
-        tesselated->lines, tesselated->texcoords, shape->subdivisions);
-    tie(ignore, tesselated->colors) = subdivide_lines(
-        tesselated->lines, tesselated->colors, shape->subdivisions);
-    tie(ignore, tesselated->radius) = subdivide_lines(
-        tesselated->lines, tesselated->radius, shape->subdivisions);
-    tie(tesselated->lines, tesselated->positions) = subdivide_lines(
-        tesselated->lines, tesselated->positions, shape->subdivisions);
-    if (shape->smooth)
-      tesselated->normals = compute_tangents(
-          tesselated->lines, tesselated->positions);
-  } else if (!shape->triangles.empty()) {
-    tie(ignore, tesselated->normals) = subdivide_triangles(
-        tesselated->triangles, tesselated->normals, shape->subdivisions);
-    tie(ignore, tesselated->texcoords) = subdivide_triangles(
-        tesselated->triangles, tesselated->texcoords, shape->subdivisions);
-    tie(ignore, tesselated->colors) = subdivide_triangles(
-        tesselated->triangles, tesselated->colors, shape->subdivisions);
-    tie(ignore, tesselated->radius) = subdivide_triangles(
-        tesselated->triangles, tesselated->radius, shape->subdivisions);
-    tie(tesselated->triangles, tesselated->positions) = subdivide_triangles(
-        tesselated->triangles, tesselated->positions, shape->subdivisions);
-    if (shape->smooth)
-      tesselated->normals = compute_normals(
-          tesselated->triangles, tesselated->positions);
-  } else if (!shape->quads.empty() && !shape->catmullclark) {
-    tie(ignore, tesselated->normals) = subdivide_quads(
-        tesselated->quads, tesselated->normals, shape->subdivisions);
-    tie(ignore, tesselated->texcoords) = subdivide_quads(
-        tesselated->quads, tesselated->texcoords, shape->subdivisions);
-    tie(ignore, tesselated->colors) = subdivide_quads(
-        tesselated->quads, tesselated->colors, shape->subdivisions);
-    tie(ignore, tesselated->radius) = subdivide_quads(
-        tesselated->quads, tesselated->radius, shape->subdivisions);
-    tie(tesselated->quads, tesselated->positions) = subdivide_quads(
-        tesselated->quads, tesselated->positions, shape->subdivisions);
-    if (tesselated->smooth)
-      tesselated->normals = compute_normals(
-          tesselated->quads, tesselated->positions);
-  } else if (!shape->quads.empty() && shape->catmullclark) {
-    tie(ignore, tesselated->normals) = subdivide_catmullclark(
-        tesselated->quads, tesselated->normals, shape->subdivisions);
-    tie(ignore, tesselated->texcoords) = subdivide_catmullclark(
-        tesselated->quads, tesselated->texcoords, shape->subdivisions);
-    tie(ignore, tesselated->colors) = subdivide_catmullclark(
-        tesselated->quads, tesselated->colors, shape->subdivisions);
-    tie(ignore, tesselated->radius) = subdivide_catmullclark(
-        tesselated->quads, tesselated->radius, shape->subdivisions);
-    tie(tesselated->quads, tesselated->positions) = subdivide_catmullclark(
-        tesselated->quads, tesselated->positions, shape->subdivisions);
-    if (tesselated->smooth)
-      tesselated->normals = compute_normals(
-          tesselated->quads, tesselated->positions);
-  } else if (!shape->quadspos.empty() && !shape->catmullclark) {
-    std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_quads(
-        tesselated->quadsnorm, tesselated->normals, shape->subdivisions);
-    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-        subdivide_quads(tesselated->quadstexcoord, tesselated->texcoords,
-            shape->subdivisions);
-    std::tie(tesselated->quadspos, tesselated->positions) = subdivide_quads(
-        tesselated->quadspos, tesselated->positions, shape->subdivisions);
-    if (tesselated->smooth) {
-      tesselated->normals = compute_normals(
-          tesselated->quadspos, tesselated->positions);
-      tesselated->quadsnorm = tesselated->quadspos;
-    }
-  } else if (!shape->quadspos.empty() && shape->catmullclark) {
-    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-        subdivide_catmullclark(tesselated->quadstexcoord, tesselated->texcoords,
-            shape->subdivisions, true);
-    std::tie(tesselated->quadsnorm, tesselated->normals) =
-        subdivide_catmullclark(tesselated->quadsnorm, tesselated->normals,
-            shape->subdivisions, true);
-    std::tie(tesselated->quadspos, tesselated->positions) =
-        subdivide_catmullclark(
-            tesselated->quadspos, tesselated->positions, shape->subdivisions);
-    if (shape->smooth) {
-      tesselated->normals = compute_normals(
-          tesselated->quadspos, tesselated->positions);
-      tesselated->quadsnorm = tesselated->quadspos;
-    } else {
-      tesselated->normals   = {};
-      tesselated->quadsnorm = {};
-    }
+  if (!subdivisions) return tesselated;
+  std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
+      subdivide_catmullclark(
+          tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
+  std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
+      tesselated->quadsnorm, tesselated->normals, subdivisions, true);
+  std::tie(tesselated->quadspos, tesselated->positions) =
+      subdivide_catmullclark(
+          tesselated->quadspos, tesselated->positions, subdivisions);
+  if (smooth) {
+    tesselated->normals = compute_normals(
+        tesselated->quadspos, tesselated->positions);
+    tesselated->quadsnorm = tesselated->quadspos;
   } else {
-    throw std::runtime_error("empty shape");
+    tesselated->normals   = {};
+    tesselated->quadsnorm = {};
   }
   return tesselated;
 }
 // Apply displacement to a shape
-shared_ptr<sceneio_subdiv> displace_subdiv(
-    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv) {
+shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
+    float displacement, shared_ptr<sceneio_texture> displacement_tex,
+    bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](shared_ptr<sceneio_texture> texture,
                           const vec2f&               texcoord) -> vec4f {
@@ -579,97 +485,78 @@ shared_ptr<sceneio_subdiv> displace_subdiv(
 
   auto displaced = make_shared<sceneio_subdiv>(*subdiv);
 
-  if (!subdiv->displacement || subdiv->displacement_tex) return displaced;
-  auto displacement = subdiv->displacement_tex;
+  if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
     throw std::runtime_error("missing texture coordinates");
 
-  displaced->displacement     = 0;
-  displaced->displacement_tex = nullptr;
-
-  // simple case
-  if (!subdiv->triangles.empty()) {
-    auto normals = subdiv->normals;
-    if (normals.empty())
-      normals = compute_normals(subdiv->triangles, subdiv->positions);
-    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
-      auto disp = mean(xyz(eval_texture(displacement, subdiv->texcoords[vid])));
-      if (!displacement->ldr.empty()) disp -= 0.5f;
-      displaced->positions[vid] += normals[vid] * subdiv->displacement * disp;
+  // facevarying case
+  auto offset = vector<float>(subdiv->positions.size(), 0);
+  auto count  = vector<int>(subdiv->positions.size(), 0);
+  for (auto fid = 0; fid < subdiv->quadspos.size(); fid++) {
+    auto qpos = subdiv->quadspos[fid];
+    auto qtxt = subdiv->quadstexcoord[fid];
+    for (auto i = 0; i < 4; i++) {
+      auto disp = mean(
+          xyz(eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]])));
+      if (!displacement_tex->ldr.empty()) disp -= 0.5f;
+      offset[qpos[i]] += displacement * disp;
+      count[qpos[i]] += 1;
     }
-    if (subdiv->smooth || !subdiv->normals.empty()) {
-      displaced->normals = compute_normals(
-          displaced->triangles, displaced->positions);
-    }
-  } else if (!subdiv->quads.empty()) {
-    auto normals = subdiv->normals;
-    if (normals.empty())
-      normals = compute_normals(subdiv->triangles, subdiv->positions);
-    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
-      auto disp = mean(xyz(eval_texture(displacement, subdiv->texcoords[vid])));
-      if (!is_hdr_filename(displacement->name)) disp -= 0.5f;
-      displaced->positions[vid] += normals[vid] * subdiv->displacement * disp;
-    }
-    if (subdiv->smooth || !subdiv->normals.empty()) {
-      displaced->normals = compute_normals(
-          displaced->quads, displaced->positions);
-    }
-  } else if (!subdiv->quadspos.empty()) {
-    // facevarying case
-    auto offset = vector<float>(subdiv->positions.size(), 0);
-    auto count  = vector<int>(subdiv->positions.size(), 0);
-    for (auto fid = 0; fid < subdiv->quadspos.size(); fid++) {
-      auto qpos = subdiv->quadspos[fid];
-      auto qtxt = subdiv->quadstexcoord[fid];
-      for (auto i = 0; i < 4; i++) {
-        auto disp = mean(
-            xyz(eval_texture(displacement, subdiv->texcoords[qtxt[i]])));
-        if (!displacement->ldr.empty()) disp -= 0.5f;
-        offset[qpos[i]] += subdiv->displacement * disp;
-        count[qpos[i]] += 1;
-      }
-    }
-    auto normals = compute_normals(subdiv->quadspos, subdiv->positions);
-    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
-      displaced->positions[vid] += normals[vid] * offset[vid] / count[vid];
-    }
-    if (subdiv->smooth || !subdiv->normals.empty()) {
-      displaced->quadsnorm = subdiv->quadspos;
-      displaced->normals   = compute_normals(
-          displaced->quadspos, displaced->positions);
-    }
+  }
+  auto normals = compute_normals(subdiv->quadspos, subdiv->positions);
+  for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
+    displaced->positions[vid] += normals[vid] * offset[vid] / count[vid];
+  }
+  if (smooth || !subdiv->normals.empty()) {
+    displaced->quadsnorm = subdiv->quadspos;
+    displaced->normals   = compute_normals(
+        displaced->quadspos, displaced->positions);
   }
 
   return displaced;
 }
 
-void tesselate_subdiv(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_subdiv> subdiv, bool no_quads) {
-  auto tesselated = subdivide_subdiv(subdiv);
-  auto displaced  = displace_subdiv(scene, tesselated);
-  if (!subdiv->quadspos.empty()) {
-    std::tie(displaced->quads, displaced->positions, displaced->normals,
-        displaced->texcoords) = split_facevarying(displaced->quadspos,
-        displaced->quadsnorm, displaced->quadstexcoord, displaced->positions,
-        displaced->normals, displaced->texcoords);
-    displaced->quadspos       = {};
-    displaced->quadsnorm      = {};
-    displaced->quadstexcoord  = {};
+void tesselate_subdiv(
+    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv) {
+  auto material = shared_ptr<sceneio_material>{};
+  auto shape    = shared_ptr<sceneio_shape>{};
+  for (auto& object : scene->objects) {
+    if (object->subdiv == subdiv) {
+      material = object->material;
+      shape    = object->shape;
+      break;
+    }
   }
-  if (!displaced->quads.empty() && no_quads) {
-    displaced->triangles = quads_to_triangles(displaced->quads);
-    displaced->quads     = {};
+  auto tesselated = subdivide_subdiv(
+      subdiv, material->subdivisions, material->smooth);
+  auto displaced = displace_subdiv(tesselated, material->displacement,
+      material->displacement_tex, material->smooth);
+  std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
+      split_facevarying(displaced->quadspos, displaced->quadsnorm,
+          displaced->quadstexcoord, displaced->positions, displaced->normals,
+          displaced->texcoords);
+  shape->points    = {};
+  shape->lines     = {};
+  shape->triangles = {};
+  shape->colors    = {};
+  shape->radius    = {};
+}
+
+void tesselate_subdivs(
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb) {
+  if (scene->subdivs.empty()) return;
+
+  // handle progress
+  auto progress = vec2i{0, (int)scene->subdivs.size()};
+
+  // tesselate subdivs
+  for (auto subdiv : scene->subdivs) {
+    if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
+    tesselate_subdiv(scene, subdiv);
   }
-  auto shape       = displaced->shape;
-  shape->points    = displaced->points;
-  shape->lines     = displaced->lines;
-  shape->triangles = displaced->triangles;
-  shape->quads     = displaced->quads;
-  shape->positions = displaced->positions;
-  shape->normals   = displaced->normals;
-  shape->texcoords = displaced->texcoords;
-  shape->colors    = displaced->colors;
-  shape->radius    = displaced->radius;
+
+  // done
+  if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
 }  // namespace yocto
@@ -1025,6 +912,29 @@ static void load_json_scene(const string& filename,
     return shape;
   };
 
+  // parse json reference
+  auto subdiv_map = unordered_map<string, shared_ptr<sceneio_subdiv>>{
+      {"", nullptr}};
+  auto get_subdiv =
+      [scene, &subdiv_map](const json& ejs, const string& name,
+          shared_ptr<sceneio_subdiv>& value,
+          const string& dirname = "subdivs/") -> shared_ptr<sceneio_subdiv> {
+    if (!ejs.contains(name)) return nullptr;
+    auto path = ""s;
+    ejs.at(name).get_to(path);
+    if (path == "") return nullptr;
+    auto it = subdiv_map.find(path);
+    if (it != subdiv_map.end()) {
+      value = it->second;
+      return it->second;
+    }
+    auto subdiv      = add_subdiv(scene);
+    subdiv->name     = path;
+    subdiv_map[path] = subdiv;
+    value            = subdiv;
+    return subdiv;
+  };
+
   // load json instance
   auto instance_map = unordered_map<string, shared_ptr<sceneio_instance>>{
       {"", nullptr}};
@@ -1111,6 +1021,7 @@ static void load_json_scene(const string& filename,
         get_value(ejs, "scanisotropy", material->scanisotropy);
         get_value(ejs, "opacity", material->opacity);
         get_value(ejs, "coat", material->coat);
+        get_value(ejs, "displacement", material->displacement);
         get_texture(ejs, "emission_tex", material->emission_tex);
         get_texture(ejs, "color_tex", material->color_tex);
         get_texture(ejs, "metallic_tex", material->metallic_tex);
@@ -1120,6 +1031,10 @@ static void load_json_scene(const string& filename,
         get_texture(ejs, "scattering_tex", material->scattering_tex);
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "normal_tex", material->normal_tex);
+        get_texture(ejs, "displacement_tex", material->displacement_tex);
+        get_value(
+            ejs, "subdivisions", material->subdivisions);  // hack fir subd
+        get_value(ejs, "smooth", material->smooth);        // hack for subd
         get_value(ejs, "gltf_textures", material->gltf_textures);
         material_map[material->name] = material;
       }
@@ -1136,44 +1051,8 @@ static void load_json_scene(const string& filename,
         }
         get_ref(ejs, "material", object->material, material_map);
         get_shape(ejs, "shape", object->shape);
+        get_subdiv(ejs, "subdiv", object->subdiv);
         get_instance(ejs, "instance", object->instance);
-      }
-    }
-    if (js.contains("subdivs")) {
-      for (auto& ejs : js.at("subdivs")) {
-        auto subdiv = add_subdiv(scene);
-        get_value(ejs, "name", subdiv->name);
-        get_ref(ejs, "shape", subdiv->shape, shape_map);
-        get_value(ejs, "subdivisions", subdiv->subdivisions);
-        get_value(ejs, "catmullclark", subdiv->catmullclark);
-        get_value(ejs, "smooth", subdiv->smooth);
-        get_texture(ejs, "displacement_tex", subdiv->displacement_tex);
-        get_value(ejs, "displacement", subdiv->displacement);
-        if (ejs.contains("subdiv")) {
-          auto path = ""s;
-          get_value(ejs, "subdiv", path);
-          try {
-            load_shape(fs::path(filename).parent_path() / path, subdiv->points,
-                subdiv->lines, subdiv->triangles, subdiv->quads,
-                subdiv->positions, subdiv->normals, subdiv->texcoords,
-                subdiv->colors, subdiv->radius);
-          } catch (std::exception& e) {
-            throw std::runtime_error{
-                filename + ": error in resource (" + e.what() + ")"};
-          }
-        }
-        if (ejs.contains("fvsubdiv")) {
-          auto path = ""s;
-          get_value(ejs, "fvsubdiv", path);
-          try {
-            load_fvshape(fs::path(filename).parent_path() / path,
-                subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
-                subdiv->positions, subdiv->normals, subdiv->texcoords);
-          } catch (std::exception& e) {
-            throw std::runtime_error{
-                filename + ": error in resource (" + e.what() + ")"};
-          }
-        }
       }
     }
   } catch (std::invalid_argument& e) {
@@ -1182,6 +1061,7 @@ static void load_json_scene(const string& filename,
 
   // handle progress
   progress.y += scene->shapes.size();
+  progress.y += scene->subdivs.size();
   progress.y += scene->textures.size();
   progress.y += scene->instances.size();
 
@@ -1192,6 +1072,18 @@ static void load_json_scene(const string& filename,
       load_shape(fs::path(filename).parent_path() / shape->name, shape->points,
           shape->lines, shape->triangles, shape->quads, shape->positions,
           shape->normals, shape->texcoords, shape->colors, shape->radius);
+    } catch (std::exception& e) {
+      throw std::runtime_error{
+          filename + ": error in resource (" + e.what() + ")"};
+    }
+  }
+  // load subdivs
+  for (auto subdiv : scene->subdivs) {
+    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+    try {
+      load_fvshape(fs::path(filename).parent_path() / subdiv->name,
+          subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
+          subdiv->positions, subdiv->normals, subdiv->texcoords);
     } catch (std::exception& e) {
       throw std::runtime_error{
           filename + ": error in resource (" + e.what() + ")"};
@@ -1260,9 +1152,9 @@ static void save_json_scene(const string& filename,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2 + (int)scene->shapes.size() +
-                               (int)scene->textures.size() +
-                               (int)scene->instances.size()};
+  auto progress = vec2i{
+      0, 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
+             (int)scene->textures.size() + (int)scene->instances.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save yaml file
@@ -1312,6 +1204,7 @@ static void save_json_scene(const string& filename,
     add_opt(
         ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
     add_opt(ejs, "opacity", material->opacity, def_material.opacity);
+    add_opt(ejs, "displacement", material->opacity, def_material.displacement);
     add_opt(ejs, "thin", material->thin, def_material.thin);
     add_tex(ejs, "emission_tex", material->emission_tex);
     add_tex(ejs, "color_tex", material->color_tex);
@@ -1323,56 +1216,26 @@ static void save_json_scene(const string& filename,
     add_tex(ejs, "coat_tex", material->coat_tex);
     add_tex(ejs, "opacity_tex", material->opacity_tex);
     add_tex(ejs, "normal_tex", material->normal_tex);
+    add_tex(ejs, "displacement_tex", material->displacement_tex);
+    add_opt(ejs, "subdivisions", material->subdivisions,
+        def_material.subdivisions);  // hack fir subd
+    add_opt(
+        ejs, "smooth", material->smooth, def_material.smooth);  // hack for subd
     add_opt(ejs, "gltf_textures", material->gltf_textures,
         def_material.gltf_textures);
   }
 
   auto def_object = sceneio_object{};
+  auto def_subdiv = sceneio_subdiv{};
   if (!scene->objects.empty()) js["objects"] = json::array();
   for (auto object : scene->objects) {
     auto& ejs = js["objects"].emplace_back();
     add_val(ejs, "name", object->name);
     add_opt(ejs, "frame", object->frame, def_object.frame);
     add_ref(ejs, "shape", object->shape);
+    add_ref(ejs, "subdiv", object->subdiv);
     add_ref(ejs, "material", object->material);
     add_ref(ejs, "instance", object->instance);
-  }
-
-  auto def_subdiv = sceneio_subdiv{};
-  if (!scene->subdivs.empty()) js["subdivs"] = json::array();
-  for (auto subdiv : scene->subdivs) {
-    auto& ejs = js["subdivs"].emplace_back();
-    add_val(ejs, "name", subdiv->name);
-    add_val(ejs, "shape", subdiv->shape->name);
-    add_opt(ejs, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
-    add_opt(ejs, "catmullclark", subdiv->catmullclark, def_subdiv.catmullclark);
-    add_opt(ejs, "smooth", subdiv->smooth, def_subdiv.smooth);
-    add_tex(ejs, "displacement_tex", subdiv->displacement_tex);
-    add_opt(ejs, "displacement", subdiv->displacement, def_subdiv.subdivisions);
-    if (!subdiv->positions.empty() && subdiv->quadspos.empty()) {
-      auto path = fs::path(subdiv->name).replace_extension(".ply");
-      add_val(ejs, "subdiv", path);
-      try {
-        save_shape(fs::path(filename).parent_path() / path, subdiv->points,
-            subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
-            subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
-      } catch (std::exception& e) {
-        throw std::runtime_error{
-            filename + ": error in resource (" + e.what() + ")"};
-      }
-    }
-    if (!subdiv->positions.empty() && !subdiv->quadspos.empty()) {
-      auto path = fs::path(subdiv->name).replace_extension(".obj");
-      add_val(ejs, "fvsubdiv", path);
-      try {
-        save_fvshape(fs::path(filename).parent_path() / path, subdiv->quadspos,
-            subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
-            subdiv->normals, subdiv->texcoords);
-      } catch (std::exception& e) {
-        throw std::runtime_error{
-            filename + ": error in resource (" + e.what() + ")"};
-      }
-    }
   }
 
   // handle progress
@@ -1390,6 +1253,21 @@ static void save_json_scene(const string& filename,
             shape->points, shape->lines, shape->triangles, shape->quads,
             shape->positions, shape->normals, shape->texcoords, shape->colors,
             shape->radius);
+      } catch (std::exception& e) {
+        throw std::runtime_error{
+            filename + ": error in resource (" + e.what() + ")"};
+      }
+    }
+  }
+
+  // save subdivs
+  for (auto subdiv : scene->subdivs) {
+    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+    if (!subdiv->positions.empty()) {
+      try {
+        save_fvshape(fs::path(filename).parent_path() / subdiv->name,
+            subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
+            subdiv->positions, subdiv->normals, subdiv->texcoords);
       } catch (std::exception& e) {
         throw std::runtime_error{
             filename + ": error in resource (" + e.what() + ")"};

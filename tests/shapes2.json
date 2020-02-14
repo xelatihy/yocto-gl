@@ -174,6 +174,7 @@
     {
       "name": "shapes/cube-subdiv-uvgrid.json",
       "shape": "shapes/cube-subdiv.obj",
+      "subdiv": "shapes/cube-subdiv.obj",
       "frame": [
         1,
         0,
@@ -193,6 +194,7 @@
     {
       "name": "shapes/suzanne-subdiv-plastic-sharp.json",
       "shape": "shapes/suzanne-subdiv.obj",
+      "subdiv": "subdivs/suzanne-subdiv.obj",
       "frame": [
         1,
         0,
@@ -212,6 +214,7 @@
     {
       "name": "shapes/sphere-displaced-matte.json",
       "shape": "shapes/sphere-displaced.obj",
+      "subdiv": "subdivs/sphere-displaced.obj",
       "frame": [
         1,
         0,
@@ -267,31 +270,6 @@
       "material": "materials/teapot-uvgrid.json"
     }
   ],
-  "subdivs": [
-    {
-      "name": "subdivs/sphere-displaced.json",
-      "subdiv": "subdivs/sphere-displaced.obj",
-      "shape": "shapes/sphere-displaced.obj",
-      "displacement": 0.025,
-      "displacement_tex": "textures/bumps-displacement.png"
-    },
-    {
-      "name": "subdivs/cube-subdiv.json",
-      "fvsubdiv": "subdivs/cube-subdiv.obj",
-      "shape": "shapes/cube-subdiv.obj",
-      "subdivisions": 4,
-      "catmullclark": true,
-      "smooth": false
-    },
-    {
-      "name": "subdivs/suzanne-subdiv.json",
-      "subdiv": "subdivs/suzanne-subdiv.obj",
-      "shape": "shapes/suzanne-subdiv.obj",
-      "subdivisions": 2,
-      "catmullclark": true,
-      "smooth": true
-    }
-  ],
   "materials": [
     {
       "name": "materials/floor.json",
@@ -321,9 +299,7 @@
     {
       "name": "materials/cube-subdiv-uvgrid.json",
       "subdivisions": 4,
-      "catmullclark": true,
       "smooth": false,
-      "facevarying": true,
       "specular": 1,
       "color": [
         1,
@@ -336,7 +312,6 @@
     {
       "name": "materials/suzanne-subdiv-plastic-sharp.json",
       "subdivisions": 2,
-      "catmullclark": true,
       "smooth": true,
       "specular": 1,
       "color": [
@@ -348,7 +323,8 @@
     },
     {
       "name": "materials/sphere-displaced-matte.json",
-      "facevarying": true,
+      "subdivisions": 0,
+      "smooth": true,
       "displacement": 0.025,
       "displacement_tex": "textures/bumps-displacement.png",
       "color": [

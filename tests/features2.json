@@ -193,6 +193,7 @@
     {
       "name": "shapes/suzanne-subdiv-plastic-rough.json",
       "shape": "shapes/suzanne-subdiv.obj",
+      "subdiv": "subdivs/suzanne-subdiv.obj",
       "frame": [
         1,
         0,
@@ -231,6 +232,7 @@
     {
       "name": "shapes/sphere-displaced-plastic-rough.json",
       "shape": "shapes/sphere-displaced.obj",
+      "subdiv": "subdivs/sphere-displaced.obj",
       "frame": [
         1,
         0,
@@ -286,24 +288,6 @@
       "material": "materials/hairballi-hair.json"
     }
   ],
-  "subdivs": [
-    {
-      "name": "subdivs/sphere-displaced.json",
-      "subdiv": "subdivs/sphere-displaced.obj",
-      "shape": "shapes/sphere-displaced.obj",
-      "facevarying": true,
-      "displacement": 0.025,
-      "displacement_tex": "textures/bumps-displacement.png"
-    },
-    {
-      "name": "subdivs/suzanne-subdiv.json",
-      "subdiv": "subdivs/suzanne-subdiv.obj",
-      "shape": "shapes/suzanne-subdiv.obj",
-      "subdivisions": 2,
-      "catmullclark": true,
-      "smooth": true
-    }
-  ],
   "materials": [
     {
       "name": "materials/floor.json",
@@ -345,7 +329,6 @@
     {
       "name": "materials/suzanne-subdiv-plastic-rough.json",
       "subdivisions": 2,
-      "catmullclark": true,
       "smooth": true,
       "color": [
         0.5,
@@ -367,9 +350,10 @@
     },
     {
       "name": "materials/sphere-displaced-plastic-rough.json",
-      "facevarying": true,
       "displacement": 0.025,
       "displacement_tex": "textures/bumps-displacement.png",
+      "subdivisions": 0,
+      "smooth": true,
       "color": [
         0.5,
         0.7,

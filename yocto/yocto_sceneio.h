@@ -115,6 +115,7 @@ struct sceneio_material {
   float scanisotropy = 0;
   float trdepth      = 0.01;
   float opacity      = 1;
+  float displacement = 0;
   bool  thin         = true;
 
   // textures
@@ -129,7 +130,12 @@ struct sceneio_material {
   shared_ptr<sceneio_texture> coat_tex         = nullptr;
   shared_ptr<sceneio_texture> opacity_tex      = nullptr;
   shared_ptr<sceneio_texture> normal_tex       = nullptr;
+  shared_ptr<sceneio_texture> displacement_tex = nullptr;
   bool                        gltf_textures    = false;  // glTF packed textures
+
+  // [experimental] properties to drive subdiv and displacement
+  int  subdivisions = 2;
+  bool smooth       = true;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -160,14 +166,7 @@ struct sceneio_shape {
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
-  string                    name  = "";
-  shared_ptr<sceneio_shape> shape = nullptr;
-
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  string name = "";
 
   // face-varying primitives
   vector<vec4i> quadspos      = {};
@@ -178,18 +177,6 @@ struct sceneio_subdiv {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-
-  // subdision properties
-  int  subdivisions = 0;
-  bool catmullclark = false;
-  bool smooth       = false;
-
-  // displacement information
-  float                       displacement     = 0;
-  shared_ptr<sceneio_texture> displacement_tex = nullptr;
 };
 
 // Instance data.
@@ -207,6 +194,7 @@ struct sceneio_object {
   shared_ptr<sceneio_shape>    shape    = nullptr;
   shared_ptr<sceneio_material> material = nullptr;
   shared_ptr<sceneio_instance> instance = nullptr;
+  shared_ptr<sceneio_subdiv>   subdiv   = nullptr;
 };
 
 // Environment map.
@@ -298,8 +286,10 @@ bbox3f compute_bounds(shared_ptr<sceneio_model> scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdiv(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_subdiv> subdiv, bool no_quads = false);
+void tesselate_subdivs(
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb = {});
+void tesselate_subdiv(
+    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.

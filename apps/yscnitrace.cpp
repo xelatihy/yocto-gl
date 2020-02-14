@@ -384,6 +384,11 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
+  edited += draw_glcombobox(win, "displacement_tex",
+      iomaterial->displacement_tex, ioscene->textures, true);
+  edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
+  edited += draw_glslider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
+  edited += draw_glcheckbox(win, "smooth", iomaterial->smooth);
   edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
   return edited;
 }
@@ -397,12 +402,12 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   draw_gllabel(win, "lines", to_string(ioshape->lines.size()));
   draw_gllabel(win, "triangles", to_string(ioshape->triangles.size()));
   draw_gllabel(win, "quads", to_string(ioshape->quads.size()));
-  draw_gllabel(win, "pos", to_string(ioshape->positions.size()));
-  draw_gllabel(win, "norm", to_string(ioshape->normals.size()));
-  draw_gllabel(win, "texcoord", to_string(ioshape->texcoords.size()));
-  draw_gllabel(win, "color", to_string(ioshape->colors.size()));
+  draw_gllabel(win, "positions", to_string(ioshape->positions.size()));
+  draw_gllabel(win, "normals", to_string(ioshape->normals.size()));
+  draw_gllabel(win, "texcoords", to_string(ioshape->texcoords.size()));
+  draw_gllabel(win, "colors", to_string(ioshape->colors.size()));
   draw_gllabel(win, "radius", to_string(ioshape->radius.size()));
-  draw_gllabel(win, "tangsp", to_string(ioshape->tangents.size()));
+  draw_gllabel(win, "tangents", to_string(ioshape->tangents.size()));
   return edited;
 }
 
@@ -438,10 +443,6 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
-  draw_gllabel(win, "points", to_string(iosubdiv->points.size()));
-  draw_gllabel(win, "lines", to_string(iosubdiv->lines.size()));
-  draw_gllabel(win, "triangles", to_string(iosubdiv->triangles.size()));
-  draw_gllabel(win, "quads", to_string(iosubdiv->quads.size()));
   draw_gllabel(win, "quads pos", to_string(iosubdiv->quadspos.size()));
   draw_gllabel(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
   draw_gllabel(
@@ -449,9 +450,6 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   draw_gllabel(win, "pos", to_string(iosubdiv->positions.size()));
   draw_gllabel(win, "norm", to_string(iosubdiv->normals.size()));
   draw_gllabel(win, "texcoord", to_string(iosubdiv->texcoords.size()));
-  draw_gllabel(win, "color", to_string(iosubdiv->colors.size()));
-  draw_gllabel(win, "radius", to_string(iosubdiv->radius.size()));
-  draw_gllabel(win, "tangsp", to_string(iosubdiv->tangents.size()));
   return edited;
 }
 
