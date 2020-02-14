@@ -115,7 +115,7 @@ struct sceneio_material {
   float scanisotropy = 0;
   float trdepth      = 0.01;
   float opacity      = 1;
-  float                       displacement     = 0;
+  float displacement = 0;
   bool  thin         = true;
 
   // textures
@@ -132,6 +132,10 @@ struct sceneio_material {
   shared_ptr<sceneio_texture> normal_tex       = nullptr;
   shared_ptr<sceneio_texture> displacement_tex = nullptr;
   bool                        gltf_textures    = false;  // glTF packed textures
+
+  // [experimental] properties to drive subdiv and displacement
+  int  subdivisions = 2;
+  bool smooth       = true;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -162,12 +166,7 @@ struct sceneio_shape {
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
-  string                    name  = "";
-
-  // subdision properties
-  int  subdivisions = 0;
-  bool catmullclark = false;
-  bool smooth       = false;
+  string name = "";
 
   // face-varying primitives
   vector<vec4i> quadspos      = {};

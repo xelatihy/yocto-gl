@@ -444,34 +444,20 @@ void trim_memory(shared_ptr<sceneio_model> scene) {
 }
 
 // Apply subdivision and displacement rules.
-shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape) {
+shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape, int subdivisions, bool smooth) {
   using std::ignore;
   auto tesselated = make_shared<sceneio_subdiv>(*shape);
-  if (!shape->subdivisions) return tesselated;
-  if (!shape->catmullclark) {
-    std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_quads(
-        tesselated->quadsnorm, tesselated->normals, shape->subdivisions);
-    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-        subdivide_quads(tesselated->quadstexcoord, tesselated->texcoords,
-            shape->subdivisions);
-    std::tie(tesselated->quadspos, tesselated->positions) = subdivide_quads(
-        tesselated->quadspos, tesselated->positions, shape->subdivisions);
-    if (tesselated->smooth) {
-      tesselated->normals = compute_normals(
-          tesselated->quadspos, tesselated->positions);
-      tesselated->quadsnorm = tesselated->quadspos;
-    }
-  } else {
+  if (!subdivisions) return tesselated;
     std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
         subdivide_catmullclark(tesselated->quadstexcoord, tesselated->texcoords,
-            shape->subdivisions, true);
+            subdivisions, true);
     std::tie(tesselated->quadsnorm, tesselated->normals) =
         subdivide_catmullclark(tesselated->quadsnorm, tesselated->normals,
-            shape->subdivisions, true);
+            subdivisions, true);
     std::tie(tesselated->quadspos, tesselated->positions) =
         subdivide_catmullclark(
-            tesselated->quadspos, tesselated->positions, shape->subdivisions);
-    if (shape->smooth) {
+            tesselated->quadspos, tesselated->positions, subdivisions);
+    if (smooth) {
       tesselated->normals = compute_normals(
           tesselated->quadspos, tesselated->positions);
       tesselated->quadsnorm = tesselated->quadspos;
@@ -479,12 +465,11 @@ shared_ptr<sceneio_subdiv> subdivide_subdiv(shared_ptr<sceneio_subdiv> shape) {
       tesselated->normals   = {};
       tesselated->quadsnorm = {};
     }
-  }
   return tesselated;
 }
 // Apply displacement to a shape
 shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
-    float displacement, shared_ptr<sceneio_texture> displacement_tex) {
+    float displacement, shared_ptr<sceneio_texture> displacement_tex, bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](shared_ptr<sceneio_texture> texture,
                           const vec2f&               texcoord) -> vec4f {
@@ -521,7 +506,7 @@ shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
   for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
     displaced->positions[vid] += normals[vid] * offset[vid] / count[vid];
   }
-  if (subdiv->smooth || !subdiv->normals.empty()) {
+  if (smooth || !subdiv->normals.empty()) {
     displaced->quadsnorm = subdiv->quadspos;
     displaced->normals   = compute_normals(
         displaced->quadspos, displaced->positions);
@@ -541,9 +526,9 @@ void tesselate_subdiv(shared_ptr<sceneio_model> scene,
       break;
     }
   }
-  auto tesselated = subdivide_subdiv(subdiv);
+  auto tesselated = subdivide_subdiv(subdiv, material->subdivisions, material->smooth);
   auto displaced  = displace_subdiv(
-      tesselated, material->displacement, material->displacement_tex);
+      tesselated, material->displacement, material->displacement_tex, material->smooth);
   std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
       split_facevarying(displaced->quadspos, displaced->quadsnorm,
           displaced->quadstexcoord, displaced->positions, displaced->normals,
@@ -1032,6 +1017,8 @@ static void load_json_scene(const string& filename,
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "displacement_tex", material->displacement_tex);
+        get_value(ejs, "subdivisions", material->subdivisions); // hack fir subd
+        get_value(ejs, "smooth", material->smooth);// hack for subd
         get_value(ejs, "gltf_textures", material->gltf_textures);
         material_map[material->name] = material;
       }
@@ -1050,12 +1037,6 @@ static void load_json_scene(const string& filename,
         get_shape(ejs, "shape", object->shape);
         get_subdiv(ejs, "subdiv", object->subdiv);
         get_instance(ejs, "instance", object->instance);
-        // hack for subdiv properties
-        if (object->subdiv) {
-          get_value(ejs, "subdiv_subdivions", object->subdiv->subdivisions);
-          get_value(ejs, "subdiv_catmullclark", object->subdiv->catmullclark);
-          get_value(ejs, "subdiv_smooth", object->subdiv->smooth);
-        }
       }
     }
   } catch (std::invalid_argument& e) {
@@ -1221,6 +1202,8 @@ static void save_json_scene(const string& filename,
     add_tex(ejs, "opacity_tex", material->opacity_tex);
     add_tex(ejs, "normal_tex", material->normal_tex);
     add_tex(ejs, "displacement_tex", material->displacement_tex);
+    add_opt(ejs, "subdivisions", material->subdivisions, def_material.subdivisions); // hack fir subd
+    add_opt(ejs, "smooth", material->smooth, def_material.smooth);// hack for subd
     add_opt(ejs, "gltf_textures", material->gltf_textures,
         def_material.gltf_textures);
   }
@@ -1236,14 +1219,6 @@ static void save_json_scene(const string& filename,
     add_ref(ejs, "subdiv", object->subdiv);
     add_ref(ejs, "material", object->material);
     add_ref(ejs, "instance", object->instance);
-    // hack to support subdiv
-    if (object->subdiv) {
-      add_opt(ejs, "subdiv_catmullclark", object->subdiv->catmullclark,
-          def_subdiv.catmullclark);
-      add_opt(ejs, "subdiv_subdivisions", object->subdiv->subdivisions,
-          def_subdiv.subdivisions);
-      add_opt(ejs, "subdiv_smooth", object->subdiv->smooth, def_subdiv.smooth);
-    }
   }
 
   // handle progress
