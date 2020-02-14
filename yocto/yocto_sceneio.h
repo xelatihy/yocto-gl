@@ -243,14 +243,14 @@ shared_ptr<sceneio_model> make_sceneio_model();
 shared_ptr<sceneio_camera>      add_camera(shared_ptr<sceneio_model> scene);
 shared_ptr<sceneio_environment> add_environment(
     shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>    add_object(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_instance>  add_instance(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_material>  add_material(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_shape>     add_shape(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_subdiv>    add_subdiv(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_texture>   add_texture(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>    add_complete_object(
-       shared_ptr<sceneio_model> scene, const string& basename = "");
+shared_ptr<sceneio_object>   add_object(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_instance> add_instance(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_material> add_material(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_shape>    add_shape(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_subdiv>   add_subdiv(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_texture>  add_texture(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_object>   add_complete_object(
+      shared_ptr<sceneio_model> scene, const string& basename = "");
 
 }  // namespace yocto
 

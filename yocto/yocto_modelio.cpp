@@ -1662,10 +1662,11 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
                                          : shape->points.emplace_back();
       // get element material or add if needed
       if (!geom_only) {
-        if(mname.empty() && !empty_material) {
-          empty_material = obj->materials.emplace_back(make_shared<obj_material>());
+        if (mname.empty() && !empty_material) {
+          empty_material = obj->materials.emplace_back(
+              make_shared<obj_material>());
           material_map[""] = empty_material;
-        } 
+        }
         auto mat_idx = -1;
         for (auto midx = 0; midx < shape->materials.size(); midx++)
           if (shape->materials[midx]->name == mname) mat_idx = midx;
@@ -1738,9 +1739,9 @@ void load_obj(const string& filename, shared_ptr<obj_model> obj, bool geom_only,
   }
 
   // fix empty material
-  if(empty_material) {
-    empty_material->name = "empty_material";
-    empty_material->diffuse = {0.8, 0.8, 0.8};
+  if (empty_material) {
+    empty_material->name     = "empty_material";
+    empty_material->diffuse  = {0.8, 0.8, 0.8};
     empty_material->pbr_base = {0.8, 0.8, 0.8};
   }
 
@@ -4474,43 +4475,46 @@ void load_gltf(const string& filename, shared_ptr<gltf_model> scene) {
     if (str.size() < substr.size()) return false;
     return str.substr(0, substr.size()) == substr;
   };
-  auto texture_map = unordered_map<cgltf_image*, shared_ptr<gltf_texture>>{{nullptr, nullptr}};
+  auto texture_map = unordered_map<cgltf_image*, shared_ptr<gltf_texture>>{
+      {nullptr, nullptr}};
   texture_map[nullptr] = nullptr;
   for (auto tid = 0; tid < gltf->images_count; tid++) {
-    auto gimg        = &gltf->images[tid];
-    auto texture     = scene->textures.emplace_back(make_shared<gltf_texture>());
-    texture->name     = gimg->name ? gimg->name : "";
+    auto gimg     = &gltf->images[tid];
+    auto texture  = scene->textures.emplace_back(make_shared<gltf_texture>());
+    texture->name = gimg->name ? gimg->name : "";
     texture->filename = (_startswith(gimg->uri, "data:"))
-                           ? string("[glTF-static inline].png")
-                           : gimg->uri;
+                            ? string("[glTF-static inline].png")
+                            : gimg->uri;
     texture_map[gimg] = texture;
   }
 
   // add a texture
   auto get_texture = [&texture_map](const cgltf_texture_view& ginfo) {
-    if (!ginfo.texture || !ginfo.texture->image) return shared_ptr<gltf_texture>{};
+    if (!ginfo.texture || !ginfo.texture->image)
+      return shared_ptr<gltf_texture>{};
     auto gtxt = ginfo.texture;
     return texture_map.at(gtxt->image);
   };
 
   // convert materials
-  auto material_map = unordered_map<cgltf_material*, shared_ptr<gltf_material>>{{nullptr, nullptr}};
+  auto material_map = unordered_map<cgltf_material*, shared_ptr<gltf_material>>{
+      {nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
-    auto gmat             = &gltf->materials[mid];
-    auto material        = scene->materials.emplace_back(make_shared<gltf_material>());
-    material_map[gmat]            = material;
-    material->name         = gmat->name ? gmat->name : "";
-    material->emission     = {gmat->emissive_factor[0], gmat->emissive_factor[1],
+    auto gmat     = &gltf->materials[mid];
+    auto material = scene->materials.emplace_back(make_shared<gltf_material>());
+    material_map[gmat] = material;
+    material->name     = gmat->name ? gmat->name : "";
+    material->emission = {gmat->emissive_factor[0], gmat->emissive_factor[1],
         gmat->emissive_factor[2]};
     material->emission_tex = get_texture(gmat->emissive_texture);
     if (gmat->has_pbr_metallic_roughness) {
-      auto gmr                 = &gmat->pbr_metallic_roughness;
-      material->color         = vec3f{gmr->base_color_factor[0],
+      auto gmr               = &gmat->pbr_metallic_roughness;
+      material->color        = vec3f{gmr->base_color_factor[0],
           gmr->base_color_factor[1], gmr->base_color_factor[2]};
-      material->opacity         = gmr->base_color_factor[3];
+      material->opacity      = gmr->base_color_factor[3];
       material->metallic     = gmr->metallic_factor;
       material->roughness    = gmr->roughness_factor;
-      material->color_tex     = get_texture(gmr->base_color_texture);
+      material->color_tex    = get_texture(gmr->base_color_texture);
       material->metallic_tex = get_texture(gmr->metallic_roughness_texture);
     }
     material->normal_tex = get_texture(gmat->normal_texture);
@@ -4572,16 +4576,18 @@ void load_gltf(const string& filename, shared_ptr<gltf_model> scene) {
   };
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, shared_ptr<gltf_mesh>>{{nullptr, nullptr}};
+  auto mesh_map = unordered_map<cgltf_mesh*, shared_ptr<gltf_mesh>>{
+      {nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
-    auto gmesh  = &gltf->meshes[mid];
-    auto mesh  = scene->meshes.emplace_back(make_shared<gltf_mesh>());
+    auto gmesh      = &gltf->meshes[mid];
+    auto mesh       = scene->meshes.emplace_back(make_shared<gltf_mesh>());
     mesh_map[gmesh] = mesh;
-    mesh->name   = gmesh->name ? gmesh->name : "";
+    mesh->name      = gmesh->name ? gmesh->name : "";
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (!gprim->attributes_count) continue;
-      auto shape = scene->primitives.emplace_back(make_shared<gltf_primitive>());
+      auto shape = scene->primitives.emplace_back(
+          make_shared<gltf_primitive>());
       mesh->primitives.push_back(shape);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
@@ -4679,13 +4685,15 @@ void load_gltf(const string& filename, shared_ptr<gltf_model> scene) {
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape->lines.reserve(indices.size());
           for (auto i = 1; i < indices.size(); i++)
-            shape->lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
+            shape->lines.push_back(
+                {(int)indices[i - 1][0], (int)indices[i][0]});
           shape->lines.back() = {
               (int)indices[indices.size() - 1][0], (int)indices[0][0]};
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape->lines.reserve(indices.size() - 1);
           for (auto i = 1; i < indices.size(); i++)
-            shape->lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
+            shape->lines.push_back(
+                {(int)indices[i - 1][0], (int)indices[i][0]});
         } else if (gprim->type == cgltf_primitive_type_points) {
           throw std::runtime_error("points not supported");
         } else {
@@ -4696,20 +4704,21 @@ void load_gltf(const string& filename, shared_ptr<gltf_model> scene) {
   }
 
   // convert cameras
-  auto camera_map = unordered_map<cgltf_camera*, shared_ptr<gltf_camera>>{{nullptr, nullptr}};
+  auto camera_map = unordered_map<cgltf_camera*, shared_ptr<gltf_camera>>{
+      {nullptr, nullptr}};
   for (auto cid = 0; cid < gltf->cameras_count; cid++) {
-    auto gcam    = &gltf->cameras[cid];
-    auto camera = make_shared<gltf_camera>();
-    camera_map[gcam]   = camera;
-    camera->name  = gcam->name ? gcam->name : "";
-    camera->ortho = gcam->type == cgltf_camera_type_orthographic;
+    auto gcam        = &gltf->cameras[cid];
+    auto camera      = make_shared<gltf_camera>();
+    camera_map[gcam] = camera;
+    camera->name     = gcam->name ? gcam->name : "";
+    camera->ortho    = gcam->type == cgltf_camera_type_orthographic;
     if (camera->ortho) {
       // throw std::runtime_error("orthographic not supported well");
-      auto ortho    = &gcam->orthographic;
+      auto ortho     = &gcam->orthographic;
       camera->yfov   = ortho->ymag;
       camera->aspect = ortho->xmag / ortho->ymag;
     } else {
-      auto persp    = &gcam->perspective;
+      auto persp     = &gcam->perspective;
       camera->yfov   = persp->yfov;
       camera->aspect = persp->aspect_ratio;
     }
@@ -4717,8 +4726,8 @@ void load_gltf(const string& filename, shared_ptr<gltf_model> scene) {
 
   // convert nodes
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    auto gnde  = &gltf->nodes[nid];
-    auto mat = mat4f{};
+    auto gnde = &gltf->nodes[nid];
+    auto mat  = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto frame = (frame3f)mat;
     if (gnde->camera) {

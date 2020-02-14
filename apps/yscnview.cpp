@@ -107,7 +107,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene    = load_scene(app->filename, progress_cb);
+    app->ioscene = load_scene(app->filename, progress_cb);
   });
   apps->states.push_back(app);
   apps->loading.push_back(app);
