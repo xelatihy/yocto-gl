@@ -485,7 +485,7 @@ shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
 
   auto displaced = make_shared<sceneio_subdiv>(*subdiv);
 
-  if (!displacement || displacement_tex) return displaced;
+  if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
     throw std::runtime_error("missing texture coordinates");
 
