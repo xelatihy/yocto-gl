@@ -286,8 +286,10 @@ bbox3f compute_bounds(shared_ptr<sceneio_model> scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
+void tesselate_subdivs(shared_ptr<sceneio_model> scene,
+    sceneio_progress progress_cb = {});
 void tesselate_subdiv(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_subdiv> subdiv, bool no_quads = false);
+    shared_ptr<sceneio_subdiv> subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
