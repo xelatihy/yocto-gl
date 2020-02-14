@@ -516,8 +516,8 @@ shared_ptr<sceneio_subdiv> displace_subdiv(shared_ptr<sceneio_subdiv> subdiv,
   return displaced;
 }
 
-void tesselate_subdiv(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_subdiv> subdiv) {
+void tesselate_subdiv(
+    shared_ptr<sceneio_model> scene, shared_ptr<sceneio_subdiv> subdiv) {
   auto material = shared_ptr<sceneio_material>{};
   auto shape    = shared_ptr<sceneio_shape>{};
   for (auto& object : scene->objects) {
@@ -542,21 +542,21 @@ void tesselate_subdiv(shared_ptr<sceneio_model> scene,
   shape->radius    = {};
 }
 
-void tesselate_subdivs(shared_ptr<sceneio_model> scene,
-    sceneio_progress progress_cb) {
-  if(scene->subdivs.empty()) return;
-  
+void tesselate_subdivs(
+    shared_ptr<sceneio_model> scene, sceneio_progress progress_cb) {
+  if (scene->subdivs.empty()) return;
+
   // handle progress
-  auto progress = vec2i{0,(int)scene->subdivs.size()};
-  
+  auto progress = vec2i{0, (int)scene->subdivs.size()};
+
   // tesselate subdivs
-  for(auto subdiv : scene->subdivs) {
-    if(progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y); 
+  for (auto subdiv : scene->subdivs) {
+    if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
     tesselate_subdiv(scene, subdiv);
   }
-  
+
   // done
-  if(progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y); 
+  if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
 }  // namespace yocto
