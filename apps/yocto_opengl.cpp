@@ -1998,7 +1998,9 @@ bool draw_glcombobox(shared_ptr<opengl_window> win, const char* lbl, int& idx,
 }
 
 void draw_glprogressbar(shared_ptr<opengl_window> win, float fraction) {
+  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction);
+  ImGui::PopStyleColor(1);
 }
 
 void draw_glhistogram(shared_ptr<opengl_window> win, const char* lbl,
