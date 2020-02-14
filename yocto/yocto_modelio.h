@@ -567,76 +567,56 @@ shared_ptr<pbrt_model> make_pbrt();
 namespace yocto {
 
 struct gltf_camera {
-  string name   = "";
-  bool   ortho  = false;
-  float  yfov   = 45 * pif / 180;
-  float  aspect = 1;
+  string          name   = "";
+  vector<frame3f> frames = {};
+  bool            ortho  = false;
+  float           yfov   = 45 * pif / 180;
+  float           aspect = 1;
 };
 struct gltf_texture {
   string name     = "";
   string filename = "";
 };
 struct gltf_material {
-  string name            = "";
-  vec3f  emission        = zero3f;
-  int    emission_tex    = -1;
-  int    normal_tex      = -1;
-  bool   has_metalrough  = false;
-  vec4f  mr_base         = zero4f;
-  float  mr_metallic     = 0;
-  float  mr_roughness    = 1;
-  int    mr_base_tex     = -1;
-  int    mr_metallic_tex = -1;
-  bool   has_specgloss   = false;
-  vec4f  sg_diffuse      = zero4f;
-  vec3f  sg_specular     = zero3f;
-  float  sg_glossiness   = 1;
-  int    sg_diffuse_tex  = -1;
-  int    sg_specular_tex = -1;
+  string                   name         = "";
+  vec3f                    emission     = {0, 0, 0};
+  vec3f                    color        = {0, 0, 0};
+  float                    opacity      = 1;
+  float                    metallic     = 0;
+  float                    roughness    = 1;
+  shared_ptr<gltf_texture> emission_tex = nullptr;
+  shared_ptr<gltf_texture> color_tex    = nullptr;
+  shared_ptr<gltf_texture> metallic_tex = nullptr;
+  shared_ptr<gltf_texture> normal_tex   = nullptr;
 };
 struct gltf_primitive {
-  int           material  = -1;
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-  vector<vec3i> triangles = {};
-  vector<vec2i> lines     = {};
-  vector<int>   points    = {};
+  shared_ptr<gltf_material> material  = nullptr;
+  vector<vec3f>             positions = {};
+  vector<vec3f>             normals   = {};
+  vector<vec2f>             texcoords = {};
+  vector<vec4f>             colors    = {};
+  vector<float>             radius    = {};
+  vector<vec4f>             tangents  = {};
+  vector<vec3i>             triangles = {};
+  vector<vec2i>             lines     = {};
+  vector<int>               points    = {};
 };
 struct gltf_mesh {
-  string                 name       = "";
-  vector<gltf_primitive> primitives = {};
-};
-struct gltf_node {
-  string      name        = "";
-  frame3f     frame       = {};
-  vec3f       translation = zero3f;
-  vec4f       rotation    = vec4f{0, 0, 0, 1};
-  vec3f       scale       = vec3f{1};
-  frame3f     local       = identity3x4f;
-  int         camera      = -1;
-  int         mesh        = -1;
-  int         parent      = -1;
-  vector<int> children    = {};
-};
-struct gltf_scene {
-  string      name  = "";
-  vector<int> nodes = {};
+  string                             name       = "";
+  vector<frame3f>                    frames     = {};
+  vector<shared_ptr<gltf_primitive>> primitives = {};
 };
 struct gltf_model {
-  vector<gltf_camera>   cameras   = {};
-  vector<gltf_mesh>     meshes    = {};
-  vector<gltf_texture>  textures  = {};
-  vector<gltf_material> materials = {};
-  vector<gltf_node>     nodes     = {};
-  vector<gltf_scene>    scenes    = {};
+  vector<shared_ptr<gltf_camera>>    cameras    = {};
+  vector<shared_ptr<gltf_mesh>>      meshes     = {};
+  vector<shared_ptr<gltf_primitive>> primitives = {};
+  vector<shared_ptr<gltf_texture>>   textures   = {};
+  vector<shared_ptr<gltf_material>>  materials  = {};
 };
 
 // Load gltf file.
-void load_gltf(const string& filename, gltf_model& gltf);
+shared_ptr<gltf_model> load_gltf(const string& filename);
+void load_gltf(const string& filename, shared_ptr<gltf_model> gltf);
 
 }  // namespace yocto
 

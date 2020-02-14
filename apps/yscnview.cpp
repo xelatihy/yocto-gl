@@ -67,12 +67,6 @@ struct app_state {
   // rendering state
   shared_ptr<opengl_scene> glscene = nullptr;
 
-  // view image
-  float  time       = 0;
-  string anim_group = "";
-  vec2f  time_range = zero2f;
-  bool   animate    = false;
-
   // editing
   shared_ptr<sceneio_camera>      selected_camera      = nullptr;
   shared_ptr<sceneio_object>      selected_object      = nullptr;
@@ -102,20 +96,6 @@ struct app_states {
   draw_glscene_params drawgl_prms = {};
 };
 
-// Compute animation range
-vec2f compute_animation_range(
-    shared_ptr<sceneio_model> ioscene, const string& anim_group = "") {
-  if (ioscene->animations.empty()) return zero2f;
-  auto range = vec2f{+flt_max, -flt_max};
-  for (auto animation : ioscene->animations) {
-    if (anim_group != "" && animation->group != anim_group) continue;
-    range.x = min(range.x, animation->times.front());
-    range.y = max(range.y, animation->times.back());
-  }
-  if (range.y < range.x) return zero2f;
-  return range;
-}
-
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
   auto app         = make_shared<app_state>();
   app->filename    = filename;
@@ -127,9 +107,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene    = load_scene(app->filename, progress_cb);
-    app->time_range = compute_animation_range(app->ioscene);
-    app->time       = app->time_range.x;
+    app->ioscene = load_scene(app->filename, progress_cb);
   });
   apps->states.push_back(app);
   apps->loading.push_back(app);
@@ -514,12 +492,6 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     draw_glcheckbox(win, "wireframe", params.wireframe);
     continue_glline(win);
     draw_glcheckbox(win, "edges", params.edges);
-    if (app->time_range != zero2f) {
-      draw_glslider(
-          win, "time", app->time, app->time_range.x, app->time_range.y);
-      draw_gltextinput(win, "anim group", app->anim_group);
-      draw_glcheckbox(win, "animate", app->animate);
-    }
     draw_glslider(win, "exposure", params.exposure, -10, 10);
     draw_glslider(win, "gamma", params.gamma, 0.1f, 4);
     draw_glcheckbox(win, "double sided", params.double_sided);
@@ -762,9 +734,6 @@ int run_app(int argc, const char* argv[]) {
     if (!apps->selected || !apps->selected->ok) return;
     auto app = apps->selected;
 
-    // update trasforms
-    update_transforms(app->ioscene, app->time);
-
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
@@ -781,14 +750,6 @@ int run_app(int argc, const char* argv[]) {
       update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
       set_frame(
           app->glscene->cameras[app->drawgl_prms.camera], iocamera->frame);
-    }
-
-    // animation
-    if (app->animate) {
-      app->time += min(1 / 60.0f, (float)input.time_delta);
-      if (app->time < app->time_range.x || app->time > app->time_range.y)
-        app->time = app->time_range.x;
-      update_transforms(app->ioscene, app->time);
     }
   });
 

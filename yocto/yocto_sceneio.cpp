@@ -189,8 +189,6 @@ vector<string> scene_stats(shared_ptr<sceneio_model> scene, bool verbose) {
   stats.push_back("subdivs:      " + format(scene->subdivs.size()));
   stats.push_back("environments: " + format(scene->environments.size()));
   stats.push_back("textures:     " + format(scene->textures.size()));
-  stats.push_back("nodes:        " + format(scene->nodes.size()));
-  stats.push_back("animations:   " + format(scene->animations.size()));
   stats.push_back(
       "points:       " + format(accumulate(scene->shapes,
                              [](auto shape) { return shape->points.size(); })));
@@ -264,8 +262,6 @@ vector<string> scene_validation(
   // check_names(scene->shapes, "object");
   check_names(scene->textures, "texture");
   check_names(scene->environments, "environment");
-  check_names(scene->nodes, "node");
-  check_names(scene->animations, "animation");
   if (!notextures) check_empty_textures(scene->textures);
 
   return errs;
@@ -373,24 +369,25 @@ bbox3f compute_bounds(shared_ptr<sceneio_model> scene) {
 // Add missing cameras.
 void add_cameras(shared_ptr<sceneio_model> scene) {
   if (!scene->cameras.empty()) return;
-  auto camera  = add_camera(scene);
-  camera->name = "cameras/default.yaml";
-  // TODO: error in camera.lens and camera.film
+  auto camera          = add_camera(scene);
+  camera->name         = "cameras/default.json";
   camera->orthographic = false;
   camera->film         = 0.036;
+  camera->aspect       = (float)16 / (float)9;
   camera->aperture     = 0;
   camera->lens         = 0.050;
   auto bbox            = compute_bounds(scene);
   auto center          = (bbox.max + bbox.min) / 2;
   auto bbox_radius     = length(bbox.max - bbox.min) / 2;
-  auto camera_dir      = camera->frame.o - center;
-  if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto camera_dist = bbox_radius / camera->film;
-  auto from        = camera_dir * (camera_dist * 1) + center;
-  auto to          = center;
-  auto up          = vec3f{0, 1, 0};
-  camera->frame    = lookat_frame(from, to, up);
-  camera->focus    = length(from - to);
+  auto camera_dir      = vec3f{0, 0, 1};
+  auto camera_dist     = bbox_radius * camera->lens /
+                     (camera->film / camera->aspect);
+  camera_dist *= 2.0f;  // correction for tracer camera implementation
+  auto from     = camera_dir * camera_dist + center;
+  auto to       = center;
+  auto up       = vec3f{0, 1, 0};
+  camera->frame = lookat_frame(from, to, up);
+  camera->focus = length(from - to);
 }
 
 // Add missing radius.
@@ -399,6 +396,19 @@ void add_radius(shared_ptr<sceneio_model> scene, float radius = 0.001f) {
     if (shape->points.empty() && shape->lines.empty()) continue;
     if (!shape->radius.empty()) continue;
     shape->radius.assign(shape->positions.size(), radius);
+  }
+}
+
+// Add missing materials.
+void add_materials(shared_ptr<sceneio_model> scene) {
+  auto default_material = shared_ptr<sceneio_material>{};
+  for (auto& object : scene->objects) {
+    if (object->material) continue;
+    if (!default_material) {
+      default_material        = add_material(scene);
+      default_material->color = {0.8, 0.8, 0.8};
+    }
+    object->material = default_material;
   }
 }
 
@@ -450,8 +460,6 @@ void trim_memory(shared_ptr<sceneio_model> scene) {
   scene->shapes.shrink_to_fit();
   scene->textures.shrink_to_fit();
   scene->environments.shrink_to_fit();
-  scene->nodes.shrink_to_fit();
-  scene->animations.shrink_to_fit();
 }
 
 // Apply subdivision and displacement rules.
@@ -662,94 +670,6 @@ void tesselate_subdiv(shared_ptr<sceneio_model> scene,
   shape->texcoords = displaced->texcoords;
   shape->colors    = displaced->colors;
   shape->radius    = displaced->radius;
-}
-
-// Update animation transforms
-void update_transforms(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_animation> animation, float time,
-    const string& anim_group) {
-  if (anim_group != "" && anim_group != animation->group) return;
-
-  if (!animation->translations.empty()) {
-    auto value = vec3f{0, 0, 0};
-    switch (animation->interpolation) {
-      case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation->times, animation->translations, time);
-        break;
-      case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(
-            animation->times, animation->translations, time);
-        break;
-      case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(
-            animation->times, animation->translations, time);
-        break;
-      default: throw std::runtime_error("should not have been here");
-    }
-    for (auto target : animation->targets)
-      scene->nodes[target]->translation = value;
-  }
-  if (!animation->rotations.empty()) {
-    auto value = vec4f{0, 0, 0, 1};
-    switch (animation->interpolation) {
-      case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation->times, animation->rotations, time);
-        break;
-      case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation->times, animation->rotations, time);
-        break;
-      case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation->times, animation->rotations, time);
-        break;
-    }
-    for (auto target : animation->targets)
-      scene->nodes[target]->rotation = value;
-  }
-  if (!animation->scales.empty()) {
-    auto value = vec3f{1, 1, 1};
-    switch (animation->interpolation) {
-      case sceneio_animation::interpolation_type::step:
-        value = keyframe_step(animation->times, animation->scales, time);
-        break;
-      case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation->times, animation->scales, time);
-        break;
-      case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation->times, animation->scales, time);
-        break;
-    }
-    for (auto target : animation->targets) scene->nodes[target]->scale = value;
-  }
-}
-
-// Update node transforms
-void update_transforms(shared_ptr<sceneio_model> scene,
-    shared_ptr<sceneio_node> node, const frame3f& parent = identity3x4f) {
-  auto frame = parent * node->local * translation_frame(node->translation) *
-               rotation_frame(node->rotation) * scaling_frame(node->scale);
-  if (node->shape >= 0) scene->objects[node->shape]->frame = frame;
-  if (node->instance >= 0)
-    scene->objects[node->shape]->instance->frames[node->instance] = frame;
-  if (node->camera >= 0) scene->cameras[node->camera]->frame = frame;
-  if (node->environment >= 0)
-    scene->environments[node->environment]->frame = frame;
-  for (auto child : node->children)
-    update_transforms(scene, scene->nodes[child], frame);
-}
-
-// Update node transforms
-void update_transforms(
-    shared_ptr<sceneio_model> scene, float time, const string& anim_group) {
-  for (auto agr : scene->animations)
-    update_transforms(scene, agr, time, anim_group);
-  for (auto node : scene->nodes) node->children.clear();
-  for (auto node_id = 0; node_id < scene->nodes.size(); node_id++) {
-    auto& node = scene->nodes[node_id];
-    if (node->parent >= 0)
-      scene->nodes[node->parent]->children.push_back(node_id);
-  }
-  for (auto& node : scene->nodes)
-    if (node->parent < 0) update_transforms(scene, node);
 }
 
 }  // namespace yocto
@@ -1309,6 +1229,7 @@ static void load_json_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
   trim_memory(scene);
 
   // done
@@ -1677,6 +1598,7 @@ static void load_obj_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1885,20 +1807,33 @@ static void load_gltf_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
-  auto gltf = gltf_model{};
-  load_gltf(filename, gltf);
+  auto gltf = load_gltf(filename);
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
+  // convert cameras
+  for (auto gcamera : gltf->cameras) {
+    for (auto frame : gcamera->frames) {
+      auto camera    = add_camera(scene);
+      camera->frame  = frame;
+      camera->aspect = gcamera->aspect;
+      camera->film   = 0.036;
+      camera->lens   = gcamera->aspect >= 1
+                         ? (2 * camera->aspect * tan(gcamera->yfov / 2))
+                         : (2 * tan(gcamera->yfov / 2));
+      camera->focus = 10;
+    }
+  }
+
   // convert textures
   auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
       {"", nullptr}};
-  auto get_texture = [&scene, &gltf, &texture_map](
-                         int ref) -> shared_ptr<sceneio_texture> {
-    if (ref < 0) return nullptr;
-    auto& gtexture = gltf.textures[ref];
-    auto  path     = gtexture.filename;
+  auto get_texture =
+      [&scene, &texture_map](
+          shared_ptr<gltf_texture> gtexture) -> shared_ptr<sceneio_texture> {
+    if (!gtexture) return nullptr;
+    auto path = gtexture->filename;
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -1910,70 +1845,54 @@ static void load_gltf_scene(const string& filename,
   };
 
   // convert materials
-  for (auto& gmaterial : gltf.materials) {
-    auto material          = add_material(scene);
-    material->emission     = gmaterial.emission;
-    material->emission_tex = get_texture(gmaterial.emission_tex);
-    if (gmaterial.has_metalrough) {
-      material->color        = xyz(gmaterial.mr_base);
-      material->opacity      = gmaterial.mr_base.w;
-      material->specular     = 1;
-      material->color_tex    = get_texture(gmaterial.mr_base_tex);
-      material->metallic_tex = get_texture(gmaterial.mr_metallic_tex);
-    }
-    material->normal_tex = get_texture(gmaterial.normal_tex);
+  auto material_map =
+      unordered_map<shared_ptr<gltf_material>, shared_ptr<sceneio_material>>{
+          {nullptr, nullptr}};
+  for (auto gmaterial : gltf->materials) {
+    auto material           = add_material(scene);
+    material->emission      = gmaterial->emission;
+    material->emission_tex  = get_texture(gmaterial->emission_tex);
+    material->color         = gmaterial->color;
+    material->opacity       = gmaterial->opacity;
+    material->specular      = 1;
+    material->color_tex     = get_texture(gmaterial->color_tex);
+    material->metallic_tex  = get_texture(gmaterial->metallic_tex);
+    material->normal_tex    = get_texture(gmaterial->normal_tex);
+    material_map[gmaterial] = material;
   }
 
   // convert shapes
-  auto shape_indices = vector<vector<vec2i>>{};
-  for (auto& gmesh : gltf.meshes) {
-    shape_indices.push_back({});
-    for (auto& gprim : gmesh.primitives) {
-      auto shape = add_shape(scene);
-      shape_indices.back().push_back(
-          {(int)scene->shapes.size() - 1, gprim.material});
-      shape->positions = gprim.positions;
-      shape->normals   = gprim.normals;
-      shape->texcoords = gprim.texcoords;
-      shape->colors    = gprim.colors;
-      shape->radius    = gprim.radius;
-      shape->tangents  = gprim.tangents;
-      shape->triangles = gprim.triangles;
-      shape->lines     = gprim.lines;
-      shape->points    = gprim.points;
-    }
+  auto shape_map =
+      unordered_map<shared_ptr<gltf_primitive>, shared_ptr<sceneio_shape>>{
+          {nullptr, nullptr}};
+  for (auto gprim : gltf->primitives) {
+    auto shape       = add_shape(scene);
+    shape_map[gprim] = shape;
+    shape->positions = gprim->positions;
+    shape->normals   = gprim->normals;
+    shape->texcoords = gprim->texcoords;
+    shape->colors    = gprim->colors;
+    shape->radius    = gprim->radius;
+    shape->tangents  = gprim->tangents;
+    shape->triangles = gprim->triangles;
+    shape->lines     = gprim->lines;
+    shape->points    = gprim->points;
   }
 
-  // convert cameras
-  auto cameras = vector<sceneio_camera>{};
-  for (auto& gcamera : gltf.cameras) {
-    auto camera    = &cameras.emplace_back();
-    camera->name   = gcamera.name;
-    camera->aspect = gcamera.aspect;
-    camera->film   = 0.036;
-    camera->lens   = gcamera.aspect >= 1
-                       ? (2 * camera->aspect * tan(gcamera.yfov / 2))
-                       : (2 * tan(gcamera.yfov / 2));
-    camera->focus = 10;
-  }
-
-  // convert scene nodes
-  for (auto& gnode : gltf.nodes) {
-    if (gnode.camera >= 0) {
-      auto camera    = add_camera(scene);
-      camera->aspect = cameras[gnode.camera].aspect;
-      camera->film   = cameras[gnode.camera].film;
-      camera->lens   = cameras[gnode.camera].lens;
-      camera->focus  = cameras[gnode.camera].focus;
-      camera->frame  = gnode.frame;
-    }
-    if (gnode.mesh >= 0) {
-      for (auto [shape, material] : shape_indices[gnode.mesh]) {
-        // TODO: maintain instances
-        auto object      = add_object(scene);
-        object->frame    = gnode.frame;
-        object->shape    = scene->shapes[shape];
-        object->material = scene->materials[shape];
+  // convert object
+  for (auto gmesh : gltf->meshes) {
+    for (auto gprim : gmesh->primitives) {
+      auto object   = add_object(scene);
+      object->frame = gmesh->frames.empty() ? identity3x4f
+                                            : gmesh->frames.front();
+      object->shape    = shape_map.at(gprim);
+      object->material = material_map.at(gprim->material);
+      object->frame    = identity3x4f;
+      if (gmesh->frames.size() == 1) {
+        object->frame = gmesh->frames.front();
+      } else {
+        object->instance         = add_instance(scene);
+        object->instance->frames = gmesh->frames;
       }
     }
   }
@@ -2001,6 +1920,7 @@ static void load_gltf_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // fix cameras
   auto bbox = compute_bounds(scene);
@@ -2151,6 +2071,7 @@ static void load_pbrt_scene(const string& filename,
   scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
+  add_materials(scene);
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);

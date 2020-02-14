@@ -217,39 +217,6 @@ struct sceneio_environment {
   shared_ptr<sceneio_texture> emission_tex = nullptr;
 };
 
-// Node in a transform hierarchy.
-struct sceneio_node {
-  string        name        = "";
-  int           parent      = -1;
-  frame3f       local       = identity3x4f;
-  vec3f         translation = {0, 0, 0};
-  vec4f         rotation    = {0, 0, 0, 1};
-  vec3f         scale       = {1, 1, 1};
-  vector<float> weights     = {};
-  int           camera      = -1;
-  int           shape       = -1;
-  int           instance    = -1;
-  int           environment = -1;
-
-  // compute properties
-  vector<int> children = {};
-};
-
-// Keyframe data.
-struct sceneio_animation {
-  enum struct interpolation_type { linear, step, bezier };
-  string                name          = "";
-  string                filename      = "";
-  string                group         = "";
-  interpolation_type    interpolation = interpolation_type::linear;
-  vector<float>         times         = {};
-  vector<vec3f>         translations  = {};
-  vector<vec4f>         rotations     = {};
-  vector<vec3f>         scales        = {};
-  vector<vector<float>> morphs        = {};
-  vector<int>           targets       = {};
-};
-
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -267,8 +234,6 @@ struct sceneio_model {
   vector<shared_ptr<sceneio_texture>>     textures     = {};
   vector<shared_ptr<sceneio_material>>    materials    = {};
   vector<shared_ptr<sceneio_instance>>    instances    = {};
-  vector<shared_ptr<sceneio_node>>        nodes        = {};
-  vector<shared_ptr<sceneio_animation>>   animations   = {};
 };
 
 // create a scene
@@ -278,16 +243,14 @@ shared_ptr<sceneio_model> make_sceneio_model();
 shared_ptr<sceneio_camera>      add_camera(shared_ptr<sceneio_model> scene);
 shared_ptr<sceneio_environment> add_environment(
     shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>    add_object(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_instance>  add_instance(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_material>  add_material(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_shape>     add_shape(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_subdiv>    add_subdiv(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_texture>   add_texture(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_node>      add_node(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_animation> add_animation(shared_ptr<sceneio_model> scene);
-shared_ptr<sceneio_object>    add_complete_object(
-       shared_ptr<sceneio_model> scene, const string& basename = "");
+shared_ptr<sceneio_object>   add_object(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_instance> add_instance(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_material> add_material(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_shape>    add_shape(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_subdiv>   add_subdiv(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_texture>  add_texture(shared_ptr<sceneio_model> scene);
+shared_ptr<sceneio_object>   add_complete_object(
+      shared_ptr<sceneio_model> scene, const string& basename = "");
 
 }  // namespace yocto
 
