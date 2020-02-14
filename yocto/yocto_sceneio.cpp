@@ -1804,20 +1804,32 @@ static void load_gltf_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
-  auto gltf = gltf_model{};
-  load_gltf(filename, gltf);
+  auto gltf = load_gltf(filename);
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
+  // convert cameras
+  for (auto gcamera : gltf->cameras) {
+    for(auto frame : gcamera->frames) {
+    auto camera    = add_camera(scene);
+    camera->frame  = frame;
+    camera->aspect = gcamera->aspect;
+    camera->film   = 0.036;
+    camera->lens   = gcamera->aspect >= 1
+                       ? (2 * camera->aspect * tan(gcamera->yfov / 2))
+                       : (2 * tan(gcamera->yfov / 2));
+    camera->focus = 10;
+    }
+  }
+
   // convert textures
   auto texture_map = unordered_map<string, shared_ptr<sceneio_texture>>{
       {"", nullptr}};
-  auto get_texture = [&scene, &gltf, &texture_map](
-                         int ref) -> shared_ptr<sceneio_texture> {
-    if (ref < 0) return nullptr;
-    auto& gtexture = gltf.textures[ref];
-    auto  path     = gtexture.filename;
+  auto get_texture = [&scene, &texture_map](
+                         shared_ptr<gltf_texture> gtexture) -> shared_ptr<sceneio_texture> {
+    if (!gtexture) return nullptr;
+    auto  path     = gtexture->filename;
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -1829,70 +1841,49 @@ static void load_gltf_scene(const string& filename,
   };
 
   // convert materials
-  for (auto& gmaterial : gltf.materials) {
+  auto material_map = unordered_map<shared_ptr<gltf_material>, shared_ptr<sceneio_material>>{{nullptr, nullptr}};
+  for (auto gmaterial : gltf->materials) {
     auto material          = add_material(scene);
-    material->emission     = gmaterial.emission;
-    material->emission_tex = get_texture(gmaterial.emission_tex);
-    if (gmaterial.has_metalrough) {
-      material->color        = xyz(gmaterial.mr_base);
-      material->opacity      = gmaterial.mr_base.w;
-      material->specular     = 1;
-      material->color_tex    = get_texture(gmaterial.mr_base_tex);
-      material->metallic_tex = get_texture(gmaterial.mr_metallic_tex);
-    }
-    material->normal_tex = get_texture(gmaterial.normal_tex);
+    material->emission     = gmaterial->emission;
+    material->emission_tex = get_texture(gmaterial->emission_tex);
+    material->color        = gmaterial->color;
+    material->opacity      = gmaterial->opacity;
+    material->specular     = 1;
+    material->color_tex    = get_texture(gmaterial->color_tex);
+    material->metallic_tex = get_texture(gmaterial->metallic_tex);
+    material->normal_tex   = get_texture(gmaterial->normal_tex);
+    material_map[gmaterial] = material;
   }
 
   // convert shapes
-  auto shape_indices = vector<vector<vec2i>>{};
-  for (auto& gmesh : gltf.meshes) {
-    shape_indices.push_back({});
-    for (auto& gprim : gmesh.primitives) {
-      auto shape = add_shape(scene);
-      shape_indices.back().push_back(
-          {(int)scene->shapes.size() - 1, gprim.material});
-      shape->positions = gprim.positions;
-      shape->normals   = gprim.normals;
-      shape->texcoords = gprim.texcoords;
-      shape->colors    = gprim.colors;
-      shape->radius    = gprim.radius;
-      shape->tangents  = gprim.tangents;
-      shape->triangles = gprim.triangles;
-      shape->lines     = gprim.lines;
-      shape->points    = gprim.points;
-    }
+  auto shape_map = unordered_map<shared_ptr<gltf_primitive>, shared_ptr<sceneio_shape>>{{nullptr, nullptr}};
+  for (auto gprim : gltf->primitives) {
+    auto shape = add_shape(scene);
+    shape_map[gprim] = shape;
+    shape->positions = gprim->positions;
+    shape->normals   = gprim->normals;
+    shape->texcoords = gprim->texcoords;
+    shape->colors    = gprim->colors;
+    shape->radius    = gprim->radius;
+    shape->tangents  = gprim->tangents;
+    shape->triangles = gprim->triangles;
+    shape->lines     = gprim->lines;
+    shape->points    = gprim->points;
   }
-
-  // convert cameras
-  auto cameras = vector<sceneio_camera>{};
-  for (auto& gcamera : gltf.cameras) {
-    auto camera    = &cameras.emplace_back();
-    camera->name   = gcamera.name;
-    camera->aspect = gcamera.aspect;
-    camera->film   = 0.036;
-    camera->lens   = gcamera.aspect >= 1
-                       ? (2 * camera->aspect * tan(gcamera.yfov / 2))
-                       : (2 * tan(gcamera.yfov / 2));
-    camera->focus = 10;
-  }
-
-  // convert scene nodes
-  for (auto& gnode : gltf.nodes) {
-    if (gnode.camera >= 0) {
-      auto camera    = add_camera(scene);
-      camera->aspect = cameras[gnode.camera].aspect;
-      camera->film   = cameras[gnode.camera].film;
-      camera->lens   = cameras[gnode.camera].lens;
-      camera->focus  = cameras[gnode.camera].focus;
-      camera->frame  = gnode.frame;
-    }
-    if (gnode.mesh >= 0) {
-      for (auto [shape, material] : shape_indices[gnode.mesh]) {
-        // TODO: maintain instances
-        auto object      = add_object(scene);
-        object->frame    = gnode.frame;
-        object->shape    = scene->shapes[shape];
-        object->material = scene->materials[shape];
+  
+  // convert object
+  for(auto gmesh : gltf->meshes) {
+    for(auto gprim : gmesh->primitives) {
+      auto object = add_object(scene);
+      object->frame = gmesh->frames.empty() ? identity3x4f : gmesh->frames.front();
+      object->shape = shape_map.at(gprim);
+      object->material = material_map.at(gprim->material);
+      object->frame = identity3x4f;
+      if(gmesh->frames.size() == 1) {
+        object->frame = gmesh->frames.front();
+      } else {
+        object->instance = add_instance(scene);
+        object->instance->frames = gmesh->frames;
       }
     }
   }
