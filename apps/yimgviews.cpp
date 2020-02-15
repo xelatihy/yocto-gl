@@ -51,8 +51,12 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  unique_ptr<opengl_image> glimage  = nullptr;
+  opengl_image* glimage  = nullptr;
   draw_glimage_params      glparams = {};
+
+  ~app_state() {
+    if(glimage) delete glimage;
+  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -116,12 +120,12 @@ int run_app(int argc, const char* argv[]) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!app->glimage) {
-          app->glimage = make_glimage();
-          set_glimage(app->glimage.get(), app->display, false, false);
+          app->glimage = make_glimage().release();
+          set_glimage(app->glimage, app->display, false, false);
         }
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage.get(), app->glparams);
+        draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
       win, [app](opengl_window* win, const opengl_input& input) {
