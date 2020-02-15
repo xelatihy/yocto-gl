@@ -389,15 +389,15 @@ ply_property* add_property(ply_element* element) {
 }
 
 // Read ply
-unique_ptr<ply_model> load_ply(const string& filename, plyio_error error_cb) {
+unique_ptr<ply_model> load_ply(const string& filename, string& error) {
   auto ply = make_ply();
-  if (!load_ply(filename, ply.get(), error_cb)) return nullptr;
+  if (!load_ply(filename, ply.get(), error)) return nullptr;
   return ply;
 }
 
 // Load ply
 [[nodiscard]] bool load_ply(
-    const string& filename, ply_model* ply, plyio_error error_cb) {
+    const string& filename, ply_model* ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
@@ -415,16 +415,16 @@ unique_ptr<ply_model> load_ply(const string& filename, plyio_error error_cb) {
   ply->elements.clear();
 
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 
@@ -657,7 +657,7 @@ unique_ptr<ply_model> load_ply(const string& filename, plyio_error error_cb) {
 
 // Save ply
 [[nodiscard]] bool save_ply(
-    const string& filename, ply_model* ply, plyio_error error_cb) {
+    const string& filename, ply_model* ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -670,12 +670,12 @@ unique_ptr<ply_model> load_ply(const string& filename, plyio_error error_cb) {
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
 
@@ -1315,18 +1315,18 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] static bool load_mtl(const string& filename, obj_model* obj,
-    objio_error error_cb, bool fliptr = true) {
+    string& error, bool fliptr = true) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 
@@ -1526,18 +1526,18 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] static bool load_objx(
-    const string& filename, obj_model* obj, objio_error error_cb) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 
@@ -1628,10 +1628,10 @@ obj_shape* add_shape(obj_model* obj) {
 }
 
 // Read obj
-unique_ptr<obj_model> load_obj(const string& filename, objio_error error_cb,
+unique_ptr<obj_model> load_obj(const string& filename, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   auto obj = make_obj();
-  if (!load_obj(filename, obj.get(), error_cb, geom_only, split_elements,
+  if (!load_obj(filename, obj.get(), error, geom_only, split_elements,
           split_materials))
     return nullptr;
   return obj;
@@ -1639,23 +1639,23 @@ unique_ptr<obj_model> load_obj(const string& filename, objio_error error_cb,
 
 // Read obj
 [[nodiscard]] bool load_obj(const string& filename, obj_model* obj,
-    objio_error error_cb, bool geom_only, bool split_elements,
+    string& error, bool geom_only, bool split_elements,
     bool split_materials) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
-  auto dependent_error_cb = [filename, error_cb](const string& message) {
-    if (error_cb) error_cb(filename + ": error in " + message);
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
     return false;
   };
 
@@ -1804,8 +1804,8 @@ unique_ptr<obj_model> load_obj(const string& filename, objio_error error_cb,
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         if (!load_mtl(fs::path(filename).parent_path() / mtllib, obj,
-                dependent_error_cb))
-          return false;
+                error))
+          return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
       }
@@ -1854,7 +1854,7 @@ unique_ptr<obj_model> load_obj(const string& filename, objio_error error_cb,
   // load extensions
   auto extfilename = fs::path(filename).replace_extension(".objx");
   if (fs::exists(fs::path(extfilename))) {
-    if (!load_objx(extfilename, obj, dependent_error_cb)) return false;
+    if (!load_objx(extfilename, obj, error)) return dependent_error();
   }
 
   return true;
@@ -1881,15 +1881,15 @@ static void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] static bool save_mtl(
-    const string& filename, obj_model* obj, objio_error error_cb) {
+    const string& filename, obj_model* obj, string& error) {
   // throw helpers
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
 
@@ -2045,14 +2045,14 @@ static void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] static bool save_objx(
-    const string& filename, obj_model* obj, objio_error error_cb) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
 
@@ -2105,18 +2105,18 @@ static void format_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] bool save_obj(
-    const string& filename, obj_model* obj, objio_error error_cb) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
-  auto dependent_error_cb = [filename, error_cb](const string& message) {
-    if (error_cb) error_cb(filename + ": error in " + message);
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
     return false;
   };
 
@@ -2187,8 +2187,8 @@ static void format_value(string& str, const obj_vertex& value) {
   // save mtl
   if (!obj->materials.empty()) {
     if (!save_mtl(fs::path(filename).replace_extension(".mtl"), obj,
-            dependent_error_cb))
-      return false;
+            error))
+      return dependent_error();
   }
 
   // save objx
@@ -2196,8 +2196,8 @@ static void format_value(string& str, const obj_vertex& value) {
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
     if (!save_objx(fs::path(filename).replace_extension(".objx"), obj,
-            dependent_error_cb))
-      return false;
+            error))
+      return dependent_error();
   }
 
   // done
@@ -3816,7 +3816,9 @@ static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
     get_pbrt_value(command.values, "filename", shape->filename_);
     try {
       // TODO: fixme
-      auto ply         = load_ply(ply_dirname + shape->filename_, {});
+      auto ioerror = ""s;
+      auto ply         = make_unique<ply_model>();
+      if(!load_ply(ply_dirname + shape->filename_, ioerror));
       shape->positions = get_positions(ply.get());
       shape->normals   = get_normals(ply.get());
       shape->texcoords = get_texcoords(ply.get());
@@ -3947,26 +3949,26 @@ struct pbrt_context {
 
 // load pbrt
 [[nodiscard]] static bool load_pbrt(const string& filename, pbrt_model* pbrt,
-    pbrtio_error error_cb, pbrt_context& ctx,
+    string& error, pbrt_context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_medium*>&   medium_map,
     unordered_map<string, pbrt_texture>&   texture_map,
     const string&                          ply_dirname) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
-  auto dependent_error_cb = [filename, error_cb](const string& message) {
-    if (error_cb) error_cb(filename + ": error in " + message);
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
     return false;
   };
 
@@ -4211,9 +4213,9 @@ struct pbrt_context {
       auto includename = ""s;
       if (!parse_pbrt_param(str, includename)) return parse_error();
       if (!load_pbrt(fs::path(filename).parent_path() / includename, pbrt,
-              dependent_error_cb, ctx, material_map, medium_map, texture_map,
+              error, ctx, material_map, medium_map, texture_map,
               ply_dirname))
-        return false;
+        return dependent_error();
     } else {
       throw std::runtime_error{filename + ": parse error [unknown command]"};
     }
@@ -4257,22 +4259,22 @@ pbrt_medium* add_medium(pbrt_model* pbrt) {
 
 // Read pbrt
 unique_ptr<pbrt_model> load_pbrt(
-    const string& filename, pbrtio_error error_cb) {
+    const string& filename, string& error) {
   auto pbrt = make_pbrt();
-  if (!load_pbrt(filename, pbrt.get(), error_cb)) return nullptr;
+  if (!load_pbrt(filename, pbrt.get(), error)) return nullptr;
   return pbrt;
 }
 
 // load pbrt
 [[nodiscard]] bool load_pbrt(
-    const string& filename, pbrt_model* pbrt, pbrtio_error error_cb) {
+    const string& filename, pbrt_model* pbrt, string& error) {
   auto ctx          = pbrt_context{};
   auto material_map = unordered_map<string, pbrt_material*>{{"", {}}};
   auto medium_map   = unordered_map<string, pbrt_medium*>{{"", {}}};
   auto texture_map  = unordered_map<string, pbrt_texture>{{"", {}}};
   auto dirname      = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
-  return load_pbrt(filename, pbrt, error_cb, ctx, material_map, medium_map,
+  return load_pbrt(filename, pbrt, error, ctx, material_map, medium_map,
       texture_map, dirname);
 }
 
@@ -4354,18 +4356,18 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 [[nodiscard]] bool save_pbrt(const string& filename, pbrt_model* pbrt,
-    pbrtio_error error_cb, bool ply_meshes) {
+    string& error, bool ply_meshes) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
-  auto dependent_error_cb = [filename, error_cb](const string& message) {
-    if (error_cb) error_cb(filename + ": error in " + message);
+  auto dependent_error = [filename, &error]() {
+    error = filename + ": error in " + error;
     return false;
   };
 
@@ -4534,8 +4536,8 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
       add_texcoords(ply.get(), shape->texcoords);
       add_triangles(ply.get(), shape->triangles);
       if (!save_ply(fs::path(filename).parent_path() / shape->filename_,
-              ply.get(), dependent_error_cb))
-        return false;
+              ply.get(), error))
+        return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape->instances.empty())
@@ -4589,26 +4591,26 @@ gltf_model::~gltf_model() {
 
 // convert gltf to scene
 unique_ptr<gltf_model> load_gltf(
-    const string& filename, gltfio_error error_cb) {
+    const string& filename, string& error) {
   auto scene = make_unique<gltf_model>();
-  if (!load_gltf(filename, scene.get(), error_cb)) return nullptr;
+  if (!load_gltf(filename, scene.get(), error)) return nullptr;
   return scene;
 }
 
 // convert gltf to scene
 [[nodiscard]] bool load_gltf(
-    const string& filename, gltf_model* scene, gltfio_error error_cb) {
+    const string& filename, gltf_model* scene, string& error) {
   // error helpers
-  auto open_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": file not found");
+  auto open_error = [filename, &error]() {
+    error = filename + ": file not found";
     return false;
   };
-  auto parse_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": parse error");
+  auto parse_error = [filename, &error]() {
+    error = filename + ": parse error";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 

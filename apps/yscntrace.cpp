@@ -153,31 +153,6 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-// progress callback
-void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(max(0, n - str.size()), '0') + str;
-  };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(max(0, n - str.size()), ' ');
-  };
-  using clock               = std::chrono::high_resolution_clock;
-  static int64_t start_time = 0;
-  if (current == 0) start_time = clock::now().time_since_epoch().count();
-  auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000;  // millisecs
-  auto mins  = pad(to_string(elapsed / 60000), 2);
-  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
-  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
-  printf("\r%s\r", line.c_str());
-  if (current == total) printf("\n");
-  fflush(stdout);
-}
-
 int run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
@@ -233,7 +208,8 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  load_scene(filename, ioscene, print_fatal, print_progress);
+  auto ioerror = ""s;
+  if(!load_scene(filename, ioscene, ioerror, print_progress)) print_fatal(ioerror);
 
   // convert scene
   auto scene_guard = make_unique<trace_scene>();
@@ -263,13 +239,14 @@ int run_app(int argc, const char* argv[]) {
         auto ext = "-s" + std::to_string(sample + samples) +
                    fs::path(imfilename).extension().string();
         auto outfilename = fs::path(imfilename).replace_extension(ext).string();
+        auto ioerror = ""s;
         print_progress("save image", sample, samples);
-        save_image(outfilename, render, print_fatal);
+        if(!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });
 
   // save image
   print_progress("save image", 0, 1);
-  save_image(imfilename, render, print_fatal);
+  if(!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
   print_progress("save image", 1, 1);
 
   // done

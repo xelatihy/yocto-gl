@@ -1501,21 +1501,21 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-image<vec4f> load_image(const string& filename, imageio_error error_cb) {
+image<vec4f> load_image(const string& filename, string &error) {
   auto img = image<vec4f>{};
-  if (!load_image(filename, img, error_cb)) return {};
+  if (!load_image(filename, img, error)) return {};
   return img;
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, imageio_error error_cb) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    const string& filename, image<vec4f>& img, string &error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 
@@ -1545,7 +1545,7 @@ image<vec4f> load_image(const string& filename, imageio_error error_cb) {
     return true;
   } else if (!is_hdr_filename(filename)) {
     auto imgb = image<vec4b>{};
-    if (!load_imageb(filename, imgb, error_cb)) return false;
+    if (!load_imageb(filename, imgb, error)) return false;
     img = srgb_to_rgb(imgb);
     return true;
   } else {
@@ -1555,13 +1555,13 @@ image<vec4f> load_image(const string& filename, imageio_error error_cb) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4f>& img, imageio_error error_cb) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    const string& filename, const image<vec4f>& img, string &error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
 
@@ -1582,28 +1582,28 @@ image<vec4f> load_image(const string& filename, imageio_error error_cb) {
       return write_error();
     return true;
   } else if (!is_hdr_filename(filename)) {
-    return save_imageb(filename, rgb_to_srgbb(img), error_cb);
+    return save_imageb(filename, rgb_to_srgbb(img), error);
   } else {
     return format_error();
   }
 }
 
 // Loads an ldr image.
-image<vec4b> load_imageb(const string& filename, imageio_error error_cb) {
+image<vec4b> load_imageb(const string& filename, string &error) {
   auto img = image<vec4b>{};
-  if (!load_imageb(filename, img, error_cb)) return {};
+  if (!load_imageb(filename, img, error)) return {};
   return img;
 }
 
 // Loads an ldr image.
 [[nodiscard]] bool load_imageb(
-    const string& filename, image<vec4b>& img, imageio_error error_cb) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    const string& filename, image<vec4b>& img, string &error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
 
@@ -1618,7 +1618,7 @@ image<vec4b> load_imageb(const string& filename, imageio_error error_cb) {
     return true;
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
-    if (!load_image(filename, imgf, error_cb)) return false;
+    if (!load_image(filename, imgf, error)) return false;
     img = rgb_to_srgbb(imgf);
     return true;
   } else {
@@ -1628,13 +1628,13 @@ image<vec4b> load_imageb(const string& filename, imageio_error error_cb) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_imageb(
-    const string& filename, const image<vec4b>& img, imageio_error error_cb) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    const string& filename, const image<vec4b>& img, string &error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
 
@@ -1660,7 +1660,7 @@ image<vec4b> load_imageb(const string& filename, imageio_error error_cb) {
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
-    return save_image(filename, srgb_to_rgb(img), error_cb);
+    return save_image(filename, srgb_to_rgb(img), error);
   } else {
     return format_error();
   }
@@ -1814,9 +1814,9 @@ static inline bool save_yvol(
 
 // Loads volume data from binary format.
 bool load_volume(
-    const string& filename, volume<float>& vol, imageio_error error_cb) {
-  auto read_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": read error");
+    const string& filename, volume<float>& vol, string &error) {
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
@@ -1829,9 +1829,9 @@ bool load_volume(
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, imageio_error error_cb) {
-  auto write_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": write error");
+    const string& filename, const volume<float>& vol, string &error) {
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
     return false;
   };
   if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
@@ -1844,14 +1844,14 @@ bool save_volume(
 
 // Loads volume data from binary format.
 bool load_volume(
-    const string& filename, volume<float>& vol, imageio_error error_cb) {
-  return impl::load_volume(filename, vol, error_cb);
+    const string& filename, volume<float>& vol, string &error) {
+  return impl::load_volume(filename, vol, error);
 }
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, imageio_error error_cb) {
-  return impl::save_volume(filename, vol, error_cb);
+    const string& filename, const volume<float>& vol, string &error) {
+  return impl::save_volume(filename, vol, error);
 }
 
 }  // namespace yocto

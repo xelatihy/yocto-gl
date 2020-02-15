@@ -40,8 +40,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type,
-    shapeio_error error_cb) {
+    vector<vec4f>& colors, vector<float>& radius, const string& type, string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -184,7 +183,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-largearealight2") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
   } else {
-    if (error_cb) error_cb("unknown shape preset " + type);
+    error = "unknown preset";
     return false;
   }
   return true;
@@ -194,13 +193,13 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type, shapeio_error error_cb) {
+    vector<float>& radius, const string& type, string& error) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-          quadstexcoord, positions, normals, texcoords, colors, radius, type,
-          error_cb))
+          quadstexcoord, positions, normals, texcoords, colors, radius, type, error
+          ))
     return false;
   if (!quadspos.empty()) throw std::runtime_error("bad preset type");
   return true;
@@ -209,8 +208,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
-    shapeio_error error_cb) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type, string& error
+    ) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
@@ -219,35 +218,10 @@ bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   auto radius    = vector<float>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
           quadstexcoord, positions, normals, texcoords, colors, radius, type,
-          error_cb))
+          error))
     return false;
   if (quadspos.empty()) throw std::runtime_error("bad preset type");
   return true;
-}
-
-// progress callback
-void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(max(0, n - str.size()), '0') + str;
-  };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(max(0, n - str.size()), ' ');
-  };
-  using clock               = std::chrono::high_resolution_clock;
-  static int64_t start_time = 0;
-  if (current == 0) start_time = clock::now().time_since_epoch().count();
-  auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000;  // millisecs
-  auto mins  = pad(std::to_string(elapsed / 60000), 2);
-  auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
-  auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
-  printf("\r%s\r", line.c_str());
-  if (current == total) printf("\n");
-  fflush(stdout);
 }
 
 int main(int argc, const char** argv) {
@@ -319,27 +293,27 @@ int main(int argc, const char** argv) {
   auto quadstexcoord = vector<vec4i>{};
 
   // load mesh
+  auto ioerror = ""s;
   print_progress("load shape", 0, 1);
   if (!facevarying) {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, basename, print_fatal);
+      if(!make_shape_preset(points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius, basename, ioerror)) print_fatal(ioerror);
     } else {
       if (!load_shape(filename, points, lines, triangles, quads, positions,
-              normals, texcoords, colors, radius, print_fatal))
-        return 1;
+              normals, texcoords, colors, radius, ioerror)) print_fatal(ioerror);
     }
   } else {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, basename, print_fatal);
+      if(!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
+          texcoords, basename, ioerror)) print_fatal(ioerror);
     } else {
-      load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords, print_fatal);
+      if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords, ioerror)) print_fatal(ioerror);
     }
   }
   print_progress("load shape", 1, 1);
@@ -495,11 +469,11 @@ int main(int argc, const char** argv) {
   // save mesh
   print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
-    save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, print_fatal);
+    if(!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, ioerror)) print_fatal(ioerror);
   } else {
-    save_shape(output, points, lines, triangles, quads, positions, normals,
-        texcoords, colors, radius, print_fatal);
+    if(!save_shape(output, points, lines, triangles, quads, positions, normals,
+        texcoords, colors, radius, ioerror)) print_fatal(ioerror);
   }
   print_progress("save shape", 1, 1);
 

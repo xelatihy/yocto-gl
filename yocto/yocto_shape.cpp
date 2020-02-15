@@ -3347,14 +3347,14 @@ static string get_extension(const string& filename) {
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, shapeio_error error_cb,
+    vector<vec4f>& colors, vector<float>& radius, string& error,
     bool flip_texcoord) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto shape_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": empty shape");
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
     return false;
   };
 
@@ -3373,7 +3373,7 @@ static string get_extension(const string& filename) {
     // open ply
     auto ply_guard = make_unique<ply_model>();
     auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error_cb)) return false;
+    if (!load_ply(filename, ply, error)) return false;
 
     // gets vertex
     positions = get_positions(ply);
@@ -3397,7 +3397,7 @@ static string get_extension(const string& filename) {
     // load obj
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error_cb, true)) return false;
+    if (!load_obj(filename, obj, error, true)) return false;
 
     // get shape
     if (obj->shapes.empty()) return shape_error();
@@ -3439,13 +3439,13 @@ static string get_extension(const string& filename) {
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius,
-    shapeio_error error_cb, bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    string& error, bool ascii, bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto shape_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": empty shape");
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
     return false;
   };
 
@@ -3462,7 +3462,7 @@ static string get_extension(const string& filename) {
     add_faces(ply, triangles, quads);
     add_lines(ply, lines);
     add_points(ply, points);
-    if (!save_ply(filename, ply, error_cb)) return false;
+    if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = make_obj();
@@ -3483,7 +3483,7 @@ static string get_extension(const string& filename) {
       return shape_error();
     }
     auto err = ""s;
-    if (!save_obj(filename, obj, error_cb)) return false;
+    if (!save_obj(filename, obj, error)) return false;
     return true;
   } else {
     return format_error();
@@ -3494,13 +3494,13 @@ static string get_extension(const string& filename) {
 [[nodiscard]] bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    shapeio_error error_cb, bool flip_texcoord) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    string& error, bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto shape_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": empty shape");
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
     return false;
   };
 
@@ -3515,7 +3515,7 @@ static string get_extension(const string& filename) {
   if (ext == ".ply" || ext == ".PLY") {
     auto ply_guard = make_unique<ply_model>();
     auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error_cb)) return false;
+    if (!load_ply(filename, ply, error)) return false;
     positions = get_positions(ply);
     normals   = get_normals(ply);
     texcoords = get_texcoords(ply, flip_texcoord);
@@ -3527,7 +3527,7 @@ static string get_extension(const string& filename) {
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error_cb, true)) return false;
+    if (!load_obj(filename, obj, error, true)) return false;
     if (obj->shapes.empty()) return shape_error();
     if (obj->shapes.size() > 1) return shape_error();
     auto shape = obj->shapes.front();
@@ -3548,13 +3548,13 @@ static string get_extension(const string& filename) {
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    shapeio_error error_cb, bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": unknown format");
+    string& error, bool ascii, bool flip_texcoord) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
     return false;
   };
-  auto shape_error = [filename, error_cb]() {
-    if (error_cb) error_cb(filename + ": empty shape");
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
     return false;
   };
 
@@ -3564,7 +3564,7 @@ static string get_extension(const string& filename) {
         split_facevarying(
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
     return save_shape(filename, {}, {}, {}, split_quads, split_positions,
-        split_normals, split_texturecoords, {}, {}, error_cb, ascii,
+        split_normals, split_texturecoords, {}, {}, error, ascii,
         flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
@@ -3576,7 +3576,7 @@ static string get_extension(const string& filename) {
         texcoords, {}, {}, {}, flip_texcoord);
 
     // Save
-    if (!save_obj(filename, obj, error_cb)) return false;
+    if (!save_obj(filename, obj, error)) return false;
     return true;
   } else {
     return format_error();

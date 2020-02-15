@@ -296,9 +296,7 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    if (!load_scene(
-            app->filename, app->ioscene,
-            [app](const string& message) { app->loader_error = message; },
+    if (!load_scene(app->filename, app->ioscene, app->loader_error,
             progress_cb))
       return;
     app->progress = 1;
@@ -500,8 +498,7 @@ void draw_glwidgets(
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    save_scene(app->outname, app->ioscene,
-        [app](const string& message) { app->error = message; });
+    save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
   continue_glline(win);
@@ -511,8 +508,7 @@ void draw_glwidgets(
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    save_image(app->imagename, app->display,
-        [app](const string& message) { app->error = message; });
+    save_image(app->imagename, app->display, app->error);
     save_path = "";
   }
   continue_glline(win);

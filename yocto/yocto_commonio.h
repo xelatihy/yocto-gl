@@ -128,6 +128,9 @@ struct print_timer {
 inline print_timer print_timed(const string& msg);
 inline void        print_elapsed(print_timer& timer);
 
+// Print progress
+inline void print_progress(const string& message, int current, int total);
+
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
@@ -298,6 +301,31 @@ inline void print_elapsed(print_timer& timer) {
   timer.start_time = -1;
 }
 inline print_timer::~print_timer() { print_elapsed(*this); }
+
+// Print progress
+inline void print_progress(const string& message, int current, int total) {
+  static auto pad = [](const string& str, int n) -> string {
+    return string(std::max(0, n - (int)str.size()), '0') + str;
+  };
+  static auto pade = [](const string& str, int n) -> string {
+    return str + string(std::max(0, n - (int)str.size()), ' ');
+  };
+  using clock               = std::chrono::high_resolution_clock;
+  static int64_t start_time = 0;
+  if (current == 0) start_time = clock::now().time_since_epoch().count();
+  auto elapsed = clock::now().time_since_epoch().count() - start_time;
+  elapsed /= 1000000;  // millisecs
+  auto mins  = pad(std::to_string(elapsed / 60000), 2);
+  auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
+  auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
+  auto n     = (int)(30 * (float)current / (float)total);
+  auto bar   = "[" + pade(string(n, '='), 30) + "]";
+  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
+              pade(message, 30);
+  printf("\r%s\r", line.c_str());
+  if (current == total) printf("\n");
+  fflush(stdout);
+}
 
 }  // namespace yocto
 

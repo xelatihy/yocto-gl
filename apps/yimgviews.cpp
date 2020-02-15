@@ -107,7 +107,11 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // load image
-  if (!load_image(app->filename, app->source, print_fatal)) return 1;
+  auto ioerror = ""s;
+  if (!load_image(app->filename, app->source, ioerror)) {
+    print_fatal(ioerror);
+    return 1;
+  }
 
   // update display
   update_display(app);
