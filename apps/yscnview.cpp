@@ -153,8 +153,8 @@ void update_lights(opengl_scene* glscene, sceneio_model* ioscene) {
   }
 }
 
-void init_glscene(opengl_scene* glscene,
-    sceneio_model* ioscene, sceneio_progress progress_cb) {
+void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
+    sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +

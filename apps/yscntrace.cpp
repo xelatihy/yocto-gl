@@ -41,8 +41,8 @@ using namespace std;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(trace_scene* scene,
-    sceneio_model* ioscene, sceneio_progress progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -231,16 +231,16 @@ int run_app(int argc, const char* argv[]) {
 
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
-  auto ioscene = ioscene_guard.get();
+  auto ioscene       = ioscene_guard.get();
   load_scene(filename, ioscene, print_progress);
 
   // convert scene
   auto scene_guard = make_unique<trace_scene>();
-  auto scene = scene_guard.get();
+  auto scene       = scene_guard.get();
   init_scene(scene, ioscene, print_progress);
 
   // cleanup
-  if(ioscene) {
+  if (ioscene) {
     delete ioscene;
     ioscene = nullptr;
   }

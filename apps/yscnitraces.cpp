@@ -80,8 +80,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene,
-    sceneio_model* ioscene, sceneio_progress print_progress = {}) {
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -204,8 +204,8 @@ void reset_display(app_state* app) {
 
   // start render
   app->render_counter = 0;
-  trace_async_start(app->render_state,
-      app->scene, app->params, {},
+  trace_async_start(
+      app->render_state, app->scene, app->params, {},
       [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
@@ -298,7 +298,7 @@ int run_app(int argc, const char* argv[]) {
   init_scene(app->scene, app->ioscene, print_progress);
 
   // cleanup
-  if(app->ioscene) {
+  if (app->ioscene) {
     delete app->ioscene;
     app->ioscene = nullptr;
   }

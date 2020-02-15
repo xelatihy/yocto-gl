@@ -3101,7 +3101,8 @@ unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
     trace_progress_image progress_image_cb,
     trace_process_async  progress_async_cb) {
   auto state = make_unique<trace_async_state>();
-  trace_async_start(state.get(), scene, params, progress_cb, progress_image_cb, progress_async_cb);
+  trace_async_start(state.get(), scene, params, progress_cb, progress_image_cb,
+      progress_async_cb);
   return state;
 }
 void trace_async_start(trace_async_state* state, const trace_scene* scene,
@@ -3111,7 +3112,7 @@ void trace_async_start(trace_async_state* state, const trace_scene* scene,
   state->state = make_state(scene, params);
   state->render.resize(state->state->size());
   state->worker = {};
-  state->stop = false;
+  state->stop   = false;
 
   // render preview
   if (progress_cb) progress_cb("trace preview", 0, params.samples);
@@ -3121,8 +3122,8 @@ void trace_async_start(trace_async_state* state, const trace_scene* scene,
   auto preview  = trace_image(scene, pprms);
   for (auto j = 0; j < state->render.size().y; j++) {
     for (auto i = 0; i < state->render.size().x; i++) {
-      auto pi = clamp(i / params.pratio, 0, preview.size().x - 1),
-           pj = clamp(j / params.pratio, 0, preview.size().y - 1);
+      auto pi               = clamp(i / params.pratio, 0, preview.size().x - 1),
+           pj               = clamp(j / params.pratio, 0, preview.size().y - 1);
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -3135,8 +3136,7 @@ void trace_async_start(trace_async_state* state, const trace_scene* scene,
       if (progress_cb) progress_cb("trace image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
-        state->render[ij] = trace_sample(
-            state->state.get(), scene, ij, params);
+        state->render[ij] = trace_sample(state->state.get(), scene, ij, params);
         if (progress_async_cb)
           progress_async_cb(state->render, sample, params.samples, ij);
       });
