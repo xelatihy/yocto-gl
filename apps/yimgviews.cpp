@@ -51,8 +51,12 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image> glimage  = nullptr;
-  draw_glimage_params      glparams = {};
+  opengl_image*       glimage  = nullptr;
+  draw_glimage_params glparams = {};
+
+  ~app_state() {
+    if (glimage) delete glimage;
+  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -74,7 +78,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void update_display(shared_ptr<app_state> app) {
+void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -87,7 +91,8 @@ void update_display(shared_ptr<app_state> app) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app       = make_shared<app_state>();
+  auto app_guard = make_unique<app_state>();
+  auto app       = app_guard.get();
   auto filenames = vector<string>{};
 
   // command line options
@@ -107,15 +112,16 @@ int run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win_guard = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win       = win_guard.get();
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
-        if (!app->glimage) {
-          app->glimage = make_glimage();
+        if (!is_initialized(app->glimage)) {
+          init_glimage(app->glimage);
           set_glimage(app->glimage, app->display, false, false);
         }
         update_imview(app->glparams.center, app->glparams.scale,
@@ -123,7 +129,7 @@ int run_app(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

@@ -50,9 +50,8 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene    = nullptr;
-  shared_ptr<trace_scene>   scene      = nullptr;
-  bool                      add_skyenv = false;
+  trace_scene* scene      = new trace_scene{};
+  bool         add_skyenv = false;
 
   // rendering state
   image<vec4f> render   = {};
@@ -60,28 +59,33 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = nullptr;
-  draw_glimage_params      glparams = {};
+  opengl_image*       glimage  = new opengl_image{};
+  draw_glimage_params glparams = {};
 
   // computation
-  int                           render_sample  = 0;
-  int                           render_counter = 0;
-  shared_ptr<trace_async_state> render_state   = nullptr;
+  int          render_sample  = 0;
+  int          render_counter = 0;
+  trace_state* render_state   = new trace_state{};
 
-  ~app_state() { trace_async_stop(render_state); }
+  ~app_state() {
+    if (render_state) {
+      trace_async_stop(render_state);
+      delete render_state;
+    }
+    if (scene) delete scene;
+    if (glimage) delete glimage;
+  }
 };
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress print_progress = {}) {
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -92,8 +96,7 @@ shared_ptr<trace_scene> make_scene(
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -107,8 +110,7 @@ shared_ptr<trace_scene> make_scene(
     texture_map[iotexture] = texture;
   }
 
-  auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -142,8 +144,7 @@ shared_ptr<trace_scene> make_scene(
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -162,8 +163,7 @@ shared_ptr<trace_scene> make_scene(
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -194,24 +194,22 @@ shared_ptr<trace_scene> make_scene(
 
   // done
   if (print_progress) print_progress("convert done", progress.x++, progress.y);
-
-  return scene;
 }
 
-void reset_display(shared_ptr<app_state> app) {
+void reset_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  app->render_state   = trace_async_start(
-      app->scene, app->params, {},
-      [app = app.get()](const image<vec4f>& render, int current, int total) {
+  trace_async_start(
+      app->render_state, app->scene, app->params, {},
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app = app.get()](
+      [app](
           const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
@@ -245,7 +243,8 @@ void print_progress(const string& message, int current, int total) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto app = make_shared<app_state>();
+  auto app_guard = make_unique<app_state>();
+  auto app       = app_guard.get();
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};
@@ -291,13 +290,15 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  app->ioscene = load_scene(app->filename, print_progress);
+  auto ioscene_guard = make_unique<sceneio_model>();
+  auto ioscene       = ioscene_guard.get();
+  load_scene(app->filename, ioscene, print_progress);
 
   // conversion
-  app->scene = make_scene(app->ioscene, print_progress);
+  init_scene(app->scene, ioscene, print_progress);
 
   // cleanup
-  app->ioscene = nullptr;
+  if (ioscene_guard) ioscene_guard.release();
 
   // build bvh
   init_bvh(app->scene, app->params, print_progress);
@@ -315,12 +316,13 @@ int run_app(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win       = win_guard.get();
 
   // callbacks
   set_draw_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
-        if (!app->glimage) app->glimage = make_glimage();
+      win, [app](opengl_window* win, const opengl_input& input) {
+        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
@@ -332,7 +334,7 @@ int run_app(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;

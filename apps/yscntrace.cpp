@@ -41,16 +41,14 @@ using namespace std;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -60,8 +58,7 @@ shared_ptr<trace_scene> make_scene(
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -74,8 +71,7 @@ shared_ptr<trace_scene> make_scene(
     texture_map[iotexture] = texture;
   }
 
-  auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -107,8 +103,7 @@ shared_ptr<trace_scene> make_scene(
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -126,8 +121,7 @@ shared_ptr<trace_scene> make_scene(
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -156,8 +150,6 @@ shared_ptr<trace_scene> make_scene(
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  return scene;
 }
 
 // progress callback
@@ -238,13 +230,17 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene = load_scene(filename, print_progress);
+  auto ioscene_guard = make_unique<sceneio_model>();
+  auto ioscene       = ioscene_guard.get();
+  load_scene(filename, ioscene, print_progress);
 
   // convert scene
-  auto scene = make_scene(ioscene, print_progress);
+  auto scene_guard = make_unique<trace_scene>();
+  auto scene       = scene_guard.get();
+  init_scene(scene, ioscene, print_progress);
 
   // cleanup
-  ioscene = nullptr;
+  if (ioscene_guard) ioscene_guard.release();
 
   // build bvh
   init_bvh(scene, params, print_progress);

@@ -66,28 +66,38 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image> glimage   = nullptr;
-  draw_glimage_params      glparams  = {};
-  bool                     glupdated = true;
+  opengl_image*       glimage   = new opengl_image{};
+  draw_glimage_params glparams  = {};
+  bool                glupdated = true;
 
   // loading status
   atomic<bool> ok     = false;
   future<void> loader = {};
   string       status = "";
   string       error  = "";
+
+  // cleanup
+  ~app_state() {
+    if (glimage) delete glimage;
+  }
 };
 
 // app states
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
-  shared_ptr<app_state>         selected = nullptr;
-  deque<shared_ptr<app_state>>  loading  = {};
+  vector<app_state*> states   = {};
+  app_state*         selected = nullptr;
+  deque<app_state*>  loading  = {};
 
   // default options
   float             exposure = 0;
   bool              filmic   = false;
   colorgrade_params params   = {};
+
+  // cleanup
+  ~app_states() {
+    for (auto state : states) delete state;
+  }
 };
 
 // compute min/max
@@ -111,7 +121,7 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(shared_ptr<app_state> app) {
+void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   if (app->colorgrade) {
     colorgrade_image_mt(app->display, app->source, true, app->params);
@@ -123,8 +133,8 @@ void update_display(shared_ptr<app_state> app) {
 }
 
 // add a new image
-void load_image_async(shared_ptr<app_states> apps, const string& filename) {
-  auto app      = make_shared<app_state>();
+void load_image_async(app_states* apps, const string& filename) {
+  auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname  = fs::path(filename).replace_extension(".display.png").string();
   app->name     = fs::path(filename).filename();
@@ -143,13 +153,12 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
     }
     compute_stats(app->display_stats, app->display, false);
   });
-  apps->states.push_back(app);
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
-    const opengl_input& input) {
+void draw_glwidgets(
+    opengl_window* win, app_states* apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -175,6 +184,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
+    delete apps->selected;
     apps->states.erase(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
@@ -258,13 +268,12 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
 }
 
-void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
-    const opengl_input& input) {
+void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
   app->glparams.framebuffer = input.framebuffer_viewport;
-  if (!app->glimage) app->glimage = make_glimage();
+  if (!is_initialized(app->glimage)) init_glimage(app->glimage);
   if (app->glupdated) {
     set_glimage(app->glimage, app->display, false, false);
     app->glupdated = false;
@@ -274,7 +283,7 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   draw_glimage(app->glimage, app->glparams);
 }
 
-void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
+void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -298,8 +307,9 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto apps      = make_shared<app_states>();
-  auto filenames = vector<string>{};
+  auto apps_guard = make_unique<app_states>();
+  auto apps       = apps_guard.get();
+  auto filenames  = vector<string>{};
 
   // command line options
   auto cli = CLI::App{"view images"};
@@ -314,23 +324,24 @@ int run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yimview", true);
+  auto win_guard = make_glwindow({1280 + 320, 720}, "yimview", true);
+  auto win       = win_guard.get();
 
   // callbacks
   set_update_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
   set_draw_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         if (!apps->selected) return;
         auto app = apps->selected;
         // handle mouse
@@ -343,7 +354,7 @@ int run_app(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const vector<string>& paths,
+      win, [apps](opengl_window* win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });

@@ -41,7 +41,7 @@ using namespace std;
 namespace fs = ghc::filesystem;
 
 namespace yocto {
-void print_obj_camera(shared_ptr<sceneio_camera> camera);
+void print_obj_camera(sceneio_camera* camera);
 };  // namespace yocto
 
 // Application scene
@@ -57,33 +57,32 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene = nullptr;
-  shared_ptr<trace_scene>   scene   = nullptr;
+  sceneio_model* ioscene = new sceneio_model{};
+  trace_scene*   scene   = new trace_scene{};
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  shared_ptr<opengl_image> glimage  = nullptr;
-  draw_glimage_params      glparams = {};
+  opengl_image*       glimage  = new opengl_image{};
+  draw_glimage_params glparams = {};
 
   // editing
-  shared_ptr<sceneio_camera>      selected_camera      = nullptr;
-  shared_ptr<sceneio_object>      selected_object      = nullptr;
-  shared_ptr<sceneio_instance>    selected_instance    = nullptr;
-  shared_ptr<sceneio_shape>       selected_shape       = nullptr;
-  shared_ptr<sceneio_subdiv>      selected_subdiv      = nullptr;
-  shared_ptr<sceneio_material>    selected_material    = nullptr;
-  shared_ptr<sceneio_environment> selected_environment = nullptr;
-  shared_ptr<sceneio_texture>     selected_texture     = nullptr;
+  sceneio_camera*      selected_camera      = nullptr;
+  sceneio_object*      selected_object      = nullptr;
+  sceneio_instance*    selected_instance    = nullptr;
+  sceneio_shape*       selected_shape       = nullptr;
+  sceneio_subdiv*      selected_subdiv      = nullptr;
+  sceneio_material*    selected_material    = nullptr;
+  sceneio_environment* selected_environment = nullptr;
+  sceneio_texture*     selected_texture     = nullptr;
 
   // computation
-  int                           render_sample  = 0;
-  int                           render_counter = 0;
-  shared_ptr<trace_async_state> render_state   = {};
+  int          render_sample  = 0;
+  int          render_counter = 0;
+  trace_state* render_state   = new trace_state{};
 
   // loading status
   atomic<bool>       ok       = false;
@@ -91,33 +90,43 @@ struct app_state {
   string             error    = "";
   std::atomic<float> progress = 0.5;
 
-  ~app_state() { trace_async_stop(render_state); }
+  ~app_state() {
+    if (render_state) {
+      trace_async_stop(render_state);
+      delete render_state;
+    }
+    if (scene) delete scene;
+    if (ioscene) delete ioscene;
+    if (glimage) delete glimage;
+  }
 };
 
 // Application state
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
-  shared_ptr<app_state>         selected = nullptr;
-  deque<shared_ptr<app_state>>  loading  = {};
+  vector<app_state*> states   = {};
+  app_state*         selected = nullptr;
+  deque<app_state*>  loading  = {};
 
   // default options
   trace_params params     = {};
   bool         add_skyenv = false;
+
+  // cleanup
+  ~app_states() {
+    for (auto state : states) delete state;
+  }
 };
 
 // Construct a scene from io
-shared_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  // initialize scene
-  auto scene = make_trace_scene();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -128,8 +137,7 @@ shared_ptr<trace_scene> make_scene(
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -143,8 +151,7 @@ shared_ptr<trace_scene> make_scene(
     texture_map[iotexture] = texture;
   }
 
-  auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -178,8 +185,7 @@ shared_ptr<trace_scene> make_scene(
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -197,8 +203,7 @@ shared_ptr<trace_scene> make_scene(
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -229,8 +234,6 @@ shared_ptr<trace_scene> make_scene(
 
   // done
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
-
-  return scene;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -252,37 +255,37 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void stop_display(shared_ptr<app_state> app) {
+void stop_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
   app->render_state = nullptr;
 }
 
-void reset_display(shared_ptr<app_state> app) {
+void reset_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  app->render_state   = trace_async_start(
-      app->scene, app->params,
-      [app = app.get()](const string& message, int sample, int nsamples) {
+  trace_async_start(
+      app->render_state, app->scene, app->params,
+      [app](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
-      [app = app.get()](const image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app = app.get()](
+      [app](
           const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
-void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
-  auto app       = make_shared<app_state>();
+void load_scene_async(app_states* apps, const string& filename) {
+  auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
   app->imagename = fs::path(filename).replace_extension(".png");
@@ -292,25 +295,23 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene  = load_scene(app->filename, progress_cb);
+    load_scene(app->filename, app->ioscene, progress_cb);
     app->progress = 1;
-    app->scene    = make_scene(app->ioscene, progress_cb);
+    init_scene(app->scene, app->ioscene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
       app->params.sampler = trace_sampler_type::eyelight;
     }
-    app->state = make_state(app->scene, app->params);
-    app->render.resize(app->state->size());
-    app->display.resize(app->state->size());
+    // app->render.resize(app->state->size());
+    // app->display.resize(app->state->size());
   });
-  apps->states.push_back(app);
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_camera> iocamera) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -335,8 +336,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_texture> iotexture) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -350,9 +351,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model>                 ioscene,
-    shared_ptr<sceneio_material>              iomaterial) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -396,8 +396,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_shape> ioshape) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -414,9 +414,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model>                 ioscene,
-    shared_ptr<sceneio_instance>              ioinstance) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -424,8 +423,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_object> ioobject) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -441,8 +440,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model> ioscene, shared_ptr<sceneio_subdiv> iosubdiv) {
+bool draw_glwidgets(
+    opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -456,9 +455,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
-    shared_ptr<sceneio_model>                 ioscene,
-    shared_ptr<sceneio_environment>           ioenvironment) {
+bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene,
+    sceneio_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioenvironment->name);
@@ -473,9 +471,8 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 }
 
 template <typename T, typename T1>
-shared_ptr<T1> get_element(shared_ptr<T> ioelement,
-    const vector<shared_ptr<T>>&         ioelements,
-    const vector<shared_ptr<T1>>&        elements) {
+T1* get_element(
+    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -483,8 +480,8 @@ shared_ptr<T1> get_element(shared_ptr<T> ioelement,
   throw std::runtime_error("element not found");
 }
 
-void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
-    const opengl_input& input) {
+void draw_glwidgets(
+    opengl_window* win, app_states* apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
@@ -524,6 +521,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
+    delete apps->selected;
     apps->states.erase(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
@@ -600,7 +598,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  auto get_texture = [app](shared_ptr<sceneio_texture> iotexture) {
+  auto get_texture = [app](sceneio_texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
@@ -765,13 +763,12 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   }
 }
 
-void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
-    const opengl_input& input) {
+void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
   app->glparams.framebuffer = input.framebuffer_viewport;
-  if (!app->glimage) app->glimage = make_glimage();
+  if (!is_initialized(app->glimage)) init_glimage(app->glimage);
   if (!app->render_counter)
     set_glimage(app->glimage, app->display, false, false);
   update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
@@ -781,7 +778,7 @@ void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
+void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -805,8 +802,9 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto apps      = make_shared<app_states>();
-  auto filenames = vector<string>{};
+  auto apps_guard = make_unique<app_states>();
+  auto apps       = apps_guard.get();
+  auto filenames  = vector<string>{};
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};
@@ -853,28 +851,29 @@ int run_app(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
+  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
+  auto win       = win_guard.get();
 
   // callbacks
   set_draw_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const vector<string>& paths,
+      win, [apps](opengl_window* win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window> win,
-                                   const opengl_input&          input) {
+  set_uiupdate_glcallback(win, [apps](opengl_window*   win,
+                                   const opengl_input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 

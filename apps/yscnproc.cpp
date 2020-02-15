@@ -105,7 +105,9 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene = load_scene(filename, print_progress);
+  auto scene_guard = make_unique<sceneio_model>();
+  auto scene       = scene_guard.get();
+  load_scene(filename, scene, print_progress);
 
   // validate scene
   if (validate) {
