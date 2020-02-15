@@ -50,8 +50,8 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene    = nullptr;
-  trace_scene*   scene      = nullptr;
+  sceneio_model* ioscene    = new sceneio_model{};
+  trace_scene*   scene      = new trace_scene{};
   bool           add_skyenv = false;
 
   // rendering state
@@ -60,13 +60,13 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = nullptr;
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // computation
   int                render_sample  = 0;
   int                render_counter = 0;
-  trace_async_state* render_state   = nullptr;
+  trace_async_state* render_state   = new trace_async_state{};
 
   ~app_state() {
     if (render_state) {
@@ -80,7 +80,7 @@ struct app_state {
 };
 
 // construct a scene from io
-unique_ptr<trace_scene> make_scene(
+void init_scene(trace_scene* scene,
     sceneio_model* ioscene, sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -88,9 +88,6 @@ unique_ptr<trace_scene> make_scene(
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  auto scene_ = make_trace_scene();
-  auto scene  = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -199,8 +196,6 @@ unique_ptr<trace_scene> make_scene(
 
   // done
   if (print_progress) print_progress("convert done", progress.x++, progress.y);
-
-  return scene_;
 }
 
 void reset_display(app_state* app) {
@@ -209,6 +204,7 @@ void reset_display(app_state* app) {
 
   // start render
   app->render_counter = 0;
+  if(app->render_state) delete app->render_state;
   app->render_state   = trace_async_start(
       app->scene, app->params, {},
       [app](const image<vec4f>& render, int current, int total) {
@@ -297,13 +293,16 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  app->ioscene = load_scene(app->filename, print_progress).release();
+  load_scene(app->filename, app->ioscene, print_progress);
 
   // conversion
-  app->scene = make_scene(app->ioscene, print_progress).release();
+  init_scene(app->scene, app->ioscene, print_progress);
 
   // cleanup
-  app->ioscene = nullptr;
+  if(app->ioscene) {
+    delete app->ioscene;
+    app->ioscene = nullptr;
+  }
 
   // build bvh
   init_bvh(app->scene, app->params, print_progress);
@@ -327,7 +326,7 @@ int run_app(int argc, const char* argv[]) {
   // callbacks
   set_draw_glcallback(
       win, [app](opengl_window* win, const opengl_input& input) {
-        if (!app->glimage) app->glimage = make_glimage().release();
+        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
