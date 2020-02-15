@@ -1521,7 +1521,7 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
     }
   }
 
-  return false;
+  return true;
 }
 
 // Read obj
