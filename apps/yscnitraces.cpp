@@ -50,7 +50,6 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene    = new sceneio_model{};
   trace_scene*   scene      = new trace_scene{};
   bool           add_skyenv = false;
 
@@ -66,7 +65,7 @@ struct app_state {
   // computation
   int                render_sample  = 0;
   int                render_counter = 0;
-  trace_async_state* render_state   = new trace_async_state{};
+  trace_state* render_state   = new trace_state{};
 
   ~app_state() {
     if (render_state) {
@@ -74,7 +73,6 @@ struct app_state {
       delete render_state;
     }
     if (scene) delete scene;
-    if (ioscene) delete ioscene;
     if (glimage) delete glimage;
   }
 };
@@ -292,16 +290,15 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  load_scene(app->filename, app->ioscene, print_progress);
+  auto ioscene_guard = make_unique<sceneio_model>();
+  auto ioscene       = ioscene_guard.get();
+  load_scene(app->filename, ioscene, print_progress);
 
   // conversion
-  init_scene(app->scene, app->ioscene, print_progress);
+  init_scene(app->scene, ioscene, print_progress);
 
   // cleanup
-  if (app->ioscene) {
-    delete app->ioscene;
-    app->ioscene = nullptr;
-  }
+  if (ioscene_guard) ioscene_guard.release();
 
   // build bvh
   init_bvh(app->scene, app->params, print_progress);

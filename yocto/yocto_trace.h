@@ -167,9 +167,6 @@ void set_frame(trace_environment* environment, const frame3f& frame);
 void set_emission(trace_environment* environment, const vec3f& emission,
     trace_texture* emission_map = nullptr);
 
-// Trace state
-struct trace_state;
-
 // Type of tracing algorithm
 enum struct trace_sampler_type {
   path,        // path tracing
@@ -260,28 +257,21 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
-// [experimental] Asynchronous state
-struct trace_async_state {
-  std::future<void>       worker = {};
-  std::atomic<bool>       stop   = {};
-  image<vec4f>            render = {};
-  unique_ptr<trace_state> state  = nullptr;
-};
-
 // [experimental] Callback used to report partially computed image
 using trace_process_async = function<void(
     const image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
-unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
+struct trace_state;
+unique_ptr<trace_state> trace_async_start(const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {},
     trace_process_async  progress_async_cb = {});
-void trace_async_start(trace_async_state* state, const trace_scene* scene,
+void trace_async_start(trace_state* state, const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {},
     trace_process_async  progress_async_cb = {});
-void trace_async_stop(trace_async_state* state);
+void trace_async_stop(trace_state* state);
 
 }  // namespace yocto
 
@@ -476,13 +466,12 @@ struct trace_pixel {
   rng_state rng      = {};
 };
 
-// State of the image being renderer
+// [experimental] Asynchronous state
 struct trace_state {
-  vec2i        size() const { return _extent; }
-  trace_pixel& at(const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
-
-  vec2i               _extent = {0, 0};
-  vector<trace_pixel> _pixels = {};
+  image<vec4f>            render = {};
+  image<trace_pixel> pixels  = {};
+  std::future<void>       worker = {}; // async
+  std::atomic<bool>       stop   = {}; // async
 };
 
 }  // namespace yocto

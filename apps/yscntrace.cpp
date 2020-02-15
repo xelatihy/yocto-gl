@@ -240,10 +240,7 @@ int run_app(int argc, const char* argv[]) {
   init_scene(scene, ioscene, print_progress);
 
   // cleanup
-  if (ioscene) {
-    delete ioscene;
-    ioscene = nullptr;
-  }
+  if (ioscene_guard) ioscene_guard.release();
 
   // build bvh
   init_bvh(scene, params, print_progress);

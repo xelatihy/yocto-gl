@@ -82,7 +82,7 @@ struct app_state {
   // computation
   int                render_sample  = 0;
   int                render_counter = 0;
-  trace_async_state* render_state   = new trace_async_state{};
+  trace_state* render_state   = new trace_state{};
 
   // loading status
   atomic<bool>       ok       = false;
