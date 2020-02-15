@@ -699,7 +699,7 @@ static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = load_ply(filename);
-    frames   = get_values(ply, "frame",
+    frames   = get_values(ply.get(), "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
   } else {
@@ -713,10 +713,10 @@ static void save_instances(
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = make_ply();
-    add_values(ply, frames, "frame",
+    add_values(ply.get(), frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
-    save_ply(filename, ply);
+    save_ply(filename, ply.get());
   } else {
     throw std::runtime_error{filename + ": unknown format"};
   }
@@ -1328,7 +1328,8 @@ static void load_obj_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj = load_obj(filename, false, true, false);
+  auto obj_guard = load_obj(filename, false, true, false);
+  auto obj = obj_guard.get();
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1367,8 +1368,7 @@ static void load_obj_scene(const string& filename,
   };
 
   // handler for materials
-  auto material_map =
-      unordered_map<shared_ptr<obj_material>, shared_ptr<sceneio_material>>{};
+  auto material_map = unordered_map<obj_material*, shared_ptr<sceneio_material>>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1489,11 +1489,12 @@ static void save_obj_scene(const string& filename,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj = make_obj();
+  auto obj_guard = make_obj();
+  auto obj = obj_guard.get();
 
   // convert cameras
   for (auto camera : scene->cameras) {
-    auto ocamera      = obj->cameras.emplace_back(make_shared<obj_camera>());
+    auto ocamera      = add_camera(obj);
     ocamera->name     = fs::path(camera->name).stem();
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
@@ -1514,7 +1515,7 @@ static void save_obj_scene(const string& filename,
 
   // convert materials and textures
   for (auto material : scene->materials) {
-    auto omaterial   = obj->materials.emplace_back(make_shared<obj_material>());
+    auto omaterial   = add_material(obj);
     omaterial->name  = fs::path(material->name).stem();
     omaterial->illum = 2;
     omaterial->as_pbr               = true;
@@ -1539,8 +1540,6 @@ static void save_obj_scene(const string& filename,
 
   // convert objects
   for (auto object : scene->objects) {
-    auto oshape    = obj->shapes.emplace_back(make_shared<obj_shape>());
-    oshape->name   = fs::path(object->name).stem();
     auto shape     = object->shape;
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
@@ -1572,8 +1571,7 @@ static void save_obj_scene(const string& filename,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto oenvironment = obj->environments.emplace_back(
-        make_shared<obj_environment>());
+    auto oenvironment = add_environment(obj);
     oenvironment->name         = fs::path(environment->name).stem();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
@@ -1685,7 +1683,8 @@ static void load_gltf_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
-  auto gltf = load_gltf(filename);
+  auto gltf_guard = load_gltf(filename);
+  auto gltf = gltf_guard.get();
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1709,7 +1708,7 @@ static void load_gltf_scene(const string& filename,
       {"", nullptr}};
   auto get_texture =
       [&scene, &texture_map](
-          shared_ptr<gltf_texture> gtexture) -> shared_ptr<sceneio_texture> {
+          gltf_texture* gtexture) -> shared_ptr<sceneio_texture> {
     if (!gtexture) return nullptr;
     auto path = gtexture->filename;
     if (path == "") return nullptr;
@@ -1724,7 +1723,7 @@ static void load_gltf_scene(const string& filename,
 
   // convert materials
   auto material_map =
-      unordered_map<shared_ptr<gltf_material>, shared_ptr<sceneio_material>>{
+      unordered_map<gltf_material*, shared_ptr<sceneio_material>>{
           {nullptr, nullptr}};
   for (auto gmaterial : gltf->materials) {
     auto material           = add_material(scene);
@@ -1741,7 +1740,7 @@ static void load_gltf_scene(const string& filename,
 
   // convert shapes
   auto shape_map =
-      unordered_map<shared_ptr<gltf_primitive>, shared_ptr<sceneio_shape>>{
+      unordered_map<gltf_primitive*, shared_ptr<sceneio_shape>>{
           {nullptr, nullptr}};
   for (auto gprim : gltf->primitives) {
     auto shape       = add_shape(scene);
@@ -1860,7 +1859,7 @@ static void load_pbrt_scene(const string& filename,
 
   // convert material
   auto material_map =
-      unordered_map<shared_ptr<pbrt_material>, shared_ptr<sceneio_material>>{};
+      unordered_map<pbrt_material*, shared_ptr<sceneio_material>>{};
   for (auto pmaterial : pbrt->materials) {
     auto material           = add_material(scene);
     material->color         = pmaterial->color;
@@ -1881,7 +1880,7 @@ static void load_pbrt_scene(const string& filename,
 
   // convert arealight
   auto arealight_map =
-      unordered_map<shared_ptr<pbrt_arealight>, shared_ptr<sceneio_material>>{};
+      unordered_map<pbrt_arealight*, shared_ptr<sceneio_material>>{};
   for (auto parealight : pbrt->arealights) {
     auto material             = add_material(scene);
     material->emission        = parealight->emission;
@@ -1963,11 +1962,12 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt = make_pbrt();
+  auto pbrt_guard = make_pbrt();
+  auto pbrt = pbrt_guard.get();
 
   // convert camera
   auto camera         = scene->cameras.front();
-  auto pcamera        = pbrt->cameras.emplace_back(make_shared<pbrt_camera>());
+  auto pcamera        = add_camera(pbrt);
   pcamera->frame      = camera->frame;
   pcamera->lens       = camera->lens;
   pcamera->aspect     = camera->aspect;
@@ -1975,11 +1975,11 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // convert materials
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_material>>{};
+      unordered_map<shared_ptr<sceneio_material>, pbrt_material*>{};
   auto arealight_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<pbrt_arealight>>{};
+      unordered_map<shared_ptr<sceneio_material>, pbrt_arealight*>{};
   for (auto material : scene->materials) {
-    auto pmaterial = pbrt->materials.emplace_back(make_shared<pbrt_material>());
+    auto pmaterial = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -1992,8 +1992,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
                                                : ""s;
     material_map[material] = pmaterial;
     if (material->emission != zero3f) {
-      auto parealight = pbrt->arealights.emplace_back(
-          make_shared<pbrt_arealight>());
+      auto parealight = add_arealight(pbrt);
       parealight->emission    = material->emission;
       arealight_map[material] = parealight;
     } else {
@@ -2003,7 +2002,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // convert instances
   for (auto object : scene->objects) {
-    auto pshape       = pbrt->shapes.emplace_back(make_shared<pbrt_shape>());
+    auto pshape       = add_shape(pbrt);
     pshape->filename_ = fs::path(object->shape->name).replace_extension(".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
@@ -2017,8 +2016,7 @@ void save_pbrt_scene(const string& filename, shared_ptr<sceneio_model> scene,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment = pbrt->environments.emplace_back(
-        make_shared<pbrt_environment>());
+    auto penvironment = add_environment(pbrt);
     penvironment->emission = environment->emission;
     if (environment->emission_tex) {
       penvironment->emission_map = environment->emission_tex->name;

@@ -56,6 +56,8 @@
 //
 //
 
+// TODO: flatten state
+
 #ifndef _YOCTO_TRACE_H_
 #define _YOCTO_TRACE_H_
 
