@@ -2994,8 +2994,10 @@ void init_lights(
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
+  for(auto light : scene->lights) delete light;
   scene->lights.clear();
-  for (auto& object : scene->objects) {
+
+  for (auto object : scene->objects) {
     if (object->material->emission == zero3f) continue;
     auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;

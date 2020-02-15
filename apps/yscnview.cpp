@@ -62,10 +62,10 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  unique_ptr<sceneio_model> ioscene = nullptr;
+  sceneio_model* ioscene = nullptr;
 
   // rendering state
-  unique_ptr<opengl_scene> glscene = nullptr;
+  opengl_scene* glscene = nullptr;
 
   // editing
   sceneio_camera*      selected_camera      = nullptr;
@@ -83,6 +83,11 @@ struct app_state {
   string             status   = "";
   string             error    = "";
   std::atomic<float> progress = 0.5;
+
+  ~app_state() {
+    if(ioscene) delete ioscene;
+    if(glscene) delete glscene;
+  }
 };
 
 // Application state
@@ -112,7 +117,7 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene = load_scene(app->filename, progress_cb);
+    app->ioscene = load_scene(app->filename, progress_cb).release();
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -455,7 +460,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
     auto app     = apps->selected;
     app->outname = save_path;
     try {
-      save_scene(app->outname, app->ioscene.get());
+      save_scene(app->outname, app->ioscene);
     } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
@@ -510,7 +515,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene.get())) printf("%s", stat.c_str());
+      for (auto stat : scene_stats(app->ioscene)) printf("%s", stat.c_str());
     }
     end_glheader(win);
   }
@@ -521,7 +526,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
-    if (draw_glwidgets(win, app->ioscene.get(), app->selected_camera)) {
+    if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
       auto iocamera = app->selected_camera;
       auto glcamera = get_element(
           iocamera, app->ioscene->cameras, app->glscene->cameras);
@@ -535,14 +540,14 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
       begin_glheader(win, "environments")) {
     draw_glcombobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
-    if (draw_glwidgets(win, app->ioscene.get(), app->selected_environment)) {
+    if (draw_glwidgets(win, app->ioscene, app->selected_environment)) {
     }
     end_glheader(win);
   }
   if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
     draw_glcombobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
-    if (!draw_glwidgets(win, app->ioscene.get(), app->selected_object)) {
+    if (!draw_glwidgets(win, app->ioscene, app->selected_object)) {
       auto ioobject = app->selected_object;
       auto globject = get_element(
           ioobject, app->ioscene->objects, app->glscene->objects);
@@ -560,7 +565,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   }
   if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
     draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
-    if (!draw_glwidgets(win, app->ioscene.get(), app->selected_shape)) {
+    if (!draw_glwidgets(win, app->ioscene, app->selected_shape)) {
       auto ioshape = app->selected_shape;
       auto glshape = get_element(
           ioshape, app->ioscene->shapes, app->glscene->shapes);
@@ -578,7 +583,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   if (!app->ioscene->materials.empty() && begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
-    if (draw_glwidgets(win, app->ioscene.get(), app->selected_material)) {
+    if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
       auto iomaterial = app->selected_material;
       auto glmaterial = get_element(
           iomaterial, app->ioscene->materials, app->glscene->materials);
@@ -603,7 +608,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   if (!app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
     draw_glcombobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (!draw_glwidgets(win, app->ioscene.get(), app->selected_instance)) {
+    if (!draw_glwidgets(win, app->ioscene, app->selected_instance)) {
       auto ioinstance = app->selected_instance;
       auto glinstance = get_element(
           ioinstance, app->ioscene->instances, app->glscene->instances);
@@ -614,7 +619,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   if (!app->ioscene->textures.empty() && begin_glheader(win, "textures")) {
     draw_glcombobox(
         win, "texture##2", app->selected_texture, app->ioscene->textures);
-    if (draw_glwidgets(win, app->ioscene.get(), app->selected_texture)) {
+    if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
       auto iotexture = app->selected_texture;
       auto gltexture = get_element(
           iotexture, app->ioscene->textures, app->glscene->textures);
@@ -629,7 +634,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
     draw_glcombobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene->subdivs);
-    if (!draw_glwidgets(win, app->ioscene.get(), app->selected_subdiv)) {
+    if (!draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
       // auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
       // tesselate_subdiv(app->ioscene, iosubdiv);
       // TODO: FIX SUBDIVS
@@ -653,7 +658,7 @@ void draw(opengl_window* win, app_states* apps,
     const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  draw_glscene(app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
+  draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
 }
 
 // update
@@ -672,8 +677,8 @@ void update(opengl_window* win, app_states* apps) {
     };
     try {
       app->loader.get();
-      app->glscene = make_glscene(app->ioscene.get(), progress_cb);
-      update_lights(app->glscene.get(), app->ioscene.get());
+      app->glscene = make_glscene(app->ioscene, progress_cb).release();
+      update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
     } catch (std::exception& e) {
