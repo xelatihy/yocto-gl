@@ -71,10 +71,10 @@ struct app_state {
   bool                glupdated = true;
 
   // loading status
-  atomic<bool> ok     = false;
-  future<void> loader = {};
-  string       status = "";
-  string       error  = "";
+  atomic<bool> ok           = false;
+  future<void> loader       = {};
+  string       status       = "";
+  string       error        = "";
   string       loader_error = "";
 
   // cleanup
@@ -144,9 +144,9 @@ void load_image_async(app_states* apps, const string& filename) {
   app->params   = apps->params;
   app->status   = "loading";
   app->loader   = async(launch::async, [app]() {
-    if(!load_image(app->filename, app->source, [app](const string& message){
-      app->loader_error = message;
-    })) return;
+    if (!load_image(app->filename, app->source,
+            [app](const string& message) { app->loader_error = message; }))
+      return;
     compute_stats(
         app->source_stats, app->source, is_hdr_filename(app->filename));
     if (app->colorgrade) {
@@ -175,9 +175,8 @@ void draw_glwidgets(
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    save_image(app->outname, app->display, [app](const string& message){
-      app->error = message;
-    });
+    save_image(app->outname, app->display,
+        [app](const string& message) { app->error = message; });
     save_path = "";
   }
   continue_glline(win);
@@ -292,8 +291,8 @@ void update(opengl_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-      app->loader.get();
-    if(app->loader_error.empty()) {
+    app->loader.get();
+    if (app->loader_error.empty()) {
       update_display(app);
       app->ok     = true;
       app->status = "ok";

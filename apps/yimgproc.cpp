@@ -218,7 +218,7 @@ image<vec4f> make_image_preset(const string& type, imageio_error error_cb) {
   } else if (type == "test-fbm-displacement") {
     return srgb_to_rgb(make_fbmmap(size));
   } else {
-    if(error_cb) error_cb("unknown preset");
+    if (error_cb) error_cb("unknown preset");
     return {};
   }
 }
@@ -275,9 +275,8 @@ int run_app(int argc, const char* argv[]) {
   // load
   auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
-  auto img      = (ext == ".ypreset") ?
-    make_image_preset(basename, print_fatal): 
-    load_image(filename, print_fatal);
+  auto img      = (ext == ".ypreset") ? make_image_preset(basename, print_fatal)
+                                 : load_image(filename, print_fatal);
 
   // set alpha
   if (alpha_filename != "") {
@@ -299,8 +298,7 @@ int run_app(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = load_image(diff_filename, print_fatal);
-    if (img.size() != diff.size())
-      print_fatal("image sizes are different");
+    if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 

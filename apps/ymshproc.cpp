@@ -184,7 +184,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-largearealight2") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
   } else {
-    if(error_cb) error_cb("unknown shape preset " + type);
+    if (error_cb) error_cb("unknown shape preset " + type);
     return false;
   }
   return true;
@@ -194,13 +194,14 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type,
-    shapeio_error error_cb) {
+    vector<float>& radius, const string& type, shapeio_error error_cb) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
-  if(!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type, error_cb)) return false;
+  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+          quadstexcoord, positions, normals, texcoords, colors, radius, type,
+          error_cb))
+    return false;
   if (!quadspos.empty()) throw std::runtime_error("bad preset type");
   return true;
 }
@@ -208,16 +209,18 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type, shapeio_error error_cb) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
+    shapeio_error error_cb) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
   auto quads     = vector<vec4i>{};
   auto colors    = vector<vec4f>{};
   auto radius    = vector<float>{};
-  if(!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type, 
-      error_cb)) return false;
+  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+          quadstexcoord, positions, normals, texcoords, colors, radius, type,
+          error_cb))
+    return false;
   if (quadspos.empty()) throw std::runtime_error("bad preset type");
   return true;
 }
@@ -324,8 +327,9 @@ int main(int argc, const char** argv) {
       make_shape_preset(points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius, basename, print_fatal);
     } else {
-      if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, print_fatal)) return 1;
+      if (!load_shape(filename, points, lines, triangles, quads, positions,
+              normals, texcoords, colors, radius, print_fatal))
+        return 1;
     }
   } else {
     auto ext      = fs::path(filename).extension().string();

@@ -694,7 +694,7 @@ static string get_extension(const string& filename) {
     frames = get_values(&ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
-      return true;
+    return true;
   } else {
     return format_error();
   }
@@ -714,7 +714,7 @@ static string get_extension(const string& filename) {
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
     if (!save_ply(filename, &ply, error_cb)) return false;
-      return true;
+    return true;
   } else {
     return format_error();
   }
@@ -1372,7 +1372,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // load obj
   auto obj_guard = make_unique<obj_model>();
   auto obj       = obj_guard.get();
-  if(!load_obj(filename, obj, error_cb, false, true, false)) return false;
+  if (!load_obj(filename, obj, error_cb, false, true, false)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1502,12 +1502,12 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (is_hdr_filename(path)) {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->hdr, dependent_error_cb))
+      if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+              dependent_error_cb))
         return false;
     } else {
-      if (!load_imageb(
-              fs::path(filename).parent_path() / path, texture->ldr, dependent_error_cb))
+      if (!load_imageb(fs::path(filename).parent_path() / path, texture->ldr,
+              dependent_error_cb))
         return false;
     }
   }
@@ -1520,11 +1520,11 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
 
   // done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
-    return true;
+  return true;
 }
 
-static bool save_obj_scene(const string& filename, const sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool save_obj_scene(const string& filename, const sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   auto shape_error = [filename, error_cb]() {
     if (error_cb) error_cb(filename + ": empty shape");
     return false;
@@ -1631,18 +1631,20 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene, s
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save obj
-  if(!save_obj(filename, obj, error_cb)) return false;
+  if (!save_obj(filename, obj, error_cb)) return false;
 
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     if (!texture->hdr.empty()) {
-      if(!save_image(
-          fs::path(filename).parent_path() / texture->name, texture->hdr, dependent_error_cb)) return false;
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->hdr, dependent_error_cb))
+        return false;
     } else {
-      if(!save_imageb(
-          fs::path(filename).parent_path() / texture->name, texture->ldr, dependent_error_cb)) return false;
+      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+              texture->ldr, dependent_error_cb))
+        return false;
     }
   }
 
@@ -1668,17 +1670,18 @@ void print_obj_camera(sceneio_camera* camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(const string& filename, sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool load_ply_scene(const string& filename, sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load ply mesh
   auto shape = add_shape(scene);
-  if(!load_shape(filename, shape->points, shape->lines, shape->triangles,
-      shape->quads, shape->positions, shape->normals, shape->texcoords,
-      shape->colors, shape->radius, error_cb)) return false;
+  if (!load_shape(filename, shape->points, shape->lines, shape->triangles,
+          shape->quads, shape->positions, shape->normals, shape->texcoords,
+          shape->colors, shape->radius, error_cb))
+    return false;
 
   // fix scene
   scene->name = filename;
@@ -1691,8 +1694,8 @@ static bool load_ply_scene(const string& filename, sceneio_model* scene, sceneio
   return true;
 }
 
-static bool save_ply_scene(const string& filename, const sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool save_ply_scene(const string& filename, const sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -1702,9 +1705,10 @@ static bool save_ply_scene(const string& filename, const sceneio_model* scene, s
 
   // save shape
   auto shape = scene->shapes.front();
-  if(!save_shape(filename, shape->points, shape->lines, shape->triangles,
-      shape->quads, shape->positions, shape->normals, shape->texcoords,
-      shape->colors, shape->radius, error_cb)) return false;
+  if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
+          shape->quads, shape->positions, shape->normals, shape->texcoords,
+          shape->colors, shape->radius, error_cb))
+    return false;
 
   // done
   if (progress_cb) progress_cb("save done", progress.x++, progress.y);
@@ -1719,8 +1723,8 @@ static bool save_ply_scene(const string& filename, const sceneio_model* scene, s
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool load_gltf_scene(const string& filename, sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   auto dependent_error_cb = [filename, error_cb](const string& message) {
     if (error_cb) error_cb(filename + ": error in " + message);
     return false;
@@ -1733,7 +1737,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene, scenei
   // load gltf
   auto gltf_guard = make_unique<gltf_model>();
   auto gltf       = gltf_guard.get();
-  if(!load_gltf(filename, gltf, error_cb)) return false;
+  if (!load_gltf(filename, gltf, error_cb)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1826,11 +1830,15 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene, scenei
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      if (is_hdr_filename(path)) {
-        if(!load_image(fs::path(filename).parent_path() / path, texture->hdr, dependent_error_cb)) return false;
-      } else {
-        if(!load_imageb(fs::path(filename).parent_path() / path, texture->ldr, dependent_error_cb)) return false;
-      }
+    if (is_hdr_filename(path)) {
+      if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+              dependent_error_cb))
+        return false;
+    } else {
+      if (!load_imageb(fs::path(filename).parent_path() / path, texture->ldr,
+              dependent_error_cb))
+        return false;
+    }
   }
 
   // fix scene
@@ -1849,7 +1857,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene, scenei
 
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
-    return true;
+  return true;
 }
 
 }  // namespace yocto
@@ -1860,8 +1868,8 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene, scenei
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   auto dependent_error_cb = [filename, error_cb](const string& message) {
     if (error_cb) error_cb(filename + ": error in " + message);
     return false;
@@ -1873,8 +1881,8 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene, scenei
 
   // load pbrt
   auto pbrt_guard = make_unique<pbrt_model>();
-  auto pbrt = pbrt_guard.get();
-  if(!load_pbrt(filename, pbrt, error_cb)) return false;
+  auto pbrt       = pbrt_guard.get();
+  if (!load_pbrt(filename, pbrt, error_cb)) return false;
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1976,11 +1984,15 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene, scenei
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-      if (is_hdr_filename(path)) {
-        if(!load_image(fs::path(filename).parent_path() / path, texture->hdr, dependent_error_cb)) return false;
-      } else {
-        if(!load_imageb(fs::path(filename).parent_path() / path, texture->ldr, dependent_error_cb)) return false;
-      }
+    if (is_hdr_filename(path)) {
+      if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+              dependent_error_cb))
+        return false;
+    } else {
+      if (!load_imageb(fs::path(filename).parent_path() / path, texture->ldr,
+              dependent_error_cb))
+        return false;
+    }
   }
 
   // fix scene
@@ -1995,8 +2007,8 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene, scenei
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const sceneio_model* scene, sceneio_error error_cb,
-    sceneio_progress progress_cb, bool noparallel) {
+static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
+    sceneio_error error_cb, sceneio_progress progress_cb, bool noparallel) {
   auto dependent_error_cb = [filename, error_cb](const string& message) {
     if (error_cb) error_cb(filename + ": error in " + message);
     return false;
@@ -2070,7 +2082,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene, 
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  if(!save_pbrt(filename, pbrt, error_cb)) return false;
+  if (!save_pbrt(filename, pbrt, error_cb)) return false;
 
   // handle progress
   progress.y += (int)scene->shapes.size() + (int)scene->textures.size();
@@ -2079,11 +2091,12 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene, 
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     if (shape->positions.empty()) continue;
-    if(!save_shape((fs::path(filename).parent_path() / shape->name)
-                    .replace_extension(".ply"),
-        shape->points, shape->lines, shape->triangles, shape->quads,
-        shape->positions, shape->normals, shape->texcoords, shape->colors,
-        shape->radius, dependent_error_cb)) return false;
+    if (!save_shape((fs::path(filename).parent_path() / shape->name)
+                        .replace_extension(".ply"),
+            shape->points, shape->lines, shape->triangles, shape->quads,
+            shape->positions, shape->normals, shape->texcoords, shape->colors,
+            shape->radius, dependent_error_cb))
+      return false;
   }
 
   // save textures
@@ -2091,17 +2104,19 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene, 
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
     if (texture->ldr.empty() && texture->hdr.empty()) continue;
     if (!texture->hdr.empty()) {
-      if(!save_image(
-          fs::path(filename).parent_path() / texture->name, texture->hdr, dependent_error_cb)) return false;
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->hdr, dependent_error_cb))
+        return false;
     } else {
-      if(!save_imageb(
-          fs::path(filename).parent_path() / texture->name, texture->ldr, dependent_error_cb)) return false;
+      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+              texture->ldr, dependent_error_cb))
+        return false;
     }
   }
-    
-    // done
-    if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
-    return true;
+
+  // done
+  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  return true;
 }
 
 }  // namespace yocto
