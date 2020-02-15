@@ -148,8 +148,6 @@ bool                has_quads(ply_model* ply);
 
 // Create PLY
 unique_ptr<ply_model> make_ply();
-ply_element* add_element(ply_model* ply);
-ply_property* add_propety(ply_element* element);
 
 // Add ply properties
 void add_values(ply_model* ply, const vector<float>& values,
