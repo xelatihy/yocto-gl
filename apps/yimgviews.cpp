@@ -78,7 +78,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void update_display(shared_ptr<app_state> app) {
+void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -91,7 +91,8 @@ void update_display(shared_ptr<app_state> app) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app       = make_shared<app_state>();
+  auto app_guard       = make_unique<app_state>();
+  auto app       = app_guard.get();
   auto filenames = vector<string>{};
 
   // command line options

@@ -41,7 +41,7 @@ using namespace std;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(
+unique_ptr<trace_scene> make_scene(
     sceneio_model* ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{

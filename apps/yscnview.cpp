@@ -88,16 +88,21 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
-  shared_ptr<app_state>         selected = nullptr;
-  deque<shared_ptr<app_state>>  loading  = {};
+  vector<app_state*> states   = {};
+  app_state*         selected = nullptr;
+  deque<app_state*>  loading  = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
+
+  // cleanup
+  ~app_states() {
+    for(auto state : states) delete state;
+  }
 };
 
-void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
-  auto app         = make_shared<app_state>();
+void load_scene_async(app_states* apps, const string& filename) {
+  auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = fs::path(filename).replace_extension(".png");
   app->outname     = fs::path(filename).replace_extension(".edited.yaml");
@@ -109,7 +114,6 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     };
     app->ioscene = load_scene(app->filename, progress_cb);
   });
-  apps->states.push_back(app);
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
@@ -435,7 +439,7 @@ T1* get_element(T* ioelement,
 }
 
 // draw with shading
-void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
+void draw_glwidgets(opengl_window* win, app_states* apps,
     const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -461,6 +465,7 @@ void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
+    delete apps->selected;
     apps->states.erase(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
@@ -644,7 +649,7 @@ void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
 }
 
 // draw with shading
-void draw(opengl_window* win, shared_ptr<app_states> apps,
+void draw(opengl_window* win, app_states* apps,
     const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
@@ -652,7 +657,7 @@ void draw(opengl_window* win, shared_ptr<app_states> apps,
 }
 
 // update
-void update(opengl_window* win, shared_ptr<app_states> apps) {
+void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -680,7 +685,8 @@ void update(opengl_window* win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // initialize app
-  auto apps       = make_shared<app_states>();
+  auto apps_guard       = make_unique<app_states>();
+  auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
   auto noparallel = false;
 

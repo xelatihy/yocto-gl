@@ -199,7 +199,7 @@ unique_ptr<trace_scene> make_scene(
   return scene_;
 }
 
-void reset_display(shared_ptr<app_state> app) {
+void reset_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state.get());
 
@@ -207,12 +207,12 @@ void reset_display(shared_ptr<app_state> app) {
   app->render_counter = 0;
   app->render_state   = trace_async_start(
       app->scene.get(), app->params, {},
-      [app = app.get()](const image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app = app.get()](
+      [app](
           const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
@@ -246,7 +246,8 @@ void print_progress(const string& message, int current, int total) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto app = make_shared<app_state>();
+  auto app_guard       = make_unique<app_state>();
+  auto app       = app_guard.get();
 
   // maps for getting param
   auto trace_sampler_map = map<string, trace_sampler_type>{};

@@ -96,13 +96,18 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
-  shared_ptr<app_state>         selected = nullptr;
-  deque<shared_ptr<app_state>>  loading  = {};
+  vector<app_state*> states   = {};
+  app_state*         selected = nullptr;
+  deque<app_state*>  loading  = {};
 
   // default options
   trace_params params     = {};
   bool         add_skyenv = false;
+
+  // cleanup
+  ~app_states() {
+    for(auto state : states) delete state;
+  }
 };
 
 // Construct a scene from io
@@ -252,13 +257,13 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void stop_display(shared_ptr<app_state> app) {
+void stop_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state.get());
   app->render_state = nullptr;
 }
 
-void reset_display(shared_ptr<app_state> app) {
+void reset_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state.get());
 
@@ -266,23 +271,23 @@ void reset_display(shared_ptr<app_state> app) {
   app->render_counter = 0;
   app->render_state   = trace_async_start(
       app->scene.get(), app->params,
-      [app = app.get()](const string& message, int sample, int nsamples) {
+      [app](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
-      [app = app.get()](const image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app = app.get()](
+      [app](
           const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
-void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
-  auto app       = make_shared<app_state>();
+void load_scene_async(app_states* apps, const string& filename) {
+  auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
   app->imagename = fs::path(filename).replace_extension(".png");
@@ -303,7 +308,6 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     // app->render.resize(app->state->size());
     // app->display.resize(app->state->size());
   });
-  apps->states.push_back(app);
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
@@ -482,7 +486,7 @@ T1* get_element(T* ioelement,
   throw std::runtime_error("element not found");
 }
 
-void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
+void draw_glwidgets(opengl_window* win, app_states* apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -523,6 +527,7 @@ void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
   continue_glline(win);
   if (draw_glbutton(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
+    delete apps->selected;
     apps->states.erase(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
@@ -764,7 +769,7 @@ void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
   }
 }
 
-void draw(opengl_window* win, shared_ptr<app_states> apps,
+void draw(opengl_window* win, app_states* apps,
     const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
@@ -780,7 +785,7 @@ void draw(opengl_window* win, shared_ptr<app_states> apps,
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(opengl_window* win, shared_ptr<app_states> apps) {
+void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -804,7 +809,8 @@ void update(opengl_window* win, shared_ptr<app_states> apps) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto apps      = make_shared<app_states>();
+  auto apps_guard       = make_unique<app_states>();
+  auto apps       = apps_guard.get();
   auto filenames = vector<string>{};
 
   // maps for getting param
