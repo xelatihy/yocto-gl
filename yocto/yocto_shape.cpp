@@ -3370,7 +3370,7 @@ void load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = load_ply(filename);
-    auto ply = ply_guard.get();
+    auto ply       = ply_guard.get();
 
     // gets vertex
     positions = get_positions(ply);
@@ -3392,7 +3392,7 @@ void load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj_guard = load_obj(filename, true);
-    auto obj = obj_guard.get();
+    auto obj       = obj_guard.get();
 
     // get shape
     if (obj->shapes.empty()) throw_emptyshape_error(filename);
@@ -3438,7 +3438,7 @@ void save_shape(const string& filename, const vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = make_ply();
-    auto ply = ply_guard.get();
+    auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
     add_texcoords(ply, texcoords, flip_texcoord);
@@ -3450,7 +3450,7 @@ void save_shape(const string& filename, const vector<int>& points,
     save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = make_obj();
-    auto obj = obj_guard.get();
+    auto obj       = obj_guard.get();
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
           {}, flip_texcoord);
@@ -3487,18 +3487,18 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard  = load_ply(filename);
-    auto ply = ply_guard.get();
-    positions = get_positions(ply);
-    normals   = get_normals(ply);
-    texcoords = get_texcoords(ply, flip_texcoord);
-    quadspos  = get_quads(ply);
+    auto ply_guard = load_ply(filename);
+    auto ply       = ply_guard.get();
+    positions      = get_positions(ply);
+    normals        = get_normals(ply);
+    texcoords      = get_texcoords(ply, flip_texcoord);
+    quadspos       = get_quads(ply);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = load_obj(filename, true);
-    auto obj = obj_guard.get();
+    auto obj       = obj_guard.get();
     if (obj->shapes.empty()) throw_emptyshape_error(filename);
     if (obj->shapes.size() > 1) throw_emptyshape_error(filename);
     auto shape = obj->shapes.front();
@@ -3529,7 +3529,7 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
     auto obj_guard = make_obj();
-    auto obj = obj_guard.get();
+    auto obj       = obj_guard.get();
 
     // Add obj data
     add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions, normals,

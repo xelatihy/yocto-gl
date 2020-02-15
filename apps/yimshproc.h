@@ -15,8 +15,7 @@ struct app_state {
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, opengl_window*)>
-      draw_glwidgets;
+  function<void(app_state*, opengl_window*)>         draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
@@ -66,8 +65,7 @@ void update_glshape(app_state* app) {
   set_colors(app->glshapes, shape.colors);
 }
 
-void update_glpolyline(
-    app_state* app, const vector<vec3f>& vertices) {
+void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
@@ -86,8 +84,8 @@ void update_glpoints(app_state* app, const vector<vec3f>& points) {
   }
 }
 
-void update_glvector_field(app_state* app,
-    const vector<vec3f>& vector_field, float scale = 0.01) {
+void update_glvector_field(
+    app_state* app, const vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -152,8 +150,8 @@ void update_gledges(app_state* app) {
   set_lines(app->gledges, elements);
 }
 
-void init_camera(app_state* app,
-    const vec3f& from = vec3f{0, 0.5, 1.5}, const vec3f& to = {0, 0, 0}) {
+void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
+    const vec3f& to = {0, 0, 0}) {
   app->camera              = sceneio_camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
@@ -258,15 +256,12 @@ void clear(app_state* app) {
   //     vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string&                         input_filename,
-    function<void(app_state*)>            init,
-    function<void(app_state*, int, bool)> key_callback,
-    function<void(app_state*, int, vec2f, int, float)>
-        click_callback,
-    function<void(app_state*, opengl_window* win)>
-        draw_glwidgets) {
+void yimshproc(const string& input_filename, function<void(app_state*)> init,
+    function<void(app_state*, int, bool)>              key_callback,
+    function<void(app_state*, int, vec2f, int, float)> click_callback,
+    function<void(app_state*, opengl_window* win)>     draw_glwidgets) {
   auto app_guard = make_unique<app_state>();
-  auto app = app_guard.get();
+  auto app       = app_guard.get();
 
   // init shape
   load_shape(input_filename, app->shape.points, app->shape.lines,
@@ -285,19 +280,20 @@ void yimshproc(const string&                         input_filename,
 
   // Init window.
   auto win_guard = make_glwindow({1280 + 320, 720}, "yimshproc", true);
-  auto win = win_guard.get();
+  auto win       = win_guard.get();
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(win, [app](opengl_window* win,
-                               const opengl_input&         input) {
-    draw_glscene(app->scene.get(), input.framebuffer_viewport, app->opengl_options);
-  });
+  set_draw_glcallback(
+      win, [app](opengl_window* win, const opengl_input& input) {
+        draw_glscene(
+            app->scene.get(), input.framebuffer_viewport, app->opengl_options);
+      });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](opengl_window* win,
                const opengl_input& input) { draw_glwidgets(app, win); });
-  set_click_glcallback(win, [app](opengl_window* win, bool left,
-                                bool press, const opengl_input& input) {
+  set_click_glcallback(win, [app](opengl_window* win, bool left, bool press,
+                                const opengl_input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
@@ -323,17 +319,17 @@ void yimshproc(const string&                         input_filename,
       }
     }
   });
-  set_scroll_glcallback(win, [app](opengl_window* win, float yoffset,
-                                 const opengl_input& input) {
-    float zoom = yoffset > 0 ? 0.1 : -0.1;
-    update_turntable(
-        app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_frame(app->glcamera, app->camera.frame);
-    set_lens(
-        app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
-  });
-  set_key_glcallback(win, [app](opengl_window* win, int key,
-                              bool pressing, const opengl_input& input) {
+  set_scroll_glcallback(
+      win, [app](opengl_window* win, float yoffset, const opengl_input& input) {
+        float zoom = yoffset > 0 ? 0.1 : -0.1;
+        update_turntable(
+            app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
+        set_frame(app->glcamera, app->camera.frame);
+        set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
+            app->camera.film);
+      });
+  set_key_glcallback(win, [app](opengl_window* win, int key, bool pressing,
+                              const opengl_input& input) {
     app->key_callback(app, key, pressing);
   });
   set_uiupdate_glcallback(

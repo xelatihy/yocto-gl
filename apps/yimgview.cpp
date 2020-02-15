@@ -66,9 +66,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image* glimage   = nullptr;
-  draw_glimage_params      glparams  = {};
-  bool                     glupdated = true;
+  opengl_image*       glimage   = nullptr;
+  draw_glimage_params glparams  = {};
+  bool                glupdated = true;
 
   // loading status
   atomic<bool> ok     = false;
@@ -78,7 +78,7 @@ struct app_state {
 
   // cleanup
   ~app_state() {
-    if(glimage) delete glimage;
+    if (glimage) delete glimage;
   }
 };
 
@@ -96,7 +96,7 @@ struct app_states {
 
   // cleanup
   ~app_states() {
-    for(auto state : states) delete state;
+    for (auto state : states) delete state;
   }
 };
 
@@ -157,8 +157,8 @@ void load_image_async(app_states* apps, const string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_glwidgets(opengl_window* win, app_states* apps,
-    const opengl_input& input) {
+void draw_glwidgets(
+    opengl_window* win, app_states* apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -268,8 +268,7 @@ void draw_glwidgets(opengl_window* win, app_states* apps,
   }
 }
 
-void draw(opengl_window* win, app_states* apps,
-    const opengl_input& input) {
+void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -308,9 +307,9 @@ void update(opengl_window* win, app_states* apps) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto apps_guard      = make_unique<app_states>();
-  auto apps      = apps_guard.get();
-  auto filenames = vector<string>{};
+  auto apps_guard = make_unique<app_states>();
+  auto apps       = apps_guard.get();
+  auto filenames  = vector<string>{};
 
   // command line options
   auto cli = CLI::App{"view images"};
@@ -326,7 +325,7 @@ int run_app(int argc, const char* argv[]) {
 
   // window
   auto win_guard = make_glwindow({1280 + 320, 720}, "yimview", true);
-  auto win = win_guard.get();
+  auto win       = win_guard.get();
 
   // callbacks
   set_update_glcallback(

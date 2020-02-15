@@ -51,11 +51,11 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image* glimage  = nullptr;
-  draw_glimage_params      glparams = {};
+  opengl_image*       glimage  = nullptr;
+  draw_glimage_params glparams = {};
 
   ~app_state() {
-    if(glimage) delete glimage;
+    if (glimage) delete glimage;
   }
 };
 
@@ -91,7 +91,7 @@ void update_display(app_state* app) {
 
 int run_app(int argc, const char* argv[]) {
   // prepare application
-  auto app_guard       = make_unique<app_state>();
+  auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
   auto filenames = vector<string>{};
 
@@ -113,7 +113,7 @@ int run_app(int argc, const char* argv[]) {
 
   // create window
   auto win_guard = make_glwindow({1280, 720}, "yimgviews", false);
-  auto win = win_guard.get();
+  auto win       = win_guard.get();
 
   // set callbacks
   set_draw_glcallback(

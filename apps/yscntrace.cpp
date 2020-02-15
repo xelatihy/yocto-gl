@@ -51,7 +51,7 @@ unique_ptr<trace_scene> make_scene(
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
   auto scene_ = make_trace_scene();
-  auto scene = scene_.get();
+  auto scene  = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -61,8 +61,7 @@ unique_ptr<trace_scene> make_scene(
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map =
-      unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -75,8 +74,7 @@ unique_ptr<trace_scene> make_scene(
     texture_map[iotexture] = texture;
   }
 
-  auto material_map =
-      unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -108,8 +106,7 @@ unique_ptr<trace_scene> make_scene(
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map =
-      unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -127,8 +124,7 @@ unique_ptr<trace_scene> make_scene(
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map =
-      unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

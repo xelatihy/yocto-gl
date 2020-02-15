@@ -52,7 +52,7 @@ struct app_state {
   // scene
   sceneio_model* ioscene    = nullptr;
   trace_scene*   scene      = nullptr;
-  bool                      add_skyenv = false;
+  bool           add_skyenv = false;
 
   // rendering state
   image<vec4f> render   = {};
@@ -60,22 +60,22 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image* glimage  = nullptr;
-  draw_glimage_params      glparams = {};
+  opengl_image*       glimage  = nullptr;
+  draw_glimage_params glparams = {};
 
   // computation
-  int                           render_sample  = 0;
-  int                           render_counter = 0;
+  int                render_sample  = 0;
+  int                render_counter = 0;
   trace_async_state* render_state   = nullptr;
 
-  ~app_state() { 
-    if(render_state) {
-      trace_async_stop(render_state); 
+  ~app_state() {
+    if (render_state) {
+      trace_async_stop(render_state);
       delete render_state;
     }
-    if(scene) delete scene;
-    if(ioscene) delete ioscene;
-    if(glimage) delete glimage;
+    if (scene) delete scene;
+    if (ioscene) delete ioscene;
+    if (glimage) delete glimage;
   }
 };
 
@@ -90,7 +90,7 @@ unique_ptr<trace_scene> make_scene(
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
   auto scene_ = make_trace_scene();
-  auto scene = scene_.get();
+  auto scene  = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -101,8 +101,7 @@ unique_ptr<trace_scene> make_scene(
     set_focus(camera, iocamera->aperture, iocamera->focus);
   }
 
-  auto texture_map =
-      unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -116,8 +115,7 @@ unique_ptr<trace_scene> make_scene(
     texture_map[iotexture] = texture;
   }
 
-  auto material_map =
-      unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -151,8 +149,7 @@ unique_ptr<trace_scene> make_scene(
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map =
-      unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -171,8 +168,7 @@ unique_ptr<trace_scene> make_scene(
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map =
-      unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -254,7 +250,7 @@ void print_progress(const string& message, int current, int total) {
 
 int run_app(int argc, const char* argv[]) {
   // application
-  auto app_guard       = make_unique<app_state>();
+  auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
 
   // maps for getting param
@@ -326,7 +322,7 @@ int run_app(int argc, const char* argv[]) {
 
   // window
   auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
-  auto win = win_guard.get();
+  auto win       = win_guard.get();
 
   // callbacks
   set_draw_glcallback(

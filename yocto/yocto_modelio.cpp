@@ -373,15 +373,15 @@ static void remove_ply_comment(string_view& str, char comment_char = '#') {
 }
 
 ply_element::~ply_element() {
-  for(auto property : properties) delete property;
+  for (auto property : properties) delete property;
 }
 ply_model::~ply_model() {
-  for(auto element : elements) delete element;
+  for (auto element : elements) delete element;
 }
 
 // Make ply
 unique_ptr<ply_model> make_ply() { return make_unique<ply_model>(); }
-ply_element* add_property(ply_model* ply) {
+ply_element*          add_property(ply_model* ply) {
   return ply->elements.emplace_back(new ply_element{});
 }
 ply_property* add_property(ply_element* element) {
@@ -1047,8 +1047,7 @@ bool has_quads(ply_model* ply) {
 }
 
 // Add ply properties
-static void add_element(
-    ply_model* ply, const string& element, size_t count) {
+static void add_element(ply_model* ply, const string& element, size_t count) {
   for (auto elem : ply->elements) {
     if (elem->name == element) return;
   }
@@ -1079,8 +1078,8 @@ static vector<T> make_ply_vector(const T* value, size_t count, int stride) {
   return ret;
 }
 
-static void add_values(ply_model* ply, const float* values,
-    size_t count, const string& element, const string* properties, int nprops) {
+static void add_values(ply_model* ply, const float* values, size_t count,
+    const string& element, const string* properties, int nprops) {
   if (!values) return;
   for (auto p = 0; p < nprops; p++) {
     add_property(ply, element, properties[p], count, ply_type::f32, false);
@@ -1142,16 +1141,16 @@ void add_lists(ply_model* ply, const vector<byte>& sizes,
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
 }
-void add_lists(ply_model* ply, const int* values, size_t count,
-    int size, const string& element, const string& property) {
+void add_lists(ply_model* ply, const int* values, size_t count, int size,
+    const string& element, const string& property) {
   if (!values) return;
   add_property(ply, element, property, count, ply_type::i32, true);
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
   prop->ldata_u8.assign(count, size);
 }
-void add_lists(ply_model* ply, const vector<int>& values,
-    const string& element, const string& property) {
+void add_lists(ply_model* ply, const vector<int>& values, const string& element,
+    const string& property) {
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
 void add_lists(ply_model* ply, const vector<vec2i>& values,
@@ -1177,8 +1176,7 @@ void add_positions(ply_model* ply, const vector<vec3f>& values) {
 void add_normals(ply_model* ply, const vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-void add_texcoords(
-    ply_model* ply, const vector<vec2f>& values, bool flipv) {
+void add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, flipv ? flip_ply_texcoord(values) : values, "vertex", "u", "v");
 }
@@ -1549,8 +1547,7 @@ static void load_objx(const string& filename, obj_model* obj) {
       if (!parse_value(str, camera->aperture)) throw_parse_error();
       if (!parse_value(str, camera->frame)) throw_parse_error();
     } else if (cmd == "e") {
-      auto environment = obj->environments.emplace_back(
-          new obj_environment{});
+      auto environment = obj->environments.emplace_back(new obj_environment{});
       if (!parse_value(str, environment->name)) throw_parse_error();
       if (!parse_value(str, environment->emission)) throw_parse_error();
       auto emission_path = ""s;
@@ -1576,15 +1573,15 @@ static void load_objx(const string& filename, obj_model* obj) {
 }
 
 obj_model::~obj_model() {
-  for(auto shape : shapes) delete shape;
-  for(auto material : materials) delete material;
-  for(auto camera : cameras) delete camera;
-  for(auto environment : environments) delete environment;
+  for (auto shape : shapes) delete shape;
+  for (auto material : materials) delete material;
+  for (auto camera : cameras) delete camera;
+  for (auto environment : environments) delete environment;
 }
 
 // Make obj
 unique_ptr<obj_model> make_obj() { return make_unique<obj_model>(); }
-obj_camera* add_camera(obj_model* obj) {
+obj_camera*           add_camera(obj_model* obj) {
   return obj->cameras.emplace_back(new obj_camera{});
 }
 obj_material* add_material(obj_model* obj) {
@@ -1699,8 +1696,7 @@ void load_obj(const string& filename, obj_model* obj, bool geom_only,
       // get element material or add if needed
       if (!geom_only) {
         if (mname.empty() && !empty_material) {
-          empty_material = obj->materials.emplace_back(
-              new obj_material{});
+          empty_material   = obj->materials.emplace_back(new obj_material{});
           material_map[""] = empty_material;
         }
         auto mat_idx = -1;
@@ -2166,10 +2162,9 @@ static vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_triangles(obj_model* obj, obj_shape* shape,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flipv) {
+void get_triangles(obj_model* obj, obj_shape* shape, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2186,10 +2181,9 @@ void get_triangles(obj_model* obj, obj_shape* shape,
     cur += face.size;
   }
 }
-void get_quads(obj_model* obj, obj_shape* shape,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flipv) {
+void get_quads(obj_model* obj, obj_shape* shape, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2212,10 +2206,9 @@ void get_quads(obj_model* obj, obj_shape* shape,
     cur += face.size;
   }
 }
-void get_lines(obj_model* obj, obj_shape* shape,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flipv) {
+void get_lines(obj_model* obj, obj_shape* shape, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2231,10 +2224,9 @@ void get_lines(obj_model* obj, obj_shape* shape,
     cur += str.size;
   }
 }
-void get_points(obj_model* obj, obj_shape* shape,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flipv) {
+void get_points(obj_model* obj, obj_shape* shape, vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -2250,12 +2242,10 @@ void get_points(obj_model* obj, obj_shape* shape,
     cur += point.size;
   }
 }
-void get_fvquads(obj_model* obj, obj_shape* shape,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
-    bool flipv) {
+void get_fvquads(obj_model* obj, obj_shape* shape, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
@@ -2364,9 +2354,9 @@ static void get_vertices(obj_shape* shape, int material,
 }
 
 // Get obj shape
-void get_triangles(obj_model* obj, obj_shape* shape,
-    int material, vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
+void get_triangles(obj_model* obj, obj_shape* shape, int material,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2383,9 +2373,9 @@ void get_triangles(obj_model* obj, obj_shape* shape,
   }
   triangles.shrink_to_fit();
 }
-void get_quads(obj_model* obj, obj_shape* shape,
-    int material, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
+void get_quads(obj_model* obj, obj_shape* shape, int material,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2407,9 +2397,9 @@ void get_quads(obj_model* obj, obj_shape* shape,
   }
   quads.shrink_to_fit();
 }
-void get_lines(obj_model* obj, obj_shape* shape,
-    int material, vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
+void get_lines(obj_model* obj, obj_shape* shape, int material,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2425,9 +2415,9 @@ void get_lines(obj_model* obj, obj_shape* shape,
   }
   lines.shrink_to_fit();
 }
-void get_points(obj_model* obj, obj_shape* shape,
-    int material, vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool flipv) {
+void get_points(obj_model* obj, obj_shape* shape, int material,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -2442,8 +2432,7 @@ void get_points(obj_model* obj, obj_shape* shape,
     cur += elem.size;
   }
 }
-vector<obj_material*> get_materials(
-    obj_model* obj, obj_shape* shape) {
+vector<obj_material*> get_materials(obj_model* obj, obj_shape* shape) {
   return shape->materials;
 }
 
@@ -2451,9 +2440,8 @@ vector<obj_material*> get_materials(
 void add_triangles(obj_model* obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials,
-    const vector<int>& ematerials, const vector<frame3f>& instances,
-    bool flipv) {
+    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<frame3f>& instances, bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
@@ -2475,10 +2463,9 @@ void add_triangles(obj_model* obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_quads(obj_model* obj, const string& name,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials,
+void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
@@ -2503,10 +2490,9 @@ void add_quads(obj_model* obj, const string& name,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_lines(obj_model* obj, const string& name,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials,
+void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
@@ -2530,10 +2516,9 @@ void add_lines(obj_model* obj, const string& name,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_points(obj_model* obj, const string& name,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials,
+void add_points(obj_model* obj, const string& name, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
     const vector<int>& ematerials, const vector<frame3f>& instances,
     bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
@@ -2559,9 +2544,8 @@ void add_fvquads(obj_model* obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials,
-    const vector<int>& ematerials, const vector<frame3f>& instances,
-    bool flipv) {
+    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<frame3f>& instances, bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
@@ -3407,10 +3391,11 @@ static void convert_texture(pbrt_texture& texture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-static void convert_material(pbrt_material* material, const pbrt_command& command,
+static void convert_material(pbrt_material*      material,
+    const pbrt_command&                          command,
     const unordered_map<string, pbrt_material*>& material_map,
-    const unordered_map<string, pbrt_texture>&              texture_map,
-    bool                                                    verbose = false) {
+    const unordered_map<string, pbrt_texture>&   texture_map,
+    bool                                         verbose = false) {
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
@@ -3754,7 +3739,7 @@ static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
     shape->filename_ = ""s;
     get_pbrt_value(command.values, "filename", shape->filename_);
     try {
-      auto ply = load_ply(ply_dirname + shape->filename_);
+      auto ply         = load_ply(ply_dirname + shape->filename_);
       shape->positions = get_positions(ply.get());
       shape->normals   = get_normals(ply.get());
       shape->texcoords = get_texcoords(ply.get());
@@ -3793,8 +3778,8 @@ static void convert_arealight(pbrt_arealight* arealight,
 }
 
 // Convert pbrt lights
-static void convert_light(pbrt_light* light,
-    const pbrt_command& command, bool verbose = false) {
+static void convert_light(
+    pbrt_light* light, const pbrt_command& command, bool verbose = false) {
   light->frame = command.frame;
   light->frend = command.frend;
   if (command.type == "distant") {
@@ -3863,33 +3848,32 @@ static void convert_environment(pbrt_environment* environment,
 
 // pbrt stack ctm
 struct pbrt_stack_element {
-  frame3f                    transform_start        = identity3x4f;
-  frame3f                    transform_end          = identity3x4f;
+  frame3f         transform_start        = identity3x4f;
+  frame3f         transform_end          = identity3x4f;
   pbrt_material*  material               = nullptr;
   pbrt_arealight* arealight              = nullptr;
   pbrt_medium*    interior               = nullptr;
   pbrt_medium*    exterior               = nullptr;
-  bool                       reverse                = false;
-  bool                       active_transform_start = true;
-  bool                       active_transform_end   = true;
+  bool            reverse                = false;
+  bool            active_transform_start = true;
+  bool            active_transform_end   = true;
 };
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element>                            stack      = {};
-  unordered_map<string, pbrt_stack_element>             coordsys   = {};
-  unordered_map<string, vector<pbrt_shape*>> objects    = {};
-  string                                                cur_object = "";
-  vec2i film_resolution                                            = {512, 512};
+  vector<pbrt_stack_element>                 stack           = {};
+  unordered_map<string, pbrt_stack_element>  coordsys        = {};
+  unordered_map<string, vector<pbrt_shape*>> objects         = {};
+  string                                     cur_object      = "";
+  vec2i                                      film_resolution = {512, 512};
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model* pbrt,
-    pbrt_context&                                     ctx,
+void load_pbrt(const string& filename, pbrt_model* pbrt, pbrt_context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_medium*>&   medium_map,
-    unordered_map<string, pbrt_texture>&              texture_map,
-    const string&                                     ply_dirname) {
+    unordered_map<string, pbrt_texture>&   texture_map,
+    const string&                          ply_dirname) {
   // open file
   auto fs = fopen(filename.c_str(), "rt");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
@@ -4045,7 +4029,7 @@ void load_pbrt(const string& filename, pbrt_model* pbrt,
       if (!parse_pbrt_params(str, command.values)) throw_parse_error();
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
-      auto camera = add_camera(pbrt);
+      auto camera   = add_camera(pbrt);
       convert_camera(camera, command, ctx.film_resolution);
 
     } else if (cmd == "Texture") {
@@ -4127,7 +4111,7 @@ void load_pbrt(const string& filename, pbrt_model* pbrt,
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium = pbrt->mediums.emplace_back(new pbrt_medium{});
+      auto medium              = pbrt->mediums.emplace_back(new pbrt_medium{});
       medium_map[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -4152,18 +4136,18 @@ void load_pbrt(const string& filename, pbrt_model* pbrt,
 }
 
 pbrt_model::~pbrt_model() {
-  for(auto camera : cameras) delete camera;
-  for(auto shape : shapes) delete shape;
-  for(auto environment : environments) delete environment;
-  for(auto light : lights) delete light;
-  for(auto arealight : arealights) delete arealight;
-  for(auto material : materials) delete material;
-  for(auto medium : mediums) delete medium;
+  for (auto camera : cameras) delete camera;
+  for (auto shape : shapes) delete shape;
+  for (auto environment : environments) delete environment;
+  for (auto light : lights) delete light;
+  for (auto arealight : arealights) delete arealight;
+  for (auto material : materials) delete material;
+  for (auto medium : mediums) delete medium;
 }
 
 // Make pbrt
 unique_ptr<pbrt_model> make_pbrt() { return make_unique<pbrt_model>(); }
-pbrt_camera* add_camera(pbrt_model* pbrt) {
+pbrt_camera*           add_camera(pbrt_model* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
 pbrt_shape* add_shape(pbrt_model* pbrt) {
@@ -4195,11 +4179,10 @@ unique_ptr<pbrt_model> load_pbrt(const string& filename) {
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model* pbrt) {
   auto ctx          = pbrt_context{};
-  auto material_map = unordered_map<string, pbrt_material*>{
-      {"", {}}};
-  auto medium_map  = unordered_map<string, pbrt_medium*>{{"", {}}};
-  auto texture_map = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname     = fs::path(filename).parent_path().string();
+  auto material_map = unordered_map<string, pbrt_material*>{{"", {}}};
+  auto medium_map   = unordered_map<string, pbrt_medium*>{{"", {}}};
+  auto texture_map  = unordered_map<string, pbrt_texture>{{"", {}}};
+  auto dirname      = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   load_pbrt(
       filename, pbrt, ctx, material_map, medium_map, texture_map, dirname);
@@ -4282,8 +4265,7 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-void save_pbrt(
-    const string& filename, pbrt_model* pbrt, bool ply_meshes) {
+void save_pbrt(const string& filename, pbrt_model* pbrt, bool ply_meshes) {
   // open file
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
@@ -4454,7 +4436,8 @@ void save_pbrt(
         add_normals(ply.get(), shape->normals);
         add_texcoords(ply.get(), shape->texcoords);
         add_triangles(ply.get(), shape->triangles);
-        save_ply(fs::path(filename).parent_path() / shape->filename_, ply.get());
+        save_ply(
+            fs::path(filename).parent_path() / shape->filename_, ply.get());
       } catch (std::exception& e) {
         throw std::runtime_error{
             filename + ": error in resource (" + e.what() + ")"};
@@ -4500,11 +4483,11 @@ void save_pbrt(
 namespace yocto {
 
 gltf_model::~gltf_model() {
-  for(auto camera :    cameras) delete camera;
-  for(auto mesh :    meshes) delete mesh;
-  for(auto primitive :    primitives) delete primitive;
-  for(auto texture :    textures) delete texture;
-  for(auto material :    materials) delete material;
+  for (auto camera : cameras) delete camera;
+  for (auto mesh : meshes) delete mesh;
+  for (auto primitive : primitives) delete primitive;
+  for (auto texture : textures) delete texture;
+  for (auto material : materials) delete material;
 }
 
 // convert gltf to scene
@@ -4542,9 +4525,9 @@ void load_gltf(const string& filename, gltf_model* scene) {
       {nullptr, nullptr}};
   texture_map[nullptr] = nullptr;
   for (auto tid = 0; tid < gltf->images_count; tid++) {
-    auto gimg     = &gltf->images[tid];
-    auto texture  = scene->textures.emplace_back(new gltf_texture{});
-    texture->name = gimg->name ? gimg->name : "";
+    auto gimg         = &gltf->images[tid];
+    auto texture      = scene->textures.emplace_back(new gltf_texture{});
+    texture->name     = gimg->name ? gimg->name : "";
     texture->filename = (_startswith(gimg->uri, "data:"))
                             ? string("[glTF-static inline].png")
                             : gimg->uri;
@@ -4552,9 +4535,9 @@ void load_gltf(const string& filename, gltf_model* scene) {
   }
 
   // add a texture
-  auto get_texture = [&texture_map](const cgltf_texture_view& ginfo) ->gltf_texture* {
-    if (!ginfo.texture || !ginfo.texture->image)
-      return nullptr;
+  auto get_texture = [&texture_map](
+                         const cgltf_texture_view& ginfo) -> gltf_texture* {
+    if (!ginfo.texture || !ginfo.texture->image) return nullptr;
     auto gtxt = ginfo.texture;
     return texture_map.at(gtxt->image);
   };
@@ -4563,8 +4546,8 @@ void load_gltf(const string& filename, gltf_model* scene) {
   auto material_map = unordered_map<cgltf_material*, gltf_material*>{
       {nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
-    auto gmat     = &gltf->materials[mid];
-    auto material = scene->materials.emplace_back(new gltf_material{});
+    auto gmat          = &gltf->materials[mid];
+    auto material      = scene->materials.emplace_back(new gltf_material{});
     material_map[gmat] = material;
     material->name     = gmat->name ? gmat->name : "";
     material->emission = {gmat->emissive_factor[0], gmat->emissive_factor[1],
@@ -4639,8 +4622,7 @@ void load_gltf(const string& filename, gltf_model* scene) {
   };
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, gltf_mesh*>{
-      {nullptr, nullptr}};
+  auto mesh_map = unordered_map<cgltf_mesh*, gltf_mesh*>{{nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh      = &gltf->meshes[mid];
     auto mesh       = scene->meshes.emplace_back(new gltf_mesh{});
@@ -4649,8 +4631,7 @@ void load_gltf(const string& filename, gltf_model* scene) {
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (!gprim->attributes_count) continue;
-      auto shape = scene->primitives.emplace_back(
-          new gltf_primitive{});
+      auto shape = scene->primitives.emplace_back(new gltf_primitive{});
       mesh->primitives.push_back(shape);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
@@ -4770,7 +4751,7 @@ void load_gltf(const string& filename, gltf_model* scene) {
   auto camera_map = unordered_map<cgltf_camera*, gltf_camera*>{};
   for (auto cid = 0; cid < gltf->cameras_count; cid++) {
     auto gcam        = &gltf->cameras[cid];
-    auto camera = scene->cameras.emplace_back(new gltf_camera{});
+    auto camera      = scene->cameras.emplace_back(new gltf_camera{});
     camera_map[gcam] = camera;
     camera->name     = gcam->name ? gcam->name : "";
     camera->ortho    = gcam->type == cgltf_camera_type_orthographic;

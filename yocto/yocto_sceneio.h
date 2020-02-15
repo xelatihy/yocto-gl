@@ -131,7 +131,7 @@ struct sceneio_material {
   sceneio_texture* opacity_tex      = nullptr;
   sceneio_texture* normal_tex       = nullptr;
   sceneio_texture* displacement_tex = nullptr;
-  bool                        gltf_textures    = false;  // glTF packed textures
+  bool             gltf_textures    = false;  // glTF packed textures
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -189,8 +189,8 @@ struct sceneio_instance {
 // Object.
 struct sceneio_object {
   // object data
-  string                       name     = "";
-  frame3f                      frame    = identity3x4f;
+  string            name     = "";
+  frame3f           frame    = identity3x4f;
   sceneio_shape*    shape    = nullptr;
   sceneio_material* material = nullptr;
   sceneio_instance* instance = nullptr;
@@ -199,9 +199,9 @@ struct sceneio_object {
 
 // Environment map.
 struct sceneio_environment {
-  string                      name         = "";
-  frame3f                     frame        = identity3x4f;
-  vec3f                       emission     = {0, 0, 0};
+  string           name         = "";
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = {0, 0, 0};
   sceneio_texture* emission_tex = nullptr;
 };
 
@@ -213,7 +213,7 @@ struct sceneio_environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct sceneio_model {
-  string                                  name         = "";
+  string                       name         = "";
   vector<sceneio_camera*>      cameras      = {};
   vector<sceneio_object*>      objects      = {};
   vector<sceneio_environment*> environments = {};
@@ -230,16 +230,15 @@ unique_ptr<sceneio_model> make_sceneio_model();
 
 // add element to a scene
 sceneio_camera*      add_camera(sceneio_model* scene);
-sceneio_environment* add_environment(
-    sceneio_model* scene);
-sceneio_object*   add_object(sceneio_model* scene);
-sceneio_instance* add_instance(sceneio_model* scene);
-sceneio_material* add_material(sceneio_model* scene);
-sceneio_shape*    add_shape(sceneio_model* scene);
-sceneio_subdiv*   add_subdiv(sceneio_model* scene);
-sceneio_texture*  add_texture(sceneio_model* scene);
-sceneio_object*   add_complete_object(
-      sceneio_model* scene, const string& basename = "");
+sceneio_environment* add_environment(sceneio_model* scene);
+sceneio_object*      add_object(sceneio_model* scene);
+sceneio_instance*    add_instance(sceneio_model* scene);
+sceneio_material*    add_material(sceneio_model* scene);
+sceneio_shape*       add_shape(sceneio_model* scene);
+sceneio_subdiv*      add_subdiv(sceneio_model* scene);
+sceneio_texture*     add_texture(sceneio_model* scene);
+sceneio_object*      add_complete_object(
+         sceneio_model* scene, const string& basename = "");
 
 }  // namespace yocto
 
@@ -270,8 +269,7 @@ void save_scene(const string& filename, const sceneio_model* scene,
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(
-    const sceneio_model* scene, bool verbose = false);
+vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
     const sceneio_model* scene, bool notextures = false);
@@ -287,15 +285,13 @@ bbox3f compute_bounds(const sceneio_model* scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(
-    sceneio_model* scene, sceneio_progress progress_cb = {});
-void tesselate_subdiv(
-    sceneio_model* scene, sceneio_subdiv* subdiv);
+void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb = {});
+void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
-void update_transforms(sceneio_model* scene, float time = 0,
-    const string& anim_group = "");
+void update_transforms(
+    sceneio_model* scene, float time = 0, const string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {

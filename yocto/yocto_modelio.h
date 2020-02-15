@@ -84,24 +84,24 @@ struct ply_property {
 
 // Ply elements
 struct ply_element {
-  string                           name       = "";
-  size_t                           count      = 0;
+  string                name       = "";
+  size_t                count      = 0;
   vector<ply_property*> properties = {};
   ~ply_element();
 };
 
 // Ply model
 struct ply_model {
-  ply_format                      format   = ply_format::binary_little_endian;
-  vector<string>                  comments = {};
+  ply_format           format   = ply_format::binary_little_endian;
+  vector<string>       comments = {};
   vector<ply_element*> elements = {};
   ~ply_model();
 };
 
 // Load and save ply
 unique_ptr<ply_model> load_ply(const string& filename);
-void load_ply(const string& filename, ply_model* ply);
-void save_ply(const string& filename, ply_model* ply);
+void                  load_ply(const string& filename, ply_model* ply);
+void                  save_ply(const string& filename, ply_model* ply);
 
 // Get ply properties
 bool has_property(
@@ -121,8 +121,8 @@ vector<vec4f>   get_values(ply_model* ply, const string& element,
 vector<vec4f>   get_values(ply_model* ply, const string& element,
       const string& property1, const string& property2, const string& property3,
       float property4);
-vector<frame3f> get_values(ply_model* ply, const string& element,
-    const array<string, 12>& properties);
+vector<frame3f> get_values(
+    ply_model* ply, const string& element, const array<string, 12>& properties);
 
 vector<vector<int>> get_lists(
     ply_model* ply, const string& element, const string& property);
@@ -134,11 +134,11 @@ vec2i get_list_minxmax(
     ply_model* ply, const string& element, const string& property);
 
 // Get ply properties for meshes
-vector<vec3f> get_positions(ply_model* ply);
-vector<vec3f> get_normals(ply_model* ply);
-vector<vec2f> get_texcoords(ply_model* ply, bool flipv = false);
-vector<vec4f> get_colors(ply_model* ply);
-vector<float> get_radius(ply_model* ply);
+vector<vec3f>       get_positions(ply_model* ply);
+vector<vec3f>       get_normals(ply_model* ply);
+vector<vec2f>       get_texcoords(ply_model* ply, bool flipv = false);
+vector<vec4f>       get_colors(ply_model* ply);
+vector<float>       get_radius(ply_model* ply);
 vector<vector<int>> get_faces(ply_model* ply);
 vector<vec2i>       get_lines(ply_model* ply);
 vector<int>         get_points(ply_model* ply);
@@ -167,8 +167,8 @@ void add_lists(ply_model* ply, const vector<vector<int>>& values,
     const string& element, const string& property);
 void add_lists(ply_model* ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<int>& values,
-    const string& element, const string& property);
+void add_lists(ply_model* ply, const vector<int>& values, const string& element,
+    const string& property);
 void add_lists(ply_model* ply, const vector<vec2i>& values,
     const string& element, const string& property);
 void add_lists(ply_model* ply, const vector<vec3i>& values,
@@ -184,8 +184,8 @@ void add_texcoords(
 void add_colors(ply_model* ply, const vector<vec4f>& values);
 void add_radius(ply_model* ply, const vector<float>& values);
 void add_faces(ply_model* ply, const vector<vector<int>>& values);
-void add_faces(ply_model* ply, const vector<vec3i>& tvalues,
-    const vector<vec4i>& qvalues);
+void add_faces(
+    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
 void add_triangles(ply_model* ply, const vector<vec3i>& values);
 void add_quads(ply_model* ply, const vector<vec4i>& values);
 void add_lines(ply_model* ply, const vector<vec2i>& values);
@@ -293,16 +293,16 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  string                           name      = "";
-  vector<vec3f>                    positions = {};
-  vector<vec3f>                    normals   = {};
-  vector<vec2f>                    texcoords = {};
+  string                name      = "";
+  vector<vec3f>         positions = {};
+  vector<vec3f>         normals   = {};
+  vector<vec2f>         texcoords = {};
   vector<obj_material*> materials = {};
-  vector<obj_vertex>               vertices  = {};
-  vector<obj_element>              faces     = {};
-  vector<obj_element>              lines     = {};
-  vector<obj_element>              points    = {};
-  vector<frame3f>                  instances = {};
+  vector<obj_vertex>    vertices  = {};
+  vector<obj_element>   faces     = {};
+  vector<obj_element>   lines     = {};
+  vector<obj_element>   points    = {};
+  vector<frame3f>       instances = {};
 };
 
 // Obj camera
@@ -327,7 +327,7 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  vector<string>                      comments     = {};
+  vector<string>           comments     = {};
   vector<obj_shape*>       shapes       = {};
   vector<obj_material*>    materials    = {};
   vector<obj_camera*>      cameras      = {};
@@ -338,65 +338,58 @@ struct obj_model {
 // Load and save obj
 unique_ptr<obj_model> load_obj(const string& filename, bool geom_only = false,
     bool split_elements = true, bool split_materials = false);
-void load_obj(const string& filename, obj_model* obj,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
+void load_obj(const string& filename, obj_model* obj, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
 void save_obj(const string& filename, obj_model* obj);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_triangles(obj_model* obj, obj_shape* shape,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
-void get_quads(obj_model* obj, obj_shape* shape,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
-void get_lines(obj_model* obj, obj_shape* shape,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
-void get_points(obj_model* obj, obj_shape* shape,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
-void get_fvquads(obj_model* obj, obj_shape* shape,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
+void get_triangles(obj_model* obj, obj_shape* shape, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
+void get_quads(obj_model* obj, obj_shape* shape, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
+void get_lines(obj_model* obj, obj_shape* shape, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
+void get_points(obj_model* obj, obj_shape* shape, vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
+void get_fvquads(obj_model* obj, obj_shape* shape, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<obj_material*>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 bool has_quads(obj_shape* shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(obj_model* obj, obj_shape* shape,
-    int material, vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flip_texcoord = false);
-void get_quads(obj_model* obj, obj_shape* shape,
-    int material, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flip_texcoord = false);
-void get_lines(obj_model* obj, obj_shape* shape,
-    int material, vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flip_texcoord = false);
-void get_points(obj_model* obj, obj_shape* shape,
-    int material, vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flip_texcoord = false);
-vector<obj_material*> get_materials(
-    obj_model* obj, obj_shape* shape);
+void get_triangles(obj_model* obj, obj_shape* shape, int material,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_quads(obj_model* obj, obj_shape* shape, int material,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_lines(obj_model* obj, obj_shape* shape, int material,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_points(obj_model* obj, obj_shape* shape, int material,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+vector<obj_material*> get_materials(obj_model* obj, obj_shape* shape);
 
 // Create OBJ
 unique_ptr<obj_model> make_obj();
-obj_camera* add_camera(obj_model* obj);
-obj_material* add_material(obj_model* obj);
-obj_environment* add_environment(obj_model* obj);
-obj_shape* add_shape(obj_model* obj);
+obj_camera*           add_camera(obj_model* obj);
+obj_material*         add_material(obj_model* obj);
+obj_environment*      add_environment(obj_model* obj);
+obj_shape*            add_shape(obj_model* obj);
 
 // Add obj shape
 void add_triangles(obj_model* obj, const string& name,
@@ -405,22 +398,19 @@ void add_triangles(obj_model* obj, const string& name,
     const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_quads(obj_model* obj, const string& name,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials = {},
+void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_lines(obj_model* obj, const string& name,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials = {},
+void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-void add_points(obj_model* obj, const string& name,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<obj_material*>& materials = {},
+void add_points(obj_model* obj, const string& name, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
 void add_fvquads(obj_model* obj, const string& name,
@@ -547,7 +537,7 @@ struct pbrt_environment {
 
 // Pbrt model
 struct pbrt_model {
-  vector<string>                       comments     = {};
+  vector<string>            comments     = {};
   vector<pbrt_camera*>      cameras      = {};
   vector<pbrt_shape*>       shapes       = {};
   vector<pbrt_environment*> environments = {};
@@ -560,18 +550,18 @@ struct pbrt_model {
 
 // Load/save pbrt
 unique_ptr<pbrt_model> load_pbrt(const string& filename);
-void load_pbrt(const string& filename, pbrt_model* pbrt);
-void save_pbrt(const string& filename, pbrt_model* pbrt,
-    bool ply_meshes = false);
+void                   load_pbrt(const string& filename, pbrt_model* pbrt);
+void                   save_pbrt(
+                      const string& filename, pbrt_model* pbrt, bool ply_meshes = false);
 
 // Create pbrt
 unique_ptr<pbrt_model> make_pbrt();
-pbrt_camera* add_camera(pbrt_model* pbrt);
-pbrt_shape* add_shape(pbrt_model* pbrt);
-pbrt_material* add_material(pbrt_model* pbrt);
-pbrt_arealight* add_arealight(pbrt_model* pbrt);
-pbrt_environment* add_environment(pbrt_model* pbrt);
-pbrt_light* add_light(pbrt_model* pbrt);
+pbrt_camera*           add_camera(pbrt_model* pbrt);
+pbrt_shape*            add_shape(pbrt_model* pbrt);
+pbrt_material*         add_material(pbrt_model* pbrt);
+pbrt_arealight*        add_arealight(pbrt_model* pbrt);
+pbrt_environment*      add_environment(pbrt_model* pbrt);
+pbrt_light*            add_light(pbrt_model* pbrt);
 
 }  // namespace yocto
 
@@ -592,12 +582,12 @@ struct gltf_texture {
   string filename = "";
 };
 struct gltf_material {
-  string                   name         = "";
-  vec3f                    emission     = {0, 0, 0};
-  vec3f                    color        = {0, 0, 0};
-  float                    opacity      = 1;
-  float                    metallic     = 0;
-  float                    roughness    = 1;
+  string        name         = "";
+  vec3f         emission     = {0, 0, 0};
+  vec3f         color        = {0, 0, 0};
+  float         opacity      = 1;
+  float         metallic     = 0;
+  float         roughness    = 1;
   gltf_texture* emission_tex = nullptr;
   gltf_texture* color_tex    = nullptr;
   gltf_texture* metallic_tex = nullptr;
@@ -605,19 +595,19 @@ struct gltf_material {
 };
 struct gltf_primitive {
   gltf_material* material  = nullptr;
-  vector<vec3f>             positions = {};
-  vector<vec3f>             normals   = {};
-  vector<vec2f>             texcoords = {};
-  vector<vec4f>             colors    = {};
-  vector<float>             radius    = {};
-  vector<vec4f>             tangents  = {};
-  vector<vec3i>             triangles = {};
-  vector<vec2i>             lines     = {};
-  vector<int>               points    = {};
+  vector<vec3f>  positions = {};
+  vector<vec3f>  normals   = {};
+  vector<vec2f>  texcoords = {};
+  vector<vec4f>  colors    = {};
+  vector<float>  radius    = {};
+  vector<vec4f>  tangents  = {};
+  vector<vec3i>  triangles = {};
+  vector<vec2i>  lines     = {};
+  vector<int>    points    = {};
 };
 struct gltf_mesh {
-  string                             name       = "";
-  vector<frame3f>                    frames     = {};
+  string                  name       = "";
+  vector<frame3f>         frames     = {};
   vector<gltf_primitive*> primitives = {};
 };
 struct gltf_model {
@@ -631,7 +621,7 @@ struct gltf_model {
 
 // Load gltf file.
 unique_ptr<gltf_model> load_gltf(const string& filename);
-void load_gltf(const string& filename, gltf_model* gltf);
+void                   load_gltf(const string& filename, gltf_model* gltf);
 
 }  // namespace yocto
 

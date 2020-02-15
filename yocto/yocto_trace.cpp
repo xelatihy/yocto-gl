@@ -419,8 +419,7 @@ static const auto coat_ior       = 1.5;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Shape element normal.
-static vec3f eval_element_normal(
-    const trace_shape* shape, int element) {
+static vec3f eval_element_normal(const trace_shape* shape, int element) {
   auto norm = zero3f;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -528,8 +527,8 @@ static vec2i texture_size(const trace_texture* texture) {
 }
 
 // Evaluate a texture
-static vec4f lookup_texture(const trace_texture* texture,
-    const vec2i& ij, bool ldr_as_linear = false) {
+static vec4f lookup_texture(
+    const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1, 1};
   if (!texture->hdr.empty()) {
     return texture->hdr[ij];
@@ -543,8 +542,8 @@ static vec4f lookup_texture(const trace_texture* texture,
 }
 
 // Evaluate a texture
-static vec4f eval_texture(const trace_texture* texture,
-    const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
+static vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
+    bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
   if (!texture) return {1, 1, 1, 1};
@@ -580,8 +579,8 @@ static vec4f eval_texture(const trace_texture* texture,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_perspective_camera(const trace_scene* scene,
-    int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
+static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
+    const vec2f& image_uv, const vec2f& lens_uv) {
   auto& camera   = scene->cameras[camera_];
   auto  distance = camera->lens;
   if (camera->focus < flt_max) {
@@ -614,8 +613,8 @@ static ray3f eval_perspective_camera(const trace_scene* scene,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_orthographic_camera(const trace_scene* scene,
-    int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
+static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
+    const vec2f& image_uv, const vec2f& lens_uv) {
   auto& camera = scene->cameras[camera_];
   if (camera->aperture) {
     auto scale = 1 / camera->lens;
@@ -644,8 +643,8 @@ static ray3f eval_orthographic_camera(const trace_scene* scene,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_camera(const trace_scene* scene, int camera_,
-    const vec2f& uv, const vec2f& luv) {
+static ray3f eval_camera(
+    const trace_scene* scene, int camera_, const vec2f& uv, const vec2f& luv) {
   auto& camera = scene->cameras[camera_];
   if (camera->orthographic)
     return eval_orthographic_camera(scene, camera_, uv, luv);
@@ -938,15 +937,14 @@ static volume_point eval_volume(const trace_scene* scene,
 }
 
 // Check if an instance as volume scattering
-static bool has_volume(const trace_scene* scene,
-    const trace_intersection&                         intersection) {
+static bool has_volume(
+    const trace_scene* scene, const trace_intersection& intersection) {
   auto object = scene->objects[intersection.object];
   return !object->material->thin && object->material->transmission;
 }
 
 // Evaluate all environment color.
-static vec3f eval_environment(
-    const trace_scene* scene, const ray3f& ray) {
+static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
   auto emission = zero3f;
   for (auto environment : scene->environments) {
     auto wl       = transform_direction(inverse(environment->frame), ray.d);
@@ -1164,12 +1162,11 @@ static RTCDevice     trace_embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(
-    trace_shape* shape, const trace_params& params) {
+static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
   auto edevice = trace_embree_device();
-  if(shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
+  if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
   shape->embree_bvh = rtcNewScene(edevice);
-  auto escene  = shape->embree_bvh;
+  auto escene       = shape->embree_bvh;
   if (params.bvh == trace_bvh_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
@@ -1277,13 +1274,12 @@ static void init_embree_bvh(
   rtcCommitScene(escene);
 }
 
-static void init_embree_bvh(
-    trace_scene* scene, const trace_params& params) {
+static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
-  if(scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
+  if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
   scene->embree_bvh = rtcNewScene(edevice);
-  auto escene  = scene->embree_bvh;
+  auto escene       = scene->embree_bvh;
   if (params.bvh == trace_bvh_type::embree_compact)
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
@@ -1294,8 +1290,7 @@ static void init_embree_bvh(
     for (auto frame : object->instance->frames) {
       frame          = frame * object->frame;
       auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-      rtcSetGeometryInstancedScene(
-          egeometry, object->shape->embree_bvh);
+      rtcSetGeometryInstancedScene(egeometry, object->shape->embree_bvh);
       rtcSetGeometryTransform(
           egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
       rtcCommitGeometry(egeometry);
@@ -1329,8 +1324,8 @@ static void update_embree_bvh(
   rtcCommitScene(escene);
 }
 
-static bool intersect_shape_embree_bvh(trace_shape* shape,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
+static bool intersect_shape_embree_bvh(trace_shape* shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1694,8 +1689,7 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(
-    trace_bvh* bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(trace_bvh* bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh->nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -1770,7 +1764,7 @@ static void init_bvh(trace_shape* shape, const trace_params& params) {
   }
 
   // build nodes
-  if(shape->bvh) delete shape->bvh;
+  if (shape->bvh) delete shape->bvh;
   shape->bvh = new trace_bvh{};
   build_bvh_serial(shape->bvh->nodes, primitives, params.bvh);
 
@@ -1824,7 +1818,7 @@ void init_bvh(trace_scene* scene, const trace_params& params,
   }
 
   // build nodes
-  if(scene->bvh) delete scene->bvh;
+  if (scene->bvh) delete scene->bvh;
   scene->bvh = new trace_bvh{};
   build_bvh_serial(scene->bvh->nodes, primitives, params.bvh);
 
@@ -1886,9 +1880,8 @@ static void update_bvh(trace_shape* shape, const trace_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(trace_scene* scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const trace_params& params) {
+void update_bvh(trace_scene* scene, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
   for (auto shape : updated_shapes) update_bvh(scene->shapes[shape], params);
 
@@ -1915,9 +1908,8 @@ void update_bvh(trace_scene* scene,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_shape_bvh(trace_shape* shape,
-    const ray3f& ray_, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
+    int& element, vec2f& uv, float& distance, bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape->embree_bvh) {
@@ -1927,7 +1919,7 @@ static bool intersect_shape_bvh(trace_shape* shape,
 #endif
 
   // get bvh and shape pointers for fast access
-  auto bvh   = shape->bvh;
+  auto bvh = shape->bvh;
 
   // check empty
   if (bvh->nodes.empty()) return false;
@@ -2029,9 +2021,9 @@ static bool intersect_shape_bvh(trace_shape* shape,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray_, int& objecct, int& instance, int& element, vec2f& uv,
-    float& distance, bool find_any, bool non_rigid_frames) {
+static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
+    int& objecct, int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any, bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene->embree_bvh) {
@@ -2041,7 +2033,7 @@ static bool intersect_scene_bvh(const trace_scene* scene,
 #endif
 
   // get bvh and scene pointers for fast access
-  auto bvh   = scene->bvh;
+  auto bvh = scene->bvh;
 
   // check empty
   if (bvh->nodes.empty()) return false;
@@ -2107,9 +2099,9 @@ static bool intersect_scene_bvh(const trace_scene* scene,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_instance_bvh(const trace_object* object,
-    int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+static bool intersect_instance_bvh(const trace_object* object, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
   auto frame   = object->instance->frames[instance] * object->frame;
   auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
@@ -2124,9 +2116,8 @@ trace_intersection intersect_scene_bvh(const trace_scene* scene,
       intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(
-    const trace_object* object, int instance, const ray3f& ray,
-    bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_instance_bvh(const trace_object* object,
+    int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
   intersection.hit  = intersect_instance_bvh(object, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
@@ -2526,8 +2517,8 @@ static float sample_scattering_pdf(const volume_point& point) {
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene* scene,
-    const vec3f& position, float rl, float rel, const vec2f& ruv) {
+static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
+    float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform(scene->lights.size(), rl);
   auto& light    = scene->lights[light_id];
   if (light->object) {
@@ -2559,8 +2550,8 @@ static vec3f sample_lights(const trace_scene* scene,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const trace_scene* scene,
-    const vec3f& position, const vec3f& direction) {
+static float sample_lights_pdf(
+    const trace_scene* scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : scene->lights) {
     if (light->object) {
@@ -2615,8 +2606,8 @@ static float sample_lights_pdf(const trace_scene* scene,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_path(const trace_scene* scene,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static pair<vec3f, bool> trace_path(const trace_scene* scene, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -2905,9 +2896,8 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = pair<vec3f, bool> (*)(
-    const trace_scene* scene, const ray3f& ray, rng_state& rng,
-    const trace_params& params);
+using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return trace_path;
@@ -2936,9 +2926,8 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(trace_state* state,
-    const trace_scene* scene, const vec2i& ij,
-    const trace_params& params) {
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
+    const vec2i& ij, const trace_params& params) {
   auto  sampler        = get_trace_sampler_func(params);
   auto& pixel          = state->at(ij);
   auto  ray            = sample_camera(scene, params.camera, ij, state->size(),
@@ -2965,9 +2954,9 @@ vec4f trace_sample(trace_state* state,
 // Init a sequence of random number generators.
 unique_ptr<trace_state> make_state(
     const trace_scene* scene, const trace_params& params) {
-  auto  state  = make_unique<trace_state>();
+  auto state  = make_unique<trace_state>();
   auto camera = scene->cameras[params.camera];
-  auto  image_size =
+  auto image_size =
       (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
                 (int)round(params.resolution * camera->film.y / camera->film.x)}
@@ -2988,13 +2977,12 @@ unique_ptr<trace_state> make_state(
 }
 
 // Init trace lights
-void init_lights(
-    trace_scene* scene, trace_progress progress_cb) {
+void init_lights(trace_scene* scene, trace_progress progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 
-  for(auto light : scene->lights) delete light;
+  for (auto light : scene->lights) delete light;
   scene->lights.clear();
 
   for (auto object : scene->objects) {
@@ -3022,9 +3010,9 @@ void init_lights(
       }
     }
     for (auto iidx = 0; iidx < object->instance->frames.size(); iidx++) {
-      auto light      = scene->lights.emplace_back(new trace_light{});
-      light->object   = object;
-      light->instance = iidx;
+      auto light         = scene->lights.emplace_back(new trace_light{});
+      light->object      = object;
+      light->instance    = iidx;
       light->environment = nullptr;
     }
   }
@@ -3080,9 +3068,8 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene* scene,
-    const trace_params& params, trace_progress progress_cb,
-    trace_progress_image progress_image_cb) {
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
+    trace_progress progress_cb, trace_progress_image progress_image_cb) {
   auto state  = make_state(scene, params);
   auto render = image{state->size(), zero4f};
 
@@ -3095,8 +3082,8 @@ image<vec4f> trace_image(const trace_scene* scene,
         }
       }
     } else {
-      parallel_for(
-          render.size(), [&render, state = state.get(), scene, &params](const vec2i& ij) {
+      parallel_for(render.size(),
+          [&render, state = state.get(), scene, &params](const vec2i& ij) {
             render[ij] = trace_sample(state, scene, ij, params);
           });
     }
@@ -3109,11 +3096,11 @@ image<vec4f> trace_image(const trace_scene* scene,
 }
 
 // [experimental] Asynchronous interface
-unique_ptr<trace_async_state> trace_async_start(
-    const trace_scene* scene, const trace_params& params,
-    trace_progress progress_cb, trace_progress_image progress_image_cb,
-    trace_process_async progress_async_cb) {
-  auto astate = make_unique<trace_async_state>();
+unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
+    const trace_params& params, trace_progress progress_cb,
+    trace_progress_image progress_image_cb,
+    trace_process_async  progress_async_cb) {
+  auto astate   = make_unique<trace_async_state>();
   astate->state = make_state(scene, params);
   astate->render.resize(astate->state->size());
 
@@ -3139,7 +3126,8 @@ unique_ptr<trace_async_state> trace_async_start(
       if (progress_cb) progress_cb("trace image", sample, params.samples);
       parallel_for(astate->render.size(), [&](const vec2i& ij) {
         if (astate->stop) return;
-        astate->render[ij] = trace_sample(astate->state.get(), scene, ij, params);
+        astate->render[ij] = trace_sample(
+            astate->state.get(), scene, ij, params);
         if (progress_async_cb)
           progress_async_cb(astate->render, sample, params.samples, ij);
       });
@@ -3168,21 +3156,21 @@ namespace yocto {
 
 // cleanup
 trace_shape::~trace_shape() {
-  if(bvh) delete bvh;
-  if(embree_bvh) rtcReleaseScene(embree_bvh);
+  if (bvh) delete bvh;
+  if (embree_bvh) rtcReleaseScene(embree_bvh);
 }
 
 // cleanup
 trace_scene::~trace_scene() {
-  for(auto camera :      cameras) delete camera;
-  for(auto object :      objects) delete object;
-  for(auto shape :      shapes) delete shape;
-  for(auto material :      materials) delete material;
-  for(auto instance :      instances) delete instance;
-  for(auto texture :      textures) delete texture;
-  for(auto environment :      environments) delete environment;
-  if(bvh) delete bvh;
-  if(embree_bvh) rtcReleaseScene(embree_bvh);
+  for (auto camera : cameras) delete camera;
+  for (auto object : objects) delete object;
+  for (auto shape : shapes) delete shape;
+  for (auto material : materials) delete material;
+  for (auto instance : instances) delete instance;
+  for (auto texture : textures) delete texture;
+  for (auto environment : environments) delete environment;
+  if (bvh) delete bvh;
+  if (embree_bvh) rtcReleaseScene(embree_bvh);
 }
 
 // create scene
@@ -3197,14 +3185,12 @@ trace_camera* add_camera(trace_scene* scene) {
 void set_frame(trace_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(trace_camera* camera, float lens, float aspect,
-    float film) {
+void set_lens(trace_camera* camera, float lens, float aspect, float film) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
 }
-void set_focus(
-    trace_camera* camera, float aperture, float focus) {
+void set_focus(trace_camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
   camera->focus    = focus;
 }
@@ -3213,13 +3199,11 @@ void set_focus(
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
-void set_texture(
-    trace_texture* texture, const image<vec4b>& img) {
+void set_texture(trace_texture* texture, const image<vec4b>& img) {
   texture->ldr = img;
   texture->hdr = {};
 }
-void set_texture(
-    trace_texture* texture, const image<vec4f>& img) {
+void set_texture(trace_texture* texture, const image<vec4f>& img) {
   texture->ldr = {};
   texture->hdr = img;
 }
@@ -3228,51 +3212,40 @@ void set_texture(
 trace_shape* add_shape(trace_scene* scene) {
   return scene->shapes.emplace_back(new trace_shape{});
 }
-void set_points(
-    trace_shape* shape, const vector<int>& points) {
+void set_points(trace_shape* shape, const vector<int>& points) {
   shape->points = points;
 }
-void set_lines(
-    trace_shape* shape, const vector<vec2i>& lines) {
+void set_lines(trace_shape* shape, const vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_triangles(
-    trace_shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(trace_shape* shape, const vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_quads(
-    trace_shape* shape, const vector<vec4i>& quads) {
+void set_quads(trace_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_fvquads(trace_shape* shape,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord) {
+void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
   shape->quadspos      = quadspos;
   shape->quadsnorm     = quadsnorm;
   shape->quadstexcoord = quadstexcoord;
 }
-void set_positions(
-    trace_shape* shape, const vector<vec3f>& positions) {
+void set_positions(trace_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_normals(
-    trace_shape* shape, const vector<vec3f>& normals) {
+void set_normals(trace_shape* shape, const vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_texcoords(
-    trace_shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(
-    trace_shape* shape, const vector<vec4f>& colors) {
+void set_colors(trace_shape* shape, const vector<vec4f>& colors) {
   shape->colors = colors;
 }
-void set_radius(
-    trace_shape* shape, const vector<float>& radius) {
+void set_radius(trace_shape* shape, const vector<float>& radius) {
   shape->radius = radius;
 }
-void set_tangents(
-    trace_shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(trace_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 
@@ -3288,26 +3261,22 @@ trace_object* add_object(trace_scene* scene) {
 void set_frame(trace_object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(
-    trace_object* object, trace_shape* shape) {
+void set_shape(trace_object* object, trace_shape* shape) {
   object->shape = shape;
 }
-void set_material(trace_object* object,
-    trace_material*                    material) {
+void set_material(trace_object* object, trace_material* material) {
   object->material = material;
 }
-void set_instance(trace_object* object,
-    trace_instance*                    instance) {
+void set_instance(trace_object* object, trace_instance* instance) {
   object->instance = instance;
-  if (!object->instance) object->instance         = &default_instance;
+  if (!object->instance) object->instance = &default_instance;
 }
 
 // Add instance
 trace_instance* add_instance(trace_scene* scene) {
   return scene->instances.emplace_back(new trace_instance{});
 }
-void set_frames(
-    trace_instance* instance, const vector<frame3f>& frames) {
+void set_frames(trace_instance* instance, const vector<frame3f>& frames) {
   instance->frames = frames;
 }
 
@@ -3315,77 +3284,67 @@ void set_frames(
 trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
 }
-void set_emission(trace_material* material,
-    const vec3f& emission, trace_texture* emission_txt) {
+void set_emission(trace_material* material, const vec3f& emission,
+    trace_texture* emission_txt) {
   material->emission     = emission;
   material->emission_tex = emission_txt;
 }
-void set_color(trace_material* material, const vec3f& color,
-    trace_texture* color_txt) {
+void set_color(
+    trace_material* material, const vec3f& color, trace_texture* color_txt) {
   material->color     = color;
   material->color_tex = color_txt;
 }
-void set_specular(trace_material* material, float specular,
-    trace_texture* specular_txt) {
+void set_specular(
+    trace_material* material, float specular, trace_texture* specular_txt) {
   material->specular     = specular;
   material->specular_tex = specular_txt;
 }
-void set_metallic(trace_material* material, float metallic,
-    trace_texture* metallic_txt) {
+void set_metallic(
+    trace_material* material, float metallic, trace_texture* metallic_txt) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_txt;
 }
-void set_ior(trace_material* material, float ior) {
-  material->ior = ior;
-}
-void set_transmission(trace_material* material,
-    float transmission, bool thin, float trdepth,
-    trace_texture* transmission_txt) {
+void set_ior(trace_material* material, float ior) { material->ior = ior; }
+void set_transmission(trace_material* material, float transmission, bool thin,
+    float trdepth, trace_texture* transmission_txt) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_txt;
 }
-void set_thin(trace_material* material, bool thin) {
-  material->thin = thin;
-}
-void set_roughness(trace_material* material, float roughness,
-    trace_texture* roughness_txt) {
+void set_thin(trace_material* material, bool thin) { material->thin = thin; }
+void set_roughness(
+    trace_material* material, float roughness, trace_texture* roughness_txt) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_txt;
 }
-void set_opacity(trace_material* material, float opacity,
-    trace_texture* opacity_txt) {
+void set_opacity(
+    trace_material* material, float opacity, trace_texture* opacity_txt) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_txt;
 }
-void set_scattering(trace_material* material,
-    const vec3f& scattering, float scanisotropy,
-    trace_texture* scattering_tex) {
+void set_scattering(trace_material* material, const vec3f& scattering,
+    float scanisotropy, trace_texture* scattering_tex) {
   material->scattering     = scattering;
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_normalmap(trace_material* material,
-    trace_texture*                        normal_txt) {
+void set_normalmap(trace_material* material, trace_texture* normal_txt) {
   material->normal_tex = normal_txt;
 }
-void set_gltftextures(
-    trace_material* material, bool gltf_textures) {
+void set_gltftextures(trace_material* material, bool gltf_textures) {
   material->gltf_textures = gltf_textures;
 }
 
 // Add environment
-trace_environment* add_environment(
-    trace_scene* scene) {
+trace_environment* add_environment(trace_scene* scene) {
   return scene->environments.emplace_back(new trace_environment{});
 }
-void set_frame(
-    trace_environment* environment, const frame3f& frame) {
+void set_frame(trace_environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_emission(trace_environment* environment,
-    const vec3f& emission, trace_texture* emission_tex) {
+void set_emission(trace_environment* environment, const vec3f& emission,
+    trace_texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }

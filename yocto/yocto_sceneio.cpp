@@ -219,8 +219,7 @@ vector<string> scene_stats(const sceneio_model* scene, bool verbose) {
 }
 
 // Checks for validity of the scene->
-vector<string> scene_validation(const 
-    sceneio_model* scene, bool notextures) {
+vector<string> scene_validation(const sceneio_model* scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -234,14 +233,13 @@ vector<string> scene_validation(const
       }
     }
   };
-  auto check_empty_textures =
-      [&errs](const vector<sceneio_texture*>& vals) {
-        for (auto value : vals) {
-          if (value->hdr.empty() && value->ldr.empty()) {
-            errs.push_back("empty texture " + value->name);
-          }
-        }
-      };
+  auto check_empty_textures = [&errs](const vector<sceneio_texture*>& vals) {
+    for (auto value : vals) {
+      if (value->hdr.empty() && value->ldr.empty()) {
+        errs.push_back("empty texture " + value->name);
+      }
+    }
+  };
 
   check_names(scene->cameras, "camera");
   check_names(scene->shapes, "shape");
@@ -263,13 +261,13 @@ vector<string> scene_validation(const
 namespace yocto {
 
 sceneio_model::~sceneio_model() {
-  for(auto camera :   cameras) delete camera;
-  for(auto shape :   shapes) delete shape;
-  for(auto subdiv :   subdivs) delete subdiv;
-  for(auto material :   materials) delete material;
-  for(auto instance :   instances) delete instance;
-  for(auto texture :   textures) delete texture;
-  for(auto environment :   environments) delete environment;
+  for (auto camera : cameras) delete camera;
+  for (auto shape : shapes) delete shape;
+  for (auto subdiv : subdivs) delete subdiv;
+  for (auto material : materials) delete material;
+  for (auto instance : instances) delete instance;
+  for (auto texture : textures) delete texture;
+  for (auto environment : environments) delete environment;
 }
 
 unique_ptr<sceneio_model> make_sceneio_model() {
@@ -283,8 +281,7 @@ sceneio_camera* add_camera(sceneio_model* scene) {
                  ".json";
   return camera;
 }
-sceneio_environment* add_environment(
-    sceneio_model* scene) {
+sceneio_environment* add_environment(sceneio_model* scene) {
   auto environment = scene->environments.emplace_back(
       new sceneio_environment{});
   environment->name = "environments/environment" +
@@ -315,15 +312,13 @@ sceneio_object* add_object(sceneio_model* scene) {
   return object;
 }
 sceneio_instance* add_instance(sceneio_model* scene) {
-  auto instance = scene->instances.emplace_back(
-      new sceneio_instance{});
+  auto instance  = scene->instances.emplace_back(new sceneio_instance{});
   instance->name = "instances/instance" +
                    std::to_string(scene->instances.size()) + ".ply";
   return instance;
 }
 sceneio_material* add_material(sceneio_model* scene) {
-  auto material = scene->materials.emplace_back(
-      new sceneio_material{});
+  auto material  = scene->materials.emplace_back(new sceneio_material{});
   material->name = "materials/material" +
                    std::to_string(scene->materials.size()) + ".json";
   return material;
@@ -479,11 +474,10 @@ unique_ptr<sceneio_subdiv> subdivide_subdiv(
 }
 // Apply displacement to a shape
 unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
-    float displacement, sceneio_texture* displacement_tex,
-    bool smooth) {
+    float displacement, sceneio_texture* displacement_tex, bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](sceneio_texture* texture,
-                          const vec2f&               texcoord) -> vec4f {
+                          const vec2f&    texcoord) -> vec4f {
     if (!texture->hdr.empty()) {
       return eval_image(texture->hdr, texcoord, false, false);
     } else if (!texture->ldr.empty()) {
@@ -526,8 +520,7 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
   return displaced;
 }
 
-void tesselate_subdiv(
-    sceneio_model* scene, sceneio_subdiv* subdiv) {
+void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv) {
   auto material = (sceneio_material*)nullptr;
   auto shape    = (sceneio_shape*)nullptr;
   for (auto object : scene->objects) {
@@ -552,8 +545,7 @@ void tesselate_subdiv(
   shape->radius    = {};
 }
 
-void tesselate_subdivs(
-    sceneio_model* scene, sceneio_progress progress_cb) {
+void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb) {
   if (scene->subdivs.empty()) return;
 
   // handle progress
@@ -577,43 +569,34 @@ void tesselate_subdivs(
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static void load_json_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
-static void save_json_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
+static void load_json_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
+static void save_json_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
-static void save_obj_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
+static void load_obj_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
+static void save_obj_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
-static void save_ply_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
+static void load_ply_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
+static void save_ply_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
+static void load_gltf_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
-static void save_pbrt_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel);
+static void load_pbrt_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
+static void save_pbrt_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel);
 
 // Load a scene
 unique_ptr<sceneio_model> load_scene(
@@ -826,9 +809,8 @@ inline json load_json(const string& filename) {
 }
 
 // Save a scene in the builtin JSON format.
-static void load_json_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void load_json_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   *scene = {};
 
   // handle progress
@@ -860,12 +842,11 @@ static void load_json_scene(const string& filename,
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, sceneio_texture*>{
-      {"", nullptr}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture =
       [scene, &texture_map](const json& ejs, const string& name,
           sceneio_texture*& value,
-          const string& dirname = "textures/") -> sceneio_texture* {
+          const string&     dirname = "textures/") -> sceneio_texture* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -883,12 +864,10 @@ static void load_json_scene(const string& filename,
   };
 
   // parse json reference
-  auto shape_map = unordered_map<string, sceneio_shape*>{
-      {"", nullptr}};
-  auto get_shape =
-      [scene, &shape_map](const json& ejs, const string& name,
-          sceneio_shape*& value,
-          const string& dirname = "shapes/") -> sceneio_shape* {
+  auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
+  auto get_shape = [scene, &shape_map](const json& ejs, const string& name,
+                       sceneio_shape*& value,
+                       const string&   dirname = "shapes/") -> sceneio_shape* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -906,12 +885,10 @@ static void load_json_scene(const string& filename,
   };
 
   // parse json reference
-  auto subdiv_map = unordered_map<string, sceneio_subdiv*>{
-      {"", nullptr}};
-  auto get_subdiv =
-      [scene, &subdiv_map](const json& ejs, const string& name,
-          sceneio_subdiv*& value,
-          const string& dirname = "subdivs/") -> sceneio_subdiv* {
+  auto subdiv_map = unordered_map<string, sceneio_subdiv*>{{"", nullptr}};
+  auto get_subdiv = [scene, &subdiv_map](const json& ejs, const string& name,
+                        sceneio_subdiv*& value,
+                        const string& dirname = "subdivs/") -> sceneio_subdiv* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -929,13 +906,11 @@ static void load_json_scene(const string& filename,
   };
 
   // load json instance
-  auto instance_map = unordered_map<string, sceneio_instance*>{
-      {"", nullptr}};
-  auto get_instance = [scene, &instance_map](const json& ejs,
-                          const string&                  name,
-                          sceneio_instance*&  value,
-                          const string&                  dirname =
-                              "instances/") -> sceneio_instance* {
+  auto instance_map = unordered_map<string, sceneio_instance*>{{"", nullptr}};
+  auto get_instance =
+      [scene, &instance_map](const json& ejs, const string& name,
+          sceneio_instance*& value,
+          const string&      dirname = "instances/") -> sceneio_instance* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -953,8 +928,7 @@ static void load_json_scene(const string& filename,
   };
 
   // material map
-  auto material_map = unordered_map<string, sceneio_material*>{
-      {"", nullptr}};
+  auto material_map = unordered_map<string, sceneio_material*>{{"", nullptr}};
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1122,9 +1096,8 @@ static void load_json_scene(const string& filename,
 }
 
 // Save a scene in the builtin JSON format.
-static void save_json_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void save_json_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // helper
   auto add_val = [](json& ejs, const string& name, const auto& value) {
     ejs[name] = value;
@@ -1134,8 +1107,7 @@ static void save_json_scene(const string& filename,
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [](json& ejs, const string& name,
-                     sceneio_texture* texture) {
+  auto add_tex = [](json& ejs, const string& name, sceneio_texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1313,16 +1285,15 @@ static void save_json_scene(const string& filename,
 namespace yocto {
 
 // Loads an OBJ
-static void load_obj_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void load_obj_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
   auto obj_guard = load_obj(filename, false, true, false);
-  auto obj = obj_guard.get();
+  auto obj       = obj_guard.get();
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1341,11 +1312,9 @@ static void load_obj_scene(const string& filename,
   }
 
   // helper to create texture maps
-  auto texture_map = unordered_map<string, sceneio_texture*>{
-      {"", nullptr}};
-  auto get_texture =
-      [&texture_map, scene](
-          const obj_texture_info& info) -> sceneio_texture* {
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_texture = [&texture_map, scene](
+                         const obj_texture_info& info) -> sceneio_texture* {
     auto path = info.path;
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
@@ -1475,15 +1444,14 @@ static void load_obj_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
-static void save_obj_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void save_obj_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   auto obj_guard = make_obj();
-  auto obj = obj_guard.get();
+  auto obj       = obj_guard.get();
 
   // convert cameras
   for (auto camera : scene->cameras) {
@@ -1508,9 +1476,9 @@ static void save_obj_scene(const string& filename,
 
   // convert materials and textures
   for (auto material : scene->materials) {
-    auto omaterial   = add_material(obj);
-    omaterial->name  = fs::path(material->name).stem();
-    omaterial->illum = 2;
+    auto omaterial                  = add_material(obj);
+    omaterial->name                 = fs::path(material->name).stem();
+    omaterial->illum                = 2;
     omaterial->as_pbr               = true;
     omaterial->pbr_emission         = material->emission;
     omaterial->pbr_base             = material->color;
@@ -1564,7 +1532,7 @@ static void save_obj_scene(const string& filename,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto oenvironment = add_environment(obj);
+    auto oenvironment          = add_environment(obj);
     oenvironment->name         = fs::path(environment->name).stem();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
@@ -1616,9 +1584,8 @@ void print_obj_camera(sceneio_camera* camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void load_ply_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   *scene = {};
 
   // handle progress
@@ -1640,9 +1607,8 @@ static void load_ply_scene(const string& filename,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 }
 
-static void save_ply_scene(const string& filename,
-    const sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void save_ply_scene(const string& filename, const sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -1668,16 +1634,15 @@ static void save_ply_scene(const string& filename,
 namespace yocto {
 
 // Load a scene
-static void load_gltf_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void load_gltf_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
   auto gltf_guard = load_gltf(filename);
-  auto gltf = gltf_guard.get();
+  auto gltf       = gltf_guard.get();
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1697,11 +1662,9 @@ static void load_gltf_scene(const string& filename,
   }
 
   // convert textures
-  auto texture_map = unordered_map<string, sceneio_texture*>{
-      {"", nullptr}};
-  auto get_texture =
-      [&scene, &texture_map](
-          gltf_texture* gtexture) -> sceneio_texture* {
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_texture = [&scene, &texture_map](
+                         gltf_texture* gtexture) -> sceneio_texture* {
     if (!gtexture) return nullptr;
     auto path = gtexture->filename;
     if (path == "") return nullptr;
@@ -1715,9 +1678,8 @@ static void load_gltf_scene(const string& filename,
   };
 
   // convert materials
-  auto material_map =
-      unordered_map<gltf_material*, sceneio_material*>{
-          {nullptr, nullptr}};
+  auto material_map = unordered_map<gltf_material*, sceneio_material*>{
+      {nullptr, nullptr}};
   for (auto gmaterial : gltf->materials) {
     auto material           = add_material(scene);
     material->emission      = gmaterial->emission;
@@ -1732,9 +1694,8 @@ static void load_gltf_scene(const string& filename,
   }
 
   // convert shapes
-  auto shape_map =
-      unordered_map<gltf_primitive*, sceneio_shape*>{
-          {nullptr, nullptr}};
+  auto shape_map = unordered_map<gltf_primitive*, sceneio_shape*>{
+      {nullptr, nullptr}};
   for (auto gprim : gltf->primitives) {
     auto shape       = add_shape(scene);
     shape_map[gprim] = shape;
@@ -1812,9 +1773,8 @@ static void load_gltf_scene(const string& filename,
 namespace yocto {
 
 // load pbrt scenes
-static void load_pbrt_scene(const string& filename,
-    sceneio_model* scene, sceneio_progress progress_cb,
-    bool noparallel) {
+static void load_pbrt_scene(const string& filename, sceneio_model* scene,
+    sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 2};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1836,8 +1796,7 @@ static void load_pbrt_scene(const string& filename,
   }
 
   // convert materials
-  auto texture_map = unordered_map<string, sceneio_texture*>{
-      {"", nullptr}};
+  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_texture = [&scene, &texture_map](
                          const string& path) -> sceneio_texture* {
     if (path == "") return nullptr;
@@ -1851,8 +1810,7 @@ static void load_pbrt_scene(const string& filename,
   };
 
   // convert material
-  auto material_map =
-      unordered_map<pbrt_material*, sceneio_material*>{};
+  auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material           = add_material(scene);
     material->color         = pmaterial->color;
@@ -1872,8 +1830,7 @@ static void load_pbrt_scene(const string& filename,
   material_map[nullptr] = add_material(scene);
 
   // convert arealight
-  auto arealight_map =
-      unordered_map<pbrt_arealight*, sceneio_material*>{};
+  auto arealight_map = unordered_map<pbrt_arealight*, sceneio_material*>{};
   for (auto parealight : pbrt->arealights) {
     auto material             = add_material(scene);
     material->emission        = parealight->emission;
@@ -1956,7 +1913,7 @@ void save_pbrt_scene(const string& filename, const sceneio_model* scene,
 
   // save pbrt
   auto pbrt_guard = make_pbrt();
-  auto pbrt = pbrt_guard.get();
+  auto pbrt       = pbrt_guard.get();
 
   // convert camera
   auto camera         = scene->cameras.front();
@@ -1967,12 +1924,10 @@ void save_pbrt_scene(const string& filename, const sceneio_model* scene,
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // convert materials
-  auto material_map =
-      unordered_map<sceneio_material*, pbrt_material*>{};
-  auto arealight_map =
-      unordered_map<sceneio_material*, pbrt_arealight*>{};
+  auto material_map  = unordered_map<sceneio_material*, pbrt_material*>{};
+  auto arealight_map = unordered_map<sceneio_material*, pbrt_arealight*>{};
   for (auto material : scene->materials) {
-    auto pmaterial = add_material(pbrt);
+    auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -1985,7 +1940,7 @@ void save_pbrt_scene(const string& filename, const sceneio_model* scene,
                                                : ""s;
     material_map[material] = pmaterial;
     if (material->emission != zero3f) {
-      auto parealight = add_arealight(pbrt);
+      auto parealight         = add_arealight(pbrt);
       parealight->emission    = material->emission;
       arealight_map[material] = parealight;
     } else {
@@ -2009,7 +1964,7 @@ void save_pbrt_scene(const string& filename, const sceneio_model* scene,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment = add_environment(pbrt);
+    auto penvironment      = add_environment(pbrt);
     penvironment->emission = environment->emission;
     if (environment->emission_tex) {
       penvironment->emission_map = environment->emission_tex->name;
