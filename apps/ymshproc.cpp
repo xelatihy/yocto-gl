@@ -40,7 +40,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type, string& error) {
+    vector<vec4f>& colors, vector<float>& radius, const string& type,
+    string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -198,8 +199,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-          quadstexcoord, positions, normals, texcoords, colors, radius, type, error
-          ))
+          quadstexcoord, positions, normals, texcoords, colors, radius, type,
+          error))
     return false;
   if (!quadspos.empty()) throw std::runtime_error("bad preset type");
   return true;
@@ -208,8 +209,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type, string& error
-    ) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
+    string& error) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
@@ -299,21 +300,25 @@ int main(int argc, const char** argv) {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      if(!make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, basename, ioerror)) print_fatal(ioerror);
+      if (!make_shape_preset(points, lines, triangles, quads, positions,
+              normals, texcoords, colors, radius, basename, ioerror))
+        print_fatal(ioerror);
     } else {
       if (!load_shape(filename, points, lines, triangles, quads, positions,
-              normals, texcoords, colors, radius, ioerror)) print_fatal(ioerror);
+              normals, texcoords, colors, radius, ioerror))
+        print_fatal(ioerror);
     }
   } else {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      if(!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, basename, ioerror)) print_fatal(ioerror);
+      if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords, basename, ioerror))
+        print_fatal(ioerror);
     } else {
-      if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords, ioerror)) print_fatal(ioerror);
+      if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords, ioerror))
+        print_fatal(ioerror);
     }
   }
   print_progress("load shape", 1, 1);
@@ -469,11 +474,13 @@ int main(int argc, const char** argv) {
   // save mesh
   print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
-    if(!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, ioerror)) print_fatal(ioerror);
+    if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, ioerror))
+      print_fatal(ioerror);
   } else {
-    if(!save_shape(output, points, lines, triangles, quads, positions, normals,
-        texcoords, colors, radius, ioerror)) print_fatal(ioerror);
+    if (!save_shape(output, points, lines, triangles, quads, positions, normals,
+            texcoords, colors, radius, ioerror))
+      print_fatal(ioerror);
   }
   print_progress("save shape", 1, 1);
 

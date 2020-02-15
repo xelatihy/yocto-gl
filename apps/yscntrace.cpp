@@ -208,8 +208,9 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  auto ioerror = ""s;
-  if(!load_scene(filename, ioscene, ioerror, print_progress)) print_fatal(ioerror);
+  auto ioerror       = ""s;
+  if (!load_scene(filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // convert scene
   auto scene_guard = make_unique<trace_scene>();
@@ -239,14 +240,14 @@ int run_app(int argc, const char* argv[]) {
         auto ext = "-s" + std::to_string(sample + samples) +
                    fs::path(imfilename).extension().string();
         auto outfilename = fs::path(imfilename).replace_extension(ext).string();
-        auto ioerror = ""s;
+        auto ioerror     = ""s;
         print_progress("save image", sample, samples);
-        if(!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
+        if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });
 
   // save image
   print_progress("save image", 0, 1);
-  if(!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
+  if (!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
   print_progress("save image", 1, 1);
 
   // done

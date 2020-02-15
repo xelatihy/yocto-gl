@@ -1501,7 +1501,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-image<vec4f> load_image(const string& filename, string &error) {
+image<vec4f> load_image(const string& filename, string& error) {
   auto img = image<vec4f>{};
   if (!load_image(filename, img, error)) return {};
   return img;
@@ -1509,7 +1509,7 @@ image<vec4f> load_image(const string& filename, string &error) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string &error) {
+    const string& filename, image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1555,7 +1555,7 @@ image<vec4f> load_image(const string& filename, string &error) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4f>& img, string &error) {
+    const string& filename, const image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1589,7 +1589,7 @@ image<vec4f> load_image(const string& filename, string &error) {
 }
 
 // Loads an ldr image.
-image<vec4b> load_imageb(const string& filename, string &error) {
+image<vec4b> load_imageb(const string& filename, string& error) {
   auto img = image<vec4b>{};
   if (!load_imageb(filename, img, error)) return {};
   return img;
@@ -1597,7 +1597,7 @@ image<vec4b> load_imageb(const string& filename, string &error) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_imageb(
-    const string& filename, image<vec4b>& img, string &error) {
+    const string& filename, image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1628,7 +1628,7 @@ image<vec4b> load_imageb(const string& filename, string &error) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_imageb(
-    const string& filename, const image<vec4b>& img, string &error) {
+    const string& filename, const image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1813,8 +1813,7 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-bool load_volume(
-    const string& filename, volume<float>& vol, string &error) {
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -1829,7 +1828,7 @@ bool load_volume(
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string &error) {
+    const string& filename, const volume<float>& vol, string& error) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
     return false;
@@ -1843,14 +1842,13 @@ bool save_volume(
 }  // namespace impl
 
 // Loads volume data from binary format.
-bool load_volume(
-    const string& filename, volume<float>& vol, string &error) {
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
   return impl::load_volume(filename, vol, error);
 }
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string &error) {
+    const string& filename, const volume<float>& vol, string& error) {
   return impl::save_volume(filename, vol, error);
 }
 

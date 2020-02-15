@@ -296,8 +296,8 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    if (!load_scene(app->filename, app->ioscene, app->loader_error,
-            progress_cb))
+    if (!load_scene(
+            app->filename, app->ioscene, app->loader_error, progress_cb))
       return;
     app->progress = 1;
     init_scene(app->scene, app->ioscene, progress_cb);

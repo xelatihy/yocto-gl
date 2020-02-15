@@ -83,8 +83,9 @@ int run_app(int argc, const char** argv) {
   // load scene
   auto scene_guard = make_unique<sceneio_model>();
   auto scene       = scene_guard.get();
-  auto ioerror = ""s;
-  if(!load_scene(filename, scene, ioerror, print_progress)) print_fatal(ioerror);
+  auto ioerror     = ""s;
+  if (!load_scene(filename, scene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // validate scene
   if (validate) {
@@ -130,7 +131,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  if(!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
 
   // done
   return 0;

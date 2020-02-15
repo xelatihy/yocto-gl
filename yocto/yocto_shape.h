@@ -492,8 +492,8 @@ namespace yocto {
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, const vector<float>& radius,
-    string& error, bool ascii = false, bool flip_texcoords = true);
+    const vector<vec4f>& colors, const vector<float>& radius, string& error,
+    bool ascii = false, bool flip_texcoords = true);
 
 // Load/save a facevarying shape
 [[nodiscard]] bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
@@ -503,8 +503,8 @@ namespace yocto {
 [[nodiscard]] bool save_fvshape(const string& filename,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    string& error, bool ascii = false, bool flip_texcoords = true);
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
+    bool ascii = false, bool flip_texcoords = true);
 
 }  // namespace yocto
 

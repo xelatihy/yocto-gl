@@ -1314,8 +1314,8 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read obj
-[[nodiscard]] static bool load_mtl(const string& filename, obj_model* obj,
-    string& error, bool fliptr = true) {
+[[nodiscard]] static bool load_mtl(
+    const string& filename, obj_model* obj, string& error, bool fliptr = true) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1639,8 +1639,7 @@ unique_ptr<obj_model> load_obj(const string& filename, string& error,
 
 // Read obj
 [[nodiscard]] bool load_obj(const string& filename, obj_model* obj,
-    string& error, bool geom_only, bool split_elements,
-    bool split_materials) {
+    string& error, bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1803,8 +1802,7 @@ unique_ptr<obj_model> load_obj(const string& filename, string& error,
       if (!parse_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(fs::path(filename).parent_path() / mtllib, obj,
-                error))
+        if (!load_mtl(fs::path(filename).parent_path() / mtllib, obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -2186,8 +2184,7 @@ static void format_value(string& str, const obj_vertex& value) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    if (!save_mtl(fs::path(filename).replace_extension(".mtl"), obj,
-            error))
+    if (!save_mtl(fs::path(filename).replace_extension(".mtl"), obj, error))
       return dependent_error();
   }
 
@@ -2195,8 +2192,7 @@ static void format_value(string& str, const obj_vertex& value) {
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    if (!save_objx(fs::path(filename).replace_extension(".objx"), obj,
-            error))
+    if (!save_objx(fs::path(filename).replace_extension(".objx"), obj, error))
       return dependent_error();
   }
 
@@ -3817,8 +3813,9 @@ static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
     try {
       // TODO: fixme
       auto ioerror = ""s;
-      auto ply         = make_unique<ply_model>();
-      if(!load_ply(ply_dirname + shape->filename_, ioerror));
+      auto ply     = make_unique<ply_model>();
+      if (!load_ply(ply_dirname + shape->filename_, ioerror))
+        ;
       shape->positions = get_positions(ply.get());
       shape->normals   = get_normals(ply.get());
       shape->texcoords = get_texcoords(ply.get());
@@ -4213,8 +4210,7 @@ struct pbrt_context {
       auto includename = ""s;
       if (!parse_pbrt_param(str, includename)) return parse_error();
       if (!load_pbrt(fs::path(filename).parent_path() / includename, pbrt,
-              error, ctx, material_map, medium_map, texture_map,
-              ply_dirname))
+              error, ctx, material_map, medium_map, texture_map, ply_dirname))
         return dependent_error();
     } else {
       throw std::runtime_error{filename + ": parse error [unknown command]"};
@@ -4258,8 +4254,7 @@ pbrt_medium* add_medium(pbrt_model* pbrt) {
 }
 
 // Read pbrt
-unique_ptr<pbrt_model> load_pbrt(
-    const string& filename, string& error) {
+unique_ptr<pbrt_model> load_pbrt(const string& filename, string& error) {
   auto pbrt = make_pbrt();
   if (!load_pbrt(filename, pbrt.get(), error)) return nullptr;
   return pbrt;
@@ -4355,8 +4350,8 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-[[nodiscard]] bool save_pbrt(const string& filename, pbrt_model* pbrt,
-    string& error, bool ply_meshes) {
+[[nodiscard]] bool save_pbrt(
+    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4590,8 +4585,7 @@ gltf_model::~gltf_model() {
 }
 
 // convert gltf to scene
-unique_ptr<gltf_model> load_gltf(
-    const string& filename, string& error) {
+unique_ptr<gltf_model> load_gltf(const string& filename, string& error) {
   auto scene = make_unique<gltf_model>();
   if (!load_gltf(filename, scene.get(), error)) return nullptr;
   return scene;

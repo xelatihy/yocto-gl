@@ -266,10 +266,11 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
 
   // init shape
   auto ioerror = ""s;
-  if(!load_shape(input_filename, app->shape.points, app->shape.lines,
-      app->shape.triangles, app->shape.quads, app->shape.positions,
-      app->shape.normals, app->shape.texcoords, app->shape.colors,
-      app->shape.radius, ioerror)) print_fatal(ioerror);
+  if (!load_shape(input_filename, app->shape.points, app->shape.lines,
+          app->shape.triangles, app->shape.quads, app->shape.positions,
+          app->shape.normals, app->shape.texcoords, app->shape.colors,
+          app->shape.radius, ioerror))
+    print_fatal(ioerror);
   init_bvh(app);
   init_camera(app);
 

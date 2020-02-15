@@ -268,8 +268,9 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  auto ioerror = ""s;
-  if(!load_scene(app->filename, ioscene, ioerror, print_progress)) print_fatal(ioerror);
+  auto ioerror       = ""s;
+  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // conversion
   init_scene(app->scene, ioscene, print_progress);

@@ -119,48 +119,48 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    img =  make_grid(size);
+    img = make_grid(size);
   } else if (type == "checker") {
-    img =  make_checker(size);
+    img = make_checker(size);
   } else if (type == "bumps") {
-    img =  make_bumps(size);
+    img = make_bumps(size);
   } else if (type == "uvramp") {
-    img =  make_uvramp(size);
+    img = make_uvramp(size);
   } else if (type == "gammaramp") {
-    img =  make_gammaramp(size);
+    img = make_gammaramp(size);
   } else if (type == "blackbodyramp") {
-    img =  make_blackbodyramp(size);
+    img = make_blackbodyramp(size);
   } else if (type == "uvgrid") {
-    img =  make_uvgrid(size);
+    img = make_uvgrid(size);
   } else if (type == "sky") {
-    img =  make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    img =  make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    img =  make_noisemap(size, 1);
+    img = make_noisemap(size, 1);
   } else if (type == "fbm") {
-    img =  make_fbmmap(size, 1);
+    img = make_fbmmap(size, 1);
   } else if (type == "ridge") {
-    img =  make_ridgemap(size, 1);
+    img = make_ridgemap(size, 1);
   } else if (type == "turbulence") {
-    img =  make_turbulencemap(size, 1);
+    img = make_turbulencemap(size, 1);
   } else if (type == "bump-normal") {
-    img =  srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
+    img = srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      if(!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
+      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img = image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
@@ -170,54 +170,54 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      if(!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
+      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img = image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    img =  add_border(make_grid(size), 0.0025f);
+    img = add_border(make_grid(size), 0.0025f);
   } else if (type == "test-grid") {
-    img =  make_grid(size);
+    img = make_grid(size);
   } else if (type == "test-checker") {
-    img =  make_checker(size);
+    img = make_checker(size);
   } else if (type == "test-bumps") {
-    img =  make_bumps(size);
+    img = make_bumps(size);
   } else if (type == "test-uvramp") {
-    img =  make_uvramp(size);
+    img = make_uvramp(size);
   } else if (type == "test-gammaramp") {
-    img =  make_gammaramp(size);
+    img = make_gammaramp(size);
   } else if (type == "test-blackbodyramp") {
-    img =  make_blackbodyramp(size);
+    img = make_blackbodyramp(size);
   } else if (type == "test-uvgrid") {
-    img =  make_uvgrid(size);
+    img = make_uvgrid(size);
   } else if (type == "test-sky") {
-    img =  make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    img =  make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    img =  make_noisemap(size);
+    img = make_noisemap(size);
   } else if (type == "test-fbm") {
-    img =  make_noisemap(size);
+    img = make_noisemap(size);
   } else if (type == "test-bumps-normal") {
-    img =  bump_to_normal(make_bumps(size), 0.05f);
+    img = bump_to_normal(make_bumps(size), 0.05f);
   } else if (type == "test-bumps-displacement") {
-    img =  srgb_to_rgb(make_bumps(size));
+    img = srgb_to_rgb(make_bumps(size));
   } else if (type == "test-fbm-displacement") {
-    img =  srgb_to_rgb(make_fbmmap(size));
+    img = srgb_to_rgb(make_fbmmap(size));
   } else {
     error = "unknown preset";
-    img = {};
+    img   = {};
     return false;
   }
   return true;
@@ -275,18 +275,18 @@ int run_app(int argc, const char* argv[]) {
   // load
   auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
-  auto ioerror = ""s;
+  auto ioerror  = ""s;
   auto img      = image<vec4f>{};
-  if(ext == ".ypreset") {
-    if(!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
+  if (ext == ".ypreset") {
+    if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
   } else {
-    if(!load_image(filename, img, ioerror)) print_fatal(ioerror);
+    if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
   }
 
   // set alpha
   if (alpha_filename != "") {
     auto alpha = image<vec4f>{};
-    if(!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
+    if (!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
@@ -295,7 +295,7 @@ int run_app(int argc, const char* argv[]) {
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>{};
-    if(!load_image(coloralpha_filename, alpha, ioerror)) print_fatal(ioerror);
+    if (!load_image(coloralpha_filename, alpha, ioerror)) print_fatal(ioerror);
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
@@ -305,7 +305,7 @@ int run_app(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = image<vec4f>{};
-    if(!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
+    if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
     if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
@@ -326,13 +326,13 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // save
-  if(!save_image(output, logo ? add_logo(img) : img, ioerror)) print_fatal(ioerror);
+  if (!save_image(output, logo ? add_logo(img) : img, ioerror))
+    print_fatal(ioerror);
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold)
-        print_fatal("image content differs");
+      if (max(xyz(c)) > diff_threshold) print_fatal("image content differs");
     }
   }
 
