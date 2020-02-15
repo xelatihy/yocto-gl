@@ -66,7 +66,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage   = nullptr;
+  opengl_image*       glimage   = new opengl_image{};
   draw_glimage_params glparams  = {};
   bool                glupdated = true;
 
@@ -273,7 +273,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
   app->glparams.framebuffer = input.framebuffer_viewport;
-  if (!app->glimage) app->glimage = make_glimage().release();
+  if (!is_initialized(app->glimage)) init_glimage(app->glimage);
   if (app->glupdated) {
     set_glimage(app->glimage, app->display, false, false);
     app->glupdated = false;

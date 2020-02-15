@@ -120,8 +120,8 @@ int run_app(int argc, const char* argv[]) {
       win, [app](opengl_window* win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
-        if (!app->glimage) {
-          app->glimage = make_glimage().release();
+        if (!is_initialized(app->glimage)) {
+          init_glimage(app->glimage);
           set_glimage(app->glimage, app->display, false, false);
         }
         update_imview(app->glparams.center, app->glparams.scale,

@@ -41,7 +41,7 @@ using namespace std;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-unique_ptr<trace_scene> make_scene(
+void init_scene(trace_scene* scene,
     sceneio_model* ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -49,9 +49,6 @@ unique_ptr<trace_scene> make_scene(
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  auto scene_ = make_trace_scene();
-  auto scene  = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -153,8 +150,6 @@ unique_ptr<trace_scene> make_scene(
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  return scene_;
 }
 
 // progress callback
@@ -235,19 +230,26 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene = load_scene(filename, print_progress);
+  auto ioscene_guard = make_unique<sceneio_model>();
+  auto ioscene = ioscene_guard.get();
+  load_scene(filename, ioscene, print_progress);
 
   // convert scene
-  auto scene = make_scene(ioscene.get(), print_progress);
+  auto scene_guard = make_unique<trace_scene>();
+  auto scene = scene_guard.get();
+  init_scene(scene, ioscene, print_progress);
 
   // cleanup
-  ioscene = nullptr;
+  if(ioscene) {
+    delete ioscene;
+    ioscene = nullptr;
+  }
 
   // build bvh
-  init_bvh(scene.get(), params, print_progress);
+  init_bvh(scene, params, print_progress);
 
   // init renderer
-  init_lights(scene.get(), print_progress);
+  init_lights(scene, print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
@@ -256,7 +258,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // render
-  auto render = trace_image(scene.get(), params, print_progress,
+  auto render = trace_image(scene, params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;

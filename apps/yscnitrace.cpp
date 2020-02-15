@@ -57,8 +57,8 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model* ioscene = nullptr;
-  trace_scene*   scene   = nullptr;
+  sceneio_model* ioscene = new sceneio_model{};
+  trace_scene*   scene   = new trace_scene{};
 
   // rendering state
   image<vec4f> render   = {};
@@ -66,7 +66,7 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = nullptr;
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   // editing
@@ -82,7 +82,7 @@ struct app_state {
   // computation
   int                render_sample  = 0;
   int                render_counter = 0;
-  trace_async_state* render_state   = {};
+  trace_async_state* render_state   = new trace_async_state{};
 
   // loading status
   atomic<bool>       ok       = false;
@@ -119,7 +119,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-unique_ptr<trace_scene> make_scene(
+void init_scene(trace_scene* scene,
     sceneio_model* ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -127,10 +127,6 @@ unique_ptr<trace_scene> make_scene(
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
-
-  // initialize scene
-  auto scene_ = make_trace_scene();
-  auto scene  = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -238,8 +234,6 @@ unique_ptr<trace_scene> make_scene(
 
   // done
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
-
-  return scene_;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -273,6 +267,7 @@ void reset_display(app_state* app) {
 
   // start render
   app->render_counter = 0;
+  if(app->render_state) delete app->render_state;
   app->render_state   = trace_async_start(
       app->scene, app->params,
       [app](const string& message, int sample, int nsamples) {
@@ -301,9 +296,9 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene  = load_scene(app->filename, progress_cb).release();
+    load_scene(app->filename, app->ioscene, progress_cb);
     app->progress = 1;
-    app->scene    = make_scene(app->ioscene, progress_cb).release();
+    init_scene(app->scene, app->ioscene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
@@ -774,7 +769,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
   app->glparams.framebuffer = input.framebuffer_viewport;
-  if (!app->glimage) app->glimage = make_glimage().release();
+  if (!is_initialized(app->glimage)) init_glimage(app->glimage);
   if (!app->render_counter)
     set_glimage(app->glimage, app->display, false, false);
   update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
