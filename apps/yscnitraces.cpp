@@ -50,8 +50,8 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  trace_scene*   scene      = new trace_scene{};
-  bool           add_skyenv = false;
+  trace_scene* scene      = new trace_scene{};
+  bool         add_skyenv = false;
 
   // rendering state
   image<vec4f> render   = {};
@@ -63,8 +63,8 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // computation
-  int                render_sample  = 0;
-  int                render_counter = 0;
+  int          render_sample  = 0;
+  int          render_counter = 0;
   trace_state* render_state   = new trace_state{};
 
   ~app_state() {

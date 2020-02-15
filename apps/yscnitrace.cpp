@@ -80,8 +80,8 @@ struct app_state {
   sceneio_texture*     selected_texture     = nullptr;
 
   // computation
-  int                render_sample  = 0;
-  int                render_counter = 0;
+  int          render_sample  = 0;
+  int          render_counter = 0;
   trace_state* render_state   = new trace_state{};
 
   // loading status

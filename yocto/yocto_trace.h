@@ -468,10 +468,10 @@ struct trace_pixel {
 
 // [experimental] Asynchronous state
 struct trace_state {
-  image<vec4f>            render = {};
-  image<trace_pixel> pixels  = {};
-  std::future<void>       worker = {}; // async
-  std::atomic<bool>       stop   = {}; // async
+  image<vec4f>       render = {};
+  image<trace_pixel> pixels = {};
+  std::future<void>  worker = {};  // async
+  std::atomic<bool>  stop   = {};  // async
 };
 
 }  // namespace yocto
