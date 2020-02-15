@@ -51,7 +51,7 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene    = nullptr;
-  shared_ptr<trace_scene>   scene      = nullptr;
+  unique_ptr<trace_scene>   scene      = nullptr;
   bool                      add_skyenv = false;
 
   // rendering state
@@ -66,13 +66,13 @@ struct app_state {
   // computation
   int                           render_sample  = 0;
   int                           render_counter = 0;
-  shared_ptr<trace_async_state> render_state   = nullptr;
+  unique_ptr<trace_async_state> render_state   = nullptr;
 
-  ~app_state() { trace_async_stop(render_state); }
+  ~app_state() { trace_async_stop(render_state.get()); }
 };
 
 // construct a scene from io
-shared_ptr<trace_scene> make_scene(
+unique_ptr<trace_scene> make_scene(
     shared_ptr<sceneio_model> ioscene, sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -81,7 +81,8 @@ shared_ptr<trace_scene> make_scene(
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto scene = make_trace_scene();
+  auto scene_ = make_trace_scene();
+  auto scene = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -93,7 +94,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -108,7 +109,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -143,7 +144,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+      unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -163,7 +164,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -195,17 +196,17 @@ shared_ptr<trace_scene> make_scene(
   // done
   if (print_progress) print_progress("convert done", progress.x++, progress.y);
 
-  return scene;
+  return scene_;
 }
 
 void reset_display(shared_ptr<app_state> app) {
   // stop render
-  trace_async_stop(app->render_state);
+  trace_async_stop(app->render_state.get());
 
   // start render
   app->render_counter = 0;
   app->render_state   = trace_async_start(
-      app->scene, app->params, {},
+      app->scene.get(), app->params, {},
       [app = app.get()](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
@@ -300,10 +301,10 @@ int run_app(int argc, const char* argv[]) {
   app->ioscene = nullptr;
 
   // build bvh
-  init_bvh(app->scene, app->params, print_progress);
+  init_bvh(app->scene.get(), app->params, print_progress);
 
   // init renderer
-  init_lights(app->scene, print_progress);
+  init_lights(app->scene.get(), print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {

@@ -58,10 +58,9 @@ struct app_state {
 
   // scene
   shared_ptr<sceneio_model> ioscene = nullptr;
-  shared_ptr<trace_scene>   scene   = nullptr;
+  unique_ptr<trace_scene>   scene   = nullptr;
 
   // rendering state
-  shared_ptr<trace_state> state    = nullptr;
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -83,7 +82,7 @@ struct app_state {
   // computation
   int                           render_sample  = 0;
   int                           render_counter = 0;
-  shared_ptr<trace_async_state> render_state   = {};
+  unique_ptr<trace_async_state> render_state   = {};
 
   // loading status
   atomic<bool>       ok       = false;
@@ -91,7 +90,7 @@ struct app_state {
   string             error    = "";
   std::atomic<float> progress = 0.5;
 
-  ~app_state() { trace_async_stop(render_state); }
+  ~app_state() { trace_async_stop(render_state.get()); }
 };
 
 // Application state
@@ -107,7 +106,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-shared_ptr<trace_scene> make_scene(
+unique_ptr<trace_scene> make_scene(
     shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -117,7 +116,8 @@ shared_ptr<trace_scene> make_scene(
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
   // initialize scene
-  auto scene = make_trace_scene();
+  auto scene_ = make_trace_scene();
+  auto scene = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -129,7 +129,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -144,7 +144,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -179,7 +179,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+      unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -198,7 +198,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -230,7 +230,7 @@ shared_ptr<trace_scene> make_scene(
   // done
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
 
-  return scene;
+  return scene_;
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -254,18 +254,18 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 
 void stop_display(shared_ptr<app_state> app) {
   // stop render
-  trace_async_stop(app->render_state);
+  trace_async_stop(app->render_state.get());
   app->render_state = nullptr;
 }
 
 void reset_display(shared_ptr<app_state> app) {
   // stop render
-  trace_async_stop(app->render_state);
+  trace_async_stop(app->render_state.get());
 
   // start render
   app->render_counter = 0;
   app->render_state   = trace_async_start(
-      app->scene, app->params,
+      app->scene.get(), app->params,
       [app = app.get()](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
@@ -295,14 +295,13 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
     app->ioscene  = load_scene(app->filename, progress_cb);
     app->progress = 1;
     app->scene    = make_scene(app->ioscene, progress_cb);
-    init_bvh(app->scene, app->params);
-    init_lights(app->scene);
+    init_bvh(app->scene.get(), app->params);
+    init_lights(app->scene.get());
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
       app->params.sampler = trace_sampler_type::eyelight;
     }
-    app->state = make_state(app->scene, app->params);
-    app->render.resize(app->state->size());
-    app->display.resize(app->state->size());
+    // app->render.resize(app->state->size());
+    // app->display.resize(app->state->size());
   });
   apps->states.push_back(app);
   apps->loading.push_back(app);
@@ -473,9 +472,9 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 }
 
 template <typename T, typename T1>
-shared_ptr<T1> get_element(shared_ptr<T> ioelement,
+T1* get_element(shared_ptr<T> ioelement,
     const vector<shared_ptr<T>>&         ioelements,
-    const vector<shared_ptr<T1>>&        elements) {
+    const vector<T1*>&        elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -630,7 +629,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
       set_frame(environment, ioenvironment->frame);
       set_emission(environment, ioenvironment->emission,
           get_texture(ioenvironment->emission_tex));
-      init_lights(app->scene);
+      init_lights(app->scene.get());
       reset_display(app);
     }
     end_glheader(win);
@@ -700,7 +699,7 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
       set_normalmap(material, get_texture(iomaterial->normal_tex));
       set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
           get_texture(iomaterial->scattering_tex));
-      init_lights(app->scene);
+      init_lights(app->scene.get());
       reset_display(app);
     }
     end_glheader(win);
@@ -913,7 +912,7 @@ int run_app(int argc, const char* argv[]) {
         auto ray    = camera_ray(camera->frame, camera->lens, camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
-        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app->scene.get(), ray); isec.hit) {
           app->selected_object = app->ioscene->objects[isec.object];
         }
       }

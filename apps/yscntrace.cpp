@@ -50,7 +50,8 @@ shared_ptr<trace_scene> make_scene(
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto scene = make_trace_scene();
+  auto scene_ = make_trace_scene();
+  auto scene = scene_.get();
 
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -61,7 +62,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, shared_ptr<trace_texture>>{};
+      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -75,7 +76,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, shared_ptr<trace_material>>{};
+      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -108,7 +109,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, shared_ptr<trace_shape>>{};
+      unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -127,7 +128,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, shared_ptr<trace_instance>>{};
+      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -157,7 +158,7 @@ shared_ptr<trace_scene> make_scene(
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 
-  return scene;
+  return scene_;
 }
 
 // progress callback
@@ -247,10 +248,10 @@ int run_app(int argc, const char* argv[]) {
   ioscene = nullptr;
 
   // build bvh
-  init_bvh(scene, params, print_progress);
+  init_bvh(scene.get(), params, print_progress);
 
   // init renderer
-  init_lights(scene, print_progress);
+  init_lights(scene.get(), print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
@@ -259,7 +260,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // render
-  auto render = trace_image(scene, params, print_progress,
+  auto render = trace_image(scene.get(), params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
