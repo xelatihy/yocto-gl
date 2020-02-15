@@ -15,14 +15,14 @@ struct app_state {
   function<void(shared_ptr<app_state>)>                         init;
   function<void(shared_ptr<app_state>, int, bool)>              key_callback;
   function<void(shared_ptr<app_state>, int, vec2f, int, float)> click_callback;
-  function<void(shared_ptr<app_state>, shared_ptr<opengl_window>)>
+  function<void(shared_ptr<app_state>, opengl_window*)>
       draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
 
   // OpenGL data
-  shared_ptr<opengl_scene> scene          = nullptr;
+  unique_ptr<opengl_scene> scene          = nullptr;
   draw_glscene_params      opengl_options = {};
 
   // Interaction data
@@ -33,22 +33,22 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  shared_ptr<opengl_camera>   glcamera    = nullptr;
-  shared_ptr<opengl_shape>    glshapes    = nullptr;
-  shared_ptr<opengl_shape>    glpoints    = nullptr;
-  shared_ptr<opengl_shape>    glvfields   = nullptr;
-  shared_ptr<opengl_shape>    gledges     = nullptr;
-  shared_ptr<opengl_shape>    glpolylines = nullptr;
-  shared_ptr<opengl_material> glshapem    = nullptr;
-  shared_ptr<opengl_material> glpointm    = nullptr;
-  shared_ptr<opengl_material> glvfieldm   = nullptr;
-  shared_ptr<opengl_material> gledgem     = nullptr;
-  shared_ptr<opengl_material> glpolylinem = nullptr;
-  shared_ptr<opengl_object>   glshapeo    = nullptr;
-  shared_ptr<opengl_object>   glpointo    = nullptr;
-  shared_ptr<opengl_object>   glvfieldo   = nullptr;
-  shared_ptr<opengl_object>   gledgeo     = nullptr;
-  shared_ptr<opengl_object>   glpolylineo = nullptr;
+  opengl_camera*   glcamera    = nullptr;
+  opengl_shape*    glshapes    = nullptr;
+  opengl_shape*    glpoints    = nullptr;
+  opengl_shape*    glvfields   = nullptr;
+  opengl_shape*    gledges     = nullptr;
+  opengl_shape*    glpolylines = nullptr;
+  opengl_material* glshapem    = nullptr;
+  opengl_material* glpointm    = nullptr;
+  opengl_material* glvfieldm   = nullptr;
+  opengl_material* gledgem     = nullptr;
+  opengl_material* glpolylinem = nullptr;
+  opengl_object*   glshapeo    = nullptr;
+  opengl_object*   glpointo    = nullptr;
+  opengl_object*   glvfieldo   = nullptr;
+  opengl_object*   gledgeo     = nullptr;
+  opengl_object*   glpolylineo = nullptr;
 };
 
 void update_glshape(shared_ptr<app_state> app) {
@@ -182,57 +182,57 @@ void show_edges(shared_ptr<app_state> app) {
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   app->scene    = make_glscene();
-  app->glcamera = add_camera(app->scene);
+  app->glcamera = add_camera(app->scene.get());
   set_frame(app->glcamera, app->camera.frame);
   set_lens(
       app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
   set_nearfar(app->glcamera, 0.001, 10000);
 
   // The model.
-  app->glshapes = add_shape(app->scene);
-  app->glshapem = add_material(app->scene);
+  app->glshapes = add_shape(app->scene.get());
+  app->glshapem = add_material(app->scene.get());
   set_color(app->glshapem, {1, 0.2, 0});
   set_specular(app->glshapem, 1);
   set_roughness(app->glshapem, 0.3);
-  app->glshapeo = add_object(app->scene);
+  app->glshapeo = add_object(app->scene.get());
   set_shape(app->glshapeo, app->glshapes);
   set_material(app->glshapeo, app->glshapem);
   update_glshape(app);
 
   // The points.
-  app->glpoints = add_shape(app->scene);
-  app->glpointm = add_material(app->scene);
+  app->glpoints = add_shape(app->scene.get());
+  app->glpointm = add_material(app->scene.get());
   set_emission(app->glpointm, {1, 1, 1});
   set_roughness(app->glpointm, 0.0);
-  app->glpointo = add_object(app->scene);
+  app->glpointo = add_object(app->scene.get());
   set_shape(app->glpointo, app->glpoints);
   set_material(app->glpointo, app->glpointm);
 
   // The vector field.
-  app->glvfields = add_shape(app->scene);
-  app->glvfieldm = add_material(app->scene);
+  app->glvfields = add_shape(app->scene.get());
+  app->glvfieldm = add_material(app->scene.get());
   set_emission(app->glvfieldm, {1, 1, 1});
   set_roughness(app->glvfieldm, 0.0);
-  app->glvfieldo = add_object(app->scene);
+  app->glvfieldo = add_object(app->scene.get());
   set_shape(app->glvfieldo, app->glvfields);
   set_material(app->glvfieldo, app->glvfieldm);
 
   // The edges.
-  app->gledges = add_shape(app->scene);
-  app->gledgem = add_material(app->scene);
+  app->gledges = add_shape(app->scene.get());
+  app->gledgem = add_material(app->scene.get());
   set_emission(app->gledgem, {1, 1, 1});
   set_roughness(app->gledgem, 0.0);
-  app->gledgeo = add_object(app->scene);
+  app->gledgeo = add_object(app->scene.get());
   set_shape(app->gledgeo, app->gledges);
   set_material(app->gledgeo, app->glvfieldm);
   update_gledges(app);
 
   // The polyline.
-  app->glpolylines = add_shape(app->scene);
-  app->glpolylinem = add_material(app->scene);
+  app->glpolylines = add_shape(app->scene.get());
+  app->glpolylinem = add_material(app->scene.get());
   set_emission(app->glpolylinem, {1, 1, 1});
   set_roughness(app->glpolylinem, 0.0);
-  app->glpolylineo = add_object(app->scene);
+  app->glpolylineo = add_object(app->scene.get());
   set_shape(app->glpolylineo, app->glpolylines);
   set_material(app->glpolylineo, app->glpolylinem);
 
@@ -240,9 +240,9 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   if (!app->show_edges) hide_edges(app);
 
   // Add lights.
-  set_light(add_light(app->scene), {5, 5, 5}, {30, 30, 30}, false);
-  set_light(add_light(app->scene), {-5, 5, 5}, {30, 30, 30}, false);
-  set_light(add_light(app->scene), {0, 5, -5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {5, 5, 5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {-5, 5, 5}, {30, 30, 30}, false);
+  set_light(add_light(app->scene.get()), {0, 5, -5}, {30, 30, 30}, false);
 }
 
 void clear(shared_ptr<app_state> app) {
@@ -263,7 +263,7 @@ void yimshproc(const string&                         input_filename,
     function<void(shared_ptr<app_state>, int, bool)> key_callback,
     function<void(shared_ptr<app_state>, int, vec2f, int, float)>
         click_callback,
-    function<void(shared_ptr<app_state>, shared_ptr<opengl_window> win)>
+    function<void(shared_ptr<app_state>, opengl_window* win)>
         draw_glwidgets) {
   auto app = make_shared<app_state>();
 
@@ -283,18 +283,19 @@ void yimshproc(const string&                         input_filename,
   app->init(app);
 
   // Init window.
-  auto win = make_glwindow({1280 + 320, 720}, "yimshproc", true);
+  auto win_guard = make_glwindow({1280 + 320, 720}, "yimshproc", true);
+  auto win = win_guard.get();
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(win, [app](shared_ptr<opengl_window> win,
+  set_draw_glcallback(win, [app](opengl_window* win,
                                const opengl_input&         input) {
-    draw_glscene(app->scene, input.framebuffer_viewport, app->opengl_options);
+    draw_glscene(app->scene.get(), input.framebuffer_viewport, app->opengl_options);
   });
   set_widgets_glcallback(
-      win, [app, draw_glwidgets](shared_ptr<opengl_window> win,
+      win, [app, draw_glwidgets](opengl_window* win,
                const opengl_input& input) { draw_glwidgets(app, win); });
-  set_click_glcallback(win, [app](shared_ptr<opengl_window> win, bool left,
+  set_click_glcallback(win, [app](opengl_window* win, bool left,
                                 bool press, const opengl_input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
@@ -321,7 +322,7 @@ void yimshproc(const string&                         input_filename,
       }
     }
   });
-  set_scroll_glcallback(win, [app](shared_ptr<opengl_window> win, float yoffset,
+  set_scroll_glcallback(win, [app](opengl_window* win, float yoffset,
                                  const opengl_input& input) {
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
@@ -330,12 +331,12 @@ void yimshproc(const string&                         input_filename,
     set_lens(
         app->glcamera, app->camera.lens, app->camera.aspect, app->camera.film);
   });
-  set_key_glcallback(win, [app](shared_ptr<opengl_window> win, int key,
+  set_key_glcallback(win, [app](opengl_window* win, int key,
                               bool pressing, const opengl_input& input) {
     app->key_callback(app, key, pressing);
   });
   set_uiupdate_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {

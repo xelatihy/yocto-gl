@@ -65,7 +65,7 @@ struct app_state {
   unique_ptr<sceneio_model> ioscene = nullptr;
 
   // rendering state
-  shared_ptr<opengl_scene> glscene = nullptr;
+  unique_ptr<opengl_scene> glscene = nullptr;
 
   // editing
   sceneio_camera*      selected_camera      = nullptr;
@@ -115,7 +115,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
 }
 
 void update_lights(
-    shared_ptr<opengl_scene> glscene, sceneio_model* ioscene) {
+    opengl_scene* glscene, sceneio_model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -145,7 +145,7 @@ void update_lights(
   }
 }
 
-shared_ptr<opengl_scene> make_glscene(
+unique_ptr<opengl_scene> make_glscene(
     sceneio_model* ioscene, sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -155,7 +155,8 @@ shared_ptr<opengl_scene> make_glscene(
              (int)ioscene->objects.size()};
 
   // create scene
-  auto glscene = make_glscene();
+  auto glscene_guard = make_glscene();
+  auto glscene = glscene_guard.get();
 
   // camera
   for (auto iocamera : ioscene->cameras) {
@@ -168,7 +169,7 @@ shared_ptr<opengl_scene> make_glscene(
 
   // textures
   auto texture_map =
-      unordered_map<sceneio_texture*, shared_ptr<opengl_texture>>{};
+      unordered_map<sceneio_texture*, opengl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -183,7 +184,7 @@ shared_ptr<opengl_scene> make_glscene(
 
   // material
   auto material_map     = unordered_map<sceneio_material*,
-      shared_ptr<opengl_material>>{};
+      opengl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -213,7 +214,7 @@ shared_ptr<opengl_scene> make_glscene(
 
   // shapes
   auto shape_map =
-      unordered_map<sceneio_shape*, shared_ptr<opengl_shape>>{};
+      unordered_map<sceneio_shape*, opengl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -231,7 +232,7 @@ shared_ptr<opengl_scene> make_glscene(
 
   // instances
   auto instance_map     = unordered_map<sceneio_instance*,
-      shared_ptr<opengl_instance>>{};
+      opengl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -253,10 +254,10 @@ shared_ptr<opengl_scene> make_glscene(
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 
-  return glscene;
+  return glscene_guard;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
@@ -283,7 +284,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 }
 
 /// Visit struct elements.
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   draw_gllabel(win, "name", iotexture->name);
@@ -296,7 +297,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return false;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model*                 ioscene,
     sceneio_material*              iomaterial) {
   if (!iomaterial) return false;
@@ -342,7 +343,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model* ioscene, sceneio_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
@@ -361,7 +362,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model*                 ioscene,
     sceneio_instance*              ioinstance) {
   if (!ioinstance) return false;
@@ -372,7 +373,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model* ioscene, sceneio_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
@@ -390,7 +391,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
@@ -406,7 +407,7 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
   return edited;
 }
 
-bool draw_glwidgets(shared_ptr<opengl_window> win,
+bool draw_glwidgets(opengl_window* win,
     sceneio_model*                 ioscene,
     sceneio_environment*           ioenvironment) {
   if (!ioenvironment) return false;
@@ -423,9 +424,9 @@ bool draw_glwidgets(shared_ptr<opengl_window> win,
 }
 
 template <typename T, typename T1>
-shared_ptr<T1> get_element(T* ioelement,
+T1* get_element(T* ioelement,
     const vector<T*>&         ioelements,
-    const vector<shared_ptr<T1>>&        elements) {
+    const vector<T1*>&        elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -434,7 +435,7 @@ shared_ptr<T1> get_element(T* ioelement,
 }
 
 // draw with shading
-void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+void draw_glwidgets(opengl_window* win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -643,15 +644,15 @@ void draw_glwidgets(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
 }
 
 // draw with shading
-void draw(shared_ptr<opengl_window> win, shared_ptr<app_states> apps,
+void draw(opengl_window* win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
+  draw_glscene(app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
 }
 
 // update
-void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
+void update(opengl_window* win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -667,7 +668,7 @@ void update(shared_ptr<opengl_window> win, shared_ptr<app_states> apps) {
     try {
       app->loader.get();
       app->glscene = make_glscene(app->ioscene.get(), progress_cb);
-      update_lights(app->glscene, app->ioscene.get());
+      update_lights(app->glscene.get(), app->ioscene.get());
       app->ok     = true;
       app->status = "ok";
     } catch (std::exception& e) {
@@ -701,27 +702,28 @@ int run_app(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
-  auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
+  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnview", true);
+  auto win = win_guard.get();
 
   // callbacks
   set_draw_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const vector<string>& paths,
+      win, [apps](opengl_window* win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](shared_ptr<opengl_window> win,
+  set_uiupdate_glcallback(win, [apps](opengl_window* win,
                                    const opengl_input&          input) {
     if (!apps->selected || !apps->selected->ok) return;
     auto app = apps->selected;

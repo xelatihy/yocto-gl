@@ -51,7 +51,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  shared_ptr<opengl_image> glimage  = nullptr;
+  unique_ptr<opengl_image> glimage  = nullptr;
   draw_glimage_params      glparams = {};
 };
 
@@ -107,23 +107,24 @@ int run_app(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win_guard = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win = win_guard.get();
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!app->glimage) {
           app->glimage = make_glimage();
-          set_glimage(app->glimage, app->display, false, false);
+          set_glimage(app->glimage.get(), app->display, false, false);
         }
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_glimage(app->glimage.get(), app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](shared_ptr<opengl_window> win, const opengl_input& input) {
+      win, [app](opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;
