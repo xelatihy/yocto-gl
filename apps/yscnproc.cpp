@@ -84,14 +84,13 @@ int main(int argc, const char* argv[]) {
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene))
-      printf("error: %s\n", error.c_str());
+    for (auto& error : scene_validation(scene)) print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    printf("scene stats ------------\n");
-    for (auto stat : scene_stats(scene)) printf("%s\n", stat.c_str());
+    print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed

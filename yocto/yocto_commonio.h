@@ -149,11 +149,12 @@ inline cli_state make_cli(const string& cmd, const string& usage);
 // parse arguments, checks for errors, and exits on error or help
 inline void parse_cli(cli_state& cli, int argc, const char** argv);
 // parse arguments and checks for errors
-inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error);
+inline bool parse_cli(
+    cli_state& cli, int argc, const char** argv, string& error);
 // gets usage message
 inline string get_usage(const cli_state& cli);
 // gets whether help was invoked
-inline bool get_help(const cli_state& cli) {
+inline bool get_help(const cli_state& cli);
 
 // Parse an int, float, string, and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -543,7 +544,7 @@ struct cli_state {
   vector<cmdline_option> options         = {};
   string                 usage_options   = "";
   string                 usage_arguments = "";
-  bool help = false;
+  bool                   help            = false;
 };
 
 // initialize a command line parser
@@ -656,9 +657,7 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   return add_option(cli, name, (int&)value, usage, choices, req);
 }
 
-inline bool get_help(const cli_state& cli) {
-  return cli.help;
-}
+inline bool get_help(const cli_state& cli) { return cli.help; }
 
 inline string get_usage(const cli_state& cli) {
   auto message = string{};
@@ -694,7 +693,8 @@ inline bool parse_cli_value(const string& str, bool& value) {
   }
 }
 
-inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+inline bool parse_cli(
+    cli_state& cli, int argc, const char** argv, string& error) {
   auto cli_error = [&error](const string& message) {
     error = message;
     return false;
@@ -727,25 +727,30 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error
         option.set           = true;
         args.erase(args.begin() + pos);
       } else {
-        if (pos + 1 >= args.size()) return cli_error("missing value for " + name);
+        if (pos + 1 >= args.size())
+          return cli_error("missing value for " + name);
         auto value = args[pos + 1];
         args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cli_type::string_) {
           *(string*)option.value = value;
           option.set             = true;
         } else if (option.type == cli_type::int_) {
-          if (!parse_cli_value(value, *(int*)option.value)) return cli_error("incorrect value for " + name);
+          if (!parse_cli_value(value, *(int*)option.value))
+            return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::float_) {
-          if (!parse_cli_value(value, *(float*)option.value)) return cli_error("incorrect value for " + name);
+          if (!parse_cli_value(value, *(float*)option.value))
+            return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::bool_) {
-          if (!parse_cli_value(value, *(bool*)option.value)) return cli_error("incorrect value for " + name);
+          if (!parse_cli_value(value, *(bool*)option.value))
+            return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::enum_) {
           auto pos = std::find(
               option.choices.begin(), option.choices.end(), value);
-          if (pos == option.choices.end()) return cli_error("incorrect value for " + name);
+          if (pos == option.choices.end())
+            return cli_error("incorrect value for " + name);
           else
             *(int*)option.value = (int)(pos - option.choices.begin());
           option.set = true;
@@ -754,7 +759,8 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error
         }
       }
     }
-    if (option.req && !option.set) return cli_error("missing value for " + option.name);
+    if (option.req && !option.set)
+      return cli_error("missing value for " + option.name);
   }
   // check unknown options
   for (auto& arg : args) {
@@ -800,12 +806,12 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error
 
 inline void parse_cli(cli_state& cli, int argc, const char** argv) {
   auto error = string{};
-  if(!parse_cli(cli, argc, argv, error)) {
+  if (!parse_cli(cli, argc, argv, error)) {
     print_info("error: " + error);
     print_info("");
     print_info(get_usage(cli));
     exit(1);
-  } else if(cli.help) {
+  } else if (cli.help) {
     print_info(get_usage(cli));
     exit(0);
   }

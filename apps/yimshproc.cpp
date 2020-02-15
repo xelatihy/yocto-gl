@@ -24,16 +24,17 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
-  printf("press: %c [%d]\n", (char)key, key);
+  print_info(
+      "press: " + std::to_string((char)key) + " [" + std::to_string(key) + "]");
   auto enter = 257;
   auto esc   = 256;
 
   if (key == enter) {
-    printf("Enter pressed!\n");
+    print_info("Enter pressed!");
   }
 
   if (key == esc) {
-    printf("Esc pressed!\n");
+    print_info("Esc pressed!");
     init_camera(app);
     set_frame(app->glcamera, app->camera.frame);
     set_lens(
@@ -41,13 +42,13 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   }
 
   if (key == 'z') {
-    printf("Z pressed!\n");
+    print_info("Z pressed!");
   }
 }
 
 void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
     int vertex, float distance) {
-  printf("clicked vertex: %d\n", vertex);
+  print_info("clicked vertex: " + std::to_string(vertex));
   data.vertex_selection.push_back(vertex);
 
   auto positions = vector<vec3f>(data.vertex_selection.size());
@@ -141,7 +142,7 @@ int main(int argc, const char* argv[]) {
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](app_state* app) {
-    printf("init my data\n");
+    print_info("init my data");
     my_init(data, app);
   };
   auto key_callback = [&data](app_state* app, int key, bool pressing) {

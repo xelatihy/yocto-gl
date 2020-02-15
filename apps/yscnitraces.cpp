@@ -264,7 +264,7 @@ int main(int argc, const char* argv[]) {
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    printf("no lights presents, switching to eyelight shader\n");
+    print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trace_sampler_type::eyelight;
   }
 

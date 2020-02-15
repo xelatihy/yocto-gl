@@ -341,11 +341,11 @@ int main(int argc, const char* argv[]) {
 
   // print info
   if (info) {
-    printf("shape stats ------------\n");
+    print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) printf("%s\n", stat.c_str());
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
@@ -459,11 +459,11 @@ int main(int argc, const char* argv[]) {
   }
 
   if (info) {
-    printf("shape stats ------------\n");
+    print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) printf("%s\n", stat.c_str());
+    for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh

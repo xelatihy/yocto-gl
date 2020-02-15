@@ -575,8 +575,7 @@ void draw_glwidgets(
       }
       continue_glline(win);
       if (draw_glbutton(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene))
-          printf("%s\n", stat.c_str());
+        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
