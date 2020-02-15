@@ -3781,13 +3781,12 @@ static void convert_shape(pbrt_shape* shape, const pbrt_command& command,
 // Convert pbrt arealights
 static void convert_arealight(pbrt_arealight* arealight,
     const pbrt_command& command, bool verbose = false) {
-  auto light  = make_unique<pbrt_arealight>();
-  light->name = command.name;
+  arealight->name = command.name;
   if (command.type == "diffuse") {
     auto l = vec3f{1}, scale = vec3f{1};
     get_pbrt_value(command.values, "L", l);
     get_pbrt_value(command.values, "scale", scale);
-    light->emission = l * scale;
+    arealight->emission = l * scale;
   } else {
     throw std::invalid_argument{"unknown arealight " + command.type};
   }
