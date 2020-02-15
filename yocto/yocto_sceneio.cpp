@@ -262,6 +262,16 @@ vector<string> scene_validation(const
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+sceneio_model::~sceneio_model() {
+  for(auto camera :   cameras) delete camera;
+  for(auto shape :   shapes) delete shape;
+  for(auto subdiv :   subdivs) delete subdiv;
+  for(auto material :   materials) delete material;
+  for(auto instance :   instances) delete instance;
+  for(auto texture :   textures) delete texture;
+  for(auto environment :   environments) delete environment;
+}
+
 unique_ptr<sceneio_model> make_sceneio_model() {
   return make_unique<sceneio_model>();
 }

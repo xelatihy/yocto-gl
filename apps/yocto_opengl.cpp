@@ -732,6 +732,12 @@ opengl_shape::~opengl_shape() {
 }
 
 opengl_scene::~opengl_scene() {
+  for(auto camera :   cameras) delete camera;
+  for(auto shape :   shapes) delete shape;
+  for(auto material :   materials) delete material;
+  for(auto instance :   instances) delete instance;
+  for(auto texture :   textures) delete texture;
+  for(auto light :   lights) delete light;
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);

@@ -222,6 +222,7 @@ struct sceneio_model {
   vector<sceneio_texture*>     textures     = {};
   vector<sceneio_material*>    materials    = {};
   vector<sceneio_instance*>    instances    = {};
+  ~sceneio_model();
 };
 
 // create a scene
