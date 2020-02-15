@@ -1,14 +1,13 @@
 #include <memory>
 
 #include "../yocto/yocto_bvh.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 using namespace std;
-
-#include "ext/CLI11.hpp"
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
@@ -264,10 +263,12 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
   auto app       = app_guard.get();
 
   // init shape
-  load_shape(input_filename, app->shape.points, app->shape.lines,
-      app->shape.triangles, app->shape.quads, app->shape.positions,
-      app->shape.normals, app->shape.texcoords, app->shape.colors,
-      app->shape.radius);
+  auto ioerror = ""s;
+  if (!load_shape(input_filename, app->shape.points, app->shape.lines,
+          app->shape.triangles, app->shape.quads, app->shape.positions,
+          app->shape.normals, app->shape.texcoords, app->shape.colors,
+          app->shape.radius, ioerror))
+    print_fatal(ioerror);
   init_bvh(app);
   init_camera(app);
 

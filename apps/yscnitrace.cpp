@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -36,7 +37,6 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -85,10 +85,11 @@ struct app_state {
   trace_state* render_state   = new trace_state{};
 
   // loading status
-  atomic<bool>       ok       = false;
-  future<void>       loader   = {};
-  string             error    = "";
-  std::atomic<float> progress = 0.5;
+  atomic<bool>       ok           = false;
+  future<void>       loader       = {};
+  string             error        = "";
+  std::atomic<float> progress     = 0.5;
+  string             loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -290,12 +291,14 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->filename  = filename;
   app->imagename = fs::path(filename).replace_extension(".png");
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
-  app->params    = app->params;
+  app->params    = apps->params;
   app->loader    = async(launch::async, [app]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    load_scene(app->filename, app->ioscene, progress_cb);
+    if (!load_scene(
+            app->filename, app->ioscene, app->loader_error, progress_cb))
+      return;
     app->progress = 1;
     init_scene(app->scene, app->ioscene, progress_cb);
     init_bvh(app->scene, app->params);
@@ -495,12 +498,7 @@ void draw_glwidgets(
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_scene(app->outname, app->ioscene);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
   continue_glline(win);
@@ -510,12 +508,7 @@ void draw_glwidgets(
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_image(app->imagename, app->display);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_image(app->imagename, app->display, app->error);
     save_path = "";
   }
   continue_glline(win);
@@ -582,8 +575,7 @@ void draw_glwidgets(
       }
       continue_glline(win);
       if (draw_glbutton(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene))
-          printf("%s\n", stat.c_str());
+        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
@@ -788,64 +780,44 @@ void update(opengl_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    try {
-      app->loader.get();
+    app->loader.get();
+    if (app->loader_error.empty()) {
       reset_display(app);
       app->name = fs::path(app->filename).filename().string() + " [ok]";
       app->ok   = true;
-    } catch (std::exception& e) {
+    } else {
       app->name  = fs::path(app->filename).filename().string() + " [error]";
-      app->error = e.what();
+      app->error = app->loader_error;
     }
   }
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // application
   auto apps_guard = make_unique<app_states>();
   auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
 
-  // maps for getting param
-  auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
-    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
-  }
-  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] =
-        (trace_falsecolor_type)idx;
-  }
-  auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
-    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
-  }
-
   // parse command line
-  auto cli = CLI::App{"progressive path tracing"};
-  cli.add_option("--camera", apps->params.camera, "Camera index.");
-  cli.add_option(
-      "--resolution,-r", apps->params.resolution, "Image resolution.");
-  cli.add_option("--samples,-s", apps->params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", apps->params.sampler, "Tracer type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option(
-         "--falsecolor,-F", apps->params.falsecolor, "Tracer false color type.")
-      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
-  cli.add_option(
-      "--bounces", apps->params.bounces, "Maximum number of bounces.");
-  cli.add_option("--clamp", apps->params.clamp, "Final pixel clamping.");
-  cli.add_flag("--filter", apps->params.tentfilter, "Filter image.");
-  cli.add_flag("--env-hidden,!--no-env-hidden", apps->params.envhidden,
+  auto cli = make_cli("yscnitrace", "progressive path tracing");
+  add_option(cli, "--camera", apps->params.camera, "Camera index.");
+  add_option(
+      cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
+  add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
+  add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
+      trace_sampler_names);
+  add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
+  add_option(
+      cli, "--bounces", apps->params.bounces, "Maximum number of bounces.");
+  add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
+  add_option(
+      cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
+  add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  cli.add_option("--bvh", apps->params.bvh, "Bvh type")
-      ->transform(CLI::CheckedTransformer(trace_bvh_map));
-  cli.add_option("scenes", filenames, "Scene filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trace_bvh_names);
+  add_option(cli, "scenes", filenames, "Scene filenames", true);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
@@ -927,13 +899,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

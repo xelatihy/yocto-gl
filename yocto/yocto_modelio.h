@@ -49,6 +49,7 @@
 namespace yocto {
 
 // Using directives
+using std::function;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -99,9 +100,11 @@ struct ply_model {
 };
 
 // Load and save ply
-unique_ptr<ply_model> load_ply(const string& filename);
-void                  load_ply(const string& filename, ply_model* ply);
-void                  save_ply(const string& filename, ply_model* ply);
+unique_ptr<ply_model> load_ply(const string& filename, string& error);
+[[nodiscard]] bool    load_ply(
+       const string& filename, ply_model* ply, string& error);
+[[nodiscard]] bool save_ply(
+    const string& filename, ply_model* ply, string& error);
 
 // Get ply properties
 bool has_property(
@@ -336,11 +339,14 @@ struct obj_model {
 };
 
 // Load and save obj
-unique_ptr<obj_model> load_obj(const string& filename, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
-void load_obj(const string& filename, obj_model* obj, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
-void save_obj(const string& filename, obj_model* obj);
+unique_ptr<obj_model> load_obj(const string& filename, string& error,
+    bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
+[[nodiscard]] bool    load_obj(const string& filename, obj_model* obj,
+       string& error, bool geom_only = false, bool split_elements = true,
+       bool split_materials = false);
+[[nodiscard]] bool    save_obj(
+       const string& filename, obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -549,10 +555,11 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-unique_ptr<pbrt_model> load_pbrt(const string& filename);
-void                   load_pbrt(const string& filename, pbrt_model* pbrt);
-void                   save_pbrt(
-                      const string& filename, pbrt_model* pbrt, bool ply_meshes = false);
+unique_ptr<pbrt_model> load_pbrt(const string& filename, string& error);
+[[nodiscard]] bool     load_pbrt(
+        const string& filename, pbrt_model* pbrt, string& error);
+[[nodiscard]] bool save_pbrt(const string& filename, pbrt_model* pbrt,
+    string& error, bool ply_meshes = false);
 
 // Create pbrt
 unique_ptr<pbrt_model> make_pbrt();
@@ -620,8 +627,9 @@ struct gltf_model {
 };
 
 // Load gltf file.
-unique_ptr<gltf_model> load_gltf(const string& filename);
-void                   load_gltf(const string& filename, gltf_model* gltf);
+unique_ptr<gltf_model> load_gltf(const string& filename, string& error);
+[[nodiscard]] bool     load_gltf(
+        const string& filename, gltf_model* gltf, string& error);
 
 }  // namespace yocto
 

@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -35,7 +36,6 @@ using namespace yocto;
 #include <set>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -51,32 +51,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-// progress callback
-void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(max(0, n - str.size()), '0') + str;
-  };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(max(0, n - str.size()), ' ');
-  };
-  using clock               = std::chrono::high_resolution_clock;
-  static int64_t start_time = 0;
-  if (current == 0) start_time = clock::now().time_since_epoch().count();
-  auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000;  // millisecs
-  auto mins  = pad(to_string(elapsed / 60000), 2);
-  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
-  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
-  printf("\r%s\r", line.c_str());
-  if (current == total) printf("\n");
-  fflush(stdout);
-}
-
-int run_app(int argc, const char** argv) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto mesh_filenames     = false;
   auto shape_directory    = "shapes/"s;
@@ -85,40 +60,37 @@ int run_app(int argc, const char** argv) {
   auto validate           = false;
   auto info               = false;
   auto output             = "out.json"s;
-  auto filename           = "scene->json"s;
+  auto filename           = "scene.json"s;
 
   // parse command line
-  auto cli = CLI::App{"Process scene"};
-  cli.add_option("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  cli.add_option("--shape-directory", shape_directory,
+  auto cli = make_cli("yscnproc", "Process scene");
+  add_option(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  cli.add_option("--subdiv-directory", subdiv_directory,
+  add_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  cli.add_option("--info,-i", info, "print scene info");
-  cli.add_flag("--validate", validate, "Validate scene");
-  cli.add_option("--output,-o", output, "output scene", true);
-  cli.add_option("scene", filename, "input scene", true);
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--info,-i", info, "print scene info");
+  add_option(cli, "--validate/--no-validate", validate, "Validate scene");
+  add_option(cli, "--output,-o", output, "output scene");
+  add_option(cli, "scene", filename, "input scene", true);
+  parse_cli(cli, argc, argv);
 
   // load scene
   auto scene_guard = make_unique<sceneio_model>();
   auto scene       = scene_guard.get();
-  load_scene(filename, scene, print_progress);
+  auto ioerror     = ""s;
+  if (!load_scene(filename, scene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene))
-      printf("error: %s\n", error.c_str());
+    for (auto& error : scene_validation(scene)) print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    printf("scene stats ------------\n");
-    for (auto stat : scene_stats(scene)) printf("%s\n", stat.c_str());
+    print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed
@@ -153,17 +125,8 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  save_scene(output, scene, print_progress);
+  if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

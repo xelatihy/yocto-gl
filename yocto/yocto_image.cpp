@@ -1500,127 +1500,169 @@ bool is_hdr_filename(const string& filename) {
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
-// Helpers for throwing
-static void throw_read_error(const string& filename) {
-  throw std::runtime_error{filename + ": read error"};
-}
-static void throw_write_error(const string& filename) {
-  throw std::runtime_error{filename + ": write error"};
-}
-static void throw_format_error(const string& filename) {
-  throw std::runtime_error{filename + ": unknown format"};
-}
-
 // Loads an hdr image.
-image<vec4f> load_image(const string& filename) {
+image<vec4f> load_image(const string& filename, string& error) {
   auto img = image<vec4f>{};
-  load_image(filename, img);
+  if (!load_image(filename, img, error)) return {};
   return img;
 }
 
 // Loads an hdr image.
-void load_image(const string& filename, image<vec4f>& img) {
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec4f>& img, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      throw_read_error(filename);
-    if (!pixels) throw_read_error(filename);
+      return read_error();
+    if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
+    return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw_read_error(filename);
+    if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
+    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw_read_error(filename);
+    if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
+    return true;
   } else if (!is_hdr_filename(filename)) {
     auto imgb = image<vec4b>{};
-    load_imageb(filename, imgb);
+    if (!load_imageb(filename, imgb, error)) return false;
     img = srgb_to_rgb(imgb);
+    return true;
   } else {
-    throw_format_error(filename);
+    return format_error();
   }
 }
 
 // Saves an hdr image.
-void save_image(const string& filename, const image<vec4f>& img) {
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec4f>& img, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str()) < 0)
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (!is_hdr_filename(filename)) {
-    save_imageb(filename, rgb_to_srgbb(img));
+    return save_imageb(filename, rgb_to_srgbb(img), error);
   } else {
-    throw_format_error(filename);
+    return format_error();
   }
 }
 
 // Loads an ldr image.
-image<vec4b> load_imageb(const string& filename) {
+image<vec4b> load_imageb(const string& filename, string& error) {
   auto img = image<vec4b>{};
-  load_imageb(filename, img);
+  if (!load_imageb(filename, img, error)) return {};
   return img;
 }
 
 // Loads an ldr image.
-void load_imageb(const string& filename, image<vec4b>& img) {
+[[nodiscard]] bool load_imageb(
+    const string& filename, image<vec4b>& img, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw_read_error(filename);
+    if (!pixels) return read_error();
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
+    return true;
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
-    load_image(filename, imgf);
+    if (!load_image(filename, imgf, error)) return false;
     img = rgb_to_srgbb(imgf);
+    return true;
   } else {
-    throw_format_error(filename);
+    return format_error();
   }
 }
 
 // Saves an ldr image.
-void save_imageb(const string& filename, const image<vec4b>& img) {
+[[nodiscard]] bool save_imageb(
+    const string& filename, const image<vec4b>& img, string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      throw_write_error(filename);
+      return write_error();
+    return true;
   } else if (is_hdr_filename(filename)) {
-    save_image(filename, srgb_to_rgb(img));
+    return save_image(filename, srgb_to_rgb(img), error);
   } else {
-    throw_format_error(filename);
+    return format_error();
   }
 }
 
@@ -1771,31 +1813,43 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-void load_volume(const string& filename, volume<float>& vol) {
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
   auto voxels = load_yvol(filename.c_str(), &width, &height, &depth, &ncomp, 1);
-  if (!voxels) throw_read_error(filename);
+  if (!voxels) return read_error();
   vol = volume{{width, height, depth}, (const float*)voxels};
   delete[] voxels;
+  return true;
 }
 
 // Saves volume data in binary format.
-void save_volume(const string& filename, const volume<float>& vol) {
+bool save_volume(
+    const string& filename, const volume<float>& vol, string& error) {
+  auto write_error = [filename, &error]() {
+    error = filename + ": write error";
+    return false;
+  };
   if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
           vol.data()))
-    throw_write_error(filename);
+    return write_error();
+  return true;
 }
 
 }  // namespace impl
 
 // Loads volume data from binary format.
-void load_volume(const string& filename, volume<float>& vol) {
-  impl::load_volume(filename, vol);
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
+  return impl::load_volume(filename, vol, error);
 }
 
 // Saves volume data in binary format.
-void save_volume(const string& filename, const volume<float>& vol) {
-  impl::save_volume(filename, vol);
+bool save_volume(
+    const string& filename, const volume<float>& vol, string& error) {
+  return impl::save_volume(filename, vol, error);
 }
 
 }  // namespace yocto

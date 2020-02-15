@@ -26,14 +26,13 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
 #include <future>
 using namespace std;
-
-#include "ext/CLI11.hpp"
 
 struct app_state {
   // original data
@@ -51,7 +50,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = nullptr;
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   ~app_state() {
@@ -89,24 +88,24 @@ void update_display(app_state* app) {
   });
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = CLI::App{"view images"};
-  cli.add_option("--output,-o", app->outname, "image output");
-  cli.add_option("image", app->filename, "image filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  auto cli = make_cli("yimgviews", "view images");
+  add_option(cli, "--output,-o", app->outname, "image output");
+  add_option(cli, "image", app->filename, "image filename", true);
+  parse_cli(cli, argc, argv);
 
   // load image
-  load_image(app->filename, app->source);
+  auto ioerror = ""s;
+  if (!load_image(app->filename, app->source, ioerror)) {
+    print_fatal(ioerror);
+    return 1;
+  }
 
   // update display
   update_display(app);
@@ -148,13 +147,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

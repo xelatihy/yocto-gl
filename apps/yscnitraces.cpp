@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -35,8 +36,6 @@ using namespace yocto;
 #include <future>
 #include <memory>
 using namespace std;
-
-#include "ext/CLI11.hpp"
 
 // Application state
 struct app_state {
@@ -216,83 +215,40 @@ void reset_display(app_state* app) {
       });
 }
 
-// progress callback
-void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(max(0, n - str.size()), '0') + str;
-  };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(max(0, n - str.size()), ' ');
-  };
-  using clock               = std::chrono::high_resolution_clock;
-  static int64_t start_time = 0;
-  if (current == 0) start_time = clock::now().time_since_epoch().count();
-  auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000;  // millisecs
-  auto mins  = pad(to_string(elapsed / 60000), 2);
-  auto secs  = pad(to_string((elapsed % 60000) / 1000), 2);
-  auto msecs = pad(to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
-  printf("\r%s\r", line.c_str());
-  if (current == total) printf("\n");
-  fflush(stdout);
-}
-
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // application
   auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
 
-  // maps for getting param
-  auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
-    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
-  }
-  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] =
-        (trace_falsecolor_type)idx;
-  }
-  auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
-    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
-  }
-
   // parse command line
-  auto cli = CLI::App{"progressive path tracing"};
-  cli.add_option("--camera", app->params.camera, "Camera index.");
-  cli.add_option(
-      "--resolution,-r", app->params.resolution, "Image resolution.");
-  cli.add_option("--samples,-s", app->params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", app->params.sampler, "Tracer type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option(
-         "--falsecolor,-F", app->params.falsecolor, "Tracer false color type.")
-      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
-  cli.add_option(
-      "--bounces", app->params.bounces, "Maximum number of bounces.");
-  cli.add_option("--clamp", app->params.clamp, "Final pixel clamping.");
-  cli.add_flag("--filter", app->params.tentfilter, "Filter image.");
-  cli.add_flag("--env-hidden,!--no-env-hidden", app->params.envhidden,
+  auto cli = make_cli("yscnitraces", "progressive path tracing");
+  add_option(cli, "--camera", app->params.camera, "Camera index.");
+  add_option(
+      cli, "--resolution,-r", app->params.resolution, "Image resolution.");
+  add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
+  add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
+      trace_sampler_names);
+  add_option(cli, "--falsecolor,-F", app->params.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
+  add_option(
+      cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
+  add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
+  add_option(
+      cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
+  add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  cli.add_option("--bvh", app->params.bvh, "Bvh type")
-      ->transform(CLI::CheckedTransformer(trace_bvh_map));
-  cli.add_flag("--add-skyenv", app->add_skyenv, "Add sky envmap");
-  cli.add_option("--output,-o", app->imagename, "Image output", false);
-  cli.add_option("scene", app->filename, "Scene filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", trace_bvh_names);
+  add_option(cli, "--skyenv/--no-skyenv", app->add_skyenv, "Add sky envmap");
+  add_option(cli, "--output,-o", app->imagename, "Image output");
+  add_option(cli, "scene", app->filename, "Scene filename", true);
+  parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  load_scene(app->filename, ioscene, print_progress);
+  auto ioerror       = ""s;
+  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // conversion
   init_scene(app->scene, ioscene, print_progress);
@@ -308,7 +264,7 @@ int run_app(int argc, const char* argv[]) {
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    printf("no lights presents, switching to eyelight shader\n");
+    print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
@@ -360,13 +316,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

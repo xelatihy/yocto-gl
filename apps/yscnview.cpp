@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -37,7 +38,6 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -78,11 +78,12 @@ struct app_state {
   sceneio_texture*     selected_texture     = nullptr;
 
   // loading status
-  atomic<bool>       ok       = false;
-  future<void>       loader   = {};
-  string             status   = "";
-  string             error    = "";
-  std::atomic<float> progress = 0.5;
+  atomic<bool>       ok           = false;
+  future<void>       loader       = {};
+  string             status       = "";
+  string             error        = "";
+  std::atomic<float> progress     = 0.5;
+  string             loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -117,7 +118,9 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    load_scene(app->filename, app->ioscene, progress_cb);
+    if (!load_scene(
+            app->filename, app->ioscene, app->loader_error, progress_cb))
+      return;
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -447,12 +450,7 @@ void draw_glwidgets(
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_scene(app->outname, app->ioscene);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
   continue_glline(win);
@@ -503,7 +501,7 @@ void draw_glwidgets(
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) printf("%s", stat.c_str());
+      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
     end_glheader(win);
   }
@@ -662,40 +660,34 @@ void update(opengl_window* win, app_states* apps) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    try {
-      app->loader.get();
+    app->loader.get();
+    if (app->loader_error.empty()) {
       init_glscene(app->glscene, app->ioscene, progress_cb);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
-    } catch (std::exception& e) {
+    } else {
       app->status = "";
-      app->error  = e.what();
+      app->error  = app->loader_error;
     }
   }
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard = make_unique<app_states>();
   auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
-  auto noparallel = false;
 
   // parse command line
-  auto cli = CLI::App{"views scenes inteactively"};
-  cli.add_option("--camera", apps->drawgl_prms.camera, "Camera index.");
-  cli.add_option(
-      "--resolution,-r", apps->drawgl_prms.resolution, "Image resolution.");
-  cli.add_flag("--eyelight!,--no-eyelight,-c", apps->drawgl_prms.eyelight,
+  auto cli = make_cli("yscnview", "views scenes inteactively");
+  add_option(cli, "--camera", apps->drawgl_prms.camera, "Camera index.");
+  add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
+      "Image resolution.");
+  add_option(cli, "--eyelight/--no-eyelight", apps->drawgl_prms.eyelight,
       "Eyelight rendering.");
-  cli.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  cli.add_option("scenes", filenames, "Scene filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "scenes", filenames, "Scene filenames", true);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
@@ -753,13 +745,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

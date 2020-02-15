@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -34,7 +35,6 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -71,10 +71,11 @@ struct app_state {
   bool                glupdated = true;
 
   // loading status
-  atomic<bool> ok     = false;
-  future<void> loader = {};
-  string       status = "";
-  string       error  = "";
+  atomic<bool> ok           = false;
+  future<void> loader       = {};
+  string       status       = "";
+  string       error        = "";
+  string       loader_error = "";
 
   // cleanup
   ~app_state() {
@@ -143,7 +144,7 @@ void load_image_async(app_states* apps, const string& filename) {
   app->params   = apps->params;
   app->status   = "loading";
   app->loader   = async(launch::async, [app]() {
-    load_image(app->filename, app->source);
+    if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
         app->source_stats, app->source, is_hdr_filename(app->filename));
     if (app->colorgrade) {
@@ -172,13 +173,7 @@ void draw_glwidgets(
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_image(app->outname, app->display);
-    } catch (exception& e) {
-      push_glmessage(win, "cannot save " + app->outname);
-      log_glinfo(win, "cannot save " + app->outname);
-      log_glinfo(win, e.what());
-    }
+    save_image(app->outname, app->display, app->error);
     save_path = "";
   }
   continue_glline(win);
@@ -293,32 +288,28 @@ void update(opengl_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    try {
-      app->loader.get();
+    app->loader.get();
+    if (app->loader_error.empty()) {
       update_display(app);
       app->ok     = true;
       app->status = "ok";
-    } catch (std::exception& e) {
+    } else {
       app->status = "";
-      app->error  = e.what();
+      app->error  = app->loader_error;
     }
   }
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = make_unique<app_states>();
   auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
 
   // command line options
-  auto cli = CLI::App{"view images"};
-  cli.add_option("images", filenames, "image filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  auto cli = make_cli("yimgview", "view images");
+  add_option(cli, "images", filenames, "image filenames", true);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);
@@ -367,13 +358,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

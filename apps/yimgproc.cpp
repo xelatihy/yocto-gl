@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -103,7 +103,7 @@ image<vec4f> filter_bilateral(
 
 }  // namespace yocto
 
-image<vec4f> make_image_preset(const string& type) {
+bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
@@ -118,110 +118,111 @@ image<vec4f> make_image_preset(const string& type) {
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    return make_grid(size);
+    img = make_grid(size);
   } else if (type == "checker") {
-    return make_checker(size);
+    img = make_checker(size);
   } else if (type == "bumps") {
-    return make_bumps(size);
+    img = make_bumps(size);
   } else if (type == "uvramp") {
-    return make_uvramp(size);
+    img = make_uvramp(size);
   } else if (type == "gammaramp") {
-    return make_gammaramp(size);
+    img = make_gammaramp(size);
   } else if (type == "blackbodyramp") {
-    return make_blackbodyramp(size);
+    img = make_blackbodyramp(size);
   } else if (type == "uvgrid") {
-    return make_uvgrid(size);
+    img = make_uvgrid(size);
   } else if (type == "sky") {
-    return make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    return make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    return make_noisemap(size, 1);
+    img = make_noisemap(size, 1);
   } else if (type == "fbm") {
-    return make_fbmmap(size, 1);
+    img = make_fbmmap(size, 1);
   } else if (type == "ridge") {
-    return make_ridgemap(size, 1);
+    img = make_ridgemap(size, 1);
   } else if (type == "turbulence") {
-    return make_turbulencemap(size, 1);
+    img = make_turbulencemap(size, 1);
   } else if (type == "bump-normal") {
-    return srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
+    img = srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
+      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    auto img = image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
-    return img;
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
+      if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    auto img = image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
-    return img;
   } else if (type == "test-floor") {
-    return add_border(make_grid(size), 0.0025f);
+    img = add_border(make_grid(size), 0.0025f);
   } else if (type == "test-grid") {
-    return make_grid(size);
+    img = make_grid(size);
   } else if (type == "test-checker") {
-    return make_checker(size);
+    img = make_checker(size);
   } else if (type == "test-bumps") {
-    return make_bumps(size);
+    img = make_bumps(size);
   } else if (type == "test-uvramp") {
-    return make_uvramp(size);
+    img = make_uvramp(size);
   } else if (type == "test-gammaramp") {
-    return make_gammaramp(size);
+    img = make_gammaramp(size);
   } else if (type == "test-blackbodyramp") {
-    return make_blackbodyramp(size);
+    img = make_blackbodyramp(size);
   } else if (type == "test-uvgrid") {
-    return make_uvgrid(size);
+    img = make_uvgrid(size);
   } else if (type == "test-sky") {
-    return make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    return make_sunsky(
+    img = make_sunsky(
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    return make_noisemap(size);
+    img = make_noisemap(size);
   } else if (type == "test-fbm") {
-    return make_noisemap(size);
+    img = make_noisemap(size);
   } else if (type == "test-bumps-normal") {
-    return bump_to_normal(make_bumps(size), 0.05f);
+    img = bump_to_normal(make_bumps(size), 0.05f);
   } else if (type == "test-bumps-displacement") {
-    return srgb_to_rgb(make_bumps(size));
+    img = srgb_to_rgb(make_bumps(size));
   } else if (type == "test-fbm-displacement") {
-    return srgb_to_rgb(make_fbmmap(size));
+    img = srgb_to_rgb(make_fbmmap(size));
   } else {
-    return {};
+    error = "unknown preset";
+    img   = {};
+    return false;
   }
+  return true;
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto tonemap_on          = false;
   auto tonemap_exposure    = 0;
@@ -240,32 +241,28 @@ int run_app(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = CLI::App{"Transform images"};
-  cli.add_flag("--tonemap,!--no-tonemap,-t", tonemap_on, "Tonemap image");
-  cli.add_option("--exposure,-e", tonemap_exposure, "Tonemap exposure");
-  cli.add_flag(
-      "--filmic,!--no-filmic,-f", tonemap_filmic, "Tonemap uses filmic curve");
-  cli.add_option(
-      "--resize-width", resize_width, "resize size (0 to maintain aspect)");
-  cli.add_option(
-      "--resize-height", resize_height, "resize size (0 to maintain aspect)");
-  cli.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  cli.add_option("--range-sigma", range_sigma, "bilateral blur range sigma");
-  cli.add_option(
-      "--set-alpha", alpha_filename, "set alpha as this image alpha");
-  cli.add_option("--set-color-as-alpha", coloralpha_filename,
+  auto cli = make_cli("yimgproc", "Transform images");
+  add_option(cli, "--tonemap/--no-tonemap", tonemap_on, "Tonemap image");
+  add_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
+  add_option(
+      cli, "--filmic/--no-filmic", tonemap_filmic, "Tonemap uses filmic curve");
+  add_option(cli, "--resize-width", resize_width,
+      "resize size (0 to maintain aspect)");
+  add_option(cli, "--resize-height", resize_height,
+      "resize size (0 to maintain aspect)");
+  add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
+  add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
+  add_option(
+      cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
+  add_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  cli.add_flag("--logo", logo, "Add logo");
-  cli.add_option("--diff", diff_filename, "compute the diff between images");
-  cli.add_option("--diff-signal", diff_signal, "signal a diff as error");
-  cli.add_option("--diff-threshold,", diff_threshold, "diff threshold");
-  cli.add_option("--output,-o", output, "output image filename")->required();
-  cli.add_option("filename", filename, "input image filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--logo/--no-logo", logo, "Add logo");
+  add_option(cli, "--diff", diff_filename, "compute the diff between images");
+  add_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
+  add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
+  add_option(cli, "--output,-o", output, "output image filename");
+  add_option(cli, "filename", filename, "input image filename", true);
+  parse_cli(cli, argc, argv);
 
   // error string buffer
   auto error = ""s;
@@ -273,21 +270,28 @@ int run_app(int argc, const char* argv[]) {
   // load
   auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
-  auto img      = (ext == ".ypreset") ? make_image_preset(basename)
-                                 : load_image(filename);
+  auto ioerror  = ""s;
+  auto img      = image<vec4f>{};
+  if (ext == ".ypreset") {
+    if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
+  } else {
+    if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
+  }
 
   // set alpha
   if (alpha_filename != "") {
-    auto alpha = load_image(alpha_filename);
-    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
+    auto alpha = image<vec4f>{};
+    if (!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
   if (coloralpha_filename != "") {
-    auto alpha = load_image(coloralpha_filename);
-    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
+    auto alpha = image<vec4f>{};
+    if (!load_image(coloralpha_filename, alpha, ioerror)) print_fatal(ioerror);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -295,9 +299,9 @@ int run_app(int argc, const char* argv[]) {
 
   // diff
   if (diff_filename != "") {
-    auto diff = load_image(diff_filename);
-    if (img.size() != diff.size())
-      throw std::runtime_error("image sizes are different");
+    auto diff = image<vec4f>{};
+    if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
+    if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -317,25 +321,16 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // save
-  save_image(output, logo ? add_logo(img) : img);
+  if (!save_image(output, logo ? add_logo(img) : img, ioerror))
+    print_fatal(ioerror);
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold)
-        throw std::runtime_error("image content differs");
+      if (max(xyz(c)) > diff_threshold) print_fatal("image content differs");
     }
   }
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

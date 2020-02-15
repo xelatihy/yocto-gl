@@ -26,20 +26,21 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type) {
+    vector<vec4f>& colors, vector<float>& radius, const string& type,
+    string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -182,64 +183,48 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-largearealight2") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
   } else {
-    throw std::invalid_argument("unknown shape preset " + type);
+    error = "unknown preset";
+    return false;
   }
+  return true;
 }
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type) {
+    vector<float>& radius, const string& type, string& error) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+          quadstexcoord, positions, normals, texcoords, colors, radius, type,
+          error))
+    return false;
   if (!quadspos.empty()) throw std::runtime_error("bad preset type");
+  return true;
 }
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
+    string& error) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
   auto quads     = vector<vec4i>{};
   auto colors    = vector<vec4f>{};
   auto radius    = vector<float>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+          quadstexcoord, positions, normals, texcoords, colors, radius, type,
+          error))
+    return false;
   if (quadspos.empty()) throw std::runtime_error("bad preset type");
+  return true;
 }
 
-// progress callback
-void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(max(0, n - str.size()), '0') + str;
-  };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(max(0, n - str.size()), ' ');
-  };
-  using clock               = std::chrono::high_resolution_clock;
-  static int64_t start_time = 0;
-  if (current == 0) start_time = clock::now().time_since_epoch().count();
-  auto elapsed = clock::now().time_since_epoch().count() - start_time;
-  elapsed /= 1000000;  // millisecs
-  auto mins  = pad(std::to_string(elapsed / 60000), 2);
-  auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
-  auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
-  printf("\r%s\r", line.c_str());
-  if (current == total) printf("\n");
-  fflush(stdout);
-}
-
-int main(int argc, const char** argv) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto geodesic_source      = -1;
   int  p0                   = -1;
@@ -261,37 +246,33 @@ int main(int argc, const char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = CLI::App{"Applies operations on a triangle mesh"};
-  cli.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
-  cli.add_option("--path-vertex0,-p0", p0, "Path vertex 0");
-  cli.add_option("--path-vertex1,-p1", p1, "Path vertex 1");
-  cli.add_option("--path-vertex2,-p2", p2, "Path vertex 2");
-  cli.add_option("--num-geodesic-samples", num_geodesic_samples,
+  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
+  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
+  add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
+  add_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
+  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  cli.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
-  cli.add_flag("--slice", slice, "Slice mesh along field isolines");
-  cli.add_flag("--facevarying", facevarying, "Preserve facevarying");
-  cli.add_flag("--positiononly", positiononly, "Remove all but positions");
-  cli.add_flag("--trianglesonly", trianglesonly, "Remove all but triangles");
-  cli.add_flag("--smooth", smooth, "Compute smooth normals");
-  cli.add_option("--rotatey,-ry", rotate.y, "Rotate around y axis");
-  cli.add_option("--rotatex,-rx", rotate.x, "Rotate around x axis");
-  cli.add_option("--rotatez,-rz", rotate.z, "Rotate around z axis");
-  cli.add_option("--translatey,-ty", translate.y, "Translate along y axis");
-  cli.add_option("--translatex,-tx", translate.x, "Translate along x axis");
-  cli.add_option("--translatez,-tz", translate.z, "Translate along z axis");
-  cli.add_option("--scale,-s", uscale, "Scale along xyz axes");
-  cli.add_option("--scaley,-sy", scale.y, "Scale along y axis");
-  cli.add_option("--scalex,-sx", scale.x, "Scale along x axis");
-  cli.add_option("--scalez,-sz", scale.z, "Scale along z axis");
-  cli.add_flag("--info,-i", info, "print mesh info");
-  cli.add_option("--output,-o", output, "output mesh")->required();
-  cli.add_option("mesh", filename, "input mesh")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_option(cli, "--slice", slice, "Slice mesh along field isolines");
+  add_option(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_option(cli, "--positiononly", positiononly, "Remove all but positions");
+  add_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
+  add_option(cli, "--smooth", smooth, "Compute smooth normals");
+  add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
+  add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
+  add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
+  add_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
+  add_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
+  add_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
+  add_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
+  add_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
+  add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
+  add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
+  add_option(cli, "--info,-i", info, "print mesh info");
+  add_option(cli, "--output,-o", output, "output mesh");
+  add_option(cli, "mesh", filename, "input mesh", true);
+  parse_cli(cli, argc, argv);
 
   // mesh data
   auto positions     = vector<vec3f>{};
@@ -308,26 +289,31 @@ int main(int argc, const char** argv) {
   auto quadstexcoord = vector<vec4i>{};
 
   // load mesh
+  auto ioerror = ""s;
   print_progress("load shape", 0, 1);
   if (!facevarying) {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, basename);
+      if (!make_shape_preset(points, lines, triangles, quads, positions,
+              normals, texcoords, colors, radius, basename, ioerror))
+        print_fatal(ioerror);
     } else {
-      load_shape(filename, points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius);
+      if (!load_shape(filename, points, lines, triangles, quads, positions,
+              normals, texcoords, colors, radius, ioerror))
+        print_fatal(ioerror);
     }
   } else {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
-      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, basename);
+      if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords, basename, ioerror))
+        print_fatal(ioerror);
     } else {
-      load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords);
+      if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords, ioerror))
+        print_fatal(ioerror);
     }
   }
   print_progress("load shape", 1, 1);
@@ -355,11 +341,11 @@ int main(int argc, const char** argv) {
 
   // print info
   if (info) {
-    printf("shape stats ------------\n");
+    print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) printf("%s\n", stat.c_str());
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
@@ -473,21 +459,23 @@ int main(int argc, const char** argv) {
   }
 
   if (info) {
-    printf("shape stats ------------\n");
+    print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) printf("%s\n", stat.c_str());
+    for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
   print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
-    save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords);
+    if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, ioerror))
+      print_fatal(ioerror);
   } else {
-    save_shape(output, points, lines, triangles, quads, positions, normals,
-        texcoords, colors, radius);
+    if (!save_shape(output, points, lines, triangles, quads, positions, normals,
+            texcoords, colors, radius, ioerror))
+      print_fatal(ioerror);
   }
   print_progress("save shape", 1, 1);
 
