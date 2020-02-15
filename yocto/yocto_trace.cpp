@@ -3100,9 +3100,18 @@ unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb,
     trace_progress_image progress_image_cb,
     trace_process_async  progress_async_cb) {
-  auto astate   = make_unique<trace_async_state>();
-  astate->state = make_state(scene, params);
-  astate->render.resize(astate->state->size());
+  auto state = make_unique<trace_async_state>();
+  trace_async_start(state.get(), scene, params, progress_cb, progress_image_cb, progress_async_cb);
+  return state;
+}
+void trace_async_start(trace_async_state* state, const trace_scene* scene,
+    const trace_params& params, trace_progress progress_cb,
+    trace_progress_image progress_image_cb,
+    trace_process_async  progress_async_cb) {
+  state->state = make_state(scene, params);
+  state->render.resize(state->state->size());
+  state->worker = {};
+  state->stop = false;
 
   // render preview
   if (progress_cb) progress_cb("trace preview", 0, params.samples);
@@ -3110,36 +3119,34 @@ unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
   auto preview  = trace_image(scene, pprms);
-  for (auto j = 0; j < astate->render.size().y; j++) {
-    for (auto i = 0; i < astate->render.size().x; i++) {
+  for (auto j = 0; j < state->render.size().y; j++) {
+    for (auto i = 0; i < state->render.size().x; i++) {
       auto pi = clamp(i / params.pratio, 0, preview.size().x - 1),
            pj = clamp(j / params.pratio, 0, preview.size().y - 1);
-      astate->render[{i, j}] = preview[{pi, pj}];
+      state->render[{i, j}] = preview[{pi, pj}];
     }
   }
-  if (progress_image_cb) progress_image_cb(astate->render, 0, params.samples);
+  if (progress_image_cb) progress_image_cb(state->render, 0, params.samples);
 
   // start renderer
-  astate->worker = std::async(std::launch::async, [=, astate = astate.get()]() {
+  state->worker = std::async(std::launch::async, [=]() {
     for (auto sample = 0; sample < params.samples; sample++) {
-      if (astate->stop) return;
+      if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(astate->render.size(), [&](const vec2i& ij) {
-        if (astate->stop) return;
-        astate->render[ij] = trace_sample(
-            astate->state.get(), scene, ij, params);
+      parallel_for(state->render.size(), [&](const vec2i& ij) {
+        if (state->stop) return;
+        state->render[ij] = trace_sample(
+            state->state.get(), scene, ij, params);
         if (progress_async_cb)
-          progress_async_cb(astate->render, sample, params.samples, ij);
+          progress_async_cb(state->render, sample, params.samples, ij);
       });
       if (progress_image_cb)
-        progress_image_cb(astate->render, sample + 1, params.samples);
+        progress_image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb) progress_cb("trace image", params.samples, params.samples);
     if (progress_image_cb)
-      progress_image_cb(astate->render, params.samples, params.samples);
+      progress_image_cb(state->render, params.samples, params.samples);
   });
-
-  return astate;
 }
 void trace_async_stop(trace_async_state* state) {
   if (!state) return;

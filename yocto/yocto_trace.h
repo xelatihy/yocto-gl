@@ -277,6 +277,10 @@ unique_ptr<trace_async_state> trace_async_start(const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {},
     trace_process_async  progress_async_cb = {});
+void trace_async_start(trace_async_state* state, const trace_scene* scene,
+    const trace_params& params, trace_progress progress_cb = {},
+    trace_progress_image progress_image_cb = {},
+    trace_process_async  progress_async_cb = {});
 void                          trace_async_stop(trace_async_state* state);
 
 }  // namespace yocto

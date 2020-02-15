@@ -204,8 +204,7 @@ void reset_display(app_state* app) {
 
   // start render
   app->render_counter = 0;
-  if(app->render_state) delete app->render_state;
-  app->render_state   = trace_async_start(
+  trace_async_start(app->render_state,
       app->scene, app->params, {},
       [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
@@ -216,7 +215,7 @@ void reset_display(app_state* app) {
           const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
-      }).release();
+      });
 }
 
 // progress callback
