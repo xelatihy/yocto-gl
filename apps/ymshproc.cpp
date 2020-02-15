@@ -31,7 +31,6 @@
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -247,37 +246,33 @@ int main(int argc, const char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = CLI::App{"Applies operations on a triangle mesh"};
-  cli.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
-  cli.add_option("--path-vertex0,-p0", p0, "Path vertex 0");
-  cli.add_option("--path-vertex1,-p1", p1, "Path vertex 1");
-  cli.add_option("--path-vertex2,-p2", p2, "Path vertex 2");
-  cli.add_option("--num-geodesic-samples", num_geodesic_samples,
+  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
+  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
+  add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
+  add_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
+  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  cli.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
-  cli.add_flag("--slice", slice, "Slice mesh along field isolines");
-  cli.add_flag("--facevarying", facevarying, "Preserve facevarying");
-  cli.add_flag("--positiononly", positiononly, "Remove all but positions");
-  cli.add_flag("--trianglesonly", trianglesonly, "Remove all but triangles");
-  cli.add_flag("--smooth", smooth, "Compute smooth normals");
-  cli.add_option("--rotatey,-ry", rotate.y, "Rotate around y axis");
-  cli.add_option("--rotatex,-rx", rotate.x, "Rotate around x axis");
-  cli.add_option("--rotatez,-rz", rotate.z, "Rotate around z axis");
-  cli.add_option("--translatey,-ty", translate.y, "Translate along y axis");
-  cli.add_option("--translatex,-tx", translate.x, "Translate along x axis");
-  cli.add_option("--translatez,-tz", translate.z, "Translate along z axis");
-  cli.add_option("--scale,-s", uscale, "Scale along xyz axes");
-  cli.add_option("--scaley,-sy", scale.y, "Scale along y axis");
-  cli.add_option("--scalex,-sx", scale.x, "Scale along x axis");
-  cli.add_option("--scalez,-sz", scale.z, "Scale along z axis");
-  cli.add_flag("--info,-i", info, "print mesh info");
-  cli.add_option("--output,-o", output, "output mesh")->required();
-  cli.add_option("mesh", filename, "input mesh")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_option(cli, "--slice", slice, "Slice mesh along field isolines");
+  add_option(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_option(cli, "--positiononly", positiononly, "Remove all but positions");
+  add_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
+  add_option(cli, "--smooth", smooth, "Compute smooth normals");
+  add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
+  add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
+  add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
+  add_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
+  add_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
+  add_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
+  add_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
+  add_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
+  add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
+  add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
+  add_option(cli, "--info,-i", info, "print mesh info");
+  add_option(cli, "--output,-o", output, "output mesh");
+  add_option(cli, "mesh", filename, "input mesh", true);
+  parse_cli(cli, argc, argv);
 
   // mesh data
   auto positions     = vector<vec3f>{};

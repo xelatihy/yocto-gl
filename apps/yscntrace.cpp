@@ -37,7 +37,6 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -178,32 +177,26 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // parse command line
-  auto cli = CLI::App{"Offline path tracing"};
-  cli.add_option("--camera", params.camera, "Camera index.");
-  cli.add_option("--resolution,-r", params.resolution, "Image resolution.");
-  cli.add_option("--samples,-s", params.samples, "Number of samples.");
-  cli.add_option("--tracer,-t", params.sampler, "Trace type.")
-      ->transform(CLI::CheckedTransformer(trace_sampler_map));
-  cli.add_option(
-         "--falsecolor,-F", params.falsecolor, "Tracer false color type.")
-      ->transform(CLI::CheckedTransformer(trace_falsecolor_map));
-  cli.add_option("--bounces", params.bounces, "Maximum number of bounces.");
-  cli.add_option("--clamp", params.clamp, "Final pixel clamping.");
-  cli.add_flag("--filter", params.tentfilter, "Filter image.");
-  cli.add_option("--batch,-b", batch, "Samples per batch.");
-  cli.add_flag("--env-hidden,!--no-env-hidden", params.envhidden,
+  auto cli = make_cli("yscntrace", "Offline path tracing");
+  add_option(cli, "--camera", params.camera, "Camera index.");
+  add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
+  add_option(cli, "--samples,-s", params.samples, "Number of samples.");
+  add_option(
+      cli, "--tracer,-t", params.sampler, "Trace type.", trace_sampler_names);
+  add_option(cli, "--falsecolor,-F", params.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
+  add_option(cli, "--bounces", params.bounces, "Maximum number of bounces.");
+  add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
+  add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
+  add_option(cli, "--batch,-b", batch, "Samples per batch.");
+  add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
-  cli.add_option("--save-batch", save_batch, "Save images progressively");
-  cli.add_option("--bvh", params.bvh, "Bvh type")
-      ->transform(CLI::CheckedTransformer(trace_bvh_map));
-  cli.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
-  cli.add_option("--output-image,-o", imfilename, "Image filename");
-  cli.add_option("scene", filename, "Scene filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--save-batch", save_batch, "Save images progressively");
+  add_option(cli, "--bvh", params.bvh, "Bvh type", trace_bvh_names);
+  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
+  add_option(cli, "--output-image,-o", imfilename, "Image filename");
+  add_option(cli, "scene", filename, "Scene filename", true);
+  parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();

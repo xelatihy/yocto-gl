@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -34,7 +35,6 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -307,13 +307,9 @@ int run_app(int argc, const char* argv[]) {
   auto filenames  = vector<string>{};
 
   // command line options
-  auto cli = CLI::App{"view images"};
-  cli.add_option("images", filenames, "image filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  auto cli = make_cli("yimgview", "view images");
+  add_option(cli, "images", filenames, "image filenames", true);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);

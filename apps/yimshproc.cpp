@@ -133,13 +133,9 @@ int run_app(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = CLI::App{"interactive viewer for mesh processing"};
-  cli.add_option("model", input_filename, "model filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
+  add_option(cli, "model", input_filename, "model filenames", true);
+  parse_cli(cli, argc, argv);
 
   auto data = my_data{};
 

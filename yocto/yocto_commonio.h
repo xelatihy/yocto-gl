@@ -26,7 +26,7 @@
 // error checking.
 //
 // 1. initialize the parser with `auto cli = make_cli(argc, argv, help)`
-// 2. add options with `add_cli_option(cli, name, value, usage, req)`
+// 2. add options with `add_option(cli, name, value, usage, req)`
 //    - if name starts with '--' or '-' then it is an option
 //    - otherwise it is a positional argument
 //    - options and arguments may be intermixed
@@ -157,19 +157,22 @@ inline bool parse_cli(
 // The library support using many names for the same option/argument
 // separate by commas. Boolean flags are indicated with a pair of names
 // "--name/--no-name", so that we have both options available.
-inline void add_cli_option(cli_state& cli, const string& name, string& value,
+inline void add_option(cli_state& cli, const string& name, string& value,
     const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
+inline void add_option(cli_state& cli, const string& name, int& value,
     const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, float& value,
+inline void add_option(cli_state& cli, const string& name, float& value,
     const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, bool& value,
+inline void add_option(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req = false);
 // Parse an enum
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
+inline void add_option(cli_state& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line.
-inline void add_cli_option(cli_state& cli, const string& name,
+inline void add_option(cli_state& cli, const string& name,
     vector<string>& value, const string& usage, bool req = false);
 
 }  // namespace yocto
@@ -566,7 +569,7 @@ inline vector<string> split_cli_names(const string& name_) {
   return split;
 }
 
-inline void add_cli_option(cli_state& cli, const string& name, cli_type type,
+inline void add_option(cli_state& cli, const string& name, cli_type type,
     void* value, const string& usage, bool req, const vector<string>& choices) {
   static auto type_name = unordered_map<cli_type, string>{
       {cli_type::string_, "<string>"},
@@ -613,35 +616,39 @@ inline void add_cli_option(cli_state& cli, const string& name, cli_type type,
       cmdline_option{name, usage, type, value, req, false, choices});
 }
 
-inline void add_cli_option(cli_state& cli, const string& name, string& value,
+inline void add_option(cli_state& cli, const string& name, string& value,
     const string& usage, bool req) {
-  return add_cli_option(cli, name, cli_type::string_, &value, usage, req, {});
+  return add_option(cli, name, cli_type::string_, &value, usage, req, {});
 }
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
+inline void add_option(cli_state& cli, const string& name, int& value,
     const string& usage, bool req) {
-  return add_cli_option(cli, name, cli_type::int_, &value, usage, req, {});
+  return add_option(cli, name, cli_type::int_, &value, usage, req, {});
 }
-inline void add_cli_option(cli_state& cli, const string& name, float& value,
+inline void add_option(cli_state& cli, const string& name, float& value,
     const string& usage, bool req) {
-  return add_cli_option(cli, name, cli_type::float_, &value, usage, req, {});
+  return add_option(cli, name, cli_type::float_, &value, usage, req, {});
 }
-inline void add_cli_option(cli_state& cli, const string& name, bool& value,
+inline void add_option(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_cli_option(cli, name, cli_type::flag_, &value, usage, req, {});
+  return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
-inline void add_cli_option(cli_state& cli, const string& name,
+inline void add_option(cli_state& cli, const string& name,
     vector<string>& value, const string& usage, bool req) {
-  return add_cli_option(
+  return add_option(
       cli, name, cli_type::string_vector_, &value, usage, req, {});
 }
 inline void add_flag(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_cli_option(cli, name, cli_type::flag_, &value, usage, req, {});
+  return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
+inline void add_option(cli_state& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_cli_option(
-      cli, name, cli_type::enum_, &value, usage, req, choices);
+  return add_option(cli, name, cli_type::enum_, &value, usage, req, choices);
+}
+template <typename T, typename>
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_option(cli, name, (int&)value, usage, choices, req);
 }
 
 struct cli_error : std::runtime_error {

@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -37,7 +38,6 @@ using namespace yocto;
 #include <memory>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -678,22 +678,16 @@ int run_app(int argc, const char* argv[]) {
   auto apps_guard = make_unique<app_states>();
   auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
-  auto noparallel = false;
 
   // parse command line
-  auto cli = CLI::App{"views scenes inteactively"};
-  cli.add_option("--camera", apps->drawgl_prms.camera, "Camera index.");
-  cli.add_option(
-      "--resolution,-r", apps->drawgl_prms.resolution, "Image resolution.");
-  cli.add_flag("--eyelight!,--no-eyelight,-c", apps->drawgl_prms.eyelight,
+  auto cli = make_cli("yscnview", "views scenes inteactively");
+  add_option(cli, "--camera", apps->drawgl_prms.camera, "Camera index.");
+  add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
+      "Image resolution.");
+  add_option(cli, "--eyelight/--no-eyelight", apps->drawgl_prms.eyelight,
       "Eyelight rendering.");
-  cli.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  cli.add_option("scenes", filenames, "Scene filenames")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "scenes", filenames, "Scene filenames", true);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);

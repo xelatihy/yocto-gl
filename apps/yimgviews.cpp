@@ -34,8 +34,6 @@ using namespace yocto;
 #include <future>
 using namespace std;
 
-#include "ext/CLI11.hpp"
-
 struct app_state {
   // original data
   string filename = "image.png";
@@ -97,14 +95,10 @@ int run_app(int argc, const char* argv[]) {
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = CLI::App{"view images"};
-  cli.add_option("--output,-o", app->outname, "image output");
-  cli.add_option("image", app->filename, "image filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  auto cli = make_cli("yimgviews", "view images");
+  add_option(cli, "--output,-o", app->outname, "image output");
+  add_option(cli, "image", app->filename, "image filename", true);
+  parse_cli(cli, argc, argv);
 
   // load image
   auto ioerror = ""s;

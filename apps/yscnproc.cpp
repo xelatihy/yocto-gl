@@ -36,7 +36,6 @@ using namespace yocto;
 #include <set>
 using namespace std;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -61,24 +60,20 @@ int run_app(int argc, const char** argv) {
   auto validate           = false;
   auto info               = false;
   auto output             = "out.json"s;
-  auto filename           = "scene->json"s;
+  auto filename           = "scene.json"s;
 
   // parse command line
-  auto cli = CLI::App{"Process scene"};
-  cli.add_option("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  cli.add_option("--shape-directory", shape_directory,
+  auto cli = make_cli("yscnproc", "Process scene");
+  add_option(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  cli.add_option("--subdiv-directory", subdiv_directory,
+  add_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  cli.add_option("--info,-i", info, "print scene info");
-  cli.add_flag("--validate", validate, "Validate scene");
-  cli.add_option("--output,-o", output, "output scene", true);
-  cli.add_option("scene", filename, "input scene", true);
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--info,-i", info, "print scene info");
+  add_option(cli, "--validate/--no-validate", validate, "Validate scene");
+  add_option(cli, "--output,-o", output, "output scene");
+  add_option(cli, "scene", filename, "input scene", true);
+  parse_cli(cli, argc, argv);
 
   // load scene
   auto scene_guard = make_unique<sceneio_model>();

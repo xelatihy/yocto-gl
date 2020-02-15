@@ -9,8 +9,6 @@
 using namespace yocto;
 using namespace std;
 
-#include "ext/CLI11.hpp"
-
 struct app_state {
   // Callbacks available for user to build its own behaviors
   function<void(app_state*)>                         init;

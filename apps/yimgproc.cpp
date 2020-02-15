@@ -31,7 +31,6 @@
 #include "../yocto/yocto_math.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
@@ -242,32 +241,28 @@ int run_app(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = CLI::App{"Transform images"};
-  cli.add_flag("--tonemap,!--no-tonemap,-t", tonemap_on, "Tonemap image");
-  cli.add_option("--exposure,-e", tonemap_exposure, "Tonemap exposure");
-  cli.add_flag(
-      "--filmic,!--no-filmic,-f", tonemap_filmic, "Tonemap uses filmic curve");
-  cli.add_option(
-      "--resize-width", resize_width, "resize size (0 to maintain aspect)");
-  cli.add_option(
-      "--resize-height", resize_height, "resize size (0 to maintain aspect)");
-  cli.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  cli.add_option("--range-sigma", range_sigma, "bilateral blur range sigma");
-  cli.add_option(
-      "--set-alpha", alpha_filename, "set alpha as this image alpha");
-  cli.add_option("--set-color-as-alpha", coloralpha_filename,
+  auto cli = make_cli("yimgproc", "Transform images");
+  add_option(cli, "--tonemap/--no-tonemap", tonemap_on, "Tonemap image");
+  add_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
+  add_option(
+      cli, "--filmic/--no-filmic", tonemap_filmic, "Tonemap uses filmic curve");
+  add_option(cli, "--resize-width", resize_width,
+      "resize size (0 to maintain aspect)");
+  add_option(cli, "--resize-height", resize_height,
+      "resize size (0 to maintain aspect)");
+  add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
+  add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
+  add_option(
+      cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
+  add_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  cli.add_flag("--logo", logo, "Add logo");
-  cli.add_option("--diff", diff_filename, "compute the diff between images");
-  cli.add_option("--diff-signal", diff_signal, "signal a diff as error");
-  cli.add_option("--diff-threshold,", diff_threshold, "diff threshold");
-  cli.add_option("--output,-o", output, "output image filename")->required();
-  cli.add_option("filename", filename, "input image filename")->required();
-  try {
-    cli.parse(argc, argv);
-  } catch (CLI::ParseError& e) {
-    return cli.exit(e);
-  }
+  add_option(cli, "--logo/--no-logo", logo, "Add logo");
+  add_option(cli, "--diff", diff_filename, "compute the diff between images");
+  add_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
+  add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
+  add_option(cli, "--output,-o", output, "output image filename");
+  add_option(cli, "filename", filename, "input image filename", true);
+  parse_cli(cli, argc, argv);
 
   // error string buffer
   auto error = ""s;
