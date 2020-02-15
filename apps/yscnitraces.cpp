@@ -50,7 +50,7 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  shared_ptr<sceneio_model> ioscene    = nullptr;
+  unique_ptr<sceneio_model> ioscene    = nullptr;
   unique_ptr<trace_scene>   scene      = nullptr;
   bool                      add_skyenv = false;
 
@@ -73,7 +73,7 @@ struct app_state {
 
 // construct a scene from io
 unique_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress print_progress = {}) {
+    sceneio_model* ioscene, sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -94,7 +94,7 @@ unique_ptr<trace_scene> make_scene(
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
+      unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -109,7 +109,7 @@ unique_ptr<trace_scene> make_scene(
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
+      unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -144,7 +144,7 @@ unique_ptr<trace_scene> make_scene(
   }
 
   auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
+      unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -164,7 +164,7 @@ unique_ptr<trace_scene> make_scene(
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
+      unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -295,7 +295,7 @@ int run_app(int argc, const char* argv[]) {
   app->ioscene = load_scene(app->filename, print_progress);
 
   // conversion
-  app->scene = make_scene(app->ioscene, print_progress);
+  app->scene = make_scene(app->ioscene.get(), print_progress);
 
   // cleanup
   app->ioscene = nullptr;

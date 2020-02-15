@@ -105,7 +105,8 @@ int run_app(int argc, const char** argv) {
   }
 
   // load scene
-  auto scene = load_scene(filename, print_progress);
+  auto scene_guard = load_scene(filename, print_progress);
+  auto scene = scene_guard.get();
 
   // validate scene
   if (validate) {

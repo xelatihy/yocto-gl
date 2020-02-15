@@ -42,7 +42,7 @@ namespace fs = ghc::filesystem;
 
 // construct a scene from io
 shared_ptr<trace_scene> make_scene(
-    shared_ptr<sceneio_model> ioscene, sceneio_progress progress_cb = {}) {
+    sceneio_model* ioscene, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -62,7 +62,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto texture_map =
-      unordered_map<shared_ptr<sceneio_texture>, trace_texture*>{};
+      unordered_map<sceneio_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -76,7 +76,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto material_map =
-      unordered_map<shared_ptr<sceneio_material>, trace_material*>{};
+      unordered_map<sceneio_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -109,7 +109,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto shape_map =
-      unordered_map<shared_ptr<sceneio_shape>, trace_shape*>{};
+      unordered_map<sceneio_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -128,7 +128,7 @@ shared_ptr<trace_scene> make_scene(
   }
 
   auto instance_map =
-      unordered_map<shared_ptr<sceneio_instance>, trace_instance*>{};
+      unordered_map<sceneio_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -242,7 +242,7 @@ int run_app(int argc, const char* argv[]) {
   auto ioscene = load_scene(filename, print_progress);
 
   // convert scene
-  auto scene = make_scene(ioscene, print_progress);
+  auto scene = make_scene(ioscene.get(), print_progress);
 
   // cleanup
   ioscene = nullptr;
