@@ -129,7 +129,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
   }
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
@@ -158,13 +158,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

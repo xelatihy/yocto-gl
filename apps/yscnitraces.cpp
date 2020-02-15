@@ -215,7 +215,7 @@ void reset_display(app_state* app) {
       });
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // application
   auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
@@ -316,13 +316,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

@@ -300,7 +300,7 @@ void update(opengl_window* win, app_states* apps) {
   }
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = make_unique<app_states>();
   auto apps       = apps_guard.get();
@@ -358,13 +358,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

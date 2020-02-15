@@ -152,7 +152,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
   auto batch      = 16;
@@ -160,21 +160,6 @@ int run_app(int argc, const char* argv[]) {
   auto add_skyenv = false;
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
-
-  // maps for getting param
-  auto trace_sampler_map = map<string, trace_sampler_type>{};
-  for (auto idx = 0; idx < trace_sampler_names.size(); idx++) {
-    trace_sampler_map[trace_sampler_names[idx]] = (trace_sampler_type)idx;
-  }
-  auto trace_falsecolor_map = map<string, trace_falsecolor_type>{};
-  for (auto idx = 0; idx < trace_falsecolor_names.size(); idx++) {
-    trace_falsecolor_map[trace_falsecolor_names[idx]] =
-        (trace_falsecolor_type)idx;
-  }
-  auto trace_bvh_map = map<string, trace_bvh_type>{};
-  for (auto idx = 0; idx < trace_bvh_names.size(); idx++) {
-    trace_bvh_map[trace_bvh_names[idx]] = (trace_bvh_type)idx;
-  }
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");
@@ -245,13 +230,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

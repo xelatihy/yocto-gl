@@ -222,7 +222,7 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   return true;
 }
 
-int run_app(int argc, const char* argv[]) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto tonemap_on          = false;
   auto tonemap_exposure    = 0;
@@ -333,13 +333,4 @@ int run_app(int argc, const char* argv[]) {
 
   // done
   return 0;
-}
-
-int main(int argc, const char* argv[]) {
-  try {
-    return run_app(argc, argv);
-  } catch (std::exception& e) {
-    fprintf(stderr, "%s\n", e.what());
-    return 1;
-  }
 }

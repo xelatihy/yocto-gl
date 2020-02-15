@@ -224,7 +224,7 @@ bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   return true;
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto geodesic_source      = -1;
   int  p0                   = -1;
