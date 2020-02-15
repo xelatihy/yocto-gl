@@ -62,10 +62,10 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  sceneio_model* ioscene = nullptr;
+  sceneio_model* ioscene = new sceneio_model{};
 
   // rendering state
-  opengl_scene* glscene = nullptr;
+  opengl_scene* glscene = new opengl_scene{};
 
   // editing
   sceneio_camera*      selected_camera      = nullptr;
@@ -117,7 +117,7 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    app->ioscene = load_scene(app->filename, progress_cb).release();
+    load_scene(app->filename, app->ioscene, progress_cb);
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -153,7 +153,7 @@ void update_lights(opengl_scene* glscene, sceneio_model* ioscene) {
   }
 }
 
-unique_ptr<opengl_scene> make_glscene(
+void init_glscene(opengl_scene* glscene,
     sceneio_model* ioscene, sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -163,8 +163,7 @@ unique_ptr<opengl_scene> make_glscene(
              (int)ioscene->objects.size()};
 
   // create scene
-  auto glscene_guard = make_glscene();
-  auto glscene       = glscene_guard.get();
+  init_glscene(glscene);
 
   // camera
   for (auto iocamera : ioscene->cameras) {
@@ -257,8 +256,6 @@ unique_ptr<opengl_scene> make_glscene(
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
-
-  return glscene_guard;
 }
 
 bool draw_glwidgets(
@@ -667,7 +664,7 @@ void update(opengl_window* win, app_states* apps) {
     };
     try {
       app->loader.get();
-      app->glscene = make_glscene(app->ioscene, progress_cb).release();
+      init_glscene(app->glscene, app->ioscene, progress_cb);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";

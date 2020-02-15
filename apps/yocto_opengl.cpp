@@ -754,7 +754,7 @@ unique_ptr<opengl_scene> make_glscene() {
   return glscene;
 }
 void init_glscene(opengl_scene* glscene) {
-  if (!glscene->program_id) return;
+  if (glscene->program_id) return;
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
       glscene->array_id, glscene_vertex, glscene_fragment);
 }

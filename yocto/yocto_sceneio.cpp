@@ -621,7 +621,6 @@ void load_scene(const string& filename, sceneio_model* scene,
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, progress_cb, noparallel);
   } else {
-    *scene = {};
     throw std::runtime_error{filename + ": unknown format"};
   }
 }
