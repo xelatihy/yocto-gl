@@ -146,11 +146,14 @@ namespace yocto {
 // Initialize a command line parser.
 struct cli_state;
 inline cli_state make_cli(const string& cmd, const string& usage);
-// check if any error occurred and throws cli_error in that case
+// parse arguments, checks for errors, and exits on error or help
 inline void parse_cli(cli_state& cli, int argc, const char** argv);
-// check if any error occurred returning the error
-inline bool parse_cli(
-    cli_state& cli, int argc, const char** argv, string& usage);
+// parse arguments and checks for errors
+inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error);
+// gets usage message
+inline string get_usage(const cli_state& cli);
+// gets whether help was invoked
+inline bool get_help(const cli_state& cli) {
 
 // Parse an int, float, string, and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -540,14 +543,16 @@ struct cli_state {
   vector<cmdline_option> options         = {};
   string                 usage_options   = "";
   string                 usage_arguments = "";
+  bool help = false;
 };
 
 // initialize a command line parser
 inline cli_state make_cli(const string& cmd, const string& usage) {
-  auto parser  = cli_state{};
-  parser.name  = cmd;
-  parser.usage = usage;
-  return parser;
+  auto cli  = cli_state{};
+  cli.name  = cmd;
+  cli.usage = usage;
+  add_option(cli, "--help/--no-help", cli.help, "Print usage.");
+  return cli;
 }
 
 inline vector<string> split_cli_names(const string& name_) {
@@ -651,13 +656,12 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   return add_option(cli, name, (int&)value, usage, choices, req);
 }
 
-struct cli_error : std::runtime_error {
-  cli_error(const string& message) : std::runtime_error{message} {}
-};
+inline bool get_help(const cli_state& cli) {
+  return cli.help;
+}
 
-inline void throw_cli_error(cli_state& cli, const string& error) {
+inline string get_usage(const cli_state& cli) {
   auto message = string{};
-  if (error != "") message += "error: " + error + "\n\n";
   message +=
       "usage: " + cli.name + (cli.usage_options.empty() ? "" : " [options]") +
       (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage + "\n\n";
@@ -665,20 +669,20 @@ inline void throw_cli_error(cli_state& cli, const string& error) {
     message += "options:\n" + cli.usage_options + "\n";
   if (!cli.usage_options.empty())
     message += "arguments:\n" + cli.usage_arguments + "\n";
-  throw cli_error{message};
+  return message;
 }
 
-inline bool parse_cmdline_value(const string& str, int& value) {
+inline bool parse_cli_value(const string& str, int& value) {
   auto end = (char*)nullptr;
   value    = (int)strtol(str.c_str(), &end, 10);
   return end != nullptr;
 }
-inline bool parse_cmdline_value(const string& str, float& value) {
+inline bool parse_cli_value(const string& str, float& value) {
   auto end = (char*)nullptr;
   value    = strtof(str.c_str(), &end);
   return end != nullptr;
 }
-inline bool parse_cmdline_value(const string& str, bool& value) {
+inline bool parse_cli_value(const string& str, bool& value) {
   if (str == "true" || str == "1") {
     value = true;
     return true;
@@ -690,7 +694,12 @@ inline bool parse_cmdline_value(const string& str, bool& value) {
   }
 }
 
-inline void parse_cli(cli_state& cli, int argc, const char** argv) {
+inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& error) {
+  auto cli_error = [&error](const string& message) {
+    error = message;
+    return false;
+  };
+
   // check for errors
   auto used = unordered_map<string, int>{};
   for (auto& option : cli.options) {
@@ -702,7 +711,7 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
         throw std::runtime_error("option name " + name + " already in use");
       used[name] = 1;
       if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::runtime_error("incosisten option type for " + name);
+        throw std::runtime_error("inconsistent option type for " + name);
     }
   }
   // prepare args
@@ -718,30 +727,25 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
         option.set           = true;
         args.erase(args.begin() + pos);
       } else {
-        if (pos + 1 >= args.size())
-          throw_cli_error(cli, "missing value for " + name);
+        if (pos + 1 >= args.size()) return cli_error("missing value for " + name);
         auto value = args[pos + 1];
         args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cli_type::string_) {
           *(string*)option.value = value;
           option.set             = true;
         } else if (option.type == cli_type::int_) {
-          if (!parse_cmdline_value(value, *(int*)option.value))
-            throw_cli_error(cli, "incorrect value for " + name);
+          if (!parse_cli_value(value, *(int*)option.value)) return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::float_) {
-          if (!parse_cmdline_value(value, *(float*)option.value))
-            throw_cli_error(cli, "incorrect value for " + name);
+          if (!parse_cli_value(value, *(float*)option.value)) return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::bool_) {
-          if (!parse_cmdline_value(value, *(bool*)option.value))
-            throw_cli_error(cli, "incorrect value for " + name);
+          if (!parse_cli_value(value, *(bool*)option.value)) return cli_error("incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::enum_) {
           auto pos = std::find(
               option.choices.begin(), option.choices.end(), value);
-          if (pos == option.choices.end())
-            throw_cli_error(cli, "incorrect value for " + name);
+          if (pos == option.choices.end()) return cli_error("incorrect value for " + name);
           else
             *(int*)option.value = (int)(pos - option.choices.begin());
           option.set = true;
@@ -750,19 +754,17 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
         }
       }
     }
-    if (option.req && !option.set) {
-      throw_cli_error(cli, "missing value for " + option.name);
-    }
+    if (option.req && !option.set) return cli_error("missing value for " + option.name);
   }
   // check unknown options
   for (auto& arg : args) {
-    if (arg.find("-") == 0) throw_cli_error(cli, "unknown option " + arg);
+    if (arg.find("-") == 0) return cli_error("unknown option " + arg);
   }
   // parse positional
   for (auto& option : cli.options) {
     if (option.name[0] == '-') continue;
     if (args.empty()) {
-      if (option.req) throw_cli_error(cli, "missing value for " + option.name);
+      if (option.req) return cli_error("missing value for " + option.name);
     } else if (option.type == cli_type::string_vector_) {
       *(vector<string>*)option.value = args;
       option.set                     = true;
@@ -774,16 +776,16 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
         *(string*)option.value = value;
         option.set             = true;
       } else if (option.type == cli_type::int_) {
-        if (!parse_cmdline_value(value, *(int*)option.value))
-          throw_cli_error(cli, "incorrect value for " + option.name);
+        if (!parse_cli_value(value, *(int*)option.value))
+          return cli_error("incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cli_type::float_) {
-        if (!parse_cmdline_value(value, *(float*)option.value))
-          throw_cli_error(cli, "incorrect value for " + option.name);
+        if (!parse_cli_value(value, *(float*)option.value))
+          return cli_error("incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cli_type::bool_) {
-        if (!parse_cmdline_value(value, *(bool*)option.value))
-          throw_cli_error(cli, "incorrect value for " + option.name);
+        if (!parse_cli_value(value, *(bool*)option.value))
+          return cli_error("incorrect value for " + option.name);
         option.set = true;
       } else {
         throw std::runtime_error("unsupported type");
@@ -791,8 +793,22 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
     }
   }
   // check remaining
-  if (!args.empty())
-    throw_cli_error(cli, "mismatched value for " + args.front());
+  if (!args.empty()) return cli_error("mismatched value for " + args.front());
+  // done
+  return true;
+}
+
+inline void parse_cli(cli_state& cli, int argc, const char** argv) {
+  auto error = string{};
+  if(!parse_cli(cli, argc, argv, error)) {
+    print_info("error: " + error);
+    print_info("");
+    print_info(get_usage(cli));
+    exit(1);
+  } else if(cli.help) {
+    print_info(get_usage(cli));
+    exit(0);
+  }
 }
 
 }  // namespace yocto
