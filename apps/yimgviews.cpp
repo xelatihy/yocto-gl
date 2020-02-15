@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -51,7 +52,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = nullptr;
+  opengl_image*       glimage  = new opengl_image{};
   draw_glimage_params glparams = {};
 
   ~app_state() {
@@ -106,7 +107,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // load image
-  load_image(app->filename, app->source);
+  if (!load_image(app->filename, app->source, print_fatal)) return 1;
 
   // update display
   update_display(app);

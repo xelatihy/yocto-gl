@@ -248,17 +248,21 @@ sceneio_object*      add_complete_object(
 
 namespace yocto {
 
-// Progress callback called when loading.
+// Progress and error callback called when loading.
+using sceneio_error = function<void(const string& message)>;
 using sceneio_progress =
     function<void(const string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
 unique_ptr<sceneio_model> load_scene(const string& filename,
-    sceneio_progress progress = {}, bool noparallel = false);
-void load_scene(const string& filename, sceneio_model* scene,
-    sceneio_progress progress_cb = {}, bool noparallel = false);
-void save_scene(const string& filename, const sceneio_model* scene,
+    sceneio_error error, sceneio_progress progress = {},
+    bool noparallel = false);
+[[nodiscard]] bool load_scene(const string& filename, sceneio_model* scene,
+    sceneio_error error, sceneio_progress progress_cb = {},
+    bool noparallel = false);
+[[nodiscard]] bool save_scene(const string& filename,
+    const sceneio_model* scene, sceneio_error error,
     sceneio_progress progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto

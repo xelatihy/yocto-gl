@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -107,7 +108,7 @@ int run_app(int argc, const char** argv) {
   // load scene
   auto scene_guard = make_unique<sceneio_model>();
   auto scene       = scene_guard.get();
-  load_scene(filename, scene, print_progress);
+  load_scene(filename, scene, print_fatal, print_progress);
 
   // validate scene
   if (validate) {
@@ -153,7 +154,7 @@ int run_app(int argc, const char** argv) {
   }
 
   // save scene
-  save_scene(output, scene, print_progress);
+  save_scene(output, scene, print_fatal, print_progress);
 
   // done
   return 0;

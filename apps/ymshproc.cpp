@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
@@ -35,11 +36,12 @@ using namespace yocto;
 namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type) {
+    vector<vec4f>& colors, vector<float>& radius, const string& type,
+    shapeio_error error_cb) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -182,36 +184,42 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-largearealight2") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
   } else {
-    throw std::invalid_argument("unknown shape preset " + type);
+    if(error_cb) error_cb("unknown shape preset " + type);
+    return false;
   }
+  return true;
 }
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
+bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type) {
+    vector<float>& radius, const string& type,
+    shapeio_error error_cb) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if(!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+      quadstexcoord, positions, normals, texcoords, colors, radius, type, error_cb)) return false;
   if (!quadspos.empty()) throw std::runtime_error("bad preset type");
+  return true;
 }
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type, shapeio_error error_cb) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
   auto quads     = vector<vec4i>{};
   auto colors    = vector<vec4f>{};
   auto radius    = vector<float>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if(!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+      quadstexcoord, positions, normals, texcoords, colors, radius, type, 
+      error_cb)) return false;
   if (quadspos.empty()) throw std::runtime_error("bad preset type");
+  return true;
 }
 
 // progress callback
@@ -314,20 +322,20 @@ int main(int argc, const char** argv) {
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, basename);
+          texcoords, colors, radius, basename, print_fatal);
     } else {
-      load_shape(filename, points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius);
+      if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius, print_fatal)) return 1;
     }
   } else {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, basename);
+          texcoords, basename, print_fatal);
     } else {
       load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords);
+          normals, texcoords, print_fatal);
     }
   }
   print_progress("load shape", 1, 1);
@@ -484,10 +492,10 @@ int main(int argc, const char** argv) {
   print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
     save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords);
+        texcoords, print_fatal);
   } else {
     save_shape(output, points, lines, triangles, quads, positions, normals,
-        texcoords, colors, radius);
+        texcoords, colors, radius, print_fatal);
   }
   print_progress("save shape", 1, 1);
 

@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -267,7 +268,7 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
   load_shape(input_filename, app->shape.points, app->shape.lines,
       app->shape.triangles, app->shape.quads, app->shape.positions,
       app->shape.normals, app->shape.texcoords, app->shape.colors,
-      app->shape.radius);
+      app->shape.radius, print_fatal);
   init_bvh(app);
   init_camera(app);
 

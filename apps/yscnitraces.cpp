@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -292,7 +293,7 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  load_scene(app->filename, ioscene, print_progress);
+  load_scene(app->filename, ioscene, print_fatal, print_progress);
 
   // conversion
   init_scene(app->scene, ioscene, print_progress);

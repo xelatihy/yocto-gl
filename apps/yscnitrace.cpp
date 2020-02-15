@@ -89,6 +89,7 @@ struct app_state {
   future<void>       loader   = {};
   string             error    = "";
   std::atomic<float> progress = 0.5;
+  string       loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -295,7 +296,9 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    load_scene(app->filename, app->ioscene, progress_cb);
+    if(!load_scene(app->filename, app->ioscene, [app](const string& message){
+      app->loader_error = message;
+    }, progress_cb)) return;
     app->progress = 1;
     init_scene(app->scene, app->ioscene, progress_cb);
     init_bvh(app->scene, app->params);
@@ -495,12 +498,9 @@ void draw_glwidgets(
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_scene(app->outname, app->ioscene);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_scene(app->outname, app->ioscene, [app](const string& message){
+      app->error = message;
+    });
     save_path = "";
   }
   continue_glline(win);
@@ -510,12 +510,9 @@ void draw_glwidgets(
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_image(app->imagename, app->display);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_image(app->imagename, app->display, [app](const string& message){
+      app->error = message;
+    });
     save_path = "";
   }
   continue_glline(win);
@@ -788,14 +785,14 @@ void update(opengl_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    try {
-      app->loader.get();
+    app->loader.get();
+    if(app->loader_error.empty()) {
       reset_display(app);
       app->name = fs::path(app->filename).filename().string() + " [ok]";
       app->ok   = true;
-    } catch (std::exception& e) {
+    } else {
       app->name  = fs::path(app->filename).filename().string() + " [error]";
-      app->error = e.what();
+      app->error = app->loader_error;
     }
   }
 }

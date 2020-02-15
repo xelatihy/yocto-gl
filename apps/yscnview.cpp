@@ -83,6 +83,7 @@ struct app_state {
   string             status   = "";
   string             error    = "";
   std::atomic<float> progress = 0.5;
+  string loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -117,7 +118,9 @@ void load_scene_async(app_states* apps, const string& filename) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    load_scene(app->filename, app->ioscene, progress_cb);
+    if(!load_scene(app->filename, app->ioscene, [app](const string& message){
+      app->loader_error = message;
+    }, progress_cb)) return;
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -447,12 +450,9 @@ void draw_glwidgets(
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    try {
-      save_scene(app->outname, app->ioscene);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    save_scene(app->outname, app->ioscene, [app](const string& message) {
+      app->error = message;
+    });
     save_path = "";
   }
   continue_glline(win);
@@ -662,15 +662,15 @@ void update(opengl_window* win, app_states* apps) {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
-    try {
-      app->loader.get();
+    app->loader.get();
+    if(app->loader_error.empty()) {
       init_glscene(app->glscene, app->ioscene, progress_cb);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
-    } catch (std::exception& e) {
+    } else {
       app->status = "";
-      app->error  = e.what();
+      app->error  = app->loader_error;
     }
   }
 }

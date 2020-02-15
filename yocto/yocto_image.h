@@ -105,6 +105,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Using directives
+using std::function;
+
 // Image container.
 template <typename T>
 struct image {
@@ -256,14 +259,21 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
+// Error callback when loading
+using imageio_error = function<void(const string& message)>;
+
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 // Throws exception on error.
-image<vec4f> load_image(const string& filename);
-void         load_image(const string& filename, image<vec4f>& img);
-void         save_image(const string& filename, const image<vec4f>& img);
-image<vec4b> load_imageb(const string& filename);
-void         load_imageb(const string& filename, image<vec4b>& img);
-void         save_imageb(const string& filename, const image<vec4b>& img);
+image<vec4f>       load_image(const string& filename, imageio_error error_cb);
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec4f>& img, imageio_error error_cb);
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec4f>& img, imageio_error error_cb);
+image<vec4b>       load_imageb(const string& filename, imageio_error error_cb);
+[[nodiscard]] bool load_imageb(
+    const string& filename, image<vec4b>& img, imageio_error error_cb);
+[[nodiscard]] bool save_imageb(
+    const string& filename, const image<vec4b>& img, imageio_error error_cb);
 
 }  // namespace yocto
 

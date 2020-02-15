@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 using namespace yocto;
@@ -103,7 +104,7 @@ image<vec4f> filter_bilateral(
 
 }  // namespace yocto
 
-image<vec4f> make_image_preset(const string& type) {
+image<vec4f> make_image_preset(const string& type, imageio_error error_cb) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
@@ -152,7 +153,7 @@ image<vec4f> make_image_preset(const string& type) {
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
+      sub_imgs[i] = make_image_preset(sub_types[i], error_cb);
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -170,7 +171,7 @@ image<vec4f> make_image_preset(const string& type) {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
+      sub_imgs[i] = make_image_preset(sub_types[i], error_cb);
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -217,6 +218,7 @@ image<vec4f> make_image_preset(const string& type) {
   } else if (type == "test-fbm-displacement") {
     return srgb_to_rgb(make_fbmmap(size));
   } else {
+    if(error_cb) error_cb("unknown preset");
     return {};
   }
 }
@@ -273,21 +275,22 @@ int run_app(int argc, const char* argv[]) {
   // load
   auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
-  auto img      = (ext == ".ypreset") ? make_image_preset(basename)
-                                 : load_image(filename);
+  auto img      = (ext == ".ypreset") ?
+    make_image_preset(basename, print_fatal): 
+    load_image(filename, print_fatal);
 
   // set alpha
   if (alpha_filename != "") {
-    auto alpha = load_image(alpha_filename);
-    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
+    auto alpha = load_image(alpha_filename, print_fatal);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
   if (coloralpha_filename != "") {
-    auto alpha = load_image(coloralpha_filename);
-    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
+    auto alpha = load_image(coloralpha_filename, print_fatal);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -295,9 +298,9 @@ int run_app(int argc, const char* argv[]) {
 
   // diff
   if (diff_filename != "") {
-    auto diff = load_image(diff_filename);
+    auto diff = load_image(diff_filename, print_fatal);
     if (img.size() != diff.size())
-      throw std::runtime_error("image sizes are different");
+      print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -317,7 +320,7 @@ int run_app(int argc, const char* argv[]) {
   }
 
   // save
-  save_image(output, logo ? add_logo(img) : img);
+  save_image(output, logo ? add_logo(img) : img, print_fatal);
 
   // check diff
   if (diff_filename != "" && diff_signal) {

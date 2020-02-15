@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -232,7 +233,7 @@ int run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene_guard = make_unique<sceneio_model>();
   auto ioscene       = ioscene_guard.get();
-  load_scene(filename, ioscene, print_progress);
+  load_scene(filename, ioscene, print_fatal, print_progress);
 
   // convert scene
   auto scene_guard = make_unique<trace_scene>();
@@ -263,12 +264,12 @@ int run_app(int argc, const char* argv[]) {
                    fs::path(imfilename).extension().string();
         auto outfilename = fs::path(imfilename).replace_extension(ext).string();
         print_progress("save image", sample, samples);
-        save_image(outfilename, render);
+        save_image(outfilename, render, print_fatal);
       });
 
   // save image
   print_progress("save image", 0, 1);
-  save_image(imfilename, render);
+  save_image(imfilename, render, print_fatal);
   print_progress("save image", 1, 1);
 
   // done
