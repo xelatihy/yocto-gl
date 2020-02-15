@@ -3983,7 +3983,7 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "filename", shape->filename_))
       return parse_error();
     auto ply = make_unique<ply_model>();
-    if (!load_ply(ply_dirname + shape->filename_, error))
+    if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
       return dependent_error();
     shape->positions = get_positions(ply.get());
     shape->normals   = get_normals(ply.get());
