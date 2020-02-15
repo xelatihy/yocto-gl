@@ -906,17 +906,24 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   if (!load_json(filename, js, error)) return false;
 
   // gets a json value
-  auto get_value = [](const json& ejs, const string& name, auto& value) {
-    if (!ejs.contains(name)) return;
-    ejs.at(name).get_to(value);
+  auto get_value = [](const json& ejs, const string& name,
+                       auto& value) -> bool {
+    if (!ejs.contains(name)) return true;
+    try {
+      ejs.at(name).get_to(value);
+      return true;
+    } catch (...) {
+      return false;
+    }
   };
 
   // parse yaml reference
-  auto get_ref = [&material_error](const json& ejs, const string& name,
-                     auto& value, const auto& refs) -> bool {
+  auto get_ref = [&material_error, &get_value](const json& ejs,
+                     const string& name, auto& value,
+                     const auto& refs) -> bool {
     if (!ejs.contains(name)) return true;
     auto ref = ""s;
-    ejs.at(name).get_to(ref);
+    if (!get_value(ejs, name, ref)) return false;
     if (ref == "") {
       value = nullptr;
     } else {
@@ -928,12 +935,12 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
 
   // parse json reference
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [scene, &texture_map](const json& ejs, const string& name,
-                         sceneio_texture*& value,
-                         const string&     dirname = "textures/") -> bool {
+  auto get_texture = [scene, &texture_map, &get_value](const json& ejs,
+                         const string& name, sceneio_texture*& value,
+                         const string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
-    ejs.at(name).get_to(path);
+    if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
@@ -949,12 +956,12 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
 
   // parse json reference
   auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
-  auto get_shape = [scene, &shape_map](const json& ejs, const string& name,
-                       sceneio_shape*& value,
-                       const string&   dirname = "shapes/") -> bool {
+  auto get_shape = [scene, &shape_map, &get_value](const json& ejs,
+                       const string& name, sceneio_shape*& value,
+                       const string& dirname = "shapes/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
-    ejs.at(name).get_to(path);
+    if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = shape_map.find(path);
     if (it != shape_map.end()) {
@@ -970,12 +977,12 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
 
   // parse json reference
   auto subdiv_map = unordered_map<string, sceneio_subdiv*>{{"", nullptr}};
-  auto get_subdiv = [scene, &subdiv_map](const json& ejs, const string& name,
-                        sceneio_subdiv*& value,
-                        const string&    dirname = "subdivs/") -> bool {
+  auto get_subdiv = [scene, &subdiv_map, &get_value](const json& ejs,
+                        const string& name, sceneio_subdiv*& value,
+                        const string& dirname = "subdivs/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
-    ejs.at(name).get_to(path);
+    if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = subdiv_map.find(path);
     if (it != subdiv_map.end()) {
@@ -991,13 +998,13 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
 
   // load json instance
   auto instance_map = unordered_map<string, sceneio_instance*>{{"", nullptr}};
-  auto get_instance = [scene, &instance_map](const json& ejs,
+  auto get_instance = [scene, &instance_map, &get_value](const json& ejs,
                           const string& name, sceneio_instance*& value,
                           const string& dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
-    ejs.at(name).get_to(path);
-    if (path == "") return nullptr;
+    if (!get_value(ejs, name, path)) return false;
+    if (path == "") return true;
     auto it = instance_map.find(path);
     if (it != instance_map.end()) {
       value = it->second;
@@ -1017,96 +1024,103 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // check for conversion errors
-  try {
-    // cameras
-    if (js.contains("cameras")) {
-      for (auto& ejs : js.at("cameras")) {
-        auto camera = add_camera(scene);
-        get_value(ejs, "name", camera->name);
-        get_value(ejs, "frame", camera->frame);
-        get_value(ejs, "orthographic", camera->orthographic);
-        get_value(ejs, "lens", camera->lens);
-        get_value(ejs, "aspect", camera->aspect);
-        get_value(ejs, "film", camera->film);
-        get_value(ejs, "focus", camera->focus);
-        get_value(ejs, "aperture", camera->aperture);
-        if (ejs.contains("lookat")) {
-          auto lookat = identity3x3f;
-          get_value(ejs, "lookat", lookat);
-          camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-          camera->focus = length(lookat.x - lookat.y);
-        }
+  // cameras
+  if (js.contains("cameras")) {
+    for (auto& ejs : js.at("cameras")) {
+      auto camera = add_camera(scene);
+      if (!get_value(ejs, "name", camera->name)) return false;
+      if (!get_value(ejs, "frame", camera->frame)) return false;
+      if (!get_value(ejs, "orthographic", camera->orthographic)) return false;
+      if (!get_value(ejs, "lens", camera->lens)) return false;
+      if (!get_value(ejs, "aspect", camera->aspect)) return false;
+      if (!get_value(ejs, "film", camera->film)) return false;
+      if (!get_value(ejs, "focus", camera->focus)) return false;
+      if (!get_value(ejs, "aperture", camera->aperture)) return false;
+      if (ejs.contains("lookat")) {
+        auto lookat = identity3x3f;
+        if (!get_value(ejs, "lookat", lookat)) return false;
+        camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+        camera->focus = length(lookat.x - lookat.y);
       }
     }
-    if (js.contains("environments")) {
-      for (auto& ejs : js.at("environments")) {
-        auto environment = add_environment(scene);
-        get_value(ejs, "name", environment->name);
-        get_value(ejs, "frame", environment->frame);
-        get_value(ejs, "emission", environment->emission);
-        get_texture(
-            ejs, "emission_tex", environment->emission_tex, "environments/");
-        if (ejs.contains("lookat")) {
-          auto lookat = identity3x3f;
-          get_value(ejs, "lookat", lookat);
-          environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
+  }
+  if (js.contains("environments")) {
+    for (auto& ejs : js.at("environments")) {
+      auto environment = add_environment(scene);
+      if (!get_value(ejs, "name", environment->name)) return false;
+      if (!get_value(ejs, "frame", environment->frame)) return false;
+      if (!get_value(ejs, "emission", environment->emission)) return false;
+      if (!get_texture(
+              ejs, "emission_tex", environment->emission_tex, "environments/"))
+        return false;
+      if (ejs.contains("lookat")) {
+        auto lookat = identity3x3f;
+        if (!get_value(ejs, "lookat", lookat)) return false;
+        environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
     }
-    if (js.contains("materials")) {
-      for (auto& ejs : js.at("materials")) {
-        auto material = add_material(scene);
-        get_value(ejs, "name", material->name);
-        get_value(ejs, "emission", material->emission);
-        get_value(ejs, "color", material->color);
-        get_value(ejs, "metallic", material->metallic);
-        get_value(ejs, "specular", material->specular);
-        get_value(ejs, "roughness", material->roughness);
-        get_value(ejs, "coat", material->coat);
-        get_value(ejs, "transmission", material->transmission);
-        get_value(ejs, "thin", material->thin);
-        get_value(ejs, "ior", material->ior);
-        get_value(ejs, "trdepth", material->trdepth);
-        get_value(ejs, "scattering", material->scattering);
-        get_value(ejs, "scanisotropy", material->scanisotropy);
-        get_value(ejs, "opacity", material->opacity);
-        get_value(ejs, "coat", material->coat);
-        get_value(ejs, "displacement", material->displacement);
-        get_texture(ejs, "emission_tex", material->emission_tex);
-        get_texture(ejs, "color_tex", material->color_tex);
-        get_texture(ejs, "metallic_tex", material->metallic_tex);
-        get_texture(ejs, "specular_tex", material->specular_tex);
-        get_texture(ejs, "transmission_tex", material->transmission_tex);
-        get_texture(ejs, "roughness_tex", material->roughness_tex);
-        get_texture(ejs, "scattering_tex", material->scattering_tex);
-        get_texture(ejs, "normal_tex", material->normal_tex);
-        get_texture(ejs, "normal_tex", material->normal_tex);
-        get_texture(ejs, "displacement_tex", material->displacement_tex);
-        get_value(
-            ejs, "subdivisions", material->subdivisions);  // hack fir subd
-        get_value(ejs, "smooth", material->smooth);        // hack for subd
-        get_value(ejs, "gltf_textures", material->gltf_textures);
-        material_map[material->name] = material;
-      }
+  }
+  if (js.contains("materials")) {
+    for (auto& ejs : js.at("materials")) {
+      auto material = add_material(scene);
+      if (!get_value(ejs, "name", material->name)) return false;
+      if (!get_value(ejs, "emission", material->emission)) return false;
+      if (!get_value(ejs, "color", material->color)) return false;
+      if (!get_value(ejs, "metallic", material->metallic)) return false;
+      if (!get_value(ejs, "specular", material->specular)) return false;
+      if (!get_value(ejs, "roughness", material->roughness)) return false;
+      if (!get_value(ejs, "coat", material->coat)) return false;
+      if (!get_value(ejs, "transmission", material->transmission)) return false;
+      if (!get_value(ejs, "thin", material->thin)) return false;
+      if (!get_value(ejs, "ior", material->ior)) return false;
+      if (!get_value(ejs, "trdepth", material->trdepth)) return false;
+      if (!get_value(ejs, "scattering", material->scattering)) return false;
+      if (!get_value(ejs, "scanisotropy", material->scanisotropy)) return false;
+      if (!get_value(ejs, "opacity", material->opacity)) return false;
+      if (!get_value(ejs, "coat", material->coat)) return false;
+      if (!get_value(ejs, "displacement", material->displacement)) return false;
+      if (!get_texture(ejs, "emission_tex", material->emission_tex))
+        return false;
+      if (!get_texture(ejs, "color_tex", material->color_tex)) return false;
+      if (!get_texture(ejs, "metallic_tex", material->metallic_tex))
+        return false;
+      if (!get_texture(ejs, "specular_tex", material->specular_tex))
+        return false;
+      if (!get_texture(ejs, "transmission_tex", material->transmission_tex))
+        return false;
+      if (!get_texture(ejs, "roughness_tex", material->roughness_tex))
+        return false;
+      if (!get_texture(ejs, "scattering_tex", material->scattering_tex))
+        return false;
+      if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
+      if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
+      if (!get_texture(ejs, "displacement_tex", material->displacement_tex))
+        return false;
+      if (!get_value(ejs, "subdivisions", material->subdivisions))
+        return false;  // hack fir subd
+      if (!get_value(ejs, "smooth", material->smooth))
+        return false;  // hack for subd
+      if (!get_value(ejs, "gltf_textures", material->gltf_textures))
+        return false;
+      material_map[material->name] = material;
     }
-    if (js.contains("objects")) {
-      for (auto& ejs : js.at("objects")) {
-        auto object = add_object(scene);
-        get_value(ejs, "name", object->name);
-        get_value(ejs, "frame", object->frame);
-        if (ejs.contains("lookat")) {
-          auto lookat = identity3x3f;
-          get_value(ejs, "lookat", lookat);
-          object->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
-        get_ref(ejs, "material", object->material, material_map);
-        get_shape(ejs, "shape", object->shape);
-        get_subdiv(ejs, "subdiv", object->subdiv);
-        get_instance(ejs, "instance", object->instance);
+  }
+  if (js.contains("objects")) {
+    for (auto& ejs : js.at("objects")) {
+      auto object = add_object(scene);
+      if (!get_value(ejs, "name", object->name)) return false;
+      if (!get_value(ejs, "frame", object->frame)) return false;
+      if (ejs.contains("lookat")) {
+        auto lookat = identity3x3f;
+        if (!get_value(ejs, "lookat", lookat)) return false;
+        object->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
+      if (!get_ref(ejs, "material", object->material, material_map))
+        return false;
+      if (!get_shape(ejs, "shape", object->shape)) return false;
+      if (!get_subdiv(ejs, "subdiv", object->subdiv)) return false;
+      if (!get_instance(ejs, "instance", object->instance)) return false;
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
 
   // handle progress
