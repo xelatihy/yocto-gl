@@ -251,17 +251,17 @@ struct obj_material {
   float opacity      = 1;
 
   // material textures
-  obj_texture_info emission_map     = {};
-  obj_texture_info ambient_map      = {};
-  obj_texture_info diffuse_map      = {};
-  obj_texture_info specular_map     = {};
-  obj_texture_info reflection_map   = {};
-  obj_texture_info transmission_map = {};
-  obj_texture_info exponent_map     = {};
-  obj_texture_info opacity_map      = {};
-  obj_texture_info bump_map         = {};
-  obj_texture_info normal_map       = {};
-  obj_texture_info displacement_map = {};
+  obj_texture_info emission_tex     = {};
+  obj_texture_info ambient_tex      = {};
+  obj_texture_info diffuse_tex      = {};
+  obj_texture_info specular_tex     = {};
+  obj_texture_info reflection_tex   = {};
+  obj_texture_info transmission_tex = {};
+  obj_texture_info exponent_tex     = {};
+  obj_texture_info opacity_tex      = {};
+  obj_texture_info bump_tex         = {};
+  obj_texture_info normal_tex       = {};
+  obj_texture_info displacement_tex = {};
 
   // pbrt extension values
   bool  as_pbr            = false;
@@ -281,17 +281,17 @@ struct obj_material {
   float pbr_volscale      = 0.01;
 
   // pbr extension textures
-  obj_texture_info pbr_emission_map      = {};
-  obj_texture_info pbr_base_map          = {};
-  obj_texture_info pbr_specular_map      = {};
-  obj_texture_info pbr_roughness_map     = {};
-  obj_texture_info pbr_metallic_map      = {};
-  obj_texture_info pbr_sheen_map         = {};
-  obj_texture_info pbr_coat_map          = {};
-  obj_texture_info pbr_coatroughness_map = {};
-  obj_texture_info pbr_transmission_map  = {};
-  obj_texture_info pbr_opacity_map       = {};
-  obj_texture_info pbr_volscattering_map = {};
+  obj_texture_info pbr_emission_tex      = {};
+  obj_texture_info pbr_base_tex          = {};
+  obj_texture_info pbr_specular_tex      = {};
+  obj_texture_info pbr_roughness_tex     = {};
+  obj_texture_info pbr_metallic_tex      = {};
+  obj_texture_info pbr_sheen_tex         = {};
+  obj_texture_info pbr_coat_tex          = {};
+  obj_texture_info pbr_coatroughness_tex = {};
+  obj_texture_info pbr_transmission_tex  = {};
+  obj_texture_info pbr_opacity_tex       = {};
+  obj_texture_info pbr_volscattering_tex = {};
 };
 
 // Obj shape
@@ -325,7 +325,7 @@ struct obj_environment {
   string           name         = "";
   frame3f          frame        = identity3x4f;
   vec3f            emission     = zero3f;
-  obj_texture_info emission_map = {};
+  obj_texture_info emission_tex = {};
 };
 
 // Obj model
@@ -478,26 +478,13 @@ struct pbrt_material {
   float  roughness       = 0;
   float  ior             = 1.5;
   float  opacity         = 1;
-  string color_map       = "";
-  string opacity_map     = "";
-  string alpha_map       = "";
+  string color_tex       = "";
+  string opacity_tex     = "";
+  string alpha_tex       = "";
   bool   thin            = true;
   vec3f  volmeanfreepath = zero3f;
   vec3f  volscatter      = zero3f;
   float  volscale        = 0.01;
-};
-
-// Pbrt area light
-struct pbrt_arealight {
-  // arealight parameters
-  string name     = "";
-  vec3f  emission = zero3f;
-};
-
-// Pbrt medium. Not parsed at the moment.
-struct pbrt_medium {
-  // medium parameters
-  string name = "";
 };
 
 // Pbrt shape
@@ -514,8 +501,7 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material*  material  = nullptr;
-  pbrt_arealight* arealight = nullptr;
+  pbrt_material* material = nullptr;
 };
 
 // Pbrt lights
@@ -540,7 +526,7 @@ struct pbrt_environment {
   frame3f frame        = identity3x4f;
   frame3f frend        = identity3x4f;
   vec3f   emission     = zero3f;
-  string  emission_map = "";
+  string  emission_tex = "";
 };
 
 // Pbrt model

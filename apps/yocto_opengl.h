@@ -137,12 +137,12 @@ struct opengl_material {
   float           metallic      = 0;
   float           roughness     = 0;
   float           opacity       = 1;
-  opengl_texture* emission_map  = nullptr;
-  opengl_texture* color_map     = nullptr;
-  opengl_texture* specular_map  = nullptr;
-  opengl_texture* metallic_map  = nullptr;
-  opengl_texture* roughness_map = nullptr;
-  opengl_texture* normal_map    = nullptr;
+  opengl_texture* emission_tex  = nullptr;
+  opengl_texture* color_tex     = nullptr;
+  opengl_texture* specular_tex  = nullptr;
+  opengl_texture* metallic_tex  = nullptr;
+  opengl_texture* roughness_tex = nullptr;
+  opengl_texture* normal_tex    = nullptr;
   bool            gltf_textures = false;
 };
 
@@ -264,18 +264,18 @@ void set_texture(
 
 // material properties
 void set_emission(opengl_material* material, const vec3f& emission,
-    opengl_texture* emission_txt = nullptr);
+    opengl_texture* emission_tex = nullptr);
 void set_color(opengl_material* material, const vec3f& color,
-    opengl_texture* color_txt = nullptr);
+    opengl_texture* color_tex = nullptr);
 void set_metallic(opengl_material* material, float metallic,
-    opengl_texture* metallic_txt = nullptr);
+    opengl_texture* metallic_tex = nullptr);
 void set_roughness(opengl_material* material, float roughness,
-    opengl_texture* roughness_txt = nullptr);
+    opengl_texture* roughness_tex = nullptr);
 void set_specular(opengl_material* material, float specular,
-    opengl_texture* specular_txt = nullptr);
+    opengl_texture* specular_tex = nullptr);
 void set_opacity(opengl_material* material, float opacity,
-    opengl_texture* opacity_txt = nullptr);
-void set_normalmap(opengl_material* material, opengl_texture* normal_txt);
+    opengl_texture* opacity_tex = nullptr);
+void set_normalmap(opengl_material* material, opengl_texture* normal_tex);
 void set_gltftextures(opengl_material* material, bool gltf_textures);
 
 // shape properties

@@ -257,7 +257,8 @@ int main(int argc, const char* argv[]) {
       cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
   add_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  add_option(cli, "--alpha-to-color/--no-alpha-to-color", alpha_to_color, "Set color as alpha");
+  add_option(cli, "--alpha-to-color/--no-alpha-to-color", alpha_to_color,
+      "Set color as alpha");
   add_option(cli, "--logo/--no-logo", logo, "Add logo");
   add_option(cli, "--diff", diff_filename, "compute the diff between images");
   add_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
@@ -300,8 +301,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // set color from alpha
-  if(alpha_to_color) {
-    for(auto& c : img) xyz(c) = vec3f{c.w};
+  if (alpha_to_color) {
+    for (auto& c : img) xyz(c) = vec3f{c.w};
   }
 
   // diff

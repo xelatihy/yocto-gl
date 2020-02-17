@@ -1432,15 +1432,15 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
     material->trdepth          = omat->pbr_volscale;
     material->opacity          = omat->pbr_opacity;
     material->thin             = true;
-    material->emission_tex     = get_texture(omat->pbr_emission_map);
-    material->color_tex        = get_texture(omat->pbr_base_map);
-    material->specular_tex     = get_texture(omat->pbr_specular_map);
-    material->metallic_tex     = get_texture(omat->pbr_metallic_map);
-    material->roughness_tex    = get_texture(omat->pbr_roughness_map);
-    material->transmission_tex = get_texture(omat->pbr_transmission_map);
-    material->coat_tex         = get_texture(omat->pbr_coat_map);
-    material->opacity_tex      = get_texture(omat->pbr_opacity_map);
-    material->normal_tex       = get_texture(omat->normal_map);
+    material->emission_tex     = get_texture(omat->pbr_emission_tex);
+    material->color_tex        = get_texture(omat->pbr_base_tex);
+    material->specular_tex     = get_texture(omat->pbr_specular_tex);
+    material->metallic_tex     = get_texture(omat->pbr_metallic_tex);
+    material->roughness_tex    = get_texture(omat->pbr_roughness_tex);
+    material->transmission_tex = get_texture(omat->pbr_transmission_tex);
+    material->coat_tex         = get_texture(omat->pbr_coat_tex);
+    material->opacity_tex      = get_texture(omat->pbr_opacity_tex);
+    material->normal_tex       = get_texture(omat->normal_tex);
     material_map[omat]         = material;
   }
 
@@ -1497,7 +1497,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
     // environment->name     = make_safe_name("environment", oenvironment.name);
     environment->frame        = oenvironment->frame;
     environment->emission     = oenvironment->emission;
-    environment->emission_tex = get_texture(oenvironment->emission_map);
+    environment->emission_tex = get_texture(oenvironment->emission_tex);
   }
 
   // handle progress
@@ -1582,15 +1582,15 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     omaterial->pbr_coat             = material->coat;
     omaterial->pbr_transmission     = material->transmission;
     omaterial->pbr_opacity          = material->opacity;
-    omaterial->pbr_emission_map     = get_texture(material->emission_tex);
-    omaterial->pbr_base_map         = get_texture(material->color_tex);
-    omaterial->pbr_specular_map     = get_texture(material->specular_tex);
-    omaterial->pbr_metallic_map     = get_texture(material->metallic_tex);
-    omaterial->pbr_roughness_map    = get_texture(material->roughness_tex);
-    omaterial->pbr_transmission_map = get_texture(material->transmission_tex);
-    omaterial->pbr_coat_map         = get_texture(material->coat_tex);
-    omaterial->pbr_opacity_map      = get_texture(material->opacity_tex);
-    omaterial->normal_map           = get_texture(material->normal_tex);
+    omaterial->pbr_emission_tex     = get_texture(material->emission_tex);
+    omaterial->pbr_base_tex         = get_texture(material->color_tex);
+    omaterial->pbr_specular_tex     = get_texture(material->specular_tex);
+    omaterial->pbr_metallic_tex     = get_texture(material->metallic_tex);
+    omaterial->pbr_roughness_tex    = get_texture(material->roughness_tex);
+    omaterial->pbr_transmission_tex = get_texture(material->transmission_tex);
+    omaterial->pbr_coat_tex         = get_texture(material->coat_tex);
+    omaterial->pbr_opacity_tex      = get_texture(material->opacity_tex);
+    omaterial->normal_tex           = get_texture(material->normal_tex);
   }
 
   // convert objects
@@ -1630,7 +1630,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     oenvironment->name         = fs::path(environment->name).stem();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
-    oenvironment->emission_map = get_texture(environment->emission_tex);
+    oenvironment->emission_tex = get_texture(environment->emission_tex);
   }
 
   // handle progress
@@ -1942,10 +1942,10 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     material->roughness    = pmaterial->roughness;
     material->opacity      = pmaterial->opacity;
     material->thin         = pmaterial->thin;
-    material->color_tex    = get_texture(pmaterial->color_map);
-    material->opacity_tex  = get_texture(pmaterial->opacity_map);
+    material->color_tex    = get_texture(pmaterial->color_tex);
+    material->opacity_tex  = get_texture(pmaterial->opacity_tex);
     if (!material->opacity_tex)
-      material->opacity_tex = get_alpha(pmaterial->alpha_map);
+      material->opacity_tex = get_alpha(pmaterial->alpha_tex);
     material_map[pmaterial] = material;
   }
 
@@ -1974,7 +1974,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     auto environment          = add_environment(scene);
     environment->frame        = penvironment->frame;
     environment->emission     = penvironment->emission;
-    environment->emission_tex = get_texture(penvironment->emission_map);
+    environment->emission_tex = get_texture(penvironment->emission_tex);
   }
 
   // lights
@@ -2063,9 +2063,13 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   pcamera->aspect     = camera->aspect;
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
+  // get texture name
+  auto get_texture = [](const sceneio_texture* texture) {
+    return texture ? texture->name : "";
+  };
+
   // convert materials
-  auto material_map  = unordered_map<sceneio_material*, pbrt_material*>{};
-  auto arealight_map = unordered_map<sceneio_material*, pbrt_arealight*>{};
+  auto material_map = unordered_map<sceneio_material*, pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
@@ -2077,9 +2081,9 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     pmaterial->roughness    = material->roughness;
     pmaterial->ior          = material->ior;
     pmaterial->opacity      = material->opacity;
-    pmaterial->color_map    = material->color_tex ? material->color_tex->name
-                                               : ""s;
-    material_map[material] = pmaterial;
+    pmaterial->color_tex    = get_texture(material->color_tex);
+    pmaterial->opacity_tex  = get_texture(material->opacity_tex);
+    material_map[material]  = pmaterial;
   }
 
   // convert instances
@@ -2089,7 +2093,6 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
     pshape->material  = material_map.at(object->material);
-    pshape->arealight = arealight_map.at(object->material);
     if (object->instance) {
       pshape->instances = object->instance->frames;
       pshape->instances = object->instance->frames;
@@ -2098,11 +2101,9 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment      = add_environment(pbrt);
-    penvironment->emission = environment->emission;
-    if (environment->emission_tex) {
-      penvironment->emission_map = environment->emission_tex->name;
-    }
+    auto penvironment          = add_environment(pbrt);
+    penvironment->emission     = environment->emission;
+    penvironment->emission_tex = get_texture(environment->emission_tex);
   }
 
   // handle progress

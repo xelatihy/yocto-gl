@@ -543,19 +543,19 @@ uniform vec3 mat_ks;           // material ks
 uniform float mat_rs;          // material rs
 uniform float mat_op;          // material op
 
-uniform bool mat_ke_txt_on;    // material ke texture on
-uniform sampler2D mat_ke_txt;  // material ke texture
-uniform bool mat_kd_txt_on;    // material kd texture on
-uniform sampler2D mat_kd_txt;  // material kd texture
-uniform bool mat_ks_txt_on;    // material ks texture on
-uniform sampler2D mat_ks_txt;  // material ks texture
-uniform bool mat_rs_txt_on;    // material rs texture on
-uniform sampler2D mat_rs_txt;  // material rs texture
-uniform bool mat_op_txt_on;    // material op texture on
-uniform sampler2D mat_op_txt;  // material op texture
+uniform bool mat_ke_tex_on;    // material ke texture on
+uniform sampler2D mat_ke_tex;  // material ke texture
+uniform bool mat_kd_tex_on;    // material kd texture on
+uniform sampler2D mat_kd_tex;  // material kd texture
+uniform bool mat_ks_tex_on;    // material ks texture on
+uniform sampler2D mat_ks_tex;  // material ks texture
+uniform bool mat_rs_tex_on;    // material rs texture on
+uniform sampler2D mat_rs_tex;  // material rs texture
+uniform bool mat_op_tex_on;    // material op texture on
+uniform sampler2D mat_op_tex;  // material op texture
 
-uniform bool mat_norm_txt_on;    // material norm texture on
-uniform sampler2D mat_norm_txt;  // material norm texture
+uniform bool mat_norm_tex_on;    // material norm texture on
+uniform sampler2D mat_norm_tex;  // material norm texture
 
 uniform bool mat_double_sided;   // double sided rendering
 
@@ -578,48 +578,48 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
     rs = mat_rs;
     op = color.w * mat_op;
 
-    vec4 ke_txt = (mat_ke_txt_on) ? texture(mat_ke_txt,texcoord) : vec4(1,1,1,1);
-    vec4 kd_txt = (mat_kd_txt_on) ? texture(mat_kd_txt,texcoord) : vec4(1,1,1,1);
-    vec4 ks_txt = (mat_ks_txt_on) ? texture(mat_ks_txt,texcoord) : vec4(1,1,1,1);
-    vec4 rs_txt = (mat_rs_txt_on) ? texture(mat_rs_txt,texcoord) : vec4(1,1,1,1);
-    vec4 op_txt = (mat_op_txt_on) ? texture(mat_op_txt,texcoord) : vec4(1,1,1,1);
+    vec4 ke_tex = (mat_ke_tex_on) ? texture(mat_ke_tex,texcoord) : vec4(1,1,1,1);
+    vec4 kd_tex = (mat_kd_tex_on) ? texture(mat_kd_tex,texcoord) : vec4(1,1,1,1);
+    vec4 ks_tex = (mat_ks_tex_on) ? texture(mat_ks_tex,texcoord) : vec4(1,1,1,1);
+    vec4 rs_tex = (mat_rs_tex_on) ? texture(mat_rs_tex,texcoord) : vec4(1,1,1,1);
+    vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
 
     // get material color from textures and adjust values
     if(mat_type == 1) {
-        ke *= ke_txt.xyz;
-        kd *= kd_txt.xyz;
-        ks *= ks_txt.xyz;
-        rs *= rs_txt.y;
+        ke *= ke_tex.xyz;
+        kd *= kd_tex.xyz;
+        ks *= ks_tex.xyz;
+        rs *= rs_tex.y;
         rs = rs*rs;
-        op *= op_txt.x * kd_txt.w;
+        op *= op_tex.x * kd_tex.w;
     } else if(mat_type == 2) {
-        ke *= ke_txt.xyz;
-        vec3 kb = kd * kd_txt.xyz;
-        float km = ks.x * ks_txt.z;
+        ke *= ke_tex.xyz;
+        vec3 kb = kd * kd_tex.xyz;
+        float km = ks.x * ks_tex.z;
         kd = kb * (1 - km);
         ks = kb * km + vec3(0.04) * (1 - km);
-        rs *= ks_txt.y;
+        rs *= ks_tex.y;
         rs = rs*rs;
-        op *= kd_txt.w;
+        op *= kd_tex.w;
     } else if(mat_type == 3) {
-        ke *= ke_txt.xyz;
-        kd *= kd_txt.xyz;
-        ks *= ks_txt.xyz;
-        float gs = (1 - rs) * ks_txt.w;
+        ke *= ke_tex.xyz;
+        kd *= kd_tex.xyz;
+        ks *= ks_tex.xyz;
+        float gs = (1 - rs) * ks_tex.w;
         rs = 1 - gs;
         rs = rs*rs;
-        op *= kd_txt.w;
+        op *= kd_tex.w;
     }
 
     return true;
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
-    if(!mat_norm_txt_on) return norm;
+    if(!mat_norm_tex_on) return norm;
     vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
     vec3 tangv = normalize(cross(norm, tangu));
     if(tangsp.w < 0) tangv = -tangv;
-    vec3 texture = 2 * pow(texture(mat_norm_txt,texcoord).xyz, vec3(1/2.2)) - 1;
+    vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
     // texture.y = -texture.y;
     return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
 }
@@ -963,36 +963,36 @@ opengl_material* add_material(opengl_scene* scene) {
   return scene->materials.emplace_back(new opengl_material{});
 }
 void set_emission(opengl_material* material, const vec3f& emission,
-    opengl_texture* emission_txt) {
+    opengl_texture* emission_tex) {
   material->emission     = emission;
-  material->emission_map = emission_txt;
+  material->emission_tex = emission_tex;
 }
 void set_color(
-    opengl_material* material, const vec3f& color, opengl_texture* color_txt) {
+    opengl_material* material, const vec3f& color, opengl_texture* color_tex) {
   material->color     = color;
-  material->color_map = color_txt;
+  material->color_tex = color_tex;
 }
 void set_specular(
-    opengl_material* material, float specular, opengl_texture* specular_txt) {
+    opengl_material* material, float specular, opengl_texture* specular_tex) {
   material->specular     = specular;
-  material->specular_map = specular_txt;
+  material->specular_tex = specular_tex;
 }
 void set_roughness(
-    opengl_material* material, float roughness, opengl_texture* roughness_txt) {
+    opengl_material* material, float roughness, opengl_texture* roughness_tex) {
   material->roughness     = roughness;
-  material->roughness_map = roughness_txt;
+  material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    opengl_material* material, float opacity, opengl_texture* opacity_txt) {
+    opengl_material* material, float opacity, opengl_texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    opengl_material* material, float metallic, opengl_texture* metallic_txt) {
+    opengl_material* material, float metallic, opengl_texture* metallic_tex) {
   material->metallic     = metallic;
-  material->metallic_map = metallic_txt;
+  material->metallic_tex = metallic_tex;
 }
-void set_normalmap(opengl_material* material, opengl_texture* normal_txt) {
-  material->normal_map = normal_txt;
+void set_normalmap(opengl_material* material, opengl_texture* normal_tex) {
+  material->normal_tex = normal_tex;
 }
 void set_gltftextures(opengl_material* material, bool gltf_textures) {
   material->gltf_textures = gltf_textures;
@@ -1053,47 +1053,47 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
       glGetUniformLocation(glscene->program_id, "mat_op"), material->opacity);
   glUniform1i(glGetUniformLocation(glscene->program_id, "mat_double_sided"),
       (int)params.double_sided);
-  if (material->emission_map) {
+  if (material->emission_tex) {
     glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, material->emission_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt"), 0);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, material->emission_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_tex"), 0);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_tex_on"), 0);
   }
-  if (material->color_map) {
+  if (material->color_tex) {
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, material->color_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt"), 1);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, material->color_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_tex"), 1);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_tex_on"), 0);
   }
-  if (material->metallic_map) {
+  if (material->metallic_tex) {
     glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, material->specular_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt"), 2);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, material->specular_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_tex"), 2);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_tex_on"), 0);
   }
-  if (material->roughness_map) {
+  if (material->roughness_tex) {
     glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, material->roughness_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt"), 3);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, material->roughness_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_tex"), 3);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_tex_on"), 0);
   }
-  if (material->normal_map) {
+  if (material->normal_tex) {
     glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, material->normal_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt"), 4);
+    glBindTexture(GL_TEXTURE_2D, material->normal_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_tex"), 4);
     glUniform1i(
-        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 1);
+        glGetUniformLocation(glscene->program_id, "mat_norm_tex_on"), 1);
   } else {
     glUniform1i(
-        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 0);
+        glGetUniformLocation(glscene->program_id, "mat_norm_tex_on"), 0);
   }
 
   auto shape = object->shape;
