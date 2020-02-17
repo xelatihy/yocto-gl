@@ -1912,7 +1912,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     if (it != texture_map.end()) return it->second;
     auto texture      = add_texture(scene);
     texture->name     = make_safe_name("texture", fs::path(path).stem(),
-        (!texture->ldr.empty() ? ".png" : ".hdr"));
+        (!is_hdr_filename(path) ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
   };
