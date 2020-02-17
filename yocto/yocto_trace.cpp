@@ -761,8 +761,8 @@ static trace_point eval_point(const trace_scene* scene,
                         ? uv
                         : eval_shape_elem(shape, shape->quadstexcoord,
                               shape->texcoords, element, uv);
-    auto normalmap =
-        -1 + 2 * eval_texture(material->normal_tex, texcoord, true);
+    auto normalmap = -1 +
+                     2 * eval_texture(material->normal_tex, texcoord, true);
     auto z = shape->normals.empty()
                  ? eval_element_normal(shape, element)
                  : normalize(eval_shape_elem(
@@ -915,7 +915,8 @@ static volume_point eval_volume(const trace_scene* scene,
   auto color = shape->colors.empty()
                    ? vec4f{1, 1, 1, 1}
                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
-  auto base         = material->color * xyz(color) * eval_texture(material->color_tex, texcoord);
+  auto base = material->color * xyz(color) *
+              eval_texture(material->color_tex, texcoord);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
   auto thin       = material->thin || !material->transmission;
@@ -950,7 +951,8 @@ static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
     auto texcoord = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (texcoord.x < 0) texcoord.x += 1;
-    emission += environment->emission * eval_texture(environment->emission_tex, texcoord);
+    emission += environment->emission *
+                eval_texture(environment->emission_tex, texcoord);
   }
   return emission;
 }
