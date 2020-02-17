@@ -34,7 +34,6 @@ using namespace yocto;
 
 #include <memory>
 #include <set>
-using namespace std;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -110,7 +109,7 @@ int main(int argc, const char* argv[]) {
 
   // make a directory if needed
   auto dirname  = fs::path(output).parent_path();
-  auto dirnames = set<fs::path>{};
+  auto dirnames = std::set<fs::path>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene->shapes)
     dirnames.insert(dirname / fs::path(shape->name).parent_path());

@@ -684,7 +684,7 @@ struct trace_point {
   vec3f normal   = zero3f;
   vec3f gnormal  = zero3f;
   vec2f texcoord = zero2f;
-  vec4f color    = zero4f;
+  vec3f color    = zero3f;
   // directions
   vec3f outgoing = zero3f;
   vec3f incoming = zero3f;
@@ -745,7 +745,7 @@ static trace_point eval_point(const trace_scene* scene,
                        : eval_shape_elem(shape, shape->quadstexcoord,
                              shape->texcoords, element, uv);
   point.color = shape->colors.empty()
-                    ? vec4f{1, 1, 1, 1}
+                    ? vec3f{1, 1, 1}
                     : eval_shape_elem(shape, {}, shape->colors, element, uv);
 
   // correct normal
@@ -794,7 +794,7 @@ static trace_point eval_point(const trace_scene* scene,
   auto texcoord = point.texcoord;
   auto emission = material->emission *
                   eval_texture(material->emission_tex, texcoord);
-  auto base = material->color * xyz(point.color) *
+  auto base = material->color * point.color *
               eval_texture(material->color_tex, texcoord);
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord).x;
@@ -809,7 +809,7 @@ static trace_point eval_point(const trace_scene* scene,
   auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
-  auto opacity = material->opacity * point.color.w *
+  auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
 
@@ -913,9 +913,9 @@ static volume_point eval_volume(const trace_scene* scene,
                       : eval_shape_elem(shape, shape->quadstexcoord,
                             shape->texcoords, element, uv);
   auto color = shape->colors.empty()
-                   ? vec4f{1, 1, 1, 1}
+                   ? vec3f{1, 1, 1}
                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
-  auto base = material->color * xyz(color) *
+  auto base = material->color * color *
               eval_texture(material->color_tex, texcoord);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
@@ -2873,7 +2873,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
     case trace_falsecolor_type::texcoord:
       return {
           {fmod(point.texcoord.x, 1.0f), fmod(point.texcoord.y, 1.0f), 0}, 1};
-    case trace_falsecolor_type::color: return {xyz(point.color), 1};
+    case trace_falsecolor_type::color: return {point.color, 1};
     case trace_falsecolor_type::emission: return {point.emission, 1};
     case trace_falsecolor_type::diffuse: return {point.diffuse, 1};
     case trace_falsecolor_type::specular: return {point.specular, 1};
@@ -3245,7 +3245,7 @@ void set_normals(trace_shape* shape, const vector<vec3f>& normals) {
 void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(trace_shape* shape, const vector<vec4f>& colors) {
+void set_colors(trace_shape* shape, const vector<vec3f>& colors) {
   shape->colors = colors;
 }
 void set_radius(trace_shape* shape, const vector<float>& radius) {

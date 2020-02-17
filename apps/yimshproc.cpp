@@ -77,10 +77,9 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
     if (data.vertex_selection.size()) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
-      auto colors = vector<vec4f>(data.scalar_field.size());
+      auto colors = vector<vec3f>(data.scalar_field.size());
       for (int i = 0; i < colors.size(); ++i) {
-        colors[i]   = vec4f(data.scalar_field[i]);
-        colors[i].w = 1;
+        colors[i] = vec3f(data.scalar_field[i]);
       }
       set_colors(app->glshapes, colors);
     }

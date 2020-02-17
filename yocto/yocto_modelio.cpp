@@ -992,12 +992,8 @@ vector<vec2f> get_texcoords(ply_model* ply, bool flipv) {
                       : get_values(ply, "vertex", "s", "t");
   return flipv ? flip_ply_texcoord(texcoord) : texcoord;
 }
-vector<vec4f> get_colors(ply_model* ply) {
-  if (has_property(ply, "vertex", "alpha")) {
-    return get_values(ply, "vertex", "red", "green", "blue", "alpha");
-  } else {
-    return get_values(ply, "vertex", "red", "green", "blue", 1);
-  }
+vector<vec3f> get_colors(ply_model* ply) {
+  return get_values(ply, "vertex", "red", "green", "blue");
 }
 vector<float> get_radius(ply_model* ply) {
   return get_values(ply, "vertex", "radius");
@@ -1198,8 +1194,8 @@ void add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, flipv ? flip_ply_texcoord(values) : values, "vertex", "u", "v");
 }
-void add_colors(ply_model* ply, const vector<vec4f>& values) {
-  return add_values(ply, values, "vertex", "red", "green", "blue", "alpha");
+void add_colors(ply_model* ply, const vector<vec3f>& values) {
+  return add_values(ply, values, "vertex", "red", "green", "blue");
 }
 void add_radius(ply_model* ply, const vector<float>& values) {
   return add_values(ply, values, "vertex", "radius");
@@ -5033,8 +5029,8 @@ unique_ptr<gltf_model> load_gltf(const string& filename, string& error) {
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape->colors.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape->colors.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2], (float)vals[i][3]});
+            shape->colors.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
         } else if (semantic == "TANGENT") {
           shape->tangents.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)

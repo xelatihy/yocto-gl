@@ -7,7 +7,6 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
-using namespace std;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
@@ -89,7 +88,7 @@ void update_glvector_field(
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
   if (!perface && !pervertex) {
-    throw runtime_error("input vector field has wrong size\n");
+    throw std::runtime_error("input vector field has wrong size\n");
   }
 
   auto size = perface ? app->shape.triangles.size()

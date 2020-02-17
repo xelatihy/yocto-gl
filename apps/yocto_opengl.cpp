@@ -920,9 +920,9 @@ void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_colors(opengl_shape* shape, const vector<vec4f>& colors) {
+void set_colors(opengl_shape* shape, const vector<vec3f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+      3, (const float*)colors.data());
 }
 void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,

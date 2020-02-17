@@ -33,10 +33,13 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <atomic>
 #include <deque>
 #include <future>
-#include <memory>
-using namespace std;
+using std::atomic;
+using std::deque;
+using std::future;
+using std::to_string;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -114,7 +117,7 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->outname     = fs::path(filename).replace_extension(".edited.yaml");
   app->name        = fs::path(app->filename).filename();
   app->drawgl_prms = apps->drawgl_prms;
-  app->loader      = async(launch::async, [app]() {
+  app->loader      = std::async(std::launch::async, [app]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
@@ -651,8 +654,8 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 // update
 void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
-    return result.valid() &&
-           result.wait_for(chrono::microseconds(0)) == future_status::ready;
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
   };
 
   while (!apps->loading.empty()) {

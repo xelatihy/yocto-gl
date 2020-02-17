@@ -140,7 +140,7 @@ vec2i get_list_minxmax(
 vector<vec3f>       get_positions(ply_model* ply);
 vector<vec3f>       get_normals(ply_model* ply);
 vector<vec2f>       get_texcoords(ply_model* ply, bool flipv = false);
-vector<vec4f>       get_colors(ply_model* ply);
+vector<vec3f>       get_colors(ply_model* ply);
 vector<float>       get_radius(ply_model* ply);
 vector<vector<int>> get_faces(ply_model* ply);
 vector<vec2i>       get_lines(ply_model* ply);
@@ -184,7 +184,7 @@ void add_positions(ply_model* ply, const vector<vec3f>& values);
 void add_normals(ply_model* ply, const vector<vec3f>& values);
 void add_texcoords(
     ply_model* ply, const vector<vec2f>& values, bool flipv = false);
-void add_colors(ply_model* ply, const vector<vec4f>& values);
+void add_colors(ply_model* ply, const vector<vec3f>& values);
 void add_radius(ply_model* ply, const vector<float>& values);
 void add_faces(ply_model* ply, const vector<vector<int>>& values);
 void add_faces(
@@ -590,7 +590,7 @@ struct gltf_primitive {
   vector<vec3f>  positions = {};
   vector<vec3f>  normals   = {};
   vector<vec2f>  texcoords = {};
-  vector<vec4f>  colors    = {};
+  vector<vec3f>  colors    = {};
   vector<float>  radius    = {};
   vector<vec4f>  tangents  = {};
   vector<vec3i>  triangles = {};

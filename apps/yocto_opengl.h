@@ -286,7 +286,7 @@ void set_quads(opengl_shape* shape, const vector<vec4i>& quads);
 void set_positions(opengl_shape* shape, const vector<vec3f>& positions);
 void set_normals(opengl_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(opengl_shape* shape, const vector<vec4f>& colors);
+void set_colors(opengl_shape* shape, const vector<vec3f>& colors);
 void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents);
 
 // instance properties

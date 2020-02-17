@@ -39,7 +39,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type,
+    vector<vec3f>& colors, vector<float>& radius, const string& type,
     string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
@@ -192,7 +192,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
     vector<float>& radius, const string& type, string& error) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
@@ -214,7 +214,7 @@ bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
   auto quads     = vector<vec4i>{};
-  auto colors    = vector<vec4f>{};
+  auto colors    = vector<vec3f>{};
   auto radius    = vector<float>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
           quadstexcoord, positions, normals, texcoords, colors, radius, type,
@@ -278,7 +278,7 @@ int main(int argc, const char* argv[]) {
   auto positions     = vector<vec3f>{};
   auto normals       = vector<vec3f>{};
   auto texcoords     = vector<vec2f>{};
-  auto colors        = vector<vec4f>{};
+  auto colors        = vector<vec3f>{};
   auto radius        = vector<float>{};
   auto points        = vector<int>{};
   auto lines         = vector<vec2i>{};
@@ -401,9 +401,9 @@ int main(int argc, const char* argv[]) {
         if (tags[i] == 1) triangles[i] = {-1, -1, -1};
       }
     } else {
-      colors = vector<vec4f>(positions.size());
+      colors = vector<vec3f>(positions.size());
       for (int i = 0; i < colors.size(); ++i) {
-        colors[i] = vec4f(sinf(geodesic_scale * field[i]));
+        colors[i] = vec3f(sinf(geodesic_scale * field[i]));
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }

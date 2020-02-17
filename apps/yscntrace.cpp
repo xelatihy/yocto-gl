@@ -35,7 +35,6 @@ using namespace yocto;
 
 #include <map>
 #include <memory>
-using namespace std;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
