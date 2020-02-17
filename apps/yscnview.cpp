@@ -308,9 +308,10 @@ bool draw_glwidgets(
   draw_gllabel(win, "name", iomaterial->name);
   edited += draw_glhdrcoloredit(win, "emission", iomaterial->emission);
   edited += draw_glcoloredit(win, "color", iomaterial->color);
-  edited += draw_glslider(win, "specular", iomaterial->specular, 0, 1);
+  edited += draw_glslider(win, "opacity", iomaterial->opacity, 0, 1);
   edited += draw_glslider(win, "metallic", iomaterial->metallic, 0, 1);
   edited += draw_glslider(win, "roughness", iomaterial->roughness, 0, 1);
+  edited += draw_glslider(win, "specular", iomaterial->specular, 0, 1);
   edited += draw_glslider(win, "coat", iomaterial->coat, 0, 1);
   edited += draw_glslider(win, "transmission", iomaterial->transmission, 0, 1);
   edited += draw_glcoloredit(win, "spectint", iomaterial->spectint);
@@ -318,22 +319,23 @@ bool draw_glwidgets(
   edited += draw_glcoloredit(win, "scattering", iomaterial->scattering);
   edited += draw_glslider(win, "trdepth", iomaterial->trdepth, 0, 1);
   edited += draw_glslider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
-  edited += draw_glslider(win, "opacity", iomaterial->opacity, 0, 1);
   edited += draw_glslider(win, "displacement", iomaterial->displacement, 0, 1);
   edited += draw_glcombobox(
       win, "emission_tex", iomaterial->emission_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "color_tex", iomaterial->color_tex, ioscene->textures, true);
   edited += draw_glcombobox(
+      win, "opacity_tex", iomaterial->opacity_tex, ioscene->textures, true);
+  edited += draw_glcombobox(
       win, "metallic_tex", iomaterial->metallic_tex, ioscene->textures, true);
+  edited += draw_glcombobox(
+      win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
   edited += draw_glcombobox(win, "transmission_tex",
       iomaterial->transmission_tex, ioscene->textures, true);
   edited += draw_glcombobox(win, "scattering_tex", iomaterial->scattering_tex,
       ioscene->textures, true);
-  edited += draw_glcombobox(
-      win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
   edited += draw_glcombobox(
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_glcombobox(
