@@ -133,17 +133,17 @@ struct opengl_material {
   // material
   vec3f           emission      = {0, 0, 0};
   vec3f           color         = {0, 0, 0};
-  float           specular      = 0;
   float           metallic      = 0;
   float           roughness     = 0;
+  float           specular      = 0;
   float           opacity       = 1;
   opengl_texture* emission_tex  = nullptr;
   opengl_texture* color_tex     = nullptr;
-  opengl_texture* specular_tex  = nullptr;
   opengl_texture* metallic_tex  = nullptr;
   opengl_texture* roughness_tex = nullptr;
+  opengl_texture* specular_tex  = nullptr;
+  opengl_texture* opacity_tex   = nullptr;
   opengl_texture* normal_tex    = nullptr;
-  bool            gltf_textures = false;
 };
 
 // Opengl shape
@@ -276,7 +276,6 @@ void set_specular(opengl_material* material, float specular,
 void set_opacity(opengl_material* material, float opacity,
     opengl_texture* opacity_tex = nullptr);
 void set_normalmap(opengl_material* material, opengl_texture* normal_tex);
-void set_gltftextures(opengl_material* material, bool gltf_textures);
 
 // shape properties
 void set_points(opengl_shape* shape, const vector<int>& points);

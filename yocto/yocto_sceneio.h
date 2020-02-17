@@ -131,7 +131,6 @@ struct sceneio_material {
   sceneio_texture* opacity_tex      = nullptr;
   sceneio_texture* normal_tex       = nullptr;
   sceneio_texture* displacement_tex = nullptr;
-  bool             gltf_textures    = false;  // glTF packed textures
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;

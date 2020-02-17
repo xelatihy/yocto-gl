@@ -348,7 +348,6 @@ bool draw_glwidgets(
       iomaterial->displacement_tex, ioscene->textures, true);
   edited += draw_glslider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
   edited += draw_glcheckbox(win, "smooth", iomaterial->smooth);
-  edited += draw_glcheckbox(win, "glTF textures", iomaterial->gltf_textures);
   return edited;
 }
 

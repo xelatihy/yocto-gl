@@ -1100,8 +1100,6 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
         return false;  // hack fir subd
       if (!get_value(ejs, "smooth", material->smooth))
         return false;  // hack for subd
-      if (!get_value(ejs, "gltf_textures", material->gltf_textures))
-        return false;
       material_map[material->name] = material;
     }
   }
@@ -1275,8 +1273,6 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
         def_material.subdivisions);  // hack fir subd
     add_opt(
         ejs, "smooth", material->smooth, def_material.smooth);  // hack for subd
-    add_opt(ejs, "gltf_textures", material->gltf_textures,
-        def_material.gltf_textures);
   }
 
   auto def_object = sceneio_object{};

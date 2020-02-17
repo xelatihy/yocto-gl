@@ -510,25 +510,19 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
         float d = ((2+ns)/(2*pif)) * pow(si,ns);
         vec3 spec = si * ks * d / (4*si*so);
         return diff+spec;
-    } else if(etype == 3 || etype == 4) {
+    } else if(etype == 3) {
         if(ndi<=0 || ndo <=0) return vec3(0);
         vec3 diff = ndi * kd / pif;
         if(ndh<=0) return diff;
-        if(etype == 4) {
-            float d = ((2+ns)/(2*pif)) * pow(ndh,ns);
-            vec3 spec = ndi * ks * d / (4*ndi*ndo);
-            return diff+spec;
-        } else {
-            float cos2 = ndh * ndh;
-            float tan2 = (1 - cos2) / cos2;
-            float alpha2 = rs * rs;
-            float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-            float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-            float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-            float g = 1 / (1 + lambda_o + lambda_i);
-            vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-            return diff+spec;
-        }
+        float cos2 = ndh * ndh;
+        float tan2 = (1 - cos2) / cos2;
+        float alpha2 = rs * rs;
+        float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+        float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+        float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+        float g = 1 / (1 + lambda_o + lambda_i);
+        vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+        return diff+spec;
     }
 }
 
@@ -585,31 +579,14 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
     vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
 
     // get material color from textures and adjust values
-    if(mat_type == 1) {
-        ke *= ke_tex.xyz;
-        kd *= kd_tex.xyz;
-        ks *= ks_tex.xyz;
-        rs *= rs_tex.y;
-        rs = rs*rs;
-        op *= op_tex.x * kd_tex.w;
-    } else if(mat_type == 2) {
-        ke *= ke_tex.xyz;
-        vec3 kb = kd * kd_tex.xyz;
-        float km = ks.x * ks_tex.z;
-        kd = kb * (1 - km);
-        ks = kb * km + vec3(0.04) * (1 - km);
-        rs *= ks_tex.y;
-        rs = rs*rs;
-        op *= kd_tex.w;
-    } else if(mat_type == 3) {
-        ke *= ke_tex.xyz;
-        kd *= kd_tex.xyz;
-        ks *= ks_tex.xyz;
-        float gs = (1 - rs) * ks_tex.w;
-        rs = 1 - gs;
-        rs = rs*rs;
-        op *= kd_tex.w;
-    }
+    ke *= ke_tex.xyz;
+    vec3 kb = kd * kd_tex.xyz;
+    float km = ks.x * ks_tex.z;
+    kd = kb * (1 - km);
+    ks = kb * km + vec3(0.04) * (1 - km);
+    rs *= ks_tex.y;
+    rs = rs*rs;
+    op *= kd_tex.w;
 
     return true;
 }
@@ -994,9 +971,6 @@ void set_metallic(
 void set_normalmap(opengl_material* material, opengl_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
-void set_gltftextures(opengl_material* material, bool gltf_textures) {
-  material->gltf_textures = gltf_textures;
-}
 
 // add light
 opengl_light* add_light(opengl_scene* scene) {
@@ -1039,7 +1013,6 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
 
   auto material = object->material;
   auto mtype    = 2;
-  if (material->gltf_textures) mtype = 3;
   glUniform1i(glGetUniformLocation(glscene->program_id, "mat_type"), mtype);
   glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ke"),
       material->emission.x, material->emission.y, material->emission.z);
@@ -1084,6 +1057,14 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_tex_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_tex_on"), 0);
+  }
+  if (material->opacity_tex) {
+    glActiveTexture(GL_TEXTURE0 + 3);
+    glBindTexture(GL_TEXTURE_2D, material->opacity_tex->texture_id);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_op_tex"), 3);
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_op_tex_on"), 1);
+  } else {
+    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_op_tex_on"), 0);
   }
   if (material->normal_tex) {
     glActiveTexture(GL_TEXTURE0 + 4);
