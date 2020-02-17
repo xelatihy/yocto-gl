@@ -470,6 +470,7 @@ struct pbrt_camera {
 struct pbrt_material {
   // material parameters
   string name            = "";
+  vec3f  emission        = zero3f;
   vec3f  color           = zero3f;
   float  specular        = 0;
   float  metallic        = 0;
@@ -479,6 +480,7 @@ struct pbrt_material {
   float  opacity         = 1;
   string color_map       = "";
   string opacity_map     = "";
+  string alpha_map       = "";
   bool   thin            = true;
   vec3f  volmeanfreepath = zero3f;
   vec3f  volscatter      = zero3f;
@@ -548,9 +550,7 @@ struct pbrt_model {
   vector<pbrt_shape*>       shapes       = {};
   vector<pbrt_environment*> environments = {};
   vector<pbrt_light*>       lights       = {};
-  vector<pbrt_arealight*>   arealights   = {};
   vector<pbrt_material*>    materials    = {};
-  vector<pbrt_medium*>      mediums      = {};
   ~pbrt_model();
 };
 
@@ -566,7 +566,6 @@ unique_ptr<pbrt_model> make_pbrt();
 pbrt_camera*           add_camera(pbrt_model* pbrt);
 pbrt_shape*            add_shape(pbrt_model* pbrt);
 pbrt_material*         add_material(pbrt_model* pbrt);
-pbrt_arealight*        add_arealight(pbrt_model* pbrt);
 pbrt_environment*      add_environment(pbrt_model* pbrt);
 pbrt_light*            add_light(pbrt_model* pbrt);
 

@@ -527,26 +527,26 @@ static vec2i texture_size(const trace_texture* texture) {
 }
 
 // Evaluate a texture
-static vec4f lookup_texture(
+static vec3f lookup_texture(
     const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
-  if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1, 1};
+  if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1};
   if (!texture->hdr.empty()) {
-    return texture->hdr[ij];
+    return xyz(texture->hdr[ij]);
   } else if (!texture->ldr.empty() && ldr_as_linear) {
-    return byte_to_float(texture->ldr[ij]);
+    return xyz(byte_to_float(texture->ldr[ij]));
   } else if (!texture->ldr.empty() && !ldr_as_linear) {
-    return srgb_to_rgb(byte_to_float(texture->ldr[ij]));
+    return xyz(srgb_to_rgb(byte_to_float(texture->ldr[ij])));
   } else {
-    return {1, 1, 1, 1};
+    return {1, 1, 1};
   }
 }
 
 // Evaluate a texture
-static vec4f eval_texture(const trace_texture* texture, const vec2f& uv,
+static vec3f eval_texture(const trace_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
-  if (!texture) return {1, 1, 1, 1};
+  if (!texture) return {1, 1, 1};
 
   // get image width/height
   auto size = texture_size(texture);
@@ -714,13 +714,13 @@ struct trace_point {
 static trace_point eval_point(const trace_scene* scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& object   = scene->objects[intersection.object];
-  auto& shape    = object->shape;
-  auto& material = object->material;
-  auto  frame = object->instance->frames[intersection.instance] * object->frame;
-  auto  element                = intersection.element;
-  auto  uv                     = intersection.uv;
-  auto  trace_non_rigid_frames = true;
+  auto object   = scene->objects[intersection.object];
+  auto shape    = object->shape;
+  auto material = object->material;
+  auto frame = object->instance->frames[intersection.instance] * object->frame;
+  auto element                = intersection.element;
+  auto uv                     = intersection.uv;
+  auto trace_non_rigid_frames = true;
 
   // initialize point
   auto point     = trace_point{};
@@ -761,8 +761,8 @@ static trace_point eval_point(const trace_scene* scene,
                         ? uv
                         : eval_shape_elem(shape, shape->quadstexcoord,
                               shape->texcoords, element, uv);
-    auto normalmap =
-        -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true));
+    auto normalmap = -1 +
+                     2 * eval_texture(material->normal_tex, texcoord, true);
     auto z = shape->normals.empty()
                  ? eval_element_normal(shape, element)
                  : normalize(eval_shape_elem(
@@ -793,9 +793,9 @@ static trace_point eval_point(const trace_scene* scene,
   // initialize factors
   auto texcoord = point.texcoord;
   auto emission = material->emission *
-                  xyz(eval_texture(material->emission_tex, texcoord));
-  auto base_tex = eval_texture(material->color_tex, texcoord);
-  auto base     = material->color * xyz(point.color) * xyz(base_tex);
+                  eval_texture(material->emission_tex, texcoord);
+  auto base = material->color * xyz(point.color) *
+              eval_texture(material->color_tex, texcoord);
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord).x;
   auto metallic = material->metallic *
@@ -809,8 +809,8 @@ static trace_point eval_point(const trace_scene* scene,
   auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
-  auto opacity = material->opacity * point.color.w * base_tex.w *
-                 eval_texture(material->opacity_tex, texcoord).x;
+  auto opacity = material->opacity * point.color.w *
+                 mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
 
   // factors
@@ -915,8 +915,8 @@ static volume_point eval_volume(const trace_scene* scene,
   auto color = shape->colors.empty()
                    ? vec4f{1, 1, 1, 1}
                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
-  auto base_tex     = eval_texture(material->color_tex, texcoord);
-  auto base         = material->color * xyz(color) * xyz(base_tex);
+  auto base = material->color * xyz(color) *
+              eval_texture(material->color_tex, texcoord);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
   auto thin       = material->thin || !material->transmission;
@@ -952,7 +952,7 @@ static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (texcoord.x < 0) texcoord.x += 1;
     emission += environment->emission *
-                xyz(eval_texture(environment->emission_tex, texcoord));
+                eval_texture(environment->emission_tex, texcoord);
   }
   return emission;
 }
@@ -2882,6 +2882,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
     case trace_falsecolor_type::transmission: return {point.transmission, 1};
     case trace_falsecolor_type::refraction: return {point.refraction, 1};
     case trace_falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
+    case trace_falsecolor_type::opacity: return {vec3f{point.opacity}, 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case trace_falsecolor_type::object:
@@ -3022,7 +3023,7 @@ void init_lights(trace_scene* scene, trace_progress progress_cb) {
           auto ij                    = vec2i{i % size.x, i / size.x};
           auto th                    = (ij.y + 0.5f) * pif / size.y;
           auto value                 = lookup_texture(texture, ij);
-          environment->texels_cdf[i] = max(xyz(value)) * sin(th);
+          environment->texels_cdf[i] = max(value) * sin(th);
           if (i) environment->texels_cdf[i] += environment->texels_cdf[i - 1];
         }
       }

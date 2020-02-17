@@ -1092,7 +1092,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
         return false;
       if (!get_texture(ejs, "scattering_tex", material->scattering_tex))
         return false;
-      if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
+      if (!get_texture(ejs, "opacity_tex", material->opacity_tex)) return false;
       if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
       if (!get_texture(ejs, "displacement_tex", material->displacement_tex))
         return false;
@@ -1912,38 +1912,45 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     if (it != texture_map.end()) return it->second;
     auto texture      = add_texture(scene);
     texture->name     = make_safe_name("texture", fs::path(path).stem(),
-        (!texture->ldr.empty() ? ".png" : ".hdr"));
+        (!is_hdr_filename(path) ? ".png" : ".hdr"));
     texture_map[path] = texture;
+    return texture;
+  };
+  auto alpha_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_alpha = [&scene, &alpha_map](
+                       const string& path) -> sceneio_texture* {
+    if (path == "") return nullptr;
+    auto it = alpha_map.find(path);
+    if (it != alpha_map.end()) return it->second;
+    auto texture  = add_texture(scene);
+    texture->name = make_safe_name(
+        "texture", fs::path(path).stem(), "-alpha.png");
+    alpha_map[path] = texture;
     return texture;
   };
 
   // convert material
   auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
-    auto material           = add_material(scene);
-    material->color         = pmaterial->color;
-    material->metallic      = pmaterial->metallic;
-    material->specular      = pmaterial->specular;
-    material->transmission  = pmaterial->transmission;
-    material->ior           = pmaterial->ior;
-    material->roughness     = pmaterial->roughness;
-    material->opacity       = pmaterial->opacity;
-    material->thin          = pmaterial->thin;
-    material->color_tex     = get_texture(pmaterial->color_map);
-    material->opacity_tex   = get_texture(pmaterial->opacity_map);
+    auto material          = add_material(scene);
+    material->emission     = pmaterial->emission;
+    material->color        = pmaterial->color;
+    material->metallic     = pmaterial->metallic;
+    material->specular     = pmaterial->specular;
+    material->transmission = pmaterial->transmission;
+    material->ior          = pmaterial->ior;
+    material->roughness    = pmaterial->roughness;
+    material->opacity      = pmaterial->opacity;
+    material->thin         = pmaterial->thin;
+    material->color_tex    = get_texture(pmaterial->color_map);
+    material->opacity_tex  = get_texture(pmaterial->opacity_map);
+    if (!material->opacity_tex)
+      material->opacity_tex = get_alpha(pmaterial->alpha_map);
     material_map[pmaterial] = material;
   }
 
   // hack for pbrt empty material
   material_map[nullptr] = add_material(scene);
-
-  // convert arealight
-  auto arealight_map = unordered_map<pbrt_arealight*, sceneio_material*>{};
-  for (auto parealight : pbrt->arealights) {
-    auto material             = add_material(scene);
-    material->emission        = parealight->emission;
-    arealight_map[parealight] = material;
-  }
 
   // convert shapes
   for (auto pshape : pbrt->shapes) {
@@ -1959,8 +1966,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     object->shape->texcoords = pshape->texcoords;
     object->shape->triangles = pshape->triangles;
     for (auto& uv : object->shape->texcoords) uv.y = 1 - uv.y;
-    object->material = pshape->arealight ? arealight_map.at(pshape->arealight)
-                                         : material_map.at(pshape->material);
+    object->material = material_map.at(pshape->material);
   }
 
   // convert environments
@@ -1998,6 +2004,27 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
       if (!load_imageb(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
+    }
+  }
+
+  // load alpha
+  alpha_map.erase("");
+  for (auto [path, texture] : alpha_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (is_hdr_filename(path)) {
+      if (!load_image(
+              fs::path(filename).parent_path() / path, texture->hdr, error))
+        return dependent_error();
+      for (auto& c : texture->hdr)
+        c = (max(xyz(c)) < 0.01) ? vec4f{0, 0, 0, 0} : vec4f{1, 1, 1, 1};
+    } else {
+      if (!load_imageb(
+              fs::path(filename).parent_path() / path, texture->ldr, error))
+        return dependent_error();
+      for (auto& c : texture->ldr) {
+        c = (max(max(c.x, c.y), c.z) < 2) ? vec4b{0, 0, 0, 0}
+                                          : vec4b{255, 255, 255, 255};
+      }
     }
   }
 
@@ -2042,6 +2069,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
+    pmaterial->emission     = material->emission;
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
     pmaterial->specular     = material->specular;
@@ -2052,13 +2080,6 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     pmaterial->color_map    = material->color_tex ? material->color_tex->name
                                                : ""s;
     material_map[material] = pmaterial;
-    if (material->emission != zero3f) {
-      auto parealight         = add_arealight(pbrt);
-      parealight->emission    = material->emission;
-      arealight_map[material] = parealight;
-    } else {
-      arealight_map[material] = nullptr;
-    }
   }
 
   // convert instances
