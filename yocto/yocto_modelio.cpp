@@ -2826,7 +2826,8 @@ struct pbrt_command {
 }
 [[nodiscard]] bool get_pbrt_value(
     const pbrt_value& pbrt, pair<float, string>& value) {
-  if (pbrt.type == pbrt_value_type::string) {
+  if (pbrt.type == pbrt_value_type::string ||
+       pbrt.type == pbrt_value_type::texture) {
     value.first = 0;
     return get_pbrt_value(pbrt, value.second);
   } else {
@@ -3954,6 +3955,21 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     return false;
   };
 
+    // helpers
+    auto get_alpha = [&](const vector<pbrt_value>& values, const string& name,
+                           string& filename) -> bool {
+      auto def = 1.0f;
+      auto textured = pair{def, ""s};
+      if (!get_pbrt_value(values, name, textured))
+          return parse_error();
+      if (textured.second == "") {
+        filename = "";
+      } else {
+        filename = named_textures.at(textured.second).filename;
+      }
+      return true;
+    };
+
   shape->frame = command.frame;
   shape->frend = command.frend;
   if (command.type == "trianglemesh") {
@@ -3985,12 +4001,8 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     shape->filename_ = ""s;
     if (!get_pbrt_value(command.values, "filename", shape->filename_))
       return parse_error();
-    if (!get_pbrt_value(command.values, "alpha", alphamap))
+    if (!get_alpha(command.values, "alpha", alphamap))
       return parse_error();
-    if (alphamap != "") {
-      if (named_textures.find(alphamap) == named_textures.end()) return false;
-      alphamap = named_textures.at(alphamap).filename;
-    }
     auto ply = make_unique<ply_model>();
     if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
       return dependent_error();
