@@ -799,12 +799,10 @@ static trace_point eval_point(const trace_scene* scene,
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord).x;
   auto metallic = material->metallic *
-                  eval_texture(material->metallic_tex, texcoord).z;
+                  eval_texture(material->metallic_tex, texcoord).x;
   auto roughness = material->roughness *
-                   eval_texture(material->roughness_tex, texcoord).x *
-                   (material->gltf_textures
-                           ? eval_texture(material->metallic_tex, texcoord).x
-                           : 1);
+                   eval_texture(material->roughness_tex, texcoord).x;
+
   auto ior  = material->ior;
   auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
   auto transmission = material->transmission *
@@ -3337,9 +3335,6 @@ void set_scattering(trace_material* material, const vec3f& scattering,
 }
 void set_normalmap(trace_material* material, trace_texture* normal_tex) {
   material->normal_tex = normal_tex;
-}
-void set_gltftextures(trace_material* material, bool gltf_textures) {
-  material->gltf_textures = gltf_textures;
 }
 
 // Add environment

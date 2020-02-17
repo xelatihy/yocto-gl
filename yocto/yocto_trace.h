@@ -143,7 +143,6 @@ void set_thin(trace_material* material, bool thin);
 void set_scattering(trace_material* material, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex = nullptr);
 void set_normalmap(trace_material* material, trace_texture* normal_tex);
-void set_gltftextures(trace_material* material, bool gltf_textures);
 
 // shape properties
 void set_points(trace_shape* shape, const vector<int>& points);
@@ -362,7 +361,6 @@ struct trace_material {
   trace_texture* coat_tex         = nullptr;
   trace_texture* opacity_tex      = nullptr;
   trace_texture* normal_tex       = nullptr;
-  bool           gltf_textures    = false;  // glTF packed textures
 };
 
 // Shape data represented as an indexed meshes of elements.
