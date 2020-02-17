@@ -91,6 +91,7 @@ struct app_state {
   // loading status
   atomic<bool>       ok           = false;
   future<void>       loader       = {};
+  string             status       = "";
   string             error        = "";
   std::atomic<float> progress     = 0.5;
   string             loader_error = "";
@@ -251,6 +252,7 @@ void reset_display(app_state* app) {
   trace_async_stop(app->render_state);
 
   // start render
+  app->status         = "render";
   app->render_counter = 0;
   trace_async_start(
       app->render_state, app->scene, app->params,
@@ -276,6 +278,7 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->imagename = fs::path(filename).replace_extension(".png");
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
+  app->status    = "load";
   app->loader    = std::async(std::launch::async, [app]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
@@ -511,12 +514,11 @@ void draw_glwidgets(
   }
   draw_glcombobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
+  draw_glprogressbar(
+      win, apps->selected->status.c_str(), apps->selected->progress);
   if (apps->selected->error != "") {
     draw_gllabel(win, "error", apps->selected->error);
     return;
-  }
-  if (apps->selected->progress) {
-    draw_glprogressbar(win, apps->selected->progress);
   }
   if (!apps->selected->ok) return;
   auto app = apps->selected;
@@ -768,12 +770,12 @@ void update(opengl_window* win, app_states* apps) {
     apps->loading.pop_front();
     app->loader.get();
     if (app->loader_error.empty()) {
+      app->status = "done";
+      app->ok     = true;
       reset_display(app);
-      app->name = fs::path(app->filename).filename().string() + " [ok]";
-      app->ok   = true;
     } else {
-      app->name  = fs::path(app->filename).filename().string() + " [error]";
-      app->error = app->loader_error;
+      app->error  = app->loader_error;
+      app->status = "error";
     }
   }
 }

@@ -117,6 +117,7 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->outname     = fs::path(filename).replace_extension(".edited.yaml");
   app->name        = fs::path(app->filename).filename();
   app->drawgl_prms = apps->drawgl_prms;
+  app->status      = "load";
   app->loader      = std::async(std::launch::async, [app]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
@@ -473,10 +474,14 @@ void draw_glwidgets(
   if (apps->states.empty()) return;
   draw_glcombobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
+  draw_glprogressbar(
+      win, apps->selected->status.c_str(), apps->selected->progress);
+  if (apps->selected->error != "") {
+    draw_gllabel(win, "error", apps->selected->error);
+    return;
+  }
+  if (!apps->selected->ok) return;
   auto app = apps->selected;
-  if (app->status != "") draw_gllabel(win, "status", app->status);
-  if (app->error != "") draw_gllabel(win, "error", app->error);
-  if (!app->ok) return;
   if (begin_glheader(win, "view")) {
     auto& params = app->drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app->ioscene->cameras);
@@ -672,7 +677,7 @@ void update(opengl_window* win, app_states* apps) {
       app->ok     = true;
       app->status = "ok";
     } else {
-      app->status = "";
+      app->status = "error";
       app->error  = app->loader_error;
     }
   }
