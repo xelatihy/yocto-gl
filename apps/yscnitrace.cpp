@@ -252,7 +252,7 @@ void reset_display(app_state* app) {
   trace_async_stop(app->render_state);
 
   // start render
-  app->status    = "render";
+  app->status         = "render";
   app->render_counter = 0;
   trace_async_start(
       app->render_state, app->scene, app->params,
@@ -514,7 +514,8 @@ void draw_glwidgets(
   }
   draw_glcombobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
-  draw_glprogressbar(win, apps->selected->status.c_str(), apps->selected->progress);
+  draw_glprogressbar(
+      win, apps->selected->status.c_str(), apps->selected->progress);
   if (apps->selected->error != "") {
     draw_gllabel(win, "error", apps->selected->error);
     return;
@@ -769,12 +770,12 @@ void update(opengl_window* win, app_states* apps) {
     apps->loading.pop_front();
     app->loader.get();
     if (app->loader_error.empty()) {
-      app->status    = "done";
-      app->ok   = true;
+      app->status = "done";
+      app->ok     = true;
       reset_display(app);
     } else {
-      app->error = app->loader_error;
-      app->status    = "error";
+      app->error  = app->loader_error;
+      app->status = "error";
     }
   }
 }

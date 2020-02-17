@@ -1981,9 +1981,9 @@ bool draw_glcombobox(opengl_window* win, const char* lbl, int& idx, int num,
 
 void draw_glprogressbar(opengl_window* win, const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
-  ImGui::ProgressBar(fraction, ImVec2(0.0f,0.0f));
+  ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-  ImGui::Text(lbl, ImVec2(0.0f,0.0f));
+  ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
   ImGui::PopStyleColor(1);
 }
 
