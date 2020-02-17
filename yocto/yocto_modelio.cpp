@@ -1317,7 +1317,7 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] static bool load_mtl(
-    const string& filename, obj_model* obj, string& error, bool fliptr = true) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1374,14 +1374,12 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
     } else if (cmd == "Kt") {
       if (!parse_value(str, material->transmission)) return parse_error();
     } else if (cmd == "Tf") {
-      material->transmission = vec3f{-1};
       if (!parse_value(str, material->transmission)) return parse_error();
-      if (material->transmission.y < 0)
-        material->transmission = vec3f{material->transmission.x};
-      if (fliptr) material->transmission = 1 - material->transmission;
+      material->transmission = max(1 - material->transmission, 0.0f);
+      if(max(material->transmission) < 0.001) material->transmission = zero3f;
     } else if (cmd == "Tr") {
       if (!parse_value(str, material->opacity)) return parse_error();
-      if (fliptr) material->opacity = 1 - material->opacity;
+      material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
       if (!parse_value(str, material->exponent)) return parse_error();
     } else if (cmd == "d") {
