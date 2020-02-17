@@ -1092,7 +1092,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
         return false;
       if (!get_texture(ejs, "scattering_tex", material->scattering_tex))
         return false;
-      if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
+      if (!get_texture(ejs, "opacity_tex", material->opacity_tex)) return false;
       if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
       if (!get_texture(ejs, "displacement_tex", material->displacement_tex))
         return false;
