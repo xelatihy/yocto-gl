@@ -3538,10 +3538,10 @@ static bool convert_texture(pbrt_texture& texture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-static bool convert_material(pbrt_material*      material,
-    const pbrt_command&                          command,
-    const unordered_map<string, pbrt_material*>& material_map,
-    const unordered_map<string, pbrt_texture>&   texture_map,
+static bool convert_material(pbrt_material*     material,
+    const pbrt_command&                         command,
+    const unordered_map<string, pbrt_material>& named_materials,
+    const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -3570,7 +3570,7 @@ static bool convert_material(pbrt_material*      material,
       color    = textured.first;
       filename = "";
     } else {
-      auto& texture = texture_map.at(textured.second);
+      auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
         color    = texture.constant;
         filename = "";
@@ -3588,7 +3588,7 @@ static bool convert_material(pbrt_material*      material,
     if (textured.second == "") {
       scalar = mean(textured.first);
     } else {
-      auto& texture = texture_map.at(textured.second);
+      auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
         scalar = mean(texture.constant);
       } else {
@@ -3604,7 +3604,7 @@ static bool convert_material(pbrt_material*      material,
     if (textured.second == "") {
       color = textured.first;
     } else {
-      auto& texture = texture_map.at(textured.second);
+      auto& texture = named_textures.at(textured.second);
       if (texture.filename.empty()) {
         color = texture.constant;
       } else {
@@ -3812,10 +3812,10 @@ static bool convert_material(pbrt_material*      material,
     if (!get_pbrt_value(command.values, "namedmaterial2", namedmaterial2))
       return parse_error();
     auto matname = (!namedmaterial1.empty()) ? namedmaterial1 : namedmaterial2;
-    auto matit   = material_map.find(matname);
-    if (matit == material_map.end()) return material_error(matname);
+    auto matit   = named_materials.find(matname);
+    if (matit == named_materials.end()) return material_error(matname);
     auto saved_name = material->name;
-    *material       = *matit->second;
+    *material       = matit->second;
     material->name  = saved_name;
     if (verbose) printf("mix material not properly supported\n");
     return true;
@@ -3938,7 +3938,7 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
-    string& alphamap, const unordered_map<string, pbrt_texture>& texture_map,
+    string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
     const string& ply_dirname, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -3988,8 +3988,8 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "alpha", alphamap))
       return parse_error();
     if (alphamap != "") {
-      if (texture_map.find(alphamap) == texture_map.end()) return false;
-      alphamap = texture_map.at(alphamap).filename;
+      if (named_textures.find(alphamap) == named_textures.end()) return false;
+      alphamap = named_textures.at(alphamap).filename;
     }
     auto ply = make_unique<ply_model>();
     if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
@@ -4137,15 +4137,15 @@ static bool convert_environment(pbrt_environment* environment,
 
 // pbrt stack ctm
 struct pbrt_stack_element {
-  frame3f         transform_start        = identity3x4f;
-  frame3f         transform_end          = identity3x4f;
-  pbrt_material*  material               = nullptr;
-  pbrt_arealight* arealight              = nullptr;
-  pbrt_medium*    interior               = nullptr;
-  pbrt_medium*    exterior               = nullptr;
-  bool            reverse                = false;
-  bool            active_transform_start = true;
-  bool            active_transform_end   = true;
+  frame3f        transform_start        = identity3x4f;
+  frame3f        transform_end          = identity3x4f;
+  pbrt_material  material               = {};
+  pbrt_arealight arealight              = {};
+  pbrt_medium    interior               = {};
+  pbrt_medium    exterior               = {};
+  bool           reverse                = false;
+  bool           active_transform_start = true;
+  bool           active_transform_end   = true;
 };
 
 // pbrt parsing context
@@ -4158,15 +4158,16 @@ struct pbrt_context {
 };
 
 using std::map;
+using std::tuple;
 
 // load pbrt
 [[nodiscard]] static bool load_pbrt(const string& filename, pbrt_model* pbrt,
     string& error, pbrt_context& ctx,
-    unordered_map<string, pbrt_material*>&            material_map,
-    unordered_map<string, pbrt_medium*>&              medium_map,
-    unordered_map<string, pbrt_texture>&              texture_map,
-    map<pair<pbrt_material*, string>, pbrt_material*> materials_with_alpha,
-    const string&                                     ply_dirname) {
+    map<tuple<string, string, string>, pbrt_material*>& material_map,
+    unordered_map<string, pbrt_material>&               named_materials,
+    unordered_map<string, pbrt_texture>&                named_textures,
+    unordered_map<string, pbrt_medium>&                 named_mediums,
+    const string&                                       ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -4348,23 +4349,22 @@ using std::map;
       if (!parse_pbrt_param(str, comptype)) return parse_error();
       if (!parse_pbrt_param(str, command.type)) return parse_error();
       if (!parse_pbrt_params(str, command.values)) return parse_error();
-      if (!convert_texture(
-              texture_map[command.name], command, texture_map, filename, error))
+      if (!convert_texture(named_textures[command.name], command,
+              named_textures, filename, error))
         return false;
     } else if (cmd == "Material") {
       static auto material_id = 0;
       auto        command     = pbrt_command{};
-      command.name            = "material_" + std::to_string(material_id++);
+      command.name = "__unnamed__material__" + std::to_string(material_id++);
       if (!parse_pbrt_param(str, command.type)) return parse_error();
       if (!parse_pbrt_params(str, command.values)) return parse_error();
       if (command.type == "") {
-        ctx.stack.back().material = nullptr;
+        ctx.stack.back().material = {};
       } else {
-        auto material = add_material(pbrt);
-        if (!convert_material(
-                material, command, material_map, texture_map, filename, error))
+        ctx.stack.back().material = {};
+        if (!convert_material(&ctx.stack.back().material, command,
+                named_materials, named_textures, filename, error))
           return false;
-        ctx.stack.back().material = material;
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto command = pbrt_command{};
@@ -4373,15 +4373,13 @@ using std::map;
       command.type = "";
       for (auto& value : command.values)
         if (value.name == "type") command.type = value.value1s;
-      auto material = add_material(pbrt);
-      if (!convert_material(
-              material, command, material_map, texture_map, filename, error))
+      if (!convert_material(&named_materials[command.name], command,
+              named_materials, named_textures, filename, error))
         return false;
-      material_map[command.name] = material;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       if (!parse_pbrt_param(str, name)) return parse_error();
-      ctx.stack.back().material = material_map.at(name);
+      ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
       auto command = pbrt_command{};
       if (!parse_pbrt_param(str, command.type)) return parse_error();
@@ -4390,37 +4388,35 @@ using std::map;
       command.frend = ctx.stack.back().transform_end;
       auto shape    = add_shape(pbrt);
       auto alphamap = ""s;
-      if (!convert_shape(shape, command, alphamap, texture_map, ply_dirname,
+      if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
               filename, error))
         return false;
-      shape->material  = ctx.stack.back().material;
-      shape->arealight = ctx.stack.back().arealight;
-      if (alphamap != "") {
-        auto matalpha = pair{shape->material, alphamap};
-        if (materials_with_alpha.find(matalpha) == materials_with_alpha.end()) {
-          auto material                  = add_material(pbrt);
-          auto old_name                  = material->name;
-          (*material)                    = *shape->material;
-          material->name                 = old_name;
-          material->alpha_map            = alphamap;
-          materials_with_alpha[matalpha] = material;
-        }
-        shape->material = materials_with_alpha.at(matalpha);
+      auto matkey = tuple<string, string, string>{
+          ctx.stack.back().material.name, ctx.stack.back().arealight.name,
+          alphamap};
+      if (material_map.find(matkey) == material_map.end()) {
+        auto material  = add_material(pbrt);
+        (*material)    = ctx.stack.back().material;
+        material->name = "material" + std::to_string(pbrt->materials.size());
+        material->emission   = ctx.stack.back().arealight.emission;
+        material->alpha_map  = alphamap;
+        material_map[matkey] = material;
       }
+      shape->material = material_map.at(matkey);
       if (ctx.cur_object != "") {
         ctx.objects[ctx.cur_object].push_back(shape);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
       auto        command      = pbrt_command{};
-      command.name             = "arealight_" + std::to_string(arealight_id++);
+      command.name = "__unnamed__arealight__" + std::to_string(arealight_id++);
       if (!parse_pbrt_param(str, command.type)) return parse_error();
       if (!parse_pbrt_params(str, command.values)) return parse_error();
-      command.frame  = ctx.stack.back().transform_start;
-      command.frend  = ctx.stack.back().transform_end;
-      auto arealight = add_arealight(pbrt);
-      if (!convert_arealight(arealight, command, filename, error)) return false;
-      ctx.stack.back().arealight = arealight;
+      command.frame = ctx.stack.back().transform_start;
+      command.frend = ctx.stack.back().transform_end;
+      if (!convert_arealight(
+              &ctx.stack.back().arealight, command, filename, error))
+        return false;
     } else if (cmd == "LightSource") {
       auto command = pbrt_command{};
       if (!parse_pbrt_param(str, command.type)) return parse_error();
@@ -4442,20 +4438,20 @@ using std::map;
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium              = pbrt->mediums.emplace_back(new pbrt_medium{});
-      medium_map[command.name] = medium;
+      auto medium                 = pbrt_medium{};
+      named_mediums[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
       if (!parse_pbrt_param(str, interior)) return parse_error();
       if (!parse_pbrt_param(str, exterior)) return parse_error();
-      ctx.stack.back().interior = medium_map.at(interior);
-      ctx.stack.back().exterior = medium_map.at(exterior);
+      ctx.stack.back().interior = named_mediums.at(interior);
+      ctx.stack.back().exterior = named_mediums.at(exterior);
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_pbrt_param(str, includename)) return parse_error();
       if (!load_pbrt(fs::path(filename).parent_path() / includename, pbrt,
-              error, ctx, material_map, medium_map, texture_map,
-              materials_with_alpha, ply_dirname))
+              error, ctx, material_map, named_materials, named_textures,
+              named_mediums, ply_dirname))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4469,9 +4465,7 @@ pbrt_model::~pbrt_model() {
   for (auto shape : shapes) delete shape;
   for (auto environment : environments) delete environment;
   for (auto light : lights) delete light;
-  for (auto arealight : arealights) delete arealight;
   for (auto material : materials) delete material;
-  for (auto medium : mediums) delete medium;
 }
 
 // Make pbrt
@@ -4485,17 +4479,11 @@ pbrt_shape* add_shape(pbrt_model* pbrt) {
 pbrt_material* add_material(pbrt_model* pbrt) {
   return pbrt->materials.emplace_back(new pbrt_material{});
 }
-pbrt_arealight* add_arealight(pbrt_model* pbrt) {
-  return pbrt->arealights.emplace_back(new pbrt_arealight{});
-}
 pbrt_environment* add_environment(pbrt_model* pbrt) {
   return pbrt->environments.emplace_back(new pbrt_environment{});
 }
 pbrt_light* add_light(pbrt_model* pbrt) {
   return pbrt->lights.emplace_back(new pbrt_light{});
-}
-pbrt_medium* add_medium(pbrt_model* pbrt) {
-  return pbrt->mediums.emplace_back(new pbrt_medium{});
 }
 
 // Read pbrt
@@ -4508,16 +4496,15 @@ unique_ptr<pbrt_model> load_pbrt(const string& filename, string& error) {
 // load pbrt
 [[nodiscard]] bool load_pbrt(
     const string& filename, pbrt_model* pbrt, string& error) {
-  auto ctx          = pbrt_context{};
-  auto material_map = unordered_map<string, pbrt_material*>{{"", {}}};
-  auto medium_map   = unordered_map<string, pbrt_medium*>{{"", {}}};
-  auto texture_map  = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto material_with_alpha =
-      map<pair<pbrt_material*, string>, pbrt_material*>{};
-  auto dirname = fs::path(filename).parent_path().string();
+  auto ctx             = pbrt_context{};
+  auto material_map    = map<tuple<string, string, string>, pbrt_material*>{};
+  auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
+  auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
+  auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
+  auto dirname         = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
-  if (!load_pbrt(filename, pbrt, error, ctx, material_map, medium_map,
-          texture_map, material_with_alpha, dirname))
+  if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
+          named_textures, named_mediums, dirname))
     return false;
 
   // remove unused materials

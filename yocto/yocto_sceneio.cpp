@@ -1933,6 +1933,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
+    material->emission     = pmaterial->emission;
     material->color        = pmaterial->color;
     material->metallic     = pmaterial->metallic;
     material->specular     = pmaterial->specular;
@@ -1951,14 +1952,6 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   // hack for pbrt empty material
   material_map[nullptr] = add_material(scene);
 
-  // convert arealight
-  auto arealight_map = unordered_map<pbrt_arealight*, sceneio_material*>{};
-  for (auto parealight : pbrt->arealights) {
-    auto material             = add_material(scene);
-    material->emission        = parealight->emission;
-    arealight_map[parealight] = material;
-  }
-
   // convert shapes
   for (auto pshape : pbrt->shapes) {
     auto object   = add_object(scene);
@@ -1973,8 +1966,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     object->shape->texcoords = pshape->texcoords;
     object->shape->triangles = pshape->triangles;
     for (auto& uv : object->shape->texcoords) uv.y = 1 - uv.y;
-    object->material = pshape->arealight ? arealight_map.at(pshape->arealight)
-                                         : material_map.at(pshape->material);
+    object->material = material_map.at(pshape->material);
   }
 
   // convert environments
@@ -2077,6 +2069,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
+    pmaterial->emission     = material->emission;
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
     pmaterial->specular     = material->specular;
@@ -2087,13 +2080,6 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     pmaterial->color_map    = material->color_tex ? material->color_tex->name
                                                : ""s;
     material_map[material] = pmaterial;
-    if (material->emission != zero3f) {
-      auto parealight         = add_arealight(pbrt);
-      parealight->emission    = material->emission;
-      arealight_map[material] = parealight;
-    } else {
-      arealight_map[material] = nullptr;
-    }
   }
 
   // convert instances
