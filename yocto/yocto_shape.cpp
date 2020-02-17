@@ -1809,9 +1809,9 @@ vector<vector<float>> compute_voronoi_fields(
   return fields;
 }
 
-vector<vec4f> colors_from_field(
-    const vector<float>& field, float scale, const vec4f& c0, const vec4f& c1) {
-  auto colors = vector<vec4f>{field.size()};
+vector<vec3f> colors_from_field(
+    const vector<float>& field, float scale, const vec3f& c0, const vec3f& c1) {
+  auto colors = vector<vec3f>{field.size()};
   for (auto i = 0; i < colors.size(); i++) {
     colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
   }
@@ -3347,7 +3347,7 @@ static string get_extension(const string& filename) {
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, string& error,
+    vector<vec3f>& colors, vector<float>& radius, string& error,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -3438,7 +3438,7 @@ static string get_extension(const string& filename) {
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec4f>& colors, const vector<float>& radius, string& error,
+    const vector<vec3f>& colors, const vector<float>& radius, string& error,
     bool ascii, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -3595,7 +3595,7 @@ vector<string> shape_stats(const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
     const vector<float>& radius, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);

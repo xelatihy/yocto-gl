@@ -156,7 +156,7 @@ struct sceneio_shape {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
+  vector<vec3f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
 };

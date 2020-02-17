@@ -155,7 +155,7 @@ void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
 void set_positions(trace_shape* shape, const vector<vec3f>& positions);
 void set_normals(trace_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(trace_shape* shape, const vector<vec4f>& colors);
+void set_colors(trace_shape* shape, const vector<vec3f>& colors);
 void set_radius(trace_shape* shape, const vector<float>& radius);
 void set_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 
@@ -385,7 +385,7 @@ struct trace_shape {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
+  vector<vec3f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
 
