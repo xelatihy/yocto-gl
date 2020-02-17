@@ -528,7 +528,7 @@ inline bool draw_glcombobox(opengl_window* win, const char* lbl,
   return edited;
 }
 
-void draw_glprogressbar(opengl_window* win, float fraction);
+void draw_glprogressbar(opengl_window* win, const char* lbl, float fraction);
 
 void draw_glhistogram(
     opengl_window* win, const char* lbl, const vector<float>& values);
