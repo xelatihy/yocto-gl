@@ -809,7 +809,7 @@ static trace_point eval_point(const trace_scene* scene,
   auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord).x;
-  auto opacity = material->opacity * 
+  auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
 

@@ -5029,8 +5029,8 @@ unique_ptr<gltf_model> load_gltf(const string& filename, string& error) {
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape->colors.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape->colors.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2]});
+            shape->colors.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
         } else if (semantic == "TANGENT") {
           shape->tangents.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)

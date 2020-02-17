@@ -79,7 +79,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
           data.solver, data.vertex_selection);
       auto colors = vector<vec3f>(data.scalar_field.size());
       for (int i = 0; i < colors.size(); ++i) {
-        colors[i]   = vec3f(data.scalar_field[i]);
+        colors[i] = vec3f(data.scalar_field[i]);
       }
       set_colors(app->glshapes, colors);
     }
