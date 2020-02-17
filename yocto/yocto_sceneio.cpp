@@ -2069,7 +2069,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   };
 
   // convert materials
-  auto material_map  = unordered_map<sceneio_material*, pbrt_material*>{};
+  auto material_map = unordered_map<sceneio_material*, pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
@@ -2082,8 +2082,8 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     pmaterial->ior          = material->ior;
     pmaterial->opacity      = material->opacity;
     pmaterial->color_tex    = get_texture(material->color_tex);
-    pmaterial->opacity_tex    = get_texture(material->opacity_tex);
-    material_map[material] = pmaterial;
+    pmaterial->opacity_tex  = get_texture(material->opacity_tex);
+    material_map[material]  = pmaterial;
   }
 
   // convert instances
@@ -2101,8 +2101,8 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
 
   // convert environments
   for (auto environment : scene->environments) {
-    auto penvironment      = add_environment(pbrt);
-    penvironment->emission = environment->emission;
+    auto penvironment          = add_environment(pbrt);
+    penvironment->emission     = environment->emission;
     penvironment->emission_tex = get_texture(environment->emission_tex);
   }
 

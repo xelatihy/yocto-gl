@@ -501,7 +501,7 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material*  material  = nullptr;
+  pbrt_material* material = nullptr;
 };
 
 // Pbrt lights

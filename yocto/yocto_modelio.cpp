@@ -1376,7 +1376,7 @@ static void remove_obj_comment(string_view& str, char comment_char = '#') {
     } else if (cmd == "Tf") {
       if (!parse_value(str, material->transmission)) return parse_error();
       material->transmission = max(1 - material->transmission, 0.0f);
-      if(max(material->transmission) < 0.001) material->transmission = zero3f;
+      if (max(material->transmission) < 0.001) material->transmission = zero3f;
     } else if (cmd == "Tr") {
       if (!parse_value(str, material->opacity)) return parse_error();
       material->opacity = 1 - material->opacity;
