@@ -510,25 +510,19 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
         float d = ((2+ns)/(2*pif)) * pow(si,ns);
         vec3 spec = si * ks * d / (4*si*so);
         return diff+spec;
-    } else if(etype == 3 || etype == 4) {
+    } else if(etype == 3) {
         if(ndi<=0 || ndo <=0) return vec3(0);
         vec3 diff = ndi * kd / pif;
         if(ndh<=0) return diff;
-        if(etype == 4) {
-            float d = ((2+ns)/(2*pif)) * pow(ndh,ns);
-            vec3 spec = ndi * ks * d / (4*ndi*ndo);
-            return diff+spec;
-        } else {
-            float cos2 = ndh * ndh;
-            float tan2 = (1 - cos2) / cos2;
-            float alpha2 = rs * rs;
-            float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-            float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-            float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-            float g = 1 / (1 + lambda_o + lambda_i);
-            vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-            return diff+spec;
-        }
+        float cos2 = ndh * ndh;
+        float tan2 = (1 - cos2) / cos2;
+        float alpha2 = rs * rs;
+        float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+        float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+        float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+        float g = 1 / (1 + lambda_o + lambda_i);
+        vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+        return diff+spec;
     }
 }
 
