@@ -31,9 +31,12 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <atomic>
 #include <deque>
 #include <future>
-using namespace std;
+using std::atomic;
+using std::deque;
+using std::future;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -143,7 +146,7 @@ void load_image_async(app_states* apps, const string& filename) {
   app->filmic   = apps->filmic;
   app->params   = apps->params;
   app->status   = "loading";
-  app->loader   = async(launch::async, [app]() {
+  app->loader   = std::async(std::launch::async, [app]() {
     if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
         app->source_stats, app->source, is_hdr_filename(app->filename));
@@ -236,8 +239,8 @@ void draw_glwidgets(
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "image",
-        to_string(app->source.size().x) + " x " +
-            to_string(app->source.size().y));
+        std::to_string(app->source.size().x) + " x " +
+            std::to_string(app->source.size().y));
     draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app->glparams.fit);
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
@@ -280,8 +283,8 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 
 void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
-    return result.valid() &&
-           result.wait_for(chrono::microseconds(0)) == future_status::ready;
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
   };
 
   while (!apps->loading.empty()) {

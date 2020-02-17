@@ -35,7 +35,6 @@ using namespace yocto;
 
 #include <future>
 #include <memory>
-using namespace std;
 
 // Application state
 struct app_state {

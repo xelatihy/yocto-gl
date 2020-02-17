@@ -33,9 +33,13 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <atomic>
 #include <deque>
 #include <future>
-using namespace std;
+using std::atomic;
+using std::deque;
+using std::future;
+using std::to_string;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -237,25 +241,6 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
 }
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
-      while (true) {
-        auto j = next_idx.fetch_add(1);
-        if (j >= size.y) break;
-        for (auto i = 0; i < size.x; i++) func({i, j});
-      }
-    }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 void stop_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
@@ -291,7 +276,7 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->imagename = fs::path(filename).replace_extension(".png");
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
-  app->loader    = async(launch::async, [app]() {
+  app->loader    = std::async(std::launch::async, [app]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
@@ -344,11 +329,11 @@ bool draw_glwidgets(
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
-      to_string(iotexture->hdr.size().x) + " x " +
-          to_string(iotexture->hdr.size().y));
+      std::to_string(iotexture->hdr.size().x) + " x " +
+          std::to_string(iotexture->hdr.size().y));
   draw_gllabel(win, "ldr",
-      to_string(iotexture->ldr.size().x) + " x " +
-          to_string(iotexture->ldr.size().y));
+      std::to_string(iotexture->ldr.size().x) + " x " +
+          std::to_string(iotexture->ldr.size().y));
   // TODO: load texture
   return edited;
 }
@@ -773,8 +758,8 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 
 void update(opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
-    return result.valid() &&
-           result.wait_for(chrono::microseconds(0)) == future_status::ready;
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
   };
 
   while (!apps->loading.empty()) {

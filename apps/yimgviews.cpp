@@ -32,7 +32,6 @@
 using namespace yocto;
 
 #include <future>
-using namespace std;
 
 struct app_state {
   // original data
@@ -58,34 +57,13 @@ struct app_state {
   }
 };
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the pixel index as a vec2i.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
-      while (true) {
-        auto j = next_idx.fetch_add(1);
-        if (j >= size.y) break;
-        for (auto i = 0; i < size.x; i++) func({i, j});
-      }
-    }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
-  parallel_for(app->source.size(), [app](const vec2i& ij) {
-    if (app->colorgrade) {
-      app->display[ij] = colorgrade(app->source[ij], true, app->params);
-    } else {
-      app->display[ij] = tonemap(app->source[ij], app->exposure, app->filmic);
-    }
-  });
+  if (app->colorgrade) {
+    colorgrade_image_mt(app->display, app->source, true, app->params);
+  } else {
+    tonemap_image_mt(app->display, app->source, app->exposure, app->filmic);
+  }
 }
 
 int main(int argc, const char* argv[]) {
