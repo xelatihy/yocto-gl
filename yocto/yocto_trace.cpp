@@ -3287,43 +3287,43 @@ trace_material* add_material(trace_scene* scene) {
   return scene->materials.emplace_back(new trace_material{});
 }
 void set_emission(trace_material* material, const vec3f& emission,
-    trace_texture* emission_txt) {
+    trace_texture* emission_tex) {
   material->emission     = emission;
-  material->emission_tex = emission_txt;
+  material->emission_tex = emission_tex;
 }
 void set_color(
-    trace_material* material, const vec3f& color, trace_texture* color_txt) {
+    trace_material* material, const vec3f& color, trace_texture* color_tex) {
   material->color     = color;
-  material->color_tex = color_txt;
+  material->color_tex = color_tex;
 }
 void set_specular(
-    trace_material* material, float specular, trace_texture* specular_txt) {
+    trace_material* material, float specular, trace_texture* specular_tex) {
   material->specular     = specular;
-  material->specular_tex = specular_txt;
+  material->specular_tex = specular_tex;
 }
 void set_metallic(
-    trace_material* material, float metallic, trace_texture* metallic_txt) {
+    trace_material* material, float metallic, trace_texture* metallic_tex) {
   material->metallic     = metallic;
-  material->metallic_tex = metallic_txt;
+  material->metallic_tex = metallic_tex;
 }
 void set_ior(trace_material* material, float ior) { material->ior = ior; }
 void set_transmission(trace_material* material, float transmission, bool thin,
-    float trdepth, trace_texture* transmission_txt) {
+    float trdepth, trace_texture* transmission_tex) {
   material->transmission     = transmission;
   material->thin             = thin;
   material->trdepth          = trdepth;
-  material->transmission_tex = transmission_txt;
+  material->transmission_tex = transmission_tex;
 }
 void set_thin(trace_material* material, bool thin) { material->thin = thin; }
 void set_roughness(
-    trace_material* material, float roughness, trace_texture* roughness_txt) {
+    trace_material* material, float roughness, trace_texture* roughness_tex) {
   material->roughness     = roughness;
-  material->roughness_tex = roughness_txt;
+  material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    trace_material* material, float opacity, trace_texture* opacity_txt) {
+    trace_material* material, float opacity, trace_texture* opacity_tex) {
   material->opacity     = opacity;
-  material->opacity_tex = opacity_txt;
+  material->opacity_tex = opacity_tex;
 }
 void set_scattering(trace_material* material, const vec3f& scattering,
     float scanisotropy, trace_texture* scattering_tex) {
@@ -3331,8 +3331,8 @@ void set_scattering(trace_material* material, const vec3f& scattering,
   material->scanisotropy   = scanisotropy;
   material->scattering_tex = scattering_tex;
 }
-void set_normalmap(trace_material* material, trace_texture* normal_txt) {
-  material->normal_tex = normal_txt;
+void set_normalmap(trace_material* material, trace_texture* normal_tex) {
+  material->normal_tex = normal_tex;
 }
 void set_gltftextures(trace_material* material, bool gltf_textures) {
   material->gltf_textures = gltf_textures;
