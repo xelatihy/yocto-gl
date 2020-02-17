@@ -3159,11 +3159,17 @@ namespace yocto {
 // cleanup
 trace_shape::~trace_shape() {
   if (bvh) delete bvh;
+#ifdef YOCTO_EMBREE
   if (embree_bvh) rtcReleaseScene(embree_bvh);
+#endif
 }
 
 // cleanup
 trace_scene::~trace_scene() {
+  if (bvh) delete bvh;
+#ifdef YOCTO_EMBREE
+  if (embree_bvh) rtcReleaseScene(embree_bvh);
+#endif
   for (auto camera : cameras) delete camera;
   for (auto object : objects) delete object;
   for (auto shape : shapes) delete shape;
@@ -3171,8 +3177,6 @@ trace_scene::~trace_scene() {
   for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
-  if (bvh) delete bvh;
-  if (embree_bvh) rtcReleaseScene(embree_bvh);
 }
 
 // create scene
