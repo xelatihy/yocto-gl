@@ -1916,6 +1916,17 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     texture_map[path] = texture;
     return texture;
   };
+  auto alpha_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_alpha = [&scene, &alpha_map](
+                         const string& path) -> sceneio_texture* {
+    if (path == "") return nullptr;
+    auto it = alpha_map.find(path);
+    if (it != alpha_map.end()) return it->second;
+    auto texture      = add_texture(scene);
+    texture->name     = make_safe_name("texture", fs::path(path).stem(), "-alpha.png");
+    alpha_map[path] = texture;
+    return texture;
+  };
 
   // convert material
   auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
@@ -1931,6 +1942,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     material->thin          = pmaterial->thin;
     material->color_tex     = get_texture(pmaterial->color_map);
     material->opacity_tex   = get_texture(pmaterial->opacity_map);
+    if(!material->opacity_tex) material->opacity_tex = get_alpha(pmaterial->alpha_map);
     material_map[pmaterial] = material;
   }
 
@@ -1998,6 +2010,26 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
       if (!load_imageb(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
+    }
+  }
+
+  // load alpha
+  alpha_map.erase("");
+  for (auto [path, texture] : alpha_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (is_hdr_filename(path)) {
+      if (!load_image(
+              fs::path(filename).parent_path() / path, texture->hdr, error))
+        return dependent_error();
+      for(auto& c : texture->hdr) 
+        c = (max(xyz(c)) < 0.01) ? vec4f{0,0,0,0} : vec4f{1,1,1,1};
+    } else {
+      if (!load_imageb(
+              fs::path(filename).parent_path() / path, texture->ldr, error))
+        return dependent_error();
+      for(auto& c : texture->ldr) {
+        c = (max(max(c.x, c.y), c.z) < 2) ? vec4b{0,0,0,0} : vec4b{255,255,255,255};
+      }
     }
   }
 

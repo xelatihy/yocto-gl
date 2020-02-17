@@ -479,6 +479,7 @@ struct pbrt_material {
   float  opacity         = 1;
   string color_map       = "";
   string opacity_map     = "";
+  string alpha_map       = "";
   bool   thin            = true;
   vec3f  volmeanfreepath = zero3f;
   vec3f  volscatter      = zero3f;

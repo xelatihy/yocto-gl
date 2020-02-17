@@ -764,6 +764,19 @@ struct vec4i {
   const int& operator[](int i) const { return (&x)[i]; }
 };
 
+struct vec3b {
+  byte x = 0;
+  byte y = 0;
+  byte z = 0;
+
+  vec3b() {}
+  vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
+  explicit vec3b(byte v) : x{v}, y{v}, z{v} {}
+
+  byte&       operator[](int i) { return (&x)[i]; }
+  const byte& operator[](int i) const { return (&x)[i]; }
+};
+
 struct vec4b {
   byte x = 0;
   byte y = 0;
@@ -782,6 +795,7 @@ struct vec4b {
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
+inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
@@ -1925,6 +1939,8 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 namespace yocto {
 
 // Conversion between flots and bytes
+inline vec3b float_to_byte(const vec3f& a);
+inline vec3f byte_to_float(const vec3b& a);
 inline vec4b float_to_byte(const vec4f& a);
 inline vec4f byte_to_float(const vec4b& a);
 
@@ -2195,6 +2211,13 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
 namespace yocto {
 
 // Conversion between flots and bytes
+inline vec3b float_to_byte(const vec3f& a) {
+  return {(byte)clamp(int(a.x * 256), 0, 255),
+      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255)};
+}
+inline vec3f byte_to_float(const vec3b& a) {
+  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f};
+}
 inline vec4b float_to_byte(const vec4f& a) {
   return {(byte)clamp(int(a.x * 256), 0, 255),
       (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),

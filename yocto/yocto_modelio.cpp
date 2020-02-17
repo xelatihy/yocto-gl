@@ -4402,7 +4402,7 @@ using std::map;
           auto old_name                  = material->name;
           (*material)                    = *shape->material;
           material->name                 = old_name;
-          material->opacity_map          = alphamap;
+          material->alpha_map            = alphamap;
           materials_with_alpha[matalpha] = material;
         }
         shape->material = materials_with_alpha.at(matalpha);
