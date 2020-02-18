@@ -156,6 +156,14 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
+int get_camera(sceneio_model* ioscene, trace_scene* scene) {
+  auto iocamera = def_default_camera(ioscene);
+  for(auto idx = 0; idx < ioscene->cameras.size(); idx++) {
+    if(iocamera == ioscene->cameras[idx]) return idx;
+  }
+  return 0;
+}
+
 int main(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
@@ -198,6 +206,9 @@ int main(int argc, const char* argv[]) {
   auto scene_guard = make_unique<trace_scene>();
   auto scene       = scene_guard.get();
   init_scene(scene, ioscene, print_progress);
+
+  // set camera
+  params.camera = get_camera(ioscene, scene);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.release();

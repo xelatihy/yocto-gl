@@ -246,6 +246,14 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
 }
 
+int get_camera(sceneio_model* ioscene, trace_scene* scene) {
+  auto iocamera = def_default_camera(ioscene);
+  for(auto idx = 0; idx < ioscene->cameras.size(); idx++) {
+    if(iocamera == ioscene->cameras[idx]) return idx;
+  }
+  return 0;
+}
+
 void stop_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
@@ -292,6 +300,7 @@ void load_scene_async(app_states* apps, const string& filename) {
       return;
     app->progress = 1;
     init_scene(app->scene, app->ioscene, progress_cb);
+    app->params.camera = get_camera(app->ioscene, app->scene);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {

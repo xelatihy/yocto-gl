@@ -45,7 +45,6 @@ struct app_state {
 
   // options
   trace_params params = {};
-  int          pratio = 8;
 
   // scene
   trace_scene* scene      = new trace_scene{};
@@ -198,6 +197,14 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   if (print_progress) print_progress("convert done", progress.x++, progress.y);
 }
 
+int get_camera(sceneio_model* ioscene, trace_scene* scene) {
+  auto iocamera = def_default_camera(ioscene);
+  for(auto idx = 0; idx < ioscene->cameras.size(); idx++) {
+    if(iocamera == ioscene->cameras[idx]) return idx;
+  }
+  return 0;
+}
+
 void reset_display(app_state* app) {
   // stop render
   trace_async_stop(app->render_state);
@@ -255,6 +262,9 @@ int main(int argc, const char* argv[]) {
 
   // conversion
   init_scene(app->scene, ioscene, print_progress);
+
+  // set camera
+  app->params.camera = get_camera(ioscene, app->scene);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.release();
