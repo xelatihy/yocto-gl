@@ -170,6 +170,10 @@ vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge);
 vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge);
+vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge);
+vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge);
 
 }  // namespace yocto
 
@@ -181,12 +185,18 @@ namespace yocto {
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
+image<vec3f> byte_to_float(const image<vec3b>& bt);
+image<vec3b> float_to_byte(const image<vec3f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
 image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
+image<vec3f> srgb_to_rgb(const image<vec3f>& srgb);
+image<vec3f> rgb_to_srgb(const image<vec3f>& rgb);
+image<vec3f> srgb_to_rgb(const image<vec3b>& srgb);
+image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb);
 
 // Apply tone mapping
 vec3f tonemap(
@@ -260,17 +270,24 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-// Throws exception on error.
-image<vec4f>       load_image(const string& filename, string& error);
 [[nodiscard]] bool load_image(
     const string& filename, image<vec4f>& img, string& error);
 [[nodiscard]] bool save_image(
     const string& filename, const image<vec4f>& img, string& error);
-image<vec4b>       load_imageb(const string& filename, string& error);
-[[nodiscard]] bool load_imageb(
+[[nodiscard]] bool load_image(
     const string& filename, image<vec4b>& img, string& error);
-[[nodiscard]] bool save_imageb(
+[[nodiscard]] bool save_image(
     const string& filename, const image<vec4b>& img, string& error);
+
+// Loads/saves a 3 channels float/byte image in linear/srgb color space.
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec3f>& img, string& error);
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec3f>& img, string& error);
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec3b>& img, string& error);
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec3b>& img, string& error);
 
 }  // namespace yocto
 

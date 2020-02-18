@@ -409,7 +409,11 @@ void add_materials(sceneio_model* scene) {
 void add_sky(sceneio_model* scene, float sun_angle) {
   auto texture              = add_texture(scene);
   texture->name             = "environments/sky.hdr";
-  texture->hdr              = make_sunsky({1024, 512}, sun_angle);
+  auto sunsky = make_sunsky({1024, 512}, sun_angle);
+  texture->hdr.resize(sunsky.size());
+  for(auto j = 0; j < sunsky.size().y; j ++) 
+    for(auto i = 0; j < sunsky.size().x; i ++)
+      texture->hdr[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene);
   environment->name         = "environments/sky.yaml";
   environment->emission     = {1, 1, 1};
@@ -477,13 +481,13 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
     float displacement, sceneio_texture* displacement_tex, bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](sceneio_texture* texture,
-                          const vec2f&    texcoord) -> vec4f {
+                          const vec2f&    texcoord) -> vec3f {
     if (!texture->hdr.empty()) {
       return eval_image(texture->hdr, texcoord, false, false);
     } else if (!texture->ldr.empty()) {
       return eval_image(texture->ldr, texcoord, true, false, false);
     } else {
-      return {1, 1, 1, 1};
+      return {1, 1, 1};
     }
   };
 
@@ -501,7 +505,7 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
     auto qtxt = subdiv->quadstexcoord[fid];
     for (auto i = 0; i < 4; i++) {
       auto disp = mean(
-          xyz(eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]])));
+          eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]]));
       if (!displacement_tex->ldr.empty()) disp -= 0.5f;
       offset[qpos[i]] += displacement * disp;
       count[qpos[i]] += 1;
@@ -1152,7 +1156,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!load_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }
@@ -1336,7 +1340,7 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
                 texture->hdr, error))
           return dependent_error();
       } else {
-        if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+        if (!save_image(fs::path(filename).parent_path() / texture->name,
                 texture->ldr, error))
           return dependent_error();
       }
@@ -1508,7 +1512,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -1644,7 +1648,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }
@@ -1837,7 +1841,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -1997,7 +2001,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -2012,14 +2016,14 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
       for (auto& c : texture->hdr)
-        c = (max(xyz(c)) < 0.01) ? vec4f{0, 0, 0, 0} : vec4f{1, 1, 1, 1};
+        c = (max(c) < 0.01) ? vec3f{0, 0, 0} : vec3f{1, 1, 1};
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
       for (auto& c : texture->ldr) {
-        c = (max(max(c.x, c.y), c.z) < 2) ? vec4b{0, 0, 0, 0}
-                                          : vec4b{255, 255, 255, 255};
+        c = (max(max(c.x, c.y), c.z) < 2) ? vec3b{0, 0, 0}
+                                          : vec3b{255, 255, 255};
       }
     }
   }
@@ -2132,7 +2136,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }

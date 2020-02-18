@@ -89,8 +89,8 @@ struct sceneio_camera {
 // in linear color space, while LDRs are encoded as sRGB.
 struct sceneio_texture {
   string       name = "";
-  image<vec4f> hdr  = {};
-  image<vec4b> ldr  = {};
+  image<vec3f> hdr  = {};
+  image<vec3b> ldr  = {};
 };
 
 // Material for surfaces, lines and triangles.

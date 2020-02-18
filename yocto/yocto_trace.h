@@ -120,8 +120,8 @@ void set_shape(trace_object* object, trace_shape* shape);
 void set_instance(trace_object* object, trace_instance* instance);
 
 // texture properties
-void set_texture(trace_texture* texture, const image<vec4b>& img);
-void set_texture(trace_texture* texture, const image<vec4f>& img);
+void set_texture(trace_texture* texture, const image<vec3b>& img);
+void set_texture(trace_texture* texture, const image<vec3f>& img);
 
 // material properties
 void set_emission(trace_material* material, const vec3f& emission,
@@ -324,8 +324,8 @@ struct trace_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct trace_texture {
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
+  image<vec3f> hdr = {};
+  image<vec3b> ldr = {};
 };
 
 // Material for surfaces, lines and triangles.

@@ -531,11 +531,11 @@ static vec3f lookup_texture(
     const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1};
   if (!texture->hdr.empty()) {
-    return xyz(texture->hdr[ij]);
+    return texture->hdr[ij];
   } else if (!texture->ldr.empty() && ldr_as_linear) {
-    return xyz(byte_to_float(texture->ldr[ij]));
+    return byte_to_float(texture->ldr[ij]);
   } else if (!texture->ldr.empty() && !ldr_as_linear) {
-    return xyz(srgb_to_rgb(byte_to_float(texture->ldr[ij])));
+    return srgb_to_rgb(byte_to_float(texture->ldr[ij]));
   } else {
     return {1, 1, 1};
   }
@@ -793,20 +793,20 @@ static trace_point eval_point(const trace_scene* scene,
   // initialize factors
   auto texcoord = point.texcoord;
   auto emission = material->emission *
-                  eval_texture(material->emission_tex, texcoord);
+                  eval_texture(material->emission_tex, texcoord, false);
   auto base = material->color * point.color *
-              eval_texture(material->color_tex, texcoord);
+              eval_texture(material->color_tex, texcoord, false);
   auto specular = material->specular *
-                  eval_texture(material->specular_tex, texcoord).x;
+                  eval_texture(material->specular_tex, texcoord, true).x;
   auto metallic = material->metallic *
-                  eval_texture(material->metallic_tex, texcoord).x;
+                  eval_texture(material->metallic_tex, texcoord, true).x;
   auto roughness = material->roughness *
-                   eval_texture(material->roughness_tex, texcoord).x;
+                   eval_texture(material->roughness_tex, texcoord, true).x;
 
   auto ior  = material->ior;
-  auto coat = material->coat * eval_texture(material->coat_tex, texcoord).x;
+  auto coat = material->coat * eval_texture(material->coat_tex, texcoord, true).x;
   auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord).x;
+                      eval_texture(material->emission_tex, texcoord, true).x;
   auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
@@ -914,12 +914,12 @@ static volume_point eval_volume(const trace_scene* scene,
                    ? vec3f{1, 1, 1}
                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
   auto base = material->color * color *
-              eval_texture(material->color_tex, texcoord);
+              eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord).x;
+                      eval_texture(material->emission_tex, texcoord, true).x;
   auto thin       = material->thin || !material->transmission;
   auto scattering = material->scattering *
-                    eval_texture(material->scattering_tex, texcoord).x;
+                    eval_texture(material->scattering_tex, texcoord, false).x;
   auto scanisotropy = material->scanisotropy;
   auto trdepth      = material->trdepth;
 
@@ -3203,11 +3203,11 @@ void set_focus(trace_camera* camera, float aperture, float focus) {
 trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
-void set_texture(trace_texture* texture, const image<vec4b>& img) {
+void set_texture(trace_texture* texture, const image<vec3b>& img) {
   texture->ldr = img;
   texture->hdr = {};
 }
-void set_texture(trace_texture* texture, const image<vec4f>& img) {
+void set_texture(trace_texture* texture, const image<vec3f>& img) {
   texture->ldr = {};
   texture->hdr = img;
 }
