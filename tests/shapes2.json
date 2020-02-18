@@ -1,7 +1,6 @@
 {
-  "cameras": [
-    {
-      "name": "cameras/default.json",
+  "cameras": {
+    "cameras/default.json": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -17,8 +16,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/front.json",
+    "cameras/front.json": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -34,8 +32,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/back.json",
+    "cameras/back.json": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -51,8 +48,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-sharp.json",
+    "cameras/perspective-sharp.json": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -68,8 +64,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-dof.json",
+    "cameras/perspective-dof.json": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -85,8 +80,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-sharp.json",
+    "cameras/orthographic-sharp.json": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -103,8 +97,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-dof.json",
+    "cameras/orthographic-dof.json": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -121,10 +114,9 @@
         0
       ]
     }
-  ],
-  "environments": [
-    {
-      "name": "environments/sky.json",
+  },
+  "environments": {
+    "environments/sky.json": {
       "emission": [
         0.5,
         0.5,
@@ -132,15 +124,13 @@
       ],
       "emission_tex": "environments/sky.hdr"
     }
-  ],
-  "objects": [
-    {
-      "name": "shapes/floor.json",
+  },
+  "objects": {
+    "shapes/floor.json": {
       "shape": "shapes/floor.ply",
       "material": "materials/floor.json"
     },
-    {
-      "name": "shapes/arealight1.json",
+    "shapes/arealight1.json": {
       "shape": "shapes/arealight1.ply",
       "lookat": [
         -0.4,
@@ -155,8 +145,7 @@
       ],
       "material": "materials/arealight1.json"
     },
-    {
-      "name": "shapes/arealight2.json",
+    "shapes/arealight2.json": {
       "shape": "shapes/arealight2.ply",
       "lookat": [
         0.4,
@@ -171,8 +160,7 @@
       ],
       "material": "materials/arealight2.json"
     },
-    {
-      "name": "shapes/cube-subdiv-uvgrid.json",
+    "shapes/cube-subdiv-uvgrid.json": {
       "shape": "shapes/cube-subdiv.obj",
       "subdiv": "shapes/cube-subdiv.obj",
       "frame": [
@@ -191,8 +179,7 @@
       ],
       "material": "materials/cube-subdiv-uvgrid.json"
     },
-    {
-      "name": "shapes/suzanne-subdiv-plastic-sharp.json",
+    "shapes/suzanne-subdiv-plastic-sharp.json": {
       "shape": "shapes/suzanne-subdiv.obj",
       "subdiv": "subdivs/suzanne-subdiv.obj",
       "frame": [
@@ -211,8 +198,7 @@
       ],
       "material": "materials/suzanne-subdiv-plastic-sharp.json"
     },
-    {
-      "name": "shapes/sphere-displaced-matte.json",
+    "shapes/sphere-displaced-matte.json": {
       "shape": "shapes/sphere-displaced.obj",
       "subdiv": "subdivs/sphere-displaced.obj",
       "frame": [
@@ -231,8 +217,7 @@
       ],
       "material": "materials/sphere-displaced-matte.json"
     },
-    {
-      "name": "shapes/bunny-uvgrid.json",
+    "shapes/bunny-uvgrid.json": {
       "shape": "shapes/bunny.obj",
       "frame": [
         1,
@@ -250,8 +235,7 @@
       ],
       "material": "materials/bunny-uvgrid.json"
     },
-    {
-      "name": "shapes/teapot-uvgrid.json",
+    "shapes/teapot-uvgrid.json": {
       "shape": "shapes/teapot.obj",
       "frame": [
         1,
@@ -269,10 +253,9 @@
       ],
       "material": "materials/teapot-uvgrid.json"
     }
-  ],
-  "materials": [
-    {
-      "name": "materials/floor.json",
+  },
+  "materials": {
+    "materials/floor.json": {
       "color": [
         0.7,
         0.7,
@@ -280,24 +263,21 @@
       ],
       "color_tex": "textures/floor.png"
     },
-    {
-      "name": "materials/arealight1.json",
+    "materials/arealight1.json": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/arealight2.json",
+    "materials/arealight2.json": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/cube-subdiv-uvgrid.json",
+    "materials/cube-subdiv-uvgrid.json": {
       "subdivisions": 4,
       "smooth": false,
       "specular": 1,
@@ -309,8 +289,7 @@
       "roughness": 0.1,
       "color_tex": "textures/uvgrid.png"
     },
-    {
-      "name": "materials/suzanne-subdiv-plastic-sharp.json",
+    "materials/suzanne-subdiv-plastic-sharp.json": {
       "subdivisions": 2,
       "smooth": true,
       "specular": 1,
@@ -321,8 +300,7 @@
       ],
       "roughness": 0.01
     },
-    {
-      "name": "materials/sphere-displaced-matte.json",
+    "materials/sphere-displaced-matte.json": {
       "subdivisions": 0,
       "smooth": true,
       "displacement": 0.025,
@@ -334,8 +312,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/bunny-uvgrid.json",
+    "materials/bunny-uvgrid.json": {
       "specular": 1,
       "color": [
         1,
@@ -345,8 +322,7 @@
       "roughness": 0.1,
       "color_tex": "textures/uvgrid.png"
     },
-    {
-      "name": "materials/teapot-uvgrid.json",
+    "materials/teapot-uvgrid.json": {
       "specular": 1,
       "color": [
         1,
@@ -356,5 +332,5 @@
       "roughness": 0.1,
       "color_tex": "textures/uvgrid.png"
     }
-  ]
+  }
 }

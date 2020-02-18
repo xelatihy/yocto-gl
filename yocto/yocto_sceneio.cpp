@@ -345,6 +345,18 @@ sceneio_object* add_complete_object(
   return object;
 }
 
+// get default camera
+sceneio_camera* def_default_camera(const sceneio_model* scene) {
+  if(scene->cameras.empty()) return nullptr;
+  for(auto camera : scene->cameras) {
+    if(camera->name.find("/default.") != string::npos) return camera;
+  }  
+  for(auto camera : scene->cameras) {
+    if(camera->name.find("/camera.") != string::npos) return camera;
+  }  
+  return scene->cameras.front();
+}
+
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const sceneio_model* scene) {
   auto shape_bbox = unordered_map<sceneio_shape*, bbox3f>{};
@@ -1136,9 +1148,9 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   // check for conversion errors
   // cameras
   if (js.contains("cameras")) {
-    for (auto& ejs : js.at("cameras")) {
+    for (auto& [name, ejs] : js.at("cameras").items()) {
       auto camera = add_camera(scene);
-      if (!get_value(ejs, "name", camera->name)) return false;
+      camera->name = name;
       if (!get_value(ejs, "frame", camera->frame)) return false;
       if (!get_value(ejs, "orthographic", camera->orthographic)) return false;
       if (!get_value(ejs, "lens", camera->lens)) return false;
@@ -1155,9 +1167,9 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
     }
   }
   if (js.contains("environments")) {
-    for (auto& ejs : js.at("environments")) {
+    for (auto& [name, ejs] : js.at("environments").items()) {
       auto environment = add_environment(scene);
-      if (!get_value(ejs, "name", environment->name)) return false;
+      environment->name = name;
       if (!get_value(ejs, "frame", environment->frame)) return false;
       if (!get_value(ejs, "emission", environment->emission)) return false;
       if (!get_ctexture(
@@ -1171,9 +1183,9 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
     }
   }
   if (js.contains("materials")) {
-    for (auto& ejs : js.at("materials")) {
+    for (auto& [name, ejs] : js.at("materials").items()) {
       auto material = add_material(scene);
-      if (!get_value(ejs, "name", material->name)) return false;
+      material->name = name;
       if (!get_value(ejs, "emission", material->emission)) return false;
       if (!get_value(ejs, "color", material->color)) return false;
       if (!get_value(ejs, "metallic", material->metallic)) return false;
@@ -1215,9 +1227,9 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
     }
   }
   if (js.contains("objects")) {
-    for (auto& ejs : js.at("objects")) {
+    for (auto& [name, ejs] : js.at("objects").items()) {
       auto object = add_object(scene);
-      if (!get_value(ejs, "name", object->name)) return false;
+      object->name = name;
       if (!get_value(ejs, "frame", object->frame)) return false;
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;

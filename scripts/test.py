@@ -720,4 +720,24 @@ def upgrade():
         with open(filename, 'wt') as f:
             f.write(nyaml)
 
+@cli.command()
+def fix_dict():
+    def noname(d):
+        import copy
+        d = copy.copy(d)
+        del d['name']
+        return d
+    for filename in sorted(glob.glob('tests/*.json')):
+        print(filename)
+        with open(filename) as f: scene = json.load(f)
+        if 'cameras' in scene: 
+            scene['cameras'] = { value['name']: noname(value) for value in scene['cameras'] }
+        if 'environments' in scene: 
+            scene['environments'] = { value['name']: noname(value) for value in scene['environments'] }
+        if 'materials' in scene: 
+            scene['materials'] = { value['name']: noname(value) for value in scene['materials'] }
+        if 'objects' in scene: 
+            scene['objects'] = { value['name']: noname(value) for value in scene['objects'] }
+        with open(filename, 'w') as f: json.dump(scene, f, indent=2)
+
 cli()
