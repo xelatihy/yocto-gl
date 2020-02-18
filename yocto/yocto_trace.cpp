@@ -442,10 +442,6 @@ static vec3f eval_element_normal(const trace_shape* shape, int element) {
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
-  } else if (!shape->quadspos.empty()) {
-    auto q = shape->quadspos[element];
-    norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
-        shape->positions[q.z], shape->positions[q.w]);
   } else {
     throw std::runtime_error("empty shape");
     norm = {0, 0, 1};
@@ -478,19 +474,6 @@ static pair<vec3f, vec3f> eval_element_tangents(
           shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w],
           uv);
     }
-  } else if (!shape->quadspos.empty()) {
-    auto q = shape->quadspos[element];
-    if (shape->texcoords.empty()) {
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], {0, 0}, {1, 0}, {0, 1},
-          {1, 1}, uv);
-    } else {
-      auto qt = shape->quadstexcoord[element];
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], shape->texcoords[qt.x],
-          shape->texcoords[qt.y], shape->texcoords[qt.z],
-          shape->texcoords[qt.w], uv);
-    }
   } else {
     return {zero3f, zero3f};
   }
@@ -498,10 +481,9 @@ static pair<vec3f, vec3f> eval_element_tangents(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-static T eval_shape_elem(const trace_shape* shape,
-    const vector<vec4i>& facevarying_quads, const vector<T>& vals, int element,
-    const vec2f& uv) {
-  if (vals.empty()) return {};
+static T eval_shape_elem(const trace_shape* shape, const vector<T>& vals,
+    int element, const vec2f& uv, const T& def) {
+  if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
@@ -515,13 +497,8 @@ static T eval_shape_elem(const trace_shape* shape,
     return interpolate_line(vals[l.x], vals[l.y], uv.x);
   } else if (!shape->points.empty()) {
     return vals[shape->points[element]];
-  } else if (!shape->quadspos.empty()) {
-    auto q = facevarying_quads[element];
-    if (q.w == q.z)
-      return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
   } else {
-    return {};
+    return def;
   }
 }
 
@@ -744,43 +721,19 @@ static trace_point eval_point(const trace_scene* scene,
 
   // geometric properties
   point.position = eval_shape_elem(
-      shape, shape->quadspos, shape->positions, element, uv);
-  point.position = transform_point(frame, point.position);
-  point.normal   = shape->normals.empty()
-                     ? eval_element_normal(shape, element)
-                     : normalize(eval_shape_elem(shape, shape->quadsnorm,
-                           shape->normals, element, uv));
-  point.normal  = transform_normal(frame, point.normal, trace_non_rigid_frames);
+      shape, shape->positions, element, uv, zero3f);
   point.gnormal = eval_element_normal(shape, element);
-  point.gnormal = transform_normal(
-      frame, point.gnormal, trace_non_rigid_frames);
-  point.texcoord = shape->texcoords.empty()
-                       ? uv
-                       : eval_shape_elem(shape, shape->quadstexcoord,
-                             shape->texcoords, element, uv);
-  point.color = shape->colors.empty()
-                    ? vec3f{1, 1, 1}
-                    : eval_shape_elem(shape, {}, shape->colors, element, uv);
+  point.normal  = normalize(
+      eval_shape_elem(shape, shape->normals, element, uv, point.gnormal));
+  point.texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
+  point.color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
 
-  // correct normal
-  if (!shape->points.empty()) {
-    point.normal = point.outgoing;
-  } else if (!shape->lines.empty()) {
-    point.normal = orthonormalize(point.outgoing, point.normal);
-  } else if (!material->normal_tex) {
-    if (material->thin && dot(point.outgoing, point.normal) < 0)
-      point.normal = -point.normal;
-  } else {
-    auto texcoord = shape->texcoords.empty()
-                        ? uv
-                        : eval_shape_elem(shape, shape->quadstexcoord,
-                              shape->texcoords, element, uv);
-    auto normalmap = -1 +
-                     2 * eval_texture(material->normal_tex, texcoord, true);
-    auto z = shape->normals.empty()
-                 ? eval_element_normal(shape, element)
-                 : normalize(eval_shape_elem(
-                       shape, shape->quadsnorm, shape->normals, element, uv));
+  // apply normal mapping
+  if (material->normal_tex &&
+      (!shape->triangles.empty() || !shape->quads.empty())) {
+    auto normalmap = -1 + 2 * eval_texture(
+                                  material->normal_tex, point.texcoord, true);
+    auto z      = point.normal;
     auto basis  = identity3x3f;
     auto flip_v = false;
     if (shape->tangents.empty()) {
@@ -790,15 +743,32 @@ static trace_point eval_point(const trace_scene* scene,
       basis         = {x, y, z};
       flip_v        = dot(y, tangents.second) < 0;
     } else {
-      auto tangsp = eval_shape_elem(shape, {}, shape->tangents, element, uv);
-      auto x      = orthonormalize(xyz(tangsp), z);
-      auto y      = normalize(cross(z, x));
-      basis       = {x, y, z};
-      flip_v      = tangsp.w < 0;
+      auto tangsp = eval_shape_elem(
+          shape, shape->tangents, element, uv, {0, 0, 0, 1});
+      auto x = orthonormalize(xyz(tangsp), z);
+      auto y = normalize(cross(z, x));
+      basis  = {x, y, z};
+      flip_v = tangsp.w < 0;
     }
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
-    auto normal  = normalize(basis * normalmap);
-    point.normal = transform_normal(frame, normal, trace_non_rigid_frames);
+    point.normal = normalize(basis * normalmap);
+  }
+
+  // transforms
+  point.position = transform_point(frame, point.position);
+  point.normal  = transform_normal(frame, point.normal, trace_non_rigid_frames);
+  point.gnormal = transform_normal(
+      frame, point.gnormal, trace_non_rigid_frames);
+
+  // correct normals
+  if (!shape->points.empty()) {
+    point.normal = point.outgoing;
+  } else if (!shape->lines.empty()) {
+    point.normal = orthonormalize(point.outgoing, point.normal);
+  } else if (!shape->triangles.empty()) {
+    if (material->thin && dot(point.outgoing, point.normal) < 0)
+      point.normal = -point.normal;
+  } else if (!shape->quads.empty()) {
     if (material->thin && dot(point.outgoing, point.normal) < 0)
       point.normal = -point.normal;
   }
@@ -916,19 +886,14 @@ static volume_point eval_volume(const trace_scene* scene,
 
   // geometric properties
   point.position = eval_shape_elem(
-      shape, shape->quadspos, shape->positions, element, uv);
+      shape, shape->positions, element, uv, zero3f);
   point.position = transform_point(frame, point.position);
 
   // material -------
   // initialize factors
-  auto texcoord = shape->texcoords.empty()
-                      ? uv
-                      : eval_shape_elem(shape, shape->quadstexcoord,
-                            shape->texcoords, element, uv);
-  auto color = shape->colors.empty()
-                   ? vec3f{1, 1, 1}
-                   : eval_shape_elem(shape, {}, shape->colors, element, uv);
-  auto base = material->color * color *
+  auto texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
+  auto color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
+  auto base     = material->color * color *
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
@@ -1255,29 +1220,6 @@ static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
       memcpy(embree_positions, shape->positions.data(),
           shape->positions.size() * 12);
       memcpy(embree_quads, shape->quads.data(), shape->quads.size() * 16);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape->quadspos.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.bvh == trace_bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape->positions.data(), 0, 3 * 4,
-          shape->positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape->quadspos.data(), 0, 4 * 4,
-          shape->quadspos.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape->positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape->quadspos.size());
-      memcpy(embree_positions, shape->positions.data(),
-          shape->positions.size() * 12);
-      memcpy(embree_quads, shape->quadspos.data(), shape->quadspos.size() * 16);
     }
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
@@ -1765,15 +1707,6 @@ static void init_bvh(trace_shape* shape, const trace_params& params) {
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 3};
     }
-  } else if (!shape->quadspos.empty()) {
-    for (auto idx = 0; idx < shape->quadspos.size(); idx++) {
-      auto& q         = shape->quadspos[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-      primitive.center    = center(primitive.bbox);
-      primitive.primitive = {idx, 4};
-    }
   }
 
   // build nodes
@@ -1874,13 +1807,6 @@ static void update_bvh(trace_shape* shape, const trace_params& params) {
           shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
     }
   } else if (!shape->quads.empty()) {
-    bboxes = vector<bbox3f>(shape->quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh->primitives[idx].x];
-      bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
-    }
-  } else if (!shape->quadspos.empty()) {
     bboxes = vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape->quads[shape->bvh->primitives[idx].x];
@@ -2007,16 +1933,6 @@ static bool intersect_shape_bvh(trace_shape* shape, const ray3f& ray_,
     } else if (!shape->quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& q = shape->quads[shape->bvh->primitives[idx].x];
-        if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
-                shape->positions[q.z], shape->positions[q.w], uv, distance)) {
-          hit      = true;
-          element  = shape->bvh->primitives[idx].x;
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape->quadspos.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape->quadspos[shape->bvh->primitives[idx].x];
         if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
                 shape->positions[q.z], shape->positions[q.w], uv, distance)) {
           hit      = true;
@@ -2540,8 +2456,8 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     auto  frame     = object->instance->frames[light->instance] * object->frame;
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto  lposition = transform_point(frame,
-        eval_shape_elem(shape, shape->quadspos, shape->positions, element, uv));
+    auto  lposition = transform_point(
+        frame, eval_shape_elem(shape, shape->positions, element, uv, zero3f));
     return normalize(lposition - position);
   } else if (light->environment) {
     auto& environment = light->environment;
@@ -2579,9 +2495,8 @@ static float sample_lights_pdf(
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
-            frame, eval_shape_elem(object->shape, object->shape->quadspos,
-                       object->shape->positions, intersection.element,
-                       intersection.uv));
+            frame, eval_shape_elem(object->shape, object->shape->positions,
+                       intersection.element, intersection.uv, zero3f));
         auto lnormal = transform_normal(frame,
             eval_element_normal(object->shape, intersection.element),
             trace_non_rigid_frames);
@@ -3245,12 +3160,6 @@ void set_triangles(trace_shape* shape, const vector<vec3i>& triangles) {
 }
 void set_quads(trace_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
-}
-void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
-  shape->quadspos      = quadspos;
-  shape->quadsnorm     = quadsnorm;
-  shape->quadstexcoord = quadstexcoord;
 }
 void set_positions(trace_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;

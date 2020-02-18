@@ -146,8 +146,6 @@ void set_points(trace_shape* shape, const vector<int>& points);
 void set_lines(trace_shape* shape, const vector<vec2i>& lines);
 void set_triangles(trace_shape* shape, const vector<vec3i>& triangles);
 void set_quads(trace_shape* shape, const vector<vec4i>& quads);
-void set_fvquads(trace_shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
 void set_positions(trace_shape* shape, const vector<vec3f>& positions);
 void set_normals(trace_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
@@ -368,11 +366,6 @@ struct trace_shape {
   vector<vec2i> lines     = {};
   vector<vec3i> triangles = {};
   vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
 
   // vertex data
   vector<vec3f> positions = {};
