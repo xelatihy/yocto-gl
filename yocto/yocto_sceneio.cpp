@@ -345,15 +345,20 @@ sceneio_object* add_complete_object(
   return object;
 }
 
-// get default camera
-sceneio_camera* def_default_camera(const sceneio_model* scene) {
-  if(scene->cameras.empty()) return nullptr;
-  for(auto camera : scene->cameras) {
-    if(camera->name.find("/default.") != string::npos) return camera;
-  }  
-  for(auto camera : scene->cameras) {
-    if(camera->name.find("/camera.") != string::npos) return camera;
-  }  
+// get named camera or default if camera is empty
+sceneio_camera* get_camera(const sceneio_model* scene, const string& name) {
+  if (scene->cameras.empty()) return nullptr;
+  auto search_name = 
+      (name.find(".json") == string::npos) ? ("cameras/" + name + ".json") : name;
+  for (auto camera : scene->cameras) {
+    if (camera->name == search_name) return camera;
+  }
+  for (auto camera : scene->cameras) {
+    if (camera->name.find("/default.") != string::npos) return camera;
+  }
+  for (auto camera : scene->cameras) {
+    if (camera->name.find("/camera.") != string::npos) return camera;
+  }
   return scene->cameras.front();
 }
 
@@ -1149,7 +1154,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   // cameras
   if (js.contains("cameras")) {
     for (auto& [name, ejs] : js.at("cameras").items()) {
-      auto camera = add_camera(scene);
+      auto camera  = add_camera(scene);
       camera->name = name;
       if (!get_value(ejs, "frame", camera->frame)) return false;
       if (!get_value(ejs, "orthographic", camera->orthographic)) return false;
@@ -1168,7 +1173,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   }
   if (js.contains("environments")) {
     for (auto& [name, ejs] : js.at("environments").items()) {
-      auto environment = add_environment(scene);
+      auto environment  = add_environment(scene);
       environment->name = name;
       if (!get_value(ejs, "frame", environment->frame)) return false;
       if (!get_value(ejs, "emission", environment->emission)) return false;
@@ -1184,7 +1189,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   }
   if (js.contains("materials")) {
     for (auto& [name, ejs] : js.at("materials").items()) {
-      auto material = add_material(scene);
+      auto material  = add_material(scene);
       material->name = name;
       if (!get_value(ejs, "emission", material->emission)) return false;
       if (!get_value(ejs, "color", material->color)) return false;
@@ -1228,7 +1233,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   }
   if (js.contains("objects")) {
     for (auto& [name, ejs] : js.at("objects").items()) {
-      auto object = add_object(scene);
+      auto object  = add_object(scene);
       object->name = name;
       if (!get_value(ejs, "frame", object->frame)) return false;
       if (ejs.contains("lookat")) {

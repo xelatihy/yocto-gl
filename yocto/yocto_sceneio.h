@@ -255,8 +255,8 @@ bool load_scene(const string& filename, sceneio_model* scene, string& error,
 bool save_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
 
-// get default camera
-sceneio_camera* def_default_camera(const sceneio_model* scene);
+// get named camera or default if name is empty
+sceneio_camera* get_camera(const sceneio_model* scene, const string& name = "");
 
 }  // namespace yocto
 
