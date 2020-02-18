@@ -1321,9 +1321,6 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   };
 
   // helper
-  auto add_val = [](json& ejs, const string& name, const auto& value) {
-    ejs[name] = value;
-  };
   auto add_opt = [](json& ejs, const string& name, const auto& value,
                      const auto& def) {
     if (value == def) return;
@@ -1349,10 +1346,9 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   js["asset"] = json::object();
 
   auto def_cam = sceneio_camera{};
-  if (!scene->cameras.empty()) js["cameras"] = json::array();
+  if (!scene->cameras.empty()) js["cameras"] = json::object();
   for (auto& camera : scene->cameras) {
-    auto& ejs = js["cameras"].emplace_back();
-    add_val(ejs, "name", camera->name);
+    auto& ejs = js["cameras"][camera->name];
     add_opt(ejs, "frame", camera->frame, def_cam.frame);
     add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
     add_opt(ejs, "lens", camera->lens, def_cam.lens);
@@ -1363,20 +1359,18 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   }
 
   auto def_env = sceneio_environment{};
-  if (!scene->environments.empty()) js["environments"] = json::array();
+  if (!scene->environments.empty()) js["environments"] = json::object();
   for (auto environment : scene->environments) {
-    auto& ejs = js["environments"].emplace_back();
-    add_val(ejs, "name", environment->name);
+    auto& ejs = js["environments"][environment->name];
     add_opt(ejs, "frame", environment->frame, def_env.frame);
     add_opt(ejs, "emission", environment->emission, def_env.emission);
     add_tex(ejs, "emission_tex", environment->emission_tex);
   }
 
   auto def_material = sceneio_material{};
-  if (!scene->materials.empty()) js["materials"] = json::array();
+  if (!scene->materials.empty()) js["materials"] = json::object();
   for (auto material : scene->materials) {
-    auto& ejs = js["materials"].emplace_back();
-    add_val(ejs, "name", material->name);
+    auto& ejs = js["materials"][material->name];
     add_opt(ejs, "emission", material->emission, def_material.emission);
     add_opt(ejs, "color", material->color, def_material.color);
     add_opt(ejs, "specular", material->specular, def_material.specular);
@@ -1405,17 +1399,16 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
     add_tex(ejs, "normal_tex", material->normal_tex);
     add_tex(ejs, "displacement_tex", material->displacement_tex);
     add_opt(ejs, "subdivisions", material->subdivisions,
-        def_material.subdivisions);  // hack fir subd
+        def_material.subdivisions);  // hack for subd
     add_opt(
         ejs, "smooth", material->smooth, def_material.smooth);  // hack for subd
   }
 
   auto def_object = sceneio_object{};
   auto def_subdiv = sceneio_subdiv{};
-  if (!scene->objects.empty()) js["objects"] = json::array();
+  if (!scene->objects.empty()) js["objects"] = json::object();
   for (auto object : scene->objects) {
-    auto& ejs = js["objects"].emplace_back();
-    add_val(ejs, "name", object->name);
+    auto& ejs = js["objects"][object->name];
     add_opt(ejs, "frame", object->frame, def_object.frame);
     add_ref(ejs, "shape", object->shape);
     add_ref(ejs, "subdiv", object->subdiv);
