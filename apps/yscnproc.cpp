@@ -112,14 +112,10 @@ int main(int argc, const char* argv[]) {
   auto dirname  = fs::path(output).parent_path();
   auto dirnames = std::set<fs::path>{};
   if (!dirname.empty()) dirnames.insert(dirname);
-  if (!scene->shapes.empty())
-    dirnames.insert(dirname / "shapes");
-  if (!scene->subdivs.empty())
-    dirnames.insert(dirname / "subdivs");
-  if (!scene->textures.empty())
-    dirnames.insert(dirname / "textures");
-  if (!scene->instances.empty())
-    dirnames.insert(dirname / "instances");
+  if (!scene->shapes.empty()) dirnames.insert(dirname / "shapes");
+  if (!scene->subdivs.empty()) dirnames.insert(dirname / "subdivs");
+  if (!scene->textures.empty()) dirnames.insert(dirname / "textures");
+  if (!scene->instances.empty()) dirnames.insert(dirname / "instances");
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       throw std::runtime_error{"cannot create directory " + output};
