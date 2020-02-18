@@ -527,10 +527,14 @@ static T eval_shape_elem(const trace_shape* shape,
 
 // Check texture size
 static vec2i texture_size(const trace_texture* texture) {
-  if (!texture->hdr.empty()) {
-    return texture->hdr.size();
-  } else if (!texture->ldr.empty()) {
-    return texture->ldr.size();
+  if (!texture->colorf.empty()) {
+    return texture->colorf.size();
+  } else if (!texture->colorb.empty()) {
+    return texture->colorb.size();
+  } else if (!texture->scalarf.empty()) {
+    return texture->scalarf.size();
+  } else if (!texture->scalarb.empty()) {
+    return texture->scalarb.size();
   } else {
     return zero2i;
   }
@@ -539,13 +543,17 @@ static vec2i texture_size(const trace_texture* texture) {
 // Evaluate a texture
 static vec3f lookup_texture(
     const trace_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
-  if (texture->hdr.empty() && texture->ldr.empty()) return {1, 1, 1};
-  if (!texture->hdr.empty()) {
-    return texture->hdr[ij];
-  } else if (!texture->ldr.empty() && ldr_as_linear) {
-    return byte_to_float(texture->ldr[ij]);
-  } else if (!texture->ldr.empty() && !ldr_as_linear) {
-    return srgb_to_rgb(byte_to_float(texture->ldr[ij]));
+  if (!texture->colorf.empty()) {
+    return texture->colorf[ij];
+  } else if (!texture->colorb.empty()) {
+    return ldr_as_linear ? byte_to_float(texture->colorb[ij])
+                         : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
+  } else if (!texture->scalarf.empty()) {
+    return vec3f{texture->scalarf[ij]};
+  } else if (!texture->scalarb.empty()) {
+    return ldr_as_linear
+               ? byte_to_float(vec3b{texture->scalarb[ij]})
+               : srgb_to_rgb(byte_to_float(vec3b{texture->scalarb[ij]}));
   } else {
     return {1, 1, 1};
   }
@@ -3201,12 +3209,28 @@ trace_texture* add_texture(trace_scene* scene) {
   return scene->textures.emplace_back(new trace_texture{});
 }
 void set_texture(trace_texture* texture, const image<vec3b>& img) {
-  texture->ldr = img;
-  texture->hdr = {};
+  texture->colorb  = img;
+  texture->colorf  = {};
+  texture->scalarb = {};
+  texture->scalarf = {};
 }
 void set_texture(trace_texture* texture, const image<vec3f>& img) {
-  texture->ldr = {};
-  texture->hdr = img;
+  texture->colorb  = {};
+  texture->colorf  = img;
+  texture->scalarb = {};
+  texture->scalarf = {};
+}
+void set_texture(trace_texture* texture, const image<byte>& img) {
+  texture->colorb  = {};
+  texture->colorf  = {};
+  texture->scalarb = img;
+  texture->scalarf = {};
+}
+void set_texture(trace_texture* texture, const image<float>& img) {
+  texture->colorb  = {};
+  texture->colorf  = {};
+  texture->scalarb = {};
+  texture->scalarf = img;
 }
 
 // Add shape

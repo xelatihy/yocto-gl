@@ -187,10 +187,14 @@ void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto gltexture = add_texture(glscene);
-    if (!iotexture->hdr.empty()) {
-      set_texture(gltexture, iotexture->hdr);
-    } else if (!iotexture->ldr.empty()) {
-      set_texture(gltexture, iotexture->ldr);
+    if (!iotexture->colorf.empty()) {
+      set_texture(gltexture, iotexture->colorf);
+    } else if (!iotexture->colorb.empty()) {
+      set_texture(gltexture, iotexture->colorb);
+    } else if (!iotexture->scalarf.empty()) {
+      set_texture(gltexture, iotexture->scalarf);
+    } else if (!iotexture->scalarb.empty()) {
+      set_texture(gltexture, iotexture->scalarb);
     }
     texture_map[iotexture] = gltexture;
   }
@@ -296,12 +300,18 @@ bool draw_glwidgets(
     opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
   if (!iotexture) return false;
   draw_gllabel(win, "name", iotexture->name);
-  draw_gllabel(win, "hdr",
-      to_string(iotexture->hdr.size().x) + " x " +
-          to_string(iotexture->hdr.size().y));
-  draw_gllabel(win, "ldr",
-      to_string(iotexture->ldr.size().x) + " x " +
-          to_string(iotexture->ldr.size().y));
+  draw_gllabel(win, "colorf",
+      std::to_string(iotexture->colorf.size().x) + " x " +
+          std::to_string(iotexture->colorf.size().y));
+  draw_gllabel(win, "colorb",
+      std::to_string(iotexture->colorb.size().x) + " x " +
+          std::to_string(iotexture->colorb.size().y));
+  draw_gllabel(win, "scalarf",
+      std::to_string(iotexture->scalarf.size().x) + " x " +
+          std::to_string(iotexture->scalarf.size().y));
+  draw_gllabel(win, "scalarb",
+      std::to_string(iotexture->scalarb.size().x) + " x " +
+          std::to_string(iotexture->scalarb.size().y));
   return false;
 }
 
@@ -618,10 +628,14 @@ void draw_glwidgets(
       auto iotexture = app->selected_texture;
       auto gltexture = get_element(
           iotexture, app->ioscene->textures, app->glscene->textures);
-      if (!iotexture->hdr.empty()) {
-        set_texture(gltexture, iotexture->hdr);
-      } else if (!iotexture->hdr.empty()) {
-        set_texture(gltexture, iotexture->ldr);
+      if (!iotexture->colorf.empty()) {
+        set_texture(gltexture, iotexture->colorf);
+      } else if (!iotexture->colorb.empty()) {
+        set_texture(gltexture, iotexture->colorb);
+      } else if (!iotexture->scalarf.empty()) {
+        set_texture(gltexture, iotexture->scalarf);
+      } else if (!iotexture->scalarb.empty()) {
+        set_texture(gltexture, iotexture->scalarb);
       }
     }
     end_glheader(win);

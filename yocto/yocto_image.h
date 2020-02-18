@@ -187,6 +187,8 @@ image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
 image<vec3f> byte_to_float(const image<vec3b>& bt);
 image<vec3b> float_to_byte(const image<vec3f>& fl);
+image<float> byte_to_float(const image<byte>& bt);
+image<byte>  float_to_byte(const image<float>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
@@ -197,6 +199,10 @@ image<vec3f> srgb_to_rgb(const image<vec3f>& srgb);
 image<vec3f> rgb_to_srgb(const image<vec3f>& rgb);
 image<vec3f> srgb_to_rgb(const image<vec3b>& srgb);
 image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb);
+image<float> srgb_to_rgb(const image<float>& srgb);
+image<float> rgb_to_srgb(const image<float>& rgb);
+image<float> srgb_to_rgb(const image<byte>& srgb);
+image<byte>  rgb_to_srgbb(const image<float>& rgb);
 
 // Apply tone mapping
 vec3f tonemap(
@@ -280,6 +286,12 @@ bool load_image(const string& filename, image<vec3f>& img, string& error);
 bool save_image(const string& filename, const image<vec3f>& img, string& error);
 bool load_image(const string& filename, image<vec3b>& img, string& error);
 bool save_image(const string& filename, const image<vec3b>& img, string& error);
+
+// Loads/saves a 1 channels float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image<float>& img, string& error);
+bool save_image(const string& filename, const image<float>& img, string& error);
+bool load_image(const string& filename, image<byte>& img, string& error);
+bool save_image(const string& filename, const image<byte>& img, string& error);
 
 }  // namespace yocto
 

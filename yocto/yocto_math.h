@@ -1943,6 +1943,8 @@ inline vec3b float_to_byte(const vec3f& a);
 inline vec3f byte_to_float(const vec3b& a);
 inline vec4b float_to_byte(const vec4f& a);
 inline vec4f byte_to_float(const vec4b& a);
+inline byte  float_to_byte(float a);
+inline float byte_to_float(byte a);
 
 // Luminance
 inline float luminance(const vec3f& a);
@@ -2226,6 +2228,8 @@ inline vec4b float_to_byte(const vec4f& a) {
 inline vec4f byte_to_float(const vec4b& a) {
   return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
+inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
+inline float byte_to_float(byte a) { return a / 255.0f; }
 
 // Luminance
 inline float luminance(const vec3f& a) {

@@ -86,9 +86,11 @@ struct sceneio_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct sceneio_texture {
-  string       name = "";
-  image<vec3f> hdr  = {};
-  image<vec3b> ldr  = {};
+  string       name    = "";
+  image<vec3f> colorf  = {};
+  image<vec3b> colorb  = {};
+  image<float> scalarf = {};
+  image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.

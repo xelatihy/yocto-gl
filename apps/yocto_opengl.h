@@ -266,6 +266,10 @@ void set_texture(
     opengl_texture* texture, const image<vec3b>& img, bool as_srgb = true);
 void set_texture(
     opengl_texture* texture, const image<vec3f>& img, bool as_float = false);
+void set_texture(
+    opengl_texture* texture, const image<byte>& img, bool as_srgb = true);
+void set_texture(
+    opengl_texture* texture, const image<float>& img, bool as_float = false);
 
 // material properties
 void set_emission(opengl_material* material, const vec3f& emission,
