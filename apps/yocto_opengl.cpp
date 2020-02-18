@@ -768,8 +768,8 @@ void set_texture(
     return;
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != img.size() || texture->is_srgb != as_srgb ||
-      texture->is_float == true) {
+  if (texture->size != img.size() || texture->nchan != 4 ||
+      texture->is_srgb != as_srgb || texture->is_float == true) {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
@@ -784,6 +784,7 @@ void set_texture(
     glGenerateMipmap(GL_TEXTURE_2D);
   }
   texture->size     = img.size();
+  texture->nchan    = 4;
   texture->is_srgb  = as_srgb;
   texture->is_float = false;
   assert(glGetError() == GL_NO_ERROR);
@@ -797,8 +798,8 @@ void set_texture(
     return;
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != img.size() || texture->is_float != as_float ||
-      texture->is_srgb == true) {
+  if (texture->size != img.size() || texture->nchan != 4 ||
+      texture->is_float != as_float || texture->is_srgb == true) {
     glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
@@ -814,6 +815,69 @@ void set_texture(
     glGenerateMipmap(GL_TEXTURE_2D);
   }
   texture->size     = img.size();
+  texture->nchan    = 4;
+  texture->is_srgb  = false;
+  texture->is_float = as_float;
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_texture(
+    opengl_texture* texture, const image<vec3b>& img, bool as_srgb) {
+  assert(glGetError() == GL_NO_ERROR);
+  if (img.empty()) {
+    glDeleteTextures(1, &texture->texture_id);
+    texture->texture_id = 0;
+    return;
+  }
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != img.size() || texture->nchan != 3 ||
+      texture->is_srgb != as_srgb || texture->is_float == true) {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB : GL_RGB, img.size().x,
+        img.size().y, 0, GL_RGB, GL_UNSIGNED_BYTE, img.data());
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGB,
+        GL_UNSIGNED_BYTE, img.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  texture->size     = img.size();
+  texture->nchan    = 3;
+  texture->is_srgb  = as_srgb;
+  texture->is_float = false;
+  assert(glGetError() == GL_NO_ERROR);
+}
+void set_texture(
+    opengl_texture* texture, const image<vec3f>& img, bool as_float) {
+  assert(glGetError() == GL_NO_ERROR);
+  if (img.empty()) {
+    glDeleteTextures(1, &texture->texture_id);
+    texture->texture_id = 0;
+    return;
+  }
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != img.size() || texture->nchan != 3 ||
+      texture->is_float != as_float || texture->is_srgb == true) {
+    glGenTextures(1, &texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGB32F : GL_RGB, img.size().x,
+        img.size().y, 0, GL_RGB, GL_FLOAT, img.data());
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGB,
+        GL_FLOAT, img.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  texture->size     = img.size();
+  texture->nchan    = 3;
   texture->is_srgb  = false;
   texture->is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);

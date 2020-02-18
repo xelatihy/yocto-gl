@@ -83,8 +83,6 @@ namespace yocto {
 
 // Using directives
 using std::function;
-using std::make_unique;
-using std::unique_ptr;
 
 // Trace scene
 struct trace_scene;
@@ -95,9 +93,6 @@ struct trace_texture;
 struct trace_material;
 struct trace_instance;
 struct trace_object;
-
-// Create scene.
-unique_ptr<trace_scene> make_trace_scene();
 
 // Add scene elements
 trace_camera*      add_camera(trace_scene* scene);
@@ -120,8 +115,8 @@ void set_shape(trace_object* object, trace_shape* shape);
 void set_instance(trace_object* object, trace_instance* instance);
 
 // texture properties
-void set_texture(trace_texture* texture, const image<vec4b>& img);
-void set_texture(trace_texture* texture, const image<vec4f>& img);
+void set_texture(trace_texture* texture, const image<vec3b>& img);
+void set_texture(trace_texture* texture, const image<vec3f>& img);
 
 // material properties
 void set_emission(trace_material* material, const vec3f& emission,
@@ -262,10 +257,6 @@ using trace_process_async = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-unique_ptr<trace_state> trace_async_start(const trace_scene* scene,
-    const trace_params& params, trace_progress progress_cb = {},
-    trace_progress_image progress_image_cb = {},
-    trace_process_async  progress_async_cb = {});
 void trace_async_start(trace_state* state, const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {},
@@ -324,8 +315,8 @@ struct trace_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct trace_texture {
-  image<vec4f> hdr = {};
-  image<vec4b> ldr = {};
+  image<vec3f> hdr = {};
+  image<vec3b> ldr = {};
 };
 
 // Material for surfaces, lines and triangles.

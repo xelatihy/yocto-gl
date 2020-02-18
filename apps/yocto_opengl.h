@@ -119,6 +119,7 @@ struct opengl_camera {
 struct opengl_texture {
   uint  texture_id = 0;
   vec2i size       = {0, 0};
+  int   nchan      = 0;
   bool  is_srgb    = false;
   bool  is_float   = false;
 
@@ -261,6 +262,10 @@ void set_texture(
     opengl_texture* texture, const image<vec4b>& img, bool as_srgb = true);
 void set_texture(
     opengl_texture* texture, const image<vec4f>& img, bool as_float = false);
+void set_texture(
+    opengl_texture* texture, const image<vec3b>& img, bool as_srgb = true);
+void set_texture(
+    opengl_texture* texture, const image<vec3f>& img, bool as_float = false);
 
 // material properties
 void set_emission(opengl_material* material, const vec3f& emission,

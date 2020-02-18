@@ -270,10 +270,6 @@ sceneio_model::~sceneio_model() {
   for (auto environment : environments) delete environment;
 }
 
-unique_ptr<sceneio_model> make_sceneio_model() {
-  return make_unique<sceneio_model>();
-}
-
 // add element
 sceneio_camera* add_camera(sceneio_model* scene) {
   auto camera  = scene->cameras.emplace_back(new sceneio_camera{});
@@ -407,9 +403,13 @@ void add_materials(sceneio_model* scene) {
 
 // Add a sky environment
 void add_sky(sceneio_model* scene, float sun_angle) {
-  auto texture              = add_texture(scene);
-  texture->name             = "environments/sky.hdr";
-  texture->hdr              = make_sunsky({1024, 512}, sun_angle);
+  auto texture  = add_texture(scene);
+  texture->name = "environments/sky.hdr";
+  auto sunsky   = make_sunsky({1024, 512}, sun_angle);
+  texture->hdr.resize(sunsky.size());
+  for (auto j = 0; j < sunsky.size().y; j++)
+    for (auto i = 0; j < sunsky.size().x; i++)
+      texture->hdr[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene);
   environment->name         = "environments/sky.yaml";
   environment->emission     = {1, 1, 1};
@@ -477,13 +477,13 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
     float displacement, sceneio_texture* displacement_tex, bool smooth) {
   // Evaluate a texture
   auto eval_texture = [](sceneio_texture* texture,
-                          const vec2f&    texcoord) -> vec4f {
+                          const vec2f&    texcoord) -> vec3f {
     if (!texture->hdr.empty()) {
       return eval_image(texture->hdr, texcoord, false, false);
     } else if (!texture->ldr.empty()) {
       return eval_image(texture->ldr, texcoord, true, false, false);
     } else {
-      return {1, 1, 1, 1};
+      return {1, 1, 1};
     }
   };
 
@@ -501,7 +501,7 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
     auto qtxt = subdiv->quadstexcoord[fid];
     for (auto i = 0; i < 4; i++) {
       auto disp = mean(
-          xyz(eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]])));
+          eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]]));
       if (!displacement_tex->ldr.empty()) disp -= 0.5f;
       offset[qpos[i]] += displacement * disp;
       count[qpos[i]] += 1;
@@ -569,56 +569,38 @@ void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb) {
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-[[nodiscard]] static bool load_json_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-[[nodiscard]] static bool save_json_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_json_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_json_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-[[nodiscard]] static bool load_obj_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-[[nodiscard]] static bool save_obj_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_obj_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_obj_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-[[nodiscard]] static bool load_ply_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-[[nodiscard]] static bool save_ply_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_ply_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_ply_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-[[nodiscard]] static bool load_gltf_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_gltf_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-[[nodiscard]] static bool load_pbrt_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-[[nodiscard]] static bool save_pbrt_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load a scene
-unique_ptr<sceneio_model> load_scene(const string& filename, string& error,
+bool load_scene(const string& filename, sceneio_model* scene, string& error,
     sceneio_progress progress_cb, bool noparallel) {
-  auto scene = make_unique<sceneio_model>();
-  if (!load_scene(filename, scene.get(), error, progress_cb, noparallel))
-    return nullptr;
-  return scene;
-}
-
-// Load a scene
-[[nodiscard]] bool load_scene(const string& filename, sceneio_model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -636,9 +618,8 @@ unique_ptr<sceneio_model> load_scene(const string& filename, string& error,
 }
 
 // Save a scene
-[[nodiscard]] bool save_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel) {
+bool save_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -681,7 +662,7 @@ static string get_extension(const string& filename) {
 }
 
 // load instances
-[[nodiscard]] static bool load_instances(
+static bool load_instances(
     const string& filename, vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -701,7 +682,7 @@ static string get_extension(const string& filename) {
 }
 
 // save instances
-[[nodiscard]] static bool save_instances(const string& filename,
+static bool save_instances(const string& filename,
     const vector<frame3f>& frames, string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -728,8 +709,7 @@ static string get_extension(const string& filename) {
 namespace yocto {
 
 // Load a text file
-[[nodiscard]] inline bool load_text(
-    const string& filename, string& str, string& error) {
+inline bool load_text(const string& filename, string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -753,7 +733,7 @@ namespace yocto {
 }
 
 // Save a text file
-[[nodiscard]] inline bool save_text(
+inline bool save_text(
     const string& filename, const string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -780,7 +760,7 @@ inline string load_text(const string& filename, string& error) {
 }
 
 // Load a binary file
-[[nodiscard]] inline bool load_binary(
+inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -805,7 +785,7 @@ inline string load_text(const string& filename, string& error) {
 }
 
 // Save a binary file
-[[nodiscard]] inline bool save_binary(
+inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -853,8 +833,7 @@ inline void from_json(const json& j, frame3f& value) {
 }
 
 // load/save json
-[[nodiscard]] inline bool load_json(
-    const string& filename, json& js, string& error) {
+inline bool load_json(const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -870,8 +849,7 @@ inline void from_json(const json& j, frame3f& value) {
   }
 }
 
-[[nodiscard]] inline bool save_json(
-    const string& filename, const json& js, string& error) {
+inline bool save_json(const string& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
 
@@ -1152,7 +1130,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!load_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }
@@ -1336,7 +1314,7 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
                 texture->hdr, error))
           return dependent_error();
       } else {
-        if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+        if (!save_image(fs::path(filename).parent_path() / texture->name,
                 texture->ldr, error))
           return dependent_error();
       }
@@ -1508,7 +1486,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -1540,7 +1518,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = make_obj();
+  auto obj_guard = make_unique<obj_model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1644,7 +1622,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }
@@ -1837,7 +1815,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -1997,7 +1975,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
     }
@@ -2012,14 +1990,14 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
               fs::path(filename).parent_path() / path, texture->hdr, error))
         return dependent_error();
       for (auto& c : texture->hdr)
-        c = (max(xyz(c)) < 0.01) ? vec4f{0, 0, 0, 0} : vec4f{1, 1, 1, 1};
+        c = (max(c) < 0.01) ? vec3f{0, 0, 0} : vec3f{1, 1, 1};
     } else {
-      if (!load_imageb(
+      if (!load_image(
               fs::path(filename).parent_path() / path, texture->ldr, error))
         return dependent_error();
       for (auto& c : texture->ldr) {
-        c = (max(max(c.x, c.y), c.z) < 2) ? vec4b{0, 0, 0, 0}
-                                          : vec4b{255, 255, 255, 255};
+        c = (max(max(c.x, c.y), c.z) < 2) ? vec3b{0, 0, 0}
+                                          : vec3b{255, 255, 255};
       }
     }
   }
@@ -2048,7 +2026,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = make_pbrt();
+  auto pbrt_guard = make_unique<pbrt_model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
@@ -2132,7 +2110,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
               texture->hdr, error))
         return dependent_error();
     } else {
-      if (!save_imageb(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
               texture->ldr, error))
         return dependent_error();
     }

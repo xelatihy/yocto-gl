@@ -382,19 +382,11 @@ ply_model::~ply_model() {
 }
 
 // Make ply
-unique_ptr<ply_model> make_ply() { return make_unique<ply_model>(); }
-ply_element*          add_property(ply_model* ply) {
+ply_element* add_property(ply_model* ply) {
   return ply->elements.emplace_back(new ply_element{});
 }
 ply_property* add_property(ply_element* element) {
   return element->properties.emplace_back(new ply_property{});
-}
-
-// Read ply
-unique_ptr<ply_model> load_ply(const string& filename, string& error) {
-  auto ply = make_ply();
-  if (!load_ply(filename, ply.get(), error)) return nullptr;
-  return ply;
 }
 
 // Load ply
@@ -1609,8 +1601,7 @@ obj_model::~obj_model() {
 }
 
 // Make obj
-unique_ptr<obj_model> make_obj() { return make_unique<obj_model>(); }
-obj_camera*           add_camera(obj_model* obj) {
+obj_camera* add_camera(obj_model* obj) {
   return obj->cameras.emplace_back(new obj_camera{});
 }
 obj_material* add_material(obj_model* obj) {
@@ -1621,16 +1612,6 @@ obj_environment* add_environment(obj_model* obj) {
 }
 obj_shape* add_shape(obj_model* obj) {
   return obj->shapes.emplace_back(new obj_shape{});
-}
-
-// Read obj
-unique_ptr<obj_model> load_obj(const string& filename, string& error,
-    bool geom_only, bool split_elements, bool split_materials) {
-  auto obj = make_obj();
-  if (!load_obj(filename, obj.get(), error, geom_only, split_elements,
-          split_materials))
-    return nullptr;
-  return obj;
 }
 
 // Read obj
@@ -4486,8 +4467,7 @@ pbrt_model::~pbrt_model() {
 }
 
 // Make pbrt
-unique_ptr<pbrt_model> make_pbrt() { return make_unique<pbrt_model>(); }
-pbrt_camera*           add_camera(pbrt_model* pbrt) {
+pbrt_camera* add_camera(pbrt_model* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
 pbrt_shape* add_shape(pbrt_model* pbrt) {
@@ -4501,13 +4481,6 @@ pbrt_environment* add_environment(pbrt_model* pbrt) {
 }
 pbrt_light* add_light(pbrt_model* pbrt) {
   return pbrt->lights.emplace_back(new pbrt_light{});
-}
-
-// Read pbrt
-unique_ptr<pbrt_model> load_pbrt(const string& filename, string& error) {
-  auto pbrt = make_pbrt();
-  if (!load_pbrt(filename, pbrt.get(), error)) return nullptr;
-  return pbrt;
 }
 
 // load pbrt
@@ -4786,13 +4759,14 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
         command.values.push_back(make_pbrt_value("uv", shape->texcoords));
     }
     if (ply_meshes) {
-      auto ply = make_ply();
-      add_positions(ply.get(), shape->positions);
-      add_normals(ply.get(), shape->normals);
-      add_texcoords(ply.get(), shape->texcoords);
-      add_triangles(ply.get(), shape->triangles);
-      if (!save_ply(fs::path(filename).parent_path() / shape->filename_,
-              ply.get(), error))
+      auto ply_guard = make_unique<ply_model>();
+      auto ply       = ply_guard.get();
+      add_positions(ply, shape->positions);
+      add_normals(ply, shape->normals);
+      add_texcoords(ply, shape->texcoords);
+      add_triangles(ply, shape->triangles);
+      if (!save_ply(
+              fs::path(filename).parent_path() / shape->filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
@@ -4847,13 +4821,6 @@ gltf_model::~gltf_model() {
   for (auto primitive : primitives) delete primitive;
   for (auto texture : textures) delete texture;
   for (auto material : materials) delete material;
-}
-
-// convert gltf to scene
-unique_ptr<gltf_model> load_gltf(const string& filename, string& error) {
-  auto scene = make_unique<gltf_model>();
-  if (!load_gltf(filename, scene.get(), error)) return nullptr;
-  return scene;
 }
 
 // convert gltf to scene
