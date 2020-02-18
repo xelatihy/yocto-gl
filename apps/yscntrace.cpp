@@ -42,7 +42,7 @@ namespace fs = ghc::filesystem;
 
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene,
-  trace_camera*& camera, sceneio_camera* iocamera,
+    trace_camera*& camera, sceneio_camera* iocamera,
     sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -165,13 +165,13 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params     = trace_params{};
-  auto batch      = 16;
-  auto save_batch = false;
-  auto add_skyenv = false;
-  auto camera_name    = ""s;
-  auto imfilename = "out.hdr"s;
-  auto filename   = "scene.json"s;
+  auto params      = trace_params{};
+  auto batch       = 16;
+  auto save_batch  = false;
+  auto add_skyenv  = false;
+  auto camera_name = ""s;
+  auto imfilename  = "out.hdr"s;
+  auto filename    = "scene.json"s;
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");

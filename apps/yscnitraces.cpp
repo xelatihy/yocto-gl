@@ -47,8 +47,8 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene* scene      = new trace_scene{};
-  trace_camera* camera      = nullptr;
+  trace_scene*  scene  = new trace_scene{};
+  trace_camera* camera = nullptr;
 
   // rendering state
   image<vec4f> render   = {};
@@ -75,8 +75,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene, 
-  trace_camera*& camera, sceneio_camera* iocamera,
+void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
     sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -230,8 +230,8 @@ int main(int argc, const char* argv[]) {
   auto app       = app_guard.get();
 
   // command line options
-  auto camera_name    = ""s;
-  auto add_skyenv     = false;
+  auto camera_name = ""s;
+  auto add_skyenv  = false;
 
   // parse command line
   auto cli = make_cli("yscnitraces", "progressive path tracing");
@@ -316,9 +316,11 @@ int main(int argc, const char* argv[]) {
           if (input.mouse_right)
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus / 200.0f;
+            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+                  200.0f;
           pan.x = -pan.x;
-          update_turntable(app->camera->frame, app->camera->focus, rotate, dolly, pan);
+          update_turntable(
+              app->camera->frame, app->camera->focus, rotate, dolly, pan);
           reset_display(app);
         }
       });

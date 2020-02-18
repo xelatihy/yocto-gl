@@ -246,8 +246,7 @@ void update_bvh(trace_scene* scene, const vector<int>& updated_instances,
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
-    const trace_params& params, 
-    trace_progress       progress_cb       = {},
+    const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {});
 
 // Check is a sampler requires lights
@@ -260,8 +259,8 @@ using trace_process_async = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_async_start(trace_state* state, const trace_scene* scene,
-const trace_camera* camera,
-    const trace_params& params, trace_progress progress_cb = {},
+    const trace_camera* camera, const trace_params& params,
+    trace_progress       progress_cb       = {},
     trace_progress_image progress_image_cb = {},
     trace_process_async  progress_async_cb = {});
 void trace_async_stop(trace_state* state);

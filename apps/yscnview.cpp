@@ -65,11 +65,11 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  sceneio_model* ioscene = new sceneio_model{};
+  sceneio_model*  ioscene  = new sceneio_model{};
   sceneio_camera* iocamera = nullptr;
 
   // rendering state
-  opengl_scene* glscene = new opengl_scene{};
+  opengl_scene*  glscene  = new opengl_scene{};
   opengl_camera* glcamera = nullptr;
 
   // editing
@@ -112,7 +112,8 @@ struct app_states {
   }
 };
 
-void load_scene_async(app_states* apps, const string& filename, const string& camera_name = "") {
+void load_scene_async(
+    app_states* apps, const string& filename, const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = fs::path(filename).replace_extension(".png");
@@ -164,7 +165,7 @@ void update_lights(opengl_scene* glscene, sceneio_model* ioscene) {
 }
 
 void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
-  opengl_camera*& glcamera, sceneio_camera* iocamera,
+    opengl_camera*& glcamera, sceneio_camera* iocamera,
     sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -502,8 +503,9 @@ void draw_glwidgets(
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_glheader(win, "view")) {
-    if(draw_glcombobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-      app->glcamera = get_element(app->iocamera, app->ioscene->cameras, app->glscene->cameras);
+    if (draw_glcombobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+      app->glcamera = get_element(
+          app->iocamera, app->ioscene->cameras, app->glscene->cameras);
     }
     auto& params = app->drawgl_prms;
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -678,7 +680,8 @@ void draw_glwidgets(
 void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport, app->drawgl_prms);
+  draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
+      app->drawgl_prms);
 }
 
 // update
@@ -697,7 +700,8 @@ void update(opengl_window* win, app_states* apps) {
     };
     app->loader.get();
     if (app->loader_error.empty()) {
-      init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera, progress_cb);
+      init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
+          progress_cb);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
@@ -710,9 +714,9 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto apps_guard = make_unique<app_states>();
-  auto apps       = apps_guard.get();
-  auto filenames  = vector<string>{};
+  auto apps_guard  = make_unique<app_states>();
+  auto apps        = apps_guard.get();
+  auto filenames   = vector<string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -749,27 +753,28 @@ int main(int argc, const char* argv[]) {
       win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](opengl_window*   win,
-                                   const opengl_input& input) {
-    if (!apps->selected || !apps->selected->ok) return;
-    auto app = apps->selected;
+  set_uiupdate_glcallback(
+      win, [apps](opengl_window* win, const opengl_input& input) {
+        if (!apps->selected || !apps->selected->ok) return;
+        auto app = apps->selected;
 
-    // handle mouse and keyboard for navigation
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto dolly    = 0.0f;
-      auto pan      = zero2f;
-      auto rotate   = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-      set_frame(app->glcamera, app->iocamera->frame);
-    }
-  });
+        // handle mouse and keyboard for navigation
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+            !input.widgets_active) {
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+          update_turntable(
+              app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+          set_frame(app->glcamera, app->iocamera->frame);
+        }
+      });
 
   // run ui
   run_ui(win);

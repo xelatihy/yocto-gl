@@ -348,8 +348,9 @@ sceneio_object* add_complete_object(
 // get named camera or default if camera is empty
 sceneio_camera* get_camera(const sceneio_model* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
-  auto search_name = 
-      (name.find(".json") == string::npos) ? ("cameras/" + name + ".json") : name;
+  auto search_name = (name.find(".json") == string::npos)
+                         ? ("cameras/" + name + ".json")
+                         : name;
   for (auto camera : scene->cameras) {
     if (camera->name == search_name) return camera;
   }
