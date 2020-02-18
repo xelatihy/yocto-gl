@@ -118,6 +118,8 @@ int main(int argc, const char* argv[]) {
     dirnames.insert(dirname / "subdivs");
   if (!scene->textures.empty())
     dirnames.insert(dirname / "textures");
+  if (!scene->instances.empty())
+    dirnames.insert(dirname / "instances");
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       throw std::runtime_error{"cannot create directory " + output};
