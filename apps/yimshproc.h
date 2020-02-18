@@ -19,8 +19,8 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  opengl_scene* glscene          = new opengl_scene{};
-  draw_glscene_params      opengl_options = {};
+  opengl_scene*       glscene        = new opengl_scene{};
+  draw_glscene_params opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -49,7 +49,7 @@ struct app_state {
 
   // cleanup
   ~app_state() {
-    if(glscene) delete glscene;
+    if (glscene) delete glscene;
   }
 };
 
@@ -291,8 +291,8 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
   // callbacks
   set_draw_glcallback(
       win, [app](opengl_window* win, const opengl_input& input) {
-        draw_glscene(
-            app->glscene, app->glcamera, input.framebuffer_viewport, app->opengl_options);
+        draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
+            app->opengl_options);
       });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](opengl_window* win,
