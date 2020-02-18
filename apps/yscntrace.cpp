@@ -63,10 +63,14 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
     auto texture = add_texture(scene);
-    if (!iotexture->hdr.empty()) {
-      set_texture(texture, std::move(iotexture->hdr));
-    } else if (!iotexture->ldr.empty()) {
-      set_texture(texture, std::move(iotexture->ldr));
+    if (!iotexture->colorf.empty()) {
+      set_texture(texture, iotexture->colorf);
+    } else if (!iotexture->colorb.empty()) {
+      set_texture(texture, iotexture->colorb);
+    } else if (!iotexture->scalarf.empty()) {
+      set_texture(texture, iotexture->scalarf);
+    } else if (!iotexture->scalarb.empty()) {
+      set_texture(texture, iotexture->scalarb);
     }
     texture_map[iotexture] = texture;
   }
