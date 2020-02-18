@@ -720,19 +720,20 @@ static trace_point eval_point(const trace_scene* scene,
   point.incoming = -ray.d;
 
   // geometric properties
-  point.position = eval_shape_elem(shape, shape->positions, element, uv, zero3f);
+  point.position = eval_shape_elem(
+      shape, shape->positions, element, uv, zero3f);
   point.gnormal = eval_element_normal(shape, element);
-  point.normal   = normalize(eval_shape_elem(shape,
-                           shape->normals, element, uv, point.gnormal));
-  point.texcoord = eval_shape_elem(shape, 
-                             shape->texcoords, element, uv, uv);
-  point.color = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
+  point.normal  = normalize(
+      eval_shape_elem(shape, shape->normals, element, uv, point.gnormal));
+  point.texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
+  point.color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
 
   // apply normal mapping
-  if (material->normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
-    auto normalmap = -1 +
-                     2 * eval_texture(material->normal_tex, point.texcoord, true);
-    auto z = point.normal;
+  if (material->normal_tex &&
+      (!shape->triangles.empty() || !shape->quads.empty())) {
+    auto normalmap = -1 + 2 * eval_texture(
+                                  material->normal_tex, point.texcoord, true);
+    auto z      = point.normal;
     auto basis  = identity3x3f;
     auto flip_v = false;
     if (shape->tangents.empty()) {
@@ -742,20 +743,22 @@ static trace_point eval_point(const trace_scene* scene,
       basis         = {x, y, z};
       flip_v        = dot(y, tangents.second) < 0;
     } else {
-      auto tangsp = eval_shape_elem(shape, shape->tangents, element, uv, {0,0,0,1});
-      auto x      = orthonormalize(xyz(tangsp), z);
-      auto y      = normalize(cross(z, x));
-      basis       = {x, y, z};
-      flip_v      = tangsp.w < 0;
+      auto tangsp = eval_shape_elem(
+          shape, shape->tangents, element, uv, {0, 0, 0, 1});
+      auto x = orthonormalize(xyz(tangsp), z);
+      auto y = normalize(cross(z, x));
+      basis  = {x, y, z};
+      flip_v = tangsp.w < 0;
     }
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
-    point.normal  = normalize(basis * normalmap);
+    point.normal = normalize(basis * normalmap);
   }
 
   // transforms
   point.position = transform_point(frame, point.position);
   point.normal  = transform_normal(frame, point.normal, trace_non_rigid_frames);
-  point.gnormal = transform_normal(frame, point.gnormal, trace_non_rigid_frames);
+  point.gnormal = transform_normal(
+      frame, point.gnormal, trace_non_rigid_frames);
 
   // correct normals
   if (!shape->points.empty()) {
@@ -882,14 +885,15 @@ static volume_point eval_volume(const trace_scene* scene,
   point.incoming = -ray.d;
 
   // geometric properties
-  point.position = eval_shape_elem(shape, shape->positions, element, uv, zero3f);
+  point.position = eval_shape_elem(
+      shape, shape->positions, element, uv, zero3f);
   point.position = transform_point(frame, point.position);
 
   // material -------
   // initialize factors
   auto texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
-  auto color = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
-  auto base = material->color * color *
+  auto color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
+  auto base     = material->color * color *
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
@@ -2452,8 +2456,8 @@ static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     auto  frame     = object->instance->frames[light->instance] * object->frame;
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto  lposition = transform_point(frame,
-        eval_shape_elem(shape, shape->positions, element, uv, zero3f));
+    auto  lposition = transform_point(
+        frame, eval_shape_elem(shape, shape->positions, element, uv, zero3f));
     return normalize(lposition - position);
   } else if (light->environment) {
     auto& environment = light->environment;
@@ -2491,9 +2495,8 @@ static float sample_lights_pdf(
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
-            frame, eval_shape_elem(object->shape,
-                       object->shape->positions, intersection.element,
-                       intersection.uv, zero3f));
+            frame, eval_shape_elem(object->shape, object->shape->positions,
+                       intersection.element, intersection.uv, zero3f));
         auto lnormal = transform_normal(frame,
             eval_element_normal(object->shape, intersection.element),
             trace_non_rigid_frames);
