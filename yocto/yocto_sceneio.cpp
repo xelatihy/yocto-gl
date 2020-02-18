@@ -569,55 +569,46 @@ void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb) {
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-[[nodiscard]] static bool load_json_scene(const string& filename,
+static bool load_json_scene(const string& filename,
     sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
-[[nodiscard]] static bool save_json_scene(const string& filename,
+static bool save_json_scene(const string& filename,
     const sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to OBJ.
-[[nodiscard]] static bool load_obj_scene(const string& filename,
+static bool load_obj_scene(const string& filename,
     sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
-[[nodiscard]] static bool save_obj_scene(const string& filename,
+static bool save_obj_scene(const string& filename,
     const sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-[[nodiscard]] static bool load_ply_scene(const string& filename,
+static bool load_ply_scene(const string& filename,
     sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
-[[nodiscard]] static bool save_ply_scene(const string& filename,
+static bool save_ply_scene(const string& filename,
     const sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to glTF.
-[[nodiscard]] static bool load_gltf_scene(const string& filename,
+static bool load_gltf_scene(const string& filename,
     sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-[[nodiscard]] static bool load_pbrt_scene(const string& filename,
+static bool load_pbrt_scene(const string& filename,
     sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
-[[nodiscard]] static bool save_pbrt_scene(const string& filename,
+static bool save_pbrt_scene(const string& filename,
     const sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel);
 
 // Load a scene
-unique_ptr<sceneio_model> load_scene(const string& filename, string& error,
-    sceneio_progress progress_cb, bool noparallel) {
-  auto scene = make_unique<sceneio_model>();
-  if (!load_scene(filename, scene.get(), error, progress_cb, noparallel))
-    return nullptr;
-  return scene;
-}
-
-// Load a scene
-[[nodiscard]] bool load_scene(const string& filename, sceneio_model* scene,
+bool load_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
@@ -636,7 +627,7 @@ unique_ptr<sceneio_model> load_scene(const string& filename, string& error,
 }
 
 // Save a scene
-[[nodiscard]] bool save_scene(const string& filename,
+bool save_scene(const string& filename,
     const sceneio_model* scene, string& error, sceneio_progress progress_cb,
     bool noparallel) {
   auto ext = fs::path(filename).extension();
@@ -681,7 +672,7 @@ static string get_extension(const string& filename) {
 }
 
 // load instances
-[[nodiscard]] static bool load_instances(
+static bool load_instances(
     const string& filename, vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -701,7 +692,7 @@ static string get_extension(const string& filename) {
 }
 
 // save instances
-[[nodiscard]] static bool save_instances(const string& filename,
+static bool save_instances(const string& filename,
     const vector<frame3f>& frames, string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -728,7 +719,7 @@ static string get_extension(const string& filename) {
 namespace yocto {
 
 // Load a text file
-[[nodiscard]] inline bool load_text(
+inline bool load_text(
     const string& filename, string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -753,7 +744,7 @@ namespace yocto {
 }
 
 // Save a text file
-[[nodiscard]] inline bool save_text(
+inline bool save_text(
     const string& filename, const string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -780,7 +771,7 @@ inline string load_text(const string& filename, string& error) {
 }
 
 // Load a binary file
-[[nodiscard]] inline bool load_binary(
+inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -805,7 +796,7 @@ inline string load_text(const string& filename, string& error) {
 }
 
 // Save a binary file
-[[nodiscard]] inline bool save_binary(
+inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -853,7 +844,7 @@ inline void from_json(const json& j, frame3f& value) {
 }
 
 // load/save json
-[[nodiscard]] inline bool load_json(
+inline bool load_json(
     const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
@@ -870,7 +861,7 @@ inline void from_json(const json& j, frame3f& value) {
   }
 }
 
-[[nodiscard]] inline bool save_json(
+inline bool save_json(
     const string& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
@@ -1540,7 +1531,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = make_obj();
+  auto obj_guard = make_unique<obj_model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -2048,7 +2039,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = make_pbrt();
+  auto pbrt_guard = make_unique<pbrt_model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera

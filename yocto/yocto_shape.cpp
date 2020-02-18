@@ -3465,7 +3465,7 @@ static string get_extension(const string& filename) {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = make_obj();
+    auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
@@ -3568,7 +3568,7 @@ static string get_extension(const string& filename) {
         flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
-    auto obj_guard = make_obj();
+    auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
 
     // Add obj data

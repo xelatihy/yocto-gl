@@ -101,9 +101,9 @@ struct ply_model {
 
 // Load and save ply
 unique_ptr<ply_model> load_ply(const string& filename, string& error);
-[[nodiscard]] bool    load_ply(
+bool    load_ply(
        const string& filename, ply_model* ply, string& error);
-[[nodiscard]] bool save_ply(
+bool save_ply(
     const string& filename, ply_model* ply, string& error);
 
 // Get ply properties
@@ -148,9 +148,6 @@ vector<int>         get_points(ply_model* ply);
 vector<vec3i>       get_triangles(ply_model* ply);
 vector<vec4i>       get_quads(ply_model* ply);
 bool                has_quads(ply_model* ply);
-
-// Create PLY
-unique_ptr<ply_model> make_ply();
 
 // Add ply properties
 void add_values(ply_model* ply, const vector<float>& values,
@@ -339,13 +336,10 @@ struct obj_model {
 };
 
 // Load and save obj
-unique_ptr<obj_model> load_obj(const string& filename, string& error,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
-[[nodiscard]] bool    load_obj(const string& filename, obj_model* obj,
+bool    load_obj(const string& filename, obj_model* obj,
        string& error, bool geom_only = false, bool split_elements = true,
        bool split_materials = false);
-[[nodiscard]] bool    save_obj(
+bool    save_obj(
        const string& filename, obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
@@ -391,7 +385,6 @@ void get_points(obj_model* obj, obj_shape* shape, int material,
 vector<obj_material*> get_materials(obj_model* obj, obj_shape* shape);
 
 // Create OBJ
-unique_ptr<obj_model> make_obj();
 obj_camera*           add_camera(obj_model* obj);
 obj_material*         add_material(obj_model* obj);
 obj_environment*      add_environment(obj_model* obj);
@@ -541,14 +534,12 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-unique_ptr<pbrt_model> load_pbrt(const string& filename, string& error);
-[[nodiscard]] bool     load_pbrt(
+bool     load_pbrt(
         const string& filename, pbrt_model* pbrt, string& error);
-[[nodiscard]] bool save_pbrt(const string& filename, pbrt_model* pbrt,
+bool save_pbrt(const string& filename, pbrt_model* pbrt,
     string& error, bool ply_meshes = false);
 
 // Create pbrt
-unique_ptr<pbrt_model> make_pbrt();
 pbrt_camera*           add_camera(pbrt_model* pbrt);
 pbrt_shape*            add_shape(pbrt_model* pbrt);
 pbrt_material*         add_material(pbrt_model* pbrt);
@@ -612,8 +603,7 @@ struct gltf_model {
 };
 
 // Load gltf file.
-unique_ptr<gltf_model> load_gltf(const string& filename, string& error);
-[[nodiscard]] bool     load_gltf(
+bool     load_gltf(
         const string& filename, gltf_model* gltf, string& error);
 
 }  // namespace yocto
