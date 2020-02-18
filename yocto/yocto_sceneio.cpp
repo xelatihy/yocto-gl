@@ -57,46 +57,6 @@ using std::make_unique;
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -284,81 +244,67 @@ sceneio_model::~sceneio_model() {
 }
 
 // add element
-sceneio_camera* add_camera(sceneio_model* scene) {
+sceneio_camera* add_camera(sceneio_model* scene, const string& name) {
   auto camera  = scene->cameras.emplace_back(new sceneio_camera{});
-  camera->name = "cameras/camera" + std::to_string(scene->cameras.size()) +
-                 ".json";
+  camera->name = name != "" ? name : ("camera" + std::to_string(scene->cameras.size()));
   return camera;
 }
-sceneio_environment* add_environment(sceneio_model* scene) {
+sceneio_environment* add_environment(sceneio_model* scene, const string& name) {
   auto environment = scene->environments.emplace_back(
       new sceneio_environment{});
-  environment->name = "environments/environment" +
-                      std::to_string(scene->environments.size()) + ".json";
+  environment->name = name != "" ? name : ("environment" +
+                      std::to_string(scene->environments.size()));
   return environment;
 }
-sceneio_shape* add_shape(sceneio_model* scene) {
+sceneio_shape* add_shape(sceneio_model* scene, const string& name) {
   auto shape  = scene->shapes.emplace_back(new sceneio_shape{});
-  shape->name = "shapes/shape" + std::to_string(scene->shapes.size()) + ".ply";
+  shape->name = name != "" ? name : ("shape" + std::to_string(scene->shapes.size()));
   return shape;
 }
-sceneio_subdiv* add_subdiv(sceneio_model* scene) {
+sceneio_subdiv* add_subdiv(sceneio_model* scene, const string& name) {
   auto subdiv  = scene->subdivs.emplace_back(new sceneio_subdiv{});
-  subdiv->name = "subdivs/subdiv" + std::to_string(scene->subdivs.size()) +
-                 ".obj";
+  subdiv->name = name != "" ? name : ("subdiv" + std::to_string(scene->subdivs.size()));
   return subdiv;
 }
-sceneio_texture* add_texture(sceneio_model* scene) {
+sceneio_texture* add_texture(sceneio_model* scene, const string& name) {
   auto texture  = scene->textures.emplace_back(new sceneio_texture{});
-  texture->name = "textures/texture" + std::to_string(scene->textures.size()) +
-                  ".png";
+  texture->name = name != "" ? name : ("texture" + std::to_string(scene->textures.size()));
   return texture;
 }
-sceneio_object* add_object(sceneio_model* scene) {
+sceneio_object* add_object(sceneio_model* scene, const string& name) {
   auto object  = scene->objects.emplace_back(new sceneio_object{});
-  object->name = "objects/object" + std::to_string(scene->objects.size()) +
-                 ".json";
+  object->name = name != "" ? name : ("object" + std::to_string(scene->objects.size()));
   return object;
 }
-sceneio_instance* add_instance(sceneio_model* scene) {
+sceneio_instance* add_instance(sceneio_model* scene, const string& name) {
   auto instance  = scene->instances.emplace_back(new sceneio_instance{});
-  instance->name = "instances/instance" +
-                   std::to_string(scene->instances.size()) + ".ply";
+  instance->name = name != "" ? name : ("instance" + std::to_string(scene->instances.size()));
   return instance;
 }
-sceneio_material* add_material(sceneio_model* scene) {
+sceneio_material* add_material(sceneio_model* scene, const string& name) {
   auto material  = scene->materials.emplace_back(new sceneio_material{});
-  material->name = "materials/material" +
-                   std::to_string(scene->materials.size()) + ".json";
+  material->name = name != "" ? name : ("material" + std::to_string(scene->materials.size()));
   return material;
 }
 sceneio_object* add_complete_object(
-    sceneio_model* scene, const string& basename) {
-  auto object      = add_object(scene);
-  object->shape    = add_shape(scene);
-  object->material = add_material(scene);
-  if (!basename.empty()) {
-    object->name           = "objects/" + basename + ".json";
-    object->shape->name    = "materials/" + basename + ".json";
-    object->material->name = "shapes/" + basename + ".ply";
-  }
+    sceneio_model* scene, const string& name) {
+  auto object      = add_object(scene, name);
+  object->shape    = add_shape(scene, name);
+  object->material = add_material(scene, name);
   return object;
 }
 
 // get named camera or default if camera is empty
 sceneio_camera* get_camera(const sceneio_model* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
-  auto search_name = (name.find(".json") == string::npos)
-                         ? ("cameras/" + name + ".json")
-                         : name;
   for (auto camera : scene->cameras) {
-    if (camera->name == search_name) return camera;
+    if (camera->name == name) return camera;
   }
   for (auto camera : scene->cameras) {
-    if (camera->name.find("/default.") != string::npos) return camera;
+    if (camera->name == "default") return camera;
   }
   for (auto camera : scene->cameras) {
-    if (camera->name.find("/camera.") != string::npos) return camera;
+    if (camera->name == "camera") return camera;
   }
   return scene->cameras.front();
 }
@@ -389,8 +335,7 @@ bbox3f compute_bounds(const sceneio_model* scene) {
 // Add missing cameras.
 void add_cameras(sceneio_model* scene) {
   if (!scene->cameras.empty()) return;
-  auto camera          = add_camera(scene);
-  camera->name         = "cameras/default.json";
+  auto camera          = add_camera(scene, "camera");
   camera->orthographic = false;
   camera->film         = 0.036;
   camera->aspect       = (float)16 / (float)9;
@@ -434,15 +379,13 @@ void add_materials(sceneio_model* scene) {
 
 // Add a sky environment
 void add_sky(sceneio_model* scene, float sun_angle) {
-  auto texture  = add_texture(scene);
-  texture->name = "environments/sky.hdr";
+  auto texture  = add_texture(scene, "sky");
   auto sunsky   = make_sunsky({1024, 512}, sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
     for (auto i = 0; j < sunsky.size().x; i++)
       texture->colorf[{i, j}] = xyz(sunsky[{i, j}]);
-  auto environment          = add_environment(scene);
-  environment->name         = "environments/sky.yaml";
+  auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
   environment->emission_tex = texture;
 }
@@ -1054,8 +997,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       value = it->second;
       return true;
     }
-    auto texture       = add_texture(scene);
-    texture->name      = path;
+    auto texture       = add_texture(scene, path);
     ctexture_map[path] = texture;
     value              = texture;
     return true;
@@ -1075,8 +1017,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       value = it->second;
       return true;
     }
-    auto texture       = add_texture(scene);
-    texture->name      = path;
+    auto texture       = add_texture(scene, path);
     stexture_map[path] = texture;
     value              = texture;
     return true;
@@ -1096,8 +1037,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       value = it->second;
       return it->second;
     }
-    auto shape      = add_shape(scene);
-    shape->name     = path;
+    auto shape      = add_shape(scene, path);
     shape_map[path] = shape;
     value           = shape;
     return true;
@@ -1117,8 +1057,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       value = it->second;
       return true;
     }
-    auto subdiv      = add_subdiv(scene);
-    subdiv->name     = path;
+    auto subdiv      = add_subdiv(scene, path);
     subdiv_map[path] = subdiv;
     value            = subdiv;
     return true;
@@ -1138,8 +1077,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       value = it->second;
       return true;
     }
-    auto instance      = add_instance(scene);
-    instance->name     = path;
+    auto instance      = add_instance(scene, path);
     instance_map[path] = instance;
     value              = instance;
     return true;
@@ -1256,11 +1194,22 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   progress.y += scene->textures.size();
   progress.y += scene->instances.size();
 
+  // get filename from name
+  auto get_filename = [filename](const string& name, const string& group, const vector<string>& extensions) {
+    for(auto& extension : extensions) {
+      auto filepath = fs::path(filename).parent_path() / group / (name + extension);
+      if(fs::exists(filepath))
+          return filepath;
+    }
+    return fs::path(filename).parent_path() / group / (name + extensions.front());
+  };
+
   // load shapes
   shape_map.erase("");
-  for (auto [path, shape] : shape_map) {
+  for (auto [name, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    if (!load_shape(fs::path(filename).parent_path() / path, shape->points,
+    auto path = get_filename(name, "shapes", {".ply", ".obj"});
+    if (!load_shape(path, shape->points,
             shape->lines, shape->triangles, shape->quads, shape->positions,
             shape->normals, shape->texcoords, shape->colors, shape->radius,
             error))
@@ -1268,35 +1217,38 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   }
   // load subdivs
   subdiv_map.erase("");
-  for (auto [path, subdiv] : subdiv_map) {
+  for (auto [name, subdiv] : subdiv_map) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    if (!load_fvshape(fs::path(filename).parent_path() / path, subdiv->quadspos,
+    auto path = get_filename(name, "subdivs", {".obj"});
+    if (!load_fvshape(path, subdiv->quadspos,
             subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
             subdiv->normals, subdiv->texcoords, error))
       return dependent_error();
   }
   // load textures
   ctexture_map.erase("");
-  for (auto [path, texture] : ctexture_map) {
+  for (auto [name, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
+    auto path = get_filename(name, "textures", {".hdr",".exr",".png",".jpg"});
+    if (!load_image(path, texture->colorf,
             texture->colorb, error))
       return dependent_error();
   }
   // load textures
   stexture_map.erase("");
-  for (auto [path, texture] : stexture_map) {
+  for (auto [name, texture] : stexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(fs::path(filename).parent_path() / path, texture->scalarf,
+    auto path = get_filename(name, "textures", {".hdr",".exr",".png",".jpg"});
+    if (!load_image(path, texture->scalarf,
             texture->scalarb, error))
       return dependent_error();
   }
   // load instances
   instance_map.erase("");
-  for (auto [path, instance] : instance_map) {
+  for (auto [name, instance] : instance_map) {
     if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
-    if (!load_instance(
-            fs::path(filename).parent_path() / path, instance->frames, error))
+    auto path = get_filename(name, "instances", {".ply"});
+    if (!load_instance(path, instance->frames, error))
       return dependent_error();
   }
 
@@ -1422,10 +1374,16 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save json
   if (!save_json(filename, js, error)) return false;
 
+  // get filename from name
+  auto get_filename = [filename](const string& name, const string& group, const string& extension) {
+    return fs::path(filename).parent_path() / group / (name + extension);
+  };
+
   // save shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    if (!save_shape(fs::path(filename).parent_path() / shape->name,
+    auto path = get_filename(shape->name, "shapes", ".ply");
+    if (!save_shape(path,
             shape->points, shape->lines, shape->triangles, shape->quads,
             shape->positions, shape->normals, shape->texcoords, shape->colors,
             shape->radius, error))
@@ -1435,7 +1393,8 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save subdivs
   for (auto subdiv : scene->subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    if (!save_fvshape(fs::path(filename).parent_path() / subdiv->name,
+    auto path = get_filename(subdiv->name, "subdivs", ".obj");
+    if (!save_fvshape(path,
             subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
             subdiv->positions, subdiv->normals, subdiv->texcoords, error))
       return dependent_error();
@@ -1444,7 +1403,8 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save instances
   for (auto instance : scene->instances) {
     if (progress_cb) progress_cb("save instance", progress.x++, progress.y);
-    if (!save_instance(fs::path(filename).parent_path() / instance->name,
+    auto path = get_filename(instance->name, "instances", ".ply");
+    if (!save_instance(path,
             instance->frames, error))
       return dependent_error();
   }
@@ -1452,12 +1412,13 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+    auto path = get_filename(texture->name, "textures", (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr" : ".png");
     if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(path,
               texture->colorf, texture->colorb, error))
         return dependent_error();
     } else {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
+      if (!save_image(path,
               texture->scalarf, texture->scalarb, error))
         return dependent_error();
     }

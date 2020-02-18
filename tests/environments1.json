@@ -1,6 +1,6 @@
 {
   "cameras": {
-    "cameras/default.json": {
+    "default": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -16,7 +16,7 @@
         0
       ]
     },
-    "cameras/front.json": {
+    "front": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -32,7 +32,7 @@
         0
       ]
     },
-    "cameras/back.json": {
+    "back": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -48,7 +48,7 @@
         0
       ]
     },
-    "cameras/perspective-sharp.json": {
+    "perspective-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -64,7 +64,7 @@
         0
       ]
     },
-    "cameras/perspective-dof.json": {
+    "perspective-dof": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -80,7 +80,7 @@
         0
       ]
     },
-    "cameras/orthographic-sharp.json": {
+    "orthographic-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -97,7 +97,7 @@
         0
       ]
     },
-    "cameras/orthographic-dof.json": {
+    "orthographic-dof": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -116,22 +116,22 @@
     }
   },
   "environments": {
-    "environments/sunsky.json": {
+    "sunsky": {
       "emission": [
         1,
         1,
         1
       ],
-      "emission_tex": "environments/sunsky.hdr"
+      "emission_tex": "sunsky"
     }
   },
   "objects": {
-    "shapes/floor.json": {
-      "shape": "shapes/floor.ply",
-      "material": "materials/floor.json"
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
     },
-    "shapes/bunny-uvgrid.json": {
-      "shape": "shapes/bunny.obj",
+    "bunny-uvgrid": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -146,10 +146,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-uvgrid.json"
+      "material": "bunny-uvgrid"
     },
-    "shapes/sphere-plastic-sharp.json": {
-      "shape": "shapes/sphere.ply",
+    "sphere-plastic-sharp": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -164,10 +164,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-sharp.json"
+      "material": "sphere-plastic-sharp"
     },
-    "shapes/bunny-metal-rough.json": {
-      "shape": "shapes/bunny.obj",
+    "bunny-metal-rough": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -182,10 +182,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-rough.json"
+      "material": "bunny-metal-rough"
     },
-    "shapes/sphere-plastic-rough.json": {
-      "shape": "shapes/sphere.ply",
+    "sphere-plastic-rough": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -200,10 +200,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-rough.json"
+      "material": "sphere-plastic-rough"
     },
-    "shapes/bunny-metal-sharp.json": {
-      "shape": "shapes/bunny.obj",
+    "bunny-metal-sharp": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -218,19 +218,19 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-sharp.json"
+      "material": "bunny-metal-sharp"
     }
   },
   "materials": {
-    "materials/floor.json": {
+    "floor": {
       "color": [
         0.7,
         0.7,
         0.7
       ],
-      "color_tex": "textures/floor.png"
+      "color_tex": "floor"
     },
-    "materials/bunny-uvgrid.json": {
+    "bunny-uvgrid": {
       "specular": 1,
       "color": [
         1,
@@ -238,9 +238,9 @@
         1
       ],
       "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png"
+      "color_tex": "uvgrid"
     },
-    "materials/sphere-plastic-sharp.json": {
+    "sphere-plastic-sharp": {
       "specular": 1,
       "color": [
         0.5,
@@ -249,7 +249,7 @@
       ],
       "roughness": 0.01
     },
-    "materials/bunny-metal-rough.json": {
+    "bunny-metal-rough": {
       "color": [
         0.66,
         0.45,
@@ -258,7 +258,7 @@
       "metallic": 1,
       "roughness": 0.2
     },
-    "materials/sphere-plastic-rough.json": {
+    "sphere-plastic-rough": {
       "specular": 1,
       "color": [
         0.5,
@@ -267,7 +267,7 @@
       ],
       "roughness": 0.2
     },
-    "materials/bunny-metal-sharp.json": {
+    "bunny-metal-sharp": {
       "color": [
         0.7,
         0.7,
