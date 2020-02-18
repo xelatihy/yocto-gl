@@ -58,8 +58,6 @@ namespace yocto {
 
 // Using directives.
 using std::function;
-using std::make_unique;
-using std::unique_ptr;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -224,9 +222,6 @@ struct sceneio_model {
   ~sceneio_model();
 };
 
-// create a scene
-unique_ptr<sceneio_model> make_sceneio_model();
-
 // add element to a scene
 sceneio_camera*      add_camera(sceneio_model* scene);
 sceneio_environment* add_environment(sceneio_model* scene);
@@ -253,11 +248,9 @@ using sceneio_progress =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-unique_ptr<sceneio_model> load_scene(const string& filename, string& error,
-    sceneio_progress progress = {}, bool noparallel = false);
-[[nodiscard]] bool load_scene(const string& filename, sceneio_model* scene,
+bool load_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
-[[nodiscard]] bool save_scene(const string& filename,
+bool save_scene(const string& filename,
     const sceneio_model* scene, string& error,
     sceneio_progress progress_cb = {}, bool noparallel = false);
 

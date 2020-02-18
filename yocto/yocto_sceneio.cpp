@@ -270,10 +270,6 @@ sceneio_model::~sceneio_model() {
   for (auto environment : environments) delete environment;
 }
 
-unique_ptr<sceneio_model> make_sceneio_model() {
-  return make_unique<sceneio_model>();
-}
-
 // add element
 sceneio_camera* add_camera(sceneio_model* scene) {
   auto camera  = scene->cameras.emplace_back(new sceneio_camera{});
