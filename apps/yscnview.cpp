@@ -269,6 +269,14 @@ void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
+int get_camera(sceneio_model* ioscene, opengl_scene* scene) {
+  auto iocamera = def_default_camera(ioscene);
+  for(auto idx = 0; idx < ioscene->cameras.size(); idx++) {
+    if(iocamera == ioscene->cameras[idx]) return idx;
+  }
+  return 0;
+}
+
 bool draw_glwidgets(
     opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
   if (!iocamera) return false;
@@ -686,6 +694,7 @@ void update(opengl_window* win, app_states* apps) {
     app->loader.get();
     if (app->loader_error.empty()) {
       init_glscene(app->glscene, app->ioscene, progress_cb);
+      app->drawgl_prms.camera = get_camera(app->ioscene, app->glscene);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
