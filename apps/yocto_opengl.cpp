@@ -1245,11 +1245,10 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
 }
 
 // Display a scene
-void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
-    const draw_glscene_params& params) {
-  auto& glcamera      = glscene->cameras.at(params.camera);
-  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
-  auto  camera_yfov =
+void draw_glscene(opengl_scene* glscene, opengl_camera* glcamera,
+    const vec4i& viewport, const draw_glscene_params& params) {
+  auto camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto camera_yfov =
       camera_aspect >= 0
           ? (2 * atan(glcamera->film / (camera_aspect * 2 * glcamera->lens)))
           : (2 * atan(glcamera->film / (2 * glcamera->lens)));

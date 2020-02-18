@@ -56,13 +56,14 @@ struct app_state {
   string outname   = "out.yaml";
   string name      = "";
 
+  // scene
+  sceneio_model*  ioscene  = new sceneio_model{};
+  trace_scene*    scene    = new trace_scene{};
+  sceneio_camera* iocamera = nullptr;
+  trace_camera*   camera   = nullptr;
+
   // options
   trace_params params = {};
-  int          pratio = 8;
-
-  // scene
-  sceneio_model* ioscene = new sceneio_model{};
-  trace_scene*   scene   = new trace_scene{};
 
   // rendering state
   image<vec4f> render   = {};
@@ -126,6 +127,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
     sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -134,6 +136,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
+  camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
       progress_cb("converting cameras", progress.x++, progress.y);
@@ -141,6 +145,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_focus(camera, iocamera->aperture, iocamera->focus);
+    camera_map[iocamera] = camera;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
@@ -244,6 +249,9 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
   // done
   if (progress_cb) progress_cb("converting done", progress.x++, progress.y);
+
+  // get camera
+  camera = camera_map.at(iocamera);
 }
 
 void stop_display(app_state* app) {
@@ -259,7 +267,7 @@ void reset_display(app_state* app) {
   app->status         = "render";
   app->render_counter = 0;
   trace_async_start(
-      app->render_state, app->scene, app->params,
+      app->render_state, app->scene, app->camera, app->params,
       [app](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
@@ -275,7 +283,8 @@ void reset_display(app_state* app) {
       });
 }
 
-void load_scene_async(app_states* apps, const string& filename) {
+void load_scene_async(
+    app_states* apps, const string& filename, const string& camera_name = "") {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -283,7 +292,7 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->outname   = fs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
   app->status    = "load";
-  app->loader    = std::async(std::launch::async, [app]() {
+  app->loader    = std::async(std::launch::async, [app, camera_name]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
@@ -291,14 +300,14 @@ void load_scene_async(app_states* apps, const string& filename) {
             app->filename, app->ioscene, app->loader_error, progress_cb))
       return;
     app->progress = 1;
-    init_scene(app->scene, app->ioscene, progress_cb);
+    app->iocamera = get_camera(app->ioscene, camera_name);
+    init_scene(
+        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
       app->params.sampler = trace_sampler_type::eyelight;
     }
-    // app->render.resize(app->state->size());
-    // app->display.resize(app->state->size());
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -531,10 +540,13 @@ void draw_glwidgets(
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_glheader(win, "trace")) {
-    auto  edited  = 0;
+    auto edited = 0;
+    if (draw_glcombobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+      app->camera = get_element(
+          app->iocamera, app->ioscene->cameras, app->scene->cameras);
+      edited += 1;
+    }
     auto& tparams = app->params;
-    edited += draw_glcombobox(
-        win, "camera", tparams.camera, app->ioscene->cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_glcombobox(
@@ -546,7 +558,7 @@ void draw_glwidgets(
     continue_glline(win);
     edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
     edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_glslider(win, "pratio", app->pratio, 1, 64);
+    edited += draw_glslider(win, "pratio", tparams.pratio, 1, 64);
     edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
     end_glheader(win);
@@ -794,13 +806,14 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // application
-  auto apps_guard = make_unique<app_states>();
-  auto apps       = apps_guard.get();
-  auto filenames  = vector<string>{};
+  auto apps_guard  = make_unique<app_states>();
+  auto apps        = apps_guard.get();
+  auto filenames   = vector<string>{};
+  auto camera_name = ""s;
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_option(cli, "--camera", apps->params.camera, "Camera index.");
+  add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
@@ -820,7 +833,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // loading images
-  for (auto filename : filenames) load_scene_async(apps, filename);
+  for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // window
   auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
@@ -852,24 +865,24 @@ int main(int argc, const char* argv[]) {
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
-      auto iocamera = app->ioscene->cameras.at(app->params.camera);
-      auto dolly    = 0.0f;
-      auto pan      = zero2f;
-      auto rotate   = zero2f;
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
       if (input.mouse_left && !input.modifier_shift)
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * iocamera->focus / 200.0f;
+        pan = (input.mouse_pos - input.mouse_last) * app->iocamera->focus /
+              200.0f;
       pan.x = -pan.x;
       stop_display(app);
-      update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_frame(app->scene->cameras[app->params.camera], iocamera->frame);
-      set_lens(app->scene->cameras[app->params.camera], iocamera->lens,
-          iocamera->aspect, iocamera->film);
-      set_focus(app->scene->cameras[app->params.camera], iocamera->aperture,
-          iocamera->focus);
+      update_turntable(
+          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+      set_frame(app->camera, app->iocamera->frame);
+      set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
+          app->iocamera->film);
+      set_focus(app->camera, app->iocamera->aperture, app->iocamera->focus);
       reset_display(app);
     }
 
@@ -880,8 +893,8 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        auto camera = app->scene->cameras.at(app->params.camera);
-        auto ray    = camera_ray(camera->frame, camera->lens, camera->film,
+        auto ray = camera_ray(app->camera->frame, app->camera->lens,
+            app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {

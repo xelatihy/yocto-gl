@@ -45,11 +45,10 @@ struct app_state {
 
   // options
   trace_params params = {};
-  int          pratio = 8;
 
   // scene
-  trace_scene* scene      = new trace_scene{};
-  bool         add_skyenv = false;
+  trace_scene*  scene  = new trace_scene{};
+  trace_camera* camera = nullptr;
 
   // rendering state
   image<vec4f> render   = {};
@@ -77,6 +76,7 @@ struct app_state {
 
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
     sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -85,6 +85,8 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
+  camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
       print_progress("convert camera", progress.x++, progress.y);
@@ -92,6 +94,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_focus(camera, iocamera->aperture, iocamera->focus);
+    camera_map[iocamera] = camera;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
@@ -196,6 +199,9 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
   // done
   if (print_progress) print_progress("convert done", progress.x++, progress.y);
+
+  // get camera
+  camera = camera_map.at(iocamera);
 }
 
 void reset_display(app_state* app) {
@@ -205,7 +211,7 @@ void reset_display(app_state* app) {
   // start render
   app->render_counter = 0;
   trace_async_start(
-      app->render_state, app->scene, app->params, {},
+      app->render_state, app->scene, app->camera, app->params, {},
       [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
@@ -223,9 +229,13 @@ int main(int argc, const char* argv[]) {
   auto app_guard = make_unique<app_state>();
   auto app       = app_guard.get();
 
+  // command line options
+  auto camera_name = ""s;
+  auto add_skyenv  = false;
+
   // parse command line
   auto cli = make_cli("yscnitraces", "progressive path tracing");
-  add_option(cli, "--camera", app->params.camera, "Camera index.");
+  add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
@@ -241,7 +251,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--bvh", app->params.bvh, "Bvh type", trace_bvh_names);
-  add_option(cli, "--skyenv/--no-skyenv", app->add_skyenv, "Add sky envmap");
+  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
@@ -253,8 +263,11 @@ int main(int argc, const char* argv[]) {
   if (!load_scene(app->filename, ioscene, ioerror, print_progress))
     print_fatal(ioerror);
 
+  // get camera
+  auto iocamera = get_camera(ioscene, camera_name);
+
   // conversion
-  init_scene(app->scene, ioscene, print_progress);
+  init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.release();
@@ -295,7 +308,6 @@ int main(int argc, const char* argv[]) {
   set_uiupdate_glcallback(
       win, [app](opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto camera = app->scene->cameras.at(app->params.camera);
           auto dolly  = 0.0f;
           auto pan    = zero2f;
           auto rotate = zero2f;
@@ -304,9 +316,11 @@ int main(int argc, const char* argv[]) {
           if (input.mouse_right)
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * camera->focus / 200.0f;
+            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+                  200.0f;
           pan.x = -pan.x;
-          update_turntable(camera->frame, camera->focus, rotate, dolly, pan);
+          update_turntable(
+              app->camera->frame, app->camera->focus, rotate, dolly, pan);
           reset_display(app);
         }
       });

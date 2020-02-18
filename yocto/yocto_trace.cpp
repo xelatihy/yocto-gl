@@ -597,10 +597,9 @@ static vec3f eval_texture(const trace_texture* texture, const vec2f& uv,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
-    const vec2f& image_uv, const vec2f& lens_uv) {
-  auto& camera   = scene->cameras[camera_];
-  auto  distance = camera->lens;
+static ray3f eval_perspective_camera(
+    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto distance = camera->lens;
   if (camera->focus < flt_max) {
     distance = camera->lens * camera->focus / (camera->focus - camera->lens);
   }
@@ -631,9 +630,8 @@ static ray3f eval_perspective_camera(const trace_scene* scene, int camera_,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
-    const vec2f& image_uv, const vec2f& lens_uv) {
-  auto& camera = scene->cameras[camera_];
+static ray3f eval_orthographic_camera(
+    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   if (camera->aperture) {
     auto scale = 1 / camera->lens;
     auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
@@ -662,22 +660,20 @@ static ray3f eval_orthographic_camera(const trace_scene* scene, int camera_,
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
-    const trace_scene* scene, int camera_, const vec2f& uv, const vec2f& luv) {
-  auto& camera = scene->cameras[camera_];
+    const trace_camera* camera, const vec2f& uv, const vec2f& luv) {
   if (camera->orthographic)
-    return eval_orthographic_camera(scene, camera_, uv, luv);
+    return eval_orthographic_camera(camera, uv, luv);
   else
-    return eval_perspective_camera(scene, camera_, uv, luv);
+    return eval_perspective_camera(camera, uv, luv);
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_scene* scene, int camera,
-    const vec2i& ij, const vec2i& image_size, const vec2f& puv,
-    const vec2f& luv, bool tent) {
+static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
         (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return eval_camera(scene, camera, uv, sample_disk(luv));
+    return eval_camera(camera, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
     const auto offset = 0.5f;
@@ -690,7 +686,7 @@ static ray3f sample_camera(const trace_scene* scene, int camera,
         offset;
     auto uv = vec2f{
         (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
-    return eval_camera(scene, camera, uv, sample_disk(luv));
+    return eval_camera(camera, uv, sample_disk(luv));
   }
 }
 
@@ -2945,11 +2941,11 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 vec4f trace_sample(trace_state* state, const trace_scene* scene,
-    const vec2i& ij, const trace_params& params) {
+    const trace_camera* camera, const vec2i& ij, const trace_params& params) {
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state->pixels[ij];
-  auto  ray     = sample_camera(scene, params.camera, ij, state->pixels.size(),
-      rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
+  auto  ray = sample_camera(camera, ij, state->pixels.size(), rand2f(pixel.rng),
+      rand2f(pixel.rng), params.tentfilter);
   auto [radiance, hit] = sampler(scene, ray, pixel.rng, params);
   if (!hit) {
     if (params.envhidden || scene->environments.empty()) {
@@ -2970,9 +2966,8 @@ vec4f trace_sample(trace_state* state, const trace_scene* scene,
 }
 
 // Init a sequence of random number generators.
-void init_state(
-    trace_state* state, const trace_scene* scene, const trace_params& params) {
-  auto camera = scene->cameras[params.camera];
+void init_state(trace_state* state, const trace_scene* scene,
+    const trace_camera* camera, const trace_params& params) {
   auto image_size =
       (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
@@ -3080,24 +3075,26 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
-    trace_progress progress_cb, trace_progress_image progress_image_cb) {
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, trace_progress progress_cb,
+    trace_progress_image progress_image_cb) {
   auto state_guard = make_unique<trace_state>();
   auto state       = state_guard.get();
-  init_state(state, scene, params);
+  init_state(state, scene, camera, params);
 
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
     if (params.noparallel) {
       for (auto j = 0; j < state->render.size().y; j++) {
         for (auto i = 0; i < state->render.size().x; i++) {
-          state->render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+          state->render[{i, j}] = trace_sample(
+              state, scene, camera, {i, j}, params);
         }
       }
     } else {
-      parallel_for(
-          state->render.size(), [state, scene, &params](const vec2i& ij) {
-            state->render[ij] = trace_sample(state, scene, ij, params);
+      parallel_for(state->render.size(),
+          [state, scene, camera, &params](const vec2i& ij) {
+            state->render[ij] = trace_sample(state, scene, camera, ij, params);
           });
     }
     if (progress_image_cb)
@@ -3110,10 +3107,10 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
 
 // [experimental] Asynchronous interface
 void trace_async_start(trace_state* state, const trace_scene* scene,
-    const trace_params& params, trace_progress progress_cb,
-    trace_progress_image progress_image_cb,
-    trace_process_async  progress_async_cb) {
-  init_state(state, scene, params);
+    const trace_camera* camera, const trace_params& params,
+    trace_progress progress_cb, trace_progress_image progress_image_cb,
+    trace_process_async progress_async_cb) {
+  init_state(state, scene, camera, params);
   state->worker = {};
   state->stop   = false;
 
@@ -3122,7 +3119,7 @@ void trace_async_start(trace_state* state, const trace_scene* scene,
   auto pprms = params;
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
-  auto preview  = trace_image(scene, pprms);
+  auto preview  = trace_image(scene, camera, pprms);
   for (auto j = 0; j < state->render.size().y; j++) {
     for (auto i = 0; i < state->render.size().x; i++) {
       auto pi               = clamp(i / params.pratio, 0, preview.size().x - 1),
@@ -3139,7 +3136,7 @@ void trace_async_start(trace_state* state, const trace_scene* scene,
       if (progress_cb) progress_cb("trace image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
-        state->render[ij] = trace_sample(state, scene, ij, params);
+        state->render[ij] = trace_sample(state, scene, camera, ij, params);
         if (progress_async_cb)
           progress_async_cb(state->render, sample, params.samples, ij);
       });

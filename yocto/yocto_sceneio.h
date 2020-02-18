@@ -225,16 +225,17 @@ struct sceneio_model {
 };
 
 // add element to a scene
-sceneio_camera*      add_camera(sceneio_model* scene);
-sceneio_environment* add_environment(sceneio_model* scene);
-sceneio_object*      add_object(sceneio_model* scene);
-sceneio_instance*    add_instance(sceneio_model* scene);
-sceneio_material*    add_material(sceneio_model* scene);
-sceneio_shape*       add_shape(sceneio_model* scene);
-sceneio_subdiv*      add_subdiv(sceneio_model* scene);
-sceneio_texture*     add_texture(sceneio_model* scene);
-sceneio_object*      add_complete_object(
-         sceneio_model* scene, const string& basename = "");
+sceneio_camera*      add_camera(sceneio_model* scene, const string& name = "");
+sceneio_environment* add_environment(
+    sceneio_model* scene, const string& name = "");
+sceneio_object*   add_object(sceneio_model* scene, const string& name = "");
+sceneio_instance* add_instance(sceneio_model* scene, const string& name = "");
+sceneio_material* add_material(sceneio_model* scene, const string& name = "");
+sceneio_shape*    add_shape(sceneio_model* scene, const string& name = "");
+sceneio_subdiv*   add_subdiv(sceneio_model* scene, const string& name = "");
+sceneio_texture*  add_texture(sceneio_model* scene, const string& name = "");
+sceneio_object*   add_complete_object(
+      sceneio_model* scene, const string& name = "");
 
 }  // namespace yocto
 
@@ -254,6 +255,9 @@ bool load_scene(const string& filename, sceneio_model* scene, string& error,
     sceneio_progress progress_cb = {}, bool noparallel = false);
 bool save_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
+
+// get named camera or default if name is empty
+sceneio_camera* get_camera(const sceneio_model* scene, const string& name = "");
 
 }  // namespace yocto
 

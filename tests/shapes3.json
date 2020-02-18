@@ -1,7 +1,6 @@
 {
-  "cameras": [
-    {
-      "name": "cameras/default.json",
+  "cameras": {
+    "default": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -17,8 +16,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/front.json",
+    "front": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -34,8 +32,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/back.json",
+    "back": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -51,8 +48,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-sharp.json",
+    "perspective-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -68,8 +64,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-dof.json",
+    "perspective-dof": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -85,8 +80,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-sharp.json",
+    "orthographic-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -103,8 +97,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-dof.json",
+    "orthographic-dof": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -121,27 +114,24 @@
         0
       ]
     }
-  ],
-  "environments": [
-    {
-      "name": "environments/sky.json",
+  },
+  "environments": {
+    "sky": {
       "emission": [
         0.5,
         0.5,
         0.5
       ],
-      "emission_tex": "environments/sky.hdr"
+      "emission_tex": "sky"
     }
-  ],
-  "objects": [
-    {
-      "name": "shapes/floor.json",
-      "shape": "shapes/floor.ply",
-      "material": "materials/floor.json"
+  },
+  "objects": {
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
     },
-    {
-      "name": "shapes/arealight1.json",
-      "shape": "shapes/arealight1.ply",
+    "arealight1": {
+      "shape": "arealight1",
       "lookat": [
         -0.4,
         0.8,
@@ -153,11 +143,10 @@
         1,
         0
       ],
-      "material": "materials/arealight1.json"
+      "material": "arealight1"
     },
-    {
-      "name": "shapes/arealight2.json",
-      "shape": "shapes/arealight2.ply",
+    "arealight2": {
+      "shape": "arealight2",
       "lookat": [
         0.4,
         0.8,
@@ -169,87 +158,10 @@
         1,
         0
       ],
-      "material": "materials/arealight2.json"
+      "material": "arealight2"
     },
-    {
-      "name": "shapes/sphere-matte.json",
-      "shape": "shapes/sphere.ply",
-      "frame": [
-        0.5,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        0
-      ],
-      "material": "materials/sphere-matte.json"
-    },
-    {
-      "name": "shapes/hairball1-hair.json",
-      "shape": "shapes/hairball1.ply",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
-      "material": "materials/hairball1-hair.json"
-    },
-    {
-      "name": "shapes/hairball2-hair.json",
-      "shape": "shapes/hairball2.ply",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
-      "material": "materials/hairball2-hair.json"
-    },
-    {
-      "name": "shapes/hairball3-hair.json",
-      "shape": "shapes/hairball3.ply",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
-      "material": "materials/hairball3-hair.json"
-    },
-    {
-      "name": "shapes/sphere-matte.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-matte": {
+      "shape": "sphere",
       "frame": [
         0.5,
         0,
@@ -264,11 +176,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-matte.json"
+      "material": "sphere-matte"
     },
-    {
-      "name": "shapes/hairballi1-hair.json",
-      "shape": "shapes/hairballi.ply",
+    "hairball1-hair": {
+      "shape": "hairball1",
       "frame": [
         1,
         0,
@@ -283,11 +194,10 @@
         0,
         0
       ],
-      "material": "materials/hairballi1-hair.json"
+      "material": "hairball1-hair"
     },
-    {
-      "name": "shapes/hairballi2-hair.json",
-      "shape": "shapes/hairballi.ply",
+    "hairball2-hair": {
+      "shape": "hairball2",
       "frame": [
         1,
         0,
@@ -302,11 +212,10 @@
         0,
         0
       ],
-      "material": "materials/hairballi2-hair.json"
+      "material": "hairball2-hair"
     },
-    {
-      "name": "shapes/hairballi3-hair.json",
-      "shape": "shapes/hairballi.ply",
+    "hairball3-hair": {
+      "shape": "hairball3",
       "frame": [
         1,
         0,
@@ -321,37 +230,87 @@
         0,
         0
       ],
-      "material": "materials/hairballi3-hair.json"
+      "material": "hairball3-hair"
+    },
+    "hairballi1-hair": {
+      "shape": "hairballi",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        -0.2,
+        0,
+        0
+      ],
+      "material": "hairballi1-hair"
+    },
+    "hairballi2-hair": {
+      "shape": "hairballi",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "material": "hairballi2-hair"
+    },
+    "hairballi3-hair": {
+      "shape": "hairballi",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0.2,
+        0,
+        0
+      ],
+      "material": "hairballi3-hair"
     }
-  ],
-  "materials": [
-    {
-      "name": "materials/floor.json",
+  },
+  "materials": {
+    "floor": {
       "color": [
         0.7,
         0.7,
         0.7
       ],
-      "color_tex": "textures/floor.png"
+      "color_tex": "floor"
     },
-    {
-      "name": "materials/arealight1.json",
+    "arealight1": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/arealight2.json",
+    "arealight2": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/sphere-matte.json",
+    "sphere-matte": {
       "color": [
         0.7,
         0.7,
@@ -359,8 +318,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/hairball1-hair.json",
+    "hairball1-hair": {
       "color": [
         0.7,
         0.7,
@@ -368,8 +326,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/hairball2-hair.json",
+    "hairball2-hair": {
       "color": [
         0.7,
         0.7,
@@ -377,8 +334,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/hairball3-hair.json",
+    "hairball3-hair": {
       "color": [
         0.7,
         0.7,
@@ -386,8 +342,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/sphere-matte.json",
+    "hairballi1-hair": {
       "color": [
         0.7,
         0.7,
@@ -395,8 +350,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/hairballi1-hair.json",
+    "hairballi2-hair": {
       "color": [
         0.7,
         0.7,
@@ -404,17 +358,7 @@
       ],
       "roughness": 1
     },
-    {
-      "name": "materials/hairballi2-hair.json",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "roughness": 1
-    },
-    {
-      "name": "materials/hairballi3-hair.json",
+    "hairballi3-hair": {
       "color": [
         0.7,
         0.7,
@@ -422,5 +366,5 @@
       ],
       "roughness": 1
     }
-  ]
+  }
 }

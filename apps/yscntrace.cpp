@@ -42,6 +42,7 @@ namespace fs = ghc::filesystem;
 
 // construct a scene from io
 void init_scene(trace_scene* scene, sceneio_model* ioscene,
+    trace_camera*& camera, sceneio_camera* iocamera,
     sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -50,12 +51,15 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
+  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
+  camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_focus(camera, iocamera->aperture, iocamera->focus);
+    camera_map[iocamera] = camera;
   }
 
   auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
@@ -154,20 +158,24 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+
+  // get camera
+  camera = camera_map.at(iocamera);
 }
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params     = trace_params{};
-  auto batch      = 16;
-  auto save_batch = false;
-  auto add_skyenv = false;
-  auto imfilename = "out.hdr"s;
-  auto filename   = "scene.json"s;
+  auto params      = trace_params{};
+  auto batch       = 16;
+  auto save_batch  = false;
+  auto add_skyenv  = false;
+  auto camera_name = ""s;
+  auto imfilename  = "out.hdr"s;
+  auto filename    = "scene.json"s;
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");
-  add_option(cli, "--camera", params.camera, "Camera index.");
+  add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
@@ -194,10 +202,14 @@ int main(int argc, const char* argv[]) {
   if (!load_scene(filename, ioscene, ioerror, print_progress))
     print_fatal(ioerror);
 
+  // get camera
+  auto iocamera = get_camera(ioscene, camera_name);
+
   // convert scene
   auto scene_guard = make_unique<trace_scene>();
   auto scene       = scene_guard.get();
-  init_scene(scene, ioscene, print_progress);
+  auto camera      = (trace_camera*)nullptr;
+  init_scene(scene, ioscene, camera, iocamera, print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.release();
@@ -215,7 +227,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // render
-  auto render = trace_image(scene, params, print_progress,
+  auto render = trace_image(scene, camera, params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;

@@ -65,10 +65,12 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  sceneio_model* ioscene = new sceneio_model{};
+  sceneio_model*  ioscene  = new sceneio_model{};
+  sceneio_camera* iocamera = nullptr;
 
   // rendering state
-  opengl_scene* glscene = new opengl_scene{};
+  opengl_scene*  glscene  = new opengl_scene{};
+  opengl_camera* glcamera = nullptr;
 
   // editing
   sceneio_camera*      selected_camera      = nullptr;
@@ -110,7 +112,8 @@ struct app_states {
   }
 };
 
-void load_scene_async(app_states* apps, const string& filename) {
+void load_scene_async(
+    app_states* apps, const string& filename, const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = fs::path(filename).replace_extension(".png");
@@ -118,13 +121,14 @@ void load_scene_async(app_states* apps, const string& filename) {
   app->name        = fs::path(app->filename).filename();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
-  app->loader      = std::async(std::launch::async, [app]() {
+  app->loader      = std::async(std::launch::async, [app, camera_name]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     if (!load_scene(
             app->filename, app->ioscene, app->loader_error, progress_cb))
       return;
+    app->iocamera = get_camera(app->ioscene, camera_name);
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
@@ -161,6 +165,7 @@ void update_lights(opengl_scene* glscene, sceneio_model* ioscene) {
 }
 
 void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
+    opengl_camera*& glcamera, sceneio_camera* iocamera,
     sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -173,12 +178,15 @@ void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
   init_glscene(glscene);
 
   // camera
+  auto camera_map     = unordered_map<sceneio_camera*, opengl_camera*>{};
+  camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
     auto camera = add_camera(glscene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
     set_nearfar(camera, 0.001, 10000);
+    camera_map[iocamera] = camera;
   }
 
   // textures
@@ -267,6 +275,9 @@ void init_glscene(opengl_scene* glscene, sceneio_model* ioscene,
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+
+  // get cmmera
+  glcamera = camera_map.at(iocamera);
 }
 
 bool draw_glwidgets(
@@ -492,8 +503,11 @@ void draw_glwidgets(
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_glheader(win, "view")) {
+    if (draw_glcombobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+      app->glcamera = get_element(
+          app->iocamera, app->ioscene->cameras, app->glscene->cameras);
+    }
     auto& params = app->drawgl_prms;
-    draw_glcombobox(win, "camera", params.camera, app->ioscene->cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
     draw_glcheckbox(win, "eyelight", params.eyelight);
     continue_glline(win);
@@ -666,7 +680,8 @@ void draw_glwidgets(
 void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
+  draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
+      app->drawgl_prms);
 }
 
 // update
@@ -685,7 +700,8 @@ void update(opengl_window* win, app_states* apps) {
     };
     app->loader.get();
     if (app->loader_error.empty()) {
-      init_glscene(app->glscene, app->ioscene, progress_cb);
+      init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
+          progress_cb);
       update_lights(app->glscene, app->ioscene);
       app->ok     = true;
       app->status = "ok";
@@ -698,13 +714,14 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto apps_guard = make_unique<app_states>();
-  auto apps       = apps_guard.get();
-  auto filenames  = vector<string>{};
+  auto apps_guard  = make_unique<app_states>();
+  auto apps        = apps_guard.get();
+  auto filenames   = vector<string>{};
+  auto camera_name = ""s;
 
   // parse command line
   auto cli = make_cli("yscnview", "views scenes inteactively");
-  add_option(cli, "--camera", apps->drawgl_prms.camera, "Camera index.");
+  add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
   add_option(cli, "--eyelight/--no-eyelight", apps->drawgl_prms.eyelight,
@@ -713,7 +730,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // loading images
-  for (auto filename : filenames) load_scene_async(apps, filename);
+  for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   auto win_guard = make_glwindow({1280 + 320, 720}, "yscnview", true);
   auto win       = win_guard.get();
@@ -736,29 +753,28 @@ int main(int argc, const char* argv[]) {
       win, [apps](opengl_window* win, const opengl_input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](opengl_window*   win,
-                                   const opengl_input& input) {
-    if (!apps->selected || !apps->selected->ok) return;
-    auto app = apps->selected;
+  set_uiupdate_glcallback(
+      win, [apps](opengl_window* win, const opengl_input& input) {
+        if (!apps->selected || !apps->selected->ok) return;
+        auto app = apps->selected;
 
-    // handle mouse and keyboard for navigation
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
-      auto iocamera = app->ioscene->cameras.at(app->drawgl_prms.camera);
-      auto dolly    = 0.0f;
-      auto pan      = zero2f;
-      auto rotate   = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
-      set_frame(
-          app->glscene->cameras[app->drawgl_prms.camera], iocamera->frame);
-    }
-  });
+        // handle mouse and keyboard for navigation
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+            !input.widgets_active) {
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+          update_turntable(
+              app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+          set_frame(app->glcamera, app->iocamera->frame);
+        }
+      });
 
   // run ui
   run_ui(win);

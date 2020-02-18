@@ -222,7 +222,6 @@ struct opengl_scene {
 
 // Draw options
 struct draw_glscene_params {
-  int   camera           = 0;
   int   resolution       = 1280;
   bool  wireframe        = false;
   bool  edges            = false;
@@ -317,8 +316,8 @@ void clear_lights(opengl_scene* scene);
 bool has_max_lights(opengl_scene* scene);
 
 // Draw an OpenGL scene
-void draw_glscene(opengl_scene* state, const vec4i& viewport,
-    const draw_glscene_params& params);
+void draw_glscene(opengl_scene* scene, opengl_camera* camera,
+    const vec4i& viewport, const draw_glscene_params& params);
 
 }  // namespace yocto
 

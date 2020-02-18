@@ -1,7 +1,6 @@
 {
-  "cameras": [
-    {
-      "name": "cameras/default.json",
+  "cameras": {
+    "default": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -17,8 +16,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/front.json",
+    "front": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -34,8 +32,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/back.json",
+    "back": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -51,8 +48,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-sharp.json",
+    "perspective-sharp": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -68,8 +64,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-dof.json",
+    "perspective-dof": {
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
@@ -85,8 +80,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-sharp.json",
+    "orthographic-sharp": {
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -103,8 +97,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-dof.json",
+    "orthographic-dof": {
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -121,27 +114,24 @@
         0
       ]
     }
-  ],
-  "environments": [
-    {
-      "name": "environments/sky.json",
+  },
+  "environments": {
+    "sky": {
       "emission": [
         0.5,
         0.5,
         0.5
       ],
-      "emission_tex": "environments/sky.hdr"
+      "emission_tex": "sky"
     }
-  ],
-  "objects": [
-    {
-      "name": "shapes/floor.json",
-      "shape": "shapes/floor.ply",
-      "material": "materials/floor.json"
+  },
+  "objects": {
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
     },
-    {
-      "name": "shapes/largearealight1.json",
-      "shape": "shapes/largearealight1.ply",
+    "largearealight1": {
+      "shape": "largearealight1",
       "lookat": [
         -0.8,
         1.6,
@@ -153,11 +143,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight1.json"
+      "material": "largearealight1"
     },
-    {
-      "name": "shapes/largearealight2.json",
-      "shape": "shapes/largearealight2.ply",
+    "largearealight2": {
+      "shape": "largearealight2",
       "lookat": [
         0.8,
         1.6,
@@ -169,11 +158,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight2.json"
+      "material": "largearealight2"
     },
-    {
-      "name": "shapes/sphere-volume-cloud.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-volume-cloud": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -188,11 +176,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-volume-cloud.json"
+      "material": "sphere-volume-cloud"
     },
-    {
-      "name": "shapes/sphere-volume-glass.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-volume-glass": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -207,11 +194,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-volume-glass.json"
+      "material": "sphere-volume-glass"
     },
-    {
-      "name": "shapes/sphere-volume-jade.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-volume-jade": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -226,11 +212,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-volume-jade.json"
+      "material": "sphere-volume-jade"
     },
-    {
-      "name": "shapes/sphere-volume-emissive.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-volume-emissive": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -245,11 +230,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-volume-emissive.json"
+      "material": "sphere-volume-emissive"
     },
-    {
-      "name": "shapes/sphere-volume-smoke.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-volume-smoke": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -264,11 +248,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-volume-smoke.json"
+      "material": "sphere-volume-smoke"
     },
-    {
-      "name": "shapes/bunny-volume-cloud.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-volume-cloud": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -283,11 +266,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-volume-cloud.json"
+      "material": "bunny-volume-cloud"
     },
-    {
-      "name": "shapes/bunny-volume-glass.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-volume-glass": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -302,11 +284,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-volume-glass.json"
+      "material": "bunny-volume-glass"
     },
-    {
-      "name": "shapes/bunny-volume-jade.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-volume-jade": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -321,11 +302,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-volume-jade.json"
+      "material": "bunny-volume-jade"
     },
-    {
-      "name": "shapes/bunny-volume-emissive.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-volume-emissive": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -340,11 +320,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-volume-emissive.json"
+      "material": "bunny-volume-emissive"
     },
-    {
-      "name": "shapes/bunny-volume-smoke.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-volume-smoke": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -359,37 +338,33 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-volume-smoke.json"
+      "material": "bunny-volume-smoke"
     }
-  ],
-  "materials": [
-    {
-      "name": "materials/floor.json",
+  },
+  "materials": {
+    "floor": {
       "color": [
         0.7,
         0.7,
         0.7
       ],
-      "color_tex": "textures/floor.png"
+      "color_tex": "floor"
     },
-    {
-      "name": "materials/largearealight1.json",
+    "largearealight1": {
       "emission": [
         10,
         10,
         10
       ]
     },
-    {
-      "name": "materials/largearealight2.json",
+    "largearealight2": {
       "emission": [
         10,
         10,
         10
       ]
     },
-    {
-      "name": "materials/sphere-volume-cloud.json",
+    "sphere-volume-cloud": {
       "color": [
         0.65,
         0.65,
@@ -403,8 +378,7 @@
       ],
       "ior": 1
     },
-    {
-      "name": "materials/sphere-volume-glass.json",
+    "sphere-volume-glass": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
@@ -416,8 +390,7 @@
       "trdepth": 0.02,
       "thin": false
     },
-    {
-      "name": "materials/sphere-volume-jade.json",
+    "sphere-volume-jade": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
@@ -433,8 +406,7 @@
       ],
       "thin": false
     },
-    {
-      "name": "materials/sphere-volume-emissive.json",
+    "sphere-volume-emissive": {
       "transmission": 1,
       "color": [
         0.95,
@@ -448,8 +420,7 @@
       ],
       "ior": 1
     },
-    {
-      "name": "materials/sphere-volume-smoke.json",
+    "sphere-volume-smoke": {
       "transmission": 1,
       "color": [
         0.5,
@@ -464,8 +435,7 @@
       "phaseg": -0.8,
       "ior": 1
     },
-    {
-      "name": "materials/bunny-volume-cloud.json",
+    "bunny-volume-cloud": {
       "color": [
         0.65,
         0.65,
@@ -479,8 +449,7 @@
       ],
       "ior": 1
     },
-    {
-      "name": "materials/bunny-volume-glass.json",
+    "bunny-volume-glass": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
@@ -492,8 +461,7 @@
       "trdepth": 0.02,
       "thin": false
     },
-    {
-      "name": "materials/bunny-volume-jade.json",
+    "bunny-volume-jade": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
@@ -509,8 +477,7 @@
       ],
       "thin": false
     },
-    {
-      "name": "materials/bunny-volume-emissive.json",
+    "bunny-volume-emissive": {
       "transmission": 1,
       "color": [
         0.95,
@@ -524,8 +491,7 @@
       ],
       "ior": 1
     },
-    {
-      "name": "materials/bunny-volume-smoke.json",
+    "bunny-volume-smoke": {
       "transmission": 1,
       "color": [
         0.5,
@@ -540,5 +506,5 @@
       "scanisotropy": -0.8,
       "ior": 1
     }
-  ]
+  }
 }

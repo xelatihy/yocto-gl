@@ -1,7 +1,6 @@
 {
-  "cameras": [
-    {
-      "name": "cameras/default.json",
+  "cameras": {
+    "default": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -17,8 +16,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/front.json",
+    "front": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -34,8 +32,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/back.json",
+    "back": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
@@ -51,8 +48,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-sharp.json",
+    "perspective-sharp": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -68,8 +64,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-dof.json",
+    "perspective-dof": {
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
@@ -85,8 +80,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-sharp.json",
+    "orthographic-sharp": {
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -103,8 +97,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-dof.json",
+    "orthographic-dof": {
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -121,27 +114,24 @@
         0
       ]
     }
-  ],
-  "environments": [
-    {
-      "name": "environments/sky.json",
+  },
+  "environments": {
+    "sky": {
       "emission": [
         0.5,
         0.5,
         0.5
       ],
-      "emission_tex": "environments/sky.hdr"
+      "emission_tex": "sky"
     }
-  ],
-  "objects": [
-    {
-      "name": "shapes/floor.json",
-      "shape": "shapes/floor.ply",
-      "material": "materials/floor.json"
+  },
+  "objects": {
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
     },
-    {
-      "name": "shapes/largearealight1.json",
-      "shape": "shapes/largearealight1.ply",
+    "largearealight1": {
+      "shape": "largearealight1",
       "lookat": [
         -0.8,
         1.6,
@@ -153,11 +143,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight1.json"
+      "material": "largearealight1"
     },
-    {
-      "name": "shapes/largearealight2.json",
-      "shape": "shapes/largearealight2.ply",
+    "largearealight2": {
+      "shape": "largearealight2",
       "lookat": [
         0.8,
         1.6,
@@ -169,11 +158,10 @@
         1,
         0
       ],
-      "material": "materials/largearealight2.json"
+      "material": "largearealight2"
     },
-    {
-      "name": "shapes/sphere-glass-sharp.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-glass-sharp": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -188,11 +176,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-glass-sharp.json"
+      "material": "sphere-glass-sharp"
     },
-    {
-      "name": "shapes/sphere-glass-rough.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-glass-rough": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -207,11 +194,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-glass-rough.json"
+      "material": "sphere-glass-rough"
     },
-    {
-      "name": "shapes/sphere-transparent.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-transparent": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -226,11 +212,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-transparent.json"
+      "material": "sphere-transparent"
     },
-    {
-      "name": "shapes/sphere-thinglass-sharp.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-thinglass-sharp": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -245,11 +230,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-thinglass-sharp.json"
+      "material": "sphere-thinglass-sharp"
     },
-    {
-      "name": "shapes/sphere-thinglass-rough.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-thinglass-rough": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -264,11 +248,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-thinglass-rough.json"
+      "material": "sphere-thinglass-rough"
     },
-    {
-      "name": "shapes/bunny-glass-sharp.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-glass-sharp": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -283,11 +266,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-glass-sharp.json"
+      "material": "bunny-glass-sharp"
     },
-    {
-      "name": "shapes/bunny-glass-rough.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-glass-rough": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -302,11 +284,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-glass-rough.json"
+      "material": "bunny-glass-rough"
     },
-    {
-      "name": "shapes/bunny-transparent.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-transparent": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -321,11 +302,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-transparent.json"
+      "material": "bunny-transparent"
     },
-    {
-      "name": "shapes/bunny-thinglass-sharp.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-thinglass-sharp": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -340,11 +320,10 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-thinglass-sharp.json"
+      "material": "bunny-thinglass-sharp"
     },
-    {
-      "name": "shapes/bunny-thinglass-rough.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-thinglass-rough": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -359,37 +338,33 @@
         0,
         -0.4
       ],
-      "material": "materials/bunny-thinglass-rough.json"
+      "material": "bunny-thinglass-rough"
     }
-  ],
-  "materials": [
-    {
-      "name": "materials/floor.json",
+  },
+  "materials": {
+    "floor": {
       "color": [
         0.7,
         0.7,
         0.7
       ],
-      "color_tex": "textures/floor.png"
+      "color_tex": "floor"
     },
-    {
-      "name": "materials/largearealight1.json",
+    "largearealight1": {
       "emission": [
         10,
         10,
         10
       ]
     },
-    {
-      "name": "materials/largearealight2.json",
+    "largearealight2": {
       "emission": [
         10,
         10,
         10
       ]
     },
-    {
-      "name": "materials/sphere-glass-sharp.json",
+    "sphere-glass-sharp": {
       "color": [
         1,
         1,
@@ -400,8 +375,7 @@
       "roughness": 0,
       "thin": false
     },
-    {
-      "name": "materials/sphere-glass-rough.json",
+    "sphere-glass-rough": {
       "specular": 1,
       "color": [
         1,
@@ -412,8 +386,7 @@
       "roughness": 0.1,
       "thin": false
     },
-    {
-      "name": "materials/sphere-transparent.json",
+    "sphere-transparent": {
       "color": [
         0.7,
         0.5,
@@ -422,8 +395,7 @@
       "roughness": 1,
       "opacity": 0.2
     },
-    {
-      "name": "materials/sphere-thinglass-sharp.json",
+    "sphere-thinglass-sharp": {
       "specular": 1,
       "color": [
         1,
@@ -434,8 +406,7 @@
       "roughness": 0,
       "thin": true
     },
-    {
-      "name": "materials/sphere-thinglass-rough.json",
+    "sphere-thinglass-rough": {
       "specular": 1,
       "color": [
         1,
@@ -446,8 +417,7 @@
       "roughness": 0.05,
       "thin": true
     },
-    {
-      "name": "materials/bunny-glass-sharp.json",
+    "bunny-glass-sharp": {
       "color": [
         1,
         1,
@@ -458,8 +428,7 @@
       "roughness": 0,
       "thin": false
     },
-    {
-      "name": "materials/bunny-glass-rough.json",
+    "bunny-glass-rough": {
       "specular": 1,
       "color": [
         1,
@@ -470,8 +439,7 @@
       "roughness": 0.1,
       "thin": false
     },
-    {
-      "name": "materials/bunny-transparent.json",
+    "bunny-transparent": {
       "color": [
         0.7,
         0.5,
@@ -480,8 +448,7 @@
       "roughness": 1,
       "opacity": 0.2
     },
-    {
-      "name": "materials/bunny-thinglass-sharp.json",
+    "bunny-thinglass-sharp": {
       "specular": 1,
       "color": [
         1,
@@ -492,8 +459,7 @@
       "roughness": 0,
       "thin": true
     },
-    {
-      "name": "materials/bunny-thinglass-rough.json",
+    "bunny-thinglass-rough": {
       "specular": 1,
       "color": [
         1,
@@ -504,5 +470,5 @@
       "roughness": 0.05,
       "thin": true
     }
-  ]
+  }
 }

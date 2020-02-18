@@ -1,7 +1,6 @@
 {
-  "cameras": [
-    {
-      "name": "cameras/default.json",
+  "cameras": {
+    "default": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -17,8 +16,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/front.json",
+    "front": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
@@ -34,8 +32,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/back.json",
+    "back": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
@@ -51,8 +48,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-sharp.json",
+    "perspective-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -68,8 +64,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/perspective-dof.json",
+    "perspective-dof": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
@@ -85,8 +80,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-sharp.json",
+    "orthographic-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
@@ -103,8 +97,7 @@
         0
       ]
     },
-    {
-      "name": "cameras/orthographic-dof.json",
+    "orthographic-dof": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
@@ -121,16 +114,14 @@
         0
       ]
     }
-  ],
-  "objects": [
-    {
-      "name": "shapes/floor.json",
-      "shape": "shapes/floor.ply",
-      "material": "materials/floor.json"
+  },
+  "objects": {
+    "floor": {
+      "shape": "floor",
+      "material": "floor"
     },
-    {
-      "name": "shapes/arealight1.json",
-      "shape": "shapes/arealight1.ply",
+    "arealight1": {
+      "shape": "arealight1",
       "lookat": [
         -0.4,
         0.8,
@@ -142,11 +133,10 @@
         1,
         0
       ],
-      "material": "materials/arealight1.json"
+      "material": "arealight1"
     },
-    {
-      "name": "shapes/arealight2.json",
-      "shape": "shapes/arealight2.ply",
+    "arealight2": {
+      "shape": "arealight2",
       "lookat": [
         0.4,
         0.8,
@@ -158,11 +148,10 @@
         1,
         0
       ],
-      "material": "materials/arealight2.json"
+      "material": "arealight2"
     },
-    {
-      "name": "shapes/bunny-uvgrid.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-uvgrid": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -177,11 +166,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-uvgrid.json"
+      "material": "bunny-uvgrid"
     },
-    {
-      "name": "shapes/sphere-plastic-sharp.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-plastic-sharp": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -196,11 +184,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-sharp.json"
+      "material": "sphere-plastic-sharp"
     },
-    {
-      "name": "shapes/bunny-metal-rough.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-metal-rough": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -215,11 +202,10 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-rough.json"
+      "material": "bunny-metal-rough"
     },
-    {
-      "name": "shapes/sphere-plastic-rough.json",
-      "shape": "shapes/sphere.ply",
+    "sphere-plastic-rough": {
+      "shape": "sphere",
       "frame": [
         1,
         0,
@@ -234,11 +220,10 @@
         0,
         0
       ],
-      "material": "materials/sphere-plastic-rough.json"
+      "material": "sphere-plastic-rough"
     },
-    {
-      "name": "shapes/bunny-metal-sharp.json",
-      "shape": "shapes/bunny.obj",
+    "bunny-metal-sharp": {
+      "shape": "bunny",
       "frame": [
         1,
         0,
@@ -253,37 +238,33 @@
         0,
         0
       ],
-      "material": "materials/bunny-metal-sharp.json"
+      "material": "bunny-metal-sharp"
     }
-  ],
-  "materials": [
-    {
-      "name": "materials/floor.json",
+  },
+  "materials": {
+    "floor": {
       "color": [
         0.7,
         0.7,
         0.7
       ],
-      "color_tex": "textures/floor.png"
+      "color_tex": "floor"
     },
-    {
-      "name": "materials/arealight1.json",
+    "arealight1": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/arealight2.json",
+    "arealight2": {
       "emission": [
         20,
         20,
         20
       ]
     },
-    {
-      "name": "materials/bunny-uvgrid.json",
+    "bunny-uvgrid": {
       "specular": 1,
       "color": [
         1,
@@ -291,10 +272,9 @@
         1
       ],
       "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png"
+      "color_tex": "uvgrid"
     },
-    {
-      "name": "materials/sphere-plastic-sharp.json",
+    "sphere-plastic-sharp": {
       "specular": 1,
       "color": [
         0.5,
@@ -303,8 +283,7 @@
       ],
       "roughness": 0.01
     },
-    {
-      "name": "materials/bunny-metal-rough.json",
+    "bunny-metal-rough": {
       "color": [
         0.66,
         0.45,
@@ -313,8 +292,7 @@
       "metallic": 1,
       "roughness": 0.2
     },
-    {
-      "name": "materials/sphere-plastic-rough.json",
+    "sphere-plastic-rough": {
       "specular": 1,
       "color": [
         0.5,
@@ -323,8 +301,7 @@
       ],
       "roughness": 0.2
     },
-    {
-      "name": "materials/bunny-metal-sharp.json",
+    "bunny-metal-sharp": {
       "color": [
         0.7,
         0.7,
@@ -333,5 +310,5 @@
       "metallic": 1,
       "roughness": 0
     }
-  ]
+  }
 }
