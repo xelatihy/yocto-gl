@@ -804,7 +804,8 @@ static trace_point eval_point(const trace_scene* scene,
                    eval_texture(material->roughness_tex, texcoord, true).x;
 
   auto ior  = material->ior;
-  auto coat = material->coat * eval_texture(material->coat_tex, texcoord, true).x;
+  auto coat = material->coat *
+              eval_texture(material->coat_tex, texcoord, true).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
   auto opacity = material->opacity *

@@ -119,7 +119,7 @@ struct opengl_camera {
 struct opengl_texture {
   uint  texture_id = 0;
   vec2i size       = {0, 0};
-  int nchan = 0;
+  int   nchan      = 0;
   bool  is_srgb    = false;
   bool  is_float   = false;
 

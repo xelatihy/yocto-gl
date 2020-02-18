@@ -494,7 +494,8 @@ inline R eval_image_generic(const image<T>& img, const vec2f& uv,
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge) {
-  return eval_image_generic<vec4f, vec4f>(img, uv, false, no_interpolation, clamp_to_edge);
+  return eval_image_generic<vec4f, vec4f>(
+      img, uv, false, no_interpolation, clamp_to_edge);
 }
 vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge) {
@@ -505,7 +506,8 @@ vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
 // Evaluates a color image at a point `uv`.
 vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge) {
-  return eval_image_generic<vec3f, vec3f>(img, uv, false, no_interpolation, clamp_to_edge);
+  return eval_image_generic<vec3f, vec3f>(
+      img, uv, false, no_interpolation, clamp_to_edge);
 }
 vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge) {
@@ -1718,11 +1720,11 @@ bool is_hdr_filename(const string& filename) {
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
       return read_error();
     if (!pixels) return read_error();
-    auto cpixels = std::unique_ptr<float[]>(new float[width*height*3]);
-    for(auto i = (size_t)0; i < (size_t)width*(size_t)height; i ++) {
-      cpixels[i*3+0] = pixels[i*4+0];
-      cpixels[i*3+1] = pixels[i*4+1];
-      cpixels[i*3+2] = pixels[i*4+2];
+    auto cpixels = std::unique_ptr<float[]>(new float[width * height * 3]);
+    for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
+      cpixels[i * 3 + 0] = pixels[i * 4 + 0];
+      cpixels[i * 3 + 1] = pixels[i * 4 + 1];
+      cpixels[i * 3 + 2] = pixels[i * 4 + 2];
     }
     img = image{{width, height}, (const vec3f*)cpixels.get()};
     free(pixels);

@@ -407,12 +407,12 @@ void add_materials(sceneio_model* scene) {
 
 // Add a sky environment
 void add_sky(sceneio_model* scene, float sun_angle) {
-  auto texture              = add_texture(scene);
-  texture->name             = "environments/sky.hdr";
-  auto sunsky = make_sunsky({1024, 512}, sun_angle);
+  auto texture  = add_texture(scene);
+  texture->name = "environments/sky.hdr";
+  auto sunsky   = make_sunsky({1024, 512}, sun_angle);
   texture->hdr.resize(sunsky.size());
-  for(auto j = 0; j < sunsky.size().y; j ++) 
-    for(auto i = 0; j < sunsky.size().x; i ++)
+  for (auto j = 0; j < sunsky.size().y; j++)
+    for (auto i = 0; j < sunsky.size().x; i++)
       texture->hdr[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene);
   environment->name         = "environments/sky.yaml";
