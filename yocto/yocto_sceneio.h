@@ -90,7 +90,7 @@ struct sceneio_texture {
   image<vec3f> colorf  = {};
   image<vec3b> colorb  = {};
   image<float> scalarf = {};
-  image<byte> scalarb = {};
+  image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.

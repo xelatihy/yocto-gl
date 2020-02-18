@@ -1928,7 +1928,8 @@ bool is_hdr_filename(const string& filename) {
     if (!pixels) return read_error();
     auto cpixels = std::unique_ptr<float[]>(new float[width * height]);
     for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
-      cpixels[i + 0] = (pixels[i * 4 + 0] + pixels[i * 4 + 1] + pixels[i * 4 + 2])/3;
+      cpixels[i + 0] =
+          (pixels[i * 4 + 0] + pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 3;
     }
     img = image{{width, height}, (const float*)cpixels.get()};
     free(pixels);
@@ -1971,12 +1972,12 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    auto npixels = (size_t)img.size().x*(size_t)img.size().y;
-    auto cpixels = std::unique_ptr<float[]>(new float[npixels*3]);
-    for(auto idx = (size_t)0; idx < npixels; idx++) {
-      cpixels[idx*3+0] = *(img.begin()+idx);
-      cpixels[idx*3+1] = *(img.begin()+idx);
-      cpixels[idx*3+2] = *(img.begin()+idx);
+    auto npixels = (size_t)img.size().x * (size_t)img.size().y;
+    auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
+    for (auto idx = (size_t)0; idx < npixels; idx++) {
+      cpixels[idx * 3 + 0] = *(img.begin() + idx);
+      cpixels[idx * 3 + 1] = *(img.begin() + idx);
+      cpixels[idx * 3 + 2] = *(img.begin() + idx);
     }
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 3,
             (float*)cpixels.get()))

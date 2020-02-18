@@ -699,15 +699,15 @@ void draw_glwidgets(
       auto iotexture = app->selected_texture;
       auto texture   = get_element(
           iotexture, app->ioscene->textures, app->scene->textures);
-    if (!iotexture->colorf.empty()) {
-      set_texture(texture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(texture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(texture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(texture, iotexture->scalarb);
-    }
+      if (!iotexture->colorf.empty()) {
+        set_texture(texture, iotexture->colorf);
+      } else if (!iotexture->colorb.empty()) {
+        set_texture(texture, iotexture->colorb);
+      } else if (!iotexture->scalarf.empty()) {
+        set_texture(texture, iotexture->scalarf);
+      } else if (!iotexture->scalarb.empty()) {
+        set_texture(texture, iotexture->scalarb);
+      }
       reset_display(app);
     }
     end_glheader(win);

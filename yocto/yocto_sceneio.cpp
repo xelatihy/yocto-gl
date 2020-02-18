@@ -775,11 +775,11 @@ static bool save_image(const string& filename, const image<vec3f>& colorf,
     const image<byte>& scalarb, string& error) {
   if (!colorf.empty()) {
     return save_image(filename, colorf, error);
-  } else if(!colorb.empty()) {
+  } else if (!colorb.empty()) {
     return save_image(filename, colorb, error);
   } else if (!scalarf.empty()) {
     return save_image(filename, scalarf, error);
-  } else if(!scalarb.empty()) {
+  } else if (!scalarb.empty()) {
     return save_image(filename, scalarb, error);
   } else {
     return false;

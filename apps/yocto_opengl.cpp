@@ -798,8 +798,8 @@ void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, cformat.at(nchan), GL_UNSIGNED_BYTE, img);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, cformat.at(nchan),
+        GL_UNSIGNED_BYTE, img);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
   texture->size     = size;
@@ -809,8 +809,8 @@ void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(
-    opengl_texture* texture, const vec2i& size, int nchan, const float* img, bool as_float) {
+void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
+    const float* img, bool as_float) {
   static auto fformat = unordered_map<int, uint>{
       {1, GL_RGB16F},
       {2, GL_RGB16F},
@@ -840,8 +840,9 @@ void set_texture(
       texture->is_float != as_float || texture->is_srgb == true) {
     glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, as_float ? fformat.at(nchan) : iformat.at(nchan),
-        size.x, size.y, 0, iformat.at(nchan), GL_FLOAT, img);
+    glTexImage2D(GL_TEXTURE_2D, 0,
+        as_float ? fformat.at(nchan) : iformat.at(nchan), size.x, size.y, 0,
+        iformat.at(nchan), GL_FLOAT, img);
     glTexParameteri(
         GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
