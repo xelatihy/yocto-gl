@@ -880,21 +880,11 @@ void set_texture(
 
 void set_texture(
     opengl_texture* texture, const image<byte>& img, bool as_srgb) {
-  // one channel textures do not support luminance in upload
-  auto img3 = image<vec3b>{img.size()};
-  for (auto j = 0; j < img3.size().y; j++)
-    for (auto i = 0; i < img3.size().x; i++) img3[{i, j}] = vec3b{img[{i, j}]};
-  set_texture(texture, img.size(), 3, (const byte*)img3.data(), as_srgb);
-  // set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
+  set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
     opengl_texture* texture, const image<float>& img, bool as_float) {
-  // one channel textures do not support luminance in upload
-  auto img3 = image<vec3f>{img.size()};
-  for (auto j = 0; j < img3.size().y; j++)
-    for (auto i = 0; i < img3.size().x; i++) img3[{i, j}] = vec3f{img[{i, j}]};
-  set_texture(texture, img.size(), 3, (const float*)img3.data(), as_float);
-  // set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
+  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
 // add shape

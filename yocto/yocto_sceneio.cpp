@@ -738,51 +738,37 @@ static string get_extension(const string& filename) {
 
 // Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<vec3f>& colorf,
-    image<vec3b>& colorb, image<float>& scalarf, image<byte>& scalarb,
-    string& error) {
+    image<vec3b>& colorb, string& error) {
   if (is_hdr_filename(filename)) {
-    colorb  = {};
-    scalarb = {};
-    if (!load_image(filename, colorf, error)) return false;
-    if (std::all_of(colorf.begin(), colorf.end(), [](const vec3f& rgb) {
-          return rgb.x == rgb.y && rgb.y == rgb.z;
-        })) {
-      scalarf.resize(colorf.size());
-      for (auto j = 0; j < colorf.size().y; j++)
-        for (auto i = 0; i < colorf.size().x; i++)
-          scalarf[{i, j}] = colorf[{i, j}].x;
-      colorf = {};
-    }
-    return true;
+    return load_image(filename, colorf, error);
   } else {
-    colorf  = {};
-    scalarf = {};
-    if (!load_image(filename, colorb, error)) return false;
-    if (std::all_of(colorb.begin(), colorb.end(), [](const vec3b& rgb) {
-          return rgb.x == rgb.y && rgb.y == rgb.z;
-        })) {
-      scalarb.resize(colorb.size());
-      for (auto j = 0; j < colorb.size().y; j++)
-        for (auto i = 0; i < colorb.size().x; i++)
-          scalarb[{i, j}] = colorb[{i, j}].x;
-      colorb = {};
-    }
-    return true;
+    return load_image(filename, colorb, error);
   }
 }
 static bool save_image(const string& filename, const image<vec3f>& colorf,
-    const image<vec3b>& colorb, const image<float>& scalarf,
-    const image<byte>& scalarb, string& error) {
-  if (!colorf.empty()) {
+    const image<vec3b>& colorb, string& error) {
+  if (is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
-  } else if (!colorb.empty()) {
-    return save_image(filename, colorb, error);
-  } else if (!scalarf.empty()) {
-    return save_image(filename, scalarf, error);
-  } else if (!scalarb.empty()) {
-    return save_image(filename, scalarb, error);
   } else {
-    return false;
+    return save_image(filename, colorb, error);
+  }
+}
+
+// Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
+static bool load_image(const string& filename, image<float>& scalarf,
+    image<byte>& scalarb, string& error) {
+  if (is_hdr_filename(filename)) {
+    return load_image(filename, scalarf, error);
+  } else {
+    return load_image(filename, scalarb, error);
+  }
+}
+static bool save_image(const string& filename, const image<float>& scalarf,
+    const image<byte>& scalarb, string& error) {
+  if (is_hdr_filename(filename)) {
+    return save_image(filename, scalarf, error);
+  } else {
+    return save_image(filename, scalarb, error);
   }
 }
 
@@ -1037,23 +1023,44 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   };
 
   // parse json reference
-  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [scene, &texture_map, &get_value](const json& ejs,
-                         const string& name, sceneio_texture*& value,
-                         const string& dirname = "textures/") -> bool {
+  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_ctexture = [scene, &ctexture_map, &get_value](const json& ejs,
+                          const string& name, sceneio_texture*& value,
+                          const string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) {
+    auto it = ctexture_map.find(path);
+    if (it != ctexture_map.end()) {
       value = it->second;
       return true;
     }
-    auto texture      = add_texture(scene);
-    texture->name     = path;
-    texture_map[path] = texture;
-    value             = texture;
+    auto texture       = add_texture(scene);
+    texture->name      = path;
+    ctexture_map[path] = texture;
+    value              = texture;
+    return true;
+  };
+
+  // parse json reference
+  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_stexture = [scene, &stexture_map, &get_value](const json& ejs,
+                          const string& name, sceneio_texture*& value,
+                          const string& dirname = "textures/") -> bool {
+    if (!ejs.contains(name)) return true;
+    auto path = ""s;
+    if (!get_value(ejs, name, path)) return false;
+    if (path == "") return true;
+    auto it = stexture_map.find(path);
+    if (it != stexture_map.end()) {
+      value = it->second;
+      return true;
+    }
+    auto texture       = add_texture(scene);
+    texture->name      = path;
+    stexture_map[path] = texture;
+    value              = texture;
     return true;
   };
 
@@ -1153,7 +1160,7 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       if (!get_value(ejs, "name", environment->name)) return false;
       if (!get_value(ejs, "frame", environment->frame)) return false;
       if (!get_value(ejs, "emission", environment->emission)) return false;
-      if (!get_texture(
+      if (!get_ctexture(
               ejs, "emission_tex", environment->emission_tex, "environments/"))
         return false;
       if (ejs.contains("lookat")) {
@@ -1182,22 +1189,23 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
       if (!get_value(ejs, "opacity", material->opacity)) return false;
       if (!get_value(ejs, "coat", material->coat)) return false;
       if (!get_value(ejs, "displacement", material->displacement)) return false;
-      if (!get_texture(ejs, "emission_tex", material->emission_tex))
+      if (!get_ctexture(ejs, "emission_tex", material->emission_tex))
         return false;
-      if (!get_texture(ejs, "color_tex", material->color_tex)) return false;
-      if (!get_texture(ejs, "metallic_tex", material->metallic_tex))
+      if (!get_ctexture(ejs, "color_tex", material->color_tex)) return false;
+      if (!get_stexture(ejs, "metallic_tex", material->metallic_tex))
         return false;
-      if (!get_texture(ejs, "specular_tex", material->specular_tex))
+      if (!get_stexture(ejs, "specular_tex", material->specular_tex))
         return false;
-      if (!get_texture(ejs, "transmission_tex", material->transmission_tex))
+      if (!get_stexture(ejs, "transmission_tex", material->transmission_tex))
         return false;
-      if (!get_texture(ejs, "roughness_tex", material->roughness_tex))
+      if (!get_stexture(ejs, "roughness_tex", material->roughness_tex))
         return false;
-      if (!get_texture(ejs, "scattering_tex", material->scattering_tex))
+      if (!get_stexture(ejs, "scattering_tex", material->scattering_tex))
         return false;
-      if (!get_texture(ejs, "opacity_tex", material->opacity_tex)) return false;
-      if (!get_texture(ejs, "normal_tex", material->normal_tex)) return false;
-      if (!get_texture(ejs, "displacement_tex", material->displacement_tex))
+      if (!get_stexture(ejs, "opacity_tex", material->opacity_tex))
+        return false;
+      if (!get_ctexture(ejs, "normal_tex", material->normal_tex)) return false;
+      if (!get_stexture(ejs, "displacement_tex", material->displacement_tex))
         return false;
       if (!get_value(ejs, "subdivisions", material->subdivisions))
         return false;  // hack fir subd
@@ -1231,35 +1239,46 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   progress.y += scene->instances.size();
 
   // load shapes
-  for (auto shape : scene->shapes) {
+  shape_map.erase("");
+  for (auto [path, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
-    if (!load_shape(fs::path(filename).parent_path() / shape->name,
-            shape->points, shape->lines, shape->triangles, shape->quads,
-            shape->positions, shape->normals, shape->texcoords, shape->colors,
-            shape->radius, error))
+    if (!load_shape(fs::path(filename).parent_path() / path, shape->points,
+            shape->lines, shape->triangles, shape->quads, shape->positions,
+            shape->normals, shape->texcoords, shape->colors, shape->radius,
+            error))
       return dependent_error();
   }
   // load subdivs
-  for (auto subdiv : scene->subdivs) {
+  subdiv_map.erase("");
+  for (auto [path, subdiv] : subdiv_map) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    if (!load_fvshape(fs::path(filename).parent_path() / subdiv->name,
-            subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
-            subdiv->positions, subdiv->normals, subdiv->texcoords, error))
+    if (!load_fvshape(fs::path(filename).parent_path() / path, subdiv->quadspos,
+            subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
+            subdiv->normals, subdiv->texcoords, error))
       return dependent_error();
   }
   // load textures
-  for (auto texture : scene->textures) {
+  ctexture_map.erase("");
+  for (auto [path, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(fs::path(filename).parent_path() / texture->name,
-            texture->colorf, texture->colorb, texture->scalarf,
+    if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
+            texture->colorb, error))
+      return dependent_error();
+  }
+  // load textures
+  stexture_map.erase("");
+  for (auto [path, texture] : stexture_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (!load_image(fs::path(filename).parent_path() / path, texture->scalarf,
             texture->scalarb, error))
       return dependent_error();
   }
   // load instances
-  for (auto instance : scene->instances) {
+  instance_map.erase("");
+  for (auto [path, instance] : instance_map) {
     if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
-    if (!load_instance(fs::path(filename).parent_path() / instance->name,
-            instance->frames, error))
+    if (!load_instance(
+            fs::path(filename).parent_path() / path, instance->frames, error))
       return dependent_error();
   }
 
@@ -1422,10 +1441,15 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (!save_image(fs::path(filename).parent_path() / texture->name,
-            texture->colorf, texture->colorb, texture->scalarf,
-            texture->scalarb, error))
-      return dependent_error();
+    if (!texture->colorf.empty() || !texture->colorb.empty()) {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->colorf, texture->colorb, error))
+        return dependent_error();
+    } else {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->scalarf, texture->scalarb, error))
+        return dependent_error();
+    }
   }
 
   // done
@@ -1478,20 +1502,38 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   }
 
   // helper to create texture maps
-  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&texture_map, scene](
-                         const obj_texture_info& info) -> sceneio_texture* {
+  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_ctexture = [&ctexture_map, scene](
+                          const obj_texture_info& info) -> sceneio_texture* {
     auto path = info.path;
     if (path == "") return nullptr;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
+    auto it = ctexture_map.find(path);
+    if (it != ctexture_map.end()) return it->second;
     auto texture = add_texture(scene);
     if (is_hdr_filename(path))
       texture->name = fs::path(texture->name).replace_extension(".hdr");
     // texture->name = make_safe_name(
     //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" :
     //     ".png");
-    texture_map[path] = texture;
+    ctexture_map[path] = texture;
+    return texture;
+  };
+
+  // helper to create texture maps
+  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_stexture = [&stexture_map, scene](
+                          const obj_texture_info& info) -> sceneio_texture* {
+    auto path = info.path;
+    if (path == "") return nullptr;
+    auto it = stexture_map.find(path);
+    if (it != stexture_map.end()) return it->second;
+    auto texture = add_texture(scene);
+    if (is_hdr_filename(path))
+      texture->name = fs::path(texture->name).replace_extension(".hdr");
+    // texture->name = make_safe_name(
+    //     "texture", get_basename(path), is_hdr_filename(path) ? ".hdr" :
+    //     ".png");
+    stexture_map[path] = texture;
     return texture;
   };
 
@@ -1513,15 +1555,15 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
     material->trdepth          = omat->pbr_volscale;
     material->opacity          = omat->pbr_opacity;
     material->thin             = true;
-    material->emission_tex     = get_texture(omat->pbr_emission_tex);
-    material->color_tex        = get_texture(omat->pbr_base_tex);
-    material->specular_tex     = get_texture(omat->pbr_specular_tex);
-    material->metallic_tex     = get_texture(omat->pbr_metallic_tex);
-    material->roughness_tex    = get_texture(omat->pbr_roughness_tex);
-    material->transmission_tex = get_texture(omat->pbr_transmission_tex);
-    material->coat_tex         = get_texture(omat->pbr_coat_tex);
-    material->opacity_tex      = get_texture(omat->pbr_opacity_tex);
-    material->normal_tex       = get_texture(omat->normal_tex);
+    material->emission_tex     = get_ctexture(omat->pbr_emission_tex);
+    material->color_tex        = get_ctexture(omat->pbr_base_tex);
+    material->specular_tex     = get_stexture(omat->pbr_specular_tex);
+    material->metallic_tex     = get_stexture(omat->pbr_metallic_tex);
+    material->roughness_tex    = get_stexture(omat->pbr_roughness_tex);
+    material->transmission_tex = get_stexture(omat->pbr_transmission_tex);
+    material->coat_tex         = get_stexture(omat->pbr_coat_tex);
+    material->opacity_tex      = get_stexture(omat->pbr_opacity_tex);
+    material->normal_tex       = get_ctexture(omat->normal_tex);
     material_map[omat]         = material;
   }
 
@@ -1535,13 +1577,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
       auto object      = add_object(scene);
       object->shape    = add_shape(scene);
       object->material = material_map.at(materials[material_idx]);
-      // if (!oshape->name.empty()) {
-      //   object->name        = make_safe_name("object", oshape->name, ".json",
-      //       materials.size() > 1 ? material_idx + 1 : 0);
-      //   object->shape->name = make_safe_name("shape", oshape->name, ".ply",
-      //       materials.size() > 1 ? material_idx + 1 : 0);
-      // }
-      auto has_quads_ = has_quads(oshape);
+      auto has_quads_  = has_quads(oshape);
       if (!oshape->faces.empty() && !has_quads_) {
         get_triangles(obj, oshape, material_idx, object->shape->triangles,
             object->shape->positions, object->shape->normals,
@@ -1562,11 +1598,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
         return shape_error();
       }
       if (!oshape->instances.empty()) {
-        object->instance = add_instance(scene);
-        // if (!oshape->name.empty()) {
-        //   object->instance->name = make_safe_name("object", oshape->name,
-        //       ".json", materials.size() > 1 ? material_idx + 1 : 0);
-        // }
+        object->instance         = add_instance(scene);
         object->instance->frames = oshape->instances;
       }
     }
@@ -1574,22 +1606,30 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
 
   // convert environments
   for (auto oenvironment : obj->environments) {
-    auto environment = add_environment(scene);
-    // environment->name     = make_safe_name("environment", oenvironment.name);
+    auto environment          = add_environment(scene);
     environment->frame        = oenvironment->frame;
     environment->emission     = oenvironment->emission;
-    environment->emission_tex = get_texture(oenvironment->emission_tex);
+    environment->emission_tex = get_ctexture(oenvironment->emission_tex);
   }
 
   // handle progress
   progress.y += (int)scene->textures.size();
 
   // load textures
-  texture_map.erase("");
-  for (auto [path, texture] : texture_map) {
+  ctexture_map.erase("");
+  for (auto [path, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
-            texture->colorb, texture->scalarf, texture->scalarb, error))
+            texture->colorb, error))
+      return dependent_error();
+  }
+
+  // load textures
+  stexture_map.erase("");
+  for (auto [path, texture] : stexture_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (!load_image(fs::path(filename).parent_path() / path, texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
   }
 
@@ -1717,10 +1757,15 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (!save_image(fs::path(filename).parent_path() / texture->name,
-            texture->colorf, texture->colorb, texture->scalarf,
-            texture->scalarb, error))
-      return dependent_error();
+    if (!texture->colorf.empty() || !texture->colorb.empty()) {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->colorf, texture->colorb, error))
+        return dependent_error();
+    } else {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->scalarf, texture->scalarb, error))
+        return dependent_error();
+    }
   }
 
   // done
@@ -1906,7 +1951,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
-            texture->colorb, texture->scalarf, texture->scalarb, error))
+            texture->colorb, error))
       return dependent_error();
   }
 
@@ -1967,28 +2012,40 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   }
 
   // convert materials
-  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&scene, &texture_map](
-                         const string& path) -> sceneio_texture* {
+  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_ctexture = [&scene, &ctexture_map](
+                          const string& path) -> sceneio_texture* {
     if (path == "") return nullptr;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    auto texture      = add_texture(scene);
-    texture->name     = make_safe_name("texture", fs::path(path).stem(),
+    auto it = ctexture_map.find(path);
+    if (it != ctexture_map.end()) return it->second;
+    auto texture       = add_texture(scene);
+    texture->name      = make_safe_name("texture", fs::path(path).stem(),
         (!is_hdr_filename(path) ? ".png" : ".hdr"));
-    texture_map[path] = texture;
+    ctexture_map[path] = texture;
     return texture;
   };
-  auto alpha_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_alpha = [&scene, &alpha_map](
-                       const string& path) -> sceneio_texture* {
+  auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_stexture = [&scene, &stexture_map](
+                          const string& path) -> sceneio_texture* {
     if (path == "") return nullptr;
-    auto it = alpha_map.find(path);
-    if (it != alpha_map.end()) return it->second;
+    auto it = stexture_map.find(path);
+    if (it != stexture_map.end()) return it->second;
+    auto texture       = add_texture(scene);
+    texture->name      = make_safe_name("texture", fs::path(path).stem(),
+        (!is_hdr_filename(path) ? ".png" : ".hdr"));
+    stexture_map[path] = texture;
+    return texture;
+  };
+  auto atexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_atexture = [&scene, &atexture_map](
+                          const string& path) -> sceneio_texture* {
+    if (path == "") return nullptr;
+    auto it = atexture_map.find(path);
+    if (it != atexture_map.end()) return it->second;
     auto texture  = add_texture(scene);
     texture->name = make_safe_name(
         "texture", fs::path(path).stem(), "-alpha.png");
-    alpha_map[path] = texture;
+    atexture_map[path] = texture;
     return texture;
   };
 
@@ -2005,10 +2062,10 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     material->roughness    = pmaterial->roughness;
     material->opacity      = pmaterial->opacity;
     material->thin         = pmaterial->thin;
-    material->color_tex    = get_texture(pmaterial->color_tex);
-    material->opacity_tex  = get_texture(pmaterial->opacity_tex);
+    material->color_tex    = get_ctexture(pmaterial->color_tex);
+    material->opacity_tex  = get_stexture(pmaterial->opacity_tex);
     if (!material->opacity_tex)
-      material->opacity_tex = get_alpha(pmaterial->alpha_tex);
+      material->opacity_tex = get_atexture(pmaterial->alpha_tex);
     material_map[pmaterial] = material;
   }
 
@@ -2037,7 +2094,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     auto environment          = add_environment(scene);
     environment->frame        = penvironment->frame;
     environment->emission     = penvironment->emission;
-    environment->emission_tex = get_texture(penvironment->emission_tex);
+    environment->emission_tex = get_ctexture(penvironment->emission_tex);
   }
 
   // lights
@@ -2056,25 +2113,30 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   progress.y += (int)scene->textures.size();
 
   // load texture
-  texture_map.erase("");
-  for (auto [path, texture] : texture_map) {
+  ctexture_map.erase("");
+  for (auto [path, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
-            texture->colorb, texture->scalarf, texture->scalarb, error))
+            texture->colorb, error))
+      return dependent_error();
+  }
+
+  // load texture
+  stexture_map.erase("");
+  for (auto [path, texture] : stexture_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (!load_image(fs::path(filename).parent_path() / path, texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
   }
 
   // load alpha
-  alpha_map.erase("");
-  for (auto [path, texture] : alpha_map) {
+  atexture_map.erase("");
+  for (auto [path, texture] : atexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
-            texture->colorb, texture->scalarf, texture->scalarb, error))
+    if (!load_image(fs::path(filename).parent_path() / path, texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
-    for (auto& c : texture->colorf)
-      c = (max(c) < 0.01) ? vec3f{0, 0, 0} : vec3f{1, 1, 1};
-    for (auto& c : texture->colorb)
-      c = (max(max(c.x, c.y), c.z) < 2) ? vec3b{0, 0, 0} : vec3b{255, 255, 255};
     for (auto& c : texture->scalarf) c = (c < 0.01) ? 1 : 1;
     for (auto& c : texture->scalarb) c = (c < 2) ? 0 : 255;
   }
@@ -2180,10 +2242,15 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (!save_image(fs::path(filename).parent_path() / texture->name,
-            texture->colorf, texture->colorb, texture->scalarf,
-            texture->scalarb, error))
-      return dependent_error();
+    if (!texture->colorf.empty() || !texture->colorb.empty()) {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->colorf, texture->colorb, error))
+        return dependent_error();
+    } else {
+      if (!save_image(fs::path(filename).parent_path() / texture->name,
+              texture->scalarf, texture->scalarb, error))
+        return dependent_error();
+    }
   }
 
   // done
