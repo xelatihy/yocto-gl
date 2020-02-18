@@ -569,47 +569,38 @@ void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb) {
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-static bool save_json_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_json_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_json_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-static bool save_obj_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_obj_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_obj_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-static bool save_ply_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_ply_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_ply_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_gltf_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const string& filename,
-    sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
-static bool save_pbrt_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel);
+static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
+static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel);
 
 // Load a scene
-bool load_scene(const string& filename, sceneio_model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+bool load_scene(const string& filename, sceneio_model* scene, string& error,
+    sceneio_progress progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -627,9 +618,8 @@ bool load_scene(const string& filename, sceneio_model* scene,
 }
 
 // Save a scene
-bool save_scene(const string& filename,
-    const sceneio_model* scene, string& error, sceneio_progress progress_cb,
-    bool noparallel) {
+bool save_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -719,8 +709,7 @@ static bool save_instances(const string& filename,
 namespace yocto {
 
 // Load a text file
-inline bool load_text(
-    const string& filename, string& str, string& error) {
+inline bool load_text(const string& filename, string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -844,8 +833,7 @@ inline void from_json(const json& j, frame3f& value) {
 }
 
 // load/save json
-inline bool load_json(
-    const string& filename, json& js, string& error) {
+inline bool load_json(const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -861,8 +849,7 @@ inline bool load_json(
   }
 }
 
-inline bool save_json(
-    const string& filename, const json& js, string& error) {
+inline bool save_json(const string& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
 

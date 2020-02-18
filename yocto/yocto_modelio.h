@@ -101,10 +101,8 @@ struct ply_model {
 
 // Load and save ply
 unique_ptr<ply_model> load_ply(const string& filename, string& error);
-bool    load_ply(
-       const string& filename, ply_model* ply, string& error);
-bool save_ply(
-    const string& filename, ply_model* ply, string& error);
+bool load_ply(const string& filename, ply_model* ply, string& error);
+bool save_ply(const string& filename, ply_model* ply, string& error);
 
 // Get ply properties
 bool has_property(
@@ -336,11 +334,10 @@ struct obj_model {
 };
 
 // Load and save obj
-bool    load_obj(const string& filename, obj_model* obj,
-       string& error, bool geom_only = false, bool split_elements = true,
-       bool split_materials = false);
-bool    save_obj(
-       const string& filename, obj_model* obj, string& error);
+bool load_obj(const string& filename, obj_model* obj, string& error,
+    bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
+bool save_obj(const string& filename, obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -385,10 +382,10 @@ void get_points(obj_model* obj, obj_shape* shape, int material,
 vector<obj_material*> get_materials(obj_model* obj, obj_shape* shape);
 
 // Create OBJ
-obj_camera*           add_camera(obj_model* obj);
-obj_material*         add_material(obj_model* obj);
-obj_environment*      add_environment(obj_model* obj);
-obj_shape*            add_shape(obj_model* obj);
+obj_camera*      add_camera(obj_model* obj);
+obj_material*    add_material(obj_model* obj);
+obj_environment* add_environment(obj_model* obj);
+obj_shape*       add_shape(obj_model* obj);
 
 // Add obj shape
 void add_triangles(obj_model* obj, const string& name,
@@ -534,17 +531,16 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-bool     load_pbrt(
-        const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt,
-    string& error, bool ply_meshes = false);
+bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
+bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
+    bool ply_meshes = false);
 
 // Create pbrt
-pbrt_camera*           add_camera(pbrt_model* pbrt);
-pbrt_shape*            add_shape(pbrt_model* pbrt);
-pbrt_material*         add_material(pbrt_model* pbrt);
-pbrt_environment*      add_environment(pbrt_model* pbrt);
-pbrt_light*            add_light(pbrt_model* pbrt);
+pbrt_camera*      add_camera(pbrt_model* pbrt);
+pbrt_shape*       add_shape(pbrt_model* pbrt);
+pbrt_material*    add_material(pbrt_model* pbrt);
+pbrt_environment* add_environment(pbrt_model* pbrt);
+pbrt_light*       add_light(pbrt_model* pbrt);
 
 }  // namespace yocto
 
@@ -603,8 +599,7 @@ struct gltf_model {
 };
 
 // Load gltf file.
-bool     load_gltf(
-        const string& filename, gltf_model* gltf, string& error);
+bool load_gltf(const string& filename, gltf_model* gltf, string& error);
 
 }  // namespace yocto
 

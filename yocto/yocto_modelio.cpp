@@ -382,7 +382,7 @@ ply_model::~ply_model() {
 }
 
 // Make ply
-ply_element*          add_property(ply_model* ply) {
+ply_element* add_property(ply_model* ply) {
   return ply->elements.emplace_back(new ply_element{});
 }
 ply_property* add_property(ply_element* element) {
@@ -1601,7 +1601,7 @@ obj_model::~obj_model() {
 }
 
 // Make obj
-obj_camera*           add_camera(obj_model* obj) {
+obj_camera* add_camera(obj_model* obj) {
   return obj->cameras.emplace_back(new obj_camera{});
 }
 obj_material* add_material(obj_model* obj) {
@@ -4467,7 +4467,7 @@ pbrt_model::~pbrt_model() {
 }
 
 // Make pbrt
-pbrt_camera*           add_camera(pbrt_model* pbrt) {
+pbrt_camera* add_camera(pbrt_model* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
 pbrt_shape* add_shape(pbrt_model* pbrt) {
@@ -4760,13 +4760,13 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
     }
     if (ply_meshes) {
       auto ply_guard = make_unique<ply_model>();
-      auto ply = ply_guard.get();
+      auto ply       = ply_guard.get();
       add_positions(ply, shape->positions);
       add_normals(ply, shape->normals);
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
-      if (!save_ply(fs::path(filename).parent_path() / shape->filename_,
-              ply, error))
+      if (!save_ply(
+              fs::path(filename).parent_path() / shape->filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);

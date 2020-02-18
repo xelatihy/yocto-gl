@@ -248,11 +248,10 @@ using sceneio_progress =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, sceneio_model* scene,
-    string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename,
-    const sceneio_model* scene, string& error,
+bool load_scene(const string& filename, sceneio_model* scene, string& error,
     sceneio_progress progress_cb = {}, bool noparallel = false);
+bool save_scene(const string& filename, const sceneio_model* scene,
+    string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto
 

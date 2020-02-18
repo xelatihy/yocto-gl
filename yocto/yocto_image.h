@@ -270,24 +270,16 @@ namespace yocto {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(
-    const string& filename, image<vec4f>& img, string& error);
-bool save_image(
-    const string& filename, const image<vec4f>& img, string& error);
-bool load_image(
-    const string& filename, image<vec4b>& img, string& error);
-bool save_image(
-    const string& filename, const image<vec4b>& img, string& error);
+bool load_image(const string& filename, image<vec4f>& img, string& error);
+bool save_image(const string& filename, const image<vec4f>& img, string& error);
+bool load_image(const string& filename, image<vec4b>& img, string& error);
+bool save_image(const string& filename, const image<vec4b>& img, string& error);
 
 // Loads/saves a 3 channels float/byte image in linear/srgb color space.
-bool load_image(
-    const string& filename, image<vec3f>& img, string& error);
-bool save_image(
-    const string& filename, const image<vec3f>& img, string& error);
-bool load_image(
-    const string& filename, image<vec3b>& img, string& error);
-bool save_image(
-    const string& filename, const image<vec3b>& img, string& error);
+bool load_image(const string& filename, image<vec3f>& img, string& error);
+bool save_image(const string& filename, const image<vec3f>& img, string& error);
+bool load_image(const string& filename, image<vec3b>& img, string& error);
+bool save_image(const string& filename, const image<vec3b>& img, string& error);
 
 }  // namespace yocto
 

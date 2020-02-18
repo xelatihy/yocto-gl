@@ -43,10 +43,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::unique_ptr;
 using std::make_unique;
+using std::unique_ptr;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
