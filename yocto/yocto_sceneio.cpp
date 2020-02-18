@@ -661,8 +661,28 @@ static string get_extension(const string& filename) {
   return filename.substr(pos);
 }
 
+// Loads/saves a 3 channel float/byte image in linear/srgb color space.
+static bool load_image(const string& filename, image<vec3f>& imgf,
+    image<vec3b>& imgb, string& error) {
+  if (is_hdr_filename(filename)) {
+    imgb = {};
+    return load_image(filename, imgf, error);
+  } else {
+    imgf = {};
+    return load_image(filename, imgb, error);
+  }
+}
+static bool save_image(const string& filename, const image<vec3f>& imgf,
+    const image<vec3b>& imgb, string& error) {
+  if (is_hdr_filename(filename)) {
+    return save_image(filename, imgf, error);
+  } else {
+    return save_image(filename, imgb, error);
+  }
+}
+
 // load instances
-static bool load_instances(
+static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -672,7 +692,7 @@ static bool load_instances(
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, &ply, error)) return false;
-    frames = get_values(&ply, "frame",
+    frames = get_values(&ply, "instance",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
     return true;
@@ -682,8 +702,8 @@ static bool load_instances(
 }
 
 // save instances
-static bool save_instances(const string& filename,
-    const vector<frame3f>& frames, string& error, bool ascii = false) {
+static bool save_instance(const string& filename, const vector<frame3f>& frames,
+    string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -691,7 +711,7 @@ static bool save_instances(const string& filename,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_values(&ply, frames, "frame",
+    add_values(&ply, frames, "instance",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
     if (!save_ply(filename, &ply, error)) return false;
@@ -1125,20 +1145,14 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
   // load textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (is_hdr_filename(texture->name)) {
-      if (!load_image(fs::path(filename).parent_path() / texture->name,
-              texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!load_image(fs::path(filename).parent_path() / texture->name,
-              texture->ldr, error))
-        return dependent_error();
-    }
+    if (!load_image(fs::path(filename).parent_path() / texture->name,
+            texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
   // load instances
   for (auto instance : scene->instances) {
     if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
-    if (!load_instances(fs::path(filename).parent_path() / instance->name,
+    if (!load_instance(fs::path(filename).parent_path() / instance->name,
             instance->frames, error))
       return dependent_error();
   }
@@ -1275,50 +1289,36 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   // save shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    if (!shape->positions.empty()) {
-      if (!save_shape(fs::path(filename).parent_path() / shape->name,
-              shape->points, shape->lines, shape->triangles, shape->quads,
-              shape->positions, shape->normals, shape->texcoords, shape->colors,
-              shape->radius, error))
-        return dependent_error();
-    }
+    if (!save_shape(fs::path(filename).parent_path() / shape->name,
+            shape->points, shape->lines, shape->triangles, shape->quads,
+            shape->positions, shape->normals, shape->texcoords, shape->colors,
+            shape->radius, error))
+      return dependent_error();
   }
 
   // save subdivs
   for (auto subdiv : scene->subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    if (!subdiv->positions.empty()) {
-      if (!save_fvshape(fs::path(filename).parent_path() / subdiv->name,
-              subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
-              subdiv->positions, subdiv->normals, subdiv->texcoords, error))
-        return dependent_error();
-    }
+    if (!save_fvshape(fs::path(filename).parent_path() / subdiv->name,
+            subdiv->quadspos, subdiv->quadsnorm, subdiv->quadstexcoord,
+            subdiv->positions, subdiv->normals, subdiv->texcoords, error))
+      return dependent_error();
   }
 
   // save instances
   for (auto instance : scene->instances) {
     if (progress_cb) progress_cb("save instance", progress.x++, progress.y);
-    if (!instance->frames.empty()) {
-      if (!save_instances(fs::path(filename).parent_path() / instance->name,
-              instance->frames, error))
-        return dependent_error();
-    }
+    if (!save_instance(fs::path(filename).parent_path() / instance->name,
+            instance->frames, error))
+      return dependent_error();
   }
 
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (!texture->ldr.empty() || !texture->hdr.empty()) {
-      if (!texture->hdr.empty()) {
-        if (!save_image(fs::path(filename).parent_path() / texture->name,
-                texture->hdr, error))
-          return dependent_error();
-      } else {
-        if (!save_image(fs::path(filename).parent_path() / texture->name,
-                texture->ldr, error))
-          return dependent_error();
-      }
-    }
+    if (!save_image(fs::path(filename).parent_path() / texture->name,
+            texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done
@@ -1481,15 +1481,9 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (is_hdr_filename(path)) {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->ldr, error))
-        return dependent_error();
-    }
+    if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+            texture->ldr, error))
+      return dependent_error();
   }
 
   // fix scene
@@ -1616,16 +1610,9 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (texture->ldr.empty() && texture->hdr.empty()) continue;
-    if (!texture->hdr.empty()) {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
-              texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
-              texture->ldr, error))
-        return dependent_error();
-    }
+    if (!save_image(fs::path(filename).parent_path() / texture->name,
+            texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done
@@ -1810,15 +1797,9 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (is_hdr_filename(path)) {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->ldr, error))
-        return dependent_error();
-    }
+    if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+            texture->ldr, error))
+      return dependent_error();
   }
 
   // fix scene
@@ -1970,36 +1951,22 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   texture_map.erase("");
   for (auto [path, texture] : texture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (is_hdr_filename(path)) {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->ldr, error))
-        return dependent_error();
-    }
+    if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+            texture->ldr, error))
+      return dependent_error();
   }
 
   // load alpha
   alpha_map.erase("");
   for (auto [path, texture] : alpha_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (is_hdr_filename(path)) {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->hdr, error))
-        return dependent_error();
-      for (auto& c : texture->hdr)
-        c = (max(c) < 0.01) ? vec3f{0, 0, 0} : vec3f{1, 1, 1};
-    } else {
-      if (!load_image(
-              fs::path(filename).parent_path() / path, texture->ldr, error))
-        return dependent_error();
-      for (auto& c : texture->ldr) {
-        c = (max(max(c.x, c.y), c.z) < 2) ? vec3b{0, 0, 0}
-                                          : vec3b{255, 255, 255};
-      }
-    }
+    if (!load_image(fs::path(filename).parent_path() / path, texture->hdr,
+            texture->ldr, error))
+      return dependent_error();
+    for (auto& c : texture->hdr)
+      c = (max(c) < 0.01) ? vec3f{0, 0, 0} : vec3f{1, 1, 1};
+    for (auto& c : texture->ldr)
+      c = (max(max(c.x, c.y), c.z) < 2) ? vec3b{0, 0, 0} : vec3b{255, 255, 255};
   }
 
   // fix scene
@@ -2092,7 +2059,6 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   // save meshes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    if (shape->positions.empty()) continue;
     if (!save_shape((fs::path(filename).parent_path() / shape->name)
                         .replace_extension(".ply"),
             shape->points, shape->lines, shape->triangles, shape->quads,
@@ -2104,16 +2070,9 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    if (texture->ldr.empty() && texture->hdr.empty()) continue;
-    if (!texture->hdr.empty()) {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
-              texture->hdr, error))
-        return dependent_error();
-    } else {
-      if (!save_image(fs::path(filename).parent_path() / texture->name,
-              texture->ldr, error))
-        return dependent_error();
-    }
+    if (!save_image(fs::path(filename).parent_path() / texture->name,
+            texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done
