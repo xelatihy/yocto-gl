@@ -83,8 +83,6 @@ namespace yocto {
 
 // Using directives
 using std::function;
-using std::make_unique;
-using std::unique_ptr;
 
 // Trace scene
 struct trace_scene;
@@ -95,9 +93,6 @@ struct trace_texture;
 struct trace_material;
 struct trace_instance;
 struct trace_object;
-
-// Create scene.
-unique_ptr<trace_scene> make_trace_scene();
 
 // Add scene elements
 trace_camera*      add_camera(trace_scene* scene);
@@ -262,10 +257,6 @@ using trace_process_async = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-unique_ptr<trace_state> trace_async_start(const trace_scene* scene,
-    const trace_params& params, trace_progress progress_cb = {},
-    trace_progress_image progress_image_cb = {},
-    trace_process_async  progress_async_cb = {});
 void trace_async_start(trace_state* state, const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {},

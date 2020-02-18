@@ -39,6 +39,16 @@
 #endif
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::unique_ptr;
+using std::make_unique;
+
+}
+
+// -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -3091,15 +3101,6 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_params& params,
 }
 
 // [experimental] Asynchronous interface
-unique_ptr<trace_state> trace_async_start(const trace_scene* scene,
-    const trace_params& params, trace_progress progress_cb,
-    trace_progress_image progress_image_cb,
-    trace_process_async  progress_async_cb) {
-  auto state = make_unique<trace_state>();
-  trace_async_start(state.get(), scene, params, progress_cb, progress_image_cb,
-      progress_async_cb);
-  return state;
-}
 void trace_async_start(trace_state* state, const trace_scene* scene,
     const trace_params& params, trace_progress progress_cb,
     trace_progress_image progress_image_cb,
@@ -3176,11 +3177,6 @@ trace_scene::~trace_scene() {
   for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
-}
-
-// create scene
-unique_ptr<trace_scene> make_trace_scene() {
-  return make_unique<trace_scene>();
 }
 
 // Add cameras
