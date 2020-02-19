@@ -156,31 +156,15 @@ inline pbrt_light*       add_light(pbrt_model* pbrt);
 //
 // -----------------------------------------------------------------------------
 
+#include <cstdio>
 #include <map>
 #include <memory>
 #include <string_view>
 #include <unordered_set>
-#include <cstdio>
 
 #include "ext/filesystem.hpp"
 #include "yocto_ply.h"
 namespace fs = ghc::filesystem;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // -----------------------------------------------------------------------------
 // PBRT PARSING
@@ -425,7 +409,8 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<float>& value) {
+[[nodiscard]] inline bool get_value(
+    const pbrt_value& pbrt, vector<float>& value) {
   if (pbrt.type == pbrt_value_type::real) {
     if (!pbrt.vector1f.empty()) {
       value = pbrt.vector1f;
@@ -437,7 +422,8 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<vec2f>& value) {
+[[nodiscard]] inline bool get_value(
+    const pbrt_value& pbrt, vector<vec2f>& value) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     if (!pbrt.vector2f.empty()) {
@@ -457,7 +443,8 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<vec3f>& value) {
+[[nodiscard]] inline bool get_value(
+    const pbrt_value& pbrt, vector<vec3f>& value) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
@@ -481,7 +468,8 @@ struct pbrt_command {
   }
 }
 
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<int>& value) {
+[[nodiscard]] inline bool get_value(
+    const pbrt_value& pbrt, vector<int>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (!pbrt.vector1i.empty()) {
       value = pbrt.vector1i;
@@ -493,7 +481,8 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<vec3i>& value) {
+[[nodiscard]] inline bool get_value(
+    const pbrt_value& pbrt, vector<vec3i>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
@@ -588,7 +577,8 @@ inline pbrt_value make_pbrt_value(const string& name, const vec3f& value,
   pbrt.value3f = value;
   return pbrt;
 }
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec2f>&                        value,
     pbrt_value_type type = pbrt_value_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -596,15 +586,16 @@ inline pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value
   pbrt.vector2f = value;
   return pbrt;
 }
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
-    pbrt_value_type type = pbrt_value_type::point) {
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3f>& value, pbrt_value_type type = pbrt_value_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = value;
   return pbrt;
 }
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3i>&                        value,
     pbrt_value_type type = pbrt_value_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -798,8 +789,7 @@ inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-inline
-pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
+inline pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
   static const unordered_map<string, pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan

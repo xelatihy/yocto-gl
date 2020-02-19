@@ -303,9 +303,9 @@ struct hash<yocto::obj::obj_vertex> {
 //
 // -----------------------------------------------------------------------------
 
+#include <cstdio>
 #include <memory>
 #include <string_view>
-#include <cstdio>
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
