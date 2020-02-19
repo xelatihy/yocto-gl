@@ -143,12 +143,6 @@ static void skip_whitespace(string_view& str) {
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
-  auto valuei = 0;
-  if (!parse_value(str, valuei)) return false;
-  value = (bool)valuei;
-  return true;
-}
 [[nodiscard]] static bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
@@ -173,35 +167,8 @@ static void skip_whitespace(string_view& str) {
 }
 #endif
 
-[[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
-static void format_value(string& str, const char* value) { str += value; }
 static void format_value(string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
@@ -251,37 +218,6 @@ static void format_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
-}
-
-static void format_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const mat4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
 }
 
 // Foramt to file
@@ -1275,58 +1211,9 @@ static void skip_whitespace(string_view& str) {
   value = string{valuev};
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
-  char* end = nullptr;
-  value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
-  char* end = nullptr;
-  value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
 [[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
-  char* end = nullptr;
-  value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
-  char* end = nullptr;
-  value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
@@ -1344,22 +1231,6 @@ static void skip_whitespace(string_view& str) {
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-#ifdef __APPLE__
-[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
-  char* end = nullptr;
-  value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-#endif
 
 [[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
@@ -1371,17 +1242,7 @@ static void skip_whitespace(string_view& str) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
 [[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
@@ -1389,45 +1250,9 @@ static void skip_whitespace(string_view& str) {
 
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
-static void format_value(string& str, const char* value) { str += value; }
-static void format_value(string& str, int8_t value) {
+static void format_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int16_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int32_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int64_t value) {
-  char buf[256];
-  sprintf(buf, "%lld", (long long)value);
-  str += buf;
-}
-static void format_value(string& str, uint8_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint16_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint32_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint64_t value) {
-  char buf[256];
-  sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
 static void format_value(string& str, float value) {
@@ -1435,12 +1260,6 @@ static void format_value(string& str, float value) {
   sprintf(buf, "%g", value);
   str += buf;
 }
-static void format_value(string& str, double value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-
 static void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
@@ -1453,19 +1272,7 @@ static void format_value(string& str, const vec3f& value) {
     format_value(str, value[i]);
   }
 }
-static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
 static void format_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const mat4f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
@@ -2939,66 +2746,11 @@ static void skip_whitespace(string_view& str) {
   value = string{valuev};
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
-  char* end = nullptr;
-  value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
-  char* end = nullptr;
-  value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
+[[nodiscard]] static bool parse_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
-  char* end = nullptr;
-  value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
-  char* end = nullptr;
-  value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
-  auto valuei = 0;
-  if (!parse_value(str, valuei)) return false;
-  value = (bool)valuei;
   return true;
 }
 [[nodiscard]] static bool parse_value(string_view& str, float& value) {
@@ -3008,22 +2760,6 @@ static void skip_whitespace(string_view& str) {
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-#ifdef __APPLE__
-[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
-  char* end = nullptr;
-  value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-#endif
 
 [[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
@@ -3040,11 +2776,6 @@ static void skip_whitespace(string_view& str) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
 [[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
@@ -3054,52 +2785,12 @@ static void skip_whitespace(string_view& str) {
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
 static void format_value(string& str, const char* value) { str += value; }
-static void format_value(string& str, int8_t value) {
+static void format_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int16_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int32_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_value(string& str, int64_t value) {
-  char buf[256];
-  sprintf(buf, "%lld", (long long)value);
-  str += buf;
-}
-static void format_value(string& str, uint8_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint16_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint32_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-static void format_value(string& str, uint64_t value) {
-  char buf[256];
-  sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
 static void format_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-static void format_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
@@ -3118,12 +2809,6 @@ static void format_value(string& str, const vec3f& value) {
   }
 }
 static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_value(str, value[i]);
-  }
-}
-static void format_value(string& str, const frame3f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
