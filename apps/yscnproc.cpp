@@ -39,33 +39,21 @@ using std::make_unique;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-bool mkdir(const string& dir) {
-  if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
-    return true;
-#ifndef _MSC_VER
-  system(("mkdir -p " + dir).c_str());
-  return true;
-#else
-  system(("mkdir " + dir).c_str());
-  return true;
-#endif
-}
-
 void make_dir(const string& dirname) {
-  if(fs::exists(dirname)) return;
+  if (fs::exists(dirname)) return;
   try {
     fs::create_directories(dirname);
-  } catch(...) {
+  } catch (...) {
     print_fatal("cannot create directory " + dirname);
   }
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto validate           = false;
-  auto info               = false;
-  auto output             = "out.json"s;
-  auto filename           = "scene.json"s;
+  auto validate = false;
+  auto info     = false;
+  auto output   = "out.json"s;
+  auto filename = "scene.json"s;
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
@@ -102,13 +90,13 @@ int main(int argc, const char* argv[]) {
 
   // make a directory if needed
   make_dir(fs::path(output).parent_path());
-  if (!scene->shapes.empty()) 
+  if (!scene->shapes.empty())
     make_dir(fs::path(output).parent_path() / "shapes");
-  if (!scene->subdivs.empty()) 
+  if (!scene->subdivs.empty())
     make_dir(fs::path(output).parent_path() / "subdivs");
-  if (!scene->textures.empty()) 
+  if (!scene->textures.empty())
     make_dir(fs::path(output).parent_path() / "textures");
-  if (!scene->instances.empty()) 
+  if (!scene->instances.empty())
     make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
