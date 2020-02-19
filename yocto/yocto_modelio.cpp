@@ -4855,7 +4855,8 @@ gltf_model::~gltf_model() {
   auto dirname = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
-      cgltf_result_success) return read_error();
+      cgltf_result_success)
+    return read_error();
 
   // convert textures
   auto _startswith = [](string_view str, string_view substr) {
@@ -4962,11 +4963,11 @@ gltf_model::~gltf_model() {
         } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
           shape->triangles.resize(shape->positions.size() - 2);
           for (auto i = 2; i < shape->positions.size(); i++)
-            shape->triangles[i-2] = {0, i - 1, i};
+            shape->triangles[i - 2] = {0, i - 1, i};
         } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
           shape->triangles.resize(shape->positions.size() - 2);
           for (auto i = 2; i < shape->positions.size(); i++)
-            shape->triangles[i-2] = {i - 2, i - 1, i};
+            shape->triangles[i - 2] = {i - 2, i - 1, i};
         } else if (gprim->type == cgltf_primitive_type_lines) {
           shape->lines.resize(shape->positions.size() / 2);
           for (auto i = 0; i < shape->positions.size() / 2; i++)
@@ -4974,12 +4975,12 @@ gltf_model::~gltf_model() {
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape->lines.resize(shape->positions.size());
           for (auto i = 1; i < shape->positions.size(); i++)
-            shape->lines[i-1] = {i - 1, i};
+            shape->lines[i - 1] = {i - 1, i};
           shape->lines.back() = {(int)shape->positions.size() - 1, 0};
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape->lines.resize(shape->positions.size() - 1);
           for (auto i = 1; i < shape->positions.size(); i++)
-            shape->lines[i-1] = {i - 1, i};
+            shape->lines[i - 1] = {i - 1, i};
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points
           return primitive_error();
@@ -4991,41 +4992,56 @@ gltf_model::~gltf_model() {
         if (gprim->type == cgltf_primitive_type_triangles) {
           shape->triangles.resize(giacc->count / 3);
           for (auto i = 0; i < giacc->count / 3; i++) {
-            cgltf_accessor_read_uint(giacc, i * 3 + 0, (uint*)&shape->triangles[i].x, 1);
-            cgltf_accessor_read_uint(giacc, i * 3 + 1, (uint*)&shape->triangles[i].y, 1);
-            cgltf_accessor_read_uint(giacc, i * 3 + 2, (uint*)&shape->triangles[i].z, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 0, (uint*)&shape->triangles[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 1, (uint*)&shape->triangles[i].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 2, (uint*)&shape->triangles[i].z, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
           shape->triangles.resize(giacc->count - 2);
           for (auto i = 2; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(giacc, 0 + 0, (uint*)&shape->triangles[i-2].x, 1);
-            cgltf_accessor_read_uint(giacc, i - 1, (uint*)&shape->triangles[i-2].y, 1);
-            cgltf_accessor_read_uint(giacc, i + 0, (uint*)&shape->triangles[i-2].z, 1);
+            cgltf_accessor_read_uint(
+                giacc, 0 + 0, (uint*)&shape->triangles[i - 2].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
           shape->triangles.resize(giacc->count - 2);
           for (auto i = 2; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(giacc, i - 2, (uint*)&shape->triangles[i-2].x, 1);
-            cgltf_accessor_read_uint(giacc, i - 1, (uint*)&shape->triangles[i-2].y, 1);
-            cgltf_accessor_read_uint(giacc, i + 0, (uint*)&shape->triangles[i-2].z, 1);
+            cgltf_accessor_read_uint(
+                giacc, i - 2, (uint*)&shape->triangles[i - 2].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_lines) {
           shape->lines.resize(giacc->count / 2);
           for (auto i = 0; i < giacc->count / 2; i++) {
-            cgltf_accessor_read_uint(giacc, i * 2 + 0, (uint*)&shape->lines[i].x, 1);
-            cgltf_accessor_read_uint(giacc, i * 2 + 1, (uint*)&shape->lines[i].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 2 + 0, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 2 + 1, (uint*)&shape->lines[i].y, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape->lines.resize(giacc->count);
           for (auto i = 0; i < giacc->count; i++) {
-            cgltf_accessor_read_uint(giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
-            cgltf_accessor_read_uint(giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape->lines.resize(giacc->count - 1);
           for (auto i = 0; i < giacc->count - 1; i++) {
-            cgltf_accessor_read_uint(giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
-            cgltf_accessor_read_uint(giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
           }
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points

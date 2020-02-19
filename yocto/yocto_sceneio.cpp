@@ -1977,42 +1977,48 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   // convert color textures
   auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
-                         gltf_texture* gtexture) -> sceneio_texture* {
+                          gltf_texture* gtexture) -> sceneio_texture* {
     if (!gtexture) return nullptr;
     auto path = gtexture->filename;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
-    auto texture = add_texture(scene);
+    auto texture       = add_texture(scene);
     ctexture_map[path] = texture;
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map = unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{{"", {nullptr, nullptr}}};
-  auto get_cotexture = [&scene, &cotexture_map](
-                         gltf_texture* gtexture) -> pair<sceneio_texture*, sceneio_texture*> {
+  auto cotexture_map =
+      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
+          {"", {nullptr, nullptr}}};
+  auto get_cotexture =
+      [&scene, &cotexture_map](
+          gltf_texture* gtexture) -> pair<sceneio_texture*, sceneio_texture*> {
     if (!gtexture) return {nullptr, nullptr};
     auto path = gtexture->filename;
     if (path == "") return {nullptr, nullptr};
     auto it = cotexture_map.find(path);
     if (it != cotexture_map.end()) return it->second;
-    auto color_texture = add_texture(scene);
+    auto color_texture   = add_texture(scene);
     auto opacity_texture = add_texture(scene);
-    cotexture_map[path] = {color_texture, opacity_texture};
+    cotexture_map[path]  = {color_texture, opacity_texture};
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map = unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{{"", {nullptr, nullptr}}};
-  auto get_mrtexture = [&scene, &mrtexture_map](
-                         gltf_texture* gtexture) -> pair<sceneio_texture*, sceneio_texture*> {
+  auto mrtexture_map =
+      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
+          {"", {nullptr, nullptr}}};
+  auto get_mrtexture =
+      [&scene, &mrtexture_map](
+          gltf_texture* gtexture) -> pair<sceneio_texture*, sceneio_texture*> {
     if (!gtexture) return {nullptr, nullptr};
     auto path = gtexture->filename;
     if (path == "") return {nullptr, nullptr};
     auto it = mrtexture_map.find(path);
     if (it != mrtexture_map.end()) return it->second;
-    auto metallic_texture = add_texture(scene);
+    auto metallic_texture  = add_texture(scene);
     auto roughness_texture = add_texture(scene);
-    mrtexture_map[path] = {metallic_texture, roughness_texture};
+    mrtexture_map[path]    = {metallic_texture, roughness_texture};
     return {metallic_texture, roughness_texture};
   };
 
@@ -2020,14 +2026,16 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   auto material_map = unordered_map<gltf_material*, sceneio_material*>{
       {nullptr, nullptr}};
   for (auto gmaterial : gltf->materials) {
-    auto material           = add_material(scene);
-    material->emission      = gmaterial->emission;
-    material->color         = gmaterial->color;
-    material->opacity       = gmaterial->opacity;
-    material->specular      = 1;
-    material->emission_tex  = get_ctexture(gmaterial->emission_tex);
-    std::tie(material->color_tex, material->opacity_tex) = get_cotexture(gmaterial->color_tex);
-    std::tie(material->metallic_tex, material->roughness_tex)  = get_mrtexture(gmaterial->metallic_tex);
+    auto material          = add_material(scene);
+    material->emission     = gmaterial->emission;
+    material->color        = gmaterial->color;
+    material->opacity      = gmaterial->opacity;
+    material->specular     = 1;
+    material->emission_tex = get_ctexture(gmaterial->emission_tex);
+    std::tie(material->color_tex, material->opacity_tex) = get_cotexture(
+        gmaterial->color_tex);
+    std::tie(material->metallic_tex, material->roughness_tex) = get_mrtexture(
+        gmaterial->metallic_tex);
     material->normal_tex    = get_ctexture(gmaterial->normal_tex);
     material_map[gmaterial] = material;
   }
@@ -2088,24 +2096,24 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
     if (!load_image(fs::path(filename).parent_path() / path, color_opacityf,
             color_opacityb, error))
       return dependent_error();
-    if(!color_opacityf.empty()) {
+    if (!color_opacityf.empty()) {
       auto [ctexture, otexture] = textures;
       ctexture->colorf.resize(color_opacityf.size());
       otexture->scalarf.resize(color_opacityf.size());
-      for(auto j = 0; j < color_opacityf.size().y; j ++) {
-        for(auto i = 0; i < color_opacityf.size().x; i ++) {
-          ctexture->colorf[{i, j}] = xyz(color_opacityf[{i, j}]);
+      for (auto j = 0; j < color_opacityf.size().y; j++) {
+        for (auto i = 0; i < color_opacityf.size().x; i++) {
+          ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
           otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
         }
       }
     }
-    if(!color_opacityb.empty()) {
+    if (!color_opacityb.empty()) {
       auto [ctexture, otexture] = textures;
       ctexture->colorb.resize(color_opacityb.size());
       otexture->scalarb.resize(color_opacityb.size());
-      for(auto j = 0; j < color_opacityb.size().y; j ++) {
-        for(auto i = 0; i < color_opacityb.size().x; i ++) {
-          ctexture->colorb[{i, j}] = xyz(color_opacityb[{i, j}]);
+      for (auto j = 0; j < color_opacityb.size().y; j++) {
+        for (auto i = 0; i < color_opacityb.size().x; i++) {
+          ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
           otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
         }
       }
@@ -2118,26 +2126,26 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec3f>{};
     auto metallic_roughnessb = image<vec3b>{};
-    if (!load_image(fs::path(filename).parent_path() / path, metallic_roughnessf,
-            metallic_roughnessb, error))
+    if (!load_image(fs::path(filename).parent_path() / path,
+            metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
-    if(!metallic_roughnessf.empty()) {
+    if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
       mtexture->scalarf.resize(metallic_roughnessf.size());
       rtexture->scalarf.resize(metallic_roughnessf.size());
-      for(auto j = 0; j < metallic_roughnessf.size().y; j ++) {
-        for(auto i = 0; i < metallic_roughnessf.size().x; i ++) {
+      for (auto j = 0; j < metallic_roughnessf.size().y; j++) {
+        for (auto i = 0; i < metallic_roughnessf.size().x; i++) {
           mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
           rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
         }
       }
     }
-    if(!metallic_roughnessb.empty()) {
+    if (!metallic_roughnessb.empty()) {
       auto [mtexture, rtexture] = textures;
       mtexture->scalarb.resize(metallic_roughnessb.size());
       rtexture->scalarb.resize(metallic_roughnessb.size());
-      for(auto j = 0; j < metallic_roughnessb.size().y; j ++) {
-        for(auto i = 0; i < metallic_roughnessb.size().x; i ++) {
+      for (auto j = 0; j < metallic_roughnessb.size().y; j++) {
+        for (auto i = 0; i < metallic_roughnessb.size().x; i++) {
           mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
           rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
         }
