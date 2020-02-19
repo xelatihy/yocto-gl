@@ -187,21 +187,6 @@ template <typename T>
   return true;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
@@ -1574,5 +1559,4 @@ void add_fvquads(obj_model* obj, const string& name,
   }
 }
 
-}  // namespace yocto::modelio
-
+}  // namespace yocto::obj

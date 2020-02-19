@@ -38,7 +38,7 @@ endif(MSVC)
 
 add_library(yocto 
   yocto/yocto_math.h yocto/yocto_commonio.h 
-  yocto/yocto_ply.h yocto/yocto_ply.cpp
+  yocto/yocto_ply.h 
   yocto/yocto_obj.h yocto/yocto_obj.cpp
   yocto/yocto_pbrt.h yocto/yocto_pbrt.cpp
   yocto/yocto_bvh.h yocto/yocto_bvh.cpp

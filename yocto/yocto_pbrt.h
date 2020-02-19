@@ -44,7 +44,7 @@
 // PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto::pbrt {
-  
+
 // Using directives
 using namespace yocto::math;
 

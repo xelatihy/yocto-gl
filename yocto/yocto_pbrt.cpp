@@ -31,7 +31,6 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_pbrt.h"
-#include "yocto_ply.h"
 
 #include <algorithm>
 #include <map>
@@ -40,6 +39,7 @@
 #include <unordered_set>
 
 #include "ext/filesystem.hpp"
+#include "yocto_ply.h"
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
@@ -195,25 +195,6 @@ template <typename T>
   return true;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Pbrt value type
 enum struct pbrt_value_type {
   // clang-format off
@@ -304,8 +285,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] bool get_value(
-    const pbrt_value& pbrt, vector<float>& value) {
+[[nodiscard]] bool get_value(const pbrt_value& pbrt, vector<float>& value) {
   if (pbrt.type == pbrt_value_type::real) {
     if (!pbrt.vector1f.empty()) {
       value = pbrt.vector1f;
@@ -317,8 +297,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] bool get_value(
-    const pbrt_value& pbrt, vector<vec2f>& value) {
+[[nodiscard]] bool get_value(const pbrt_value& pbrt, vector<vec2f>& value) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     if (!pbrt.vector2f.empty()) {
@@ -338,8 +317,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] bool get_value(
-    const pbrt_value& pbrt, vector<vec3f>& value) {
+[[nodiscard]] bool get_value(const pbrt_value& pbrt, vector<vec3f>& value) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
@@ -375,8 +353,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] bool get_value(
-    const pbrt_value& pbrt, vector<vec3i>& value) {
+[[nodiscard]] bool get_value(const pbrt_value& pbrt, vector<vec3i>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
@@ -1003,8 +980,7 @@ static bool convert_camera(pbrt_camera* camera, const pbrt_command& command,
     return true;
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
-    if (!get_value(command.values, "lensfile", lensfile))
-      return parse_error();
+    if (!get_value(command.values, "lensfile", lensfile)) return parse_error();
     lensfile         = lensfile.substr(0, lensfile.size() - 4);
     lensfile         = lensfile.substr(lensfile.find('.') + 1);
     lensfile         = lensfile.substr(0, lensfile.size() - 2);
@@ -1400,8 +1376,7 @@ static bool convert_material(pbrt_material*     material,
     return true;
   } else if (command.type == "fourier") {
     auto bsdffile = ""s;
-    if (!get_value(command.values, "bsdffile", bsdffile))
-      return parse_error();
+    if (!get_value(command.values, "bsdffile", bsdffile)) return parse_error();
     if (bsdffile.rfind("/") != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
@@ -1554,10 +1529,8 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     shape->normals   = {};
     shape->texcoords = {};
     shape->triangles = {};
-    if (!get_value(command.values, "P", shape->positions))
-      return parse_error();
-    if (!get_value(command.values, "N", shape->normals))
-      return parse_error();
+    if (!get_value(command.values, "P", shape->positions)) return parse_error();
+    if (!get_value(command.values, "N", shape->normals)) return parse_error();
     if (!get_value(command.values, "uv", shape->texcoords))
       return parse_error();
     for (auto& uv : shape->texcoords) uv.y = (1 - uv.y);
@@ -1567,8 +1540,7 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   } else if (command.type == "loopsubdiv") {
     shape->positions = {};
     shape->triangles = {};
-    if (!get_value(command.values, "P", shape->positions))
-      return parse_error();
+    if (!get_value(command.values, "P", shape->positions)) return parse_error();
     if (!get_value(command.values, "indices", shape->triangles))
       return parse_error();
     shape->normals.resize(shape->positions.size());
@@ -1650,8 +1622,7 @@ static bool convert_light(pbrt_light* light, const pbrt_command& command,
     light->emission = l * scale;
     light->from     = zero3f;
     light->to       = vec3f{0, 0, 1};
-    if (!get_value(command.values, "from", light->from))
-      return parse_error();
+    if (!get_value(command.values, "from", light->from)) return parse_error();
     if (!get_value(command.values, "to", light->to)) return parse_error();
     light->distant       = true;
     auto distant_dist    = 100;
@@ -1677,8 +1648,7 @@ static bool convert_light(pbrt_light* light, const pbrt_command& command,
     if (!get_value(command.values, "scale", scale)) return parse_error();
     light->emission = i * scale;
     light->from     = zero3f;
-    if (!get_value(command.values, "from", light->from))
-      return parse_error();
+    if (!get_value(command.values, "from", light->from)) return parse_error();
     light->area_emission = light->emission;
     light->area_frame    = light->frame * translation_frame(light->from);
     light->area_frend    = light->frend * translation_frame(light->from);
@@ -2398,4 +2368,4 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   return true;
 }
 
-}  // namespace yocto::modelio
+}  // namespace yocto::pbrt

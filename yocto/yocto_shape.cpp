@@ -12,8 +12,8 @@
 #include <memory>
 using std::make_unique;
 
-#include "yocto_ply.h"
 #include "yocto_obj.h"
+#include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
@@ -3554,7 +3554,7 @@ static string get_extension(const string& filename) {
     auto [split_quads, split_positions, split_normals, split_texcoords] =
         split_facevarying(
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
-    
+
     // ply model
     using namespace yocto::ply;
     auto ply_guard = make_unique<ply_model>();

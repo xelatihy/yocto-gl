@@ -1,7 +1,7 @@
 //
 // # Yocto/Obj: Tiny library for Obj parsing and writing
 //
-// Yocto/Obj is a tiny library for loading and saving Obj. 
+// Yocto/Obj is a tiny library for loading and saving Obj.
 //
 
 //
