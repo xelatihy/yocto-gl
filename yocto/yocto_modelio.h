@@ -49,9 +49,6 @@
 namespace yocto::ply {
 
 // Using directives
-using std::function;
-using std::make_unique;
-using std::unique_ptr;
 using namespace yocto::math;
 
 // Type of ply file. For best performance, choose binary_little_endian when
@@ -101,7 +98,6 @@ struct ply_model {
 };
 
 // Load and save ply
-unique_ptr<ply_model> load_ply(const string& filename, string& error);
 bool load_ply(const string& filename, ply_model* ply, string& error);
 bool save_ply(const string& filename, ply_model* ply, string& error);
 
@@ -198,9 +194,6 @@ void add_points(ply_model* ply, const vector<int>& values);
 namespace yocto::obj {
 
 // Using directives
-using std::function;
-using std::make_unique;
-using std::unique_ptr;
 using namespace yocto::math;
 
 // OBJ vertex
@@ -452,9 +445,6 @@ struct hash<yocto::obj::obj_vertex> {
 namespace yocto::pbrt {
   
 // Using directives
-using std::function;
-using std::make_unique;
-using std::unique_ptr;
 using namespace yocto::math;
 
 // Pbrt camera
