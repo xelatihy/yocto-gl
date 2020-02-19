@@ -644,11 +644,14 @@ void draw_glwidgets(
       stop_display(app);
       auto ioobject = app->selected_object;
       auto object   = get_element(
-        ioobject, app->ioscene->objects, app->scene->objects);
+          ioobject, app->ioscene->objects, app->scene->objects);
       set_frame(object, ioobject->frame);
-      set_shape(object, get_element(ioobject->shape, app->ioscene->shapes, app->scene->shapes));
-      set_material(object, get_element(ioobject->material, app->ioscene->materials, app->scene->materials));
-      set_instance(object, get_element(ioobject->instance, app->ioscene->instances, app->scene->instances));
+      set_shape(object, get_element(ioobject->shape, app->ioscene->shapes,
+                            app->scene->shapes));
+      set_material(object, get_element(ioobject->material,
+                               app->ioscene->materials, app->scene->materials));
+      set_instance(object, get_element(ioobject->instance,
+                               app->ioscene->instances, app->scene->instances));
       update_bvh(app->scene, {object}, {}, {}, app->params);
       reset_display(app);
     }

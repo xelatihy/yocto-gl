@@ -525,10 +525,11 @@ static vector<vec3f> compute_normals(
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-static split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>,
+    vector<vec2f>> static split_facevarying(const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
   auto split =
       std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
   auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
