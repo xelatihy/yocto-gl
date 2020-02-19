@@ -1997,16 +1997,16 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     auto gnde = &gltf->nodes[nid];
     if (!gnde->camera) continue;
-    auto mat  = mat4f{};
+    auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
-    auto gcam        = gnde->camera;
-    auto camera      = add_camera(scene);
-    camera->frame    = (frame3f)mat;
-    camera->orthographic    = gcam->type == cgltf_camera_type_orthographic;
+    auto gcam            = gnde->camera;
+    auto camera          = add_camera(scene);
+    camera->frame        = (frame3f)mat;
+    camera->orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera->orthographic) {
       auto ortho     = &gcam->data.orthographic;
       camera->aspect = ortho->xmag / ortho->ymag;
-      camera->lens   = ortho->ymag; // this is probably bogus
+      camera->lens   = ortho->ymag;  // this is probably bogus
       camera->film   = 0.036;
     } else {
       auto persp     = &gcam->data.perspective;
@@ -2035,9 +2035,8 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   auto cotexture_map =
       unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
           {"", {nullptr, nullptr}}};
-  auto get_cotexture =
-      [&scene, &cotexture_map](
-          const cgltf_texture_view& ginfo) -> pair<sceneio_texture*, sceneio_texture*> {
+  auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
+      -> pair<sceneio_texture*, sceneio_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2052,9 +2051,8 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   auto mrtexture_map =
       unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
           {"", {nullptr, nullptr}}};
-  auto get_mrtexture =
-      [&scene, &mrtexture_map](
-          const cgltf_texture_view& ginfo) -> pair<sceneio_texture*, sceneio_texture*> {
+  auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
+      -> pair<sceneio_texture*, sceneio_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2072,17 +2070,17 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmaterial         = &gltf->materials[mid];
     auto material          = add_material(scene);
-    material->emission     = {gmaterial->emissive_factor[0], gmaterial->emissive_factor[1],
-        gmaterial->emissive_factor[2]};
+    material->emission     = {gmaterial->emissive_factor[0],
+        gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
     material->emission_tex = get_ctexture(gmaterial->emissive_texture);
     if (gmaterial->has_pbr_metallic_roughness) {
-      auto gmr               = &gmaterial->pbr_metallic_roughness;
-      material->color        = {gmr->base_color_factor[0],
-          gmr->base_color_factor[1], gmr->base_color_factor[2]};
-      material->opacity      = gmr->base_color_factor[3];
-      material->metallic     = gmr->metallic_factor;
+      auto gmr          = &gmaterial->pbr_metallic_roughness;
+      material->color   = {gmr->base_color_factor[0], gmr->base_color_factor[1],
+          gmr->base_color_factor[2]};
+      material->opacity = gmr->base_color_factor[3];
+      material->metallic  = gmr->metallic_factor;
       material->roughness = gmr->roughness_factor;
-      material->specular     = 1;
+      material->specular  = 1;
       std::tie(material->color_tex, material->opacity_tex) = get_cotexture(
           gmr->base_color_texture);
       std::tie(material->metallic_tex, material->roughness_tex) = get_mrtexture(
@@ -2093,16 +2091,17 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   }
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_object*>>{{nullptr, {}}};
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_object*>>{
+      {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
-    auto gmesh      = &gltf->meshes[mid];
+    auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (!gprim->attributes_count) continue;
       auto object = add_object(scene);
       mesh_map[gmesh].push_back(object);
-      auto shape = add_shape(scene);
-      object->shape = shape;
+      auto shape       = add_shape(scene);
+      object->shape    = shape;
       object->material = material_map.at(gprim->material);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
@@ -2240,19 +2239,19 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   auto instance_map = unordered_map<cgltf_mesh*, vector<frame3f>>{};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     auto gnde = &gltf->nodes[nid];
-    if(!gnde->mesh) continue;
-    auto mat  = mat4f{};
+    if (!gnde->mesh) continue;
+    auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto frame = (frame3f)mat;
     instance_map[gnde->mesh].push_back(frame);
   }
-  for(auto& [gmsh, frames] : instance_map) {
-    if(frames.size() == 1) {
-      for(auto object : mesh_map.at(gmsh)) object->frame = frames.front();
+  for (auto& [gmsh, frames] : instance_map) {
+    if (frames.size() == 1) {
+      for (auto object : mesh_map.at(gmsh)) object->frame = frames.front();
     } else {
-      auto instance = add_instance(scene);
+      auto instance    = add_instance(scene);
       instance->frames = frames;
-      for(auto object : mesh_map.at(gmsh)) object->instance = instance;
+      for (auto object : mesh_map.at(gmsh)) object->instance = instance;
     }
   }
 

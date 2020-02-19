@@ -4807,4 +4807,3 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 }  // namespace yocto::modelio
-
