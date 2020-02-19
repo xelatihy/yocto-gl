@@ -2080,6 +2080,70 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec2f& ruv);
+inline float sample_hemisphere_pdf(const vec3f& direction);
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv);
+inline float sample_hemisphere_pdf(const vec3f& normal, const vec3f& direction);
+
+// Sample a spherical direction with uniform distribution.
+inline vec3f sample_sphere(const vec2f& ruv);
+inline float sample_sphere_pdf(const vec3f& w);
+
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec2f& ruv);
+inline float sample_hemisphere_cos_pdf(const vec3f& direction);
+
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv);
+inline float sample_hemisphere_cos_pdf(
+    const vec3f& normal, const vec3f& direction);
+
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& direction);
+
+// Sample a point uniformly on a disk.
+inline vec2f sample_disk(const vec2f& ruv);
+inline float sample_disk_pdf();
+
+// Sample a point uniformly on a cylinder, without caps.
+inline vec3f sample_cylinder(const vec2f& ruv);
+inline float sample_cylinder_pdf();
+
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+inline vec2f sample_triangle(const vec2f& ruv);
+
+// Sample a point uniformly on a triangle.
+inline vec3f sample_triangle(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv);
+// Pdf for uniform triangle sampling, i.e. triangle area.
+inline float sample_triangle_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+
+// Sample an index with uniform distribution.
+inline int   sample_uniform(int size, float r);
+inline float sample_uniform_pdf(int size);
+
+// Sample an index with uniform distribution.
+inline float sample_uniform(const vector<float>& elements, float r);
+inline float sample_uniform_pdf(const vector<float>& elements);
+
+// Sample a discrete distribution represented by its cdf.
+inline int sample_discrete(const vector<float>& cdf, float r);
+// Pdf for uniform discrete distribution sampling.
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -2087,115 +2151,27 @@ namespace yocto {
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
 inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size) {
-  auto xyf = (mouse_pos - center) / scale;
-  return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
-      (int)round(xyf.y + txt_size.y / 2.0f)};
-}
+    float scale, const vec2i& txt_size);
 
 // Center image and autofit.
 inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
-  if (zoom_to_fit) {
-    scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
-    center = {(float)winsize.x / 2, (float)winsize.y / 2};
-  } else {
-    if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
-    if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
-  }
-}
+    const vec2i& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation.
 inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
-  // rotate if necessary
-  if (rotate.x || rotate.y) {
-    auto z     = normalize(to - from);
-    auto lz    = length(to - from);
-    auto phi   = atan2(z.z, z.x) + rotate.x;
-    auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
-    auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-        sin(theta) * sin(phi) * lz};
-    from       = to - nz;
-  }
-
-  // dolly if necessary
-  if (dolly) {
-    auto z  = normalize(to - from);
-    auto lz = max(0.001f, length(to - from) * (1 + dolly));
-    z *= lz;
-    from = to - z;
-  }
-
-  // pan if necessary
-  if (pan.x || pan.y) {
-    auto z = normalize(to - from);
-    auto x = normalize(cross(up, z));
-    auto y = normalize(cross(z, x));
-    auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-        pan.x * x.z + pan.y * y.z};
-    from += t;
-    to += t;
-  }
-}
+    const vec2f& rotate, float dolly, const vec2f& pan);
 
 // Turntable for UI navigation.
 inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan) {
-  // rotate if necessary
-  if (rotate != zero2f) {
-    auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
-    auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
-    auto new_z = vec3f{
-        sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
-    auto new_center = frame.o - frame.z * focus;
-    auto new_o      = new_center + new_z * focus;
-    frame           = lookat_frame(new_o, new_center, {0, 1, 0});
-    focus           = length(new_o - new_center);
-  }
-
-  // pan if necessary
-  if (dolly) {
-    auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
-    frame.o = c + frame.z * focus;
-  }
-
-  // pan if necessary
-  if (pan.x || pan.y) {
-    frame.o += frame.x * pan.x + frame.y * pan.y;
-  }
-}
+    float dolly, const vec2f& pan);
 
 // FPS camera for UI navigation for a frame parametrization.
 inline void update_fpscam(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
-  // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-  auto y = vec3f{0, 1, 0};
-  auto z = orthonormalize(frame.z, y);
-  auto x = cross(y, z);
-
-  auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
-             yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
-             rotation_frame(vec3f{0, 1, 0}, rotate.x);
-  auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
-
-  frame = {rot.x, rot.y, rot.z, pos};
-}
+    frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 // Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
-    const vec2f& image_uv) {
-  auto e = zero3f;
-  auto q = vec3f{
-      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
-  auto q1  = -q;
-  auto d   = normalize(q1 - e);
-  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
-  return ray;
-}
+inline ray3f camera_ray(
+    const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
 
 }  // namespace yocto
 
@@ -2208,7 +2184,7 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-// COLOR CONVERSION UTILITIES
+// IMPLEMENTATION FOR COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -2647,6 +2623,267 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
   return _stb_perlin_turbulence_noise3(
       p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec2f& ruv) {
+  auto z   = ruv.y;
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_pdf(const vec3f& direction) {
+  return (direction.z <= 0) ? 0 : 1 / (2 * pif);
+}
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
+  auto z               = ruv.y;
+  auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_pdf(
+    const vec3f& normal, const vec3f& direction) {
+  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+}
+
+// Sample a spherical direction with uniform distribution.
+inline vec3f sample_sphere(const vec2f& ruv) {
+  auto z   = 2 * ruv.y - 1;
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec2f& ruv) {
+  auto z   = sqrt(ruv.y);
+  auto r   = sqrt(1 - z * z);
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
+  return (direction.z <= 0) ? 0 : direction.z / pif;
+}
+
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+  auto z               = sqrt(ruv.y);
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_cos_pdf(
+    const vec3f& normal, const vec3f& direction) {
+  auto cosw = dot(normal, direction);
+  return (cosw <= 0) ? 0 : cosw / pif;
+}
+
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
+  auto z   = pow(ruv.y, 1 / (exponent + 1));
+  auto r   = sqrt(1 - z * z);
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& direction) {
+  return (direction.z <= 0)
+             ? 0
+             : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+}
+
+// Sample a point uniformly on a disk.
+inline vec2f sample_disk(const vec2f& ruv) {
+  auto r   = sqrt(ruv.y);
+  auto phi = 2 * pif * ruv.x;
+  return {cos(phi) * r, sin(phi) * r};
+}
+inline float sample_disk_pdf() { return 1 / pif; }
+
+// Sample a point uniformly on a cylinder, without caps.
+inline vec3f sample_cylinder(const vec2f& ruv) {
+  auto phi = 2 * pif * ruv.x;
+  return {sin(phi), cos(phi), ruv.y * 2 - 1};
+}
+inline float sample_cylinder_pdf() { return 1 / pif; }
+
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+inline vec2f sample_triangle(const vec2f& ruv) {
+  return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
+}
+
+// Sample a point uniformly on a triangle.
+inline vec3f sample_triangle(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+  auto uv = sample_triangle(ruv);
+  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+// Pdf for uniform triangle sampling, i.e. triangle area.
+inline float sample_triangle_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+  return 2 / length(cross(p1 - p0, p2 - p0));
+}
+
+// Sample an index with uniform distribution.
+inline int sample_uniform(int size, float r) {
+  return clamp((int)(r * size), 0, size - 1);
+}
+inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
+
+// Sample an index with uniform distribution.
+inline float sample_uniform(const vector<float>& elements, float r) {
+  if (elements.empty()) return {};
+  auto size = (int)elements.size();
+  return elements[clamp((int)(r * size), 0, size - 1)];
+}
+inline float sample_uniform_pdf(const vector<float>& elements) {
+  if (elements.empty()) return 0;
+  return 1.0f / (int)elements.size();
+}
+
+// Sample a discrete distribution represented by its cdf.
+inline int sample_discrete(const vector<float>& cdf, float r) {
+  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
+  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
+                   cdf.data());
+  return clamp(idx, 0, (int)cdf.size() - 1);
+}
+// Pdf for uniform discrete distribution sampling.
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+  if (idx == 0) return cdf.at(0);
+  return cdf.at(idx) - cdf.at(idx - 1);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF USER INTERFACE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Computes the image uv coordinates corresponding to the view parameters.
+// Returns negative coordinates if out of the image.
+inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
+    float scale, const vec2i& txt_size) {
+  auto xyf = (mouse_pos - center) / scale;
+  return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
+      (int)round(xyf.y + txt_size.y / 2.0f)};
+}
+
+// Center image and autofit.
+inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
+    const vec2i& winsize, bool zoom_to_fit) {
+  if (zoom_to_fit) {
+    scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
+    center = {(float)winsize.x / 2, (float)winsize.y / 2};
+  } else {
+    if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
+    if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
+  }
+}
+
+// Turntable for UI navigation.
+inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
+  // rotate if necessary
+  if (rotate.x || rotate.y) {
+    auto z     = normalize(to - from);
+    auto lz    = length(to - from);
+    auto phi   = atan2(z.z, z.x) + rotate.x;
+    auto theta = acos(z.y) + rotate.y;
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        sin(theta) * sin(phi) * lz};
+    from       = to - nz;
+  }
+
+  // dolly if necessary
+  if (dolly) {
+    auto z  = normalize(to - from);
+    auto lz = max(0.001f, length(to - from) * (1 + dolly));
+    z *= lz;
+    from = to - z;
+  }
+
+  // pan if necessary
+  if (pan.x || pan.y) {
+    auto z = normalize(to - from);
+    auto x = normalize(cross(up, z));
+    auto y = normalize(cross(z, x));
+    auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+        pan.x * x.z + pan.y * y.z};
+    from += t;
+    to += t;
+  }
+}
+
+// Turntable for UI navigation.
+inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan) {
+  // rotate if necessary
+  if (rotate != zero2f) {
+    auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
+    auto theta = acos(frame.z.y) + rotate.y;
+    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    auto new_z = vec3f{
+        sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+    auto new_center = frame.o - frame.z * focus;
+    auto new_o      = new_center + new_z * focus;
+    frame           = lookat_frame(new_o, new_center, {0, 1, 0});
+    focus           = length(new_o - new_center);
+  }
+
+  // pan if necessary
+  if (dolly) {
+    auto c  = frame.o - frame.z * focus;
+    focus   = max(focus * (1 + dolly), 0.001f);
+    frame.o = c + frame.z * focus;
+  }
+
+  // pan if necessary
+  if (pan.x || pan.y) {
+    frame.o += frame.x * pan.x + frame.y * pan.y;
+  }
+}
+
+// FPS camera for UI navigation for a frame parametrization.
+inline void update_fpscam(
+    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+  // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
+  auto y = vec3f{0, 1, 0};
+  auto z = orthonormalize(frame.z, y);
+  auto x = cross(y, z);
+
+  auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
+             yocto::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+             rotation_frame(vec3f{0, 1, 0}, rotate.x);
+  auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
+
+  frame = {rot.x, rot.y, rot.z, pos};
+}
+
+// Generate a ray from a camera
+inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
+    const vec2f& image_uv) {
+  auto e = zero3f;
+  auto q = vec3f{
+      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
+  auto q1  = -q;
+  auto d   = normalize(q1 - e);
+  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
+  return ray;
 }
 
 }  // namespace yocto
