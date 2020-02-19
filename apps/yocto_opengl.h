@@ -358,9 +358,12 @@ using widgets_glcallback =
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback = std::function<void(
     opengl_window*, const vector<string>&, const opengl_input& input)>;
-// Key callback that returns ASCII key, pressed/released flag and modifier keys
+// Key callback that returns key codes, pressed/released flag and modifier keys
 using key_glcallback = std::function<void(
     opengl_window*, int key, bool pressed, const opengl_input& input)>;
+// Char callback that returns ASCII key
+using char_glcallback = std::function<void(
+    opengl_window*, unsigned int key, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_glcallback = std::function<void(
@@ -383,6 +386,7 @@ struct opengl_window {
   widgets_glcallback  widgets_cb    = {};
   drop_glcallback     drop_cb       = {};
   key_glcallback      key_cb        = {};
+  char_glcallback     char_cb       = {};
   click_glcallback    click_cb      = {};
   scroll_glcallback   scroll_cb     = {};
   update_glcallback   update_cb     = {};
@@ -405,6 +409,7 @@ void set_draw_glcallback(opengl_window* win, draw_glcallback draw_cb);
 void set_widgets_glcallback(opengl_window* win, widgets_glcallback widgets_cb);
 void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb);
 void set_key_glcallback(opengl_window* win, key_glcallback cb);
+void set_char_glcallback(opengl_window* win, char_glcallback cb);
 void set_click_glcallback(opengl_window* win, click_glcallback cb);
 void set_scroll_glcallback(opengl_window* win, scroll_glcallback cb);
 void set_uiupdate_glcallback(opengl_window* win, uiupdate_glcallback cb);

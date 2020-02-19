@@ -1388,6 +1388,10 @@ unique_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
         auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
       });
+  glfwSetCharCallback(win->win, [](GLFWwindow* glfw, unsigned int key) {
+    auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
+    if (win->char_cb) win->char_cb(win, key, win->input);
+  });
   glfwSetMouseButtonCallback(
       win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
         auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
@@ -1528,6 +1532,9 @@ void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb) {
 }
 void set_key_glcallback(opengl_window* win, key_glcallback cb) {
   win->key_cb = cb;
+}
+void set_char_glcallback(opengl_window* win, char_glcallback cb) {
+  win->char_cb = cb;
 }
 void set_click_glcallback(opengl_window* win, click_glcallback cb) {
   win->click_cb = cb;
