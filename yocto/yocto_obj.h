@@ -195,10 +195,10 @@ inline bool save_obj(const string& filename, obj_model* obj, string& error);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_triangles(obj_model* obj, obj_shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials,
-    bool flip_texcoord = false);
+inline void get_triangles(obj_model* obj, obj_shape* shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
 inline void get_quads(obj_model* obj, obj_shape* shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<obj_material*>& materials, vector<int>& ematerials,
@@ -211,9 +211,10 @@ inline void get_points(obj_model* obj, obj_shape* shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<obj_material*>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_fvquads(obj_model* obj, obj_shape* shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_fvquads(obj_model* obj, obj_shape* shape,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<obj_material*>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 inline bool has_quads(obj_shape* shape);
@@ -246,19 +247,22 @@ inline void add_triangles(obj_model* obj, const string& name,
     const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-inline void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+inline void add_quads(obj_model* obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-inline void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+inline void add_lines(obj_model* obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
-inline void add_points(obj_model* obj, const string& name, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials = {},
+inline void add_points(obj_model* obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials = {},
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
 inline void add_fvquads(obj_model* obj, const string& name,
@@ -281,7 +285,7 @@ template <>
 struct hash<yocto::obj::obj_vertex> {
   size_t operator()(const yocto::obj::obj_vertex& v) const {
     const std::hash<int> hasher = std::hash<int>();
-    auto                        h      = (size_t)0;
+    auto                 h      = (size_t)0;
     h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
     h ^= hasher(v.normal) + 0x9e3779b9 + (h << 6) + (h >> 2);
     h ^= hasher(v.texcoord) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -818,8 +822,8 @@ inline obj_shape* add_shape(obj_model* obj) {
 }
 
 // Read obj
-inline bool load_obj(const string& filename, obj_model* obj,
-    string& error, bool geom_only, bool split_elements, bool split_materials) {
+inline bool load_obj(const string& filename, obj_model* obj, string& error,
+    bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1414,9 +1418,10 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-inline void get_triangles(obj_model* obj, obj_shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_triangles(obj_model* obj, obj_shape* shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<obj_material*>& materials,
+    vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -1494,9 +1499,10 @@ inline void get_points(obj_model* obj, obj_shape* shape, vector<int>& points,
     cur += point.size;
   }
 }
-inline void get_fvquads(obj_model* obj, obj_shape* shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_fvquads(obj_model* obj, obj_shape* shape,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<obj_material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
@@ -1715,11 +1721,11 @@ inline void add_triangles(obj_model* obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_quads(obj_model* obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
-    const vector<int>& ematerials, const vector<frame3f>& instances,
-    bool flipv) {
+inline void add_quads(obj_model* obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<frame3f>& instances, bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
@@ -1742,11 +1748,11 @@ inline void add_quads(obj_model* obj, const string& name, const vector<vec4i>& q
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_lines(obj_model* obj, const string& name, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
-    const vector<int>& ematerials, const vector<frame3f>& instances,
-    bool flipv) {
+inline void add_lines(obj_model* obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<frame3f>& instances, bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
@@ -1768,11 +1774,11 @@ inline void add_lines(obj_model* obj, const string& name, const vector<vec2i>& l
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_points(obj_model* obj, const string& name, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<obj_material*>& materials,
-    const vector<int>& ematerials, const vector<frame3f>& instances,
-    bool flipv) {
+inline void add_points(obj_model* obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<obj_material*>& materials, const vector<int>& ematerials,
+    const vector<frame3f>& instances, bool flipv) {
   auto shape       = obj->shapes.emplace_back(new obj_shape{});
   shape->name      = name;
   shape->materials = materials;
