@@ -56,6 +56,18 @@ using std::make_unique;
 #include "yocto_shape.h"
 namespace fs = ghc::filesystem;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#endif
+
+#define CGLTF_IMPLEMENTATION
+#include "ext/cgltf.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
@@ -761,19 +773,6 @@ bool save_scene(const string& filename, const sceneio_model* scene,
   }
 }
 
-// create a name from another
-static string make_safe_name(const string& prefix, const string& name,
-    const string& ext = ".json", size_t count = 0) {
-  if (name.empty()) return prefix + "s/" + prefix + std::to_string(count) + ext;
-  auto lname = name;
-  for (auto& c : lname) {
-    c = tolower((int)c);
-    if (c == ' ') c = '-';
-  }
-  if (count) lname += "[" + std::to_string(count) + "]";
-  return prefix + "s/" + lname + ext;
-}
-
 }  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
@@ -788,7 +787,19 @@ static string get_extension(const string& filename) {
   return filename.substr(pos);
 }
 
-// Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+static bool load_image(const string& filename, image<vec4f>& colorf,
+    image<vec4b>& colorb, string& error) {
+  using yocto::image::is_hdr_filename;
+  using yocto::image::load_image;
+  if (is_hdr_filename(filename)) {
+    return load_image(filename, colorf, error);
+  } else {
+    return load_image(filename, colorb, error);
+  }
+}
+
+// Loads/saves a 3 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<vec3f>& colorf,
     image<vec3b>& colorb, string& error) {
   using yocto::image::is_hdr_filename;
@@ -810,7 +821,7 @@ static bool save_image(const string& filename, const image<vec3f>& colorf,
   }
 }
 
-// Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
+// Loads/saves a 1 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<float>& scalarf,
     image<byte>& scalarb, string& error) {
   using yocto::image::is_hdr_filename;
@@ -1943,103 +1954,304 @@ namespace yocto::sceneio {
 // Load a scene
 static bool load_gltf_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::modelio;
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+  auto primitive_error = [filename, &error]() {
+    error = filename + ": primitive error";
+    return false;
+  };
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
+  auto progress = vec2i{0, 3};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load gltf
-  auto gltf_guard = make_unique<gltf_model>();
-  auto gltf       = gltf_guard.get();
-  if (!load_gltf(filename, gltf, error)) return false;
+  auto params = cgltf_options{};
+  memset(&params, 0, sizeof(params));
+  auto data   = (cgltf_data*)nullptr;
+  auto result = cgltf_parse_file(&params, filename.c_str(), &data);
+  if (result != cgltf_result_success) return read_error();
+  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+      data, cgltf_free};
+
+  // handle progress
+  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // load buffers
+  auto dirname = fs::path(filename).parent_path().string();
+  if (dirname != "") dirname += "/";
+  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
+      cgltf_result_success)
+    return read_error();
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // convert cameras
-  for (auto gcamera : gltf->cameras) {
-    for (auto frame : gcamera->frames) {
-      auto camera    = add_camera(scene);
-      camera->frame  = frame;
-      camera->aspect = gcamera->aspect;
+  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+    auto gnde = &gltf->nodes[nid];
+    if (!gnde->camera) continue;
+    auto mat = mat4f{};
+    cgltf_node_transform_world(gnde, &mat.x.x);
+    auto gcam            = gnde->camera;
+    auto camera          = add_camera(scene);
+    camera->frame        = (frame3f)mat;
+    camera->orthographic = gcam->type == cgltf_camera_type_orthographic;
+    if (camera->orthographic) {
+      auto ortho     = &gcam->data.orthographic;
+      camera->aspect = ortho->xmag / ortho->ymag;
+      camera->lens   = ortho->ymag;  // this is probably bogus
       camera->film   = 0.036;
-      camera->lens   = gcamera->aspect >= 1
-                         ? (2 * camera->aspect * tan(gcamera->yfov / 2))
-                         : (2 * tan(gcamera->yfov / 2));
-      camera->focus = 10;
+    } else {
+      auto persp     = &gcam->data.perspective;
+      camera->aspect = persp->aspect_ratio;
+      camera->film   = 0.036;
+      camera->lens   = camera->aspect >= 1
+                         ? (2 * camera->aspect * tan(persp->yfov / 2))
+                         : (2 * tan(persp->yfov / 2));
     }
   }
 
-  // convert textures
-  auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&scene, &texture_map](
-                         gltf_texture* gtexture) -> sceneio_texture* {
-    if (!gtexture) return nullptr;
-    auto path = gtexture->filename;
+  // convert color textures
+  auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
+  auto get_ctexture = [&scene, &ctexture_map](
+                          const cgltf_texture_view& ginfo) -> sceneio_texture* {
+    if (!ginfo.texture || !ginfo.texture->image) return nullptr;
+    auto path = string{ginfo.texture->image->uri};
     if (path == "") return nullptr;
-    auto it = texture_map.find(path);
-    if (it != texture_map.end()) return it->second;
-    auto texture = add_texture(scene);
-    using yocto::image::is_hdr_filename;
-    texture->name     = make_safe_name("texture", fs::path(path).stem(),
-        (!is_hdr_filename(path) ? ".png" : ".hdr"));
-    texture_map[path] = texture;
+    auto it = ctexture_map.find(path);
+    if (it != ctexture_map.end()) return it->second;
+    auto texture       = add_texture(scene);
+    ctexture_map[path] = texture;
     return texture;
+  };
+  // convert color opacity textures
+  auto cotexture_map =
+      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
+          {"", {nullptr, nullptr}}};
+  auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
+      -> pair<sceneio_texture*, sceneio_texture*> {
+    if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
+    auto path = string{ginfo.texture->image->uri};
+    if (path == "") return {nullptr, nullptr};
+    auto it = cotexture_map.find(path);
+    if (it != cotexture_map.end()) return it->second;
+    auto color_texture   = add_texture(scene);
+    auto opacity_texture = add_texture(scene);
+    cotexture_map[path]  = {color_texture, opacity_texture};
+    return {color_texture, opacity_texture};
+  };
+  // convert textures
+  auto mrtexture_map =
+      unordered_map<string, pair<sceneio_texture*, sceneio_texture*>>{
+          {"", {nullptr, nullptr}}};
+  auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
+      -> pair<sceneio_texture*, sceneio_texture*> {
+    if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
+    auto path = string{ginfo.texture->image->uri};
+    if (path == "") return {nullptr, nullptr};
+    auto it = mrtexture_map.find(path);
+    if (it != mrtexture_map.end()) return it->second;
+    auto metallic_texture  = add_texture(scene);
+    auto roughness_texture = add_texture(scene);
+    mrtexture_map[path]    = {metallic_texture, roughness_texture};
+    return {metallic_texture, roughness_texture};
   };
 
   // convert materials
-  auto material_map = unordered_map<gltf_material*, sceneio_material*>{
+  auto material_map = unordered_map<cgltf_material*, sceneio_material*>{
       {nullptr, nullptr}};
-  for (auto gmaterial : gltf->materials) {
-    auto material           = add_material(scene);
-    material->emission      = gmaterial->emission;
-    material->emission_tex  = get_texture(gmaterial->emission_tex);
-    material->color         = gmaterial->color;
-    material->opacity       = gmaterial->opacity;
-    material->specular      = 1;
-    material->color_tex     = get_texture(gmaterial->color_tex);
-    material->metallic_tex  = get_texture(gmaterial->metallic_tex);
-    material->normal_tex    = get_texture(gmaterial->normal_tex);
+  for (auto mid = 0; mid < gltf->materials_count; mid++) {
+    auto gmaterial         = &gltf->materials[mid];
+    auto material          = add_material(scene);
+    material->emission     = {gmaterial->emissive_factor[0],
+        gmaterial->emissive_factor[1], gmaterial->emissive_factor[2]};
+    material->emission_tex = get_ctexture(gmaterial->emissive_texture);
+    if (gmaterial->has_pbr_metallic_roughness) {
+      auto gmr          = &gmaterial->pbr_metallic_roughness;
+      material->color   = {gmr->base_color_factor[0], gmr->base_color_factor[1],
+          gmr->base_color_factor[2]};
+      material->opacity = gmr->base_color_factor[3];
+      material->metallic  = gmr->metallic_factor;
+      material->roughness = gmr->roughness_factor;
+      material->specular  = 1;
+      std::tie(material->color_tex, material->opacity_tex) = get_cotexture(
+          gmr->base_color_texture);
+      std::tie(material->metallic_tex, material->roughness_tex) = get_mrtexture(
+          gmr->metallic_roughness_texture);
+    }
+    material->normal_tex    = get_ctexture(gmaterial->normal_texture);
     material_map[gmaterial] = material;
   }
 
-  // convert shapes
-  auto shape_map = unordered_map<gltf_primitive*, sceneio_shape*>{
-      {nullptr, nullptr}};
-  for (auto gprim : gltf->primitives) {
-    auto shape       = add_shape(scene);
-    shape_map[gprim] = shape;
-    shape->positions = gprim->positions;
-    shape->normals   = gprim->normals;
-    shape->texcoords = gprim->texcoords;
-    shape->colors    = gprim->colors;
-    shape->radius    = gprim->radius;
-    shape->tangents  = gprim->tangents;
-    shape->triangles = gprim->triangles;
-    shape->lines     = gprim->lines;
-    shape->points    = gprim->points;
+  // convert meshes
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<sceneio_object*>>{
+      {nullptr, {}}};
+  for (auto mid = 0; mid < gltf->meshes_count; mid++) {
+    auto gmesh = &gltf->meshes[mid];
+    for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
+      auto gprim = &gmesh->primitives[sid];
+      if (!gprim->attributes_count) continue;
+      auto object = add_object(scene);
+      mesh_map[gmesh].push_back(object);
+      auto shape       = add_shape(scene);
+      object->shape    = shape;
+      object->material = material_map.at(gprim->material);
+      for (auto aid = 0; aid < gprim->attributes_count; aid++) {
+        auto gattr    = &gprim->attributes[aid];
+        auto semantic = string(gattr->name ? gattr->name : "");
+        auto gacc     = gattr->data;
+        if (semantic == "POSITION") {
+          shape->positions.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->positions[i].x, 3);
+        } else if (semantic == "NORMAL") {
+          shape->normals.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->normals[i].x, 3);
+        } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
+          shape->texcoords.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->texcoords[i].x, 2);
+        } else if (semantic == "COLOR" || semantic == "COLOR_0") {
+          shape->colors.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
+        } else if (semantic == "TANGENT") {
+          shape->tangents.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->tangents[i].x, 4);
+          for (auto& t : shape->tangents) t.w = -t.w;
+        } else if (semantic == "RADIUS") {
+          shape->radius.resize(gacc->count);
+          for (auto i = 0; i < gacc->count; i++)
+            cgltf_accessor_read_float(gacc, i, &shape->radius[i], 1);
+        } else {
+          // ignore
+        }
+      }
+      // indices
+      if (!gprim->indices) {
+        if (gprim->type == cgltf_primitive_type_triangles) {
+          shape->triangles.resize(shape->positions.size() / 3);
+          for (auto i = 0; i < shape->positions.size() / 3; i++)
+            shape->triangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
+        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+          shape->triangles.resize(shape->positions.size() - 2);
+          for (auto i = 2; i < shape->positions.size(); i++)
+            shape->triangles[i - 2] = {0, i - 1, i};
+        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+          shape->triangles.resize(shape->positions.size() - 2);
+          for (auto i = 2; i < shape->positions.size(); i++)
+            shape->triangles[i - 2] = {i - 2, i - 1, i};
+        } else if (gprim->type == cgltf_primitive_type_lines) {
+          shape->lines.resize(shape->positions.size() / 2);
+          for (auto i = 0; i < shape->positions.size() / 2; i++)
+            shape->lines[i] = {i * 2 + 0, i * 2 + 1};
+        } else if (gprim->type == cgltf_primitive_type_line_loop) {
+          shape->lines.resize(shape->positions.size());
+          for (auto i = 1; i < shape->positions.size(); i++)
+            shape->lines[i - 1] = {i - 1, i};
+          shape->lines.back() = {(int)shape->positions.size() - 1, 0};
+        } else if (gprim->type == cgltf_primitive_type_line_strip) {
+          shape->lines.resize(shape->positions.size() - 1);
+          for (auto i = 1; i < shape->positions.size(); i++)
+            shape->lines[i - 1] = {i - 1, i};
+        } else if (gprim->type == cgltf_primitive_type_points) {
+          // points
+          return primitive_error();
+        } else {
+          return primitive_error();
+        }
+      } else {
+        auto giacc = gprim->indices;
+        if (gprim->type == cgltf_primitive_type_triangles) {
+          shape->triangles.resize(giacc->count / 3);
+          for (auto i = 0; i < giacc->count / 3; i++) {
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 0, (uint*)&shape->triangles[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 1, (uint*)&shape->triangles[i].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 3 + 2, (uint*)&shape->triangles[i].z, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+          shape->triangles.resize(giacc->count - 2);
+          for (auto i = 2; i < giacc->count; i++) {
+            cgltf_accessor_read_uint(
+                giacc, 0 + 0, (uint*)&shape->triangles[i - 2].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+          shape->triangles.resize(giacc->count - 2);
+          for (auto i = 2; i < giacc->count; i++) {
+            cgltf_accessor_read_uint(
+                giacc, i - 2, (uint*)&shape->triangles[i - 2].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+            cgltf_accessor_read_uint(
+                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_lines) {
+          shape->lines.resize(giacc->count / 2);
+          for (auto i = 0; i < giacc->count / 2; i++) {
+            cgltf_accessor_read_uint(
+                giacc, i * 2 + 0, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, i * 2 + 1, (uint*)&shape->lines[i].y, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_line_loop) {
+          shape->lines.resize(giacc->count);
+          for (auto i = 0; i < giacc->count; i++) {
+            cgltf_accessor_read_uint(
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_line_strip) {
+          shape->lines.resize(giacc->count - 1);
+          for (auto i = 0; i < giacc->count - 1; i++) {
+            cgltf_accessor_read_uint(
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+            cgltf_accessor_read_uint(
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+          }
+        } else if (gprim->type == cgltf_primitive_type_points) {
+          // points
+          return primitive_error();
+        } else {
+          return primitive_error();
+        }
+      }
+    }
   }
 
-  // convert object
-  for (auto gmesh : gltf->meshes) {
-    for (auto gprim : gmesh->primitives) {
-      auto object   = add_object(scene);
-      object->frame = gmesh->frames.empty() ? identity3x4f
-                                            : gmesh->frames.front();
-      object->shape    = shape_map.at(gprim);
-      object->material = material_map.at(gprim->material);
-      object->frame    = identity3x4f;
-      if (gmesh->frames.size() == 1) {
-        object->frame = gmesh->frames.front();
-      } else {
-        object->instance         = add_instance(scene);
-        object->instance->frames = gmesh->frames;
-      }
+  // convert nodes
+  auto instance_map = unordered_map<cgltf_mesh*, vector<frame3f>>{};
+  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+    auto gnde = &gltf->nodes[nid];
+    if (!gnde->mesh) continue;
+    auto mat = mat4f{};
+    cgltf_node_transform_world(gnde, &mat.x.x);
+    auto frame = (frame3f)mat;
+    instance_map[gnde->mesh].push_back(frame);
+  }
+  for (auto& [gmsh, frames] : instance_map) {
+    if (frames.size() == 1) {
+      for (auto object : mesh_map.at(gmsh)) object->frame = frames.front();
+    } else {
+      auto instance    = add_instance(scene);
+      instance->frames = frames;
+      for (auto object : mesh_map.at(gmsh)) object->instance = instance;
     }
   }
 
@@ -2047,12 +2259,78 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   progress.y += (int)scene->textures.size();
 
   // load texture
-  texture_map.erase("");
-  for (auto [path, texture] : texture_map) {
+  ctexture_map.erase("");
+  for (auto [path, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
             texture->colorb, error))
       return dependent_error();
+  }
+
+  // load texture
+  cotexture_map.erase("");
+  for (auto [path, textures] : cotexture_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto color_opacityf = image<vec4f>{};
+    auto color_opacityb = image<vec4b>{};
+    if (!load_image(fs::path(filename).parent_path() / path, color_opacityf,
+            color_opacityb, error))
+      return dependent_error();
+    if (!color_opacityf.empty()) {
+      auto [ctexture, otexture] = textures;
+      ctexture->colorf.resize(color_opacityf.size());
+      otexture->scalarf.resize(color_opacityf.size());
+      for (auto j = 0; j < color_opacityf.size().y; j++) {
+        for (auto i = 0; i < color_opacityf.size().x; i++) {
+          ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
+          otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
+        }
+      }
+    }
+    if (!color_opacityb.empty()) {
+      auto [ctexture, otexture] = textures;
+      ctexture->colorb.resize(color_opacityb.size());
+      otexture->scalarb.resize(color_opacityb.size());
+      for (auto j = 0; j < color_opacityb.size().y; j++) {
+        for (auto i = 0; i < color_opacityb.size().x; i++) {
+          ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
+          otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
+        }
+      }
+    }
+  }
+
+  // load texture
+  mrtexture_map.erase("");
+  for (auto [path, textures] : mrtexture_map) {
+    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    auto metallic_roughnessf = image<vec3f>{};
+    auto metallic_roughnessb = image<vec3b>{};
+    if (!load_image(fs::path(filename).parent_path() / path,
+            metallic_roughnessf, metallic_roughnessb, error))
+      return dependent_error();
+    if (!metallic_roughnessf.empty()) {
+      auto [mtexture, rtexture] = textures;
+      mtexture->scalarf.resize(metallic_roughnessf.size());
+      rtexture->scalarf.resize(metallic_roughnessf.size());
+      for (auto j = 0; j < metallic_roughnessf.size().y; j++) {
+        for (auto i = 0; i < metallic_roughnessf.size().x; i++) {
+          mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
+          rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
+        }
+      }
+    }
+    if (!metallic_roughnessb.empty()) {
+      auto [mtexture, rtexture] = textures;
+      mtexture->scalarb.resize(metallic_roughnessb.size());
+      rtexture->scalarb.resize(metallic_roughnessb.size());
+      for (auto j = 0; j < metallic_roughnessb.size().y; j++) {
+        for (auto i = 0; i < metallic_roughnessb.size().x; i++) {
+          mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
+          rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
+        }
+      }
+    }
   }
 
   // fix scene

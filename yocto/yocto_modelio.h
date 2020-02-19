@@ -1,8 +1,8 @@
 //
-// # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt/Yaml/glTF parsing and writing
+// # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt parsing and writing
 //
 // Yocto/ModelIO is a tiny library for loading and saving
-// Ply/Obj/Pbrt/glTF. In Yocto/ModelIO, all model data is loaded and saved
+// Ply/Obj/Pbrt. In Yocto/ModelIO, all model data is loaded and saved
 // at once. Each format is parsed in a manner that is as close as possible to
 // the original. Data can be accessed directly or via converters.
 //
@@ -542,65 +542,6 @@ pbrt_shape*       add_shape(pbrt_model* pbrt);
 pbrt_material*    add_material(pbrt_model* pbrt);
 pbrt_environment* add_environment(pbrt_model* pbrt);
 pbrt_light*       add_light(pbrt_model* pbrt);
-
-}  // namespace yocto::modelio
-
-// -----------------------------------------------------------------------------
-// SIMPLE GLTF LOADER DECLARATIONS
-// -----------------------------------------------------------------------------
-namespace yocto::modelio {
-
-struct gltf_camera {
-  string          name   = "";
-  vector<frame3f> frames = {};
-  bool            ortho  = false;
-  float           yfov   = 45 * pif / 180;
-  float           aspect = 1;
-};
-struct gltf_texture {
-  string name     = "";
-  string filename = "";
-};
-struct gltf_material {
-  string        name         = "";
-  vec3f         emission     = {0, 0, 0};
-  vec3f         color        = {0, 0, 0};
-  float         opacity      = 1;
-  float         metallic     = 0;
-  float         roughness    = 1;
-  gltf_texture* emission_tex = nullptr;
-  gltf_texture* color_tex    = nullptr;
-  gltf_texture* metallic_tex = nullptr;
-  gltf_texture* normal_tex   = nullptr;
-};
-struct gltf_primitive {
-  gltf_material* material  = nullptr;
-  vector<vec3f>  positions = {};
-  vector<vec3f>  normals   = {};
-  vector<vec2f>  texcoords = {};
-  vector<vec3f>  colors    = {};
-  vector<float>  radius    = {};
-  vector<vec4f>  tangents  = {};
-  vector<vec3i>  triangles = {};
-  vector<vec2i>  lines     = {};
-  vector<int>    points    = {};
-};
-struct gltf_mesh {
-  string                  name       = "";
-  vector<frame3f>         frames     = {};
-  vector<gltf_primitive*> primitives = {};
-};
-struct gltf_model {
-  vector<gltf_camera*>    cameras    = {};
-  vector<gltf_mesh*>      meshes     = {};
-  vector<gltf_primitive*> primitives = {};
-  vector<gltf_texture*>   textures   = {};
-  vector<gltf_material*>  materials  = {};
-  ~gltf_model();
-};
-
-// Load gltf file.
-bool load_gltf(const string& filename, gltf_model* gltf, string& error);
 
 }  // namespace yocto::modelio
 
