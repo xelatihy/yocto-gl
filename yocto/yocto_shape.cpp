@@ -12,10 +12,11 @@
 #include <memory>
 using std::make_unique;
 
-#include "yocto_modelio.h"
+#include "yocto_obj.h"
+#include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
+// IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
@@ -3332,7 +3333,6 @@ static string get_extension(const string& filename) {
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, vector<float>& radius, string& error,
     bool flip_texcoord) {
-  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3355,6 +3355,7 @@ static string get_extension(const string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
+    using namespace yocto::ply;
     auto ply_guard = make_unique<ply_model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
@@ -3379,6 +3380,7 @@ static string get_extension(const string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
+    using namespace yocto::obj;
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
@@ -3424,7 +3426,6 @@ static string get_extension(const string& filename) {
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec3f>& colors, const vector<float>& radius, string& error,
     bool ascii, bool flip_texcoord) {
-  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3437,6 +3438,7 @@ static string get_extension(const string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
+    using namespace yocto::ply;
     auto ply_guard = make_unique<ply_model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
@@ -3450,6 +3452,7 @@ static string get_extension(const string& filename) {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
+    using namespace yocto::obj;
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
     if (!triangles.empty()) {
@@ -3480,7 +3483,6 @@ static string get_extension(const string& filename) {
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     string& error, bool flip_texcoord) {
-  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3499,6 +3501,7 @@ static string get_extension(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
+    using namespace yocto::ply;
     auto ply_guard = make_unique<ply_model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
@@ -3511,6 +3514,7 @@ static string get_extension(const string& filename) {
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
+    using namespace yocto::obj;
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
@@ -3535,7 +3539,6 @@ static string get_extension(const string& filename) {
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
     bool ascii, bool flip_texcoord) {
-  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3547,14 +3550,26 @@ static string get_extension(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto [split_quads, split_positions, split_normals, split_texturecoords] =
+    // split data
+    auto [split_quads, split_positions, split_normals, split_texcoords] =
         split_facevarying(
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
-    return save_shape(filename, {}, {}, {}, split_quads, split_positions,
-        split_normals, split_texturecoords, {}, {}, error, ascii,
-        flip_texcoord);
+
+    // ply model
+    using namespace yocto::ply;
+    auto ply_guard = make_unique<ply_model>();
+    auto ply       = ply_guard.get();
+    add_positions(ply, split_positions);
+    add_normals(ply, split_normals);
+    add_texcoords(ply, split_texcoords, flip_texcoord);
+    add_faces(ply, {}, split_quads);
+
+    // save
+    if (!save_ply(filename, ply, error)) return false;
+    return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
+    using namespace yocto::obj;
     auto obj_guard = make_unique<obj_model>();
     auto obj       = obj_guard.get();
 

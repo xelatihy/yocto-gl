@@ -52,7 +52,9 @@ using std::make_unique;
 #include "ext/filesystem.hpp"
 #include "ext/json.hpp"
 #include "yocto_image.h"
-#include "yocto_modelio.h"
+#include "yocto_obj.h"
+#include "yocto_pbrt.h"
+#include "yocto_ply.h"
 #include "yocto_shape.h"
 namespace fs = ghc::filesystem;
 
@@ -846,7 +848,7 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 // load instances
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
-  using namespace yocto::modelio;
+  using namespace yocto::ply;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -867,7 +869,7 @@ static bool load_instance(
 // save instances
 static bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
-  using namespace yocto::modelio;
+  using namespace yocto::ply;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1566,7 +1568,7 @@ namespace yocto::sceneio {
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::modelio;
+  using namespace yocto::obj;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1741,7 +1743,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
 
 static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::modelio;
+  using namespace yocto::obj;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -2362,7 +2364,7 @@ namespace yocto::sceneio {
 // load pbrt scenes
 static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::modelio;
+  using namespace yocto::pbrt;
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2533,7 +2535,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
 // Save a pbrt scene
 static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::modelio;
+  using namespace yocto::pbrt;
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
