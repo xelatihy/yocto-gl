@@ -305,6 +305,32 @@ int main(int argc, const char* argv[]) {
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });
+  set_char_glcallback(win, [app](opengl_window* win, unsigned int key, const opengl_input& input) {
+    switch (key) {
+      case 'c': {
+        auto ncameras = (int)app->scene->cameras.size();
+        for(auto pos = 0; pos < ncameras; pos++) {
+          if(app->scene->cameras[pos] == app->camera) {
+            app->camera = app->scene->cameras[(pos+1)%ncameras];
+            reset_display(app);
+            break;
+          }
+        }
+      } break;
+      case 'f':
+        app->params.sampler = trace_sampler_type::falsecolor;
+            reset_display(app);
+        break;
+      case 'p':
+        app->params.sampler = trace_sampler_type::path;
+            reset_display(app);
+        break;
+      case 'F':
+        app->params.falsecolor = (trace_falsecolor_type)(((int)app->params.falsecolor+1)%(int)trace_sampler_names.size());
+            reset_display(app);
+        break;
+    }
+  });
   set_uiupdate_glcallback(
       win, [app](opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
