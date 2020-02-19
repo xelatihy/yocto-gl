@@ -504,9 +504,83 @@ static vec3f eval_texture(const sceneio_texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
+// Compute per-vertex normals for quads.
+static vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  auto normals = vector<vec3f>{positions.size()};
+  for (auto& normal : normals) normal = zero3f;
+  for (auto& q : quads) {
+    auto normal = quad_normal(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    auto area = quad_area(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    normals[q.x] += normal * area;
+    normals[q.y] += normal * area;
+    normals[q.z] += normal * area;
+    if (q.z != q.w) normals[q.w] += normal * area;
+  }
+  for (auto& normal : normals) normal = normalize(normal);
+  return normals;
+}
+
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+static split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+  auto split =
+      std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
+  auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
+  // make faces unique
+  unordered_map<vec3i, int> vert_map;
+  split_quads.resize(quadspos.size());
+  for (auto fid = 0; fid < quadspos.size(); fid++) {
+    for (auto c = 0; c < 4; c++) {
+      auto v = vec3i{
+          (&quadspos[fid].x)[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+      };
+      auto it = vert_map.find(v);
+      if (it == vert_map.end()) {
+        auto s = (int)vert_map.size();
+        vert_map.insert(it, {v, s});
+        (&split_quads[fid].x)[c] = s;
+      } else {
+        (&split_quads[fid].x)[c] = it->second;
+      }
+    }
+  }
+
+  // fill vert data
+  split_positions.clear();
+  if (!positions.empty()) {
+    split_positions.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_positions[index] = positions[vert.x];
+    }
+  }
+  split_normals.clear();
+  if (!normals.empty()) {
+    split_normals.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_normals[index] = normals[vert.y];
+    }
+  }
+  split_texcoords.clear();
+  if (!texcoords.empty()) {
+    split_texcoords.resize(vert_map.size());
+    for (auto& [vert, index] : vert_map) {
+      split_texcoords[index] = texcoords[vert.z];
+    }
+  }
+
+  return split;
+}
+
 // using
 using std::unique_ptr;
-using yocto::shape::compute_normals;
 using yocto::shape::subdivide_catmullclark;
 
 // Apply subdivision and displacement rules.
@@ -541,10 +615,6 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
   if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
     throw std::runtime_error("missing texture coordinates");
-
-  // using
-  using yocto::shape::compute_normals;
-  using yocto::shape::split_facevarying;
 
   // facevarying case
   auto offset = vector<float>(subdiv->positions.size(), 0);
@@ -585,10 +655,6 @@ void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv) {
       break;
     }
   }
-
-  // using
-  using yocto::shape::compute_normals;
-  using yocto::shape::split_facevarying;
 
   auto tesselated = subdivide_subdiv(
       subdiv, material->subdivisions, material->smooth);
