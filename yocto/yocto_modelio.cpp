@@ -4845,17 +4845,13 @@ gltf_model::~gltf_model() {
   memset(&params, 0, sizeof(params));
   auto data   = (cgltf_data*)nullptr;
   auto result = cgltf_parse_file(&params, filename.c_str(), &data);
-  if (result != cgltf_result_success) {
-    throw std::runtime_error{filename + ": read error"};
-  }
+  if (result != cgltf_result_success) return read_error();
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
   auto dirname = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
-      cgltf_result_success) {
-    throw std::runtime_error(filename + ": error reading buffers");
-  }
+      cgltf_result_success) return read_error();
 
   // convert textures
   auto _startswith = [](string_view str, string_view substr) {
@@ -5099,11 +5095,11 @@ gltf_model::~gltf_model() {
     camera->ortho    = gcam->type == cgltf_camera_type_orthographic;
     if (camera->ortho) {
       // throw std::runtime_error("orthographic not supported well");
-      auto ortho     = &gcam->orthographic;
+      auto ortho     = &gcam->data.orthographic;
       camera->yfov   = ortho->ymag;
       camera->aspect = ortho->xmag / ortho->ymag;
     } else {
-      auto persp     = &gcam->perspective;
+      auto persp     = &gcam->data.perspective;
       camera->yfov   = persp->yfov;
       camera->aspect = persp->aspect_ratio;
     }
