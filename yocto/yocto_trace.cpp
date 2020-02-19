@@ -1429,9 +1429,8 @@ static pair<int, int> split_balanced(
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
-    axis = 0;
-    mid  = (start + end) / 2;
+    // throw std::runtime_error("bad bvh split");
+    mid = (start + end) / 2;
   }
 
   return {mid, axis};
@@ -1465,9 +1464,8 @@ static pair<int, int> split_middle(
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
-    axis = 0;
-    mid  = (start + end) / 2;
+    // throw std::runtime_error("bad bvh split");
+    mid = (start + end) / 2;
   }
 
   return {mid, axis};
