@@ -88,7 +88,10 @@
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
+
+// using directives
+using namespace yocto::math;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -201,12 +204,12 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
@@ -277,6 +280,6 @@ bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
 bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 #endif

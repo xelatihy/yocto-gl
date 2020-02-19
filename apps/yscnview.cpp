@@ -31,7 +31,10 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "yocto_opengl.h"
-using namespace yocto;
+using namespace yocto::sceneio;
+using namespace yocto::image;
+using namespace yocto::commonio;
+using namespace yocto::opengl;
 
 #include <atomic>
 #include <deque>
@@ -49,7 +52,7 @@ namespace fs = ghc::filesystem;
 #undef far
 #endif
 
-namespace yocto {
+namespace yocto::sceneio {
 void print_obj_camera(sceneio_camera* camera);
 };
 

@@ -87,7 +87,7 @@
 // -----------------------------------------------------------------------------
 // DICTIONARY TYPES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // Aliased typenames for readability
 using std::array;
@@ -102,22 +102,22 @@ using namespace std::literals::string_literals;
 template <typename K, typename V>
 using hash_map = unordered_map<K, V>;
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 // TIMING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time();
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 inline auto range(int min, int max);
@@ -140,12 +140,12 @@ inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
 template <typename T>
 inline vector<T> operator+(const vector<T>& a, const T& b);
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 // CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
@@ -187,7 +187,7 @@ inline void parallel_foreach(vector<T>& values, Func&& func);
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, Func&& func);
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 //
@@ -200,19 +200,19 @@ inline void parallel_foreach(const vector<T>& values, Func&& func);
 // -----------------------------------------------------------------------------
 // TIMING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // Range object to support Python-like iteration. Use with `range()`.
 struct range_helper {
@@ -286,12 +286,12 @@ inline vector<T> operator+(const vector<T>& a, const T& b) {
   return c += b;
 }
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 // -----------------------------------------------------------------------------
 // CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::common {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
@@ -373,6 +373,6 @@ inline void parallel_foreach(const vector<T>& values, Func&& func) {
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
-}  // namespace yocto
+}  // namespace yocto::common
 
 #endif

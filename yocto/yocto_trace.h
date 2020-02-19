@@ -79,10 +79,12 @@
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::trace {
 
 // Using directives
 using std::function;
+using yocto::image::image;
+using namespace yocto::math;
 
 // Trace scene
 struct trace_scene;
@@ -263,12 +265,12 @@ void trace_async_start(trace_state* state, const trace_scene* scene,
     trace_process_async  progress_async_cb = {});
 void trace_async_stop(trace_state* state);
 
-}  // namespace yocto
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // SCENE AND RENDERING DATA
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::trace {
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -460,12 +462,12 @@ struct trace_state {
   std::atomic<bool>  stop   = {};  // async
 };
 
-}  // namespace yocto
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // INTERSECTION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::trace {
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -488,6 +490,6 @@ trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
-}  // namespace yocto
+}  // namespace yocto::trace
 
 #endif

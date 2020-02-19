@@ -103,10 +103,11 @@
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Using directives
 using std::function;
+using namespace yocto::math;
 
 // Image container.
 template <typename T>
@@ -158,12 +159,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 template <typename T>
 inline void swap(image<T>& a, image<T>& b);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
@@ -175,12 +176,12 @@ vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
 vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -265,12 +266,12 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
@@ -293,12 +294,12 @@ bool save_image(const string& filename, const image<float>& img, string& error);
 bool load_image(const string& filename, image<byte>& img, string& error);
 bool save_image(const string& filename, const image<byte>& img, string& error);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Make a grid image.
 image<vec4f> make_grid(const vec2i& size, float scale = 1,
@@ -368,12 +369,12 @@ image<vec4f> add_logo(
 image<vec4b> add_logo(
     const image<vec4b>& img, const string& name = "logo-medium");
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Volume container.
 template <typename T>
@@ -424,46 +425,46 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline void swap(volume<T>& a, volume<T>& b);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Evaluates a color image at a point `uv`.
 float eval_volume(const image<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME IO
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
 void save_volume(const string& filename, const volume<float>& vol);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // EXAMPLE VOLUMES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
 void make_volume_preset(volume<float>& vol, const string& type);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // RGB color spaces
 enum struct color_space {
@@ -489,12 +490,12 @@ enum struct color_space {
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // constructors
 template <typename T>
@@ -606,12 +607,12 @@ inline void swap(image<T>& a, image<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Volume container ----------
 
@@ -723,6 +724,6 @@ inline void swap(volume<T>& a, volume<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 #endif

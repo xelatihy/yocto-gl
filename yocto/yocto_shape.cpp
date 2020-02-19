@@ -17,7 +17,7 @@ using std::make_unique;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Compute per-vertex tangents for lines.
 vector<vec3f> compute_tangents(
@@ -239,12 +239,12 @@ void update_matrix_skinning(vector<vec3f>& skinned_positions,
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Flip vertex normals
 vector<vec3f> flip_normals(const vector<vec3f>& normals) {
@@ -297,12 +297,12 @@ vector<vec3f> align_vertices(
   return aligned;
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Initialize an edge map with elements.
 edge_map make_edge_map(const vector<vec3i>& triangles) {
@@ -543,13 +543,13 @@ vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
   return boundaries;
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHTBORS
 // -----------------------------------------------------------------------------
 
-namespace yocto {
+namespace yocto::shape {
 
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
@@ -613,12 +613,12 @@ void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const vector<float>& field, float isoline,
@@ -720,12 +720,12 @@ void meandering_triangles(const vector<float>& field, float isoline,
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Convert quads to triangles
 vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
@@ -958,12 +958,12 @@ void merge_triangles_and_quads(
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Subdivide lines.
 template <typename T>
@@ -1404,12 +1404,12 @@ pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
@@ -1549,12 +1549,12 @@ void sample_quads(vector<vec3f>& sampled_positions,
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
@@ -1801,12 +1801,12 @@ vector<vec3f> colors_from_field(
   return colors;
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF INTEGRAL PATHS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 namespace integral_paths {
 
@@ -2190,12 +2190,12 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   return result;
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Make a quad.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
@@ -3301,7 +3301,7 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
   auto bbox = invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
-  auto center              = yocto::center(bbox);
+  auto center              = yocto::math::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;
@@ -3312,12 +3312,12 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
       inner_positions, inner_normals, inner_texturecoords);
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 // Get extension (not including '.').
 static string get_extension(const string& filename) {
@@ -3332,6 +3332,7 @@ static string get_extension(const string& filename) {
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, vector<float>& radius, string& error,
     bool flip_texcoord) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3423,6 +3424,7 @@ static string get_extension(const string& filename) {
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec3f>& colors, const vector<float>& radius, string& error,
     bool ascii, bool flip_texcoord) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3478,6 +3480,7 @@ static string get_extension(const string& filename) {
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     string& error, bool flip_texcoord) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3532,6 +3535,7 @@ static string get_extension(const string& filename) {
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
     bool ascii, bool flip_texcoord) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3566,12 +3570,12 @@ static string get_extension(const string& filename) {
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::shape {
 
 vector<string> shape_stats(const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3614,4 +3618,4 @@ vector<string> shape_stats(const vector<int>& points,
   return stats;
 }
 
-}  // namespace yocto
+}  // namespace yocto::shape

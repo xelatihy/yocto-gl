@@ -46,7 +46,7 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 using std::string_view;
 
@@ -201,12 +201,12 @@ static void skip_whitespace(string_view& str) {
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
@@ -325,12 +325,12 @@ template <typename T>
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL BINARY HANDLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 template <typename T>
 static T swap_endian(T value) {
@@ -360,12 +360,12 @@ template <typename T>
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 static void remove_ply_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -1238,12 +1238,12 @@ void add_points(ply_model* ply, const vector<int>& values) {
   return add_lists(ply, values, "point", "vertex_indices");
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -2617,12 +2617,12 @@ void add_fvquads(obj_model* obj, const string& name,
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 // Pbrt value type
 enum struct pbrt_value_type {
@@ -4808,12 +4808,12 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio
 
 // -----------------------------------------------------------------------------
 // SIMPLE GLTF LOADER
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::modelio {
 
 gltf_model::~gltf_model() {
   for (auto camera : cameras) delete camera;
@@ -5126,4 +5126,4 @@ gltf_model::~gltf_model() {
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::modelio

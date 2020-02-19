@@ -30,7 +30,8 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
-using namespace yocto;
+using namespace yocto::sceneio;
+using namespace yocto::commonio;
 
 #include <memory>
 #include <set>

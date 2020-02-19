@@ -46,7 +46,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 // Intersect a ray with a point (approximate)
 inline bool intersect_point(
@@ -200,12 +200,12 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
@@ -350,12 +350,12 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR EMBREE BVH
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -596,12 +596,12 @@ bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
 }
 #endif
 
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR BVH
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static pair<int, int> split_sah(vector<int>& primitives,
@@ -1318,12 +1318,12 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
   return intersection;
 }
 
-}  // namespace yocto
+}  // namespace yocto::bvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::bvh {
 
 void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
 #ifdef YOCTO_EMBREE
@@ -1931,4 +1931,4 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
   return intersection;
 }
 
-}  // namespace yocto
+}  // namespace yocto::bvh

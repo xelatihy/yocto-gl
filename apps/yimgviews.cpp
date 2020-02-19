@@ -29,7 +29,10 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
-using namespace yocto;
+using namespace yocto::math;
+using namespace yocto::image;
+using namespace yocto::commonio;
+using namespace yocto::opengl;
 
 #include <future>
 

@@ -31,7 +31,10 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
-using namespace yocto;
+using namespace yocto::trace;
+using namespace yocto::sceneio;
+using namespace yocto::image;
+using namespace yocto::commonio;
 
 #include <map>
 #include <memory>

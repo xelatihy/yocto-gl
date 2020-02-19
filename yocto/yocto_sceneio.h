@@ -54,10 +54,12 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Using directives.
 using std::function;
+using yocto::image::image;
+using namespace yocto::math;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -237,13 +239,13 @@ sceneio_texture*  add_texture(sceneio_model* scene, const string& name = "");
 sceneio_object*   add_complete_object(
       sceneio_model* scene, const string& name = "");
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace yocto {
+namespace yocto::sceneio {
 
 // Progress callback called when loading.
 using sceneio_progress =
@@ -259,12 +261,12 @@ bool save_scene(const string& filename, const sceneio_model* scene,
 // get named camera or default if name is empty
 sceneio_camera* get_camera(const sceneio_model* scene, const string& name = "");
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
@@ -275,12 +277,12 @@ vector<string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const sceneio_model* scene);
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb = {});
@@ -296,6 +298,6 @@ inline vec3f eta_to_reflectivity(float eta) {
   return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 #endif
