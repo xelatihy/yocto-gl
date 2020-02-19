@@ -2095,7 +2095,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
       for(auto j = 0; j < color_opacityf.size().y; j ++) {
         for(auto i = 0; i < color_opacityf.size().x; i ++) {
           ctexture->colorf[{i, j}] = xyz(color_opacityf[{i, j}]);
-          ctexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
+          otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
         }
       }
     }
@@ -2106,7 +2106,7 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
       for(auto j = 0; j < color_opacityb.size().y; j ++) {
         for(auto i = 0; i < color_opacityb.size().x; i ++) {
           ctexture->colorb[{i, j}] = xyz(color_opacityb[{i, j}]);
-          ctexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
+          otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
         }
       }
     }
