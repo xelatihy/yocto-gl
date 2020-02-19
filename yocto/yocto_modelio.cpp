@@ -4907,61 +4907,6 @@ gltf_model::~gltf_model() {
     material->normal_tex = get_texture(gmat->normal_texture);
   }
 
-  // get values from accessors
-  auto accessor_values =
-      [](const cgltf_accessor* gacc,
-          bool normalize = false) -> vector<std::array<double, 4>> {
-    auto gview       = gacc->buffer_view;
-    auto data        = (byte*)gview->buffer->data;
-    auto offset      = gacc->offset + gview->offset;
-    auto stride      = gview->stride;
-    auto compTypeNum = gacc->component_type;
-    auto count       = gacc->count;
-    auto type        = gacc->type;
-    auto ncomp       = 0;
-    if (type == cgltf_type_scalar) ncomp = 1;
-    if (type == cgltf_type_vec2) ncomp = 2;
-    if (type == cgltf_type_vec3) ncomp = 3;
-    if (type == cgltf_type_vec4) ncomp = 4;
-    auto compSize = 1;
-    if (compTypeNum == cgltf_component_type_r_16 ||
-        compTypeNum == cgltf_component_type_r_16u) {
-      compSize = 2;
-    }
-    if (compTypeNum == cgltf_component_type_r_32u ||
-        compTypeNum == cgltf_component_type_r_32f) {
-      compSize = 4;
-    }
-    if (!stride) stride = compSize * ncomp;
-    auto vals = vector<std::array<double, 4>>(count, {{0.0, 0.0, 0.0, 1.0}});
-    for (auto i = 0; i < count; i++) {
-      auto d = data + offset + i * stride;
-      for (auto c = 0; c < ncomp; c++) {
-        if (compTypeNum == cgltf_component_type_r_8) {  // char
-          vals[i][c] = (double)(*(char*)d);
-          if (normalize) vals[i][c] /= SCHAR_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_8u) {  // byte
-          vals[i][c] = (double)(*(byte*)d);
-          if (normalize) vals[i][c] /= UCHAR_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_16) {  // short
-          vals[i][c] = (double)(*(short*)d);
-          if (normalize) vals[i][c] /= SHRT_MAX;
-        } else if (compTypeNum ==
-                   cgltf_component_type_r_16u) {  // unsigned short
-          vals[i][c] = (double)(*(unsigned short*)d);
-          if (normalize) vals[i][c] /= USHRT_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_32u) {  // unsigned int
-          vals[i][c] = (double)(*(unsigned int*)d);
-          if (normalize) vals[i][c] /= UINT_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_32f) {  // float
-          vals[i][c] = (*(float*)d);
-        }
-        d += compSize;
-      }
-    }
-    return vals;
-  };
-
   // convert meshes
   auto mesh_map = unordered_map<cgltf_mesh*, gltf_mesh*>{{nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
