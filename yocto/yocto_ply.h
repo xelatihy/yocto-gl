@@ -193,6 +193,10 @@ inline void add_points(ply_model* ply, const vector<int>& values);
 //
 // -----------------------------------------------------------------------------
 
+#include <memory>
+#include <string_view>
+#include <cstdio>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
