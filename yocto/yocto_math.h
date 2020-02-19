@@ -802,6 +802,10 @@ inline const auto zero4b = vec4b{0, 0, 0, 0};
 inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
 inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 
+// Element access
+inline vec3b&       xyz(vec4b& a) { return (vec3b&)a; }
+inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
+
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b) {
   return a.x == b.x && a.y == b.y;
