@@ -1411,23 +1411,6 @@ pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Sample a point uniformly on a triangle.
-inline vec2f sample_triangle(const vec2f& ruv) {
-  return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
-}
-// Sample an index with uniform distribution.
-inline int sample_uniform(int size, float r) {
-  return clamp((int)(r * size), 0, size - 1);
-}
-
-// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
-  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                   cdf.data());
-  return clamp(idx, 0, (int)cdf.size() - 1);
-}
-
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
 int sample_points(const vector<float>& cdf, float re) {
