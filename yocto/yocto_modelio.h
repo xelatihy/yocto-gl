@@ -46,7 +46,7 @@
 // -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::ply {
 
 // Using directives
 using std::function;
@@ -190,12 +190,18 @@ void add_quads(ply_model* ply, const vector<vec4i>& values);
 void add_lines(ply_model* ply, const vector<vec2i>& values);
 void add_points(ply_model* ply, const vector<int>& values);
 
-}  // namespace yocto::modelio
+}  // namespace yocto::ply
 
 // -----------------------------------------------------------------------------
 // SIMPLE OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::obj {
+
+// Using directives
+using std::function;
+using std::make_unique;
+using std::unique_ptr;
+using namespace yocto::math;
 
 // OBJ vertex
 struct obj_vertex {
@@ -418,7 +424,7 @@ void add_fvquads(obj_model* obj, const string& name,
     const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
     bool flip_texcoord = false);
 
-}  // namespace yocto::modelio
+}  // namespace yocto::obj
 
 // -----------------------------------------------------------------------------
 // HELPER FOR DICTIONARIES
@@ -427,8 +433,8 @@ namespace std {
 
 // Hash functor for vector for use with hash_map
 template <>
-struct hash<yocto::modelio::obj_vertex> {
-  size_t operator()(const yocto::modelio::obj_vertex& v) const {
+struct hash<yocto::obj::obj_vertex> {
+  size_t operator()(const yocto::obj::obj_vertex& v) const {
     static const std::hash<int> hasher = std::hash<int>();
     auto                        h      = (size_t)0;
     h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -443,7 +449,13 @@ struct hash<yocto::modelio::obj_vertex> {
 // -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::pbrt {
+  
+// Using directives
+using std::function;
+using std::make_unique;
+using std::unique_ptr;
+using namespace yocto::math;
 
 // Pbrt camera
 struct pbrt_camera {
@@ -543,6 +555,6 @@ pbrt_material*    add_material(pbrt_model* pbrt);
 pbrt_environment* add_environment(pbrt_model* pbrt);
 pbrt_light*       add_light(pbrt_model* pbrt);
 
-}  // namespace yocto::modelio
+}  // namespace yocto::pbrt
 
 #endif

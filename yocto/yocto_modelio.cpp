@@ -42,9 +42,9 @@
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
-// LOAD-LEVEL PARSING
+// PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::ply {
 
 using std::string_view;
 
@@ -199,13 +199,6 @@ static void skip_whitespace(string_view& str) {
   return true;
 }
 
-}  // namespace yocto::modelio
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL PRINTING
-// -----------------------------------------------------------------------------
-namespace yocto::modelio {
-
 // Formats values to string
 static void format_value(string& str, const string& value) { str += value; }
 static void format_value(string& str, const char* value) { str += value; }
@@ -323,13 +316,6 @@ template <typename T>
   return true;
 }
 
-}  // namespace yocto::modelio
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL BINARY HANDLING
-// -----------------------------------------------------------------------------
-namespace yocto::modelio {
-
 template <typename T>
 static T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
@@ -358,12 +344,17 @@ template <typename T>
   return true;
 }
 
-}  // namespace yocto::modelio
 
-// -----------------------------------------------------------------------------
-// PLY CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto::modelio {
+
+
+
+
+
+
+
+
+
+
 
 static void remove_ply_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -1241,7 +1232,292 @@ void add_points(ply_model* ply, const vector<int>& values) {
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::obj {
+
+using std::string_view;
+
+// utilities
+static bool is_newline(char c) { return c == '\r' || c == '\n'; }
+static bool is_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static void skip_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+}
+
+// Parse values from a string
+[[nodiscard]] static bool parse_value(string_view& str, string_view& value) {
+  skip_whitespace(str);
+  if (str.empty()) return false;
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') return false;
+    str.remove_prefix(1);
+    if (str.empty()) return false;
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) return false;
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, string& value) {
+  auto valuev = string_view{};
+  if (!parse_value(str, valuev)) return false;
+  value = string{valuev};
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
+  char* end = nullptr;
+  value     = (int8_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
+  char* end = nullptr;
+  value     = (int16_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
+  char* end = nullptr;
+  value     = (int32_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
+  char* end = nullptr;
+  value     = (int64_t)strtoll(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
+  char* end = nullptr;
+  value     = (uint8_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
+  char* end = nullptr;
+  value     = (uint16_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
+  char* end = nullptr;
+  value     = (uint32_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
+  char* end = nullptr;
+  value     = (uint64_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
+  auto valuei = 0;
+  if (!parse_value(str, valuei)) return false;
+  value = (bool)valuei;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, float& value) {
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, double& value) {
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#ifdef __APPLE__
+[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
+  char* end = nullptr;
+  value     = (size_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#endif
+
+[[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+
+// Formats values to string
+static void format_value(string& str, const string& value) { str += value; }
+static void format_value(string& str, const char* value) { str += value; }
+static void format_value(string& str, int8_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int16_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int32_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int64_t value) {
+  char buf[256];
+  sprintf(buf, "%lld", (long long)value);
+  str += buf;
+}
+static void format_value(string& str, uint8_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint16_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint32_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint64_t value) {
+  char buf[256];
+  sprintf(buf, "%llu", (unsigned long long)value);
+  str += buf;
+}
+static void format_value(string& str, float value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+static void format_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+
+static void format_value(string& str, const vec2f& value) {
+  for (auto i = 0; i < 2; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const vec3f& value) {
+  for (auto i = 0; i < 3; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const vec4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const frame3f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const mat4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+
+// Foramt to file
+static void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+static void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+[[nodiscard]] static bool format_values(
+    FILE* fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
+}
+template <typename T>
+[[nodiscard]] static bool format_value(FILE* fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 static void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -2620,7 +2896,296 @@ void add_fvquads(obj_model* obj, const string& name,
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::modelio {
+namespace yocto::pbrt {
+
+using std::string_view;
+
+// utilities
+static bool is_newline(char c) { return c == '\r' || c == '\n'; }
+static bool is_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static void skip_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+}
+
+// Parse values from a string
+[[nodiscard]] static bool parse_value(string_view& str, string_view& value) {
+  skip_whitespace(str);
+  if (str.empty()) return false;
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') return false;
+    str.remove_prefix(1);
+    if (str.empty()) return false;
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) return false;
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, string& value) {
+  auto valuev = string_view{};
+  if (!parse_value(str, valuev)) return false;
+  value = string{valuev};
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int8_t& value) {
+  char* end = nullptr;
+  value     = (int8_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int16_t& value) {
+  char* end = nullptr;
+  value     = (int16_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int32_t& value) {
+  char* end = nullptr;
+  value     = (int32_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, int64_t& value) {
+  char* end = nullptr;
+  value     = (int64_t)strtoll(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint8_t& value) {
+  char* end = nullptr;
+  value     = (uint8_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint16_t& value) {
+  char* end = nullptr;
+  value     = (uint16_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint32_t& value) {
+  char* end = nullptr;
+  value     = (uint32_t)strtoul(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, uint64_t& value) {
+  char* end = nullptr;
+  value     = (uint64_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, bool& value) {
+  auto valuei = 0;
+  if (!parse_value(str, valuei)) return false;
+  value = (bool)valuei;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, float& value) {
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, double& value) {
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#ifdef __APPLE__
+[[nodiscard]] static bool parse_value(string_view& str, size_t& value) {
+  char* end = nullptr;
+  value     = (size_t)strtoull(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+#endif
+
+[[nodiscard]] static bool parse_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] static bool parse_value(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+
+// Formats values to string
+static void format_value(string& str, const string& value) { str += value; }
+static void format_value(string& str, const char* value) { str += value; }
+static void format_value(string& str, int8_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int16_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int32_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static void format_value(string& str, int64_t value) {
+  char buf[256];
+  sprintf(buf, "%lld", (long long)value);
+  str += buf;
+}
+static void format_value(string& str, uint8_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint16_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint32_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static void format_value(string& str, uint64_t value) {
+  char buf[256];
+  sprintf(buf, "%llu", (unsigned long long)value);
+  str += buf;
+}
+static void format_value(string& str, float value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+static void format_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+
+static void format_value(string& str, const vec2f& value) {
+  for (auto i = 0; i < 2; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const vec3f& value) {
+  for (auto i = 0; i < 3; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const vec4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const frame3f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const mat4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+
+// Foramt to file
+static void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+static void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+[[nodiscard]] static bool format_values(
+    FILE* fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
+}
+template <typename T>
+[[nodiscard]] static bool format_value(FILE* fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
+  if (fputs(str.c_str(), fs) < 0) return false;
+  return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Pbrt value type
 enum struct pbrt_value_type {
@@ -3987,7 +4552,7 @@ static bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "filename", shape->filename_))
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
-    auto ply = make_unique<ply_model>();
+    auto ply = make_unique<ply::ply_model>();
     if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
       return dependent_error();
     shape->positions = get_positions(ply.get());
@@ -4757,7 +5322,7 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
         command.values.push_back(make_pbrt_value("uv", shape->texcoords));
     }
     if (ply_meshes) {
-      auto ply_guard = make_unique<ply_model>();
+      auto ply_guard = make_unique<ply::ply_model>();
       auto ply       = ply_guard.get();
       add_positions(ply, shape->positions);
       add_normals(ply, shape->normals);
