@@ -409,9 +409,9 @@ bool draw_glwidgets(
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
-  edited += draw_glslider(win, "frame[0]", ioobject->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", ioobject->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", ioobject->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.x", ioobject->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", ioobject->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", ioobject->frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
   edited += draw_glcombobox(win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_glcombobox(
@@ -443,9 +443,9 @@ bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene,
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_gltextinput(win, "name", ioenvironment->name);
-  edited += draw_glslider(win, "frame[0]", ioenvironment->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", ioenvironment->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", ioenvironment->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.x", ioenvironment->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", ioenvironment->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", ioenvironment->frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", ioenvironment->frame.o, -10, 10);
   edited += draw_glhdrcoloredit(win, "emission", ioenvironment->emission);
   edited += draw_glcombobox(win, "emission texture",
@@ -661,19 +661,7 @@ void draw_glwidgets(
     draw_glcombobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene->subdivs);
     if (!draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
-      // auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
-      // tesselate_subdiv(app->ioscene, iosubdiv);
-      // TODO: FIX SUBDIVS
-      // auto glshape = app->glscene->shapes[app->selected_shape];
-      // auto ioshape = iosubdiv->shape;
-      // set_positions(glshape, ioshape->positions);
-      // set_normals(glshape, ioshape->normals);
-      // set_texcoords(glshape, ioshape->texcoords);
-      // set_colors(glshape, ioshape->colors);
-      // set_points(glshape, ioshape->points);
-      // set_lines(glshape, ioshape->lines);
-      // set_triangles(glshape, ioshape->triangles);
-      // set_quads(glshape, ioshape->quads);
+      // TODO: subdiv updates not implemented yet
     }
     end_glheader(win);
   }

@@ -642,10 +642,14 @@ void draw_glwidgets(
         win, "object##2", app->selected_object, app->ioscene->objects, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_object)) {
       stop_display(app);
-      // auto ioobject = app->ioscene->shapes[app->selected_shape];
-      // TODO: update editing
-      // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
-      // TODO: maybe we should update lights for this
+      auto ioobject = app->selected_object;
+      auto object   = get_element(
+        ioobject, app->ioscene->objects, app->scene->objects);
+      set_frame(object, ioobject->frame);
+      set_shape(object, get_element(ioobject->shape, app->ioscene->shapes, app->scene->shapes));
+      set_material(object, get_element(ioobject->material, app->ioscene->materials, app->scene->materials));
+      set_instance(object, get_element(ioobject->instance, app->ioscene->instances, app->scene->instances));
+      update_bvh(app->scene, {object}, {}, {}, app->params);
       reset_display(app);
     }
     end_glheader(win);
@@ -668,9 +672,7 @@ void draw_glwidgets(
       set_colors(shape, ioshape->colors);
       set_radius(shape, ioshape->radius);
       set_tangents(shape, ioshape->tangents);
-      // TODO: bvh update
-      // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
-      // TODO: maybe we should update lights for this
+      update_bvh(app->scene, {}, {shape}, {}, app->params);
       reset_display(app);
     }
     end_glheader(win);
@@ -733,10 +735,11 @@ void draw_glwidgets(
         app->ioscene->instances, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_instance)) {
       stop_display(app);
-      // auto ioinstance = app->ioscene->instances[app->selected_instance];
-      // TODO: update editing
-      // update_bvh(app->scene, {}, {app->selected_shape}, app->params);
-      // TODO: maybe we should update lights for this
+      auto ioinstance = app->selected_instance;
+      auto instance   = get_element(
+          ioinstance, app->ioscene->instances, app->scene->instances);
+      set_frames(instance, ioinstance->frames);
+      update_bvh(app->scene, {}, {}, {instance}, app->params);
       reset_display(app);
     }
     end_glheader(win);
@@ -746,25 +749,7 @@ void draw_glwidgets(
         win, "selection##2", app->selected_subdiv, app->ioscene->subdivs, true);
     if (draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
       stop_display(app);
-      // TODO: this is bogus
-      // auto iosubdiv = app->ioscene->subdivs[app->selected_subdiv];
-      // tesselate_subdiv(app->ioscene, iosubdiv);
-      // TODO: this is bogus
-      // auto shape   = app->scene->shapes[app->selected_subdiv];
-      // auto ioshape = iosubdiv->shape;
-      // set_points(shape, ioshape->points);
-      // set_lines(shape, ioshape->lines);
-      // set_triangles(shape, ioshape->triangles);
-      // set_quads(shape, ioshape->quads);
-      // set_positions(shape, ioshape->positions);
-      // set_normals(shape, ioshape->normals);
-      // set_texcoords(shape, ioshape->texcoords);
-      // set_colors(shape, ioshape->colors);
-      // set_radius(shape, ioshape->radius);
-      // set_tangents(shape, ioshape->tangents);
-      // TODO: bvh update
-      // update_bvh(app->scene, {}, {app->selected_subdiv}, app->params);
-      // TODO: maybe we should update lights for this
+      // TODO: subdiv not implemented yet
       reset_display(app);
     }
     end_glheader(win);
