@@ -1,10 +1,7 @@
 //
-// # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt parsing and writing
+// # Yocto/Obj: Tiny library for Obj parsing and writing
 //
-// Yocto/ModelIO is a tiny library for loading and saving
-// Ply/Obj/Pbrt. In Yocto/ModelIO, all model data is loaded and saved
-// at once. Each format is parsed in a manner that is as close as possible to
-// the original. Data can be accessed directly or via converters.
+// Yocto/Obj is a tiny library for loading and saving Obj. 
 //
 
 //
@@ -31,8 +28,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_MODELIO_H_
-#define _YOCTO_MODELIO_H_
+#ifndef _YOCTO_OBJ_H_
+#define _YOCTO_OBJ_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -42,151 +39,6 @@
 #include <memory>
 
 #include "yocto_math.h"
-
-// -----------------------------------------------------------------------------
-// SIMPLE PLY LOADER AND WRITER
-// -----------------------------------------------------------------------------
-namespace yocto::ply {
-
-// Using directives
-using namespace yocto::math;
-
-// Type of ply file. For best performance, choose binary_little_endian when
-// writing ply files.
-enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
-
-// Type of Ply data
-enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
-
-// Ply property
-struct ply_property {
-  // description
-  string   name    = "";
-  bool     is_list = false;
-  ply_type type    = ply_type::f32;
-
-  // data if property is loaded
-  vector<int8_t>   data_i8  = {};
-  vector<int16_t>  data_i16 = {};
-  vector<int32_t>  data_i32 = {};
-  vector<int64_t>  data_i64 = {};
-  vector<uint8_t>  data_u8  = {};
-  vector<uint16_t> data_u16 = {};
-  vector<uint32_t> data_u32 = {};
-  vector<uint64_t> data_u64 = {};
-  vector<float>    data_f32 = {};
-  vector<double>   data_f64 = {};
-
-  // list length
-  vector<uint8_t> ldata_u8 = {};
-};
-
-// Ply elements
-struct ply_element {
-  string                name       = "";
-  size_t                count      = 0;
-  vector<ply_property*> properties = {};
-  ~ply_element();
-};
-
-// Ply model
-struct ply_model {
-  ply_format           format   = ply_format::binary_little_endian;
-  vector<string>       comments = {};
-  vector<ply_element*> elements = {};
-  ~ply_model();
-};
-
-// Load and save ply
-bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, ply_model* ply, string& error);
-
-// Get ply properties
-bool has_property(
-    ply_model* ply, const string& element, const string& property);
-ply_property* get_property(
-    ply_model* ply, const string& element, const string& property);
-
-vector<float> get_values(
-    ply_model* ply, const string& element, const string& property);
-vector<vec2f>   get_values(ply_model* ply, const string& element,
-      const string& property1, const string& property2);
-vector<vec3f>   get_values(ply_model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3);
-vector<vec4f>   get_values(ply_model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3,
-      const string& property4);
-vector<vec4f>   get_values(ply_model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3,
-      float property4);
-vector<frame3f> get_values(
-    ply_model* ply, const string& element, const array<string, 12>& properties);
-
-vector<vector<int>> get_lists(
-    ply_model* ply, const string& element, const string& property);
-vector<byte> get_list_sizes(
-    ply_model* ply, const string& element, const string& property);
-vector<int> get_list_values(
-    ply_model* ply, const string& element, const string& property);
-vec2i get_list_minxmax(
-    ply_model* ply, const string& element, const string& property);
-
-// Get ply properties for meshes
-vector<vec3f>       get_positions(ply_model* ply);
-vector<vec3f>       get_normals(ply_model* ply);
-vector<vec2f>       get_texcoords(ply_model* ply, bool flipv = false);
-vector<vec3f>       get_colors(ply_model* ply);
-vector<float>       get_radius(ply_model* ply);
-vector<vector<int>> get_faces(ply_model* ply);
-vector<vec2i>       get_lines(ply_model* ply);
-vector<int>         get_points(ply_model* ply);
-vector<vec3i>       get_triangles(ply_model* ply);
-vector<vec4i>       get_quads(ply_model* ply);
-bool                has_quads(ply_model* ply);
-
-// Add ply properties
-void add_values(ply_model* ply, const vector<float>& values,
-    const string& element, const string& property);
-void add_values(ply_model* ply, const vector<vec2f>& values,
-    const string& element, const string& property1, const string& property2);
-void add_values(ply_model* ply, const vector<vec3f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3);
-void add_values(ply_model* ply, const vector<vec4f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3, const string& property4);
-void add_values(ply_model* ply, const vector<frame3f>& values,
-    const string& element, const array<string, 12>& properties);
-
-void add_lists(ply_model* ply, const vector<vector<int>>& values,
-    const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<byte>& sizes,
-    const vector<int>& values, const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<int>& values, const string& element,
-    const string& property);
-void add_lists(ply_model* ply, const vector<vec2i>& values,
-    const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<vec3i>& values,
-    const string& element, const string& property);
-void add_lists(ply_model* ply, const vector<vec4i>& values,
-    const string& element, const string& property);
-
-// Add ply properties for meshes
-void add_positions(ply_model* ply, const vector<vec3f>& values);
-void add_normals(ply_model* ply, const vector<vec3f>& values);
-void add_texcoords(
-    ply_model* ply, const vector<vec2f>& values, bool flipv = false);
-void add_colors(ply_model* ply, const vector<vec3f>& values);
-void add_radius(ply_model* ply, const vector<float>& values);
-void add_faces(ply_model* ply, const vector<vector<int>>& values);
-void add_faces(
-    ply_model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-void add_triangles(ply_model* ply, const vector<vec3i>& values);
-void add_quads(ply_model* ply, const vector<vec4i>& values);
-void add_lines(ply_model* ply, const vector<vec2i>& values);
-void add_points(ply_model* ply, const vector<int>& values);
-
-}  // namespace yocto::ply
 
 // -----------------------------------------------------------------------------
 // SIMPLE OBJ LOADER AND WRITER
@@ -438,113 +290,5 @@ struct hash<yocto::obj::obj_vertex> {
 };
 
 }  // namespace std
-
-// -----------------------------------------------------------------------------
-// SIMPLE PBRT LOADER AND WRITER
-// -----------------------------------------------------------------------------
-namespace yocto::pbrt {
-  
-// Using directives
-using namespace yocto::math;
-
-// Pbrt camera
-struct pbrt_camera {
-  // camera parameters
-  frame3f frame      = identity3x4f;
-  frame3f frend      = identity3x4f;
-  vec2i   resolution = {0, 0};
-  float   lens       = 0;
-  float   aspect     = 0;
-  float   focus      = 0;
-  float   aperture   = 0;
-};
-
-// Pbrt material
-struct pbrt_material {
-  // material parameters
-  string name            = "";
-  vec3f  emission        = zero3f;
-  vec3f  color           = zero3f;
-  float  specular        = 0;
-  float  metallic        = 0;
-  float  transmission    = 0;
-  float  roughness       = 0;
-  float  ior             = 1.5;
-  float  opacity         = 1;
-  string color_tex       = "";
-  string opacity_tex     = "";
-  string alpha_tex       = "";
-  bool   thin            = true;
-  vec3f  volmeanfreepath = zero3f;
-  vec3f  volscatter      = zero3f;
-  float  volscale        = 0.01;
-};
-
-// Pbrt shape
-struct pbrt_shape {
-  // frames
-  frame3f         frame     = identity3x4f;
-  frame3f         frend     = identity3x4f;
-  vector<frame3f> instances = {};
-  vector<frame3f> instaends = {};
-  // shape
-  string        filename_ = "";
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3i> triangles = {};
-  // material
-  pbrt_material* material = nullptr;
-};
-
-// Pbrt lights
-struct pbrt_light {
-  // light parameters
-  frame3f frame    = identity3x4f;
-  frame3f frend    = identity3x4f;
-  vec3f   emission = zero3f;
-  vec3f   from     = zero3f;
-  vec3f   to       = zero3f;
-  bool    distant  = false;
-  // arealight approximation
-  vec3f         area_emission  = zero3f;
-  frame3f       area_frame     = identity3x4f;
-  frame3f       area_frend     = identity3x4f;
-  vector<vec3i> area_triangles = {};
-  vector<vec3f> area_positions = {};
-  vector<vec3f> area_normals   = {};
-};
-struct pbrt_environment {
-  // environment approximation
-  frame3f frame        = identity3x4f;
-  frame3f frend        = identity3x4f;
-  vec3f   emission     = zero3f;
-  string  emission_tex = "";
-};
-
-// Pbrt model
-struct pbrt_model {
-  vector<string>            comments     = {};
-  vector<pbrt_camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_material*>    materials    = {};
-  ~pbrt_model();
-};
-
-// Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
-    bool ply_meshes = false);
-
-// Create pbrt
-pbrt_camera*      add_camera(pbrt_model* pbrt);
-pbrt_shape*       add_shape(pbrt_model* pbrt);
-pbrt_material*    add_material(pbrt_model* pbrt);
-pbrt_environment* add_environment(pbrt_model* pbrt);
-pbrt_light*       add_light(pbrt_model* pbrt);
-
-}  // namespace yocto::pbrt
 
 #endif

@@ -12,10 +12,11 @@
 #include <memory>
 using std::make_unique;
 
-#include "yocto_modelio.h"
+#include "yocto_ply.h"
+#include "yocto_obj.h"
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
+// IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
