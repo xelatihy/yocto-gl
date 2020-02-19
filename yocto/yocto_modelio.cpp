@@ -4974,6 +4974,7 @@ gltf_model::~gltf_model() {
       if (!gprim->attributes_count) continue;
       auto shape = scene->primitives.emplace_back(new gltf_primitive{});
       mesh->primitives.push_back(shape);
+      shape->material = material_map.at(gprim->material);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {
         auto gattr    = &gprim->attributes[aid];
         auto semantic = string(gattr->name ? gattr->name : "");
