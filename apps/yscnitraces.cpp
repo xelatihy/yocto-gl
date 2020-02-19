@@ -270,7 +270,7 @@ int main(int argc, const char* argv[]) {
   init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 
   // cleanup
-  if (ioscene_guard) ioscene_guard.release();
+  if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
   init_bvh(app->scene, app->params, print_progress);
