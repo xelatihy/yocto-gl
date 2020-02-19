@@ -39,36 +39,24 @@ using std::make_unique;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-bool mkdir(const string& dir) {
-  if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
-    return true;
-#ifndef _MSC_VER
-  system(("mkdir -p " + dir).c_str());
-  return true;
-#else
-  system(("mkdir " + dir).c_str());
-  return true;
-#endif
+void make_dir(const string& dirname) {
+  if (fs::exists(dirname)) return;
+  try {
+    fs::create_directories(dirname);
+  } catch (...) {
+    print_fatal("cannot create directory " + dirname);
+  }
 }
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto mesh_filenames     = false;
-  auto shape_directory    = "shapes/"s;
-  auto subdiv_directory   = "subdivs/"s;
-  auto instance_directory = "instances/"s;
-  auto validate           = false;
-  auto info               = false;
-  auto output             = "out.json"s;
-  auto filename           = "scene.json"s;
+  auto validate = false;
+  auto info     = false;
+  auto output   = "out.json"s;
+  auto filename = "scene.json"s;
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
-  add_option(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  add_option(cli, "--shape-directory", shape_directory,
-      "Shape directory when adding names.");
-  add_option(cli, "--subdiv-directory", subdiv_directory,
-      "Subdiv directory when adding names.");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
   add_option(cli, "--output,-o", output, "output scene");
@@ -100,27 +88,16 @@ int main(int argc, const char* argv[]) {
     }
   }
 
-  // add missing mesh names if necessary
-  if (!shape_directory.empty() && shape_directory.back() != '/')
-    shape_directory += '/';
-
-  // add missing mesh names if necessary
-  if (!instance_directory.empty() && instance_directory.back() != '/')
-    instance_directory += '/';
-
   // make a directory if needed
-  auto dirname  = fs::path(output).parent_path();
-  auto dirnames = std::set<fs::path>{};
-  if (!dirname.empty()) dirnames.insert(dirname);
-  if (!scene->shapes.empty()) dirnames.insert(dirname / "shapes");
-  if (!scene->subdivs.empty()) dirnames.insert(dirname / "subdivs");
-  if (!scene->textures.empty()) dirnames.insert(dirname / "textures");
-  if (!scene->instances.empty()) dirnames.insert(dirname / "instances");
-  for (auto& dir : dirnames) {
-    if (!mkdir(dir)) {
-      throw std::runtime_error{"cannot create directory " + output};
-    }
-  }
+  make_dir(fs::path(output).parent_path());
+  if (!scene->shapes.empty())
+    make_dir(fs::path(output).parent_path() / "shapes");
+  if (!scene->subdivs.empty())
+    make_dir(fs::path(output).parent_path() / "subdivs");
+  if (!scene->textures.empty())
+    make_dir(fs::path(output).parent_path() / "textures");
+  if (!scene->instances.empty())
+    make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
