@@ -56,7 +56,17 @@ using std::make_unique;
 #include "yocto_shape.h"
 namespace fs = ghc::filesystem;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#endif
+
+#define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
