@@ -31,7 +31,11 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto;
+using namespace yocto::trace;
+using namespace yocto::sceneio;
+using namespace yocto::image;
+using namespace yocto::commonio;
+using namespace yocto::opengl;
 
 #include <future>
 #include <memory>

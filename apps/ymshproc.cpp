@@ -29,7 +29,9 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
-using namespace yocto;
+using namespace yocto::math;
+using namespace yocto::shape;
+using namespace yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

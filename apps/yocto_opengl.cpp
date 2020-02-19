@@ -57,7 +57,7 @@
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
@@ -225,12 +225,12 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 auto glimage_vertex =
     R"(
@@ -400,12 +400,12 @@ void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -1304,12 +1304,12 @@ void draw_glscene(opengl_scene* glscene, opengl_camera* glcamera,
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 static void draw_glwindow(opengl_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
@@ -1553,12 +1553,12 @@ void set_close(opengl_window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 void init_glwidgets(opengl_window* win, int width, bool left) {
   // init widgets
@@ -2161,4 +2161,4 @@ void draw_gllog(opengl_window* win) {
   _log_mutex.unlock();
 }
 
-}  // namespace yocto
+}  // namespace yocto::opengl

@@ -29,12 +29,14 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
-using namespace yocto;
+using namespace yocto::math;
+using namespace yocto::image;
+using namespace yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yocto {
+namespace yocto::image {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
@@ -101,7 +103,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,

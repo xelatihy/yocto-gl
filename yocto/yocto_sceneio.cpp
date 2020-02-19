@@ -59,7 +59,7 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const vector<float>& times, const float& time) {
@@ -116,12 +116,12 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 vector<string> scene_stats(const sceneio_model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
@@ -226,12 +226,12 @@ vector<string> scene_validation(const sceneio_model* scene, bool notextures) {
   return errs;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 sceneio_model::~sceneio_model() {
   for (auto camera : cameras) delete camera;
@@ -388,6 +388,7 @@ void add_materials(sceneio_model* scene) {
 
 // Add a sky environment
 void add_sky(sceneio_model* scene, float sun_angle) {
+  using yocto::image::make_sunsky;
   auto texture = add_texture(scene, "sky");
   auto sunsky  = make_sunsky({1024, 512}, sun_angle);
   texture->colorf.resize(sunsky.size());
@@ -503,6 +504,11 @@ static vec3f eval_texture(const sceneio_texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
+// using
+using std::unique_ptr;
+using yocto::shape::compute_normals;
+using yocto::shape::subdivide_catmullclark;
+
 // Apply subdivision and displacement rules.
 unique_ptr<sceneio_subdiv> subdivide_subdiv(
     sceneio_subdiv* shape, int subdivisions, bool smooth) {
@@ -535,6 +541,10 @@ unique_ptr<sceneio_subdiv> displace_subdiv(sceneio_subdiv* subdiv,
   if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
     throw std::runtime_error("missing texture coordinates");
+
+  // using
+  using yocto::shape::compute_normals;
+  using yocto::shape::split_facevarying;
 
   // facevarying case
   auto offset = vector<float>(subdiv->positions.size(), 0);
@@ -575,6 +585,11 @@ void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv) {
       break;
     }
   }
+
+  // using
+  using yocto::shape::compute_normals;
+  using yocto::shape::split_facevarying;
+
   auto tesselated = subdivide_subdiv(
       subdiv, material->subdivisions, material->smooth);
   auto displaced = displace_subdiv(tesselated.get(), material->displacement,
@@ -606,12 +621,12 @@ void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, sceneio_model* scene,
@@ -692,12 +707,12 @@ static string make_safe_name(const string& prefix, const string& name,
   return prefix + "s/" + lname + ext;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Get extension (not including '.').
 static string get_extension(const string& filename) {
@@ -709,6 +724,8 @@ static string get_extension(const string& filename) {
 // Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<vec3f>& colorf,
     image<vec3b>& colorb, string& error) {
+  using yocto::image::is_hdr_filename;
+  using yocto::image::load_image;
   if (is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
   } else {
@@ -717,6 +734,8 @@ static bool load_image(const string& filename, image<vec3f>& colorf,
 }
 static bool save_image(const string& filename, const image<vec3f>& colorf,
     const image<vec3b>& colorb, string& error) {
+  using yocto::image::is_hdr_filename;
+  using yocto::image::save_image;
   if (is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
   } else {
@@ -727,6 +746,8 @@ static bool save_image(const string& filename, const image<vec3f>& colorf,
 // Loads/saves a 1/3 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<float>& scalarf,
     image<byte>& scalarb, string& error) {
+  using yocto::image::is_hdr_filename;
+  using yocto::image::load_image;
   if (is_hdr_filename(filename)) {
     return load_image(filename, scalarf, error);
   } else {
@@ -735,6 +756,8 @@ static bool load_image(const string& filename, image<float>& scalarf,
 }
 static bool save_image(const string& filename, const image<float>& scalarf,
     const image<byte>& scalarb, string& error) {
+  using yocto::image::is_hdr_filename;
+  using yocto::image::save_image;
   if (is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
   } else {
@@ -745,6 +768,7 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 // load instances
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -765,6 +789,7 @@ static bool load_instance(
 // save instances
 static bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
+  using namespace yocto::modelio;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -782,12 +807,41 @@ static bool save_instance(const string& filename, const vector<frame3f>& frames,
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::math {
+
+using json = nlohmann::json;
+
+// support for json conversions
+inline void to_json(json& j, const vec3f& value) {
+  nlohmann::to_json(j, (const array<float, 3>&)value);
+}
+inline void to_json(json& j, const frame3f& value) {
+  nlohmann::to_json(j, (const array<float, 12>&)value);
+}
+
+inline void from_json(const json& j, vec3f& value) {
+  nlohmann::from_json(j, (array<float, 3>&)value);
+}
+inline void from_json(const json& j, mat3f& value) {
+  nlohmann::from_json(j, (array<float, 9>&)value);
+}
+inline void from_json(const json& j, frame3f& value) {
+  nlohmann::from_json(j, (array<float, 12>&)value);
+}
+
+}  // namespace yocto::math
+
+// -----------------------------------------------------------------------------
+// JSON IO
+// -----------------------------------------------------------------------------
+namespace yocto::sceneio {
+
+using json = nlohmann::json;
 
 // Load a text file
 inline bool load_text(const string& filename, string& str, string& error) {
@@ -891,26 +945,6 @@ inline vector<byte> load_binary(const string& filename, string& error) {
   auto data = vector<byte>{};
   if (!load_binary(filename, data, error)) return {};
   return data;
-}
-
-using json = nlohmann::json;
-
-// support for json conversions
-inline void to_json(json& j, const vec3f& value) {
-  nlohmann::to_json(j, (const array<float, 3>&)value);
-}
-inline void to_json(json& j, const frame3f& value) {
-  nlohmann::to_json(j, (const array<float, 12>&)value);
-}
-
-inline void from_json(const json& j, vec3f& value) {
-  nlohmann::from_json(j, (array<float, 3>&)value);
-}
-inline void from_json(const json& j, mat3f& value) {
-  nlohmann::from_json(j, (array<float, 9>&)value);
-}
-inline void from_json(const json& j, frame3f& value) {
-  nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
 // load/save json
@@ -1215,6 +1249,10 @@ static bool load_json_scene(const string& filename, sceneio_model* scene,
            (name + extensions.front());
   };
 
+  // using
+  using yocto::shape::load_fvshape;
+  using yocto::shape::load_shape;
+
   // load shapes
   shape_map.erase("");
   for (auto [name, shape] : shape_map) {
@@ -1389,6 +1427,10 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
     return fs::path(filename).parent_path() / group / (name + extension);
   };
 
+  // using
+  using yocto::shape::save_fvshape;
+  using yocto::shape::save_shape;
+
   // save shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
@@ -1436,16 +1478,17 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
+  using namespace yocto::modelio;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1620,6 +1663,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
 
 static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
+  using namespace yocto::modelio;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1764,18 +1808,21 @@ void print_obj_camera(sceneio_camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 static bool load_ply_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // using
+  using yocto::shape::load_shape;
 
   // load ply mesh
   auto shape = add_shape(scene);
@@ -1804,6 +1851,9 @@ static bool save_ply_scene(const string& filename, const sceneio_model* scene,
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
+  // using
+  using yocto::shape::save_shape;
+
   // save shape
   auto shape = scene->shapes.front();
   if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
@@ -1816,16 +1866,17 @@ static bool save_ply_scene(const string& filename, const sceneio_model* scene,
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // Load a scene
 static bool load_gltf_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
+  using namespace yocto::modelio;
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -1866,7 +1917,8 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto texture      = add_texture(scene);
+    auto texture = add_texture(scene);
+    using yocto::image::is_hdr_filename;
     texture->name     = make_safe_name("texture", fs::path(path).stem(),
         (!is_hdr_filename(path) ? ".png" : ".hdr"));
     texture_map[path] = texture;
@@ -1955,16 +2007,17 @@ static bool load_gltf_scene(const string& filename, sceneio_model* scene,
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
+  using namespace yocto::modelio;
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2135,6 +2188,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
 // Save a pbrt scene
 static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
+  using namespace yocto::modelio;
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2234,12 +2288,12 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   return true;
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::sceneio {
 
 void make_cornellbox_scene(sceneio_model* scene) {
   scene->name                = "cornellbox";
@@ -2305,4 +2359,4 @@ void make_cornellbox_scene(sceneio_model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace yocto
+}  // namespace yocto::sceneio

@@ -46,11 +46,13 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 // using directives
 using std::make_unique;
 using std::unique_ptr;
+using namespace yocto::math;
+using yocto::image::image;
 
 // OpenGL image data
 struct opengl_image {
@@ -98,12 +100,12 @@ struct draw_glimage_params {
 // draw image
 void draw_glimage(opengl_image* glimage, const draw_glimage_params& params);
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 // Opengl caemra
 struct opengl_camera {
@@ -319,12 +321,12 @@ bool has_max_lights(opengl_scene* scene);
 void draw_glscene(opengl_scene* scene, opengl_camera* camera,
     const vec4i& viewport, const draw_glscene_params& params);
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 // Forward declaration of OpenGL window
 struct opengl_window;
@@ -419,12 +421,12 @@ void set_update_glcallback(opengl_window* win, update_glcallback cb);
 void run_ui(opengl_window* win);
 void set_close(opengl_window* win, bool close);
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::opengl {
 
 bool begin_glheader(opengl_window* win, const char* title);
 void end_glheader(opengl_window* win);
@@ -565,6 +567,6 @@ void log_glerror(opengl_window* win, const string& msg);
 void clear_gllogs(opengl_window* win);
 void draw_gllog(opengl_window* win);
 
-}  // namespace yocto
+}  // namespace yocto::opengl
 
 #endif

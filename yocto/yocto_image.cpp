@@ -69,7 +69,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 struct color_space_params {
@@ -425,12 +425,12 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
   return xyz_to_color(color_to_xyz(col, from), to);
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
@@ -515,12 +515,12 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 template <typename T>
 inline void set_region(
@@ -591,12 +591,14 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++)
+    fl[i] = yocto::math::byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++)
+    bt[i] = yocto::math::float_to_byte(fl[i]);
   return bt;
 }
 
@@ -651,24 +653,26 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.size()};
-  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = yocto::math::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.size()};
-  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = yocto::math::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.size()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
+    rgb[i] = yocto::math::srgb_to_rgb(yocto::math::byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.size()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
+    srgb[i] = yocto::math::float_to_byte(yocto::math::rgb_to_srgb(rgb[i]));
   return srgb;
 }
 
@@ -847,12 +851,12 @@ image<vec4f> image_difference(
   return diff;
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
@@ -1322,12 +1326,12 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   return wlogo;
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Lookup volume
 inline float lookup_volume(
@@ -1373,12 +1377,12 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
          lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // make a simple example volume
 void make_test(
@@ -1416,12 +1420,12 @@ volume<float> make_volume_preset(const string& type) {
   return vol;
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 // Split a string
 static inline vector<string> split_string(const string& str) {
@@ -2071,12 +2075,12 @@ bool is_hdr_filename(const string& filename) {
   }
 }
 
-}  // namespace yocto
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::image {
 
 namespace impl {
 
@@ -2257,4 +2261,4 @@ bool save_volume(
   return impl::save_volume(filename, vol, error);
 }
 
-}  // namespace yocto
+}  // namespace yocto::image

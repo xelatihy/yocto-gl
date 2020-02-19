@@ -31,7 +31,11 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto;
+using namespace yocto::trace;
+using namespace yocto::sceneio;
+using namespace yocto::image;
+using namespace yocto::commonio;
+using namespace yocto::opengl;
 
 #include <atomic>
 #include <deque>
@@ -44,9 +48,9 @@ using std::to_string;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yocto {
+namespace yocto::sceneio {
 void print_obj_camera(sceneio_camera* camera);
-};  // namespace yocto
+};  // namespace yocto::sceneio
 
 // Application scene
 struct app_state {

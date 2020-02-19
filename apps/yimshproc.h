@@ -6,7 +6,12 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto;
+using namespace yocto::math;
+using namespace yocto::shape;
+using namespace yocto::commonio;
+using namespace yocto::sceneio;
+using namespace yocto::opengl;
+using namespace yocto::bvh;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
