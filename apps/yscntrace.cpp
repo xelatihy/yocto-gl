@@ -65,7 +65,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, tr::trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, tr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -82,7 +82,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, tr::trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, tr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -114,7 +114,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, tr::trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, tr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -132,7 +132,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, tr::trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, tr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -182,9 +182,9 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", tr::trace_sampler_names);
+      cli, "--tracer,-t", params.sampler, "Trace type.", tr::sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", tr::trace_falsecolor_names);
+      "Tracer false color type.", tr::falsecolor_names);
   add_option(cli, "--bounces", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
@@ -192,7 +192,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", tr::trace_bvh_names);
+  add_option(cli, "--bvh", params.bvh, "Bvh type", tr::bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_option(cli, "scene", filename, "Scene filename", true);
@@ -226,7 +226,7 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
-    params.sampler = tr::trace_sampler_type::eyelight;
+    params.sampler = tr::sampler_type::eyelight;
   }
 
   // render

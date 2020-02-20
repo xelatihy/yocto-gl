@@ -91,7 +91,7 @@ struct app_state {
   // computation
   int          render_sample  = 0;
   int          render_counter = 0;
-  tr::trace_state* render_state   = new tr::trace_state{};
+  tr::state* render_state   = new tr::state{};
 
   // loading status
   atomic<bool>       ok           = false;
@@ -152,7 +152,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, tr::trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, tr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -170,7 +170,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, tr::trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, tr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -204,7 +204,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, tr::trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, tr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -222,7 +222,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, tr::trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, tr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -310,7 +310,7 @@ void load_scene_async(
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-      app->params.sampler = tr::trace_sampler_type::eyelight;
+      app->params.sampler = tr::sampler_type::eyelight;
     }
   });
   apps->loading.push_back(app);
@@ -554,9 +554,9 @@ void draw_glwidgets(
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_glcombobox(
-        win, "tracer", (int&)tparams.sampler, tr::trace_sampler_names);
+        win, "tracer", (int&)tparams.sampler, tr::sampler_names);
     edited += draw_glcombobox(
-        win, "false color", (int&)tparams.falsecolor, tr::trace_falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, tr::falsecolor_names);
     edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
     continue_glline(win);
@@ -810,9 +810,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      tr::trace_sampler_names);
+      tr::sampler_names);
   add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", tr::trace_falsecolor_names);
+      "Tracer false color type.", tr::falsecolor_names);
   add_option(
       cli, "--bounces", apps->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
@@ -820,7 +820,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", tr::trace_bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", tr::bvh_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 

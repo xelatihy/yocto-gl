@@ -66,7 +66,7 @@ struct app_state {
   // computation
   int          render_sample  = 0;
   int          render_counter = 0;
-  tr::trace_state* render_state   = new tr::trace_state{};
+  tr::state* render_state   = new tr::state{};
 
   ~app_state() {
     if (render_state) {
@@ -101,7 +101,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, tr::trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, tr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -119,7 +119,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, tr::trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, tr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -153,7 +153,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, tr::trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, tr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -172,7 +172,7 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, tr::trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, tr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -244,9 +244,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      tr::trace_sampler_names);
+      tr::sampler_names);
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.", tr::trace_falsecolor_names);
+      "Tracer false color type.", tr::falsecolor_names);
   add_option(
       cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
@@ -254,7 +254,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", app->params.bvh, "Bvh type", tr::trace_bvh_names);
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", tr::bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
@@ -285,7 +285,7 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = tr::trace_sampler_type::eyelight;
+    app->params.sampler = tr::sampler_type::eyelight;
   }
 
   // allocate buffers
@@ -323,17 +323,17 @@ int main(int argc, const char* argv[]) {
             }
           } break;
           case 'f':
-            app->params.sampler = tr::trace_sampler_type::falsecolor;
+            app->params.sampler = tr::sampler_type::falsecolor;
             reset_display(app);
             break;
           case 'p':
-            app->params.sampler = tr::trace_sampler_type::path;
+            app->params.sampler = tr::sampler_type::path;
             reset_display(app);
             break;
           case 'F':
-            app->params.falsecolor = (tr::trace_falsecolor_type)(
+            app->params.falsecolor = (tr::falsecolor_type)(
                 ((int)app->params.falsecolor + 1) %
-                (int)tr::trace_sampler_names.size());
+                (int)tr::sampler_names.size());
             reset_display(app);
             break;
         }
