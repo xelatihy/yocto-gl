@@ -2,10 +2,6 @@ cmake_minimum_required (VERSION 3.12)
 
 project (yocto-gl-apps VERSION 2.0)
 
-option(YOCTO_OPENGL "Build OpenGL apps" ON)
-option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
-option(YOCTO_TESTING "Enable testing" ON)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(yscntrace yscntrace.cpp)
@@ -22,6 +18,13 @@ target_link_libraries(yscntrace yocto)
 target_link_libraries(yscnproc  yocto)
 target_link_libraries(yimgproc  yocto)
 target_link_libraries(ymshproc  yocto)
+
+if(YOCTO_EMBREE)
+  target_compile_definitions(yscntrace PUBLIC -DYOCTO_EMBREE)
+  target_compile_definitions(yscnproc PUBLIC  -DYOCTO_EMBREE)
+  target_compile_definitions(yimgproc PUBLIC  -DYOCTO_EMBREE)
+  target_compile_definitions(ymshproc PUBLIC  -DYOCTO_EMBREE)
+endif(YOCTO_EMBREE)
 
 if(YOCTO_OPENGL)
   add_definitions(-DYOCTO_OPENGL)
@@ -58,6 +61,15 @@ if(YOCTO_OPENGL)
   add_executable(yscnitraces yscnitraces.cpp)
   add_executable(yimgview    yimgview.cpp)
   add_executable(yimgviews   yimgviews.cpp)
+
+  if(YOCTO_EMBREE)
+    target_compile_definitions(yscnview PUBLIC -DYOCTO_EMBREE)
+    target_compile_definitions(yimshproc PUBLIC  -DYOCTO_EMBREE)
+    target_compile_definitions(yscnitrace PUBLIC  -DYOCTO_EMBREE)
+    target_compile_definitions(yscnitraces PUBLIC  -DYOCTO_EMBREE)
+    target_compile_definitions(yimgview PUBLIC  -DYOCTO_EMBREE)
+    target_compile_definitions(yimgviews PUBLIC  -DYOCTO_EMBREE)
+  endif(YOCTO_EMBREE)
 
   set_target_properties(yscnview     PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   set_target_properties(yimshproc    PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)

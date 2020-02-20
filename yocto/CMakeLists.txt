@@ -2,14 +2,6 @@ cmake_minimum_required (VERSION 3.12)
 
 project (yocto-gl-lib VERSION 2.0)
 
-option(YOCTO_OPENGL "Build OpenGL apps" ON)
-option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
-option(YOCTO_TESTING "Enable testing" ON)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_subdirectory(ext)
-
 add_library(yocto 
   yocto_math.h yocto_commonio.h 
   yocto_ply.h yocto_obj.h yocto_pbrt.h 
@@ -18,11 +10,13 @@ add_library(yocto
   yocto_image.h yocto_image.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
+  ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
+  ext/cgltf.h ext/cgltf_write.h ext/cgltf.cpp
+  ext/filesystem.hpp ext/json.hpp
+  ext/tinyexr.h ext/tinyexr.cpp
 )
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
-
-target_link_libraries(yocto yocto-ext)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)
@@ -30,7 +24,7 @@ if(UNIX AND NOT APPLE)
 endif(UNIX AND NOT APPLE)
 
 if(YOCTO_EMBREE)
-  add_definitions(-DYOCTO_EMBREE)
+  target_compile_definitions(yocto PUBLIC -DYOCTO_EMBREE)
   if(APPLE)
     target_include_directories(yocto PUBLIC /usr/local/include)
     target_link_libraries(yocto /usr/local/lib/libembree3.dylib)
