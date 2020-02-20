@@ -35,7 +35,7 @@ if(YOCTO_OPENGL)
   include_directories(.)
   add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-  add_library(yocto_opengl 
+  add_library(yocto-opengl 
     yocto_opengl.h 
     yocto_opengl.cpp 
     ext/imgui/imgui.cpp 
@@ -45,12 +45,12 @@ if(YOCTO_OPENGL)
     ext/imgui/imgui_impl_opengl3.cpp 
     ext/glad/glad.c)
   
-  set_target_properties(yocto_opengl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+  set_target_properties(yocto-opengl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
-  target_link_libraries(yocto_opengl glfw ${OPENGL_gl_LIBRARY})
+  target_link_libraries(yocto-opengl glfw ${OPENGL_gl_LIBRARY})
 
   if(UNIX AND NOT APPLE)
-    target_link_libraries(yocto_opengl dl)
+    target_link_libraries(yocto-opengl dl)
   endif(UNIX AND NOT APPLE)
 
   add_executable(yscnview    yscnview.cpp)
@@ -67,10 +67,10 @@ if(YOCTO_OPENGL)
   set_target_properties(yimgview     PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   set_target_properties(yimgviews    PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-  target_link_libraries(yscnview    yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimshproc   yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitrace  yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitraces yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgview    yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgviews   yocto yocto_opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnview    yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimshproc   yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitrace  yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitraces yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgview    yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgviews   yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
