@@ -432,6 +432,11 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 // -----------------------------------------------------------------------------
 namespace yocto::image {
 
+// Using directives
+using std::function;
+using std::string;
+using std::vector;
+
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
   return img[ij];
