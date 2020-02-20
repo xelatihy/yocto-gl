@@ -57,6 +57,9 @@ using ym::log;
 using ym::pow;
 using ym::sin;
 using ym::sqrt;
+using ym::clamp;
+using ym::min;
+using ym::max;
 
 }  // namespace ytr
 

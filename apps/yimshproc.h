@@ -8,7 +8,6 @@
 #include "yocto_opengl.h"
 using namespace yocto::math;
 namespace ygl = yocto::opengl;
-namespace ybv = yocto::bvh;
 
 using std::function;
 using std::string;
@@ -34,7 +33,7 @@ struct app_state {
   bool          show_edges = false;
   ysc::camera   camera;
   float         camera_focus;
-  ybv::bvh_tree bvh;
+  ybvh::bvh_tree bvh;
 
   // Internal handles
   ygl::camera*   glcamera    = nullptr;
