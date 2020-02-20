@@ -54,10 +54,10 @@ using namespace yocto::math;
 namespace yim = yocto::image;
 
 // OpenGL image data
-struct glimage {
-  glimage() {}
-  glimage(const glimage&) = delete;
-  glimage& operator=(const glimage&) = delete;
+struct image {
+  image() {}
+  image(const image&) = delete;
+  image& operator=(const image&) = delete;
 
   uint  program_id     = 0;
   uint  vertex_id      = 0;
@@ -70,21 +70,21 @@ struct glimage {
   bool  texture_linear = false;
   bool  texture_mipmap = false;
 
-  ~glimage();
+  ~image();
 };
 
 // create image drawing program
-void init_glimage(glimage* glimage);
-bool is_initialized(const glimage* glimage);
+void init_glimage(image* image);
+bool is_initialized(const image* image);
 
 // update image data
-void set_glimage(glimage* glimage, const yim::image<vec4f>& img,
+void set_glimage(image* image, const yim::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(glimage* glimage, const yim::image<vec4b>& img,
+void set_glimage(image* image, const yim::image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
-struct glimage_params {
+struct image_params {
   vec2i window      = {512, 512};
   vec4i framebuffer = {0, 0, 512, 512};
   vec2f center      = {0, 0};
@@ -96,7 +96,7 @@ struct glimage_params {
 };
 
 // draw image
-void draw_glimage(glimage* glimage, const glimage_params& params);
+void draw_glimage(image* image, const image_params& params);
 
 }  // namespace yocto::opengl
 

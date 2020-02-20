@@ -69,8 +69,8 @@ struct app_state {
   bool                   colorgrade = false;
 
   // viewing properties
-  ygl::glimage*       glimage   = new ygl::glimage{};
-  ygl::glimage_params glparams  = {};
+  ygl::image*       glimage   = new ygl::image{};
+  ygl::image_params glparams  = {};
   bool                glupdated = true;
 
   // loading status

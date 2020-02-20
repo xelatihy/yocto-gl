@@ -73,8 +73,8 @@ struct app_state {
   float             exposure = 0;
 
   // view scene
-  ygl::glimage*       glimage  = new ygl::glimage{};
-  ygl::glimage_params glparams = {};
+  ygl::image*       glimage  = new ygl::image{};
+  ygl::image_params glparams = {};
 
   // editing
   yio::camera*      selected_camera      = nullptr;

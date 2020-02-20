@@ -62,8 +62,8 @@ struct app_state {
   float             exposure = 0;
 
   // view scene
-  ygl::glimage*       glimage  = new ygl::glimage{};
-  ygl::glimage_params glparams = {};
+  ygl::image*       glimage  = new ygl::image{};
+  ygl::image_params glparams = {};
 
   // computation
   int         render_sample  = 0;
