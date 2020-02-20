@@ -77,10 +77,10 @@ void init_glimage(glimage* glimage);
 bool is_initialized(const glimage* glimage);
 
 // update image data
-void set_glimage(glimage* glimage, const image<vec4f>& img,
-    bool linear = false, bool mipmap = false);
-void set_glimage(glimage* glimage, const image<vec4b>& img,
-    bool linear = false, bool mipmap = false);
+void set_glimage(glimage* glimage, const image<vec4f>& img, bool linear = false,
+    bool mipmap = false);
+void set_glimage(glimage* glimage, const image<vec4b>& img, bool linear = false,
+    bool mipmap = false);
 
 // OpenGL image drawing params
 struct glimage_params {
