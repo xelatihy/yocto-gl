@@ -935,7 +935,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
     } else if (type == "integer") {
       value.type = value::type_t::integer;
       if (!parse_pvalues(str, value.value1i, value.vector1i)) return false;
-    } else if (type == "std::string") {
+    } else if (type == "string") {
       auto vector1s = std::vector<std::string>{};
       value.type    = value::type_t::string;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
