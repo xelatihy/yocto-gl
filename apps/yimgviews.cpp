@@ -52,8 +52,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::opengl_image*     glimage  = new ygl::opengl_image{};
-  ygl::draw_image_params glparams = {};
+  ygl::glimage*     glimage  = new ygl::glimage{};
+  ygl::glimage_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -106,7 +106,7 @@ int main(int argc, const char* argv[]) {
     }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_image(app->glimage, app->glparams);
+    draw_glimage(app->glimage, app->glparams);
   });
   set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
     // handle mouse

@@ -72,8 +72,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::opengl_image*     glimage   = new ygl::opengl_image{};
-  ygl::draw_image_params glparams  = {};
+  ygl::glimage*     glimage   = new ygl::glimage{};
+  ygl::glimage_params glparams  = {};
   bool                   glupdated = true;
 
   // loading status
@@ -279,7 +279,7 @@ void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
   }
   update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
       app->glparams.window, app->glparams.fit);
-  draw_image(app->glimage, app->glparams);
+  draw_glimage(app->glimage, app->glparams);
 }
 
 void update(ygl::window* win, app_states* apps) {

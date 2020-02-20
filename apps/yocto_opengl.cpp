@@ -290,11 +290,11 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const opengl_image* glimage) {
+bool is_initialized(const glimage* glimage) {
   return (bool)glimage->program_id;
 }
 
-opengl_image::~opengl_image() {
+glimage::~glimage() {
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
@@ -305,7 +305,7 @@ opengl_image::~opengl_image() {
 }
 
 // init image program
-void init_glimage(opengl_image* glimage) {
+void init_glimage(glimage* glimage) {
   if (glimage->program_id) return;
 
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
@@ -325,7 +325,7 @@ void init_glimage(opengl_image* glimage) {
 
 // update image data
 void set_glimage(
-    opengl_image* glimage, const image<vec4f>& img, bool linear, bool mipmap) {
+    glimage* glimage, const image<vec4f>& img, bool linear, bool mipmap) {
   if (!glimage->texture_id) {
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -344,7 +344,7 @@ void set_glimage(
   glimage->texture_mipmap = mipmap;
 }
 void set_glimage(
-    opengl_image* glimage, const image<vec4b>& img, bool linear, bool mipmap) {
+    glimage* glimage, const image<vec4b>& img, bool linear, bool mipmap) {
   if (!glimage->texture_id) {
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -364,7 +364,7 @@ void set_glimage(
 }
 
 // draw image
-void draw_image(opengl_image* glimage, const draw_image_params& params) {
+void draw_glimage(glimage* glimage, const glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);

@@ -53,10 +53,10 @@ using namespace yocto::math;
 using yocto::image::image;
 
 // OpenGL image data
-struct opengl_image {
-  opengl_image() {}
-  opengl_image(const opengl_image&) = delete;
-  opengl_image& operator=(const opengl_image&) = delete;
+struct glimage {
+  glimage() {}
+  glimage(const glimage&) = delete;
+  glimage& operator=(const glimage&) = delete;
 
   uint  program_id     = 0;
   uint  vertex_id      = 0;
@@ -69,21 +69,21 @@ struct opengl_image {
   bool  texture_linear = false;
   bool  texture_mipmap = false;
 
-  ~opengl_image();
+  ~glimage();
 };
 
 // create image drawing program
-void init_glimage(opengl_image* glimage);
-bool is_initialized(const opengl_image* glimage);
+void init_glimage(glimage* glimage);
+bool is_initialized(const glimage* glimage);
 
 // update image data
-void set_glimage(opengl_image* glimage, const image<vec4f>& img,
+void set_glimage(glimage* glimage, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(opengl_image* glimage, const image<vec4b>& img,
+void set_glimage(glimage* glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
-struct draw_image_params {
+struct glimage_params {
   vec2i window      = {512, 512};
   vec4i framebuffer = {0, 0, 512, 512};
   vec2f center      = {0, 0};
@@ -95,7 +95,7 @@ struct draw_image_params {
 };
 
 // draw image
-void draw_image(opengl_image* glimage, const draw_image_params& params);
+void draw_glimage(glimage* glimage, const glimage_params& params);
 
 }  // namespace yocto::opengl
 
