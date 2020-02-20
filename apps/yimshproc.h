@@ -18,7 +18,7 @@ struct app_state {
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, ygl::opengl_window*)>         draw_glwidgets;
+  function<void(app_state*, ygl::window*)>         draw_glwidgets;
 
   // Geometry data
   yio::shape shape;
@@ -267,7 +267,7 @@ void clear(app_state* app) {
 void yimshproc(const string& input_filename, function<void(app_state*)> init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
-    function<void(app_state*, ygl::opengl_window* win)>     draw_glwidgets) {
+    function<void(app_state*, ygl::window* win)>     draw_glwidgets) {
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
@@ -289,22 +289,22 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
   app->init(app);
 
   // Init window.
-  auto win_guard = std::make_unique<ygl::opengl_window>();
+  auto win_guard = std::make_unique<ygl::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
-        draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
+      win, [app](ygl::window* win, const ygl::input& input) {
+        draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
             app->opengl_options);
       });
   set_widgets_glcallback(
-      win, [app, draw_glwidgets](ygl::opengl_window* win,
-               const ygl::opengl_input& input) { draw_glwidgets(app, win); });
-  set_click_glcallback(win, [app](ygl::opengl_window* win, bool left, bool press,
-                                const ygl::opengl_input& input) {
+      win, [app, draw_glwidgets](ygl::window* win,
+               const ygl::input& input) { draw_glwidgets(app, win); });
+  set_click_glcallback(win, [app](ygl::window* win, bool left, bool press,
+                                const ygl::input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
@@ -331,7 +331,7 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
     }
   });
   set_scroll_glcallback(
-      win, [app](ygl::opengl_window* win, float yoffset, const ygl::opengl_input& input) {
+      win, [app](ygl::window* win, float yoffset, const ygl::input& input) {
         float zoom = yoffset > 0 ? 0.1 : -0.1;
         update_turntable(
             app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
@@ -339,12 +339,12 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
         set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
             app->camera.film);
       });
-  set_key_glcallback(win, [app](ygl::opengl_window* win, int key, bool pressing,
-                              const ygl::opengl_input& input) {
+  set_key_glcallback(win, [app](ygl::window* win, int key, bool pressing,
+                              const ygl::input& input) {
     app->key_callback(app, key, pressing);
   });
   set_uiupdate_glcallback(
-      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
+      win, [app](ygl::window* win, const ygl::input& input) {
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {

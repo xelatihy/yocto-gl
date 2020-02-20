@@ -317,7 +317,7 @@ void load_scene_async(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::camera* iocamera) {
+    ygl::window* win, yio::model* ioscene, yio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -343,7 +343,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::texture* iotexture) {
+    ygl::window* win, yio::model* ioscene, yio::texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -364,7 +364,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::material* iomaterial) {
+    ygl::window* win, yio::model* ioscene, yio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -409,7 +409,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::shape* ioshape) {
+    ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -427,7 +427,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::instance* ioinstance) {
+    ygl::window* win, yio::model* ioscene, yio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -436,7 +436,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::object* ioobject) {
+    ygl::window* win, yio::model* ioscene, yio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -453,7 +453,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    ygl::opengl_window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
+    ygl::window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -467,7 +467,7 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(ygl::opengl_window* win, yio::model* ioscene,
+bool draw_glwidgets(ygl::window* win, yio::model* ioscene,
     yio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
@@ -493,7 +493,7 @@ T1* get_element(
 }
 
 void draw_glwidgets(
-    ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
+    ygl::window* win, app_states* apps, const ygl::input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
@@ -758,7 +758,7 @@ void draw_glwidgets(
   }
 }
 
-void draw(ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
+void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -773,7 +773,7 @@ void draw(ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& in
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(ygl::opengl_window* win, app_states* apps) {
+void update(ygl::window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -827,30 +827,30 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // window
-  auto win_guard = std::make_unique<ygl::opengl_window>();
+  auto win_guard = std::make_unique<ygl::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
   set_draw_glcallback(
-      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
+      win, [apps](ygl::window* win, const ygl::input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
+      win, [apps](ygl::window* win, const ygl::input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
-      win, [apps](ygl::opengl_window* win, const vector<string>& paths,
-               const ygl::opengl_input& input) {
+      win, [apps](ygl::window* win, const vector<string>& paths,
+               const ygl::input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
+      win, [apps](ygl::window* win, const ygl::input& input) {
         update(win, apps);
       });
-  set_uiupdate_glcallback(win, [apps](ygl::opengl_window*   win,
-                                   const ygl::opengl_input& input) {
+  set_uiupdate_glcallback(win, [apps](ygl::window*   win,
+                                   const ygl::input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 
