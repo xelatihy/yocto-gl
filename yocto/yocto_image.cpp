@@ -69,7 +69,7 @@
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 using namespace ym;
 // import math symbols for use
@@ -90,12 +90,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 struct color_space_params {
@@ -451,12 +451,12 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
   return xyz_to_color(color_to_xyz(col, from), to);
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
@@ -541,12 +541,12 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 template <typename T>
 inline void set_region(
@@ -829,12 +829,12 @@ image<vec4f> image_difference(
   return diff;
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
@@ -1301,12 +1301,12 @@ image<vec4b> add_logo(const image<vec4b>& img, const std::string& type) {
   return wlogo;
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Lookup volume
 inline float lookup_volume(
@@ -1352,12 +1352,12 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
          lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // make a simple example volume
 void make_test(
@@ -1395,12 +1395,12 @@ volume<float> make_volume_preset(const std::string& type) {
   return vol;
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Split a std::string
 static inline std::vector<std::string> split_string(const std::string& str) {
@@ -2050,12 +2050,12 @@ bool is_hdr_filename(const std::string& filename) {
   }
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 namespace impl {
 
@@ -2238,4 +2238,4 @@ bool save_volume(
   return impl::save_volume(filename, vol, error);
 }
 
-}  // namespace yim
+}  // namespace yimg

@@ -86,7 +86,7 @@
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Math defitions
 using ym::bbox3f;
@@ -145,12 +145,12 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
     const std::vector<vec3f>& normals, const std::vector<vec4f>& weights,
     const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Flip vertex normals
 std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals);
@@ -161,12 +161,12 @@ std::vector<vec4i> flip_quads(const std::vector<vec4i>& quads);
 std::vector<vec3f> align_vertices(
     const std::vector<vec3f>& positions, const vec3i& alignment);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
@@ -212,12 +212,12 @@ std::vector<std::vector<int>> ordered_boundaries(
 std::vector<std::vector<int>> vertex_to_faces_adjacencies(
     const std::vector<vec3i>& triangles, const std::vector<vec3i>& adjacencies);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHBORS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
@@ -239,12 +239,12 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
 void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
     int vertex, float max_radius);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Convert quads to triangles
 std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads);
@@ -312,12 +312,12 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 void merge_triangles_and_quads(std::vector<vec3i>& triangles,
     std::vector<vec4i>& quads, bool force_triangles);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Subdivide lines by splitting each line in half.
 std::pair<std::vector<vec2i>, std::vector<float>> subdivide_lines(
@@ -379,12 +379,12 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<vec4f>& vert, int level,
     bool lock_boundary = false);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Pick a point in a point set uniformly.
 int                sample_points(int npoints, float re);
@@ -424,12 +424,12 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
     const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
     int npoints, int seed = 7);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
@@ -505,12 +505,12 @@ std::vector<vec3f> make_positions_from_path(
 vec3f compute_gradient(const vec3i& triangle,
     const std::vector<vec3f>& positions, const std::vector<float>& field);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE IO FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Load/save a shape as indexed meshes
 [[nodiscard]] bool load_shape(const std::string& filename,
@@ -540,12 +540,12 @@ namespace ysh {
     const std::vector<vec2f>& texcoords, std::string& error, bool ascii = false,
     bool flip_texcoords = true);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Get mesh statistics for printing
 std::vector<std::string> shape_stats(const std::vector<int>& points,
@@ -557,12 +557,12 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2f>& texcoords, const std::vector<vec3f>& colors,
     const std::vector<float>& radius, bool verbose = false);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Make a plane.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -710,12 +710,12 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     float thickness);
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
@@ -723,6 +723,6 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
     std::vector<int>& tags, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals);
 
-}  // namespace ysh
+}  // namespace yshp
 
 #endif

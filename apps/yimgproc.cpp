@@ -35,7 +35,7 @@ using namespace std::string_literals;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yim {
+namespace yimg {
 
 yim::image<vec4f> filter_bilateral(const yim::image<vec4f>& img,
     float spatial_sigma, float range_sigma,
@@ -228,7 +228,7 @@ bool make_image_preset(
   return true;
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 int main(int argc, const char* argv[]) {
   // command line parameters

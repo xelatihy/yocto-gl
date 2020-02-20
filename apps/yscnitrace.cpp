@@ -41,9 +41,9 @@ using namespace std::string_literals;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace ysc {
+namespace yscn {
 void print_obj_camera(ysc::camera* camera);
-};  // namespace ysc
+};  // namespace yscn
 
 // Application scene
 struct app_state {

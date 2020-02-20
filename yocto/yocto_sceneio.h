@@ -54,7 +54,7 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Math defitions
 using ym::bbox3f;
@@ -245,13 +245,13 @@ subdiv*      add_subdiv(model* scene, const std::string& name = "");
 texture*     add_texture(model* scene, const std::string& name = "");
 object*      add_complete_object(model* scene, const std::string& name = "");
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace ysc {
+namespace yscn {
 
 // Progress callback called when loading.
 using progress_callback =
@@ -268,12 +268,12 @@ bool save_scene(const std::string& filename, const model* scene,
 // get named camera or default if name is empty
 camera* get_camera(const model* scene, const std::string& name = "");
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
@@ -284,12 +284,12 @@ std::vector<std::string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const model* scene);
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdivs(model* scene, progress_callback progress_cb = {});
@@ -305,6 +305,6 @@ inline vec3f eta_to_reflectivity(float eta) {
   return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 #endif

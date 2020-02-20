@@ -47,7 +47,7 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 // Math defitions
 using ym::bbox3f;
@@ -109,12 +109,12 @@ struct image_params {
 // draw image
 void draw_glimage(image* image, const image_params& params);
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 // Opengl caemra
 struct camera {
@@ -331,12 +331,12 @@ bool has_max_lights(scene* scene);
 void draw_scene(scene* scene, camera* camera, const vec4i& viewport,
     const scene_params& params);
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 // Forward declaration of OpenGL window
 struct window;
@@ -427,12 +427,12 @@ void set_update_callback(window* win, update_callback cb);
 void run_ui(window* win);
 void set_close(window* win, bool close);
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 bool begin_glheader(window* win, const char* title);
 void end_glheader(window* win);
@@ -570,6 +570,6 @@ void log_error(window* win, const std::string& msg);
 void clear_log(window* win);
 void draw_log(window* win);
 
-}  // namespace ygl
+}  // namespace yglu
 
 #endif

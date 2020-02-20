@@ -106,7 +106,7 @@
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Math defitions
 using ym::byte;
@@ -169,12 +169,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 template <typename T>
 inline void swap(image<T>& a, image<T>& b);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
@@ -186,12 +186,12 @@ vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
 vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -270,12 +270,12 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const std::string& filename);
@@ -310,12 +310,12 @@ bool load_image(
 bool save_image(
     const std::string& filename, const image<byte>& img, std::string& error);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Make a grid image.
 void make_grid(image<vec4f>& img, const vec2i& size, float scale = 1,
@@ -385,12 +385,12 @@ image<vec4f> add_logo(
 image<vec4b> add_logo(
     const image<vec4b>& img, const std::string& name = "logo-medium");
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Volume container.
 template <typename T>
@@ -441,46 +441,46 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline void swap(volume<T>& a, volume<T>& b);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Evaluates a color image at a point `uv`.
 float eval_volume(const image<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME IO
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Loads/saves a 1 channel volume.
 void load_volume(const std::string& filename, volume<float>& vol);
 void save_volume(const std::string& filename, const volume<float>& vol);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // EXAMPLE VOLUMES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
 void make_volume_preset(volume<float>& vol, const std::string& type);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // RGB color spaces
 enum struct color_space {
@@ -506,12 +506,12 @@ enum struct color_space {
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // constructors
 template <typename T>
@@ -623,12 +623,12 @@ inline void swap(image<T>& a, image<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yim {
+namespace yimg {
 
 // Volume container ----------
 
@@ -740,6 +740,6 @@ inline void swap(volume<T>& a, volume<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yim
+}  // namespace yimg
 
 #endif

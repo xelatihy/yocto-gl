@@ -79,7 +79,7 @@
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // Math defitions
 using ym::bbox3f;
@@ -274,12 +274,12 @@ void trace_start(state* state, const scene* scene, const camera* camera,
     image_callback image_cb = {}, async_callback async_cb = {});
 void trace_stop(state* state);
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // SCENE AND RENDERING DATA
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -471,12 +471,12 @@ struct state {
   std::atomic<bool> stop   = {};  // async
 };
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // INTERSECTION
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -498,6 +498,6 @@ intersection3f intersect_scene_bvh(const scene* scene, const ray3f& ray,
 intersection3f intersect_instance_bvh(const object* object, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
-}  // namespace ytr
+}  // namespace ytrc
 
 #endif

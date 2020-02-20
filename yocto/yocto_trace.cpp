@@ -42,7 +42,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 using namespace ym;
 // import math symbols for use
@@ -60,12 +60,12 @@ using ym::pow;
 using ym::sin;
 using ym::sqrt;
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
@@ -291,12 +291,12 @@ float eval_phasefunction(float cos_theta, float g) {
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // constant values
 static const auto coat_ior       = 1.5;
@@ -805,12 +805,12 @@ static vec3f eval_environment(const scene* scene, const ray3f& ray) {
   return emission;
 }
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // Intersect a ray with a point (approximate)
 inline bool intersect_point(
@@ -964,12 +964,12 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -1921,12 +1921,12 @@ intersection3f intersect_instance_bvh(const object* object, int instance,
   return intersection;
 }
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // Set non-rigid frames as default
 static const bool non_rigid_frames = true;
@@ -2932,12 +2932,12 @@ void trace_stop(state* state) {
   if (state->worker.valid()) state->worker.get();
 }
 
-}  // namespace ytr
+}  // namespace ytrc
 
 // -----------------------------------------------------------------------------
 // SCENE CREATION
 // -----------------------------------------------------------------------------
-namespace ytr {
+namespace ytrc {
 
 // cleanup
 shape::~shape() {
@@ -3135,4 +3135,4 @@ void set_emission(
   environment->emission_tex = emission_tex;
 }
 
-}  // namespace ytr
+}  // namespace ytrc

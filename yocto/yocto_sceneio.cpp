@@ -73,7 +73,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 using namespace ym;
 // import math symbols for use
@@ -89,12 +89,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const std::vector<float>& times, const float& time) {
@@ -151,12 +151,12 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 std::vector<std::string> scene_stats(const model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
@@ -261,12 +261,12 @@ std::vector<std::string> scene_validation(const model* scene, bool notextures) {
   return errs;
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 model::~model() {
   for (auto camera : cameras) delete camera;
@@ -702,12 +702,12 @@ void tesselate_subdivs(model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const std::string& filename, model* scene,
@@ -775,12 +775,12 @@ bool save_scene(const std::string& filename, const model* scene,
   }
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -878,7 +878,7 @@ static bool save_instance(const std::string& filename,
   }
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -911,7 +911,7 @@ inline void from_json(const json& j, frame3f& value) {
 // -----------------------------------------------------------------------------
 // JSON IO
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 using json = nlohmann::json;
 
@@ -1548,12 +1548,12 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Loads an OBJ
 static bool load_obj_scene(const std::string& filename, model* scene,
@@ -1876,12 +1876,12 @@ void print_obj_camera(camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 static bool load_ply_scene(const std::string& filename, model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
@@ -1928,12 +1928,12 @@ static bool save_ply_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // Load a scene
 static bool load_gltf_scene(const std::string& filename, model* scene,
@@ -2338,12 +2338,12 @@ static bool load_gltf_scene(const std::string& filename, model* scene,
   return true;
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const std::string& filename, model* scene,
@@ -2618,12 +2618,12 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace ysc
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace ysc {
+namespace yscn {
 
 void make_cornellbox_scene(model* scene) {
   scene->name                = "cornellbox";
@@ -2689,4 +2689,4 @@ void make_cornellbox_scene(model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace ysc
+}  // namespace yscn

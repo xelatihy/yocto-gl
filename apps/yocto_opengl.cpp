@@ -60,7 +60,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 using namespace ym;
 // import math symbols for use
@@ -82,12 +82,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
@@ -255,12 +255,12 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 auto glimage_vertex =
     R"(
@@ -420,12 +420,12 @@ void draw_glimage(image* image, const image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -1304,12 +1304,12 @@ void draw_scene(scene* glscene, camera* glcamera, const vec4i& viewport,
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 static void draw_window(window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
@@ -1541,12 +1541,12 @@ void set_close(window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace ygl
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yglu {
 
 void init_glwidgets(window* win, int width, bool left) {
   // init widgets
@@ -2143,4 +2143,4 @@ void draw_log(window* win) {
   _log_mutex.unlock();
 }
 
-}  // namespace ygl
+}  // namespace yglu

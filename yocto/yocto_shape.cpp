@@ -19,7 +19,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 using namespace ym;
 // import math symbols for use
@@ -34,12 +34,12 @@ using ym::pow;
 using ym::sin;
 using ym::sqrt;
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Compute per-vertex tangents for lines.
 std::vector<vec3f> compute_tangents(
@@ -261,12 +261,12 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
   }
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Flip vertex normals
 std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals) {
@@ -319,12 +319,12 @@ std::vector<vec3f> align_vertices(
   return aligned;
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Initialize an edge map with elements.
 edge_map make_edge_map(const std::vector<vec3i>& triangles) {
@@ -568,13 +568,13 @@ std::vector<std::vector<int>> ordered_boundaries(
   return boundaries;
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHTBORS
 // -----------------------------------------------------------------------------
 
-namespace ysh {
+namespace yshp {
 
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
@@ -638,12 +638,12 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
@@ -746,12 +746,12 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
   }
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Convert quads to triangles
 std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads) {
@@ -991,12 +991,12 @@ void merge_triangles_and_quads(std::vector<vec3i>& triangles,
   }
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Subdivide lines.
 template <typename T>
@@ -1456,12 +1456,12 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
@@ -1602,12 +1602,12 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
   }
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
@@ -1856,12 +1856,12 @@ std::vector<vec3f> colors_from_field(const std::vector<float>& field,
   return colors;
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF INTEGRAL PATHS
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 namespace integral_paths {
 
@@ -2247,12 +2247,12 @@ vec3f compute_gradient(const vec3i& triangle,
   return result;
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Make a quad.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -3378,12 +3378,12 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
       inner_positions, inner_normals, inner_texturecoords);
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -3648,12 +3648,12 @@ static std::string get_extension(const std::string& filename) {
   }
 }
 
-}  // namespace ysh
+}  // namespace yshp
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysh {
+namespace yshp {
 
 std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
@@ -3697,4 +3697,4 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
   return stats;
 }
 
-}  // namespace ysh
+}  // namespace yshp

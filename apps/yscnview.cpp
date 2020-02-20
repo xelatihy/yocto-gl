@@ -53,7 +53,7 @@ namespace fs = ghc::filesystem;
 #undef far
 #endif
 
-namespace ysc {
+namespace yscn {
 void print_obj_camera(ysc::camera* camera);
 };
 
