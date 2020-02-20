@@ -53,7 +53,7 @@ namespace fs = ghc::filesystem;
 #endif
 
 namespace yocto::sceneio {
-void print_obj_camera(yio::sceneio_camera* camera);
+void print_obj_camera(yio::camera* camera);
 };
 
 // Application state
@@ -69,14 +69,14 @@ struct app_state {
 
   // scene
   yio::sceneio_model*  ioscene  = new yio::sceneio_model{};
-  yio::sceneio_camera* iocamera = nullptr;
+  yio::camera* iocamera = nullptr;
 
   // rendering state
   opengl_scene*  glscene  = new opengl_scene{};
   opengl_camera* glcamera = nullptr;
 
   // editing
-  yio::sceneio_camera*      selected_camera      = nullptr;
+  yio::camera*      selected_camera      = nullptr;
   yio::sceneio_object*      selected_object      = nullptr;
   yio::sceneio_instance*    selected_instance    = nullptr;
   yio::sceneio_shape*       selected_shape       = nullptr;
@@ -168,7 +168,7 @@ void update_lights(opengl_scene* glscene, yio::sceneio_model* ioscene) {
 }
 
 void init_glscene(opengl_scene* glscene, yio::sceneio_model* ioscene,
-    opengl_camera*& glcamera, yio::sceneio_camera* iocamera,
+    opengl_camera*& glcamera, yio::camera* iocamera,
     yio::sceneio_progress progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -181,7 +181,7 @@ void init_glscene(opengl_scene* glscene, yio::sceneio_model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<yio::sceneio_camera*, opengl_camera*>{};
+  auto camera_map     = unordered_map<yio::camera*, opengl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -284,7 +284,7 @@ void init_glscene(opengl_scene* glscene, yio::sceneio_model* ioscene,
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_camera* iocamera) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);

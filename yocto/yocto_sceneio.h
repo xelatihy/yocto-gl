@@ -74,7 +74,7 @@ using namespace yocto::math;
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct sceneio_camera {
+struct camera {
   string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
@@ -215,7 +215,7 @@ struct sceneio_environment {
 // updates node transformations only if defined.
 struct sceneio_model {
   string                       name         = "";
-  vector<sceneio_camera*>      cameras      = {};
+  vector<camera*>      cameras      = {};
   vector<sceneio_object*>      objects      = {};
   vector<sceneio_environment*> environments = {};
   vector<sceneio_shape*>       shapes       = {};
@@ -227,7 +227,7 @@ struct sceneio_model {
 };
 
 // add element to a scene
-sceneio_camera*      add_camera(sceneio_model* scene, const string& name = "");
+camera*      add_camera(sceneio_model* scene, const string& name = "");
 sceneio_environment* add_environment(
     sceneio_model* scene, const string& name = "");
 sceneio_object*   add_object(sceneio_model* scene, const string& name = "");
@@ -259,7 +259,7 @@ bool save_scene(const string& filename, const sceneio_model* scene,
     string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
 
 // get named camera or default if name is empty
-sceneio_camera* get_camera(const sceneio_model* scene, const string& name = "");
+camera* get_camera(const sceneio_model* scene, const string& name = "");
 
 }  // namespace yocto::sceneio
 

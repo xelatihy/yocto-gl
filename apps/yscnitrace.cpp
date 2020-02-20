@@ -49,7 +49,7 @@ using std::to_string;
 namespace fs = ghc::filesystem;
 
 namespace yocto::sceneio {
-void print_obj_camera(yio::sceneio_camera* camera);
+void print_obj_camera(yio::camera* camera);
 };  // namespace yocto::sceneio
 
 // Application scene
@@ -63,7 +63,7 @@ struct app_state {
   // scene
   yio::sceneio_model*  ioscene  = new yio::sceneio_model{};
   ytr::scene*      scene    = new ytr::scene{};
-  yio::sceneio_camera* iocamera = nullptr;
+  yio::camera* iocamera = nullptr;
   ytr::camera*     camera   = nullptr;
 
   // options
@@ -79,7 +79,7 @@ struct app_state {
   draw_glimage_params glparams = {};
 
   // editing
-  yio::sceneio_camera*      selected_camera      = nullptr;
+  yio::camera*      selected_camera      = nullptr;
   yio::sceneio_object*      selected_object      = nullptr;
   yio::sceneio_instance*    selected_instance    = nullptr;
   yio::sceneio_shape*       selected_shape       = nullptr;
@@ -131,7 +131,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& camera,
-    yio::sceneio_camera* iocamera, yio::sceneio_progress progress_cb = {}) {
+    yio::camera* iocamera, yio::sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -139,7 +139,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<yio::sceneio_camera*, ytr::camera*>{};
+  auto camera_map     = unordered_map<yio::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -317,7 +317,7 @@ void load_scene_async(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_camera* iocamera) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);

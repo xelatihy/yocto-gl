@@ -80,7 +80,7 @@ struct app_state {
 
 // construct a scene from io
 void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& camera,
-    yio::sceneio_camera* iocamera, yio::sceneio_progress print_progress = {}) {
+    yio::camera* iocamera, yio::sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -88,7 +88,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<yio::sceneio_camera*, ytr::camera*>{};
+  auto camera_map     = unordered_map<yio::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)

@@ -30,7 +30,7 @@ struct app_state {
   // Interaction data
   float          time       = 0;
   bool           show_edges = false;
-  sceneio_camera camera;
+  camera camera;
   float          camera_focus;
   bvh_tree       bvh;
 
@@ -160,7 +160,7 @@ void update_gledges(app_state* app) {
 
 void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app->camera              = sceneio_camera{};
+  app->camera              = camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
   app->camera.orthographic = false;

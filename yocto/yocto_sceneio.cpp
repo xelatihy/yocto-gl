@@ -257,58 +257,39 @@ sceneio_model::~sceneio_model() {
   for (auto environment : environments) delete environment;
 }
 
+// add an element
+template<typename T>
+static T* add_element(vector<T*>& elements, const string& name, const string& base) {
+  auto element = elements.emplace_back(new T{});
+  element->name =
+      name != "" ? name : (base + std::to_string(elements.size()));
+  return element;
+}
+
 // add element
-sceneio_camera* add_camera(sceneio_model* scene, const string& name) {
-  auto camera = scene->cameras.emplace_back(new sceneio_camera{});
-  camera->name =
-      name != "" ? name : ("camera" + std::to_string(scene->cameras.size()));
-  return camera;
+camera* add_camera(sceneio_model* scene, const string& name) {
+  return add_element(scene->cameras, name, "camera");
 }
 sceneio_environment* add_environment(sceneio_model* scene, const string& name) {
-  auto environment = scene->environments.emplace_back(
-      new sceneio_environment{});
-  environment->name =
-      name != "" ? name
-                 : ("environment" + std::to_string(scene->environments.size()));
-  return environment;
+  return add_element(scene->environments, name, "environment");
 }
 sceneio_shape* add_shape(sceneio_model* scene, const string& name) {
-  auto shape  = scene->shapes.emplace_back(new sceneio_shape{});
-  shape->name = name != "" ? name
-                           : ("shape" + std::to_string(scene->shapes.size()));
-  return shape;
+  return add_element(scene->shapes, name, "shape");
 }
 sceneio_subdiv* add_subdiv(sceneio_model* scene, const string& name) {
-  auto subdiv = scene->subdivs.emplace_back(new sceneio_subdiv{});
-  subdiv->name =
-      name != "" ? name : ("subdiv" + std::to_string(scene->subdivs.size()));
-  return subdiv;
+  return add_element(scene->subdivs, name, "subdiv");
 }
 sceneio_texture* add_texture(sceneio_model* scene, const string& name) {
-  auto texture = scene->textures.emplace_back(new sceneio_texture{});
-  texture->name =
-      name != "" ? name : ("texture" + std::to_string(scene->textures.size()));
-  return texture;
+  return add_element(scene->textures, name, "texture");
 }
 sceneio_object* add_object(sceneio_model* scene, const string& name) {
-  auto object = scene->objects.emplace_back(new sceneio_object{});
-  object->name =
-      name != "" ? name : ("object" + std::to_string(scene->objects.size()));
-  return object;
+  return add_element(scene->objects, name, "object");
 }
 sceneio_instance* add_instance(sceneio_model* scene, const string& name) {
-  auto instance  = scene->instances.emplace_back(new sceneio_instance{});
-  instance->name = name != ""
-                       ? name
-                       : ("instance" + std::to_string(scene->instances.size()));
-  return instance;
+  return add_element(scene->instances, name, "instance");
 }
 sceneio_material* add_material(sceneio_model* scene, const string& name) {
-  auto material  = scene->materials.emplace_back(new sceneio_material{});
-  material->name = name != ""
-                       ? name
-                       : ("material" + std::to_string(scene->materials.size()));
-  return material;
+  return add_element(scene->materials, name, "material");
 }
 sceneio_object* add_complete_object(sceneio_model* scene, const string& name) {
   auto object      = add_object(scene, name);
@@ -318,7 +299,7 @@ sceneio_object* add_complete_object(sceneio_model* scene, const string& name) {
 }
 
 // get named camera or default if camera is empty
-sceneio_camera* get_camera(const sceneio_model* scene, const string& name) {
+camera* get_camera(const sceneio_model* scene, const string& name) {
   if (scene->cameras.empty()) return nullptr;
   for (auto camera : scene->cameras) {
     if (camera->name == name) return camera;
@@ -1424,7 +1405,7 @@ static bool save_json_scene(const string& filename, const sceneio_model* scene,
   auto js     = json::object();
   js["asset"] = json::object();
 
-  auto def_cam = sceneio_camera{};
+  auto def_cam = camera{};
   if (!scene->cameras.empty()) js["cameras"] = json::object();
   for (auto& camera : scene->cameras) {
     auto& ejs = js["cameras"][camera->name];
@@ -1876,7 +1857,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   return true;
 }
 
-void print_obj_camera(sceneio_camera* camera) {
+void print_obj_camera(camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera->name.c_str(), (int)camera->orthographic, camera->film,
       camera->film / camera->aspect, camera->lens, camera->focus,
