@@ -70,6 +70,27 @@ namespace fs = ghc::filesystem;
 #endif
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF GENERIC UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto::sceneio {
+
+// Using directives.
+using std::string;
+using std::vector;
+using namespace std::string_literals;
+using std::function;
+using std::array;
+using std::pair;
+using std::unordered_map;
+using std::make_unique;
+using std::unique_ptr;
+using std::ignore;
+namespace ysh = yocto::shape;
+using yim::image;
+
+}
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::sceneio {
@@ -202,10 +223,6 @@ vector<string> scene_stats(const model* scene, bool verbose) {
 
   return stats;
 }
-
-using std::array;
-using std::pair;
-using std::unordered_map;
 
 // Checks for validity of the scene->
 vector<string> scene_validation(const model* scene, bool notextures) {
@@ -387,7 +404,7 @@ void add_materials(model* scene) {
 // Add a sky environment
 void add_sky(model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = image<vec4f>{{1024, 512}};
+  auto sunsky  = yim::image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
@@ -578,24 +595,18 @@ std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>,
   return split;
 }
 
-// using
-using std::make_unique;
-using std::unique_ptr;
-using yocto::shape::subdivide_catmullclark;
-
 // Apply subdivision and displacement rules.
 unique_ptr<subdiv> subdivide_subdiv(
     subdiv* shape, int subdivisions, bool smooth) {
-  using std::ignore;
   auto tesselated = make_unique<subdiv>(*shape);
   if (!subdivisions) return tesselated;
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-      subdivide_catmullclark(
+      ysh::subdivide_catmullclark(
           tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
-  std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
+  std::tie(tesselated->quadsnorm, tesselated->normals) = ysh::subdivide_catmullclark(
       tesselated->quadsnorm, tesselated->normals, subdivisions, true);
   std::tie(tesselated->quadspos, tesselated->positions) =
-      subdivide_catmullclark(
+      ysh::subdivide_catmullclark(
           tesselated->quadspos, tesselated->positions, subdivisions);
   if (smooth) {
     tesselated->normals = compute_normals(

@@ -56,13 +56,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto::sceneio {
 
-// Using directives.
-using std::string;
-using std::vector;
-using namespace std::string_literals;
-using std::function;
-using yocto::image::image;
+// Math defitions
 using namespace yocto::math;
+namespace yim = yocto::image;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -78,7 +74,7 @@ using namespace yocto::math;
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct camera {
-  string  name         = "";
+  std::string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
@@ -91,11 +87,11 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  string       name    = "";
-  image<vec3f> colorf  = {};
-  image<vec3b> colorb  = {};
-  image<float> scalarf = {};
-  image<byte>  scalarb = {};
+  std::string       name    = "";
+  yim::image<vec3f> colorf  = {};
+  yim::image<vec3b> colorb  = {};
+  yim::image<float> scalarf = {};
+  yim::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -104,7 +100,7 @@ struct texture {
 // For the documentation on the values, please see the OBJ format.
 struct material {
   // material data
-  string name = "";
+  std::string name = "";
 
   // material
   vec3f emission     = {0, 0, 0};
@@ -148,21 +144,21 @@ struct material {
 // each vertex data has its own topology.
 struct shape {
   // shape data
-  string name = "";
+  std::string name = "";
 
   // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  std::vector<int>   points    = {};
+  std::vector<vec2i> lines     = {};
+  std::vector<vec3i> triangles = {};
+  std::vector<vec4i> quads     = {};
 
   // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
+  std::vector<vec3f> colors    = {};
+  std::vector<float> radius    = {};
+  std::vector<vec4f> tangents  = {};
 };
 
 // Subdiv data represented as indexed meshes of elements.
@@ -170,30 +166,30 @@ struct shape {
 // face-varying quads.
 struct subdiv {
   // shape data
-  string name = "";
+  std::string name = "";
 
   // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
+  std::vector<vec4i> quadspos      = {};
+  std::vector<vec4i> quadsnorm     = {};
+  std::vector<vec4i> quadstexcoord = {};
 
   // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
 };
 
 // Instance data.
 struct instance {
   // instance data
-  string          name   = "";
-  vector<frame3f> frames = {};
+  std::string          name   = "";
+  std::vector<frame3f> frames = {};
 };
 
 // Object.
 struct object {
   // object data
-  string    name     = "";
+  std::string    name     = "";
   frame3f   frame    = identity3x4f;
   shape*    shape    = nullptr;
   material* material = nullptr;
@@ -203,7 +199,7 @@ struct object {
 
 // Environment map.
 struct environment {
-  string   name         = "";
+  std::string   name         = "";
   frame3f  frame        = identity3x4f;
   vec3f    emission     = {0, 0, 0};
   texture* emission_tex = nullptr;
@@ -217,28 +213,28 @@ struct environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct model {
-  string               name         = "";
-  vector<camera*>      cameras      = {};
-  vector<object*>      objects      = {};
-  vector<environment*> environments = {};
-  vector<shape*>       shapes       = {};
-  vector<subdiv*>      subdivs      = {};
-  vector<texture*>     textures     = {};
-  vector<material*>    materials    = {};
-  vector<instance*>    instances    = {};
+  std::string               name         = "";
+  std::vector<camera*>      cameras      = {};
+  std::vector<object*>      objects      = {};
+  std::vector<environment*> environments = {};
+  std::vector<shape*>       shapes       = {};
+  std::vector<subdiv*>      subdivs      = {};
+  std::vector<texture*>     textures     = {};
+  std::vector<material*>    materials    = {};
+  std::vector<instance*>    instances    = {};
   ~model();
 };
 
 // add element to a scene
-camera*      add_camera(model* scene, const string& name = "");
-environment* add_environment(model* scene, const string& name = "");
-object*      add_object(model* scene, const string& name = "");
-instance*    add_instance(model* scene, const string& name = "");
-material*    add_material(model* scene, const string& name = "");
-shape*       add_shape(model* scene, const string& name = "");
-subdiv*      add_subdiv(model* scene, const string& name = "");
-texture*     add_texture(model* scene, const string& name = "");
-object*      add_complete_object(model* scene, const string& name = "");
+camera*      add_camera(model* scene, const std::string& name = "");
+environment* add_environment(model* scene, const std::string& name = "");
+object*      add_object(model* scene, const std::string& name = "");
+instance*    add_instance(model* scene, const std::string& name = "");
+material*    add_material(model* scene, const std::string& name = "");
+shape*       add_shape(model* scene, const std::string& name = "");
+subdiv*      add_subdiv(model* scene, const std::string& name = "");
+texture*     add_texture(model* scene, const std::string& name = "");
+object*      add_complete_object(model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -250,17 +246,17 @@ namespace yocto::sceneio {
 
 // Progress callback called when loading.
 using progress_callback =
-    function<void(const string& message, int current, int total)>;
+    std::function<void(const std::string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, model* scene, string& error,
+bool load_scene(const std::string& filename, model* scene, std::string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const model* scene, string& error,
+bool save_scene(const std::string& filename, const model* scene, std::string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
 
 // get named camera or default if name is empty
-camera* get_camera(const model* scene, const string& name = "");
+camera* get_camera(const model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -270,9 +266,9 @@ camera* get_camera(const model* scene, const string& name = "");
 namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const model* scene, bool verbose = false);
+std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> scene_validation(const model* scene, bool notextures = false);
+std::vector<std::string> scene_validation(const model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const model* scene);
@@ -291,7 +287,7 @@ void tesselate_subdiv(model* scene, subdiv* subdiv);
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    model* scene, float time = 0, const string& anim_group = "");
+    model* scene, float time = 0, const std::string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {
