@@ -855,7 +855,7 @@ static bool load_instance(
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
+    auto ply = ply::model{};
     if (!load_ply(filename, &ply, error)) return false;
     frames = get_values(&ply, "instance",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
@@ -876,7 +876,7 @@ static bool save_instance(const string& filename, const vector<frame3f>& frames,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply_model{};
+    auto ply = ply::model{};
     add_values(&ply, frames, "instance",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
@@ -1781,6 +1781,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   };
 
   // convert materials and textures
+  auto material_map = unordered_map<sceneio_material*, obj::material*>{{nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
     omaterial->name                 = fs::path(material->name).stem();
@@ -1803,6 +1804,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     omaterial->pbr_coat_tex         = get_texture(material->coat_tex);
     omaterial->pbr_opacity_tex      = get_texture(material->opacity_tex);
     omaterial->normal_tex           = get_texture(material->normal_tex);
+    material_map[material] = omaterial;
   }
 
   // convert objects

@@ -3356,7 +3356,7 @@ static string get_extension(const string& filename) {
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     using namespace yocto::ply;
-    auto ply_guard = make_unique<ply_model>();
+    auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
@@ -3438,7 +3438,7 @@ static string get_extension(const string& filename) {
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     using namespace yocto::ply;
-    auto ply_guard = make_unique<ply_model>();
+    auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -3501,7 +3501,7 @@ static string get_extension(const string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     using namespace yocto::ply;
-    auto ply_guard = make_unique<ply_model>();
+    auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
     positions = get_positions(ply);
@@ -3555,7 +3555,7 @@ static string get_extension(const string& filename) {
 
     // ply model
     using namespace yocto::ply;
-    auto ply_guard = make_unique<ply_model>();
+    auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
