@@ -17,9 +17,30 @@ using namespace std::string_literals;
 #include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ysh {
+
+namespace ym = yocto::math;
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan2;
+using ym::cos;
+using ym::exp;
+using ym::fmod;
+using ym::log;
+using ym::pow;
+using ym::sin;
+using ym::sqrt;
+
+}  // namespace ysh
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Compute per-vertex tangents for lines.
 std::vector<vec3f> compute_tangents(
@@ -241,12 +262,12 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Flip vertex normals
 std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals) {
@@ -299,12 +320,12 @@ std::vector<vec3f> align_vertices(
   return aligned;
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Initialize an edge map with elements.
 edge_map make_edge_map(const std::vector<vec3i>& triangles) {
@@ -548,13 +569,13 @@ std::vector<std::vector<int>> ordered_boundaries(
   return boundaries;
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHTBORS
 // -----------------------------------------------------------------------------
 
-namespace yocto::shape {
+namespace ysh {
 
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
@@ -618,12 +639,12 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
@@ -726,12 +747,12 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Convert quads to triangles
 std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads) {
@@ -971,12 +992,12 @@ void merge_triangles_and_quads(std::vector<vec3i>& triangles,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Subdivide lines.
 template <typename T>
@@ -1436,12 +1457,12 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
@@ -1582,12 +1603,12 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
@@ -1836,12 +1857,12 @@ std::vector<vec3f> colors_from_field(const std::vector<float>& field,
   return colors;
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF INTEGRAL PATHS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 namespace integral_paths {
 
@@ -2227,12 +2248,12 @@ vec3f compute_gradient(const vec3i& triangle,
   return result;
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Make a quad.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -3358,12 +3379,12 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
       inner_positions, inner_normals, inner_texturecoords);
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -3401,7 +3422,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<yocto::ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
@@ -3425,7 +3446,7 @@ static std::string get_extension(const std::string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<obj::model>();
+    auto obj_guard = std::make_unique<yocto::obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -3437,7 +3458,7 @@ static std::string get_extension(const std::string& filename) {
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = std::vector<obj::material*>{};
+    auto materials  = std::vector<yocto::obj::material*>{};
     auto ematerials = std::vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
@@ -3483,7 +3504,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<yocto::ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -3496,7 +3517,7 @@ static std::string get_extension(const std::string& filename) {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj::model>();
+    auto obj_guard = std::make_unique<yocto::obj::model>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
@@ -3546,7 +3567,7 @@ static std::string get_extension(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<yocto::ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
     positions = get_positions(ply);
@@ -3558,14 +3579,14 @@ static std::string get_extension(const std::string& filename) {
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj::model>();
+    auto obj_guard = std::make_unique<yocto::obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
     if (obj->shapes.empty()) return shape_error();
     if (obj->shapes.size() > 1) return shape_error();
     auto shape = obj->shapes.front();
     if (shape->faces.empty()) return shape_error();
-    auto materials  = std::vector<obj::material*>{};
+    auto materials  = std::vector<yocto::obj::material*>{};
     auto ematerials = std::vector<int>{};
     get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, materials, ematerials, flip_texcoord);
@@ -3600,7 +3621,7 @@ static std::string get_extension(const std::string& filename) {
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
 
     // ply model
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<yocto::ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
@@ -3612,7 +3633,7 @@ static std::string get_extension(const std::string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
-    auto obj_guard = std::make_unique<obj::model>();
+    auto obj_guard = std::make_unique<yocto::obj::model>();
     auto obj       = obj_guard.get();
 
     // Add obj data
@@ -3628,12 +3649,12 @@ static std::string get_extension(const std::string& filename) {
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
@@ -3677,4 +3698,4 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
   return stats;
 }
 
-}  // namespace yocto::shape
+}  // namespace ysh

@@ -53,7 +53,6 @@
 #include "yocto_pbrt.h"
 #include "yocto_ply.h"
 #include "yocto_shape.h"
-namespace ysh = yocto::shape;
 
 #include "ext/filesystem.hpp"
 #include "ext/json.hpp"
@@ -1307,16 +1306,12 @@ static bool load_json_scene(const std::string& filename, model* scene,
            (name + extensions.front());
   };
 
-  // using
-  using yocto::shape::load_fvshape;
-  using yocto::shape::load_shape;
-
   // load shapes
   shape_map.erase("");
   for (auto [name, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
-    if (!load_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!ysh::load_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1326,7 +1321,7 @@ static bool load_json_scene(const std::string& filename, model* scene,
   for (auto [name, subdiv] : subdiv_map) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
     auto path = get_filename(name, "subdivs", {".obj"});
-    if (!load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!ysh::load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1486,15 +1481,11 @@ static bool save_json_scene(const std::string& filename, const model* scene,
     return fs::path(filename).parent_path() / group / (name + extension);
   };
 
-  // using
-  using yocto::shape::save_fvshape;
-  using yocto::shape::save_shape;
-
   // save shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = get_filename(shape->name, "shapes", ".ply");
-    if (!save_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!ysh::save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1504,7 +1495,7 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   for (auto subdiv : scene->subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
     auto path = get_filename(subdiv->name, "subdivs", ".obj");
-    if (!save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!ysh::save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1878,12 +1869,9 @@ static bool load_ply_scene(const std::string& filename, model* scene,
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
-  // using
-  using yocto::shape::load_shape;
-
   // load ply mesh
   auto shape = add_shape(scene);
-  if (!load_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!ysh::load_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;
@@ -1908,12 +1896,9 @@ static bool save_ply_scene(const std::string& filename, const model* scene,
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  // using
-  using yocto::shape::save_shape;
-
   // save shape
   auto shape = scene->shapes.front();
-  if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!ysh::save_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;

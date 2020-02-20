@@ -86,10 +86,21 @@
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Math defitions
-using namespace yocto::math;
+namespace ym  = yocto::math;
+using ym::bbox3f;
+using ym::byte;
+using ym::frame3f;
+using ym::mat4f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 std::vector<vec3f> compute_tangents(
@@ -135,12 +146,12 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
     const std::vector<vec3f>& normals, const std::vector<vec4f>& weights,
     const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Flip vertex normals
 std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals);
@@ -151,12 +162,12 @@ std::vector<vec4i> flip_quads(const std::vector<vec4i>& quads);
 std::vector<vec3f> align_vertices(
     const std::vector<vec3f>& positions, const vec3i& alignment);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
@@ -202,12 +213,12 @@ std::vector<std::vector<int>> ordered_boundaries(
 std::vector<std::vector<int>> vertex_to_faces_adjacencies(
     const std::vector<vec3i>& triangles, const std::vector<vec3i>& adjacencies);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHBORS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
@@ -229,12 +240,12 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
 void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
     int vertex, float max_radius);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Convert quads to triangles
 std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads);
@@ -302,12 +313,12 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 void merge_triangles_and_quads(std::vector<vec3i>& triangles,
     std::vector<vec4i>& quads, bool force_triangles);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Subdivide lines by splitting each line in half.
 std::pair<std::vector<vec2i>, std::vector<float>> subdivide_lines(
@@ -369,12 +380,12 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<vec4f>& vert, int level,
     bool lock_boundary = false);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Pick a point in a point set uniformly.
 int                sample_points(int npoints, float re);
@@ -414,19 +425,19 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
     const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
     int npoints, int seed = 7);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
   static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
-    float length = flt_max;
+    float length = ym::flt_max;
   };
 #ifdef YOCTO_ABSEIL
   std::vector<short_vector<adjancency_list, min_arcs>> graph = {};
@@ -442,10 +453,10 @@ geodesic_solver make_geodesic_solver(const std::vector<vec3i>& triangles,
 // Compute geodesic distances
 void update_geodesic_distances(std::vector<float>& distances,
     const geodesic_solver& solver, const std::vector<int>& sources,
-    float max_distance = flt_max);
+    float max_distance = ym::flt_max);
 
 std::vector<float> compute_geodesic_distances(const geodesic_solver& solver,
-    const std::vector<int>& sources, float max_distance = flt_max);
+    const std::vector<int>& sources, float max_distance = ym::flt_max);
 
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assignes its previous node in
@@ -495,12 +506,12 @@ std::vector<vec3f> make_positions_from_path(
 vec3f compute_gradient(const vec3i& triangle,
     const std::vector<vec3f>& positions, const std::vector<float>& field);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE IO FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Load/save a shape as indexed meshes
 [[nodiscard]] bool load_shape(const std::string& filename,
@@ -530,12 +541,12 @@ namespace yocto::shape {
     const std::vector<vec2f>& texcoords, std::string& error, bool ascii = false,
     bool flip_texcoords = true);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Get mesh statistics for printing
 std::vector<std::string> shape_stats(const std::vector<int>& points,
@@ -547,12 +558,12 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2f>& texcoords, const std::vector<vec3f>& colors,
     const std::vector<float>& radius, bool verbose = false);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Make a plane.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -700,12 +711,12 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     float thickness);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace ysh {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
@@ -713,6 +724,6 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
     std::vector<int>& tags, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals);
 
-}  // namespace yocto::shape
+}  // namespace ysh
 
 #endif

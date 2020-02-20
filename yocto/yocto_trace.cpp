@@ -57,17 +57,6 @@ using ym::log;
 using ym::pow;
 using ym::sin;
 using ym::sqrt;
-// using ym::sqrt;
-// using ym::zero2f;
-// using ym::zero3f;
-// using ym::zero2i;
-// using ym::zero3i;
-// using ym::zero4i;
-// using ym::identity3x4f;
-// using ym::identity3x3f;
-// using ym::invalidb3f;
-// using ym::pif;
-// using ym::flt_max;
 
 }  // namespace ytr
 
