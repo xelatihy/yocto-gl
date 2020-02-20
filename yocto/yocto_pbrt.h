@@ -1847,10 +1847,10 @@ inline bool convert_environment(environment* penvironment,
 struct stack_element {
   frame3f   transform_start        = identity3x4f;
   frame3f   transform_end          = identity3x4f;
-  material  material               = {};
-  arealight arealight              = {};
-  medium    interior               = {};
-  medium    exterior               = {};
+  ypbrt::material  material               = {};
+  ypbrt::arealight arealight              = {};
+  ypbrt::medium    interior               = {};
+  ypbrt::medium    exterior               = {};
   bool      reverse                = false;
   bool      active_transform_start = true;
   bool      active_transform_end   = true;
