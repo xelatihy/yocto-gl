@@ -46,7 +46,8 @@
 namespace yply {
 
 // Math defitions
-namespace ym  = yocto::math;
+namespace ym = yocto::math;
+using ym::byte;
 using ym::frame3f;
 using ym::vec2f;
 using ym::vec2i;
@@ -54,7 +55,6 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
-using ym::byte;
 
 // Ply property
 struct property {

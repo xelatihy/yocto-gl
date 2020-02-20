@@ -46,7 +46,7 @@ namespace fs = ghc::filesystem;
 
 namespace ysc {
 void print_obj_camera(ysc::camera* camera);
-};  // namespace yocto::sceneio
+};  // namespace ysc
 
 // Application scene
 struct app_state {

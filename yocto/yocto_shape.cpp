@@ -3422,7 +3422,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<yocto::ply::model>();
+    auto ply_guard = std::make_unique<yply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
@@ -3504,7 +3504,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<yocto::ply::model>();
+    auto ply_guard = std::make_unique<yply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -3567,7 +3567,7 @@ static std::string get_extension(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard = std::make_unique<yocto::ply::model>();
+    auto ply_guard = std::make_unique<yply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
     positions = get_positions(ply);
@@ -3621,7 +3621,7 @@ static std::string get_extension(const std::string& filename) {
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
 
     // ply model
-    auto ply_guard = std::make_unique<yocto::ply::model>();
+    auto ply_guard = std::make_unique<yply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);

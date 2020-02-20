@@ -48,9 +48,15 @@
 // -----------------------------------------------------------------------------
 namespace yocto::obj {
 
-// Using directives
-using namespace std::string_literals;
-using namespace yocto::math;
+// Math defitions
+namespace ym = yocto::math;
+using ym::frame3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
 
 // OBJ vertex
 struct vertex {
@@ -91,12 +97,12 @@ struct material {
   int         illum = 0;
 
   // material colors and values
-  vec3f emission     = zero3f;
-  vec3f ambient      = zero3f;
-  vec3f diffuse      = zero3f;
-  vec3f specular     = zero3f;
-  vec3f reflection   = zero3f;
-  vec3f transmission = zero3f;
+  vec3f emission     = {0, 0, 0};
+  vec3f ambient      = {0, 0, 0};
+  vec3f diffuse      = {0, 0, 0};
+  vec3f specular     = {0, 0, 0};
+  vec3f reflection   = {0, 0, 0};
+  vec3f transmission = {0, 0, 0};
   float exponent     = 10;
   float ior          = 1.5;
   float opacity      = 1;
@@ -127,7 +133,7 @@ struct material {
   float pbr_transmission  = 0;
   float pbr_ior           = 1.5;
   float pbr_opacity       = 1;
-  vec3f pbr_volscattering = zero3f;
+  vec3f pbr_volscattering = {0, 0, 0};
   float pbr_volanisotropy = 0;
   float pbr_volscale      = 0.01;
 
@@ -162,7 +168,7 @@ struct shape {
 // Obj camera
 struct camera {
   std::string name     = "";
-  frame3f     frame    = identity3x4f;
+  frame3f     frame    = ym::identity3x4f;
   bool        ortho    = false;
   float       width    = 0.036;
   float       height   = 0.028;
@@ -174,8 +180,8 @@ struct camera {
 // Obj environment
 struct environment {
   std::string name         = "";
-  frame3f     frame        = identity3x4f;
-  vec3f       emission     = zero3f;
+  frame3f     frame        = ym::identity3x4f;
+  vec3f       emission     = {0, 0, 0};
   texture     emission_tex = {};
 };
 
@@ -316,6 +322,9 @@ namespace fs = ghc::filesystem;
 // IMPLEMENTATION FOR OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto::obj {
+
+// string literals
+using namespace std::string_literals;
 
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
@@ -580,7 +589,8 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
     } else if (cmd == "Tf") {
       if (!parse_value(str, material->transmission)) return parse_error();
       material->transmission = max(1 - material->transmission, 0.0f);
-      if (max(material->transmission) < 0.001) material->transmission = zero3f;
+      if (max(material->transmission) < 0.001)
+        material->transmission = ym::zero3f;
     } else if (cmd == "Tr") {
       if (!parse_value(str, material->opacity)) return parse_error();
       material->opacity = 1 - material->opacity;
@@ -792,7 +802,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       if (!parse_value(str, environment->frame)) return parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
-      auto frame  = identity3x4f;
+      auto frame  = ym::identity3x4f;
       if (!parse_value(str, object)) return parse_error();
       if (!parse_value(str, frame)) return parse_error();
       if (shape_map.find(object) == shape_map.end()) {
@@ -895,15 +905,15 @@ inline bool load_obj(const std::string& filename, model* obj,
 
     // possible token values
     if (cmd == "v") {
-      if (!parse_value(str, opositions.emplace_back(zero3f)))
+      if (!parse_value(str, opositions.emplace_back(ym::zero3f)))
         return parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if (!parse_value(str, onormals.emplace_back(zero3f)))
+      if (!parse_value(str, onormals.emplace_back(ym::zero3f)))
         return parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if (!parse_value(str, otexcoords.emplace_back(zero2f)))
+      if (!parse_value(str, otexcoords.emplace_back(ym::zero2f)))
         return parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -1107,20 +1117,20 @@ inline void format_value(std::string& str, const vertex& value) {
     if (!material->as_pbr) {
       if (!format_values(fs, "illum {}\n", material->illum))
         return write_error();
-      if (material->emission != zero3f)
+      if (material->emission != ym::zero3f)
         if (!format_values(fs, "Ke {}\n", material->emission))
           return write_error();
-      if (material->ambient != zero3f)
+      if (material->ambient != ym::zero3f)
         if (!format_values(fs, "Ka {}\n", material->ambient))
           return write_error();
       if (!format_values(fs, "Kd {}\n", material->diffuse))
         return write_error();
       if (!format_values(fs, "Ks {}\n", material->specular))
         return write_error();
-      if (material->reflection != zero3f)
+      if (material->reflection != ym::zero3f)
         if (!format_values(fs, "Kr {}\n", material->reflection))
           return write_error();
-      if (material->transmission != zero3f)
+      if (material->transmission != ym::zero3f)
         if (!format_values(fs, "Kt {}\n", material->transmission))
           return write_error();
       if (!format_values(fs, "Ns {}\n", (int)material->exponent))
@@ -1160,10 +1170,10 @@ inline void format_value(std::string& str, const vertex& value) {
           return write_error();
     } else {
       if (!format_values(fs, "illum 2\n")) return write_error();
-      if (material->pbr_emission != zero3f)
+      if (material->pbr_emission != ym::zero3f)
         if (!format_values(fs, "Pe {}\n", material->pbr_emission))
           return write_error();
-      if (material->pbr_base != zero3f)
+      if (material->pbr_base != ym::zero3f)
         if (!format_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
       if (material->pbr_specular)
@@ -1184,7 +1194,7 @@ inline void format_value(std::string& str, const vertex& value) {
       if (material->pbr_coatroughness)
         if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
           return write_error();
-      if (material->pbr_volscattering != zero3f)
+      if (material->pbr_volscattering != ym::zero3f)
         if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
           return write_error();
       if (material->pbr_volanisotropy)

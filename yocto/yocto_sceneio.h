@@ -60,6 +60,7 @@ namespace ysc {
 namespace yim = yocto::image;
 namespace ym  = yocto::math;
 // Math defitions
+using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;
 using ym::vec2f;
@@ -69,7 +70,6 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
-using ym::bbox3f;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,

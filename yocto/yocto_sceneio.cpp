@@ -48,14 +48,13 @@
 #include <future>
 #include <memory>
 
+#include "ext/filesystem.hpp"
+#include "ext/json.hpp"
 #include "yocto_image.h"
 #include "yocto_obj.h"
 #include "yocto_pbrt.h"
 #include "yocto_ply.h"
 #include "yocto_shape.h"
-
-#include "ext/filesystem.hpp"
-#include "ext/json.hpp"
 namespace fs = ghc::filesystem;
 using namespace std::string_literals;
 
@@ -88,8 +87,8 @@ using ym::fmod;
 using ym::log;
 using ym::pow;
 using ym::sin;
-using ym::tan;
 using ym::sqrt;
+using ym::tan;
 
 }  // namespace ysc
 
@@ -2360,7 +2359,7 @@ static bool load_pbrt_scene(const std::string& filename, model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt_guard = std::make_unique<yocto::pbrt::model>();
+  auto pbrt_guard = std::make_unique<ypbrt::model>();
   auto pbrt       = pbrt_guard.get();
   if (!load_pbrt(filename, pbrt, error)) return false;
 
@@ -2410,7 +2409,7 @@ static bool load_pbrt_scene(const std::string& filename, model* scene,
   };
 
   // convert material
-  auto material_map = std::unordered_map<yocto::pbrt::material*, material*>{};
+  auto material_map = std::unordered_map<ypbrt::material*, material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2530,7 +2529,7 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = std::make_unique<yocto::pbrt::model>();
+  auto pbrt_guard = std::make_unique<ypbrt::model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
@@ -2547,7 +2546,7 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<material*, yocto::pbrt::material*>{};
+  auto material_map = std::unordered_map<material*, ypbrt::material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
