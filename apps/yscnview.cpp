@@ -32,7 +32,7 @@
 #include "../yocto/yocto_shape.h"
 #include "yocto_opengl.h"
 using namespace yocto::image;
-using namespace yocto::commonio;
+namespace ycl = yocto::commonio;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
 
@@ -533,7 +533,7 @@ void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
     }
     continue_glline(win);
     if (draw_button(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) ycl::print_info(stat);
     }
     end_glheader(win);
   }
@@ -707,7 +707,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = make_cli("yscnview", "views scenes inteactively");
+  auto cli = ycl::make_cli("yscnview", "views scenes inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");

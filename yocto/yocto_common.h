@@ -95,7 +95,7 @@ using std::pair;
 using std::string;
 using std::unordered_map;
 using std::vector;
-using namespace std::literals::string_literals;
+using namespace std::string_literals;
 
 // For dictionaries, we use hash tables with a using directive to switch between
 // implementations.

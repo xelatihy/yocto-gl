@@ -3355,7 +3355,6 @@ static string get_extension(const string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    using namespace yocto::ply;
     auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
@@ -3437,7 +3436,6 @@ static string get_extension(const string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    using namespace yocto::ply;
     auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
@@ -3500,7 +3498,6 @@ static string get_extension(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    using namespace yocto::ply;
     auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;

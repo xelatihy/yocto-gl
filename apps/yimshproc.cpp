@@ -24,17 +24,17 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
-  print_info(
+  ycl::print_info(
       "press: " + std::to_string((char)key) + " [" + std::to_string(key) + "]");
   auto enter = 257;
   auto esc   = 256;
 
   if (key == enter) {
-    print_info("Enter pressed!");
+    ycl::print_info("Enter pressed!");
   }
 
   if (key == esc) {
-    print_info("Esc pressed!");
+    ycl::print_info("Esc pressed!");
     init_camera(app);
     set_frame(app->glcamera, app->camera.frame);
     set_lens(
@@ -42,13 +42,13 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   }
 
   if (key == 'z') {
-    print_info("Z pressed!");
+    ycl::print_info("Z pressed!");
   }
 }
 
 void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
     int vertex, float distance) {
-  print_info("clicked vertex: " + std::to_string(vertex));
+  ycl::print_info("clicked vertex: " + std::to_string(vertex));
   data.vertex_selection.push_back(vertex);
 
   auto positions = vector<vec3f>(data.vertex_selection.size());
@@ -133,7 +133,7 @@ int main(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
+  auto cli = ycl::make_cli("yimshproc", "interactive viewer for mesh processing");
   add_option(cli, "model", input_filename, "model filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -141,7 +141,7 @@ int main(int argc, const char* argv[]) {
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](app_state* app) {
-    print_info("init my data");
+    ycl::print_info("init my data");
     my_init(data, app);
   };
   auto key_callback = [&data](app_state* app, int key, bool pressing) {

@@ -829,7 +829,6 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 // load instances
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
-  using namespace yocto::ply;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -850,7 +849,6 @@ static bool load_instance(
 // save instances
 static bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
-  using namespace yocto::ply;
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1723,7 +1721,6 @@ static bool load_obj_scene(const string& filename, model* scene, string& error,
 
 static bool save_obj_scene(const string& filename, const model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
-  using namespace yocto::obj;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;

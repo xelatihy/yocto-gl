@@ -31,7 +31,7 @@
 #include "yocto_opengl.h"
 using namespace yocto::math;
 using namespace yocto::image;
-using namespace yocto::commonio;
+namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
 
 #include <future>
@@ -76,7 +76,7 @@ int main(int argc, const char* argv[]) {
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cli("yimgviews", "view images");
+  auto cli = ycl::make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -84,7 +84,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    print_fatal(ioerror);
+    ycl::print_fatal(ioerror);
     return 1;
   }
 

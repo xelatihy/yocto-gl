@@ -31,7 +31,7 @@
 #include "../yocto/yocto_shape.h"
 using namespace yocto::math;
 using namespace yocto::shape;
-using namespace yocto::commonio;
+namespace ycl = yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -248,7 +248,7 @@ int main(int argc, const char* argv[]) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
+  auto cli = ycl::make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
   add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
   add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
@@ -292,18 +292,18 @@ int main(int argc, const char* argv[]) {
 
   // load mesh
   auto ioerror = ""s;
-  print_progress("load shape", 0, 1);
+  ycl::print_progress("load shape", 0, 1);
   if (!facevarying) {
     auto ext      = fs::path(filename).extension().string();
     auto basename = fs::path(filename).stem().string();
     if (ext == ".ypreset") {
       if (!make_shape_preset(points, lines, triangles, quads, positions,
               normals, texcoords, colors, radius, basename, ioerror))
-        print_fatal(ioerror);
+        ycl::print_fatal(ioerror);
     } else {
       if (!load_shape(filename, points, lines, triangles, quads, positions,
               normals, texcoords, colors, radius, ioerror))
-        print_fatal(ioerror);
+        ycl::print_fatal(ioerror);
     }
   } else {
     auto ext      = fs::path(filename).extension().string();
@@ -311,14 +311,14 @@ int main(int argc, const char* argv[]) {
     if (ext == ".ypreset") {
       if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
               normals, texcoords, basename, ioerror))
-        print_fatal(ioerror);
+        ycl::print_fatal(ioerror);
     } else {
       if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
               normals, texcoords, ioerror))
-        print_fatal(ioerror);
+        ycl::print_fatal(ioerror);
     }
   }
-  print_progress("load shape", 1, 1);
+  ycl::print_progress("load shape", 1, 1);
 
   // remove data
   if (positiononly) {
@@ -343,17 +343,17 @@ int main(int argc, const char* argv[]) {
 
   // print info
   if (info) {
-    print_info("shape stats ------------");
+    ycl::print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) ycl::print_info(stat);
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    print_progress("transform shape", 0, 1);
+    ycl::print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -361,12 +361,12 @@ int main(int argc, const char* argv[]) {
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    print_progress("transform shape", 1, 1);
+    ycl::print_progress("transform shape", 1, 1);
   }
 
   // compute normals
   if (smooth) {
-    print_progress("smooth shape", 0, 1);
+    ycl::print_progress("smooth shape", 0, 1);
     if (!points.empty()) {
       normals = vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
@@ -379,12 +379,12 @@ int main(int argc, const char* argv[]) {
       normals = compute_normals(quadspos, positions);
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
-    print_progress("smooth shape", 1, 1);
+    ycl::print_progress("smooth shape", 1, 1);
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    print_progress("compute geodesic", 0, 1);
+    ycl::print_progress("compute geodesic", 0, 1);
     auto adjacencies = face_adjacencies(triangles);
     auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
     auto sources     = vector<int>();
@@ -409,11 +409,11 @@ int main(int argc, const char* argv[]) {
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }
-    print_progress("compute geodesic", 1, 1);
+    ycl::print_progress("compute geodesic", 1, 1);
   }
 
   if (p0 != -1) {
-    print_progress("cut mesh", 0, 1);
+    ycl::print_progress("cut mesh", 0, 1);
     auto tags        = vector<int>(triangles.size(), 0);
     auto adjacencies = face_adjacencies(triangles);
     auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
@@ -457,29 +457,29 @@ int main(int argc, const char* argv[]) {
     texcoords = {};
     colors    = {};
     radius    = {};
-    print_progress("cut mesh", 1, 1);
+    ycl::print_progress("cut mesh", 1, 1);
   }
 
   if (info) {
-    print_info("shape stats ------------");
+    ycl::print_info("shape stats ------------");
     auto stats = shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) print_info(stat);
+    for (auto& stat : stats) ycl::print_info(stat);
   }
 
   // save mesh
-  print_progress("save shape", 0, 1);
+  ycl::print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
     if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
             normals, texcoords, ioerror))
-      print_fatal(ioerror);
+      ycl::print_fatal(ioerror);
   } else {
     if (!save_shape(output, points, lines, triangles, quads, positions, normals,
             texcoords, colors, radius, ioerror))
-      print_fatal(ioerror);
+      ycl::print_fatal(ioerror);
   }
-  print_progress("save shape", 1, 1);
+  ycl::print_progress("save shape", 1, 1);
 
   // done
   return 0;

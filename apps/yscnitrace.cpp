@@ -32,7 +32,7 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto::image;
-using namespace yocto::commonio;
+namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
@@ -582,7 +582,7 @@ void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
       }
       continue_glline(win);
       if (draw_button(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
+        for (auto stat : scene_stats(app->ioscene)) ycl::print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
@@ -799,7 +799,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
+  auto cli = ycl::make_cli("yscnitrace", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");

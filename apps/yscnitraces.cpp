@@ -32,7 +32,7 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto::image;
-using namespace yocto::commonio;
+namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
@@ -237,7 +237,7 @@ int main(int argc, const char* argv[]) {
   auto add_skyenv  = false;
 
   // parse command line
-  auto cli = make_cli("yscnitraces", "progressive path tracing");
+  auto cli = ycl::make_cli("yscnitraces", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
@@ -263,27 +263,27 @@ int main(int argc, const char* argv[]) {
   auto ioscene_guard = std::make_unique<yio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!load_scene(app->filename, ioscene, ioerror, ycl::print_progress))
+    ycl::print_fatal(ioerror);
 
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
   // conversion
-  init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
+  init_scene(app->scene, ioscene, app->camera, iocamera, ycl::print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(app->scene, app->params, print_progress);
+  init_bvh(app->scene, app->params, ycl::print_progress);
 
   // init renderer
-  init_lights(app->scene, print_progress);
+  init_lights(app->scene, ycl::print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    print_info("no lights presents, switching to eyelight shader");
+    ycl::print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = ytr::sampler_type::eyelight;
   }
 
