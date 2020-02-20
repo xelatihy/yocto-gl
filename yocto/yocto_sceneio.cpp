@@ -1605,8 +1605,8 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // helper to create texture maps
   auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const obj::texture_info& info) -> sceneio_texture* {
-    auto path = info.path;
+                          const obj::texture& tinfo) -> sceneio_texture* {
+    auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
@@ -1618,8 +1618,8 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // helper to create texture maps
   auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const obj::texture_info& info) -> sceneio_texture* {
-    auto path = info.path;
+                          const obj::texture& tinfo) -> sceneio_texture* {
+    auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
@@ -1774,10 +1774,10 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
 
   // textures
   auto get_texture = [](sceneio_texture* texture) {
-    if (!texture) return obj::texture_info{};
-    auto info = obj::texture_info{};
-    info.path = texture->name;
-    return info;
+    if (!texture) return obj::texture{};
+    auto tinfo = obj::texture{};
+    tinfo.path = texture->name;
+    return tinfo;
   };
 
   // convert materials and textures

@@ -61,7 +61,7 @@ inline bool operator==(const vertex& a, const vertex& b) {
 }
 
 // Obj texture information.
-struct texture_info {
+struct texture {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
@@ -69,9 +69,9 @@ struct texture_info {
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
 
-  texture_info() {}
-  texture_info(const char* path) : path{path} {}
-  texture_info(const string& path) : path{path} {}
+  texture() {}
+  texture(const char* path) : path{path} {}
+  texture(const string& path) : path{path} {}
 };
 
 // Obj element
@@ -98,17 +98,17 @@ struct material {
   float opacity      = 1;
 
   // material textures
-  texture_info emission_tex     = {};
-  texture_info ambient_tex      = {};
-  texture_info diffuse_tex      = {};
-  texture_info specular_tex     = {};
-  texture_info reflection_tex   = {};
-  texture_info transmission_tex = {};
-  texture_info exponent_tex     = {};
-  texture_info opacity_tex      = {};
-  texture_info bump_tex         = {};
-  texture_info normal_tex       = {};
-  texture_info displacement_tex = {};
+  texture emission_tex     = {};
+  texture ambient_tex      = {};
+  texture diffuse_tex      = {};
+  texture specular_tex     = {};
+  texture reflection_tex   = {};
+  texture transmission_tex = {};
+  texture exponent_tex     = {};
+  texture opacity_tex      = {};
+  texture bump_tex         = {};
+  texture normal_tex       = {};
+  texture displacement_tex = {};
 
   // pbrt extension values
   bool  as_pbr            = false;
@@ -128,17 +128,17 @@ struct material {
   float pbr_volscale      = 0.01;
 
   // pbr extension textures
-  texture_info pbr_emission_tex      = {};
-  texture_info pbr_base_tex          = {};
-  texture_info pbr_specular_tex      = {};
-  texture_info pbr_roughness_tex     = {};
-  texture_info pbr_metallic_tex      = {};
-  texture_info pbr_sheen_tex         = {};
-  texture_info pbr_coat_tex          = {};
-  texture_info pbr_coatroughness_tex = {};
-  texture_info pbr_transmission_tex  = {};
-  texture_info pbr_opacity_tex       = {};
-  texture_info pbr_volscattering_tex = {};
+  texture pbr_emission_tex      = {};
+  texture pbr_base_tex          = {};
+  texture pbr_specular_tex      = {};
+  texture pbr_roughness_tex     = {};
+  texture pbr_metallic_tex      = {};
+  texture pbr_sheen_tex         = {};
+  texture pbr_coat_tex          = {};
+  texture pbr_coatroughness_tex = {};
+  texture pbr_transmission_tex  = {};
+  texture pbr_opacity_tex       = {};
+  texture pbr_volscattering_tex = {};
 };
 
 // Obj shape
@@ -172,7 +172,7 @@ struct environment {
   string           name         = "";
   frame3f          frame        = identity3x4f;
   vec3f            emission     = zero3f;
-  texture_info emission_tex = {};
+  texture emission_tex = {};
 };
 
 // Obj model
@@ -484,9 +484,9 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 
 // Input for OBJ textures
 [[nodiscard]] inline bool parse_value(
-    string_view& str, texture_info& info) {
+    string_view& str, texture& info) {
   // initialize
-  info = texture_info();
+  info = texture();
 
   // get tokens
   auto tokens = vector<string>();
@@ -1047,7 +1047,7 @@ inline bool load_obj(const string& filename, model* obj, string& error,
 }
 
 // Format values
-inline void format_value(string& str, const texture_info& value) {
+inline void format_value(string& str, const texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
 inline void format_value(string& str, const vertex& value) {
