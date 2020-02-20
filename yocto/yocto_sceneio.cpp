@@ -667,7 +667,7 @@ void tesselate_subdiv(model* scene, subdiv* subdiv) {
   shape->radius    = {};
 }
 
-void tesselate_subdivs(model* scene, sceneio_progress progress_cb) {
+void tesselate_subdivs(model* scene, progress_callback progress_cb) {
   if (scene->subdivs.empty()) return;
 
   // handle progress
@@ -692,37 +692,37 @@ namespace yocto::sceneio {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 static bool save_json_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 static bool save_obj_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 static bool save_ply_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static bool load_pbrt_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 static bool save_pbrt_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel);
+    string& error, progress_callback progress_cb, bool noparallel);
 
 // Load a scene
 bool load_scene(const string& filename, model* scene, string& error,
-    sceneio_progress progress_cb, bool noparallel) {
+    progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -741,7 +741,7 @@ bool load_scene(const string& filename, model* scene, string& error,
 
 // Save a scene
 bool save_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -1037,7 +1037,7 @@ inline json load_json(const string& filename, string& error) {
 
 // Save a scene in the builtin JSON format.
 static bool load_json_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1374,7 +1374,7 @@ static bool load_json_scene(const string& filename, model* scene,
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -1548,7 +1548,7 @@ namespace yocto::sceneio {
 
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1722,7 +1722,7 @@ static bool load_obj_scene(const string& filename, model* scene,
 }
 
 static bool save_obj_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   using namespace yocto::obj;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -1875,7 +1875,7 @@ void print_obj_camera(camera* camera) {
 namespace yocto::sceneio {
 
 static bool load_ply_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1902,7 +1902,7 @@ static bool load_ply_scene(const string& filename, model* scene,
 }
 
 static bool save_ply_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -1934,7 +1934,7 @@ namespace yocto::sceneio {
 
 // Load a scene
 static bool load_gltf_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2342,7 +2342,7 @@ namespace yocto::sceneio {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const string& filename, model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2512,7 +2512,7 @@ static bool load_pbrt_scene(const string& filename, model* scene,
 
 // Save a pbrt scene
 static bool save_pbrt_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb, bool noparallel) {
+    string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;

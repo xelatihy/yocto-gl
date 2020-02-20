@@ -169,7 +169,7 @@ void update_lights(opengl_scene* glscene, yio::model* ioscene) {
 
 void init_glscene(opengl_scene* glscene, yio::model* ioscene,
     opengl_camera*& glcamera, yio::camera* iocamera,
-    yio::sceneio_progress progress_cb) {
+    yio::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +

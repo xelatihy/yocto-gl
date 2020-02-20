@@ -131,7 +131,7 @@ struct app_states {
 
 // Construct a scene from io
 void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
-    yio::camera* iocamera, yio::sceneio_progress progress_cb = {}) {
+    yio::camera* iocamera, yio::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +

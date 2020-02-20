@@ -248,15 +248,15 @@ object*   add_complete_object(
 namespace yocto::sceneio {
 
 // Progress callback called when loading.
-using sceneio_progress =
+using progress_callback =
     function<void(const string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, model* scene, string& error,
-    sceneio_progress progress_cb = {}, bool noparallel = false);
+    progress_callback progress_cb = {}, bool noparallel = false);
 bool save_scene(const string& filename, const model* scene,
-    string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
+    string& error, progress_callback progress_cb = {}, bool noparallel = false);
 
 // get named camera or default if name is empty
 camera* get_camera(const model* scene, const string& name = "");
@@ -285,7 +285,7 @@ bbox3f compute_bounds(const model* scene);
 namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(model* scene, sceneio_progress progress_cb = {});
+void tesselate_subdivs(model* scene, progress_callback progress_cb = {});
 void tesselate_subdiv(model* scene, subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
