@@ -1572,7 +1572,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<yocto::obj::model>();
+  auto obj_guard = std::make_unique<yobj::model>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -1595,7 +1595,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   // helper to create texture maps
   auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const yocto::obj::texture& tinfo) -> yscn::texture* {
+                          const yobj::texture& tinfo) -> yscn::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1608,7 +1608,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   // helper to create texture maps
   auto stexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const yocto::obj::texture& tinfo) -> yscn::texture* {
+                          const yobj::texture& tinfo) -> yscn::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1619,7 +1619,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<yocto::obj::material*, yscn::material*>{};
+  auto material_map = std::unordered_map<yobj::material*, yscn::material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1745,7 +1745,7 @@ static bool save_obj_scene(const std::string& filename, const yscn::model* scene
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = std::make_unique<yocto::obj::model>();
+  auto obj_guard = std::make_unique<yobj::model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1763,14 +1763,14 @@ static bool save_obj_scene(const std::string& filename, const yscn::model* scene
 
   // textures
   auto get_texture = [](yscn::texture* texture) {
-    if (!texture) return yocto::obj::texture{};
-    auto tinfo = yocto::obj::texture{};
+    if (!texture) return yobj::texture{};
+    auto tinfo = yobj::texture{};
     tinfo.path = texture->name;
     return tinfo;
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<yscn::material*, yocto::obj::material*>{
+  auto material_map = std::unordered_map<yscn::material*, yobj::material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
