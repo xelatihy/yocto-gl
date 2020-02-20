@@ -288,7 +288,7 @@ static const auto coat_ior       = 1.5;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Shape element normal.
-static vec3f eval_element_normal(const shape* shape, int element) {
+static vec3f eval_normal(const shape* shape, int element) {
   auto norm = zero3f;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -309,7 +309,7 @@ static vec3f eval_element_normal(const shape* shape, int element) {
 }
 
 // Shape element normal.
-static pair<vec3f, vec3f> eval_element_tangents(
+static pair<vec3f, vec3f> eval_tangents(
     const shape* shape, int element, const vec2f& uv) {
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -340,7 +340,7 @@ static pair<vec3f, vec3f> eval_element_tangents(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-static T eval_shape_elem(const shape* shape, const vector<T>& vals,
+static T eval_shape(const shape* shape, const vector<T>& vals,
     int element, const vec2f& uv, const T& def) {
   if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
@@ -579,13 +579,13 @@ static trace_point eval_point(const scene* scene,
   point.incoming = -ray.d;
 
   // geometric properties
-  point.position = eval_shape_elem(
+  point.position = eval_shape(
       shape, shape->positions, element, uv, zero3f);
-  point.gnormal = eval_element_normal(shape, element);
+  point.gnormal = eval_normal(shape, element);
   point.normal  = normalize(
-      eval_shape_elem(shape, shape->normals, element, uv, point.gnormal));
-  point.texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
-  point.color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
+      eval_shape(shape, shape->normals, element, uv, point.gnormal));
+  point.texcoord = eval_shape(shape, shape->texcoords, element, uv, uv);
+  point.color    = eval_shape(shape, shape->colors, element, uv, vec3f{1});
 
   // apply normal mapping
   if (material->normal_tex &&
@@ -596,13 +596,13 @@ static trace_point eval_point(const scene* scene,
     auto basis  = identity3x3f;
     auto flip_v = false;
     if (shape->tangents.empty()) {
-      auto tangents = eval_element_tangents(shape, element, uv);
+      auto tangents = eval_tangents(shape, element, uv);
       auto x        = orthonormalize(tangents.first, z);
       auto y        = normalize(cross(z, x));
       basis         = {x, y, z};
       flip_v        = dot(y, tangents.second) < 0;
     } else {
-      auto tangsp = eval_shape_elem(
+      auto tangsp = eval_shape(
           shape, shape->tangents, element, uv, {0, 0, 0, 1});
       auto x = orthonormalize(xyz(tangsp), z);
       auto y = normalize(cross(z, x));
@@ -744,14 +744,14 @@ static volume_point eval_volume(const scene* scene,
   point.incoming = -ray.d;
 
   // geometric properties
-  point.position = eval_shape_elem(
+  point.position = eval_shape(
       shape, shape->positions, element, uv, zero3f);
   point.position = transform_point(frame, point.position);
 
   // material -------
   // initialize factors
-  auto texcoord = eval_shape_elem(shape, shape->texcoords, element, uv, uv);
-  auto color    = eval_shape_elem(shape, shape->colors, element, uv, vec3f{1});
+  auto texcoord = eval_shape(shape, shape->texcoords, element, uv, uv);
+  auto color    = eval_shape(shape, shape->colors, element, uv, vec3f{1});
   auto base     = material->color * color *
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
@@ -2315,7 +2315,7 @@ static vec3f sample_lights(const scene* scene, const vec3f& position,
     auto  element   = sample_discrete(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(
-        frame, eval_shape_elem(shape, shape->positions, element, uv, zero3f));
+        frame, eval_shape(shape, shape->positions, element, uv, zero3f));
     return normalize(lposition - position);
   } else if (light->environment) {
     auto& environment = light->environment;
@@ -2353,10 +2353,10 @@ static float sample_lights_pdf(
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
-            frame, eval_shape_elem(object->shape, object->shape->positions,
+            frame, eval_shape(object->shape, object->shape->positions,
                        intersection.element, intersection.uv, zero3f));
         auto lnormal = transform_normal(frame,
-            eval_element_normal(object->shape, intersection.element),
+            eval_normal(object->shape, intersection.element),
             trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = object->shape->elements_cdf.back();
