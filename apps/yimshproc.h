@@ -24,8 +24,8 @@ struct app_state {
   yio::shape shape;
 
   // OpenGL data
-  ygl::opengl_scene*       glscene        = new ygl::opengl_scene{};
-  ygl::draw_glscene_params opengl_options = {};
+  ygl::scene*       glscene        = new ygl::scene{};
+  ygl::scene_params opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -35,22 +35,22 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
-  ygl::opengl_camera*   glcamera    = nullptr;
-  ygl::opengl_shape*    glshapes    = nullptr;
-  ygl::opengl_shape*    glpoints    = nullptr;
-  ygl::opengl_shape*    glvfields   = nullptr;
-  ygl::opengl_shape*    gledges     = nullptr;
-  ygl::opengl_shape*    glpolylines = nullptr;
-  ygl::opengl_material* glshapem    = nullptr;
-  ygl::opengl_material* glpointm    = nullptr;
-  ygl::opengl_material* glvfieldm   = nullptr;
-  ygl::opengl_material* gledgem     = nullptr;
-  ygl::opengl_material* glpolylinem = nullptr;
-  ygl::opengl_object*   glshapeo    = nullptr;
-  ygl::opengl_object*   glpointo    = nullptr;
-  ygl::opengl_object*   glvfieldo   = nullptr;
-  ygl::opengl_object*   gledgeo     = nullptr;
-  ygl::opengl_object*   glpolylineo = nullptr;
+  ygl::camera*   glcamera    = nullptr;
+  ygl::shape*    glshapes    = nullptr;
+  ygl::shape*    glpoints    = nullptr;
+  ygl::shape*    glvfields   = nullptr;
+  ygl::shape*    gledges     = nullptr;
+  ygl::shape*    glpolylines = nullptr;
+  ygl::material* glshapem    = nullptr;
+  ygl::material* glpointm    = nullptr;
+  ygl::material* glvfieldm   = nullptr;
+  ygl::material* gledgem     = nullptr;
+  ygl::material* glpolylinem = nullptr;
+  ygl::object*   glshapeo    = nullptr;
+  ygl::object*   glpointo    = nullptr;
+  ygl::object*   glvfieldo   = nullptr;
+  ygl::object*   gledgeo     = nullptr;
+  ygl::object*   glpolylineo = nullptr;
 
   // cleanup
   ~app_state() {

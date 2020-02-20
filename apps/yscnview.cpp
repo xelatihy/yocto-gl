@@ -65,15 +65,15 @@ struct app_state {
   string name      = "";
 
   // options
-  ygl::draw_glscene_params drawgl_prms = {};
+  ygl::scene_params drawgl_prms = {};
 
   // scene
   yio::model*  ioscene  = new yio::model{};
   yio::camera* iocamera = nullptr;
 
   // rendering state
-  ygl::opengl_scene*  glscene  = new ygl::opengl_scene{};
-  ygl::opengl_camera* glcamera = nullptr;
+  ygl::scene*  glscene  = new ygl::scene{};
+  ygl::camera* glcamera = nullptr;
 
   // editing
   yio::camera*      selected_camera      = nullptr;
@@ -107,7 +107,7 @@ struct app_states {
   deque<app_state*>  loading  = {};
 
   // default options
-  ygl::draw_glscene_params drawgl_prms = {};
+  ygl::scene_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -137,7 +137,7 @@ void load_scene_async(
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(ygl::opengl_scene* glscene, yio::model* ioscene) {
+void update_lights(ygl::scene* glscene, yio::model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -167,8 +167,8 @@ void update_lights(ygl::opengl_scene* glscene, yio::model* ioscene) {
   }
 }
 
-void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
-    ygl::opengl_camera*& glcamera, yio::camera* iocamera,
+void init_glscene(ygl::scene* glscene, yio::model* ioscene,
+    ygl::camera*& glcamera, yio::camera* iocamera,
     yio::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -181,7 +181,7 @@ void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<yio::camera*, ygl::opengl_camera*>{};
+  auto camera_map     = unordered_map<yio::camera*, ygl::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -193,7 +193,7 @@ void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<yio::texture*, ygl::opengl_texture*>{};
+  auto texture_map     = unordered_map<yio::texture*, ygl::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -211,7 +211,7 @@ void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<yio::material*, ygl::opengl_material*>{};
+  auto material_map     = unordered_map<yio::material*, ygl::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -240,7 +240,7 @@ void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<yio::shape*, ygl::opengl_shape*>{};
+  auto shape_map     = unordered_map<yio::shape*, ygl::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -257,7 +257,7 @@ void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = unordered_map<yio::instance*, ygl::opengl_instance*>{};
+  auto instance_map     = unordered_map<yio::instance*, ygl::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

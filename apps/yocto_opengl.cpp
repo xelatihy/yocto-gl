@@ -688,11 +688,11 @@ void main() {
 #pragma GCC diagnostic pop
 #endif
 
-opengl_texture::~opengl_texture() {
+texture::~texture() {
   if (texture_id) glDeleteTextures(1, &texture_id);
 }
 
-opengl_shape::~opengl_shape() {
+shape::~shape() {
   if (positions_id) glDeleteBuffers(1, &positions_id);
   if (normals_id) glDeleteBuffers(1, &normals_id);
   if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
@@ -705,7 +705,7 @@ opengl_shape::~opengl_shape() {
   if (edges_id) glDeleteBuffers(1, &edges_id);
 }
 
-opengl_scene::~opengl_scene() {
+scene::~scene() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
@@ -719,36 +719,36 @@ opengl_scene::~opengl_scene() {
 }
 
 // Initialize an OpenGL scene
-void init_glscene(opengl_scene* glscene) {
+void init_glscene(scene* glscene) {
   if (glscene->program_id) return;
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
       glscene->array_id, glscene_vertex, glscene_fragment);
 }
-bool is_initialized(opengl_scene* glscene) { return (bool)glscene->program_id; }
+bool is_initialized(scene* glscene) { return (bool)glscene->program_id; }
 
 // add camera
-opengl_camera* add_camera(opengl_scene* scene) {
-  return scene->cameras.emplace_back(new opengl_camera{});
+camera* add_camera(scene* scene) {
+  return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(opengl_camera* camera, const frame3f& frame) {
+void set_frame(camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(opengl_camera* camera, float lens, float aspect, float film) {
+void set_lens(camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(opengl_camera* camera, float near, float far) {
+void set_nearfar(camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-opengl_texture* add_texture(opengl_scene* scene) {
-  return scene->textures.emplace_back(new opengl_texture{});
+texture* add_texture(scene* scene) {
+  return scene->textures.emplace_back(new texture{});
 }
 
-void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
+void set_texture(texture* texture, const vec2i& size, int nchan,
     const byte* img, bool as_srgb) {
   static auto sformat = unordered_map<int, uint>{
       {1, GL_SRGB},
@@ -798,7 +798,7 @@ void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
+void set_texture(texture* texture, const vec2i& size, int nchan,
     const float* img, bool as_float) {
   static auto fformat = unordered_map<int, uint>{
       {1, GL_RGB16F},
@@ -850,35 +850,35 @@ void set_texture(opengl_texture* texture, const vec2i& size, int nchan,
 }
 
 void set_texture(
-    opengl_texture* texture, const image<vec4b>& img, bool as_srgb) {
+    texture* texture, const image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    opengl_texture* texture, const image<vec4f>& img, bool as_float) {
+    texture* texture, const image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    opengl_texture* texture, const image<vec3b>& img, bool as_srgb) {
+    texture* texture, const image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    opengl_texture* texture, const image<vec3f>& img, bool as_float) {
+    texture* texture, const image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    opengl_texture* texture, const image<byte>& img, bool as_srgb) {
+    texture* texture, const image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    opengl_texture* texture, const image<float>& img, bool as_float) {
+    texture* texture, const image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
 // add shape
-opengl_shape* add_shape(opengl_scene* scene) {
-  return scene->shapes.emplace_back(new opengl_shape{});
+shape* add_shape(scene* scene) {
+  return scene->shapes.emplace_back(new shape{});
 }
 
 static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
@@ -920,19 +920,19 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_points(opengl_shape* shape, const vector<int>& points) {
+void set_points(shape* shape, const vector<int>& points) {
   set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
       1, (const int*)points.data());
 }
-void set_lines(opengl_shape* shape, const vector<vec2i>& lines) {
+void set_lines(shape* shape, const vector<vec2i>& lines) {
   set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_triangles(opengl_shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(shape* shape, const vector<vec3i>& triangles) {
   set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_quads(opengl_shape* shape, const vector<vec4i>& quads) {
+void set_quads(shape* shape, const vector<vec4i>& quads) {
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
@@ -942,112 +942,112 @@ void set_quads(opengl_shape* shape, const vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
-void set_positions(opengl_shape* shape, const vector<vec3f>& positions) {
+void set_positions(shape* shape, const vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
 }
-void set_normals(opengl_shape* shape, const vector<vec3f>& normals) {
+void set_normals(shape* shape, const vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
       normals.size(), 3, (const float*)normals.data());
 }
-void set_texcoords(opengl_shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(shape* shape, const vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_colors(opengl_shape* shape, const vector<vec3f>& colors) {
+void set_colors(shape* shape, const vector<vec3f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       3, (const float*)colors.data());
 }
-void set_tangents(opengl_shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(shape* shape, const vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
 }
 
 // add object
-opengl_object* add_object(opengl_scene* scene) {
-  return scene->objects.emplace_back(new opengl_object{});
+object* add_object(scene* scene) {
+  return scene->objects.emplace_back(new object{});
 }
-void set_frame(opengl_object* object, const frame3f& frame) {
+void set_frame(object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(opengl_object* object, opengl_shape* shape) {
+void set_shape(object* object, shape* shape) {
   object->shape = shape;
 }
-void set_material(opengl_object* object, opengl_material* material) {
+void set_material(object* object, material* material) {
   object->material = material;
 }
-void set_instance(opengl_object* object, opengl_instance* instance) {
+void set_instance(object* object, instance* instance) {
   object->instance = instance;
 }
-void set_hidden(opengl_object* object, bool hidden) { object->hidden = hidden; }
-void set_highlighted(opengl_object* object, bool highlighted) {
+void set_hidden(object* object, bool hidden) { object->hidden = hidden; }
+void set_highlighted(object* object, bool highlighted) {
   object->highlighted = highlighted;
 }
 
 // add instance
-opengl_instance* add_instance(opengl_scene* scene) {
-  return scene->instances.emplace_back(new opengl_instance{});
+instance* add_instance(scene* scene) {
+  return scene->instances.emplace_back(new instance{});
 }
-void set_frames(opengl_instance* instance, const vector<frame3f>& frames) {
+void set_frames(instance* instance, const vector<frame3f>& frames) {
   // TODO: instances
 }
 
 // add material
-opengl_material* add_material(opengl_scene* scene) {
-  return scene->materials.emplace_back(new opengl_material{});
+material* add_material(scene* scene) {
+  return scene->materials.emplace_back(new material{});
 }
-void set_emission(opengl_material* material, const vec3f& emission,
-    opengl_texture* emission_tex) {
+void set_emission(material* material, const vec3f& emission,
+    texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    opengl_material* material, const vec3f& color, opengl_texture* color_tex) {
+    material* material, const vec3f& color, texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    opengl_material* material, float specular, opengl_texture* specular_tex) {
+    material* material, float specular, texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    opengl_material* material, float roughness, opengl_texture* roughness_tex) {
+    material* material, float roughness, texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    opengl_material* material, float opacity, opengl_texture* opacity_tex) {
+    material* material, float opacity, texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    opengl_material* material, float metallic, opengl_texture* metallic_tex) {
+    material* material, float metallic, texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(opengl_material* material, opengl_texture* normal_tex) {
+void set_normalmap(material* material, texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // add light
-opengl_light* add_light(opengl_scene* scene) {
-  return scene->lights.emplace_back(new opengl_light{});
+light* add_light(scene* scene) {
+  return scene->lights.emplace_back(new light{});
 }
-void set_light(opengl_light* light, const vec3f& position,
+void set_light(light* light, const vec3f& position,
     const vec3f& emission, bool directional) {
   light->position = position;
   light->emission = emission;
   light->type     = directional ? 1 : 0;
 }
-void clear_lights(opengl_scene* scene) {
+void clear_lights(scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
-bool has_max_lights(opengl_scene* scene) { return scene->lights.size() >= 16; }
+bool has_max_lights(scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
-void draw_globject(opengl_scene* glscene, opengl_object* object,
-    const draw_glscene_params& params) {
+void draw_globject(scene* glscene, object* object,
+    const scene_params& params) {
   if (object->hidden) return;
 
   auto instance_xform     = mat4f(object->frame);
@@ -1234,8 +1234,8 @@ void draw_globject(opengl_scene* glscene, opengl_object* object,
 }
 
 // Display a scene
-void draw_glscene(opengl_scene* glscene, opengl_camera* glcamera,
-    const vec4i& viewport, const draw_glscene_params& params) {
+void draw_glscene(scene* glscene, camera* glcamera,
+    const vec4i& viewport, const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
