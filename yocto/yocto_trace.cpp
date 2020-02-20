@@ -1578,7 +1578,7 @@ static void init_bvh(shape* shape, const trace_params& params) {
 }
 
 void init_bvh(scene* scene, const trace_params& params,
-    trace_progress progress_cb) {
+    progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
 
@@ -2760,7 +2760,7 @@ void init_state(state* state, const scene* scene,
 light* add_light(scene* scene);
 
 // Init trace lights
-void init_lights(scene* scene, trace_progress progress_cb) {
+void init_lights(scene* scene, progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
@@ -2852,8 +2852,8 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const scene* scene, const camera* camera,
-    const trace_params& params, trace_progress progress_cb,
-    trace_progress_image progress_image_cb) {
+    const trace_params& params, progress_callback progress_cb,
+    image_callback image_cb) {
   auto state_guard = make_unique<state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
@@ -2873,8 +2873,8 @@ image<vec4f> trace_image(const scene* scene, const camera* camera,
             state->render[ij] = trace_sample(state, scene, camera, ij, params);
           });
     }
-    if (progress_image_cb)
-      progress_image_cb(state->render, sample + 1, params.samples);
+    if (image_cb)
+      image_cb(state->render, sample + 1, params.samples);
   }
 
   if (progress_cb) progress_cb("trace image", params.samples, params.samples);
@@ -2882,10 +2882,10 @@ image<vec4f> trace_image(const scene* scene, const camera* camera,
 }
 
 // [experimental] Asynchronous interface
-void trace_async_start(state* state, const scene* scene,
+void trace_start(state* state, const scene* scene,
     const camera* camera, const trace_params& params,
-    trace_progress progress_cb, trace_progress_image progress_image_cb,
-    trace_process_async progress_async_cb) {
+    progress_callback progress_cb, image_callback image_cb,
+    async_callback async_cb) {
   init_state(state, scene, camera, params);
   state->worker = {};
   state->stop   = false;
@@ -2903,7 +2903,7 @@ void trace_async_start(state* state, const scene* scene,
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }
-  if (progress_image_cb) progress_image_cb(state->render, 0, params.samples);
+  if (image_cb) image_cb(state->render, 0, params.samples);
 
   // start renderer
   state->worker = std::async(std::launch::async, [=]() {
@@ -2913,18 +2913,18 @@ void trace_async_start(state* state, const scene* scene,
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
         state->render[ij] = trace_sample(state, scene, camera, ij, params);
-        if (progress_async_cb)
-          progress_async_cb(state->render, sample, params.samples, ij);
+        if (async_cb)
+          async_cb(state->render, sample, params.samples, ij);
       });
-      if (progress_image_cb)
-        progress_image_cb(state->render, sample + 1, params.samples);
+      if (image_cb)
+        image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb) progress_cb("trace image", params.samples, params.samples);
-    if (progress_image_cb)
-      progress_image_cb(state->render, params.samples, params.samples);
+    if (image_cb)
+      image_cb(state->render, params.samples, params.samples);
   });
 }
-void trace_async_stop(state* state) {
+void trace_stop(state* state) {
   if (!state) return;
   state->stop = true;
   if (state->worker.valid()) state->worker.get();

@@ -227,18 +227,18 @@ const auto bvh_names        = vector<string>{
 };
 
 // Progress report callback
-using trace_progress =
+using progress_callback =
     function<void(const string& message, int current, int total)>;
 // Callback used to report partially computed image
-using trace_progress_image =
+using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
-void init_lights(scene* scene, trace_progress progress_cb = {});
+void init_lights(scene* scene, progress_callback progress_cb = {});
 
 // Build the bvh acceleration structure.
 void init_bvh(scene* scene, const trace_params& params,
-    trace_progress progress_cb = {});
+    progress_callback progress_cb = {});
 
 // Refit bvh data
 void update_bvh(scene*       scene,
@@ -249,24 +249,24 @@ void update_bvh(scene*       scene,
 
 // Progressively computes an image.
 image<vec4f> trace_image(const scene* scene, const camera* camera,
-    const trace_params& params, trace_progress progress_cb = {},
-    trace_progress_image progress_image_cb = {});
+    const trace_params& params, progress_callback progress_cb = {},
+    image_callback image_cb = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
 // [experimental] Callback used to report partially computed image
-using trace_process_async = function<void(
+using async_callback = function<void(
     const image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct state;
-void trace_async_start(state* state, const scene* scene,
+void trace_start(state* state, const scene* scene,
     const camera* camera, const trace_params& params,
-    trace_progress       progress_cb       = {},
-    trace_progress_image progress_image_cb = {},
-    trace_process_async  progress_async_cb = {});
-void trace_async_stop(state* state);
+    progress_callback       progress_cb       = {},
+    image_callback image_cb = {},
+    async_callback  async_cb = {});
+void trace_stop(state* state);
 
 }  // namespace yocto::trace
 

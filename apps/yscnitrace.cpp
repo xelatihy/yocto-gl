@@ -103,7 +103,7 @@ struct app_state {
 
   ~app_state() {
     if (render_state) {
-      tr::trace_async_stop(render_state);
+      tr::trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -260,17 +260,17 @@ void init_scene(tr::scene* scene, sceneio_model* ioscene,
 
 void stop_display(app_state* app) {
   // stop render
-  tr::trace_async_stop(app->render_state);
+  tr::trace_stop(app->render_state);
 }
 
 void reset_display(app_state* app) {
   // stop render
-  tr::trace_async_stop(app->render_state);
+  tr::trace_stop(app->render_state);
 
   // start render
   app->status         = "render";
   app->render_counter = 0;
-  tr::trace_async_start(
+  tr::trace_start(
       app->render_state, app->scene, app->camera, app->params,
       [app](const string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
