@@ -38,8 +38,8 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "yocto_math.h"
 
@@ -50,8 +50,8 @@ namespace yocto::obj {
 
 // Using directives
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 using namespace yocto::math;
 

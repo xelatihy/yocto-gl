@@ -357,9 +357,9 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto::bvh {
 
+using std::pair;
 using std::string;
 using std::vector;
-using std::pair;
 using namespace std::string_literals;
 
 #ifdef YOCTO_EMBREE

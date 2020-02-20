@@ -36,19 +36,19 @@ namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
-using yocto::image::image; 
-using yocto::image::is_hdr_filename; 
+using yocto::image::image;
+using yocto::image::is_hdr_filename;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using std::string;
 using std::atomic;
 using std::deque;
 using std::future;
+using std::string;
 using std::to_string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
@@ -81,7 +81,7 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  ygl::glimage*     glimage  = new ygl::glimage{};
+  ygl::glimage*       glimage  = new ygl::glimage{};
   ygl::glimage_params glparams = {};
 
   // editing

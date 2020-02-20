@@ -42,9 +42,9 @@ namespace ygl = yocto::opengl;
 using std::atomic;
 using std::deque;
 using std::future;
+using std::string;
 using std::to_string;
 using std::unordered_map;
-using std::string;
 using std::vector;
 using namespace std::string_literals;
 

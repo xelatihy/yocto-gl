@@ -36,8 +36,8 @@ namespace ysh = yocto::shape;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-using std::vector;
 using std::string;
+using std::vector;
 using namespace std::string_literals;
 
 // Shape presets used ofr testing.
@@ -70,7 +70,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-uvcylinder") {
     ysh::make_uvcylinder(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder-rounded") {
-    ysh::make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
+    ysh::make_rounded_uvcylinder(
+        quads, positions, normals, texcoords, {32, 32, 32});
   } else if (type == "default-geosphere") {
     ysh::make_geosphere(triangles, positions);
   } else if (type == "default-floor") {
@@ -108,8 +109,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     ysh::make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    ysh::make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075,
-        {1, 1}, 0.3 * 0.075);
+    ysh::make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32},
+        0.075, {1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     ysh::make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
@@ -121,11 +122,12 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     ysh::make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
-    ysh::make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
+    ysh::make_rounded_uvcylinder(quads, positions, normals, texcoords,
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
-    ysh::make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
+    ysh::make_floor(
+        quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-matball") {
     ysh::make_sphere(quads, positions, normals, texcoords, 32, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
@@ -135,8 +137,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
+    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
+        32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     ysh::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
@@ -148,8 +150,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
+    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
+        32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     ysh::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
@@ -160,15 +162,16 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
+    ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
+        32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     ysh::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
         {0.5, 128});
   } else if (type == "test-hairball-interior") {
-    ysh::make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
+    ysh::make_sphere(
+        quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
     ysh::make_monkey(quads, positions, 0.075f * 0.8f);
@@ -317,8 +320,8 @@ int main(int argc, const char* argv[]) {
               normals, texcoords, basename, ioerror))
         ycl::print_fatal(ioerror);
     } else {
-      if (!ysh::load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-              normals, texcoords, ioerror))
+      if (!ysh::load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
+              positions, normals, texcoords, ioerror))
         ycl::print_fatal(ioerror);
     }
   }
@@ -390,8 +393,8 @@ int main(int argc, const char* argv[]) {
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
     ycl::print_progress("compute geodesic", 0, 1);
     auto adjacencies = ysh::face_adjacencies(triangles);
-    auto solver      = ysh::make_geodesic_solver(triangles, adjacencies, positions);
-    auto sources     = vector<int>();
+    auto solver  = ysh::make_geodesic_solver(triangles, adjacencies, positions);
+    auto sources = vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {
@@ -420,7 +423,7 @@ int main(int argc, const char* argv[]) {
     ycl::print_progress("cut mesh", 0, 1);
     auto tags        = vector<int>(triangles.size(), 0);
     auto adjacencies = ysh::face_adjacencies(triangles);
-    auto solver      = ysh::make_geodesic_solver(triangles, adjacencies, positions);
+    auto solver = ysh::make_geodesic_solver(triangles, adjacencies, positions);
 
     auto          paths = vector<ysh::surface_path>();
     vector<float> fields[3];
@@ -475,12 +478,12 @@ int main(int argc, const char* argv[]) {
   // save mesh
   ycl::print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
-    if (!ysh::save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords, ioerror))
+    if (!ysh::save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords, ioerror))
       ycl::print_fatal(ioerror);
   } else {
-    if (!ysh::save_shape(output, points, lines, triangles, quads, positions, normals,
-            texcoords, colors, radius, ioerror))
+    if (!ysh::save_shape(output, points, lines, triangles, quads, positions,
+            normals, texcoords, colors, radius, ioerror))
       ycl::print_fatal(ioerror);
   }
   ycl::print_progress("save shape", 1, 1);

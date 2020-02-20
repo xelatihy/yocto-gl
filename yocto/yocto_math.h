@@ -1847,9 +1847,10 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -1917,9 +1918,10 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {

@@ -96,12 +96,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <algorithm>
-#include <vector>
 #include <functional>
 #include <string>
+#include <vector>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
@@ -110,8 +110,8 @@ namespace yocto::image {
 
 // Using directives
 using std::function;
-using std::vector;
 using std::string;
+using std::vector;
 using namespace yocto::math;
 
 // Image container.
@@ -323,11 +323,11 @@ void make_gammaramp(image<vec4f>& img, const vec2i& size, float scale = 1,
 // Make a uv ramp
 void make_uvramp(image<vec4f>& img, const vec2i& size, float scale = 1);
 // Make a uv grid
-void make_uvgrid(image<vec4f>& img, 
-    const vec2i& size, float scale = 1, bool colored = true);
+void make_uvgrid(
+    image<vec4f>& img, const vec2i& size, float scale = 1, bool colored = true);
 // Make blackbody ramp.
-void make_blackbodyramp(image<vec4f>& img, 
-    const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
+void make_blackbodyramp(image<vec4f>& img, const vec2i& size, float scale = 1,
+    float from = 1000, float to = 12000);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
 void make_noisemap(image<vec4f>& img, const vec2i& size, float scale = 1,
     const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
@@ -350,9 +350,9 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
+void make_lights(image<vec4f>& img, const vec2i& size,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);

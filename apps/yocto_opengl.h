@@ -50,8 +50,8 @@ struct GLFWwindow;
 namespace yocto::opengl {
 
 // using directives
-using std::vector;
 using std::string;
+using std::vector;
 using namespace yocto::math;
 using yocto::image::image;
 

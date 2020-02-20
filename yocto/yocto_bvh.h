@@ -79,9 +79,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <vector>
+
+#include "yocto_math.h"
 
 #ifdef YOCTO_EMBREE
 #include <memory>

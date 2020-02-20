@@ -82,9 +82,9 @@
 namespace yocto::trace {
 
 // Using directives
+using std::function;
 using std::string;
 using std::vector;
-using std::function;
 using yocto::image::image;
 using namespace yocto::math;
 

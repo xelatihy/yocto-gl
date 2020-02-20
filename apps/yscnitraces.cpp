@@ -41,8 +41,8 @@ namespace ygl = yocto::opengl;
 #include <memory>
 using std::function;
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 // Application state
@@ -65,7 +65,7 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  ygl::glimage*     glimage  = new ygl::glimage{};
+  ygl::glimage*       glimage  = new ygl::glimage{};
   ygl::glimage_params glparams = {};
 
   // computation

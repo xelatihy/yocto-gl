@@ -1,11 +1,11 @@
 #include "yimshproc.h"
 
 struct my_data {
-  vector<vec3i>       face_adjacency;
-  vector<vector<int>> vertex_adjacency;
-  ysh::geodesic_solver     solver;
-  vector<float>       scalar_field;
-  vector<vec3f>       vector_field;
+  vector<vec3i>        face_adjacency;
+  vector<vector<int>>  vertex_adjacency;
+  ysh::geodesic_solver solver;
+  vector<float>        scalar_field;
+  vector<vec3f>        vector_field;
 
   int         num_samples      = 500;
   vector<int> vertex_selection = {};
@@ -96,10 +96,12 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
 
         // @Speed: Remove tags from function api to avoid this.
         auto dummy_tags = vector<int>(app->shape.triangles.size(), 0);
-        auto path = ysh::integrate_field(app->shape.triangles, app->shape.positions,
-            data.face_adjacency, dummy_tags, 0, field, from, to);
+        auto path       = ysh::integrate_field(app->shape.triangles,
+            app->shape.positions, data.face_adjacency, dummy_tags, 0, field,
+            from, to);
 
-        auto ppositions = ysh::make_positions_from_path(path, app->shape.positions);
+        auto ppositions = ysh::make_positions_from_path(
+            path, app->shape.positions);
         positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
       update_glpolyline(app, positions);
@@ -132,7 +134,8 @@ int main(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = ycl::make_cli("yimshproc", "interactive viewer for mesh processing");
+  auto cli = ycl::make_cli(
+      "yimshproc", "interactive viewer for mesh processing");
   add_option(cli, "model", input_filename, "model filenames", true);
   parse_cli(cli, argc, argv);
 

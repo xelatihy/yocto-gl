@@ -32,9 +32,9 @@
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
-using yocto::image::image; 
-using yocto::image::colorgrade_params; 
-using yocto::image::is_hdr_filename; 
+using yocto::image::colorgrade_params;
+using yocto::image::image;
+using yocto::image::is_hdr_filename;
 
 #include <atomic>
 #include <deque>
@@ -42,8 +42,8 @@ using yocto::image::is_hdr_filename;
 using std::atomic;
 using std::deque;
 using std::future;
-using std::vector;
 using std::string;
+using std::vector;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -76,9 +76,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::glimage*     glimage   = new ygl::glimage{};
+  ygl::glimage*       glimage   = new ygl::glimage{};
   ygl::glimage_params glparams  = {};
-  bool                   glupdated = true;
+  bool                glupdated = true;
 
   // loading status
   atomic<bool> ok           = false;

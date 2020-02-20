@@ -38,11 +38,11 @@ namespace yio = yocto::sceneio;
 
 #include <map>
 #include <memory>
-using std::make_unique;
 using std::function;
+using std::make_unique;
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
@@ -243,7 +243,8 @@ int main(int argc, const char* argv[]) {
         auto outfilename = fs::path(imfilename).replace_extension(ext).string();
         auto ioerror     = ""s;
         ycl::print_progress("save image", sample, samples);
-        if (!save_image(outfilename, render, ioerror)) ycl::print_fatal(ioerror);
+        if (!save_image(outfilename, render, ioerror))
+          ycl::print_fatal(ioerror);
       });
 
   // save image

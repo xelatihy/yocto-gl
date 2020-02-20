@@ -73,7 +73,8 @@ int main(int argc, const char* argv[]) {
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene)) ycl::print_info("error: " + error);
+    for (auto& error : scene_validation(scene))
+      ycl::print_info("error: " + error);
   }
 
   // print info
@@ -101,7 +102,8 @@ int main(int argc, const char* argv[]) {
     make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, ycl::print_progress)) ycl::print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, ycl::print_progress))
+    ycl::print_fatal(ioerror);
 
   // done
   return 0;

@@ -32,13 +32,13 @@
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
-using yocto::image::image; 
-using yocto::image::colorgrade_params; 
-using yocto::image::is_hdr_filename; 
+using yocto::image::colorgrade_params;
+using yocto::image::image;
+using yocto::image::is_hdr_filename;
 
 #include <future>
-using std::vector;
 using std::string;
+using std::vector;
 using namespace std::string_literals;
 
 struct app_state {
@@ -57,7 +57,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::glimage*     glimage  = new ygl::glimage{};
+  ygl::glimage*       glimage  = new ygl::glimage{};
   ygl::glimage_params glparams = {};
 
   ~app_state() {

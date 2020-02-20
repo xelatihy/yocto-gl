@@ -89,11 +89,11 @@
 namespace yocto::shape {
 
 // Using directives.
+using std::function;
 using std::pair;
 using std::string;
-using std::vector;
 using std::unordered_map;
-using std::function;
+using std::vector;
 using namespace yocto::math;
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.

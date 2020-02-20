@@ -136,11 +136,11 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   } else if (type == "uvgrid") {
     make_uvgrid(img, size);
   } else if (type == "sky") {
-    make_sunsky(img, 
-        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    make_sunsky(
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    make_sunsky(img, 
-        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    make_sunsky(
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
     make_noisemap(img, size, 1);
   } else if (type == "fbm") {
@@ -205,11 +205,11 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   } else if (type == "test-uvgrid") {
     make_uvgrid(img, size);
   } else if (type == "test-sky") {
-    make_sunsky(img, 
-        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    make_sunsky(
+        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    make_sunsky(img,
-        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    make_sunsky(
+        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
     make_noisemap(img, size);
   } else if (type == "test-fbm") {
@@ -304,7 +304,8 @@ int main(int argc, const char* argv[]) {
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>{};
-    if (!load_image(coloralpha_filename, alpha, ioerror)) ycl::print_fatal(ioerror);
+    if (!load_image(coloralpha_filename, alpha, ioerror))
+      ycl::print_fatal(ioerror);
     if (img.size() != alpha.size()) ycl::print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
@@ -320,7 +321,8 @@ int main(int argc, const char* argv[]) {
   if (diff_filename != "") {
     auto diff = image<vec4f>{};
     if (!load_image(diff_filename, diff, ioerror)) ycl::print_fatal(ioerror);
-    if (img.size() != diff.size()) ycl::print_fatal("image sizes are different");
+    if (img.size() != diff.size())
+      ycl::print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -346,7 +348,8 @@ int main(int argc, const char* argv[]) {
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold) ycl::print_fatal("image content differs");
+      if (max(xyz(c)) > diff_threshold)
+        ycl::print_fatal("image content differs");
     }
   }
 

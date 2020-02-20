@@ -203,9 +203,9 @@ vector<string> scene_stats(const model* scene, bool verbose) {
   return stats;
 }
 
-using std::unordered_map;
-using std::pair;
 using std::array;
+using std::pair;
+using std::unordered_map;
 
 // Checks for validity of the scene->
 vector<string> scene_validation(const model* scene, bool notextures) {
@@ -579,8 +579,8 @@ std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>,
 }
 
 // using
-using std::unique_ptr;
 using std::make_unique;
+using std::unique_ptr;
 using yocto::shape::subdivide_catmullclark;
 
 // Apply subdivision and displacement rules.

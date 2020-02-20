@@ -33,8 +33,8 @@
 #include <cstdarg>
 #include <deque>
 #include <mutex>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 using namespace std::string_literals;
 
 #include "ext/glad/glad.h"
@@ -62,11 +62,11 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto::opengl {
 
-  // using directives
-  using std::unordered_map;
-  using std::string;
-  using std::vector;
-  using std::pair;
+// using directives
+using std::pair;
+using std::string;
+using std::unordered_map;
+using std::vector;
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
