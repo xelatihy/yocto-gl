@@ -31,26 +31,23 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::image;
+using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
+namespace yim = yocto::image;
 
 #include <future>
 #include <memory>
-using std::function;
-using std::string;
-using std::unordered_map;
-using std::vector;
 using namespace std::string_literals;
 
 // Application state
 struct app_state {
   // loading options
-  string filename  = "scene.yaml";
-  string imagename = "out.png";
-  string name      = "";
+  std::string filename  = "scene.yaml";
+  std::string imagename = "out.png";
+  std::string name      = "";
 
   // options
   ytr::trace_params params = {};
@@ -60,8 +57,8 @@ struct app_state {
   ytr::camera* camera = nullptr;
 
   // rendering state
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
+  yim::image<vec4f> render   = {};
+  yim::image<vec4f> display  = {};
   float        exposure = 0;
 
   // view scene
@@ -93,7 +90,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<yio::camera*, ytr::camera*>{};
+  auto camera_map     = std::unordered_map<yio::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -105,7 +102,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<yio::texture*, ytr::texture*>{};
+  auto texture_map     = std::unordered_map<yio::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -123,7 +120,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<yio::material*, ytr::material*>{};
+  auto material_map     = std::unordered_map<yio::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -157,7 +154,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<yio::shape*, ytr::shape*>{};
+  auto shape_map     = std::unordered_map<yio::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -176,7 +173,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<yio::instance*, ytr::instance*>{};
+  auto instance_map     = std::unordered_map<yio::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -220,13 +217,13 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   ytr::trace_start(
       app->render_state, app->scene, app->camera, app->params, {},
-      [app](const image<vec4f>& render, int current, int total) {
+      [app](const yim::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
       [app](
-          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+          const yim::image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });

@@ -41,12 +41,12 @@ using std::vector;
 using namespace std::string_literals;
 
 // Shape presets used ofr testing.
-bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec3f>& colors, vector<float>& radius, const string& type,
-    string& error) {
+bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
+    std::vector<vec3i>& triangles, std::vector<vec4i>& quads, std::vector<vec4i>& quadspos,
+    std::vector<vec4i>& quadsnorm, std::vector<vec4i>& quadstexcoord,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<vec3f>& colors, std::vector<float>& radius, const std::string& type,
+    std::string& error) {
   if (type == "default-quad") {
     ysh::make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -81,11 +81,11 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-matball") {
     ysh::make_sphere(quads, positions, normals, texcoords);
   } else if (type == "default-hairball") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
+    auto base_triangles = std::vector<vec3i>{};
+    auto base_quads     = std::vector<vec4i>{};
+    auto base_positions = std::vector<vec3f>{};
+    auto base_normals   = std::vector<vec3f>{};
+    auto base_texcoords = std::vector<vec2f>{};
     ysh::make_sphere(
         base_quads, base_positions, base_normals, base_texcoords, pow2(5), 0.8);
     ysh::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
@@ -132,11 +132,11 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     ysh::make_sphere(quads, positions, normals, texcoords, 32, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-hairball1") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
+    auto base_triangles = std::vector<vec3i>{};
+    auto base_quads     = std::vector<vec4i>{};
+    auto base_positions = std::vector<vec3f>{};
+    auto base_normals   = std::vector<vec3f>{};
+    auto base_texcoords = std::vector<vec2f>{};
     ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
@@ -145,11 +145,11 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
         {0.03, 100});
   } else if (type == "test-hairball2") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
+    auto base_triangles = std::vector<vec3i>{};
+    auto base_quads     = std::vector<vec4i>{};
+    auto base_positions = std::vector<vec3f>{};
+    auto base_normals   = std::vector<vec3f>{};
+    auto base_texcoords = std::vector<vec2f>{};
     ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
@@ -157,11 +157,11 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test-hairball3") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
+    auto base_triangles = std::vector<vec3i>{};
+    auto base_quads     = std::vector<vec4i>{};
+    auto base_positions = std::vector<vec3f>{};
+    auto base_normals   = std::vector<vec3f>{};
+    auto base_texcoords = std::vector<vec2f>{};
     ysh::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
@@ -199,13 +199,13 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
-    vector<float>& radius, const string& type, string& error) {
-  auto quadspos      = vector<vec4i>{};
-  auto quadsnorm     = vector<vec4i>{};
-  auto quadstexcoord = vector<vec4i>{};
+bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
+    std::vector<vec3i>& triangles, std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
+    std::vector<float>& radius, const std::string& type, std::string& error) {
+  auto quadspos      = std::vector<vec4i>{};
+  auto quadsnorm     = std::vector<vec4i>{};
+  auto quadstexcoord = std::vector<vec4i>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
           quadstexcoord, positions, normals, texcoords, colors, radius, type,
           error))
@@ -215,16 +215,16 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
-    string& error) {
-  auto points    = vector<int>{};
-  auto lines     = vector<vec2i>{};
-  auto triangles = vector<vec3i>{};
-  auto quads     = vector<vec4i>{};
-  auto colors    = vector<vec3f>{};
-  auto radius    = vector<float>{};
+bool make_shape_preset(vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
+    std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const std::string& type,
+    std::string& error) {
+  auto points    = std::vector<int>{};
+  auto lines     = std::vector<vec2i>{};
+  auto triangles = std::vector<vec3i>{};
+  auto quads     = std::vector<vec4i>{};
+  auto colors    = std::vector<vec3f>{};
+  auto radius    = std::vector<float>{};
   if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
           quadstexcoord, positions, normals, texcoords, colors, radius, type,
           error))
@@ -284,18 +284,18 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // mesh data
-  auto positions     = vector<vec3f>{};
-  auto normals       = vector<vec3f>{};
-  auto texcoords     = vector<vec2f>{};
-  auto colors        = vector<vec3f>{};
-  auto radius        = vector<float>{};
-  auto points        = vector<int>{};
-  auto lines         = vector<vec2i>{};
-  auto triangles     = vector<vec3i>{};
-  auto quads         = vector<vec4i>{};
-  auto quadspos      = vector<vec4i>{};
-  auto quadsnorm     = vector<vec4i>{};
-  auto quadstexcoord = vector<vec4i>{};
+  auto positions     = std::vector<vec3f>{};
+  auto normals       = std::vector<vec3f>{};
+  auto texcoords     = std::vector<vec2f>{};
+  auto colors        = std::vector<vec3f>{};
+  auto radius        = std::vector<float>{};
+  auto points        = std::vector<int>{};
+  auto lines         = std::vector<vec2i>{};
+  auto triangles     = std::vector<vec3i>{};
+  auto quads         = std::vector<vec4i>{};
+  auto quadspos      = std::vector<vec4i>{};
+  auto quadsnorm     = std::vector<vec4i>{};
+  auto quadstexcoord = std::vector<vec4i>{};
 
   // load mesh
   auto ioerror = ""s;
@@ -375,7 +375,7 @@ int main(int argc, const char* argv[]) {
   if (smooth) {
     ycl::print_progress("smooth shape", 0, 1);
     if (!points.empty()) {
-      normals = vector<vec3f>{positions.size(), {0, 0, 1}};
+      normals = std::vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
       normals = ysh::compute_tangents(lines, positions);
     } else if (!triangles.empty()) {
@@ -394,7 +394,7 @@ int main(int argc, const char* argv[]) {
     ycl::print_progress("compute geodesic", 0, 1);
     auto adjacencies = ysh::face_adjacencies(triangles);
     auto solver  = ysh::make_geodesic_solver(triangles, adjacencies, positions);
-    auto sources = vector<int>();
+    auto sources = std::vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {
@@ -403,14 +403,14 @@ int main(int argc, const char* argv[]) {
     auto field = ysh::compute_geodesic_distances(solver, sources);
 
     if (slice) {
-      auto tags = vector<int>(triangles.size(), 0);
+      auto tags = std::vector<int>(triangles.size(), 0);
       ysh::meandering_triangles(
           field, geodesic_scale, 0, 1, 2, triangles, tags, positions, normals);
       for (int i = 0; i < triangles.size(); i++) {
         if (tags[i] == 1) triangles[i] = {-1, -1, -1};
       }
     } else {
-      colors = vector<vec3f>(positions.size());
+      colors = std::vector<vec3f>(positions.size());
       for (int i = 0; i < colors.size(); ++i) {
         colors[i] = vec3f(sinf(geodesic_scale * field[i]));
       }
@@ -421,12 +421,12 @@ int main(int argc, const char* argv[]) {
 
   if (p0 != -1) {
     ycl::print_progress("cut mesh", 0, 1);
-    auto tags        = vector<int>(triangles.size(), 0);
+    auto tags        = std::vector<int>(triangles.size(), 0);
     auto adjacencies = ysh::face_adjacencies(triangles);
     auto solver = ysh::make_geodesic_solver(triangles, adjacencies, positions);
 
-    auto          paths = vector<ysh::surface_path>();
-    vector<float> fields[3];
+    auto          paths = std::vector<ysh::surface_path>();
+    std::vector<float> fields[3];
     fields[0] = ysh::compute_geodesic_distances(solver, {p0});
     fields[1] = ysh::compute_geodesic_distances(solver, {p1});
     fields[2] = ysh::compute_geodesic_distances(solver, {p2});
@@ -443,11 +443,11 @@ int main(int argc, const char* argv[]) {
     paths.push_back(ysh::integrate_field(
         triangles, positions, adjacencies, tags, 0, fields[0], p2, p0));
 
-    auto plines     = vector<vec2i>{};
-    auto ppositions = vector<vec3f>{};
+    auto plines     = std::vector<vec2i>{};
+    auto ppositions = std::vector<vec3f>{};
     for (int i = 0; i < 3; i++) {
       auto pos  = make_positions_from_path(paths[i], positions);
-      auto line = vector<vec2i>(pos.size() - 1);
+      auto line = std::vector<vec2i>(pos.size() - 1);
       for (int k = 0; k < line.size(); k++) {
         line[k] = {k, k + 1};
         line[k] += (int)lines.size();

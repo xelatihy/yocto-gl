@@ -36,19 +36,11 @@ namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
-using yocto::image::image;
-using yocto::image::is_hdr_filename;
+namespace yim = yocto::image;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using std::atomic;
-using std::deque;
-using std::future;
-using std::string;
-using std::to_string;
-using std::unordered_map;
-using std::vector;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
@@ -61,10 +53,10 @@ void print_obj_camera(yio::camera* camera);
 // Application scene
 struct app_state {
   // loading options
-  string filename  = "app->yaml";
-  string imagename = "out.png";
-  string outname   = "out.yaml";
-  string name      = "";
+  std::string filename  = "app->yaml";
+  std::string imagename = "out.png";
+  std::string outname   = "out.yaml";
+  std::string name      = "";
 
   // scene
   yio::model*  ioscene  = new yio::model{};
@@ -76,8 +68,8 @@ struct app_state {
   ytr::trace_params params = {};
 
   // rendering state
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
+  yim::image<vec4f> render   = {};
+  yim::image<vec4f> display  = {};
   float        exposure = 0;
 
   // view scene
@@ -100,12 +92,12 @@ struct app_state {
   ytr::state* render_state   = new ytr::state{};
 
   // loading status
-  atomic<bool>       ok           = false;
-  future<void>       loader       = {};
-  string             status       = "";
-  string             error        = "";
+  std::atomic<bool>       ok           = false;
+  std::future<void>       loader       = {};
+  std::string             status       = "";
+  std::string             error        = "";
   std::atomic<float> progress     = 0.5;
-  string             loader_error = "";
+  std::string             loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -121,9 +113,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  std::vector<app_state*> states   = {};
   app_state*         selected = nullptr;
-  deque<app_state*>  loading  = {};
+  std::deque<app_state*>  loading  = {};
 
   // default options
   ytr::trace_params params     = {};
@@ -145,7 +137,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<yio::camera*, ytr::camera*>{};
+  auto camera_map     = std::unordered_map<yio::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -157,7 +149,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<yio::texture*, ytr::texture*>{};
+  auto texture_map     = std::unordered_map<yio::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -175,7 +167,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<yio::material*, ytr::material*>{};
+  auto material_map     = std::unordered_map<yio::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -209,7 +201,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<yio::shape*, ytr::shape*>{};
+  auto shape_map     = std::unordered_map<yio::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -227,7 +219,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<yio::instance*, ytr::instance*>{};
+  auto instance_map     = std::unordered_map<yio::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -277,23 +269,23 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   ytr::trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const string& message, int sample, int nsamples) {
+      [app](const std::string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
-      [app](const image<vec4f>& render, int current, int total) {
+      [app](const yim::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
       [app](
-          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+          const yim::image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
 void load_scene_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
+    app_states* apps, const std::string& filename, const std::string& camera_name = "") {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -302,7 +294,7 @@ void load_scene_async(
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](const std::string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     if (!load_scene(
@@ -418,16 +410,16 @@ bool draw_widgets(ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
-  draw_label(win, "points", to_string(ioshape->points.size()));
-  draw_label(win, "lines", to_string(ioshape->lines.size()));
-  draw_label(win, "triangles", to_string(ioshape->triangles.size()));
-  draw_label(win, "quads", to_string(ioshape->quads.size()));
-  draw_label(win, "positions", to_string(ioshape->positions.size()));
-  draw_label(win, "normals", to_string(ioshape->normals.size()));
-  draw_label(win, "texcoords", to_string(ioshape->texcoords.size()));
-  draw_label(win, "colors", to_string(ioshape->colors.size()));
-  draw_label(win, "radius", to_string(ioshape->radius.size()));
-  draw_label(win, "tangents", to_string(ioshape->tangents.size()));
+  draw_label(win, "points", std::to_string(ioshape->points.size()));
+  draw_label(win, "lines", std::to_string(ioshape->lines.size()));
+  draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
+  draw_label(win, "quads", std::to_string(ioshape->quads.size()));
+  draw_label(win, "positions", std::to_string(ioshape->positions.size()));
+  draw_label(win, "normals", std::to_string(ioshape->normals.size()));
+  draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
+  draw_label(win, "colors", std::to_string(ioshape->colors.size()));
+  draw_label(win, "radius", std::to_string(ioshape->radius.size()));
+  draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
   return edited;
 }
 
@@ -436,7 +428,7 @@ bool draw_widgets(
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
-  draw_label(win, "frames", to_string(ioinstance->frames.size()));
+  draw_label(win, "frames", std::to_string(ioinstance->frames.size()));
   return edited;
 }
 
@@ -462,12 +454,12 @@ bool draw_widgets(
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
-  draw_label(win, "quads pos", to_string(iosubdiv->quadspos.size()));
-  draw_label(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_label(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
-  draw_label(win, "pos", to_string(iosubdiv->positions.size()));
-  draw_label(win, "norm", to_string(iosubdiv->normals.size()));
-  draw_label(win, "texcoord", to_string(iosubdiv->texcoords.size()));
+  draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
+  draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
+  draw_label(win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
+  draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
+  draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
   return edited;
 }
 
@@ -488,7 +480,7 @@ bool draw_widgets(
 
 template <typename T, typename T1>
 T1* get_element(
-    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
+    T* ioelement, const std::vector<T*>& ioelements, const std::vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -497,7 +489,7 @@ T1* get_element(
 }
 
 void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
-  static string load_path = "", save_path = "", error_message = "";
+  static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
@@ -575,9 +567,9 @@ void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
     draw_label(win, "imagename", app->imagename);
     if (app->ok) {
       draw_label(win, "image",
-          to_string(app->render.size().x) + " x " +
-              to_string(app->render.size().y) + " @ " +
-              to_string(app->render_sample));
+          std::to_string(app->render.size().x) + " x " +
+              std::to_string(app->render.size().y) + " @ " +
+              std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
       continue_glline(win);
@@ -776,7 +768,7 @@ void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
 }
 
 void update(ygl::window* win, app_states* apps) {
-  auto is_ready = [](const future<void>& result) -> bool {
+  auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
@@ -801,7 +793,7 @@ int main(int argc, const char* argv[]) {
   // application
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = vector<string>{};
+  auto filenames   = std::vector<std::string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -840,7 +832,7 @@ int main(int argc, const char* argv[]) {
   set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
     draw_widgets(win, apps, input);
   });
-  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+  set_drop_callback(win, [apps](ygl::window* win, const std::vector<std::string>& paths,
                              const ygl::input& input) {
     for (auto& path : paths) load_scene_async(apps, path);
   });

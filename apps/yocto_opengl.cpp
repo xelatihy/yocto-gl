@@ -317,8 +317,8 @@ glimage::~glimage() {
 void init_glimage(glimage* glimage) {
   if (glimage->program_id) return;
 
-  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+  auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
   init_glprogram(glimage->program_id, glimage->vertex_id, glimage->fragment_id,
       glimage->array_id, glimage_vertex, glimage_fragment);
@@ -334,7 +334,7 @@ void init_glimage(glimage* glimage) {
 
 // update image data
 void set_glimage(
-    glimage* glimage, const image<vec4f>& img, bool linear, bool mipmap) {
+    glimage* glimage, const yim::image<vec4f>& img, bool linear, bool mipmap) {
   if (!glimage->texture_id) {
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -353,7 +353,7 @@ void set_glimage(
   glimage->texture_mipmap = mipmap;
 }
 void set_glimage(
-    glimage* glimage, const image<vec4b>& img, bool linear, bool mipmap) {
+    glimage* glimage, const yim::image<vec4b>& img, bool linear, bool mipmap) {
   if (!glimage->texture_id) {
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -757,19 +757,19 @@ texture* add_texture(scene* scene) {
 
 void set_texture(texture* texture, const vec2i& size, int nchan,
     const byte* img, bool as_srgb) {
-  static auto sformat = unordered_map<int, uint>{
+  static auto sformat = std::unordered_map<int, uint>{
       {1, GL_SRGB},
       {2, GL_SRGB},
       {3, GL_SRGB},
       {4, GL_SRGB_ALPHA},
   };
-  static auto iformat = unordered_map<int, uint>{
+  static auto iformat = std::unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = unordered_map<int, uint>{
+  static auto cformat = std::unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
@@ -807,19 +807,19 @@ void set_texture(texture* texture, const vec2i& size, int nchan,
 
 void set_texture(texture* texture, const vec2i& size, int nchan,
     const float* img, bool as_float) {
-  static auto fformat = unordered_map<int, uint>{
+  static auto fformat = std::unordered_map<int, uint>{
       {1, GL_RGB16F},
       {2, GL_RGB16F},
       {3, GL_RGB16F},
       {4, GL_RGBA32F},
   };
-  static auto iformat = unordered_map<int, uint>{
+  static auto iformat = std::unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = unordered_map<int, uint>{
+  static auto cformat = std::unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
@@ -856,24 +856,24 @@ void set_texture(texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(texture* texture, const image<vec4b>& img, bool as_srgb) {
+void set_texture(texture* texture, const yim::image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const image<vec4f>& img, bool as_float) {
+void set_texture(texture* texture, const yim::image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
-void set_texture(texture* texture, const image<vec3b>& img, bool as_srgb) {
+void set_texture(texture* texture, const yim::image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const image<vec3f>& img, bool as_float) {
+void set_texture(texture* texture, const yim::image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
-void set_texture(texture* texture, const image<byte>& img, bool as_srgb) {
+void set_texture(texture* texture, const yim::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const image<float>& img, bool as_float) {
+void set_texture(texture* texture, const yim::image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
@@ -921,20 +921,20 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_points(shape* shape, const vector<int>& points) {
+void set_points(shape* shape, const std::vector<int>& points) {
   set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
       1, (const int*)points.data());
 }
-void set_lines(shape* shape, const vector<vec2i>& lines) {
+void set_lines(shape* shape, const std::vector<vec2i>& lines) {
   set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_triangles(shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(shape* shape, const std::vector<vec3i>& triangles) {
   set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_quads(shape* shape, const vector<vec4i>& quads) {
-  auto triangles = vector<vec3i>{};
+void set_quads(shape* shape, const std::vector<vec4i>& quads) {
+  auto triangles = std::vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
@@ -943,23 +943,23 @@ void set_quads(shape* shape, const vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
-void set_positions(shape* shape, const vector<vec3f>& positions) {
+void set_positions(shape* shape, const std::vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
 }
-void set_normals(shape* shape, const vector<vec3f>& normals) {
+void set_normals(shape* shape, const std::vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
       normals.size(), 3, (const float*)normals.data());
 }
-void set_texcoords(shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(shape* shape, const std::vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_colors(shape* shape, const vector<vec3f>& colors) {
+void set_colors(shape* shape, const std::vector<vec3f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       3, (const float*)colors.data());
 }
-void set_tangents(shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(shape* shape, const std::vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
 }
@@ -985,7 +985,7 @@ void set_highlighted(object* object, bool highlighted) {
 instance* add_instance(scene* scene) {
   return scene->instances.emplace_back(new instance{});
 }
-void set_frames(instance* instance, const vector<frame3f>& frames) {
+void set_frames(instance* instance, const std::vector<frame3f>& frames) {
   // TODO: instances
 }
 
@@ -1326,7 +1326,7 @@ static void draw_window(window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_glwindow(window* win, const vec2i& size, const string& title,
+void init_glwindow(window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -1357,7 +1357,7 @@ void init_glwindow(window* win, const vec2i& size, const string& title,
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
         auto win = (window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
-          auto pathv = vector<string>();
+          auto pathv = std::vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
           win->drop_cb(win, pathv, win->input);
         }
@@ -1562,7 +1562,7 @@ bool is_glmodal_open(window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(window* win, const char* lbl, const string& message) {
+bool draw_message(window* win, const char* lbl, const std::string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1579,7 +1579,7 @@ bool draw_message(window* win, const char* lbl, const string& message) {
 
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
-void               push_message(window* win, const string& message) {
+void               push_message(window* win, const std::string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1603,7 +1603,7 @@ bool draw_messages(window* win) {
 }
 
 // Utility to normalize a path
-static inline string normalize_path(const string& filename_) {
+static inline std::string normalize_path(const std::string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -1624,43 +1624,43 @@ static inline string normalize_path(const string& filename_) {
 }
 
 // Get extension (not including '.').
-static string get_extension(const string& filename_) {
+static std::string get_extension(const std::string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
+  if (pos == std::string::npos) return "";
   return filename.substr(pos);
 }
 
 struct filedialog_state {
-  string                     dirname       = "";
-  string                     filename      = "";
-  vector<pair<string, bool>> entries       = {};
+  std::string                     dirname       = "";
+  std::string                     filename      = "";
+  std::vector<pair<string, bool>> entries       = {};
   bool                       save          = false;
   bool                       remove_hidden = true;
-  string                     filter        = "";
-  vector<string>             extensions    = {};
+  std::string                     filter        = "";
+  std::vector<string>             extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const string& dirname, const string& filename, bool save,
-      const string& filter) {
+  filedialog_state(const std::string& dirname, const std::string& filename, bool save,
+      const std::string& filter) {
     this->save = save;
     set_filter(filter);
     set_dirname(dirname);
     set_filename(filename);
   }
-  void set_dirname(const string& name) {
+  void set_dirname(const std::string& name) {
     dirname = name;
     dirname = normalize_path(dirname);
     if (dirname == "") dirname = "./";
     if (dirname.back() != '/') dirname += '/';
     refresh();
   }
-  void set_filename(const string& name) {
+  void set_filename(const std::string& name) {
     filename = name;
     check_filename();
   }
-  void set_filter(const string& flt) {
-    auto globs = vector<string>{""};
+  void set_filter(const std::string& flt) {
+    auto globs = std::vector<string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
         globs.push_back("");
@@ -1722,17 +1722,17 @@ struct filedialog_state {
     });
   }
 
-  string get_path() const { return dirname + filename; }
-  bool   exists_file(const string& filename) {
+  std::string get_path() const { return dirname + filename; }
+  bool   exists_file(const std::string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
     return true;
   }
 };
-bool draw_filedialog(window* win, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter) {
-  static auto states = unordered_map<string, filedialog_state>{};
+bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
+    const std::string& dirname, const std::string& filename, const std::string& filter) {
+  static auto states = std::unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
@@ -1786,8 +1786,8 @@ bool draw_filedialog(window* win, const char* lbl, string& path, bool save,
   }
 }
 bool draw_filedialog_button(window* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter) {
+    bool button_active, const char* lbl, std::string& path, bool save,
+    const std::string& dirname, const std::string& filename, const std::string& filter) {
   if (is_glmodal_open(win, lbl)) {
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
@@ -1811,7 +1811,7 @@ bool draw_button(window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_label(window* win, const char* lbl, const string& label) {
+void draw_label(window* win, const char* lbl, const std::string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
@@ -1819,7 +1819,7 @@ void draw_separator(window* win) { ImGui::Separator(); }
 
 void continue_glline(window* win) { ImGui::SameLine(); }
 
-bool draw_textinput(window* win, const char* lbl, string& value) {
+bool draw_textinput(window* win, const char* lbl, std::string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -1946,7 +1946,7 @@ bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value) {
 }
 
 bool draw_combobox(
-    window* win, const char* lbl, int& value, const vector<string>& labels) {
+    window* win, const char* lbl, int& value, const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -1960,7 +1960,7 @@ bool draw_combobox(
 }
 
 bool draw_combobox(
-    window* win, const char* lbl, string& value, const vector<string>& labels) {
+    window* win, const char* lbl, std::string& value, const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2007,17 +2007,17 @@ void draw_histogram(
     window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
-void draw_histogram(window* win, const char* lbl, const vector<float>& values) {
+void draw_histogram(window* win, const char* lbl, const std::vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
-void draw_histogram(window* win, const char* lbl, const vector<vec2f>& values) {
+void draw_histogram(window* win, const char* lbl, const std::vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
-void draw_histogram(window* win, const char* lbl, const vector<vec3f>& values) {
+void draw_histogram(window* win, const char* lbl, const std::vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2025,7 +2025,7 @@ void draw_histogram(window* win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
-void draw_histogram(window* win, const char* lbl, const vector<vec4f>& values) {
+void draw_histogram(window* win, const char* lbl, const std::vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2097,12 +2097,12 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_info(window* win, const string& msg) {
+void        log_info(window* win, const std::string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_error(window* win, const string& msg) {
+void log_error(window* win, const std::string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();

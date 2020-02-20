@@ -63,10 +63,10 @@ void print_obj_camera(yio::camera* camera);
 // Application state
 struct app_state {
   // loading parameters
-  string filename  = "scene.json";
-  string imagename = "out.png";
-  string outname   = "scene.json";
-  string name      = "";
+  std::string filename  = "scene.json";
+  std::string imagename = "out.png";
+  std::string outname   = "scene.json";
+  std::string name      = "";
 
   // options
   ygl::scene_params drawgl_prms = {};
@@ -92,10 +92,10 @@ struct app_state {
   // loading status
   atomic<bool>       ok           = false;
   future<void>       loader       = {};
-  string             status       = "";
-  string             error        = "";
+  std::string             status       = "";
+  std::string             error        = "";
   std::atomic<float> progress     = 0.5;
-  string             loader_error = "";
+  std::string             loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -106,7 +106,7 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  std::vector<app_state*> states   = {};
   app_state*         selected = nullptr;
   deque<app_state*>  loading  = {};
 
@@ -120,7 +120,7 @@ struct app_states {
 };
 
 void load_scene_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
+    app_states* apps, const std::string& filename, const std::string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = fs::path(filename).replace_extension(".png");
@@ -129,7 +129,7 @@ void load_scene_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](const std::string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     if (!load_scene(
@@ -185,7 +185,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<yio::camera*, ygl::camera*>{};
+  auto camera_map     = std::unordered_map<yio::camera*, ygl::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -197,7 +197,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<yio::texture*, ygl::texture*>{};
+  auto texture_map     = std::unordered_map<yio::texture*, ygl::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -215,7 +215,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<yio::material*, ygl::material*>{};
+  auto material_map     = std::unordered_map<yio::material*, ygl::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -244,7 +244,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<yio::shape*, ygl::shape*>{};
+  auto shape_map     = std::unordered_map<yio::shape*, ygl::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -261,7 +261,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = unordered_map<yio::instance*, ygl::instance*>{};
+  auto instance_map     = std::unordered_map<yio::instance*, ygl::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -457,7 +457,7 @@ bool draw_widgets(
 
 template <typename T, typename T1>
 T1* get_element(
-    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
+    T* ioelement, const std::vector<T*>& ioelements, const std::vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -686,7 +686,7 @@ void update(ygl::window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](const std::string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     app->loader.get();
@@ -707,7 +707,7 @@ int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = vector<string>{};
+  auto filenames   = std::vector<string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -734,7 +734,7 @@ int main(int argc, const char* argv[]) {
   set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
     draw_widgets(win, apps, input);
   });
-  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+  set_drop_callback(win, [apps](ygl::window* win, const std::vector<string>& paths,
                              const ygl::input& input) {
     for (auto& path : paths) load_scene_async(apps, path);
   });

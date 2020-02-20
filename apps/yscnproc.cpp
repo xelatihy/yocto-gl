@@ -40,7 +40,7 @@ using namespace std::string_literals;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-void make_dir(const string& dirname) {
+void make_dir(const std::string& dirname) {
   if (fs::exists(dirname)) return;
   try {
     fs::create_directories(dirname);

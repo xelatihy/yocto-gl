@@ -1,14 +1,14 @@
 #include "yimshproc.h"
 
 struct my_data {
-  vector<vec3i>        face_adjacency;
-  vector<vector<int>>  vertex_adjacency;
+  std::vector<vec3i>        face_adjacency;
+  std::vector<vector<int>>  vertex_adjacency;
   ysh::geodesic_solver solver;
-  vector<float>        scalar_field;
-  vector<vec3f>        vector_field;
+  std::vector<float>        scalar_field;
+  std::vector<vec3f>        vector_field;
 
   int         num_samples      = 500;
-  vector<int> vertex_selection = {};
+  std::vector<int> vertex_selection = {};
 };
 
 void my_init(my_data& data, app_state* app) {
@@ -50,7 +50,7 @@ void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
   ycl::print_info("clicked vertex: " + std::to_string(vertex));
   data.vertex_selection.push_back(vertex);
 
-  auto positions = vector<vec3f>(data.vertex_selection.size());
+  auto positions = std::vector<vec3f>(data.vertex_selection.size());
   for (int i = 0; i < positions.size(); ++i) {
     positions[i] = app->shape.positions[data.vertex_selection[i]];
   }
@@ -63,7 +63,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
 
-      data.vector_field = vector<vec3f>(app->shape.triangles.size());
+      data.vector_field = std::vector<vec3f>(app->shape.triangles.size());
       for (int i = 0; i < app->shape.triangles.size(); ++i) {
         data.vector_field[i] = ysh::compute_gradient(
             app->shape.triangles[i], app->shape.positions, data.scalar_field);
@@ -76,7 +76,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
     if (data.vertex_selection.size()) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
-      auto colors = vector<vec3f>(data.scalar_field.size());
+      auto colors = std::vector<vec3f>(data.scalar_field.size());
       for (int i = 0; i < colors.size(); ++i) {
         colors[i] = vec3f(data.scalar_field[i]);
       }
@@ -86,7 +86,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
 
   if (draw_button(win, "Compute geodesic path")) {
     if (data.vertex_selection.size() > 1) {
-      auto positions = vector<vec3f>();
+      auto positions = std::vector<vec3f>();
       auto n         = data.vertex_selection.size();
       for (int i = 0; i < n - (n < 3); ++i) {
         auto from  = data.vertex_selection[i];
@@ -95,7 +95,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
         for (auto& f : field) f = -f;
 
         // @Speed: Remove tags from function api to avoid this.
-        auto dummy_tags = vector<int>(app->shape.triangles.size(), 0);
+        auto dummy_tags = std::vector<int>(app->shape.triangles.size(), 0);
         auto path       = ysh::integrate_field(app->shape.triangles,
             app->shape.positions, data.face_adjacency, dummy_tags, 0, field,
             from, to);
@@ -111,7 +111,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
   if (draw_slider(win, "Sample points", data.num_samples, 0, 10000)) {
     data.vertex_selection = sample_vertices_poisson(
         data.solver, data.num_samples);
-    auto positions = vector<vec3f>(data.vertex_selection.size());
+    auto positions = std::vector<vec3f>(data.vertex_selection.size());
     for (int i = 0; i < positions.size(); ++i)
       positions[i] = app->shape.positions[data.vertex_selection[i]];
     update_glpoints(app, positions);
@@ -131,7 +131,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
 }
 
 int main(int argc, const char* argv[]) {
-  string input_filename = "model.obj";
+  std::string input_filename = "model.obj";
 
   // Parse command line.
   auto cli = ycl::make_cli(

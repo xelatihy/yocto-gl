@@ -32,28 +32,24 @@
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
-using yocto::image::colorgrade_params;
-using yocto::image::image;
-using yocto::image::is_hdr_filename;
+namespace yim = yocto::image;
 
 #include <future>
-using std::string;
-using std::vector;
 using namespace std::string_literals;
 
 struct app_state {
   // original data
-  string filename = "image.png";
-  string outname  = "out.png";
+  std::string filename = "image.png";
+  std::string outname  = "out.png";
 
   // image data
-  image<vec4f> source = {};
+  yim::image<vec4f> source = {};
 
   // diplay data
-  image<vec4f>      display    = {};
+  yim::image<vec4f>      display    = {};
   float             exposure   = 0;
   bool              filmic     = false;
-  colorgrade_params params     = {};
+  yim::colorgrade_params params     = {};
   bool              colorgrade = false;
 
   // viewing properties
@@ -78,7 +74,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = vector<string>{};
+  auto filenames = std::vector<std::string>{};
 
   // command line options
   auto cli = ycl::make_cli("yimgviews", "view images");

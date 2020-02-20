@@ -78,27 +78,27 @@ void update_glshape(app_state* app) {
   set_colors(app->glshapes, shape.colors);
 }
 
-void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
+void update_glpolyline(app_state* app, const std::vector<vec3f>& vertices) {
   if (vertices.size()) {
-    auto elements = vector<vec2i>(vertices.size() - 1);
+    auto elements = std::vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
     set_positions(app->glpolylines, vertices);
     set_lines(app->glpolylines, elements);
   }
 }
 
-void update_glpoints(app_state* app, const vector<vec3f>& points) {
+void update_glpoints(app_state* app, const std::vector<vec3f>& points) {
   if (points.size()) {
-    auto elements = vector<int>(points.size());
+    auto elements = std::vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
-    auto normals = vector<vec3f>(points.size(), {0, 0, 1});
+    auto normals = std::vector<vec3f>(points.size(), {0, 0, 1});
     set_positions(app->glpolylines, points);
     set_points(app->glpolylines, elements);
   }
 }
 
 void update_glvector_field(
-    app_state* app, const vector<vec3f>& vector_field, float scale = 0.01) {
+    app_state* app, const std::vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -108,7 +108,7 @@ void update_glvector_field(
 
   auto size = perface ? app->shape.triangles.size()
                       : app->shape.positions.size();
-  auto positions = vector<vec3f>(size * 2);
+  auto positions = std::vector<vec3f>(size * 2);
 
   // Per-face vector field
   if (perface) {
@@ -133,7 +133,7 @@ void update_glvector_field(
     }
   }
 
-  auto elements = vector<vec2i>(size);
+  auto elements = std::vector<vec2i>(size);
   for (int i = 0; i < elements.size(); i++) {
     elements[i] = {2 * i, 2 * i + 1};
   }
@@ -148,7 +148,7 @@ void update_gledges(app_state* app) {
     positions[i] += app->shape.normals[i] * 0.0001;
   }
 
-  auto elements = vector<vec2i>();
+  auto elements = std::vector<vec2i>();
   elements.reserve(app->shape.triangles.size() * 3);
   for (int i = 0; i < app->shape.triangles.size(); i++) {
     for (int k = 0; k < 3; k++) {
@@ -266,10 +266,10 @@ void clear(app_state* app) {
   // }
   // delete_glarraybuffer(app->glshapes().colors);
   // init_glarraybuffer(app->glshapes().colors,
-  //     vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
+  //     std::vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string& input_filename, function<void(app_state*)> init,
+void yimshproc(const std::string& input_filename, function<void(app_state*)> init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
     function<void(app_state*, ygl::window* win)>       draw_widgets) {

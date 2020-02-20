@@ -32,18 +32,11 @@
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
-using yocto::image::colorgrade_params;
-using yocto::image::image;
-using yocto::image::is_hdr_filename;
+namespace yim = yocto::image;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using std::atomic;
-using std::deque;
-using std::future;
-using std::string;
-using std::vector;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -52,18 +45,18 @@ struct image_stats {
   vec4f         min       = zero4f;
   vec4f         max       = zero4f;
   vec4f         average   = zero4f;
-  vector<vec3f> histogram = {};
+  std::vector<vec3f> histogram = {};
 };
 
 struct app_state {
   // original data
-  string name     = "";
-  string filename = "";
-  string outname  = "";
+  std::string name     = "";
+  std::string filename = "";
+  std::string outname  = "";
 
   // image data
-  image<vec4f> source  = {};
-  image<vec4f> display = {};
+  yim::image<vec4f> source  = {};
+  yim::image<vec4f> display = {};
 
   // image stats
   image_stats source_stats  = {};
@@ -72,7 +65,7 @@ struct app_state {
   // tonemapping values
   float             exposure   = 0;
   bool              filmic     = false;
-  colorgrade_params params     = {};
+  yim::colorgrade_params params     = {};
   bool              colorgrade = false;
 
   // viewing properties
@@ -81,11 +74,11 @@ struct app_state {
   bool                glupdated = true;
 
   // loading status
-  atomic<bool> ok           = false;
-  future<void> loader       = {};
-  string       status       = "";
-  string       error        = "";
-  string       loader_error = "";
+  std::atomic<bool> ok           = false;
+  std::future<void> loader       = {};
+  std::string       status       = "";
+  std::string       error        = "";
+  std::string       loader_error = "";
 
   // cleanup
   ~app_state() {
@@ -96,14 +89,14 @@ struct app_state {
 // app states
 struct app_states {
   // data
-  vector<app_state*> states   = {};
+  std::vector<app_state*> states   = {};
   app_state*         selected = nullptr;
-  deque<app_state*>  loading  = {};
+  std::deque<app_state*>  loading  = {};
 
   // default options
   float             exposure = 0;
   bool              filmic   = false;
-  colorgrade_params params   = {};
+  yim::colorgrade_params params   = {};
 
   // cleanup
   ~app_states() {
@@ -113,7 +106,7 @@ struct app_states {
 
 // compute min/max
 void compute_stats(
-    image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
+    image_stats& stats, const yim::image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
   stats.min      = vec4f{flt_max};
   stats.max      = vec4f{flt_min};
@@ -144,7 +137,7 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const string& filename) {
+void load_image_async(app_states* apps, const std::string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname  = fs::path(filename).replace_extension(".display.png").string();
@@ -156,7 +149,7 @@ void load_image_async(app_states* apps, const string& filename) {
   app->loader   = std::async(std::launch::async, [app]() {
     if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
-        app->source_stats, app->source, is_hdr_filename(app->filename));
+        app->source_stats, app->source, yim::is_hdr_filename(app->filename));
     if (app->colorgrade) {
       app->display = colorgrade_image(app->display, true, app->params);
     } else {
@@ -169,7 +162,7 @@ void load_image_async(app_states* apps, const string& filename) {
 }
 
 void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
-  static string load_path = "", save_path = "", error_message = "";
+  static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -287,7 +280,7 @@ void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
 }
 
 void update(ygl::window* win, app_states* apps) {
-  auto is_ready = [](const future<void>& result) -> bool {
+  auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
@@ -312,7 +305,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = std::make_unique<app_states>();
   auto apps       = apps_guard.get();
-  auto filenames  = vector<string>{};
+  auto filenames  = std::vector<std::string>{};
 
   // command line options
   auto cli = ycl::make_cli("yimgview", "view images");
@@ -348,7 +341,7 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   });
-  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+  set_drop_callback(win, [apps](ygl::window* win, const std::vector<std::string>& paths,
                              const ygl::input& input) {
     for (auto path : paths) load_image_async(apps, path);
   });

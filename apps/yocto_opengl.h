@@ -50,10 +50,8 @@ struct GLFWwindow;
 namespace yocto::opengl {
 
 // using directives
-using std::string;
-using std::vector;
 using namespace yocto::math;
-using yocto::image::image;
+namespace yim = yocto::image;
 
 // OpenGL image data
 struct glimage {
@@ -80,9 +78,9 @@ void init_glimage(glimage* glimage);
 bool is_initialized(const glimage* glimage);
 
 // update image data
-void set_glimage(glimage* glimage, const image<vec4f>& img, bool linear = false,
+void set_glimage(glimage* glimage, const yim::image<vec4f>& img, bool linear = false,
     bool mipmap = false);
-void set_glimage(glimage* glimage, const image<vec4b>& img, bool linear = false,
+void set_glimage(glimage* glimage, const yim::image<vec4b>& img, bool linear = false,
     bool mipmap = false);
 
 // OpenGL image drawing params
@@ -209,13 +207,13 @@ struct scene {
   scene& operator=(const scene&) = delete;
   ~scene();
 
-  vector<camera*>   cameras   = {};
-  vector<object*>   objects   = {};
-  vector<shape*>    shapes    = {};
-  vector<material*> materials = {};
-  vector<instance*> instances = {};
-  vector<texture*>  textures  = {};
-  vector<light*>    lights    = {};
+  std::vector<camera*>   cameras   = {};
+  std::vector<object*>   objects   = {};
+  std::vector<shape*>    shapes    = {};
+  std::vector<material*> materials = {};
+  std::vector<instance*> instances = {};
+  std::vector<texture*>  textures  = {};
+  std::vector<light*>    lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -261,16 +259,16 @@ void set_nearfar(camera* camera, float near, float far);
 
 // texture properties
 void set_texture(
-    texture* texture, const image<vec4b>& img, bool as_srgb = true);
+    texture* texture, const yim::image<vec4b>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const image<vec4f>& img, bool as_float = false);
+    texture* texture, const yim::image<vec4f>& img, bool as_float = false);
 void set_texture(
-    texture* texture, const image<vec3b>& img, bool as_srgb = true);
+    texture* texture, const yim::image<vec3b>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const image<vec3f>& img, bool as_float = false);
-void set_texture(texture* texture, const image<byte>& img, bool as_srgb = true);
+    texture* texture, const yim::image<vec3f>& img, bool as_float = false);
+void set_texture(texture* texture, const yim::image<byte>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const image<float>& img, bool as_float = false);
+    texture* texture, const yim::image<float>& img, bool as_float = false);
 
 // material properties
 void set_emission(
@@ -288,18 +286,18 @@ void set_opacity(
 void set_normalmap(material* material, texture* normal_tex);
 
 // shape properties
-void set_points(shape* shape, const vector<int>& points);
-void set_lines(shape* shape, const vector<vec2i>& lines);
-void set_triangles(shape* shape, const vector<vec3i>& triangles);
-void set_quads(shape* shape, const vector<vec4i>& quads);
-void set_positions(shape* shape, const vector<vec3f>& positions);
-void set_normals(shape* shape, const vector<vec3f>& normals);
-void set_texcoords(shape* shape, const vector<vec2f>& texcoords);
-void set_colors(shape* shape, const vector<vec3f>& colors);
-void set_tangents(shape* shape, const vector<vec4f>& tangents);
+void set_points(shape* shape, const std::vector<int>& points);
+void set_lines(shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(shape* shape, const std::vector<vec4i>& quads);
+void set_positions(shape* shape, const std::vector<vec3f>& positions);
+void set_normals(shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(shape* shape, const std::vector<vec3f>& colors);
+void set_tangents(shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(instance* instance, const vector<frame3f>& frames);
+void set_frames(instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
 void set_frame(object* object, const frame3f& frame);
@@ -357,7 +355,7 @@ using draw_callback = std::function<void(window*, const input& input)>;
 using widgets_callback = std::function<void(window*, const input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback =
-    std::function<void(window*, const vector<string>&, const input& input)>;
+    std::function<void(window*, const std::vector<std::string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback =
     std::function<void(window*, int key, bool pressed, const input& input)>;
@@ -379,7 +377,7 @@ using update_callback = std::function<void(window*, const input& input)>;
 // OpenGL window wrapper
 struct window {
   GLFWwindow*       win           = nullptr;
-  string            title         = "";
+  std::string            title         = "";
   draw_callback     draw_cb       = {};
   widgets_callback  widgets_cb    = {};
   drop_callback     drop_cb       = {};
@@ -396,7 +394,7 @@ struct window {
 };
 
 // Windows initialization
-void init_glwindow(window* win, const vec2i& size, const string& title,
+void init_glwindow(window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
@@ -427,14 +425,14 @@ namespace yocto::opengl {
 bool begin_glheader(window* win, const char* title);
 void end_glheader(window* win);
 
-void draw_label(window* win, const char* lbl, const string& text);
+void draw_label(window* win, const char* lbl, const std::string& text);
 
 void draw_separator(window* win);
 void continue_glline(window* win);
 
 bool draw_button(window* win, const char* lbl, bool enabled = true);
 
-bool draw_textinput(window* win, const char* lbl, string& value);
+bool draw_textinput(window* win, const char* lbl, std::string& value);
 
 bool draw_slider(
     window* win, const char* lbl, float& value, float min, float max);
@@ -477,29 +475,29 @@ bool draw_hdrcoloredit(window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value);
 
 bool draw_combobox(
-    window* win, const char* lbl, int& idx, const vector<string>& labels);
+    window* win, const char* lbl, int& idx, const std::vector<std::string>& labels);
 bool draw_combobox(
-    window* win, const char* lbl, string& value, const vector<string>& labels);
+    window* win, const char* lbl, std::string& value, const std::vector<std::string>& labels);
 bool draw_combobox(window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_combobox(window* win, const char* lbl, int& idx,
-    const vector<T>& vals, bool include_null = false) {
+    const std::vector<T>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox(window* win, const char* lbl, int& idx,
-    const vector<T*>& vals, bool include_null = false) {
+    const std::vector<T*>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox(window* win, const char* lbl, T*& value,
-    const vector<T*>& vals, bool include_null = false) {
+    const std::vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
@@ -513,14 +511,14 @@ inline bool draw_combobox(window* win, const char* lbl, T*& value,
 }
 template <typename T>
 inline bool draw_combobox(window* win, const char* lbl, int& idx,
-    const vector<std::shared_ptr<T>>& vals, bool include_null = false) {
+    const std::vector<std::shared_ptr<T>>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox(window* win, const char* lbl,
-    std::shared_ptr<T>& value, const vector<std::shared_ptr<T>>& vals,
+    std::shared_ptr<T>& value, const std::vector<std::shared_ptr<T>>& vals,
     bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -536,21 +534,21 @@ inline bool draw_combobox(window* win, const char* lbl,
 
 void draw_progressbar(window* win, const char* lbl, float fraction);
 
-void draw_histogram(window* win, const char* lbl, const vector<float>& values);
-void draw_histogram(window* win, const char* lbl, const vector<vec2f>& values);
-void draw_histogram(window* win, const char* lbl, const vector<vec3f>& values);
-void draw_histogram(window* win, const char* lbl, const vector<vec4f>& values);
+void draw_histogram(window* win, const char* lbl, const std::vector<float>& values);
+void draw_histogram(window* win, const char* lbl, const std::vector<vec2f>& values);
+void draw_histogram(window* win, const char* lbl, const std::vector<vec3f>& values);
+void draw_histogram(window* win, const char* lbl, const std::vector<vec4f>& values);
 
 bool draw_messages(window* win);
-void push_message(window* win, const string& message);
-bool draw_filedialog(window* win, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+void push_message(window* win, const std::string& message);
+bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
+    const std::string& dirname, const std::string& filename, const std::string& filter);
 bool draw_filedialog_button(window* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+    bool button_active, const char* lbl, std::string& path, bool save,
+    const std::string& dirname, const std::string& filename, const std::string& filter);
 
-void log_info(window* win, const string& msg);
-void log_error(window* win, const string& msg);
+void log_info(window* win, const std::string& msg);
+void log_error(window* win, const std::string& msg);
 void clear_log(window* win);
 void draw_log(window* win);
 
