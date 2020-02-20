@@ -730,9 +730,7 @@ bool is_initialized(scene* glscene) { return (bool)glscene->program_id; }
 camera* add_camera(scene* scene) {
   return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(camera* camera, const frame3f& frame) {
-  camera->frame = frame;
-}
+void set_frame(camera* camera, const frame3f& frame) { camera->frame = frame; }
 void set_lens(camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
@@ -849,30 +847,24 @@ void set_texture(texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(
-    texture* texture, const image<vec4b>& img, bool as_srgb) {
+void set_texture(texture* texture, const image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
-void set_texture(
-    texture* texture, const image<vec4f>& img, bool as_float) {
+void set_texture(texture* texture, const image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
-void set_texture(
-    texture* texture, const image<vec3b>& img, bool as_srgb) {
+void set_texture(texture* texture, const image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
-void set_texture(
-    texture* texture, const image<vec3f>& img, bool as_float) {
+void set_texture(texture* texture, const image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
-void set_texture(
-    texture* texture, const image<byte>& img, bool as_srgb) {
+void set_texture(texture* texture, const image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
-void set_texture(
-    texture* texture, const image<float>& img, bool as_float) {
+void set_texture(texture* texture, const image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
@@ -967,12 +959,8 @@ void set_tangents(shape* shape, const vector<vec4f>& tangents) {
 object* add_object(scene* scene) {
   return scene->objects.emplace_back(new object{});
 }
-void set_frame(object* object, const frame3f& frame) {
-  object->frame = frame;
-}
-void set_shape(object* object, shape* shape) {
-  object->shape = shape;
-}
+void set_frame(object* object, const frame3f& frame) { object->frame = frame; }
+void set_shape(object* object, shape* shape) { object->shape = shape; }
 void set_material(object* object, material* material) {
   object->material = material;
 }
@@ -996,18 +984,16 @@ void set_frames(instance* instance, const vector<frame3f>& frames) {
 material* add_material(scene* scene) {
   return scene->materials.emplace_back(new material{});
 }
-void set_emission(material* material, const vec3f& emission,
-    texture* emission_tex) {
+void set_emission(
+    material* material, const vec3f& emission, texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
-void set_color(
-    material* material, const vec3f& color, texture* color_tex) {
+void set_color(material* material, const vec3f& color, texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
-void set_specular(
-    material* material, float specular, texture* specular_tex) {
+void set_specular(material* material, float specular, texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
@@ -1016,12 +1002,10 @@ void set_roughness(
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
-void set_opacity(
-    material* material, float opacity, texture* opacity_tex) {
+void set_opacity(material* material, float opacity, texture* opacity_tex) {
   material->opacity = opacity;
 }
-void set_metallic(
-    material* material, float metallic, texture* metallic_tex) {
+void set_metallic(material* material, float metallic, texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
@@ -1033,8 +1017,8 @@ void set_normalmap(material* material, texture* normal_tex) {
 light* add_light(scene* scene) {
   return scene->lights.emplace_back(new light{});
 }
-void set_light(light* light, const vec3f& position,
-    const vec3f& emission, bool directional) {
+void set_light(light* light, const vec3f& position, const vec3f& emission,
+    bool directional) {
   light->position = position;
   light->emission = emission;
   light->type     = directional ? 1 : 0;
@@ -1046,8 +1030,7 @@ void clear_lights(scene* scene) {
 bool has_max_lights(scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
-void draw_object(scene* glscene, object* object,
-    const scene_params& params) {
+void draw_object(scene* glscene, object* object, const scene_params& params) {
   if (object->hidden) return;
 
   auto instance_xform     = mat4f(object->frame);
@@ -1234,8 +1217,8 @@ void draw_object(scene* glscene, object* object,
 }
 
 // Display a scene
-void draw_scene(scene* glscene, camera* glcamera,
-    const vec4i& viewport, const scene_params& params) {
+void draw_scene(scene* glscene, camera* glcamera, const vec4i& viewport,
+    const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
@@ -1506,24 +1489,16 @@ void run_ui(window* win) {
   }
 }
 
-void set_draw_callback(window* win, draw_callback cb) {
-  win->draw_cb = cb;
-}
+void set_draw_callback(window* win, draw_callback cb) { win->draw_cb = cb; }
 void set_widgets_callback(window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
 void set_drop_callback(window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
-void set_key_callback(window* win, key_callback cb) {
-  win->key_cb = cb;
-}
-void set_char_callback(window* win, char_callback cb) {
-  win->char_cb = cb;
-}
-void set_click_callback(window* win, click_callback cb) {
-  win->click_cb = cb;
-}
+void set_key_callback(window* win, key_callback cb) { win->key_cb = cb; }
+void set_char_callback(window* win, char_callback cb) { win->char_cb = cb; }
+void set_click_callback(window* win, click_callback cb) { win->click_cb = cb; }
 void set_scroll_callback(window* win, scroll_callback cb) {
   win->scroll_cb = cb;
 }
@@ -1568,9 +1543,7 @@ bool begin_glheader(window* win, const char* lbl) {
 }
 void end_glheader(window* win) { ImGui::PopID(); }
 
-void open_glmodal(window* win, const char* lbl) {
-  ImGui::OpenPopup(lbl);
-}
+void open_glmodal(window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
 void clear_glmodal(window* win) { ImGui::CloseCurrentPopup(); }
 bool begin_glmodal(window* win, const char* lbl) {
   return ImGui::BeginPopupModal(lbl);
@@ -1580,8 +1553,7 @@ bool is_glmodal_open(window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(
-    window* win, const char* lbl, const string& message) {
+bool draw_message(window* win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1749,9 +1721,8 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_filedialog(window* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter) {
+bool draw_filedialog(window* win, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
@@ -1866,54 +1837,50 @@ bool draw_slider(
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
-bool draw_slider(
-    window* win, const char* lbl, int& value, int min, int max) {
+bool draw_slider(window* win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
-bool draw_slider(
-    window* win, const char* lbl, vec2i& value, int min, int max) {
+bool draw_slider(window* win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    window* win, const char* lbl, vec3i& value, int min, int max) {
+bool draw_slider(window* win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
-bool draw_slider(
-    window* win, const char* lbl, vec4i& value, int min, int max) {
+bool draw_slider(window* win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger(window* win, const char* lbl, float& value,
-    float speed, float min, float max) {
+bool draw_dragger(window* win, const char* lbl, float& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec2f& value,
-    float speed, float min, float max) {
+bool draw_dragger(window* win, const char* lbl, vec2f& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec3f& value,
-    float speed, float min, float max) {
+bool draw_dragger(window* win, const char* lbl, vec3f& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec4f& value,
-    float speed, float min, float max) {
+bool draw_dragger(window* win, const char* lbl, vec4f& value, float speed,
+    float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger(window* win, const char* lbl, int& value,
-    float speed, int min, int max) {
+bool draw_dragger(
+    window* win, const char* lbl, int& value, float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec2i& value,
-    float speed, int min, int max) {
+bool draw_dragger(
+    window* win, const char* lbl, vec2i& value, float speed, int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec3i& value,
-    float speed, int min, int max) {
+bool draw_dragger(
+    window* win, const char* lbl, vec3i& value, float speed, int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(window* win, const char* lbl, vec4i& value,
-    float speed, int min, int max) {
+bool draw_dragger(
+    window* win, const char* lbl, vec4i& value, float speed, int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
@@ -1969,8 +1936,8 @@ bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_combobox(window* win, const char* lbl, int& value,
-    const vector<string>& labels) {
+bool draw_combobox(
+    window* win, const char* lbl, int& value, const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -1983,8 +1950,8 @@ bool draw_combobox(window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_combobox(window* win, const char* lbl, string& value,
-    const vector<string>& labels) {
+bool draw_combobox(
+    window* win, const char* lbl, string& value, const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2031,20 +1998,17 @@ void draw_histogram(
     window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
-void draw_histogram(
-    window* win, const char* lbl, const vector<float>& values) {
+void draw_histogram(window* win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec2f>& values) {
+void draw_histogram(window* win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec3f>& values) {
+void draw_histogram(window* win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2052,8 +2016,7 @@ void draw_histogram(
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec4f>& values) {
+void draw_histogram(window* win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,

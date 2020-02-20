@@ -52,7 +52,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::opengl_image*       glimage  = new ygl::opengl_image{};
+  ygl::opengl_image*     glimage  = new ygl::opengl_image{};
   ygl::draw_image_params glparams = {};
 
   ~app_state() {
@@ -97,29 +97,27 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_callback(
-      win, [app](ygl::window* win, const ygl::input& input) {
-        app->glparams.window      = input.window_size;
-        app->glparams.framebuffer = input.framebuffer_viewport;
-        if (!is_initialized(app->glimage)) {
-          init_glimage(app->glimage);
-          set_glimage(app->glimage, app->display, false, false);
-        }
-        update_imview(app->glparams.center, app->glparams.scale,
-            app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_image(app->glimage, app->glparams);
-      });
-  set_uiupdate_callback(
-      win, [app](ygl::window* win, const ygl::input& input) {
-        // handle mouse
-        if (input.mouse_left) {
-          app->glparams.center += input.mouse_pos - input.mouse_last;
-        }
-        if (input.mouse_right) {
-          app->glparams.scale *= powf(
-              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-        }
-      });
+  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
+    if (!is_initialized(app->glimage)) {
+      init_glimage(app->glimage);
+      set_glimage(app->glimage, app->display, false, false);
+    }
+    update_imview(app->glparams.center, app->glparams.scale,
+        app->display.size(), app->glparams.window, app->glparams.fit);
+    draw_image(app->glimage, app->glparams);
+  });
+  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    // handle mouse
+    if (input.mouse_left) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  });
 
   // run ui
   run_ui(win);

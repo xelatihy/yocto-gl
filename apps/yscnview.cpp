@@ -360,23 +360,22 @@ bool draw_widgets(
       win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
   edited += draw_combobox(
       win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "transmission_tex",
-      iomaterial->transmission_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
+      ioscene->textures, true);
   edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
       ioscene->textures, true);
   edited += draw_combobox(
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_combobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "displacement_tex",
-      iomaterial->displacement_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "displacement_tex", iomaterial->displacement_tex,
+      ioscene->textures, true);
   edited += draw_slider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
   edited += draw_checkbox(win, "smooth", iomaterial->smooth);
   return edited;
 }
 
-bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
+bool draw_widgets(ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -429,8 +428,7 @@ bool draw_widgets(
   draw_label(win, "name", iosubdiv->name);
   draw_label(win, "quads pos", to_string(iosubdiv->quadspos.size()));
   draw_label(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_label(
-      win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
   draw_label(win, "pos", to_string(iosubdiv->positions.size()));
   draw_label(win, "norm", to_string(iosubdiv->normals.size()));
   draw_label(win, "texcoord", to_string(iosubdiv->texcoords.size()));
@@ -438,8 +436,8 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(ygl::window* win, yio::model* ioscene,
-    yio::environment* ioenvironment) {
+bool draw_widgets(
+    ygl::window* win, yio::model* ioscene, yio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);
@@ -448,8 +446,8 @@ bool draw_widgets(ygl::window* win, yio::model* ioscene,
   edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
   edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
   edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
-  edited += draw_combobox(win, "emission texture",
-      ioenvironment->emission_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
+      ioscene->textures, true);
   return edited;
 }
 
@@ -464,19 +462,17 @@ T1* get_element(
 }
 
 // draw with shading
-void draw_widgets(
-    ygl::window* win, app_states* apps, const ygl::input& input) {
+void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  if (draw_filedialog_button(win, "load", true, "load", load_path, false,
-          "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
+          "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_filedialog_button(win, "save",
-          apps->selected && apps->selected->ok, "save", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
+          "save", save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -728,45 +724,39 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yscnview", true);
 
   // callbacks
-  set_draw_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw(win, apps, input);
-      });
-  set_widgets_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_drop_callback(
-      win, [apps](ygl::window* win, const vector<string>& paths,
-               const ygl::input& input) {
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
-  set_update_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        update(win, apps);
-      });
-  set_uiupdate_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        if (!apps->selected || !apps->selected->ok) return;
-        auto app = apps->selected;
+  set_draw_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw(win, apps, input);
+  });
+  set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw_widgets(win, apps, input);
+  });
+  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+                             const ygl::input& input) {
+    for (auto& path : paths) load_scene_async(apps, path);
+  });
+  set_update_callback(win,
+      [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
+  set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    if (!apps->selected || !apps->selected->ok) return;
+    auto app = apps->selected;
 
-        // handle mouse and keyboard for navigation
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-            !input.widgets_active) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-          update_turntable(
-              app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-          set_frame(app->glcamera, app->iocamera->frame);
-        }
-      });
+    // handle mouse and keyboard for navigation
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      update_turntable(
+          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+      set_frame(app->glcamera, app->iocamera->frame);
+    }
+  });
 
   // run ui
   run_ui(win);

@@ -73,8 +73,8 @@ struct opengl_image {
 };
 
 // create image drawing program
-void                     init_glimage(opengl_image* glimage);
-bool                     is_initialized(const opengl_image* glimage);
+void init_glimage(opengl_image* glimage);
+bool is_initialized(const opengl_image* glimage);
 
 // update image data
 void set_glimage(opengl_image* glimage, const image<vec4f>& img,
@@ -131,12 +131,12 @@ struct texture {
 // Opengl material
 struct material {
   // material
-  vec3f           emission      = {0, 0, 0};
-  vec3f           color         = {0, 0, 0};
-  float           metallic      = 0;
-  float           roughness     = 0;
-  float           specular      = 0;
-  float           opacity       = 1;
+  vec3f    emission      = {0, 0, 0};
+  vec3f    color         = {0, 0, 0};
+  float    metallic      = 0;
+  float    roughness     = 0;
+  float    specular      = 0;
+  float    opacity       = 1;
   texture* emission_tex  = nullptr;
   texture* color_tex     = nullptr;
   texture* metallic_tex  = nullptr;
@@ -184,12 +184,12 @@ struct instance {
 // Opengl object
 struct object {
   // object properties
-  frame3f          frame       = identity3x4f;
+  frame3f   frame       = identity3x4f;
   shape*    shape       = nullptr;
   material* material    = nullptr;
   instance* instance    = nullptr;
-  bool             hidden      = false;
-  bool             highlighted = false;
+  bool      hidden      = false;
+  bool      highlighted = false;
 };
 
 // Opengl light
@@ -239,8 +239,8 @@ struct scene_params {
 };
 
 // Initialize an OpenGL scene
-void                     init_glscene(scene* glscene);
-bool                     is_initialized(const scene* glscene);
+void init_glscene(scene* glscene);
+bool is_initialized(const scene* glscene);
 
 // add scene elements
 camera*   add_camera(scene* scene);
@@ -265,24 +265,23 @@ void set_texture(
     texture* texture, const image<vec3b>& img, bool as_srgb = true);
 void set_texture(
     texture* texture, const image<vec3f>& img, bool as_float = false);
-void set_texture(
-    texture* texture, const image<byte>& img, bool as_srgb = true);
+void set_texture(texture* texture, const image<byte>& img, bool as_srgb = true);
 void set_texture(
     texture* texture, const image<float>& img, bool as_float = false);
 
 // material properties
-void set_emission(material* material, const vec3f& emission,
-    texture* emission_tex = nullptr);
-void set_color(material* material, const vec3f& color,
-    texture* color_tex = nullptr);
-void set_metallic(material* material, float metallic,
-    texture* metallic_tex = nullptr);
-void set_roughness(material* material, float roughness,
-    texture* roughness_tex = nullptr);
-void set_specular(material* material, float specular,
-    texture* specular_tex = nullptr);
-void set_opacity(material* material, float opacity,
-    texture* opacity_tex = nullptr);
+void set_emission(
+    material* material, const vec3f& emission, texture* emission_tex = nullptr);
+void set_color(
+    material* material, const vec3f& color, texture* color_tex = nullptr);
+void set_metallic(
+    material* material, float metallic, texture* metallic_tex = nullptr);
+void set_roughness(
+    material* material, float roughness, texture* roughness_tex = nullptr);
+void set_specular(
+    material* material, float specular, texture* specular_tex = nullptr);
+void set_opacity(
+    material* material, float opacity, texture* opacity_tex = nullptr);
 void set_normalmap(material* material, texture* normal_tex);
 
 // shape properties
@@ -308,16 +307,16 @@ void set_hidden(object* object, bool hidden);
 void set_highlighted(object* object, bool highlighted);
 
 // light properties
-void set_light(light* light, const vec3f& position,
-    const vec3f& emission, bool directional);
+void set_light(light* light, const vec3f& position, const vec3f& emission,
+    bool directional);
 
 // light size
 void clear_lights(scene* scene);
 bool has_max_lights(scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(scene* scene, camera* camera,
-    const vec4i& viewport, const scene_params& params);
+void draw_scene(scene* scene, camera* camera, const vec4i& viewport,
+    const scene_params& params);
 
 }  // namespace yocto::opengl
 
@@ -350,38 +349,34 @@ struct input {
 };
 
 // Draw callback called every frame and when resizing
-using draw_callback =
-    std::function<void(window*, const input& input)>;
+using draw_callback = std::function<void(window*, const input& input)>;
 // Draw callback for drawing widgets
-using widgets_callback =
-    std::function<void(window*, const input& input)>;
+using widgets_callback = std::function<void(window*, const input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_callback = std::function<void(
-    window*, const vector<string>&, const input& input)>;
+using drop_callback =
+    std::function<void(window*, const vector<string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
-using key_callback = std::function<void(
-    window*, int key, bool pressed, const input& input)>;
+using key_callback =
+    std::function<void(window*, int key, bool pressed, const input& input)>;
 // Char callback that returns ASCII key
-using char_callback = std::function<void(
-    window*, unsigned int key, const input& input)>;
+using char_callback =
+    std::function<void(window*, unsigned int key, const input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_callback = std::function<void(
-    window*, bool left, bool pressed, const input& input)>;
+using click_callback =
+    std::function<void(window*, bool left, bool pressed, const input& input)>;
 // Scroll callback that returns scroll amount
-using scroll_callback = std::function<void(
-    window*, float amount, const input& input)>;
+using scroll_callback =
+    std::function<void(window*, float amount, const input& input)>;
 // Update functions called every frame
-using uiupdate_callback =
-    std::function<void(window*, const input& input)>;
+using uiupdate_callback = std::function<void(window*, const input& input)>;
 // Update functions called every frame
-using update_callback =
-    std::function<void(window*, const input& input)>;
+using update_callback = std::function<void(window*, const input& input)>;
 
 // OpenGL window wrapper
 struct window {
-  GLFWwindow*         win           = nullptr;
-  string              title         = "";
+  GLFWwindow*       win           = nullptr;
+  string            title         = "";
   draw_callback     draw_cb       = {};
   widgets_callback  widgets_cb    = {};
   drop_callback     drop_cb       = {};
@@ -391,10 +386,10 @@ struct window {
   scroll_callback   scroll_cb     = {};
   update_callback   update_cb     = {};
   uiupdate_callback uiupdate_cb   = {};
-  int                 widgets_width = 0;
-  bool                widgets_left  = true;
-  input        input         = {};
-  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
+  int               widgets_width = 0;
+  bool              widgets_left  = true;
+  input             input         = {};
+  vec4f             background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Windows initialization
@@ -447,14 +442,10 @@ bool draw_slider(
 bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max);
 
-bool draw_slider(
-    window* win, const char* lbl, int& value, int min, int max);
-bool draw_slider(
-    window* win, const char* lbl, vec2i& value, int min, int max);
-bool draw_slider(
-    window* win, const char* lbl, vec3i& value, int min, int max);
-bool draw_slider(
-    window* win, const char* lbl, vec4i& value, int min, int max);
+bool draw_slider(window* win, const char* lbl, int& value, int min, int max);
+bool draw_slider(window* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_slider(window* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_slider(window* win, const char* lbl, vec4i& value, int min, int max);
 
 bool draw_dragger(window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
@@ -465,14 +456,14 @@ bool draw_dragger(window* win, const char* lbl, vec3f& value,
 bool draw_dragger(window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(window* win, const char* lbl, int& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec2i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec3i& value,
-    float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec4i& value,
-    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(window* win, const char* lbl, int& value, float speed = 1,
+    int min = 0, int max = 0);
+bool draw_dragger(window* win, const char* lbl, vec2i& value, float speed = 1,
+    int min = 0, int max = 0);
+bool draw_dragger(window* win, const char* lbl, vec3i& value, float speed = 1,
+    int min = 0, int max = 0);
+bool draw_dragger(window* win, const char* lbl, vec4i& value, float speed = 1,
+    int min = 0, int max = 0);
 
 bool draw_checkbox(window* win, const char* lbl, bool& value);
 
@@ -482,10 +473,10 @@ bool draw_coloredit(window* win, const char* lbl, vec4f& value);
 bool draw_hdrcoloredit(window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(window* win, const char* lbl, int& idx,
-    const vector<string>& labels);
-bool draw_combobox(window* win, const char* lbl, string& value,
-    const vector<string>& labels);
+bool draw_combobox(
+    window* win, const char* lbl, int& idx, const vector<string>& labels);
+bool draw_combobox(
+    window* win, const char* lbl, string& value, const vector<string>& labels);
 bool draw_combobox(window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null = false);
 
@@ -542,20 +533,15 @@ inline bool draw_combobox(window* win, const char* lbl,
 
 void draw_progressbar(window* win, const char* lbl, float fraction);
 
-void draw_histogram(
-    window* win, const char* lbl, const vector<float>& values);
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec2f>& values);
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec3f>& values);
-void draw_histogram(
-    window* win, const char* lbl, const vector<vec4f>& values);
+void draw_histogram(window* win, const char* lbl, const vector<float>& values);
+void draw_histogram(window* win, const char* lbl, const vector<vec2f>& values);
+void draw_histogram(window* win, const char* lbl, const vector<vec3f>& values);
+void draw_histogram(window* win, const char* lbl, const vector<vec4f>& values);
 
 bool draw_messages(window* win);
 void push_message(window* win, const string& message);
-bool draw_filedialog(window* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter);
+bool draw_filedialog(window* win, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter);
 bool draw_filedialog_button(window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);

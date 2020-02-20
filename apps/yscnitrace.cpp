@@ -62,9 +62,9 @@ struct app_state {
 
   // scene
   yio::model*  ioscene  = new yio::model{};
-  ytr::scene*      scene    = new ytr::scene{};
+  ytr::scene*  scene    = new ytr::scene{};
   yio::camera* iocamera = nullptr;
-  ytr::camera*     camera   = nullptr;
+  ytr::camera* camera   = nullptr;
 
   // options
   ytr::trace_params params = {};
@@ -75,7 +75,7 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  ygl::opengl_image*       glimage  = new ygl::opengl_image{};
+  ygl::opengl_image*     glimage  = new ygl::opengl_image{};
   ygl::draw_image_params glparams = {};
 
   // editing
@@ -89,8 +89,8 @@ struct app_state {
   yio::texture*     selected_texture     = nullptr;
 
   // computation
-  int        render_sample  = 0;
-  int        render_counter = 0;
+  int         render_sample  = 0;
+  int         render_counter = 0;
   ytr::state* render_state   = new ytr::state{};
 
   // loading status
@@ -121,7 +121,7 @@ struct app_states {
 
   // default options
   ytr::trace_params params     = {};
-  bool             add_skyenv = false;
+  bool              add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -393,23 +393,22 @@ bool draw_widgets(
       win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
   edited += draw_combobox(
       win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "transmission_tex",
-      iomaterial->transmission_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
+      ioscene->textures, true);
   edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
       ioscene->textures, true);
   edited += draw_combobox(
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_combobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "displacement_tex",
-      iomaterial->displacement_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "displacement_tex", iomaterial->displacement_tex,
+      ioscene->textures, true);
   edited += draw_slider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
   edited += draw_checkbox(win, "smooth", iomaterial->smooth);
   return edited;
 }
 
-bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
+bool draw_widgets(ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -459,16 +458,15 @@ bool draw_widgets(
   draw_label(win, "name", iosubdiv->name);
   draw_label(win, "quads pos", to_string(iosubdiv->quadspos.size()));
   draw_label(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_label(
-      win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
   draw_label(win, "pos", to_string(iosubdiv->positions.size()));
   draw_label(win, "norm", to_string(iosubdiv->normals.size()));
   draw_label(win, "texcoord", to_string(iosubdiv->texcoords.size()));
   return edited;
 }
 
-bool draw_widgets(ygl::window* win, yio::model* ioscene,
-    yio::environment* ioenvironment) {
+bool draw_widgets(
+    ygl::window* win, yio::model* ioscene, yio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -477,8 +475,8 @@ bool draw_widgets(ygl::window* win, yio::model* ioscene,
   edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
   edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
   edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
-  edited += draw_combobox(win, "emission texture",
-      ioenvironment->emission_tex, ioscene->textures, true);
+  edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
+      ioscene->textures, true);
   return edited;
 }
 
@@ -492,19 +490,17 @@ T1* get_element(
   throw std::runtime_error("element not found");
 }
 
-void draw_widgets(
-    ygl::window* win, app_states* apps, const ygl::input& input) {
+void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  if (draw_filedialog_button(win, "load", true, "load", load_path, false,
-          "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
+          "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_filedialog_button(win, "save",
-          apps->selected && apps->selected->ok, "save", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
+          "save", save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -832,25 +828,19 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
-  set_draw_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw(win, apps, input);
-      });
-  set_widgets_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_drop_callback(
-      win, [apps](ygl::window* win, const vector<string>& paths,
-               const ygl::input& input) {
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
-  set_update_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        update(win, apps);
-      });
-  set_uiupdate_callback(win, [apps](ygl::window*   win,
-                                   const ygl::input& input) {
+  set_draw_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw(win, apps, input);
+  });
+  set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw_widgets(win, apps, input);
+  });
+  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+                             const ygl::input& input) {
+    for (auto& path : paths) load_scene_async(apps, path);
+  });
+  set_update_callback(win,
+      [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
+  set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 

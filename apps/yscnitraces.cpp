@@ -60,12 +60,12 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  ygl::opengl_image*       glimage  = new ygl::opengl_image{};
+  ygl::opengl_image*     glimage  = new ygl::opengl_image{};
   ygl::draw_image_params glparams = {};
 
   // computation
-  int        render_sample  = 0;
-  int        render_counter = 0;
+  int         render_sample  = 0;
+  int         render_counter = 0;
   ytr::state* render_state   = new ytr::state{};
 
   ~app_state() {
@@ -296,21 +296,20 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
-  set_draw_callback(
-      win, [app](ygl::window* win, const ygl::input& input) {
-        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
-        if (!app->render_counter)
-          set_glimage(app->glimage, app->display, false, false);
-        app->glparams.window      = input.window_size;
-        app->glparams.framebuffer = input.framebuffer_viewport;
-        update_imview(app->glparams.center, app->glparams.scale,
-            app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_image(app->glimage, app->glparams);
-        app->render_counter++;
-        if (app->render_counter > 10) app->render_counter = 0;
-      });
+  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+    if (!app->render_counter)
+      set_glimage(app->glimage, app->display, false, false);
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
+    update_imview(app->glparams.center, app->glparams.scale,
+        app->display.size(), app->glparams.window, app->glparams.fit);
+    draw_image(app->glimage, app->glparams);
+    app->render_counter++;
+    if (app->render_counter > 10) app->render_counter = 0;
+  });
   set_char_callback(win, [app](ygl::window* win, unsigned int key,
-                               const ygl::input& input) {
+                             const ygl::input& input) {
     switch (key) {
       case 'c': {
         auto ncameras = (int)app->scene->cameras.size();
@@ -337,25 +336,24 @@ int main(int argc, const char* argv[]) {
         break;
     }
   });
-  set_uiupdate_callback(
-      win, [app](ygl::window* win, const ygl::input& input) {
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-                  200.0f;
-          pan.x = -pan.x;
-          update_turntable(
-              app->camera->frame, app->camera->focus, rotate, dolly, pan);
-          reset_display(app);
-        }
-      });
+  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+              200.0f;
+      pan.x = -pan.x;
+      update_turntable(
+          app->camera->frame, app->camera->focus, rotate, dolly, pan);
+      reset_display(app);
+    }
+  });
 
   // run ui
   run_ui(win);

@@ -72,9 +72,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  ygl::opengl_image*       glimage   = new ygl::opengl_image{};
+  ygl::opengl_image*     glimage   = new ygl::opengl_image{};
   ygl::draw_image_params glparams  = {};
-  bool                glupdated = true;
+  bool                   glupdated = true;
 
   // loading status
   atomic<bool> ok           = false;
@@ -164,18 +164,17 @@ void load_image_async(app_states* apps, const string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_widgets(
-    ygl::window* win, app_states* apps, const ygl::input& input) {
+void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  if (draw_filedialog_button(win, "load", true, "load image", load_path,
-          false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+  if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
+          "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_filedialog_button(win, "save",
-          apps->selected && apps->selected->ok, "save image", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
+  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
+          "save image", save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
@@ -232,8 +231,7 @@ void draw_widgets(
     edited += draw_slider(win, "highlights", params.highlights, 0, 1);
     edited += draw_coloredit(win, "shadows color", params.shadows_color);
     edited += draw_coloredit(win, "midtones color", params.midtones_color);
-    edited += draw_coloredit(
-        win, "highlights color", params.highlights_color);
+    edited += draw_coloredit(win, "highlights color", params.highlights_color);
     if (edited) update_display(app);
     end_glheader(win);
   }
@@ -326,36 +324,30 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
-  set_update_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        update(win, apps);
-      });
-  set_draw_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw(win, apps, input);
-      });
-  set_widgets_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_uiupdate_callback(
-      win, [apps](ygl::window* win, const ygl::input& input) {
-        if (!apps->selected) return;
-        auto app = apps->selected;
-        // handle mouse
-        if (input.mouse_left && !input.widgets_active) {
-          app->glparams.center += input.mouse_pos - input.mouse_last;
-        }
-        if (input.mouse_right && !input.widgets_active) {
-          app->glparams.scale *= powf(
-              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-        }
-      });
-  set_drop_callback(
-      win, [apps](ygl::window* win, const vector<string>& paths,
-               const ygl::input& input) {
-        for (auto path : paths) load_image_async(apps, path);
-      });
+  set_update_callback(win,
+      [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
+  set_draw_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw(win, apps, input);
+  });
+  set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw_widgets(win, apps, input);
+  });
+  set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    if (!apps->selected) return;
+    auto app = apps->selected;
+    // handle mouse
+    if (input.mouse_left && !input.widgets_active) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right && !input.widgets_active) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  });
+  set_drop_callback(win, [apps](ygl::window* win, const vector<string>& paths,
+                             const ygl::input& input) {
+    for (auto path : paths) load_image_async(apps, path);
+  });
 
   // run ui
   run_ui(win);

@@ -258,11 +258,11 @@ model::~model() {
 }
 
 // add an element
-template<typename T>
-static T* add_element(vector<T*>& elements, const string& name, const string& base) {
-  auto element = elements.emplace_back(new T{});
-  element->name =
-      name != "" ? name : (base + std::to_string(elements.size()));
+template <typename T>
+static T* add_element(
+    vector<T*>& elements, const string& name, const string& base) {
+  auto element  = elements.emplace_back(new T{});
+  element->name = name != "" ? name : (base + std::to_string(elements.size()));
   return element;
 }
 
@@ -445,8 +445,8 @@ static vec2i texture_size(const texture* texture) {
 }
 
 // Evaluate a texture
-static vec3f lookup_texture(const texture* texture, const vec2i& ij,
-    bool ldr_as_linear = false) {
+static vec3f lookup_texture(
+    const texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (!texture->colorf.empty()) {
     return texture->colorf[ij];
   } else if (!texture->colorb.empty()) {
@@ -604,8 +604,8 @@ unique_ptr<subdiv> subdivide_subdiv(
   return tesselated;
 }
 // Apply displacement to a shape
-unique_ptr<subdiv> displace_subdiv(subdiv* subdiv,
-    float displacement, texture* displacement_tex, bool smooth) {
+unique_ptr<subdiv> displace_subdiv(subdiv* subdiv, float displacement,
+    texture* displacement_tex, bool smooth) {
   auto displaced = make_unique<sceneio::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
@@ -691,32 +691,32 @@ void tesselate_subdivs(model* scene, progress_callback progress_cb) {
 namespace yocto::sceneio {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+static bool load_json_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel);
 static bool save_json_scene(const string& filename, const model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+static bool load_obj_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel);
 static bool save_obj_scene(const string& filename, const model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+static bool load_ply_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel);
 static bool save_ply_scene(const string& filename, const model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+static bool load_gltf_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel);
+static bool load_pbrt_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel);
 static bool save_pbrt_scene(const string& filename, const model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
@@ -740,8 +740,8 @@ bool load_scene(const string& filename, model* scene, string& error,
 }
 
 // Save a scene
-bool save_scene(const string& filename, const model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+bool save_scene(const string& filename, const model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -1036,8 +1036,8 @@ inline json load_json(const string& filename, string& error) {
 }
 
 // Save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+static bool load_json_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1547,8 +1547,8 @@ static bool save_json_scene(const string& filename, const model* scene,
 namespace yocto::sceneio {
 
 // Loads an OBJ
-static bool load_obj_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+static bool load_obj_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1874,8 +1874,8 @@ void print_obj_camera(camera* camera) {
 // -----------------------------------------------------------------------------
 namespace yocto::sceneio {
 
-static bool load_ply_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+static bool load_ply_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1933,8 +1933,8 @@ static bool save_ply_scene(const string& filename, const model* scene,
 namespace yocto::sceneio {
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+static bool load_gltf_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2013,11 +2013,11 @@ static bool load_gltf_scene(const string& filename, model* scene,
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map =
-      unordered_map<string, pair<texture*, texture*>>{
-          {"", {nullptr, nullptr}}};
-  auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
-      -> pair<texture*, texture*> {
+  auto cotexture_map = unordered_map<string, pair<texture*, texture*>>{
+      {"", {nullptr, nullptr}}};
+  auto get_cotexture =
+      [&scene, &cotexture_map](
+          const cgltf_texture_view& ginfo) -> pair<texture*, texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2029,11 +2029,11 @@ static bool load_gltf_scene(const string& filename, model* scene,
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map =
-      unordered_map<string, pair<texture*, texture*>>{
-          {"", {nullptr, nullptr}}};
-  auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
-      -> pair<texture*, texture*> {
+  auto mrtexture_map = unordered_map<string, pair<texture*, texture*>>{
+      {"", {nullptr, nullptr}}};
+  auto get_mrtexture =
+      [&scene, &mrtexture_map](
+          const cgltf_texture_view& ginfo) -> pair<texture*, texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2072,8 +2072,7 @@ static bool load_gltf_scene(const string& filename, model* scene,
   }
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, vector<object*>>{
-      {nullptr, {}}};
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<object*>>{{nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
@@ -2341,8 +2340,8 @@ static bool load_gltf_scene(const string& filename, model* scene,
 namespace yocto::sceneio {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, model* scene,
-    string& error, progress_callback progress_cb, bool noparallel) {
+static bool load_pbrt_scene(const string& filename, model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2372,8 +2371,7 @@ static bool load_pbrt_scene(const string& filename, model* scene,
 
   // convert materials
   auto ctexture_map = unordered_map<string, texture*>{{"", nullptr}};
-  auto get_ctexture = [&scene, &ctexture_map](
-                          const string& path) -> texture* {
+  auto get_ctexture = [&scene, &ctexture_map](const string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
@@ -2382,8 +2380,7 @@ static bool load_pbrt_scene(const string& filename, model* scene,
     return texture;
   };
   auto stexture_map = unordered_map<string, texture*>{{"", nullptr}};
-  auto get_stexture = [&scene, &stexture_map](
-                          const string& path) -> texture* {
+  auto get_stexture = [&scene, &stexture_map](const string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
@@ -2392,8 +2389,7 @@ static bool load_pbrt_scene(const string& filename, model* scene,
     return texture;
   };
   auto atexture_map = unordered_map<string, texture*>{{"", nullptr}};
-  auto get_atexture = [&scene, &atexture_map](
-                          const string& path) -> texture* {
+  auto get_atexture = [&scene, &atexture_map](const string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;

@@ -190,8 +190,8 @@ struct instance {
 // Object.
 struct object {
   // object data
-  string            name     = "";
-  frame3f           frame    = identity3x4f;
+  string    name     = "";
+  frame3f   frame    = identity3x4f;
   shape*    shape    = nullptr;
   material* material = nullptr;
   instance* instance = nullptr;
@@ -200,9 +200,9 @@ struct object {
 
 // Environment map.
 struct environment {
-  string           name         = "";
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = {0, 0, 0};
+  string   name         = "";
+  frame3f  frame        = identity3x4f;
+  vec3f    emission     = {0, 0, 0};
   texture* emission_tex = nullptr;
 };
 
@@ -214,7 +214,7 @@ struct environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct model {
-  string                       name         = "";
+  string               name         = "";
   vector<camera*>      cameras      = {};
   vector<object*>      objects      = {};
   vector<environment*> environments = {};
@@ -228,16 +228,14 @@ struct model {
 
 // add element to a scene
 camera*      add_camera(model* scene, const string& name = "");
-environment* add_environment(
-    model* scene, const string& name = "");
-object*   add_object(model* scene, const string& name = "");
-instance* add_instance(model* scene, const string& name = "");
-material* add_material(model* scene, const string& name = "");
-shape*    add_shape(model* scene, const string& name = "");
-subdiv*   add_subdiv(model* scene, const string& name = "");
-texture*  add_texture(model* scene, const string& name = "");
-object*   add_complete_object(
-      model* scene, const string& name = "");
+environment* add_environment(model* scene, const string& name = "");
+object*      add_object(model* scene, const string& name = "");
+instance*    add_instance(model* scene, const string& name = "");
+material*    add_material(model* scene, const string& name = "");
+shape*       add_shape(model* scene, const string& name = "");
+subdiv*      add_subdiv(model* scene, const string& name = "");
+texture*     add_texture(model* scene, const string& name = "");
+object*      add_complete_object(model* scene, const string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -255,8 +253,8 @@ using progress_callback =
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const string& filename, model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const model* scene,
-    string& error, progress_callback progress_cb = {}, bool noparallel = false);
+bool save_scene(const string& filename, const model* scene, string& error,
+    progress_callback progress_cb = {}, bool noparallel = false);
 
 // get named camera or default if name is empty
 camera* get_camera(const model* scene, const string& name = "");
@@ -271,8 +269,7 @@ namespace yocto::sceneio {
 // Return scene statistics as list of strings.
 vector<string> scene_stats(const model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> scene_validation(
-    const model* scene, bool notextures = false);
+vector<string> scene_validation(const model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const model* scene);
