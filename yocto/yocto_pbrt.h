@@ -331,7 +331,7 @@ enum struct pbrt_value_type {
 };
 
 // Pbrt value
-struct pbrt_value {
+struct value {
   string          name     = "";
   pbrt_value_type type     = pbrt_value_type::real;
   int             value1i  = 0;
@@ -350,13 +350,13 @@ struct pbrt_value {
 struct pbrt_command {
   string             name   = "";
   string             type   = "";
-  vector<pbrt_value> values = {};
+  vector<value> values = {};
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
 };
 
 // get pbrt value
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, string& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, string& val) {
   if (pbrt.type == pbrt_value_type::string ||
       pbrt.type == pbrt_value_type::texture) {
     val = pbrt.value1s;
@@ -365,7 +365,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, bool& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, bool& val) {
   if (pbrt.type == pbrt_value_type::boolean) {
     val = pbrt.value1b;
     return true;
@@ -373,7 +373,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, int& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, int& val) {
   if (pbrt.type == pbrt_value_type::integer) {
     val = pbrt.value1i;
     return true;
@@ -381,7 +381,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, float& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, float& val) {
   if (pbrt.type == pbrt_value_type::real) {
     val = pbrt.value1f;
     return true;
@@ -389,7 +389,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vec2f& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, vec2f& val) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     val = pbrt.value2f;
@@ -398,7 +398,7 @@ struct pbrt_command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vec3f& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, vec3f& val) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
@@ -413,7 +413,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<float>& val) {
+    const value& pbrt, vector<float>& val) {
   if (pbrt.type == pbrt_value_type::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
@@ -426,7 +426,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<vec2f>& val) {
+    const value& pbrt, vector<vec2f>& val) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     if (!pbrt.vector2f.empty()) {
@@ -447,7 +447,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<vec3f>& val) {
+    const value& pbrt, vector<vec3f>& val) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
@@ -472,7 +472,7 @@ struct pbrt_command {
 }
 
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<int>& val) {
+    const value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -485,7 +485,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<vec3i>& val) {
+    const value& pbrt, vector<vec3i>& val) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
@@ -499,7 +499,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, pair<float, string>& val) {
+    const value& pbrt, pair<float, string>& val) {
   if (pbrt.type == pbrt_value_type::string ||
       pbrt.type == pbrt_value_type::texture) {
     val.first = 0;
@@ -510,7 +510,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, pair<vec3f, string>& val) {
+    const value& pbrt, pair<vec3f, string>& val) {
   if (pbrt.type == pbrt_value_type::string ||
       pbrt.type == pbrt_value_type::texture) {
     val.first = zero3f;
@@ -522,7 +522,7 @@ struct pbrt_command {
 }
 template <typename T>
 [[nodiscard]] inline bool get_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& val) {
+    const vector<value>& pbrt, const string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_value(p, val);
@@ -532,73 +532,73 @@ template <typename T>
 }
 
 // pbrt value construction
-inline pbrt_value make_value(const string& name, const string& val,
+inline value make_value(const string& name, const string& val,
     pbrt_value_type type = pbrt_value_type::string) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1s = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, bool val,
+inline value make_value(const string& name, bool val,
     pbrt_value_type type = pbrt_value_type::boolean) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1b = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, int val,
+inline value make_value(const string& name, int val,
     pbrt_value_type type = pbrt_value_type::integer) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1i = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, float val,
+inline value make_value(const string& name, float val,
     pbrt_value_type type = pbrt_value_type::real) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vec2f& val,
+inline value make_value(const string& name, const vec2f& val,
     pbrt_value_type type = pbrt_value_type::point2) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vec3f& val,
+inline value make_value(const string& name, const vec3f& val,
     pbrt_value_type type = pbrt_value_type::color) {
-  auto pbrt    = pbrt_value{};
+  auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vector<vec2f>& val,
+inline value make_value(const string& name, const vector<vec2f>& val,
     pbrt_value_type type = pbrt_value_type::point2) {
-  auto pbrt     = pbrt_value{};
+  auto pbrt     = value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vector<vec3f>& val,
+inline value make_value(const string& name, const vector<vec3f>& val,
     pbrt_value_type type = pbrt_value_type::point) {
-  auto pbrt     = pbrt_value{};
+  auto pbrt     = value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vector<vec3i>& val,
+inline value make_value(const string& name, const vector<vec3i>& val,
     pbrt_value_type type = pbrt_value_type::integer) {
-  auto pbrt     = pbrt_value{};
+  auto pbrt     = value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector1i = {(int*)val.data(), (int*)val.data() + val.size() * 3};
@@ -880,7 +880,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
 }
 
 [[nodiscard]] inline bool parse_params(
-    string_view& str, vector<pbrt_value>& values) {
+    string_view& str, vector<value>& values) {
   auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
@@ -1244,7 +1244,7 @@ inline bool convert_material(material*     pmaterial,
   };
 
   // helpers
-  auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
+  auto get_texture = [&](const vector<value>& values, const string& name,
                          vec3f& color, string& filename,
                          const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
@@ -1264,7 +1264,7 @@ inline bool convert_material(material*     pmaterial,
     }
     return true;
   };
-  auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
+  auto get_scalar = [&](const vector<value>& values, const string& name,
                         float& scalar, float def) -> bool {
     auto textured = pair{vec3f{def}, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1280,7 +1280,7 @@ inline bool convert_material(material*     pmaterial,
     }
     return true;
   };
-  auto get_color = [&](const vector<pbrt_value>& values, const string& name,
+  auto get_color = [&](const vector<value>& values, const string& name,
                        vec3f& color, const vec3f& def) -> bool {
     auto textured = pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1297,7 +1297,7 @@ inline bool convert_material(material*     pmaterial,
     return true;
   };
 
-  auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
+  auto get_roughness = [&](const vector<value>& values, float& roughness,
                            float def = 0.1) -> bool {
     auto roughness_ = pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
@@ -1637,7 +1637,7 @@ inline bool convert_shape(shape* shape, const pbrt_command& command,
   };
 
   // helpers
-  auto get_alpha = [&](const vector<pbrt_value>& values, const string& name,
+  auto get_alpha = [&](const vector<value>& values, const string& name,
                        string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = pair{def, ""s};
@@ -2201,7 +2201,7 @@ inline light* add_light(model* pbrt) {
   return true;
 }
 
-inline void format_value(string& str, const pbrt_value& value) {
+inline void format_value(string& str, const value& value) {
   static auto type_labels = unordered_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
@@ -2271,7 +2271,7 @@ inline void format_value(string& str, const pbrt_value& value) {
   }
 }
 
-inline void format_value(string& str, const vector<pbrt_value>& values) {
+inline void format_value(string& str, const vector<value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);
