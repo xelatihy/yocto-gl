@@ -723,8 +723,9 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
-  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yscnview", true);
+  auto win_guard = std::make_unique<ygl::opengl_window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", true);
 
   // callbacks
   set_draw_glcallback(

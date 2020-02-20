@@ -9,48 +9,48 @@
 using namespace yocto::math;
 using namespace yocto::shape;
 using namespace yocto::commonio;
-using namespace yocto::sceneio;
-using namespace yocto::opengl;
 using namespace yocto::bvh;
+namespace yio = yocto::sceneio;
+namespace ygl = yocto::opengl;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, opengl_window*)>         draw_glwidgets;
+  function<void(app_state*, ygl::opengl_window*)>         draw_glwidgets;
 
   // Geometry data
-  shape shape;
+  yio::shape shape;
 
   // OpenGL data
-  opengl_scene*       glscene        = new opengl_scene{};
-  draw_glscene_params opengl_options = {};
+  ygl::opengl_scene*       glscene        = new ygl::opengl_scene{};
+  ygl::draw_glscene_params opengl_options = {};
 
   // Interaction data
   float          time       = 0;
   bool           show_edges = false;
-  camera camera;
+  yio::camera camera;
   float          camera_focus;
   bvh_tree       bvh;
 
   // Internal handles
-  opengl_camera*   glcamera    = nullptr;
-  opengl_shape*    glshapes    = nullptr;
-  opengl_shape*    glpoints    = nullptr;
-  opengl_shape*    glvfields   = nullptr;
-  opengl_shape*    gledges     = nullptr;
-  opengl_shape*    glpolylines = nullptr;
-  opengl_material* glshapem    = nullptr;
-  opengl_material* glpointm    = nullptr;
-  opengl_material* glvfieldm   = nullptr;
-  opengl_material* gledgem     = nullptr;
-  opengl_material* glpolylinem = nullptr;
-  opengl_object*   glshapeo    = nullptr;
-  opengl_object*   glpointo    = nullptr;
-  opengl_object*   glvfieldo   = nullptr;
-  opengl_object*   gledgeo     = nullptr;
-  opengl_object*   glpolylineo = nullptr;
+  ygl::opengl_camera*   glcamera    = nullptr;
+  ygl::opengl_shape*    glshapes    = nullptr;
+  ygl::opengl_shape*    glpoints    = nullptr;
+  ygl::opengl_shape*    glvfields   = nullptr;
+  ygl::opengl_shape*    gledges     = nullptr;
+  ygl::opengl_shape*    glpolylines = nullptr;
+  ygl::opengl_material* glshapem    = nullptr;
+  ygl::opengl_material* glpointm    = nullptr;
+  ygl::opengl_material* glvfieldm   = nullptr;
+  ygl::opengl_material* gledgem     = nullptr;
+  ygl::opengl_material* glpolylinem = nullptr;
+  ygl::opengl_object*   glshapeo    = nullptr;
+  ygl::opengl_object*   glpointo    = nullptr;
+  ygl::opengl_object*   glvfieldo   = nullptr;
+  ygl::opengl_object*   gledgeo     = nullptr;
+  ygl::opengl_object*   glpolylineo = nullptr;
 
   // cleanup
   ~app_state() {
@@ -160,7 +160,7 @@ void update_gledges(app_state* app) {
 
 void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app->camera              = camera{};
+  app->camera              = yio::camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
   app->camera.orthographic = false;
@@ -267,8 +267,8 @@ void clear(app_state* app) {
 void yimshproc(const string& input_filename, function<void(app_state*)> init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
-    function<void(app_state*, opengl_window* win)>     draw_glwidgets) {
-  auto app_guard = make_unique<app_state>();
+    function<void(app_state*, ygl::opengl_window* win)>     draw_glwidgets) {
+  auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
   // init shape
@@ -289,21 +289,22 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
   app->init(app);
 
   // Init window.
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yimshproc", true);
+  auto win_guard = std::make_unique<ygl::opengl_window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
             app->opengl_options);
       });
   set_widgets_glcallback(
-      win, [app, draw_glwidgets](opengl_window* win,
-               const opengl_input& input) { draw_glwidgets(app, win); });
-  set_click_glcallback(win, [app](opengl_window* win, bool left, bool press,
-                                const opengl_input& input) {
+      win, [app, draw_glwidgets](ygl::opengl_window* win,
+               const ygl::opengl_input& input) { draw_glwidgets(app, win); });
+  set_click_glcallback(win, [app](ygl::opengl_window* win, bool left, bool press,
+                                const ygl::opengl_input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
@@ -330,7 +331,7 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
     }
   });
   set_scroll_glcallback(
-      win, [app](opengl_window* win, float yoffset, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, float yoffset, const ygl::opengl_input& input) {
         float zoom = yoffset > 0 ? 0.1 : -0.1;
         update_turntable(
             app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
@@ -338,12 +339,12 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
         set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
             app->camera.film);
       });
-  set_key_glcallback(win, [app](opengl_window* win, int key, bool pressing,
-                              const opengl_input& input) {
+  set_key_glcallback(win, [app](ygl::opengl_window* win, int key, bool pressing,
+                              const ygl::opengl_input& input) {
     app->key_callback(app, key, pressing);
   });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {

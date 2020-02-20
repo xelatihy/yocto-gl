@@ -92,8 +92,9 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_guard = ygl::make_glwindow({1280, 720}, "yimgviews", false);
+  auto win_guard = std::make_unique<ygl::opengl_window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(

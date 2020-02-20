@@ -400,7 +400,7 @@ struct opengl_window {
 };
 
 // Windows initialization
-unique_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+void init_glwindow(opengl_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup

@@ -1345,10 +1345,8 @@ static void draw_glwindow(opengl_window* win) {
   glfwSwapBuffers(win->win);
 }
 
-unique_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
+void init_glwindow(opengl_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
-  auto win = make_unique<opengl_window>();
-
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1367,7 +1365,7 @@ unique_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
   glfwSwapInterval(1);  // Enable vsync
 
   // set user data
-  glfwSetWindowUserPointer(win->win, win.get());
+  glfwSetWindowUserPointer(win->win, win);
 
   // set callbacks
   glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
@@ -1444,8 +1442,6 @@ unique_ptr<opengl_window> make_glwindow(const vec2i& size, const string& title,
     win->widgets_width = widgets_width;
     win->widgets_left  = widgets_left;
   }
-
-  return win;
 }
 
 void clear_glwindow(opengl_window* win) {

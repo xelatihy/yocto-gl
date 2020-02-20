@@ -321,8 +321,9 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yimview", true);
+  auto win_guard = std::make_unique<ygl::opengl_window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(

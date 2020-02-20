@@ -291,8 +291,9 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win_guard = std::make_unique<ygl::opengl_window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
