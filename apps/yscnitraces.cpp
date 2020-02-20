@@ -59,7 +59,7 @@ struct app_state {
   // rendering state
   yim::image<vec4f> render   = {};
   yim::image<vec4f> display  = {};
-  float        exposure = 0;
+  float             exposure = 0;
 
   // view scene
   ygl::glimage*       glimage  = new ygl::glimage{};
@@ -222,8 +222,8 @@ void reset_display(app_state* app) {
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](
-          const yim::image<vec4f>& render, int current, int total, const vec2i& ij) {
+      [app](const yim::image<vec4f>& render, int current, int total,
+          const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });

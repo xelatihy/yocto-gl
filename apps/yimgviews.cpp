@@ -47,10 +47,10 @@ struct app_state {
 
   // diplay data
   yim::image<vec4f>      display    = {};
-  float             exposure   = 0;
-  bool              filmic     = false;
+  float                  exposure   = 0;
+  bool                   filmic     = false;
   yim::colorgrade_params params     = {};
-  bool              colorgrade = false;
+  bool                   colorgrade = false;
 
   // viewing properties
   ygl::glimage*       glimage  = new ygl::glimage{};

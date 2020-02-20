@@ -42,9 +42,9 @@ namespace yim = yocto::image;
 namespace fs = ghc::filesystem;
 
 struct image_stats {
-  vec4f         min       = zero4f;
-  vec4f         max       = zero4f;
-  vec4f         average   = zero4f;
+  vec4f              min       = zero4f;
+  vec4f              max       = zero4f;
+  vec4f              average   = zero4f;
   std::vector<vec3f> histogram = {};
 };
 
@@ -63,10 +63,10 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  float             exposure   = 0;
-  bool              filmic     = false;
+  float                  exposure   = 0;
+  bool                   filmic     = false;
   yim::colorgrade_params params     = {};
-  bool              colorgrade = false;
+  bool                   colorgrade = false;
 
   // viewing properties
   ygl::glimage*       glimage   = new ygl::glimage{};
@@ -90,12 +90,12 @@ struct app_state {
 struct app_states {
   // data
   std::vector<app_state*> states   = {};
-  app_state*         selected = nullptr;
+  app_state*              selected = nullptr;
   std::deque<app_state*>  loading  = {};
 
   // default options
-  float             exposure = 0;
-  bool              filmic   = false;
+  float                  exposure = 0;
+  bool                   filmic   = false;
   yim::colorgrade_params params   = {};
 
   // cleanup
@@ -341,10 +341,11 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   });
-  set_drop_callback(win, [apps](ygl::window* win, const std::vector<std::string>& paths,
-                             const ygl::input& input) {
-    for (auto path : paths) load_image_async(apps, path);
-  });
+  set_drop_callback(
+      win, [apps](ygl::window* win, const std::vector<std::string>& paths,
+               const ygl::input& input) {
+        for (auto path : paths) load_image_async(apps, path);
+      });
 
   // run ui
   run_ui(win);

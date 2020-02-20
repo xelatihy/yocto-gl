@@ -74,14 +74,14 @@ namespace yim = yocto::image;
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct camera {
-  std::string  name         = "";
-  frame3f frame        = identity3x4f;
-  bool    orthographic = false;
-  float   lens         = 0.050;
-  float   film         = 0.036;
-  float   aspect       = 1.500;
-  float   focus        = flt_max;
-  float   aperture     = 0;
+  std::string name         = "";
+  frame3f     frame        = identity3x4f;
+  bool        orthographic = false;
+  float       lens         = 0.050;
+  float       film         = 0.036;
+  float       aspect       = 1.500;
+  float       focus        = flt_max;
+  float       aperture     = 0;
 };
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
@@ -189,20 +189,20 @@ struct instance {
 // Object.
 struct object {
   // object data
-  std::string    name     = "";
-  frame3f   frame    = identity3x4f;
-  shape*    shape    = nullptr;
-  material* material = nullptr;
-  instance* instance = nullptr;
-  subdiv*   subdiv   = nullptr;
+  std::string name     = "";
+  frame3f     frame    = identity3x4f;
+  shape*      shape    = nullptr;
+  material*   material = nullptr;
+  instance*   instance = nullptr;
+  subdiv*     subdiv   = nullptr;
 };
 
 // Environment map.
 struct environment {
-  std::string   name         = "";
-  frame3f  frame        = identity3x4f;
-  vec3f    emission     = {0, 0, 0};
-  texture* emission_tex = nullptr;
+  std::string name         = "";
+  frame3f     frame        = identity3x4f;
+  vec3f       emission     = {0, 0, 0};
+  texture*    emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -252,8 +252,9 @@ using progress_callback =
 // Calls the progress callback, if defined, as we process more data.
 bool load_scene(const std::string& filename, model* scene, std::string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const std::string& filename, const model* scene, std::string& error,
-    progress_callback progress_cb = {}, bool noparallel = false);
+bool save_scene(const std::string& filename, const model* scene,
+    std::string& error, progress_callback progress_cb = {},
+    bool noparallel = false);
 
 // get named camera or default if name is empty
 camera* get_camera(const model* scene, const std::string& name = "");
@@ -268,7 +269,8 @@ namespace yocto::sceneio {
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-std::vector<std::string> scene_validation(const model* scene, bool notextures = false);
+std::vector<std::string> scene_validation(
+    const model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const model* scene);

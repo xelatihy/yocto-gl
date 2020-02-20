@@ -42,11 +42,12 @@ using namespace std::string_literals;
 
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec4i>& quads, std::vector<vec4i>& quadspos,
-    std::vector<vec4i>& quadsnorm, std::vector<vec4i>& quadstexcoord,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<vec3f>& colors, std::vector<float>& radius, const std::string& type,
-    std::string& error) {
+    std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
+    std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
+    std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<vec3f>& colors, std::vector<float>& radius,
+    const std::string& type, std::string& error) {
   if (type == "default-quad") {
     ysh::make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
@@ -200,8 +201,9 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
 
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
+    std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
     std::vector<float>& radius, const std::string& type, std::string& error) {
   auto quadspos      = std::vector<vec4i>{};
   auto quadsnorm     = std::vector<vec4i>{};
@@ -217,8 +219,8 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const std::string& type,
-    std::string& error) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const std::string& type, std::string& error) {
   auto points    = std::vector<int>{};
   auto lines     = std::vector<vec2i>{};
   auto triangles = std::vector<vec3i>{};
@@ -425,7 +427,7 @@ int main(int argc, const char* argv[]) {
     auto adjacencies = ysh::face_adjacencies(triangles);
     auto solver = ysh::make_geodesic_solver(triangles, adjacencies, positions);
 
-    auto          paths = std::vector<ysh::surface_path>();
+    auto               paths = std::vector<ysh::surface_path>();
     std::vector<float> fields[3];
     fields[0] = ysh::compute_geodesic_distances(solver, {p0});
     fields[1] = ysh::compute_geodesic_distances(solver, {p1});

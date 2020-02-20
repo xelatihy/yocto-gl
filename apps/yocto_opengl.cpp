@@ -859,21 +859,24 @@ void set_texture(texture* texture, const vec2i& size, int nchan,
 void set_texture(texture* texture, const yim::image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const yim::image<vec4f>& img, bool as_float) {
+void set_texture(
+    texture* texture, const yim::image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
 void set_texture(texture* texture, const yim::image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const yim::image<vec3f>& img, bool as_float) {
+void set_texture(
+    texture* texture, const yim::image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
 void set_texture(texture* texture, const yim::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
-void set_texture(texture* texture, const yim::image<float>& img, bool as_float) {
+void set_texture(
+    texture* texture, const yim::image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
@@ -1635,14 +1638,14 @@ struct filedialog_state {
   std::string                     dirname       = "";
   std::string                     filename      = "";
   std::vector<pair<string, bool>> entries       = {};
-  bool                       save          = false;
-  bool                       remove_hidden = true;
+  bool                            save          = false;
+  bool                            remove_hidden = true;
   std::string                     filter        = "";
   std::vector<string>             extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const std::string& dirname, const std::string& filename, bool save,
-      const std::string& filter) {
+  filedialog_state(const std::string& dirname, const std::string& filename,
+      bool save, const std::string& filter) {
     this->save = save;
     set_filter(filter);
     set_dirname(dirname);
@@ -1723,7 +1726,7 @@ struct filedialog_state {
   }
 
   std::string get_path() const { return dirname + filename; }
-  bool   exists_file(const std::string& filename) {
+  bool        exists_file(const std::string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
@@ -1731,7 +1734,8 @@ struct filedialog_state {
   }
 };
 bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename, const std::string& filter) {
+    const std::string& dirname, const std::string& filename,
+    const std::string& filter) {
   static auto states = std::unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
@@ -1787,7 +1791,8 @@ bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
 }
 bool draw_filedialog_button(window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename, const std::string& filter) {
+    const std::string& dirname, const std::string& filename,
+    const std::string& filter) {
   if (is_glmodal_open(win, lbl)) {
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
@@ -1945,8 +1950,8 @@ bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_combobox(
-    window* win, const char* lbl, int& value, const std::vector<string>& labels) {
+bool draw_combobox(window* win, const char* lbl, int& value,
+    const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -1959,8 +1964,8 @@ bool draw_combobox(
   return value != old_val;
 }
 
-bool draw_combobox(
-    window* win, const char* lbl, std::string& value, const std::vector<string>& labels) {
+bool draw_combobox(window* win, const char* lbl, std::string& value,
+    const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2007,17 +2012,20 @@ void draw_histogram(
     window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
-void draw_histogram(window* win, const char* lbl, const std::vector<float>& values) {
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
-void draw_histogram(window* win, const char* lbl, const std::vector<vec2f>& values) {
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
-void draw_histogram(window* win, const char* lbl, const std::vector<vec3f>& values) {
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2025,7 +2033,8 @@ void draw_histogram(window* win, const char* lbl, const std::vector<vec3f>& valu
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
-void draw_histogram(window* win, const char* lbl, const std::vector<vec4f>& values) {
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,

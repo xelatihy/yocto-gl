@@ -39,9 +39,10 @@ namespace fs = ghc::filesystem;
 
 namespace yocto::image {
 
-yim::image<vec4f> filter_bilateral(const yim::image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const std::vector<yim::image<vec4f>>& features,
-    const std::vector<float>& features_sigma) {
+yim::image<vec4f> filter_bilateral(const yim::image<vec4f>& img,
+    float spatial_sigma, float range_sigma,
+    const std::vector<yim::image<vec4f>>& features,
+    const std::vector<float>&             features_sigma) {
   auto filtered     = image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -104,7 +105,8 @@ yim::image<vec4f> filter_bilateral(
   return filtered;
 }
 
-bool make_image_preset(const std::string& type, yim::image<vec4f>& img, std::string& error) {
+bool make_image_preset(
+    const std::string& type, yim::image<vec4f>& img, std::string& error) {
   auto set_region = [](yim::image<vec4f>& img, const yim::image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
@@ -150,8 +152,8 @@ bool make_image_preset(const std::string& type, yim::image<vec4f>& img, std::str
     make_bumps(img, size);
     img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
-    auto sub_types = std::vector<std::string>{"grid", "uvgrid", "checker", "gammaramp",
-        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_types = std::vector<std::string>{"grid", "uvgrid", "checker",
+        "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = std::vector<yim::image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;

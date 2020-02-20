@@ -97,8 +97,8 @@ void update_glpoints(app_state* app, const std::vector<vec3f>& points) {
   }
 }
 
-void update_glvector_field(
-    app_state* app, const std::vector<vec3f>& vector_field, float scale = 0.01) {
+void update_glvector_field(app_state* app,
+    const std::vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -269,7 +269,8 @@ void clear(app_state* app) {
   //     std::vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const std::string& input_filename, function<void(app_state*)> init,
+void yimshproc(const std::string&                      input_filename,
+    function<void(app_state*)>                         init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
     function<void(app_state*, ygl::window* win)>       draw_widgets) {

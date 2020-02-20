@@ -166,8 +166,8 @@ void update_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<float>& radius);
 void update_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions);
-void update_quads_bvh(
-    bvh_tree& bvh, const std::vector<vec4i>& quads, const std::vector<vec3f>& positions);
+void update_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions);
 
 // Find a shape element or scene instances that intersects a ray,
 // returning either the closest or any overlap depending on `find_any`.

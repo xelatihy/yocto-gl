@@ -78,17 +78,17 @@ namespace yocto::sceneio {
 using std::string;
 using std::vector;
 using namespace std::string_literals;
-using std::function;
 using std::array;
-using std::pair;
-using std::unordered_map;
-using std::make_unique;
-using std::unique_ptr;
+using std::function;
 using std::ignore;
+using std::make_unique;
+using std::pair;
+using std::unique_ptr;
+using std::unordered_map;
 namespace ysh = yocto::shape;
 using yim::image;
 
-}
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
@@ -603,8 +603,9 @@ unique_ptr<subdiv> subdivide_subdiv(
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
       ysh::subdivide_catmullclark(
           tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
-  std::tie(tesselated->quadsnorm, tesselated->normals) = ysh::subdivide_catmullclark(
-      tesselated->quadsnorm, tesselated->normals, subdivisions, true);
+  std::tie(tesselated->quadsnorm, tesselated->normals) =
+      ysh::subdivide_catmullclark(
+          tesselated->quadsnorm, tesselated->normals, subdivisions, true);
   std::tie(tesselated->quadspos, tesselated->positions) =
       ysh::subdivide_catmullclark(
           tesselated->quadspos, tesselated->positions, subdivisions);

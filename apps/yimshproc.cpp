@@ -1,13 +1,13 @@
 #include "yimshproc.h"
 
 struct my_data {
-  std::vector<vec3i>        face_adjacency;
-  std::vector<vector<int>>  vertex_adjacency;
-  ysh::geodesic_solver solver;
-  std::vector<float>        scalar_field;
-  std::vector<vec3f>        vector_field;
+  std::vector<vec3i>       face_adjacency;
+  std::vector<vector<int>> vertex_adjacency;
+  ysh::geodesic_solver     solver;
+  std::vector<float>       scalar_field;
+  std::vector<vec3f>       vector_field;
 
-  int         num_samples      = 500;
+  int              num_samples      = 500;
   std::vector<int> vertex_selection = {};
 };
 

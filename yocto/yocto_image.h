@@ -147,7 +147,7 @@ struct image {
 
  private:
   // data
-  vec2i     extent = zero2i;
+  vec2i          extent = zero2i;
   std::vector<T> pixels = {};
 };
 
@@ -273,22 +273,34 @@ namespace yocto::image {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const std::string& filename, image<vec4f>& img, std::string& error);
-bool save_image(const std::string& filename, const image<vec4f>& img, std::string& error);
-bool load_image(const std::string& filename, image<vec4b>& img, std::string& error);
-bool save_image(const std::string& filename, const image<vec4b>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<vec4f>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<vec4f>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<vec4b>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<vec4b>& img, std::string& error);
 
 // Loads/saves a 3 channels float/byte image in linear/srgb color space.
-bool load_image(const std::string& filename, image<vec3f>& img, std::string& error);
-bool save_image(const std::string& filename, const image<vec3f>& img, std::string& error);
-bool load_image(const std::string& filename, image<vec3b>& img, std::string& error);
-bool save_image(const std::string& filename, const image<vec3b>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<vec3f>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<vec3f>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<vec3b>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<vec3b>& img, std::string& error);
 
 // Loads/saves a 1 channels float/byte image in linear/srgb color space.
-bool load_image(const std::string& filename, image<float>& img, std::string& error);
-bool save_image(const std::string& filename, const image<float>& img, std::string& error);
-bool load_image(const std::string& filename, image<byte>& img, std::string& error);
-bool save_image(const std::string& filename, const image<byte>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<float>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<float>& img, std::string& error);
+bool load_image(
+    const std::string& filename, image<byte>& img, std::string& error);
+bool save_image(
+    const std::string& filename, const image<byte>& img, std::string& error);
 
 }  // namespace yocto::image
 
@@ -407,7 +419,7 @@ struct volume {
 
  private:
   // data
-  vec3i         extent = zero3i;
+  vec3i              extent = zero3i;
   std::vector<float> voxels = {};
 };
 

@@ -70,7 +70,7 @@ struct app_state {
   // rendering state
   yim::image<vec4f> render   = {};
   yim::image<vec4f> display  = {};
-  float        exposure = 0;
+  float             exposure = 0;
 
   // view scene
   ygl::glimage*       glimage  = new ygl::glimage{};
@@ -92,12 +92,12 @@ struct app_state {
   ytr::state* render_state   = new ytr::state{};
 
   // loading status
-  std::atomic<bool>       ok           = false;
-  std::future<void>       loader       = {};
-  std::string             status       = "";
-  std::string             error        = "";
+  std::atomic<bool>  ok           = false;
+  std::future<void>  loader       = {};
+  std::string        status       = "";
+  std::string        error        = "";
   std::atomic<float> progress     = 0.5;
-  std::string             loader_error = "";
+  std::string        loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -114,7 +114,7 @@ struct app_state {
 struct app_states {
   // data
   std::vector<app_state*> states   = {};
-  app_state*         selected = nullptr;
+  app_state*              selected = nullptr;
   std::deque<app_state*>  loading  = {};
 
   // default options
@@ -277,15 +277,15 @@ void reset_display(app_state* app) {
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](
-          const yim::image<vec4f>& render, int current, int total, const vec2i& ij) {
+      [app](const yim::image<vec4f>& render, int current, int total,
+          const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
-void load_scene_async(
-    app_states* apps, const std::string& filename, const std::string& camera_name = "") {
+void load_scene_async(app_states* apps, const std::string& filename,
+    const std::string& camera_name = "") {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -294,7 +294,8 @@ void load_scene_async(
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const std::string& message, int current, int total) {
+    auto progress_cb = [app](
+                           const std::string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     if (!load_scene(
@@ -456,7 +457,8 @@ bool draw_widgets(
   draw_label(win, "name", iosubdiv->name);
   draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
   draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
-  draw_label(win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(
+      win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
   draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
   draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
   draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
@@ -479,8 +481,8 @@ bool draw_widgets(
 }
 
 template <typename T, typename T1>
-T1* get_element(
-    T* ioelement, const std::vector<T*>& ioelements, const std::vector<T1*>& elements) {
+T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
+    const std::vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -832,10 +834,11 @@ int main(int argc, const char* argv[]) {
   set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
     draw_widgets(win, apps, input);
   });
-  set_drop_callback(win, [apps](ygl::window* win, const std::vector<std::string>& paths,
-                             const ygl::input& input) {
-    for (auto& path : paths) load_scene_async(apps, path);
-  });
+  set_drop_callback(
+      win, [apps](ygl::window* win, const std::vector<std::string>& paths,
+               const ygl::input& input) {
+        for (auto& path : paths) load_scene_async(apps, path);
+      });
   set_update_callback(win,
       [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
   set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {

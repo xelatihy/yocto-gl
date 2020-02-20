@@ -78,10 +78,10 @@ void init_glimage(glimage* glimage);
 bool is_initialized(const glimage* glimage);
 
 // update image data
-void set_glimage(glimage* glimage, const yim::image<vec4f>& img, bool linear = false,
-    bool mipmap = false);
-void set_glimage(glimage* glimage, const yim::image<vec4b>& img, bool linear = false,
-    bool mipmap = false);
+void set_glimage(glimage* glimage, const yim::image<vec4f>& img,
+    bool linear = false, bool mipmap = false);
+void set_glimage(glimage* glimage, const yim::image<vec4b>& img,
+    bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
 struct glimage_params {
@@ -266,7 +266,8 @@ void set_texture(
     texture* texture, const yim::image<vec3b>& img, bool as_srgb = true);
 void set_texture(
     texture* texture, const yim::image<vec3f>& img, bool as_float = false);
-void set_texture(texture* texture, const yim::image<byte>& img, bool as_srgb = true);
+void set_texture(
+    texture* texture, const yim::image<byte>& img, bool as_srgb = true);
 void set_texture(
     texture* texture, const yim::image<float>& img, bool as_float = false);
 
@@ -354,8 +355,8 @@ using draw_callback = std::function<void(window*, const input& input)>;
 // Draw callback for drawing widgets
 using widgets_callback = std::function<void(window*, const input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_callback =
-    std::function<void(window*, const std::vector<std::string>&, const input& input)>;
+using drop_callback = std::function<void(
+    window*, const std::vector<std::string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback =
     std::function<void(window*, int key, bool pressed, const input& input)>;
@@ -377,7 +378,7 @@ using update_callback = std::function<void(window*, const input& input)>;
 // OpenGL window wrapper
 struct window {
   GLFWwindow*       win           = nullptr;
-  std::string            title         = "";
+  std::string       title         = "";
   draw_callback     draw_cb       = {};
   widgets_callback  widgets_cb    = {};
   drop_callback     drop_cb       = {};
@@ -474,10 +475,10 @@ bool draw_coloredit(window* win, const char* lbl, vec4f& value);
 bool draw_hdrcoloredit(window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(
-    window* win, const char* lbl, int& idx, const std::vector<std::string>& labels);
-bool draw_combobox(
-    window* win, const char* lbl, std::string& value, const std::vector<std::string>& labels);
+bool draw_combobox(window* win, const char* lbl, int& idx,
+    const std::vector<std::string>& labels);
+bool draw_combobox(window* win, const char* lbl, std::string& value,
+    const std::vector<std::string>& labels);
 bool draw_combobox(window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null = false);
 
@@ -534,18 +535,24 @@ inline bool draw_combobox(window* win, const char* lbl,
 
 void draw_progressbar(window* win, const char* lbl, float fraction);
 
-void draw_histogram(window* win, const char* lbl, const std::vector<float>& values);
-void draw_histogram(window* win, const char* lbl, const std::vector<vec2f>& values);
-void draw_histogram(window* win, const char* lbl, const std::vector<vec3f>& values);
-void draw_histogram(window* win, const char* lbl, const std::vector<vec4f>& values);
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<float>& values);
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec2f>& values);
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec3f>& values);
+void draw_histogram(
+    window* win, const char* lbl, const std::vector<vec4f>& values);
 
 bool draw_messages(window* win);
 void push_message(window* win, const std::string& message);
 bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename, const std::string& filter);
+    const std::string& dirname, const std::string& filename,
+    const std::string& filter);
 bool draw_filedialog_button(window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename, const std::string& filter);
+    const std::string& dirname, const std::string& filename,
+    const std::string& filter);
 
 void log_info(window* win, const std::string& msg);
 void log_error(window* win, const std::string& msg);
