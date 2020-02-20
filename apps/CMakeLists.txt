@@ -1,3 +1,13 @@
+cmake_minimum_required (VERSION 3.12)
+
+project (yocto-gl-apps VERSION 2.0)
+
+option(YOCTO_OPENGL "Build OpenGL apps" ON)
+option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
+option(YOCTO_TESTING "Enable testing" ON)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_executable(yscntrace yscntrace.cpp)
 add_executable(yscnproc  yscnproc.cpp)
 add_executable(yimgproc  yimgproc.cpp)
