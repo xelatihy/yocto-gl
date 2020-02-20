@@ -30,12 +30,13 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
-using namespace yocto::sceneio;
 using namespace yocto::commonio;
+namespace yio = yocto::sceneio;
 
 #include <memory>
 #include <set>
 using std::make_unique;
+using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
@@ -65,7 +66,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = make_unique<sceneio_model>();
+  auto scene_guard = make_unique<yio::sceneio_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (!load_scene(filename, scene, ioerror, print_progress))

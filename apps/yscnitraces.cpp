@@ -31,11 +31,11 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::sceneio;
 using namespace yocto::image;
 using namespace yocto::commonio;
 using namespace yocto::opengl;
 namespace ytr = yocto::trace;
+namespace yio = yocto::sceneio;
 
 #include <future>
 #include <memory>
@@ -79,8 +79,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
-    sceneio_camera* iocamera, sceneio_progress print_progress = {}) {
+void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& camera,
+    yio::sceneio_camera* iocamera, yio::sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -88,7 +88,7 @@ void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, ytr::camera*>{};
+  auto camera_map     = unordered_map<yio::sceneio_camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -100,7 +100,7 @@ void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, ytr::texture*>{};
+  auto texture_map     = unordered_map<yio::sceneio_texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -118,7 +118,7 @@ void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, ytr::material*>{};
+  auto material_map     = unordered_map<yio::sceneio_material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -152,7 +152,7 @@ void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, ytr::shape*>{};
+  auto shape_map     = unordered_map<yio::sceneio_shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -171,7 +171,7 @@ void init_scene(ytr::scene* scene, sceneio_model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, ytr::instance*>{};
+  auto instance_map     = unordered_map<yio::sceneio_instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -260,7 +260,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = make_unique<sceneio_model>();
+  auto ioscene_guard = make_unique<yio::sceneio_model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(app->filename, ioscene, ioerror, print_progress))
