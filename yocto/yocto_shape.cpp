@@ -3551,7 +3551,6 @@ static string get_extension(const string& filename) {
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
 
     // ply model
-    using namespace yocto::ply;
     auto ply_guard = make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);

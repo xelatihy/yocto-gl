@@ -30,9 +30,11 @@
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto::math;
-using namespace yocto::image;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
+using yocto::image::image; 
+using yocto::image::colorgrade_params; 
+using yocto::image::is_hdr_filename; 
 
 #include <atomic>
 #include <deque>

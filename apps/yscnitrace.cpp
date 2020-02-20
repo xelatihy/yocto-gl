@@ -31,15 +31,18 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::image;
+using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
+using yocto::image::image; 
+using yocto::image::is_hdr_filename; 
 
 #include <atomic>
 #include <deque>
 #include <future>
+using std::string;
 using std::atomic;
 using std::deque;
 using std::future;

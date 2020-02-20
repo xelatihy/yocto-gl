@@ -1971,6 +1971,12 @@ inline vec3f contrast(const vec3f& rgb, float contrast);
 inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f});
 
+// Apply tone mapping
+inline vec3f tonemap(
+    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
+inline vec4f tonemap(
+    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb);
 inline vec3f xyz_to_rgb(const vec3f& xyz);
@@ -2260,6 +2266,50 @@ inline vec3f saturate(
     const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+}
+
+// Filmic tonemapping
+inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+  if (!accurate_fit) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return max(zero3f, ldr);
+  } else {
+    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+    static const auto ACESInputMat = transpose(mat3f{
+        {0.59719, 0.35458, 0.04823},
+        {0.07600, 0.90834, 0.01566},
+        {0.02840, 0.13383, 0.83777},
+    });
+    // ODT_SAT => XYZ => D60_2_D65 => sRGB
+    static const auto ACESOutputMat = transpose(mat3f{
+        {1.60475, -0.53108, -0.07367},
+        {-0.10208, 1.10813, -0.00605},
+        {-0.00327, -0.07276, 1.07602},
+    });
+    // RRT => ODT
+    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+      return (v * v + v * 0.0245786f - 0.000090537f) /
+             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+    };
+
+    auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+    return max(zero3f, ldr);
+  }
+}
+
+inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+  auto rgb = hdr;
+  if (exposure != 0) rgb *= exp2(exposure);
+  if (filmic) rgb = tonemap_filmic(rgb);
+  if (srgb) rgb = rgb_to_srgb(rgb);
+  return rgb;
+}
+inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
