@@ -33,26 +33,11 @@
 #include <future>
 #include <memory>
 #include <mutex>
+using namespace std::string_literals;
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto::trace {
-
-using std::function;
-using std::make_unique;
-using std::pair;
-using std::string;
-using std::unique_ptr;
-using std::vector;
-using yocto::image::image;
-using namespace std::string_literals;
-
-}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
@@ -140,7 +125,7 @@ vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
 }
 
 // Specular to fresnel eta.
-pair<vec3f, vec3f> reflectivity_to_eta(
+std::pair<vec3f, vec3f> reflectivity_to_eta(
     const vec3f& reflectivity, const vec3f& edge_tint) {
   auto r = clamp(reflectivity, 0.0f, 0.99f);
   auto g = edge_tint;
@@ -245,7 +230,7 @@ vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
   return (rp + rs) / 2;
 }
 
-pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
+std::pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
   auto density_channel = density[channel];
   if (density_channel == 0 || rd == 0)
@@ -315,7 +300,7 @@ static vec3f eval_normal(const shape* shape, int element) {
 }
 
 // Shape element normal.
-static pair<vec3f, vec3f> eval_tangents(
+static std::pair<vec3f, vec3f> eval_tangents(
     const shape* shape, int element, const vec2f& uv) {
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -346,7 +331,7 @@ static pair<vec3f, vec3f> eval_tangents(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-static T eval_shape(const shape* shape, const vector<T>& vals, int element,
+static T eval_shape(const shape* shape, const std::vector<T>& vals, int element,
     const vec2f& uv, const T& def) {
   if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
@@ -408,7 +393,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
   // get texture
   if (!texture) return {1, 1, 1};
 
-  // get image width/height
+  // get yim::image width/height
   auto size = texture_size(texture);
 
   // get coordinates normalized for tiling
@@ -423,7 +408,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
     if (t < 0) t += size.y;
   }
 
-  // get image coordinates and residuals
+  // get yim::image coordinates and residuals
   auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
@@ -437,7 +422,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
-// Generates a ray from a camera for image plane coordinate uv and
+// Generates a ray from a camera for yim::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
     const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -450,7 +435,7 @@ static ray3f eval_perspective_camera(
         (lens_uv.y - 0.5f) * camera->aperture, 0};
     auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
         camera->film.y * (image_uv.y - 0.5f), distance};
-    // distance of the image of the point
+    // distance of the yim::image of the point
     auto distance1 = camera->lens * distance / (distance - camera->lens);
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
@@ -470,7 +455,7 @@ static ray3f eval_perspective_camera(
   }
 }
 
-// Generates a ray from a camera for image plane coordinate uv and
+// Generates a ray from a camera for yim::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
     const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -499,7 +484,7 @@ static ray3f eval_orthographic_camera(
   }
 }
 
-// Generates a ray from a camera for image plane coordinate uv and
+// Generates a ray from a camera for yim::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
     const camera* camera, const vec2f& uv, const vec2f& luv) {
@@ -1013,8 +998,8 @@ static void init_embree_bvh(shape* shape, const trace_params& params) {
   if (!shape->points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape->lines.empty()) {
-    auto elines     = vector<int>{};
-    auto epositions = vector<vec4f>{};
+    auto elines     = std::vector<int>{};
+    auto epositions = std::vector<vec4f>{};
     auto last_index = -1;
     for (auto& l : shape->lines) {
       if (last_index == l.x) {
@@ -1121,9 +1106,9 @@ static void init_embree_bvh(scene* scene, const trace_params& params) {
 }
 
 static void update_embree_bvh(scene* scene,
-    const vector<object*>&           updated_objects,
-    const vector<shape*>&            updated_shapes,
-    const vector<instance*>& updated_instances, const trace_params& params) {
+    const std::vector<object*>&           updated_objects,
+    const std::vector<shape*>&            updated_shapes,
+    const std::vector<instance*>& updated_instances, const trace_params& params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -1198,8 +1183,8 @@ struct bvh_primitive {
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(
-    vector<bvh_primitive>& primitives, int start, int end) {
+static std::pair<int, int> split_sah(
+    std::vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -1261,8 +1246,8 @@ static pair<int, int> split_sah(
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static pair<int, int> split_balanced(
-    vector<bvh_primitive>& primitives, int start, int end) {
+static std::pair<int, int> split_balanced(
+    std::vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1297,8 +1282,8 @@ static pair<int, int> split_balanced(
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static pair<int, int> split_middle(
-    vector<bvh_primitive>& primitives, int start, int end) {
+static std::pair<int, int> split_middle(
+    std::vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1331,8 +1316,8 @@ static pair<int, int> split_middle(
 }
 
 // Split bvh nodes according to a type
-static pair<int, int> split_nodes(
-    vector<bvh_primitive>& primitives, int start, int end, bvh_type type) {
+static std::pair<int, int> split_nodes(
+    std::vector<bvh_primitive>& primitives, int start, int end, bvh_type type) {
   switch (type) {
     case bvh_type::default_: return split_middle(primitives, start, end);
     case bvh_type::highquality: return split_sah(primitives, start, end);
@@ -1347,7 +1332,7 @@ const int bvh_max_prims = 4;
 
 // Build BVH nodes
 static void build_bvh_serial(
-    vector<bvh_node>& nodes, vector<bvh_primitive>& primitives, bvh_type type) {
+    std::vector<bvh_node>& nodes, std::vector<bvh_primitive>& primitives, bvh_type type) {
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(primitives.size() * 2);
@@ -1401,7 +1386,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    const shared_ptr<bvh_tree>& bvh, vector<bbox3f>& bboxes, bvh_type type) {
+    const shared_ptr<bvh_tree>& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh->nodes;
   auto& primitives = bvh->primitives;
@@ -1415,7 +1400,7 @@ static void build_bvh_parallel(
   for (auto idx = 0; idx < bboxes.size(); idx++) bvh->primitives[idx] = idx;
 
   // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
+  auto centers = std::vector<vec3f>(bboxes.size());
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
@@ -1426,7 +1411,7 @@ static void build_bvh_parallel(
   // synchronization
   std::atomic<int>          num_processed_prims(0);
   std::mutex                queue_mutex;
-  vector<std::future<void>> futures;
+  std::vector<std::future<void>> futures;
   auto                      nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
@@ -1500,7 +1485,7 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(bvh_tree* bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(bvh_tree* bvh, const std::vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh->nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -1527,7 +1512,7 @@ static void init_bvh(shape* shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto primitives = vector<bvh_primitive>{};
+  auto primitives = std::vector<bvh_primitive>{};
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < shape->points.size(); idx++) {
       auto& p             = shape->points[idx];
@@ -1601,9 +1586,9 @@ void init_bvh(
   if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
-  auto primitives            = vector<bvh_primitive>{};
+  auto primitives            = std::vector<bvh_primitive>{};
   auto object_id             = 0;
-  auto empty_instance_frames = vector<frame3f>{identity3x4f};
+  auto empty_instance_frames = std::vector<frame3f>{identity3x4f};
   for (auto object : scene->objects) {
     auto instance_id = 0;
     for (auto& frame : object->instance->frames) {
@@ -1642,28 +1627,28 @@ static void update_bvh(shape* shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(shape->bvh->primitives.size());
+  auto bboxes = std::vector<bbox3f>(shape->bvh->primitives.size());
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& p     = shape->points[shape->bvh->primitives[idx].x];
       bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
     }
   } else if (!shape->lines.empty()) {
-    bboxes = vector<bbox3f>(shape->lines.size());
+    bboxes = std::vector<bbox3f>(shape->lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape->lines[shape->bvh->primitives[idx].x];
       bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
           shape->radius[l.x], shape->radius[l.y]);
     }
   } else if (!shape->triangles.empty()) {
-    bboxes = vector<bbox3f>(shape->triangles.size());
+    bboxes = std::vector<bbox3f>(shape->triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape->triangles[shape->bvh->primitives[idx].x];
       bboxes[idx] = triangle_bounds(
           shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
     }
   } else if (!shape->quads.empty()) {
-    bboxes = vector<bbox3f>(shape->quads.size());
+    bboxes = std::vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape->quads[shape->bvh->primitives[idx].x];
       bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
@@ -1675,9 +1660,9 @@ static void update_bvh(shape* shape, const trace_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(scene* scene, const vector<object*>& updated_objects,
-    const vector<shape*>&    updated_shapes,
-    const vector<instance*>& updated_instances, const trace_params& params) {
+void update_bvh(scene* scene, const std::vector<object*>& updated_objects,
+    const std::vector<shape*>&    updated_shapes,
+    const std::vector<instance*>& updated_instances, const trace_params& params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1688,7 +1673,7 @@ void update_bvh(scene* scene, const vector<object*>& updated_objects,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
+  auto bboxes = std::vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto instance = scene->bvh->primitives[idx];
     auto object   = scene->objects[instance.x];
@@ -2389,13 +2374,13 @@ static float sample_lights_pdf(
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_path(const scene* scene, const ray3f& ray_,
+static std::pair<vec3f, bool> trace_path(const scene* scene, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = vector<volume_point>{};
+  auto volume_stack  = std::vector<volume_point>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
 
@@ -2518,7 +2503,7 @@ static pair<vec3f, bool> trace_path(const scene* scene, const ray3f& ray_,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_naive(const scene* scene, const ray3f& ray_,
+static std::pair<vec3f, bool> trace_naive(const scene* scene, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -2576,7 +2561,7 @@ static pair<vec3f, bool> trace_naive(const scene* scene, const ray3f& ray_,
 }
 
 // Eyelight for quick previewing.
-static pair<vec3f, bool> trace_eyelight(const scene* scene, const ray3f& ray_,
+static std::pair<vec3f, bool> trace_eyelight(const scene* scene, const ray3f& ray_,
     rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -2625,7 +2610,7 @@ static pair<vec3f, bool> trace_eyelight(const scene* scene, const ray3f& ray_,
 }
 
 // False color rendering
-static pair<vec3f, bool> trace_falsecolor(const scene* scene, const ray3f& ray,
+static std::pair<vec3f, bool> trace_falsecolor(const scene* scene, const ray3f& ray,
     rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_scene_bvh(scene, ray);
@@ -2678,7 +2663,7 @@ static pair<vec3f, bool> trace_falsecolor(const scene* scene, const ray3f& ray,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = pair<vec3f, bool> (*)(const scene* scene, const ray3f& ray,
+using sampler_func = std::pair<vec3f, bool> (*)(const scene* scene, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -2769,7 +2754,7 @@ void init_lights(scene* scene, progress_callback progress_cb) {
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (!shape->triangles.empty()) {
-      shape->elements_cdf = vector<float>(shape->triangles.size());
+      shape->elements_cdf = std::vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->triangles[idx];
         shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
@@ -2778,7 +2763,7 @@ void init_lights(scene* scene, progress_callback progress_cb) {
       }
     }
     if (!shape->quads.empty()) {
-      shape->elements_cdf = vector<float>(shape->quads.size());
+      shape->elements_cdf = std::vector<float>(shape->quads.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->quads[idx];
         shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
@@ -2800,7 +2785,7 @@ void init_lights(scene* scene, progress_callback progress_cb) {
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
-      environment->texels_cdf = vector<float>(size.x * size.y);
+      environment->texels_cdf = std::vector<float>(size.x * size.y);
       if (size != zero2i) {
         for (auto i = 0; i < environment->texels_cdf.size(); i++) {
           auto ij                    = vec2i{i % size.x, i / size.x};
@@ -2829,7 +2814,7 @@ using std::future;
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
+  auto             futures  = std::vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -2846,10 +2831,10 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const scene* scene, const camera* camera,
+yim::image<vec4f> trace_image(const scene* scene, const camera* camera,
     const trace_params& params, progress_callback progress_cb,
     image_callback image_cb) {
-  auto state_guard = make_unique<state>();
+  auto state_guard = std::make_unique<state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
 
@@ -2902,7 +2887,7 @@ void trace_start(state* state, const scene* scene, const camera* camera,
   state->worker = std::async(std::launch::async, [=]() {
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
-      if (progress_cb) progress_cb("trace image", sample, params.samples);
+      if (progress_cb) progress_cb("trace yim::image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
         state->render[ij] = trace_sample(state, scene, camera, ij, params);
@@ -2910,7 +2895,7 @@ void trace_start(state* state, const scene* scene, const camera* camera,
       });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
-    if (progress_cb) progress_cb("trace image", params.samples, params.samples);
+    if (progress_cb) progress_cb("trace yim::image", params.samples, params.samples);
     if (image_cb) image_cb(state->render, params.samples, params.samples);
   });
 }
@@ -2994,25 +2979,25 @@ void set_focus(camera* camera, float aperture, float focus) {
 }
 
 // Add texture
-void set_texture(texture* texture, const image<vec3b>& img) {
+void set_texture(texture* texture, const yim::image<vec3b>& img) {
   texture->colorb  = img;
   texture->colorf  = {};
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const image<vec3f>& img) {
+void set_texture(texture* texture, const yim::image<vec3f>& img) {
   texture->colorb  = {};
   texture->colorf  = img;
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const image<byte>& img) {
+void set_texture(texture* texture, const yim::image<byte>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = img;
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const image<float>& img) {
+void set_texture(texture* texture, const yim::image<float>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = {};
@@ -3020,34 +3005,34 @@ void set_texture(texture* texture, const image<float>& img) {
 }
 
 // Add shape
-void set_points(shape* shape, const vector<int>& points) {
+void set_points(shape* shape, const std::vector<int>& points) {
   shape->points = points;
 }
-void set_lines(shape* shape, const vector<vec2i>& lines) {
+void set_lines(shape* shape, const std::vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_triangles(shape* shape, const vector<vec3i>& triangles) {
+void set_triangles(shape* shape, const std::vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_quads(shape* shape, const vector<vec4i>& quads) {
+void set_quads(shape* shape, const std::vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_positions(shape* shape, const vector<vec3f>& positions) {
+void set_positions(shape* shape, const std::vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_normals(shape* shape, const vector<vec3f>& normals) {
+void set_normals(shape* shape, const std::vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_texcoords(shape* shape, const vector<vec2f>& texcoords) {
+void set_texcoords(shape* shape, const std::vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(shape* shape, const vector<vec3f>& colors) {
+void set_colors(shape* shape, const std::vector<vec3f>& colors) {
   shape->colors = colors;
 }
-void set_radius(shape* shape, const vector<float>& radius) {
+void set_radius(shape* shape, const std::vector<float>& radius) {
   shape->radius = radius;
 }
-void set_tangents(shape* shape, const vector<vec4f>& tangents) {
+void set_tangents(shape* shape, const std::vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 
@@ -3063,7 +3048,7 @@ void set_instance(object* object, instance* instance) {
 }
 
 // Add instance
-void set_frames(instance* instance, const vector<frame3f>& frames) {
+void set_frames(instance* instance, const std::vector<frame3f>& frames) {
   instance->frames = frames;
 }
 
