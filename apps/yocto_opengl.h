@@ -89,9 +89,9 @@ void init_glimage(image* image);
 bool is_initialized(const image* image);
 
 // update image data
-void set_glimage(image* image, const yim::image<vec4f>& img,
+void set_glimage(image* image, const yimg::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(image* image, const yim::image<vec4b>& img,
+void set_glimage(image* image, const yimg::image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -270,17 +270,17 @@ void set_nearfar(camera* camera, float near, float far);
 
 // texture properties
 void set_texture(
-    texture* texture, const yim::image<vec4b>& img, bool as_srgb = true);
+    texture* texture, const yimg::image<vec4b>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const yim::image<vec4f>& img, bool as_float = false);
+    texture* texture, const yimg::image<vec4f>& img, bool as_float = false);
 void set_texture(
-    texture* texture, const yim::image<vec3b>& img, bool as_srgb = true);
+    texture* texture, const yimg::image<vec3b>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const yim::image<vec3f>& img, bool as_float = false);
+    texture* texture, const yimg::image<vec3f>& img, bool as_float = false);
 void set_texture(
-    texture* texture, const yim::image<byte>& img, bool as_srgb = true);
+    texture* texture, const yimg::image<byte>& img, bool as_srgb = true);
 void set_texture(
-    texture* texture, const yim::image<float>& img, bool as_float = false);
+    texture* texture, const yimg::image<float>& img, bool as_float = false);
 
 // material properties
 void set_emission(

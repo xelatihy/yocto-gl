@@ -96,11 +96,11 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  std::string       name    = "";
-  yim::image<vec3f> colorf  = {};
-  yim::image<vec3b> colorb  = {};
-  yim::image<float> scalarf = {};
-  yim::image<byte>  scalarb = {};
+  std::string        name    = "";
+  yimg::image<vec3f> colorf  = {};
+  yimg::image<vec3b> colorb  = {};
+  yimg::image<float> scalarf = {};
+  yimg::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.

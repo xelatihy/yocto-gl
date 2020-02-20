@@ -41,8 +41,8 @@ using namespace std::string_literals;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
-    ysc::camera* iocamera, ysc::progress_callback progress_cb = {}) {
+void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
+    yscn::camera* iocamera, yscn::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -50,7 +50,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<ysc::camera*, ytr::camera*>{};
+  auto camera_map     = std::unordered_map<yscn::camera*, ytrc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -61,7 +61,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<ysc::texture*, ytr::texture*>{};
+  auto texture_map     = std::unordered_map<yscn::texture*, ytrc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -78,7 +78,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<ysc::material*, ytr::material*>{};
+  auto material_map = std::unordered_map<yscn::material*, ytrc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -110,7 +110,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<ysc::shape*, ytr::shape*>{};
+  auto shape_map     = std::unordered_map<yscn::shape*, ytrc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -128,7 +128,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<ysc::instance*, ytr::instance*>{};
+  auto instance_map = std::unordered_map<yscn::instance*, ytrc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -164,7 +164,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params      = ytr::trace_params{};
+  auto params      = ytrc::trace_params{};
   auto batch       = 16;
   auto save_batch  = false;
   auto add_skyenv  = false;
@@ -173,14 +173,14 @@ int main(int argc, const char* argv[]) {
   auto filename    = "scene.json"s;
 
   // parse command line
-  auto cli = ycl::make_cli("yscntrace", "Offline path tracing");
+  auto cli = ycli::make_cli("yscntrace", "Offline path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", ytr::sampler_names);
+      cli, "--tracer,-t", params.sampler, "Trace type.", ytrc::sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", ytr::falsecolor_names);
+      "Tracer false color type.", ytrc::falsecolor_names);
   add_option(cli, "--bounces", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
@@ -188,61 +188,61 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", ytr::bvh_names);
+  add_option(cli, "--bvh", params.bvh, "Bvh type", ytrc::bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_option(cli, "scene", filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<ysc::model>();
+  auto ioscene_guard = std::make_unique<yscn::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(filename, ioscene, ioerror, ycl::print_progress))
-    ycl::print_fatal(ioerror);
+  if (!load_scene(filename, ioscene, ioerror, ycli::print_progress))
+    ycli::print_fatal(ioerror);
 
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
   // convert scene
-  auto scene_guard = std::make_unique<ytr::scene>();
+  auto scene_guard = std::make_unique<ytrc::scene>();
   auto scene       = scene_guard.get();
-  auto camera      = (ytr::camera*)nullptr;
-  init_scene(scene, ioscene, camera, iocamera, ycl::print_progress);
+  auto camera      = (ytrc::camera*)nullptr;
+  init_scene(scene, ioscene, camera, iocamera, ycli::print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(scene, params, ycl::print_progress);
+  init_bvh(scene, params, ycli::print_progress);
 
   // init renderer
-  init_lights(scene, ycl::print_progress);
+  init_lights(scene, ycli::print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    ycl::print_info("no lights presents, switching to eyelight shader");
-    params.sampler = ytr::sampler_type::eyelight;
+    ycli::print_info("no lights presents, switching to eyelight shader");
+    params.sampler = ytrc::sampler_type::eyelight;
   }
 
   // render
-  auto render = ytr::trace_image(scene, camera, params, ycl::print_progress,
+  auto render = ytrc::trace_image(scene, camera, params, ycli::print_progress,
       [save_batch, imfilename](
-          const yim::image<vec4f>& render, int sample, int samples) {
+          const yimg::image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    fs::path(imfilename).extension().string();
         auto outfilename = fs::path(imfilename).replace_extension(ext).string();
         auto ioerror     = ""s;
-        ycl::print_progress("save image", sample, samples);
+        ycli::print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror))
-          ycl::print_fatal(ioerror);
+          ycli::print_fatal(ioerror);
       });
 
   // save image
-  ycl::print_progress("save image", 0, 1);
-  if (!save_image(imfilename, render, ioerror)) ycl::print_fatal(ioerror);
-  ycl::print_progress("save image", 1, 1);
+  ycli::print_progress("save image", 0, 1);
+  if (!save_image(imfilename, render, ioerror)) ycli::print_fatal(ioerror);
+  ycli::print_progress("save image", 1, 1);
 
   // done
   return 0;

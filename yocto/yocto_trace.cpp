@@ -417,7 +417,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
   // get texture
   if (!texture) return {1, 1, 1};
 
-  // get yim::image width/height
+  // get yimg::image width/height
   auto size = texture_size(texture);
 
   // get coordinates normalized for tiling
@@ -432,7 +432,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
     if (t < 0) t += size.y;
   }
 
-  // get yim::image coordinates and residuals
+  // get yimg::image coordinates and residuals
   auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
@@ -446,7 +446,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
-// Generates a ray from a camera for yim::image plane coordinate uv and
+// Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
     const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -459,7 +459,7 @@ static ray3f eval_perspective_camera(
         (lens_uv.y - 0.5f) * camera->aperture, 0};
     auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
         camera->film.y * (image_uv.y - 0.5f), distance};
-    // distance of the yim::image of the point
+    // distance of the yimg::image of the point
     auto distance1 = camera->lens * distance / (distance - camera->lens);
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
@@ -479,7 +479,7 @@ static ray3f eval_perspective_camera(
   }
 }
 
-// Generates a ray from a camera for yim::image plane coordinate uv and
+// Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
     const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -508,7 +508,7 @@ static ray3f eval_orthographic_camera(
   }
 }
 
-// Generates a ray from a camera for yim::image plane coordinate uv and
+// Generates a ray from a camera for yimg::image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
     const camera* camera, const vec2f& uv, const vec2f& luv) {
@@ -2857,7 +2857,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-yim::image<vec4f> trace_image(const scene* scene, const camera* camera,
+yimg::image<vec4f> trace_image(const scene* scene, const camera* camera,
     const trace_params& params, progress_callback progress_cb,
     image_callback image_cb) {
   auto state_guard = std::make_unique<state>();
@@ -2913,7 +2913,7 @@ void trace_start(state* state, const scene* scene, const camera* camera,
   state->worker = std::async(std::launch::async, [=]() {
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
-      if (progress_cb) progress_cb("trace yim::image", sample, params.samples);
+      if (progress_cb) progress_cb("trace yimg::image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
         state->render[ij] = trace_sample(state, scene, camera, ij, params);
@@ -2922,7 +2922,7 @@ void trace_start(state* state, const scene* scene, const camera* camera,
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb)
-      progress_cb("trace yim::image", params.samples, params.samples);
+      progress_cb("trace yimg::image", params.samples, params.samples);
     if (image_cb) image_cb(state->render, params.samples, params.samples);
   });
 }
@@ -3006,25 +3006,25 @@ void set_focus(camera* camera, float aperture, float focus) {
 }
 
 // Add texture
-void set_texture(texture* texture, const yim::image<vec3b>& img) {
+void set_texture(texture* texture, const yimg::image<vec3b>& img) {
   texture->colorb  = img;
   texture->colorf  = {};
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const yim::image<vec3f>& img) {
+void set_texture(texture* texture, const yimg::image<vec3f>& img) {
   texture->colorb  = {};
   texture->colorf  = img;
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const yim::image<byte>& img) {
+void set_texture(texture* texture, const yimg::image<byte>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = img;
   texture->scalarf = {};
 }
-void set_texture(texture* texture, const yim::image<float>& img) {
+void set_texture(texture* texture, const yimg::image<float>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = {};

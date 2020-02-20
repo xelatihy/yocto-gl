@@ -126,10 +126,10 @@ void set_shape(object* object, shape* shape);
 void set_instance(object* object, instance* instance);
 
 // texture properties
-void set_texture(texture* texture, const yim::image<vec3b>& img);
-void set_texture(texture* texture, const yim::image<vec3f>& img);
-void set_texture(texture* texture, const yim::image<byte>& img);
-void set_texture(texture* texture, const yim::image<float>& img);
+void set_texture(texture* texture, const yimg::image<vec3b>& img);
+void set_texture(texture* texture, const yimg::image<vec3f>& img);
+void set_texture(texture* texture, const yimg::image<byte>& img);
+void set_texture(texture* texture, const yimg::image<float>& img);
 
 // material properties
 void set_emission(
@@ -240,7 +240,7 @@ using progress_callback =
     std::function<void(const std::string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback = std::function<void(
-    const yim::image<vec4f>& render, int current, int total)>;
+    const yimg::image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
 void init_lights(scene* scene, progress_callback progress_cb = {});
@@ -256,7 +256,7 @@ void update_bvh(scene* scene, const std::vector<object*>& updated_objects,
     const trace_params&           params);
 
 // Progressively computes an image.
-yim::image<vec4f> trace_image(const scene* scene, const camera* camera,
+yimg::image<vec4f> trace_image(const scene* scene, const camera* camera,
     const trace_params& params, progress_callback progress_cb = {},
     image_callback image_cb = {});
 
@@ -265,7 +265,7 @@ bool is_sampler_lit(const trace_params& params);
 
 // [experimental] Callback used to report partially computed image
 using async_callback = std::function<void(
-    const yim::image<vec4f>& render, int current, int total, const vec2i& ij)>;
+    const yimg::image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct state;
@@ -326,10 +326,10 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  yim::image<vec3f> colorf  = {};
-  yim::image<vec3b> colorb  = {};
-  yim::image<float> scalarf = {};
-  yim::image<byte>  scalarb = {};
+  yimg::image<vec3f> colorf  = {};
+  yimg::image<vec3b> colorb  = {};
+  yimg::image<float> scalarf = {};
+  yimg::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -465,10 +465,10 @@ struct pixel {
 
 // [experimental] Asynchronous state
 struct state {
-  yim::image<vec4f> render = {};
-  yim::image<pixel> pixels = {};
-  std::future<void> worker = {};  // async
-  std::atomic<bool> stop   = {};  // async
+  yimg::image<vec4f> render = {};
+  yimg::image<pixel> pixels = {};
+  std::future<void>  worker = {};  // async
+  std::atomic<bool>  stop   = {};  // async
 };
 
 }  // namespace ytrc

@@ -353,7 +353,7 @@ void init_glimage(image* image) {
 
 // update image data
 void set_glimage(
-    image* image, const yim::image<vec4f>& img, bool linear, bool mipmap) {
+    image* image, const yimg::image<vec4f>& img, bool linear, bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -371,7 +371,7 @@ void set_glimage(
   image->texture_mipmap = mipmap;
 }
 void set_glimage(
-    image* image, const yim::image<vec4b>& img, bool linear, bool mipmap) {
+    image* image, const yimg::image<vec4b>& img, bool linear, bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -872,27 +872,29 @@ void set_texture(texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(texture* texture, const yim::image<vec4b>& img, bool as_srgb) {
+void set_texture(
+    texture* texture, const yimg::image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    texture* texture, const yim::image<vec4f>& img, bool as_float) {
+    texture* texture, const yimg::image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
-void set_texture(texture* texture, const yim::image<vec3b>& img, bool as_srgb) {
+void set_texture(
+    texture* texture, const yimg::image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    texture* texture, const yim::image<vec3f>& img, bool as_float) {
+    texture* texture, const yimg::image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
-void set_texture(texture* texture, const yim::image<byte>& img, bool as_srgb) {
+void set_texture(texture* texture, const yimg::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    texture* texture, const yim::image<float>& img, bool as_float) {
+    texture* texture, const yimg::image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 

@@ -43,7 +43,7 @@ void make_dir(const std::string& dirname) {
   try {
     fs::create_directories(dirname);
   } catch (...) {
-    ycl::print_fatal("cannot create directory " + dirname);
+    ycli::print_fatal("cannot create directory " + dirname);
   }
 }
 
@@ -55,7 +55,7 @@ int main(int argc, const char* argv[]) {
   auto filename = "scene.json"s;
 
   // parse command line
-  auto cli = ycl::make_cli("yscnproc", "Process scene");
+  auto cli = ycli::make_cli("yscnproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
   add_option(cli, "--output,-o", output, "output scene");
@@ -63,22 +63,22 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = std::make_unique<ysc::model>();
+  auto scene_guard = std::make_unique<yscn::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
-  if (!load_scene(filename, scene, ioerror, ycl::print_progress))
-    ycl::print_fatal(ioerror);
+  if (!load_scene(filename, scene, ioerror, ycli::print_progress))
+    ycli::print_fatal(ioerror);
 
   // validate scene
   if (validate) {
     for (auto& error : scene_validation(scene))
-      ycl::print_info("error: " + error);
+      ycli::print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    ycl::print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) ycl::print_info(stat);
+    ycli::print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) ycli::print_info(stat);
   }
 
   // tesselate if needed
@@ -100,8 +100,8 @@ int main(int argc, const char* argv[]) {
     make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, ycl::print_progress))
-    ycl::print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, ycli::print_progress))
+    ycli::print_fatal(ioerror);
 
   // done
   return 0;

@@ -405,7 +405,7 @@ void add_materials(model* scene) {
 // Add a sky environment
 void add_sky(model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = yim::image<vec4f>{{1024, 512}};
+  auto sunsky  = yimg::image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
@@ -491,7 +491,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
   // get texture
   if (!texture) return {1, 1, 1};
 
-  // get yim::image width/height
+  // get yimg::image width/height
   auto size = texture_size(texture);
 
   // get coordinates normalized for tiling
@@ -506,7 +506,7 @@ static vec3f eval_texture(const texture* texture, const vec2f& uv,
     if (t < 0) t += size.y;
   }
 
-  // get yim::image coordinates and residuals
+  // get yimg::image coordinates and residuals
   auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
@@ -604,13 +604,13 @@ std::unique_ptr<subdiv> subdivide_subdiv(
   auto tesselated = std::make_unique<subdiv>(*shape);
   if (!subdivisions) return tesselated;
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-      ysh::subdivide_catmullclark(
+      yshp::subdivide_catmullclark(
           tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
   std::tie(tesselated->quadsnorm, tesselated->normals) =
-      ysh::subdivide_catmullclark(
+      yshp::subdivide_catmullclark(
           tesselated->quadsnorm, tesselated->normals, subdivisions, true);
   std::tie(tesselated->quadspos, tesselated->positions) =
-      ysh::subdivide_catmullclark(
+      yshp::subdivide_catmullclark(
           tesselated->quadspos, tesselated->positions, subdivisions);
   if (smooth) {
     tesselated->normals = compute_normals(
@@ -625,7 +625,7 @@ std::unique_ptr<subdiv> subdivide_subdiv(
 // Apply displacement to a shape
 std::unique_ptr<subdiv> displace_subdiv(subdiv* subdiv, float displacement,
     texture* displacement_tex, bool smooth) {
-  auto displaced = std::make_unique<ysc::subdiv>(*subdiv);
+  auto displaced = std::make_unique<yscn::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
@@ -661,8 +661,8 @@ std::unique_ptr<subdiv> displace_subdiv(subdiv* subdiv, float displacement,
 }
 
 void tesselate_subdiv(model* scene, subdiv* subdiv) {
-  auto material = (ysc::material*)nullptr;
-  auto shape    = (ysc::shape*)nullptr;
+  auto material = (yscn::material*)nullptr;
+  auto shape    = (yscn::shape*)nullptr;
   for (auto object : scene->objects) {
     if (object->subdiv == subdiv) {
       material = object->material;
@@ -789,48 +789,48 @@ static std::string get_extension(const std::string& filename) {
   return filename.substr(pos);
 }
 
-// Loads/saves a  channel float/byte yim::image in linear/srgb color space.
-static bool load_image(const std::string& filename, yim::image<vec4f>& colorf,
-    yim::image<vec4b>& colorb, std::string& error) {
-  if (yim::is_hdr_filename(filename)) {
+// Loads/saves a  channel float/byte yimg::image in linear/srgb color space.
+static bool load_image(const std::string& filename, yimg::image<vec4f>& colorf,
+    yimg::image<vec4b>& colorb, std::string& error) {
+  if (yimg::is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
   } else {
     return load_image(filename, colorb, error);
   }
 }
 
-// Loads/saves a 3 channel float/byte yim::image in linear/srgb color space.
-static bool load_image(const std::string& filename, yim::image<vec3f>& colorf,
-    yim::image<vec3b>& colorb, std::string& error) {
-  if (yim::is_hdr_filename(filename)) {
+// Loads/saves a 3 channel float/byte yimg::image in linear/srgb color space.
+static bool load_image(const std::string& filename, yimg::image<vec3f>& colorf,
+    yimg::image<vec3b>& colorb, std::string& error) {
+  if (yimg::is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
   } else {
     return load_image(filename, colorb, error);
   }
 }
 static bool save_image(const std::string& filename,
-    const yim::image<vec3f>& colorf, const yim::image<vec3b>& colorb,
+    const yimg::image<vec3f>& colorf, const yimg::image<vec3b>& colorb,
     std::string& error) {
-  if (yim::is_hdr_filename(filename)) {
+  if (yimg::is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
   } else {
     return save_image(filename, colorb, error);
   }
 }
 
-// Loads/saves a 1 channel float/byte yim::image in linear/srgb color space.
-static bool load_image(const std::string& filename, yim::image<float>& scalarf,
-    yim::image<byte>& scalarb, std::string& error) {
-  if (yim::is_hdr_filename(filename)) {
+// Loads/saves a 1 channel float/byte yimg::image in linear/srgb color space.
+static bool load_image(const std::string& filename, yimg::image<float>& scalarf,
+    yimg::image<byte>& scalarb, std::string& error) {
+  if (yimg::is_hdr_filename(filename)) {
     return load_image(filename, scalarf, error);
   } else {
     return load_image(filename, scalarb, error);
   }
 }
 static bool save_image(const std::string& filename,
-    const yim::image<float>& scalarf, const yim::image<byte>& scalarb,
+    const yimg::image<float>& scalarf, const yimg::image<byte>& scalarb,
     std::string& error) {
-  if (yim::is_hdr_filename(filename)) {
+  if (yimg::is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
   } else {
     return save_image(filename, scalarb, error);
@@ -1331,7 +1331,7 @@ static bool load_json_scene(const std::string& filename, model* scene,
   for (auto [name, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
-    if (!ysh::load_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!yshp::load_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1341,7 +1341,7 @@ static bool load_json_scene(const std::string& filename, model* scene,
   for (auto [name, subdiv] : subdiv_map) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
     auto path = get_filename(name, "subdivs", {".obj"});
-    if (!ysh::load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!yshp::load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1505,7 +1505,7 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = get_filename(shape->name, "shapes", ".ply");
-    if (!ysh::save_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!yshp::save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1515,7 +1515,7 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   for (auto subdiv : scene->subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
     auto path = get_filename(subdiv->name, "subdivs", ".obj");
-    if (!ysh::save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!yshp::save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1891,7 +1891,7 @@ static bool load_ply_scene(const std::string& filename, model* scene,
 
   // load ply mesh
   auto shape = add_shape(scene);
-  if (!ysh::load_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!yshp::load_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;
@@ -1918,7 +1918,7 @@ static bool save_ply_scene(const std::string& filename, const model* scene,
 
   // save shape
   auto shape = scene->shapes.front();
-  if (!ysh::save_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!yshp::save_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;
@@ -2257,8 +2257,8 @@ static bool load_gltf_scene(const std::string& filename, model* scene,
   cotexture_map.erase("");
   for (auto [path, textures] : cotexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto color_opacityf = yim::image<vec4f>{};
-    auto color_opacityb = yim::image<vec4b>{};
+    auto color_opacityf = yimg::image<vec4f>{};
+    auto color_opacityb = yimg::image<vec4b>{};
     if (!load_image(fs::path(filename).parent_path() / path, color_opacityf,
             color_opacityb, error))
       return dependent_error();
@@ -2290,8 +2290,8 @@ static bool load_gltf_scene(const std::string& filename, model* scene,
   mrtexture_map.erase("");
   for (auto [path, textures] : mrtexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto metallic_roughnessf = yim::image<vec3f>{};
-    auto metallic_roughnessb = yim::image<vec3b>{};
+    auto metallic_roughnessf = yimg::image<vec3f>{};
+    auto metallic_roughnessb = yimg::image<vec3b>{};
     if (!load_image(fs::path(filename).parent_path() / path,
             metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();

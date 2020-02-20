@@ -52,23 +52,23 @@ struct app_state {
   std::string outname  = "";
 
   // image data
-  yim::image<vec4f> source  = {};
-  yim::image<vec4f> display = {};
+  yimg::image<vec4f> source  = {};
+  yimg::image<vec4f> display = {};
 
   // image stats
   image_stats source_stats  = {};
   image_stats display_stats = {};
 
   // tonemapping values
-  float                  exposure   = 0;
-  bool                   filmic     = false;
-  yim::colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  float                   exposure   = 0;
+  bool                    filmic     = false;
+  yimg::colorgrade_params params     = {};
+  bool                    colorgrade = false;
 
   // viewing properties
-  ygl::image*       glimage   = new ygl::image{};
-  ygl::image_params glparams  = {};
-  bool              glupdated = true;
+  yglu::image*       glimage   = new yglu::image{};
+  yglu::image_params glparams  = {};
+  bool               glupdated = true;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -91,9 +91,9 @@ struct app_states {
   std::deque<app_state*>  loading  = {};
 
   // default options
-  float                  exposure = 0;
-  bool                   filmic   = false;
-  yim::colorgrade_params params   = {};
+  float                   exposure = 0;
+  bool                    filmic   = false;
+  yimg::colorgrade_params params   = {};
 
   // cleanup
   ~app_states() {
@@ -103,7 +103,7 @@ struct app_states {
 
 // compute min/max
 void compute_stats(
-    image_stats& stats, const yim::image<vec4f>& img, bool linear_hdr) {
+    image_stats& stats, const yimg::image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
   stats.min      = vec4f{flt_max};
   stats.max      = vec4f{flt_min};
@@ -146,7 +146,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
   app->loader   = std::async(std::launch::async, [app]() {
     if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
-        app->source_stats, app->source, yim::is_hdr_filename(app->filename));
+        app->source_stats, app->source, yimg::is_hdr_filename(app->filename));
     if (app->colorgrade) {
       app->display = colorgrade_image(app->display, true, app->params);
     } else {
@@ -158,7 +158,8 @@ void load_image_async(app_states* apps, const std::string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
+void draw_widgets(
+    yglu::window* win, app_states* apps, const yglu::input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -261,7 +262,7 @@ void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
   }
 }
 
-void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
+void draw(yglu::window* win, app_states* apps, const yglu::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -276,7 +277,7 @@ void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
   draw_glimage(app->glimage, app->glparams);
 }
 
-void update(ygl::window* win, app_states* apps) {
+void update(yglu::window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -305,7 +306,7 @@ int main(int argc, const char* argv[]) {
   auto filenames  = std::vector<std::string>{};
 
   // command line options
-  auto cli = ycl::make_cli("yimgview", "view images");
+  auto cli = ycli::make_cli("yimgview", "view images");
   add_option(cli, "images", filenames, "image filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -313,34 +314,37 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win_guard = std::make_unique<ygl::window>();
+  auto win_guard = std::make_unique<yglu::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
-  set_update_callback(win,
-      [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
-  set_draw_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+  set_update_callback(win, [apps](yglu::window* win, const yglu::input& input) {
+    update(win, apps);
+  });
+  set_draw_callback(win, [apps](yglu::window* win, const yglu::input& input) {
     draw(win, apps, input);
   });
-  set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
-    draw_widgets(win, apps, input);
-  });
-  set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {
-    if (!apps->selected) return;
-    auto app = apps->selected;
-    // handle mouse
-    if (input.mouse_left && !input.widgets_active) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right && !input.widgets_active) {
-      app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  });
+  set_widgets_callback(
+      win, [apps](yglu::window* win, const yglu::input& input) {
+        draw_widgets(win, apps, input);
+      });
+  set_uiupdate_callback(
+      win, [apps](yglu::window* win, const yglu::input& input) {
+        if (!apps->selected) return;
+        auto app = apps->selected;
+        // handle mouse
+        if (input.mouse_left && !input.widgets_active) {
+          app->glparams.center += input.mouse_pos - input.mouse_last;
+        }
+        if (input.mouse_right && !input.widgets_active) {
+          app->glparams.scale *= powf(
+              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+        }
+      });
   set_drop_callback(
-      win, [apps](ygl::window* win, const std::vector<std::string>& paths,
-               const ygl::input& input) {
+      win, [apps](yglu::window* win, const std::vector<std::string>& paths,
+               const yglu::input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
 

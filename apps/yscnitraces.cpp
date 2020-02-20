@@ -45,29 +45,29 @@ struct app_state {
   std::string name      = "";
 
   // options
-  ytr::trace_params params = {};
+  ytrc::trace_params params = {};
 
   // scene
-  ytr::scene*  scene  = new ytr::scene{};
-  ytr::camera* camera = nullptr;
+  ytrc::scene*  scene  = new ytrc::scene{};
+  ytrc::camera* camera = nullptr;
 
   // rendering state
-  yim::image<vec4f> render   = {};
-  yim::image<vec4f> display  = {};
-  float             exposure = 0;
+  yimg::image<vec4f> render   = {};
+  yimg::image<vec4f> display  = {};
+  float              exposure = 0;
 
   // view scene
-  ygl::image*       glimage  = new ygl::image{};
-  ygl::image_params glparams = {};
+  yglu::image*       glimage  = new yglu::image{};
+  yglu::image_params glparams = {};
 
   // computation
-  int         render_sample  = 0;
-  int         render_counter = 0;
-  ytr::state* render_state   = new ytr::state{};
+  int          render_sample  = 0;
+  int          render_counter = 0;
+  ytrc::state* render_state   = new ytrc::state{};
 
   ~app_state() {
     if (render_state) {
-      ytr::trace_stop(render_state);
+      ytrc::trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -76,8 +76,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
-    ysc::camera* iocamera, ysc::progress_callback print_progress = {}) {
+void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
+    yscn::camera* iocamera, yscn::progress_callback print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -85,7 +85,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<ysc::camera*, ytr::camera*>{};
+  auto camera_map     = std::unordered_map<yscn::camera*, ytrc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -97,7 +97,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<ysc::texture*, ytr::texture*>{};
+  auto texture_map     = std::unordered_map<yscn::texture*, ytrc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -115,7 +115,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<ysc::material*, ytr::material*>{};
+  auto material_map = std::unordered_map<yscn::material*, ytrc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -149,7 +149,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<ysc::shape*, ytr::shape*>{};
+  auto shape_map     = std::unordered_map<yscn::shape*, ytrc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -168,7 +168,7 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<ysc::instance*, ytr::instance*>{};
+  auto instance_map = std::unordered_map<yscn::instance*, ytrc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -206,18 +206,18 @@ void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
 
 void reset_display(app_state* app) {
   // stop render
-  ytr::trace_stop(app->render_state);
+  ytrc::trace_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  ytr::trace_start(
+  ytrc::trace_start(
       app->render_state, app->scene, app->camera, app->params, {},
-      [app](const yim::image<vec4f>& render, int current, int total) {
+      [app](const yimg::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const yim::image<vec4f>& render, int current, int total,
+      [app](const yimg::image<vec4f>& render, int current, int total,
           const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
@@ -234,15 +234,15 @@ int main(int argc, const char* argv[]) {
   auto add_skyenv  = false;
 
   // parse command line
-  auto cli = ycl::make_cli("yscnitraces", "progressive path tracing");
+  auto cli = ycli::make_cli("yscnitraces", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      ytr::sampler_names);
+      ytrc::sampler_names);
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.", ytr::falsecolor_names);
+      "Tracer false color type.", ytrc::falsecolor_names);
   add_option(
       cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
@@ -250,50 +250,50 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", app->params.bvh, "Bvh type", ytr::bvh_names);
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", ytrc::bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<ysc::model>();
+  auto ioscene_guard = std::make_unique<yscn::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(app->filename, ioscene, ioerror, ycl::print_progress))
-    ycl::print_fatal(ioerror);
+  if (!load_scene(app->filename, ioscene, ioerror, ycli::print_progress))
+    ycli::print_fatal(ioerror);
 
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
   // conversion
-  init_scene(app->scene, ioscene, app->camera, iocamera, ycl::print_progress);
+  init_scene(app->scene, ioscene, app->camera, iocamera, ycli::print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(app->scene, app->params, ycl::print_progress);
+  init_bvh(app->scene, app->params, ycli::print_progress);
 
   // init renderer
-  init_lights(app->scene, ycl::print_progress);
+  init_lights(app->scene, ycli::print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    ycl::print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = ytr::sampler_type::eyelight;
+    ycli::print_info("no lights presents, switching to eyelight shader");
+    app->params.sampler = ytrc::sampler_type::eyelight;
   }
 
   // allocate buffers
   reset_display(app);
 
   // window
-  auto win_guard = std::make_unique<ygl::window>();
+  auto win_guard = std::make_unique<yglu::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
-  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+  set_draw_callback(win, [app](yglu::window* win, const yglu::input& input) {
     if (!is_initialized(app->glimage)) init_glimage(app->glimage);
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
@@ -305,52 +305,54 @@ int main(int argc, const char* argv[]) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   });
-  set_char_callback(win, [app](ygl::window* win, unsigned int key,
-                             const ygl::input& input) {
-    switch (key) {
-      case 'c': {
-        auto ncameras = (int)app->scene->cameras.size();
-        for (auto pos = 0; pos < ncameras; pos++) {
-          if (app->scene->cameras[pos] == app->camera) {
-            app->camera = app->scene->cameras[(pos + 1) % ncameras];
+  set_char_callback(win,
+      [app](yglu::window* win, unsigned int key, const yglu::input& input) {
+        switch (key) {
+          case 'c': {
+            auto ncameras = (int)app->scene->cameras.size();
+            for (auto pos = 0; pos < ncameras; pos++) {
+              if (app->scene->cameras[pos] == app->camera) {
+                app->camera = app->scene->cameras[(pos + 1) % ncameras];
+                reset_display(app);
+                break;
+              }
+            }
+          } break;
+          case 'f':
+            app->params.sampler = ytrc::sampler_type::falsecolor;
             reset_display(app);
             break;
-          }
+          case 'p':
+            app->params.sampler = ytrc::sampler_type::path;
+            reset_display(app);
+            break;
+          case 'F':
+            app->params.falsecolor = (ytrc::falsecolor_type)(
+                ((int)app->params.falsecolor + 1) %
+                (int)ytrc::sampler_names.size());
+            reset_display(app);
+            break;
         }
-      } break;
-      case 'f':
-        app->params.sampler = ytr::sampler_type::falsecolor;
-        reset_display(app);
-        break;
-      case 'p':
-        app->params.sampler = ytr::sampler_type::path;
-        reset_display(app);
-        break;
-      case 'F':
-        app->params.falsecolor = (ytr::falsecolor_type)(
-            ((int)app->params.falsecolor + 1) % (int)ytr::sampler_names.size());
-        reset_display(app);
-        break;
-    }
-  });
-  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-      auto dolly  = 0.0f;
-      auto pan    = zero2f;
-      auto rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-              200.0f;
-      pan.x = -pan.x;
-      update_turntable(
-          app->camera->frame, app->camera->focus, rotate, dolly, pan);
-      reset_display(app);
-    }
-  });
+      });
+  set_uiupdate_callback(
+      win, [app](yglu::window* win, const yglu::input& input) {
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+                  200.0f;
+          pan.x = -pan.x;
+          update_turntable(
+              app->camera->frame, app->camera->focus, rotate, dolly, pan);
+          reset_display(app);
+        }
+      });
 
   // run ui
   run_ui(win);

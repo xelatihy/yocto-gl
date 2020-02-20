@@ -40,18 +40,18 @@ struct app_state {
   std::string outname  = "out.png";
 
   // image data
-  yim::image<vec4f> source = {};
+  yimg::image<vec4f> source = {};
 
   // diplay data
-  yim::image<vec4f>      display    = {};
-  float                  exposure   = 0;
-  bool                   filmic     = false;
-  yim::colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  yimg::image<vec4f>      display    = {};
+  float                   exposure   = 0;
+  bool                    filmic     = false;
+  yimg::colorgrade_params params     = {};
+  bool                    colorgrade = false;
 
   // viewing properties
-  ygl::image*       glimage  = new ygl::image{};
-  ygl::image_params glparams = {};
+  yglu::image*       glimage  = new yglu::image{};
+  yglu::image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -74,7 +74,7 @@ int main(int argc, const char* argv[]) {
   auto filenames = std::vector<std::string>{};
 
   // command line options
-  auto cli = ycl::make_cli("yimgviews", "view images");
+  auto cli = ycli::make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -82,7 +82,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    ycl::print_fatal(ioerror);
+    ycli::print_fatal(ioerror);
     return 1;
   }
 
@@ -90,12 +90,12 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_guard = std::make_unique<ygl::window>();
+  auto win_guard = std::make_unique<yglu::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+  set_draw_callback(win, [app](yglu::window* win, const yglu::input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
@@ -106,16 +106,17 @@ int main(int argc, const char* argv[]) {
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_glimage(app->glimage, app->glparams);
   });
-  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
-    // handle mouse
-    if (input.mouse_left) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right) {
-      app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  });
+  set_uiupdate_callback(
+      win, [app](yglu::window* win, const yglu::input& input) {
+        // handle mouse
+        if (input.mouse_left) {
+          app->glparams.center += input.mouse_pos - input.mouse_last;
+        }
+        if (input.mouse_right) {
+          app->glparams.scale *= powf(
+              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+        }
+      });
 
   // run ui
   run_ui(win);
