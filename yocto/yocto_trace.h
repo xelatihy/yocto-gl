@@ -81,12 +81,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
-// Using directives
-using std::function;
-using std::string;
-using std::vector;
-using yocto::image::image;
+// Math defitions
 using namespace yocto::math;
+namespace yim = yocto::image;
 
 // Trace scene
 struct scene;
@@ -119,10 +116,10 @@ void set_shape(object* object, shape* shape);
 void set_instance(object* object, instance* instance);
 
 // texture properties
-void set_texture(texture* texture, const image<vec3b>& img);
-void set_texture(texture* texture, const image<vec3f>& img);
-void set_texture(texture* texture, const image<byte>& img);
-void set_texture(texture* texture, const image<float>& img);
+void set_texture(texture* texture, const yim::image<vec3b>& img);
+void set_texture(texture* texture, const yim::image<vec3f>& img);
+void set_texture(texture* texture, const yim::image<byte>& img);
+void set_texture(texture* texture, const yim::image<float>& img);
 
 // material properties
 void set_emission(
@@ -146,19 +143,19 @@ void set_scattering(material* material, const vec3f& scattering,
 void set_normalmap(material* material, texture* normal_tex);
 
 // shape properties
-void set_points(shape* shape, const vector<int>& points);
-void set_lines(shape* shape, const vector<vec2i>& lines);
-void set_triangles(shape* shape, const vector<vec3i>& triangles);
-void set_quads(shape* shape, const vector<vec4i>& quads);
-void set_positions(shape* shape, const vector<vec3f>& positions);
-void set_normals(shape* shape, const vector<vec3f>& normals);
-void set_texcoords(shape* shape, const vector<vec2f>& texcoords);
-void set_colors(shape* shape, const vector<vec3f>& colors);
-void set_radius(shape* shape, const vector<float>& radius);
-void set_tangents(shape* shape, const vector<vec4f>& tangents);
+void set_points(shape* shape, const std::vector<int>& points);
+void set_lines(shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(shape* shape, const std::vector<vec4i>& quads);
+void set_positions(shape* shape, const std::vector<vec3f>& positions);
+void set_normals(shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(shape* shape, const std::vector<vec3f>& colors);
+void set_radius(shape* shape, const std::vector<float>& radius);
+void set_tangents(shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(instance* instance, const vector<frame3f>& frames);
+void set_frames(instance* instance, const std::vector<frame3f>& frames);
 
 // environment properties
 void set_frame(environment* environment, const frame3f& frame);
@@ -214,14 +211,14 @@ struct trace_params {
   float           exposure   = 0;
 };
 
-const auto sampler_names = vector<string>{
+const auto sampler_names = std::vector<std::string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto falsecolor_names = vector<string>{"normal", "frontfacing", "gnormal",
-    "gfrontfacing", "texcoord", "color", "emission", "diffuse", "specular",
-    "coat", "metal", "transmission", "refraction", "roughness", "opacity",
-    "object", "element", "highlight"};
-const auto bvh_names        = vector<string>{
+const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
+    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
+    "specular", "coat", "metal", "transmission", "refraction", "roughness",
+    "opacity", "object", "element", "highlight"};
+const auto bvh_names        = std::vector<std::string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -230,10 +227,10 @@ const auto bvh_names        = vector<string>{
 
 // Progress report callback
 using progress_callback =
-    function<void(const string& message, int current, int total)>;
+    std::function<void(const std::string& message, int current, int total)>;
 // Callback used to report partially computed image
-using image_callback =
-    function<void(const image<vec4f>& render, int current, int total)>;
+using image_callback = std::function<void(
+    const yim::image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
 void init_lights(scene* scene, progress_callback progress_cb = {});
@@ -243,12 +240,13 @@ void init_bvh(scene* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene* scene, const vector<object*>& updated_objects,
-    const vector<shape*>&    updated_shapes,
-    const vector<instance*>& updated_instances, const trace_params& params);
+void update_bvh(scene* scene, const std::vector<object*>& updated_objects,
+    const std::vector<shape*>&    updated_shapes,
+    const std::vector<instance*>& updated_instances,
+    const trace_params&           params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const scene* scene, const camera* camera,
+yim::image<vec4f> trace_image(const scene* scene, const camera* camera,
     const trace_params& params, progress_callback progress_cb = {},
     image_callback image_cb = {});
 
@@ -256,8 +254,8 @@ image<vec4f> trace_image(const scene* scene, const camera* camera,
 bool is_sampler_lit(const trace_params& params);
 
 // [experimental] Callback used to report partially computed image
-using async_callback = function<void(
-    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
+using async_callback = std::function<void(
+    const yim::image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct state;
@@ -290,8 +288,8 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
 struct bvh_tree {
-  vector<bvh_node> nodes      = {};
-  vector<vec2i>    primitives = {};
+  std::vector<bvh_node> nodes      = {};
+  std::vector<vec2i>    primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -318,10 +316,10 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  image<vec3f> colorf  = {};
-  image<vec3b> colorb  = {};
-  image<float> scalarf = {};
-  image<byte>  scalarb = {};
+  yim::image<vec3f> colorf  = {};
+  yim::image<vec3b> colorb  = {};
+  yim::image<float> scalarf = {};
+  yim::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -365,18 +363,18 @@ struct material {
 // each verftex data has its own topology.
 struct shape {
   // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  std::vector<int>   points    = {};
+  std::vector<vec2i> lines     = {};
+  std::vector<vec3i> triangles = {};
+  std::vector<vec4i> quads     = {};
 
   // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
+  std::vector<vec3f> colors    = {};
+  std::vector<float> radius    = {};
+  std::vector<vec4f> tangents  = {};
 
   // computed properties
   bvh_tree* bvh = nullptr;
@@ -385,7 +383,7 @@ struct shape {
 #endif
 
   // element cdf for sampling
-  vector<float> elements_cdf = {};
+  std::vector<float> elements_cdf = {};
 
   // cleanup
   ~shape();
@@ -393,7 +391,7 @@ struct shape {
 
 // Instances.
 struct instance {
-  vector<frame3f> frames = {};
+  std::vector<frame3f> frames = {};
 };
 
 // Object.
@@ -406,10 +404,10 @@ struct object {
 
 // Environment map.
 struct environment {
-  frame3f       frame        = identity3x4f;
-  vec3f         emission     = {0, 0, 0};
-  texture*      emission_tex = nullptr;
-  vector<float> texels_cdf   = {};
+  frame3f            frame        = identity3x4f;
+  vec3f              emission     = {0, 0, 0};
+  texture*           emission_tex = nullptr;
+  std::vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
@@ -427,20 +425,20 @@ struct light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-  vector<camera*>      cameras      = {};
-  vector<object*>      objects      = {};
-  vector<shape*>       shapes       = {};
-  vector<material*>    materials    = {};
-  vector<instance*>    instances    = {};
-  vector<texture*>     textures     = {};
-  vector<environment*> environments = {};
+  std::vector<camera*>      cameras      = {};
+  std::vector<object*>      objects      = {};
+  std::vector<shape*>       shapes       = {};
+  std::vector<material*>    materials    = {};
+  std::vector<instance*>    instances    = {};
+  std::vector<texture*>     textures     = {};
+  std::vector<environment*> environments = {};
 
   // computed properties
-  vector<light*> lights = {};
-  bvh_tree*      bvh    = nullptr;
+  std::vector<light*> lights = {};
+  bvh_tree*           bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  RTCScene      embree_bvh       = nullptr;
-  vector<vec2i> embree_instances = {};
+  RTCScene           embree_bvh       = nullptr;
+  std::vector<vec2i> embree_instances = {};
 #endif
 
   // cleanup
@@ -457,8 +455,8 @@ struct pixel {
 
 // [experimental] Asynchronous state
 struct state {
-  image<vec4f>      render = {};
-  image<pixel>      pixels = {};
+  yim::image<vec4f> render = {};
+  yim::image<pixel> pixels = {};
   std::future<void> worker = {};  // async
   std::atomic<bool> stop   = {};  // async
 };

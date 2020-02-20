@@ -43,9 +43,13 @@
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
+using std::function;
 using std::make_unique;
 using std::pair;
+using std::string;
 using std::unique_ptr;
+using std::vector;
+using yocto::image::image;
 using namespace std::string_literals;
 
 }  // namespace yocto::trace
