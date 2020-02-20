@@ -73,7 +73,7 @@ struct app_state {
 
   // viewing properties
   ygl::opengl_image*       glimage   = new ygl::opengl_image{};
-  ygl::draw_glimage_params glparams  = {};
+  ygl::draw_image_params glparams  = {};
   bool                glupdated = true;
 
   // loading status
@@ -164,16 +164,16 @@ void load_image_async(app_states* apps, const string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_glwidgets(
+void draw_widgets(
     ygl::window* win, app_states* apps, const ygl::input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
+  if (draw_filedialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save",
+  if (draw_filedialog_button(win, "save",
           apps->selected && apps->selected->ok, "save image", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -183,7 +183,7 @@ void draw_glwidgets(
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", (bool)apps->selected)) {
+  if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
     apps->states.erase(
@@ -191,80 +191,80 @@ void draw_glwidgets(
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
   continue_glline(win);
-  if (draw_glbutton(win, "quit")) {
+  if (draw_button(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(win, "image", apps->selected, apps->states, false);
+  draw_combobox(win, "image", apps->selected, apps->states, false);
   if (!apps->selected) return;
   auto app = apps->selected;
-  if (app->status != "") draw_gllabel(win, "status", app->status);
-  if (app->error != "") draw_gllabel(win, "error", app->error);
+  if (app->status != "") draw_label(win, "status", app->status);
+  if (app->error != "") draw_label(win, "error", app->error);
   if (!app->ok) return;
   if (begin_glheader(win, "tonemap")) {
     auto edited = 0;
-    edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
-    edited += draw_glcheckbox(win, "filmic", app->filmic);
+    edited += draw_slider(win, "exposure", app->exposure, -5, 5);
+    edited += draw_checkbox(win, "filmic", app->filmic);
     if (edited) update_display(app);
     end_glheader(win);
   }
   if (begin_glheader(win, "colorgrade")) {
     auto& params = app->params;
     auto  edited = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", app->colorgrade);
-    edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
-    edited += draw_glcoloredit(win, "tint", params.tint);
-    edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);
-    edited += draw_glslider(win, "logcontrast", params.logcontrast, 0, 1);
-    edited += draw_glslider(win, "linsaturation", params.linsaturation, 0, 1);
-    edited += draw_glcheckbox(win, "filmic", params.filmic);
+    edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
+    edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+    edited += draw_coloredit(win, "tint", params.tint);
+    edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
+    edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
+    edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
+    edited += draw_checkbox(win, "filmic", params.filmic);
     continue_glline(win);
-    edited += draw_glcheckbox(win, "srgb", params.srgb);
+    edited += draw_checkbox(win, "srgb", params.srgb);
     continue_glline(win);
-    if (draw_glbutton(win, "auto wb")) {
+    if (draw_button(win, "auto wb")) {
       auto wb     = 1 / xyz(app->source_stats.average);
       params.tint = wb / max(wb);
       edited += 1;
     }
-    edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
-    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
-    edited += draw_glslider(win, "shadows", params.shadows, 0, 1);
-    edited += draw_glslider(win, "midtones", params.midtones, 0, 1);
-    edited += draw_glslider(win, "highlights", params.highlights, 0, 1);
-    edited += draw_glcoloredit(win, "shadows color", params.shadows_color);
-    edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
-    edited += draw_glcoloredit(
+    edited += draw_slider(win, "contrast", params.contrast, 0, 1);
+    edited += draw_slider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_slider(win, "shadows", params.shadows, 0, 1);
+    edited += draw_slider(win, "midtones", params.midtones, 0, 1);
+    edited += draw_slider(win, "highlights", params.highlights, 0, 1);
+    edited += draw_coloredit(win, "shadows color", params.shadows_color);
+    edited += draw_coloredit(win, "midtones color", params.midtones_color);
+    edited += draw_coloredit(
         win, "highlights color", params.highlights_color);
     if (edited) update_display(app);
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "image", fs::path(app->filename).filename());
-    draw_gllabel(win, "filename", app->filename);
-    draw_gllabel(win, "outname", app->outname);
-    draw_gllabel(win, "image",
+    draw_label(win, "image", fs::path(app->filename).filename());
+    draw_label(win, "filename", app->filename);
+    draw_label(win, "outname", app->outname);
+    draw_label(win, "image",
         std::to_string(app->source.size().x) + " x " +
             std::to_string(app->source.size().y));
-    draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
-    draw_glcheckbox(win, "fit", app->glparams.fit);
+    draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
+    draw_checkbox(win, "fit", app->glparams.fit);
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->source.size());
-    draw_gldragger(win, "mouse", ij);
+    draw_dragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
     if (ij.x >= 0 && ij.x < app->source.size().x && ij.y >= 0 &&
         ij.y < app->source.size().y) {
       img_pixel     = app->source[{ij.x, ij.y}];
       display_pixel = app->display[{ij.x, ij.y}];
     }
-    draw_glcoloredit(win, "image", img_pixel);
-    draw_gldragger(win, "display", display_pixel);
-    draw_gldragger(win, "image min", app->source_stats.min);
-    draw_gldragger(win, "image max", app->source_stats.max);
-    draw_gldragger(win, "image avg", app->source_stats.average);
-    draw_glhistogram(win, "image histo", app->source_stats.histogram);
-    draw_gldragger(win, "display min", app->display_stats.min);
-    draw_gldragger(win, "display max", app->display_stats.max);
-    draw_gldragger(win, "display avg", app->display_stats.average);
-    draw_glhistogram(win, "display histo", app->display_stats.histogram);
+    draw_coloredit(win, "image", img_pixel);
+    draw_dragger(win, "display", display_pixel);
+    draw_dragger(win, "image min", app->source_stats.min);
+    draw_dragger(win, "image max", app->source_stats.max);
+    draw_dragger(win, "image avg", app->source_stats.average);
+    draw_histogram(win, "image histo", app->source_stats.histogram);
+    draw_dragger(win, "display min", app->display_stats.min);
+    draw_dragger(win, "display max", app->display_stats.max);
+    draw_dragger(win, "display avg", app->display_stats.average);
+    draw_histogram(win, "display histo", app->display_stats.histogram);
     end_glheader(win);
   }
 }
@@ -281,7 +281,7 @@ void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
   }
   update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
       app->glparams.window, app->glparams.fit);
-  draw_glimage(app->glimage, app->glparams);
+  draw_image(app->glimage, app->glparams);
 }
 
 void update(ygl::window* win, app_states* apps) {
@@ -326,19 +326,19 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
-  set_update_glcallback(
+  set_update_callback(
       win, [apps](ygl::window* win, const ygl::input& input) {
         update(win, apps);
       });
-  set_draw_glcallback(
+  set_draw_callback(
       win, [apps](ygl::window* win, const ygl::input& input) {
         draw(win, apps, input);
       });
-  set_widgets_glcallback(
+  set_widgets_callback(
       win, [apps](ygl::window* win, const ygl::input& input) {
-        draw_glwidgets(win, apps, input);
+        draw_widgets(win, apps, input);
       });
-  set_uiupdate_glcallback(
+  set_uiupdate_callback(
       win, [apps](ygl::window* win, const ygl::input& input) {
         if (!apps->selected) return;
         auto app = apps->selected;
@@ -351,7 +351,7 @@ int main(int argc, const char* argv[]) {
               2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
         }
       });
-  set_drop_glcallback(
+  set_drop_callback(
       win, [apps](ygl::window* win, const vector<string>& paths,
                const ygl::input& input) {
         for (auto path : paths) load_image_async(apps, path);

@@ -59,7 +59,7 @@ void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
 }
 
 void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
-  if (draw_glbutton(win, "Geodesic gradient field")) {
+  if (draw_button(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
@@ -73,7 +73,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
     }
   }
 
-  if (draw_glbutton(win, "Geodesic distance field")) {
+  if (draw_button(win, "Geodesic distance field")) {
     if (data.vertex_selection.size()) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
@@ -85,7 +85,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
     }
   }
 
-  if (draw_glbutton(win, "Compute geodesic path")) {
+  if (draw_button(win, "Compute geodesic path")) {
     if (data.vertex_selection.size() > 1) {
       auto positions = vector<vec3f>();
       auto n         = data.vertex_selection.size();
@@ -107,7 +107,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
     }
   }
 
-  if (draw_glslider(win, "Sample points", data.num_samples, 0, 10000)) {
+  if (draw_slider(win, "Sample points", data.num_samples, 0, 10000)) {
     data.vertex_selection = sample_vertices_poisson(
         data.solver, data.num_samples);
     auto positions = vector<vec3f>(data.vertex_selection.size());
@@ -116,14 +116,14 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
     update_glpoints(app, positions);
   }
 
-  if (draw_glcheckbox(win, "Show mesh edges", app->show_edges)) {
+  if (draw_checkbox(win, "Show mesh edges", app->show_edges)) {
     if (app->show_edges)
       show_edges(app);
     else
       hide_edges(app);
   }
 
-  if (draw_glbutton(win, "Clear")) {
+  if (draw_button(win, "Clear")) {
     data.vertex_selection.clear();
     clear(app);
   }
@@ -150,11 +150,11 @@ int main(int argc, const char* argv[]) {
   auto click_callback = [&data](app_state* a, int f, vec2f uv, int v, float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](app_state* app, ygl::window* win) {
+  auto draw_widgets = [&data](app_state* app, ygl::window* win) {
     my_draw_glwidgets(data, app, win);
   };
 
-  yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+  yimshproc(input_filename, init, key_callback, click_callback, draw_widgets);
 
   // done
   return 0;

@@ -53,7 +53,7 @@ struct app_state {
 
   // viewing properties
   ygl::opengl_image*       glimage  = new ygl::opengl_image{};
-  ygl::draw_glimage_params glparams = {};
+  ygl::draw_image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -97,7 +97,7 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_glcallback(
+  set_draw_callback(
       win, [app](ygl::window* win, const ygl::input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
@@ -107,9 +107,9 @@ int main(int argc, const char* argv[]) {
         }
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_image(app->glimage, app->glparams);
       });
-  set_uiupdate_glcallback(
+  set_uiupdate_callback(
       win, [app](ygl::window* win, const ygl::input& input) {
         // handle mouse
         if (input.mouse_left) {

@@ -364,7 +364,7 @@ void set_glimage(
 }
 
 // draw image
-void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
+void draw_image(opengl_image* glimage, const draw_image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
@@ -1046,7 +1046,7 @@ void clear_lights(scene* scene) {
 bool has_max_lights(scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
-void draw_globject(scene* glscene, object* object,
+void draw_object(scene* glscene, object* object,
     const scene_params& params) {
   if (object->hidden) return;
 
@@ -1286,7 +1286,7 @@ void draw_scene(scene* glscene, camera* glcamera,
 
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (auto object : glscene->objects) {
-    draw_globject(glscene, object, params);
+    draw_object(glscene, object, params);
   }
 
   glUseProgram(0);
@@ -1300,7 +1300,7 @@ void draw_scene(scene* glscene, camera* glcamera,
 // -----------------------------------------------------------------------------
 namespace yocto::opengl {
 
-static void draw_glwindow(window* win) {
+static void draw_window(window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1324,7 +1324,7 @@ static void draw_glwindow(window* win) {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
-      draw_glmessages(win);
+      draw_messages(win);
       win->widgets_cb(win, win->input);
     }
     ImGui::End();
@@ -1359,7 +1359,7 @@ void init_glwindow(window* win, const vec2i& size, const string& title,
   // set callbacks
   glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
     auto win = (window*)glfwGetWindowUserPointer(glfw);
-    draw_glwindow(win);
+    draw_window(win);
   });
   glfwSetDropCallback(
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
@@ -1499,38 +1499,38 @@ void run_ui(window* win) {
     if (win->update_cb) win->update_cb(win, win->input);
 
     // draw
-    draw_glwindow(win);
+    draw_window(win);
 
     // event hadling
     glfwPollEvents();
   }
 }
 
-void set_draw_glcallback(window* win, draw_glcallback cb) {
+void set_draw_callback(window* win, draw_callback cb) {
   win->draw_cb = cb;
 }
-void set_widgets_glcallback(window* win, widgets_glcallback cb) {
+void set_widgets_callback(window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
-void set_drop_glcallback(window* win, drop_glcallback drop_cb) {
+void set_drop_callback(window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
-void set_key_glcallback(window* win, key_glcallback cb) {
+void set_key_callback(window* win, key_callback cb) {
   win->key_cb = cb;
 }
-void set_char_glcallback(window* win, char_glcallback cb) {
+void set_char_callback(window* win, char_callback cb) {
   win->char_cb = cb;
 }
-void set_click_glcallback(window* win, click_glcallback cb) {
+void set_click_callback(window* win, click_callback cb) {
   win->click_cb = cb;
 }
-void set_scroll_glcallback(window* win, scroll_glcallback cb) {
+void set_scroll_callback(window* win, scroll_callback cb) {
   win->scroll_cb = cb;
 }
-void set_uiupdate_glcallback(window* win, uiupdate_glcallback cb) {
+void set_uiupdate_callback(window* win, uiupdate_callback cb) {
   win->uiupdate_cb = cb;
 }
-void set_update_glcallback(window* win, update_glcallback cb) {
+void set_update_callback(window* win, update_callback cb) {
   win->update_cb = cb;
 }
 
@@ -1580,7 +1580,7 @@ bool is_glmodal_open(window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_glmessage(
+bool draw_message(
     window* win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
@@ -1598,11 +1598,11 @@ bool draw_glmessage(
 
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
-void               push_glmessage(window* win, const string& message) {
+void               push_message(window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
-bool draw_glmessages(window* win) {
+bool draw_messages(window* win) {
   std::lock_guard lock(_message_mutex);
   if (_message_queue.empty()) return false;
   if (!is_glmodal_open(win, "<message>")) {
@@ -1749,7 +1749,7 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_glfiledialog(window* win, const char* lbl, string& path,
+bool draw_filedialog(window* win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
@@ -1805,20 +1805,20 @@ bool draw_glfiledialog(window* win, const char* lbl, string& path,
     return false;
   }
 }
-bool draw_glfiledialog_button(window* win, const char* button_lbl,
+bool draw_filedialog_button(window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
-    return draw_glfiledialog(win, lbl, path, save, dirname, filename, filter);
+    return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
-    if (draw_glbutton(win, button_lbl, button_active)) {
+    if (draw_button(win, button_lbl, button_active)) {
       open_glmodal(win, lbl);
     }
     return false;
   }
 }
 
-bool draw_glbutton(window* win, const char* lbl, bool enabled) {
+bool draw_button(window* win, const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
   } else {
@@ -1831,15 +1831,15 @@ bool draw_glbutton(window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_gllabel(window* win, const char* lbl, const string& label) {
+void draw_label(window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
-void draw_glseparator(window* win) { ImGui::Separator(); }
+void draw_separator(window* win) { ImGui::Separator(); }
 
 void continue_glline(window* win) { ImGui::SameLine(); }
 
-bool draw_gltextinput(window* win, const char* lbl, string& value) {
+bool draw_textinput(window* win, const char* lbl, string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -1849,89 +1849,89 @@ bool draw_gltextinput(window* win, const char* lbl, string& value) {
   return edited;
 }
 
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, float& value, float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec2f& value, float min, float max) {
   return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec3f& value, float min, float max) {
   return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
-bool draw_glslider(
+bool draw_slider(
     window* win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_gldragger(window* win, const char* lbl, float& value,
+bool draw_dragger(window* win, const char* lbl, float& value,
     float speed, float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec2f& value,
+bool draw_dragger(window* win, const char* lbl, vec2f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec3f& value,
+bool draw_dragger(window* win, const char* lbl, vec3f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec4f& value,
+bool draw_dragger(window* win, const char* lbl, vec4f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_gldragger(window* win, const char* lbl, int& value,
+bool draw_dragger(window* win, const char* lbl, int& value,
     float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec2i& value,
+bool draw_dragger(window* win, const char* lbl, vec2i& value,
     float speed, int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec3i& value,
+bool draw_dragger(window* win, const char* lbl, vec3i& value,
     float speed, int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(window* win, const char* lbl, vec4i& value,
+bool draw_dragger(window* win, const char* lbl, vec4i& value,
     float speed, int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_glcheckbox(window* win, const char* lbl, bool& value) {
+bool draw_checkbox(window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_glcoloredit(window* win, const char* lbl, vec3f& value) {
+bool draw_coloredit(window* win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
-bool draw_glcoloredit(window* win, const char* lbl, vec4f& value) {
+bool draw_coloredit(window* win, const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
-bool draw_glhdrcoloredit(window* win, const char* lbl, vec3f& value) {
+bool draw_hdrcoloredit(window* win, const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -1939,9 +1939,9 @@ bool draw_glhdrcoloredit(window* win, const char* lbl, vec3f& value) {
     color /= scale;
     exposure = log2(scale);
   }
-  auto edit_exposure = draw_glslider(
+  auto edit_exposure = draw_slider(
       win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_glcoloredit(win, (lbl + " [col]"s).c_str(), color);
+  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     value = color * exp2(exposure);
     return true;
@@ -1949,7 +1949,7 @@ bool draw_glhdrcoloredit(window* win, const char* lbl, vec3f& value) {
     return false;
   }
 }
-bool draw_glhdrcoloredit(window* win, const char* lbl, vec4f& value) {
+bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -1957,9 +1957,9 @@ bool draw_glhdrcoloredit(window* win, const char* lbl, vec4f& value) {
     xyz(color) /= scale;
     exposure = log2(scale);
   }
-  auto edit_exposure = draw_glslider(
+  auto edit_exposure = draw_slider(
       win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_glcoloredit(win, (lbl + " [col]"s).c_str(), color);
+  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     xyz(value) = xyz(color) * exp2(exposure);
     value.w    = color.w;
@@ -1969,7 +1969,7 @@ bool draw_glhdrcoloredit(window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_glcombobox(window* win, const char* lbl, int& value,
+bool draw_combobox(window* win, const char* lbl, int& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
@@ -1983,7 +1983,7 @@ bool draw_glcombobox(window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_glcombobox(window* win, const char* lbl, string& value,
+bool draw_combobox(window* win, const char* lbl, string& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
@@ -1998,7 +1998,7 @@ bool draw_glcombobox(window* win, const char* lbl, string& value,
   return value != old_val;
 }
 
-bool draw_glcombobox(window* win, const char* lbl, int& idx, int num,
+bool draw_combobox(window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
@@ -2019,7 +2019,7 @@ bool draw_glcombobox(window* win, const char* lbl, int& idx, int num,
   return idx != old_idx;
 }
 
-void draw_glprogressbar(window* win, const char* lbl, float fraction) {
+void draw_progressbar(window* win, const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -2027,23 +2027,23 @@ void draw_glprogressbar(window* win, const char* lbl, float fraction) {
   ImGui::PopStyleColor(1);
 }
 
-void draw_glhistogram(
+void draw_histogram(
     window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
-void draw_glhistogram(
+void draw_histogram(
     window* win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
-void draw_glhistogram(
+void draw_histogram(
     window* win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
-void draw_glhistogram(
+void draw_histogram(
     window* win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
@@ -2052,7 +2052,7 @@ void draw_glhistogram(
   ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
-void draw_glhistogram(
+void draw_histogram(
     window* win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
@@ -2125,22 +2125,22 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_glinfo(window* win, const string& msg) {
+void        log_info(window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_glerror(window* win, const string& msg) {
+void log_error(window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();
 }
-void clear_gllogs(window* win) {
+void clear_log(window* win) {
   _log_mutex.lock();
   _log_widget.Clear();
   _log_mutex.unlock();
 }
-void draw_gllog(window* win) {
+void draw_log(window* win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();

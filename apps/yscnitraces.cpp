@@ -61,7 +61,7 @@ struct app_state {
 
   // view scene
   ygl::opengl_image*       glimage  = new ygl::opengl_image{};
-  ygl::draw_glimage_params glparams = {};
+  ygl::draw_image_params glparams = {};
 
   // computation
   int        render_sample  = 0;
@@ -296,7 +296,7 @@ int main(int argc, const char* argv[]) {
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
-  set_draw_glcallback(
+  set_draw_callback(
       win, [app](ygl::window* win, const ygl::input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
@@ -305,11 +305,11 @@ int main(int argc, const char* argv[]) {
         app->glparams.framebuffer = input.framebuffer_viewport;
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_image(app->glimage, app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });
-  set_char_glcallback(win, [app](ygl::window* win, unsigned int key,
+  set_char_callback(win, [app](ygl::window* win, unsigned int key,
                                const ygl::input& input) {
     switch (key) {
       case 'c': {
@@ -337,7 +337,7 @@ int main(int argc, const char* argv[]) {
         break;
     }
   });
-  set_uiupdate_glcallback(
+  set_uiupdate_callback(
       win, [app](ygl::window* win, const ygl::input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto dolly  = 0.0f;
