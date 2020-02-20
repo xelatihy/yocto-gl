@@ -104,6 +104,7 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+using ym::identity3x4f;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -245,7 +246,7 @@ struct bvh_shape {
 
 // instance
 struct bvh_instance {
-  frame3f frame = ym::identity3x4f;
+  frame3f frame = identity3x4f;
   int     shape = -1;
 };
 

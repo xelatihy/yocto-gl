@@ -54,12 +54,13 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+using ym::identity3x4f;
 
 // Pbrt camera
 struct camera {
   // camera parameters
-  frame3f frame      = ym::identity3x4f;
-  frame3f frend      = ym::identity3x4f;
+  frame3f frame      = identity3x4f;
+  frame3f frend      = identity3x4f;
   vec2i   resolution = {0, 0};
   float   lens       = 0;
   float   aspect     = 0;
@@ -91,8 +92,8 @@ struct material {
 // Pbrt shape
 struct shape {
   // frames
-  frame3f              frame     = ym::identity3x4f;
-  frame3f              frend     = ym::identity3x4f;
+  frame3f              frame     = identity3x4f;
+  frame3f              frend     = identity3x4f;
   std::vector<frame3f> instances = {};
   std::vector<frame3f> instaends = {};
   // shape
@@ -108,24 +109,24 @@ struct shape {
 // Pbrt lights
 struct light {
   // light parameters
-  frame3f frame    = ym::identity3x4f;
-  frame3f frend    = ym::identity3x4f;
+  frame3f frame    = identity3x4f;
+  frame3f frend    = identity3x4f;
   vec3f   emission = {0, 0, 0};
   vec3f   from     = {0, 0, 0};
   vec3f   to       = {0, 0, 0};
   bool    distant  = false;
   // arealight approximation
   vec3f              area_emission  = {0, 0, 0};
-  frame3f            area_frame     = ym::identity3x4f;
-  frame3f            area_frend     = ym::identity3x4f;
+  frame3f            area_frame     = identity3x4f;
+  frame3f            area_frend     = identity3x4f;
   std::vector<vec3i> area_triangles = {};
   std::vector<vec3f> area_positions = {};
   std::vector<vec3f> area_normals   = {};
 };
 struct environment {
   // environment approximation
-  frame3f     frame        = ym::identity3x4f;
-  frame3f     frend        = ym::identity3x4f;
+  frame3f     frame        = identity3x4f;
+  frame3f     frend        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
   std::string emission_tex = "";
 };
@@ -365,8 +366,8 @@ struct command {
   std::string        name   = "";
   std::string        type   = "";
   std::vector<value> values = {};
-  frame3f            frame  = ym::identity3x4f;
-  frame3f            frend  = ym::identity3x4f;
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
 };
 
 // get pbrt value
@@ -1844,8 +1845,8 @@ inline bool convert_environment(environment* penvironment,
 
 // pbrt stack ctm
 struct stack_element {
-  frame3f   transform_start        = ym::identity3x4f;
-  frame3f   transform_end          = ym::identity3x4f;
+  frame3f   transform_start        = identity3x4f;
+  frame3f   transform_end          = identity3x4f;
   material  material               = {};
   arealight arealight              = {};
   medium    interior               = {};

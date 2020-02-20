@@ -67,6 +67,7 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+using ym::identity3x4f;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -83,7 +84,7 @@ using ym::vec4i;
 // and set the aperture to focal length over f-stop.
 struct camera {
   std::string name         = "";
-  frame3f     frame        = ym::identity3x4f;
+  frame3f     frame        = identity3x4f;
   bool        orthographic = false;
   float       lens         = 0.050;
   float       film         = 0.036;
@@ -198,7 +199,7 @@ struct instance {
 struct object {
   // object data
   std::string name     = "";
-  frame3f     frame    = ym::identity3x4f;
+  frame3f     frame    = identity3x4f;
   shape*      shape    = nullptr;
   material*   material = nullptr;
   instance*   instance = nullptr;
@@ -208,7 +209,7 @@ struct object {
 // Environment map.
 struct environment {
   std::string name         = "";
-  frame3f     frame        = ym::identity3x4f;
+  frame3f     frame        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
   texture*    emission_tex = nullptr;
 };

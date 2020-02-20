@@ -56,6 +56,7 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+using ym::identity3x4f;
 
 // OBJ vertex
 struct vertex {
@@ -167,7 +168,7 @@ struct shape {
 // Obj camera
 struct camera {
   std::string name     = "";
-  frame3f     frame    = ym::identity3x4f;
+  frame3f     frame    = identity3x4f;
   bool        ortho    = false;
   float       width    = 0.036;
   float       height   = 0.028;
@@ -179,7 +180,7 @@ struct camera {
 // Obj environment
 struct environment {
   std::string name         = "";
-  frame3f     frame        = ym::identity3x4f;
+  frame3f     frame        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
   texture     emission_tex = {};
 };
@@ -801,7 +802,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       if (!parse_value(str, environment->frame)) return parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
-      auto frame  = ym::identity3x4f;
+      auto frame  = identity3x4f;
       if (!parse_value(str, object)) return parse_error();
       if (!parse_value(str, frame)) return parse_error();
       if (shape_map.find(object) == shape_map.end()) {

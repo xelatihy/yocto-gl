@@ -64,6 +64,7 @@ using ym::vec3b;
 using ym::vec4b;
 using ym::uint;
 using ym::byte;
+using ym::identity3x4f;
 
 // OpenGL image data
 struct image {
@@ -119,7 +120,7 @@ namespace ygl {
 
 // Opengl caemra
 struct camera {
-  frame3f frame  = ym::identity3x4f;
+  frame3f frame  = identity3x4f;
   float   lens   = 0.050;
   float   aspect = 1.000;
   float   film   = 0.036;
@@ -197,7 +198,7 @@ struct instance {
 // Opengl object
 struct object {
   // object properties
-  frame3f   frame       = ym::identity3x4f;
+  frame3f   frame       = identity3x4f;
   shape*    shape       = nullptr;
   material* material    = nullptr;
   instance* instance    = nullptr;
