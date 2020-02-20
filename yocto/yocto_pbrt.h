@@ -103,7 +103,7 @@ struct shape {
   std::vector<vec2f> texcoords = {};
   std::vector<vec3i> triangles = {};
   // material
-  material* material = nullptr;
+  ypbrt::material* material = nullptr;
 };
 
 // Pbrt lights
