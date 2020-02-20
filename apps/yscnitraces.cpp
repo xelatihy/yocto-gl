@@ -51,7 +51,7 @@ struct app_state {
   tr::trace_params params = {};
 
   // scene
-  tr::trace_scene*  scene  = new tr::trace_scene{};
+  tr::scene*  scene  = new tr::scene{};
   tr::camera* camera = nullptr;
 
   // rendering state
@@ -79,7 +79,7 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(tr::trace_scene* scene, sceneio_model* ioscene,
+void init_scene(tr::scene* scene, sceneio_model* ioscene,
     tr::camera*& camera, sceneio_camera* iocamera,
     sceneio_progress print_progress = {}) {
   // handle progress

@@ -44,7 +44,7 @@ using std::make_unique;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(tr::trace_scene* scene, sceneio_model* ioscene,
+void init_scene(tr::scene* scene, sceneio_model* ioscene,
     tr::camera*& camera, sceneio_camera* iocamera,
     sceneio_progress progress_cb = {}) {
   // handle progress
@@ -209,7 +209,7 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // convert scene
-  auto scene_guard = make_unique<tr::trace_scene>();
+  auto scene_guard = make_unique<tr::scene>();
   auto scene       = scene_guard.get();
   auto camera      = (tr::camera*)nullptr;
   init_scene(scene, ioscene, camera, iocamera, print_progress);

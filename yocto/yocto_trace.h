@@ -87,7 +87,7 @@ using yocto::image::image;
 using namespace yocto::math;
 
 // Trace scene
-struct trace_scene;
+struct scene;
 struct camera;
 struct trace_environment;
 struct trace_shape;
@@ -97,13 +97,13 @@ struct trace_instance;
 struct trace_object;
 
 // Add scene elements
-camera*      add_camera(trace_scene* scene);
-trace_object*      add_object(trace_scene* scene);
-trace_texture*     add_texture(trace_scene* scene);
-trace_material*    add_material(trace_scene* scene);
-trace_shape*       add_shape(trace_scene* scene);
-trace_instance*    add_instance(trace_scene* scene);
-trace_environment* add_environment(trace_scene* scene);
+camera*      add_camera(scene* scene);
+trace_object*      add_object(scene* scene);
+trace_texture*     add_texture(scene* scene);
+trace_material*    add_material(scene* scene);
+trace_shape*       add_shape(scene* scene);
+trace_instance*    add_instance(scene* scene);
+trace_environment* add_environment(scene* scene);
 
 // camera properties
 void set_frame(camera* camera, const frame3f& frame);
@@ -234,21 +234,21 @@ using trace_progress_image =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
-void init_lights(trace_scene* scene, trace_progress progress_cb = {});
+void init_lights(scene* scene, trace_progress progress_cb = {});
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_params& params,
+void init_bvh(scene* scene, const trace_params& params,
     trace_progress progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_scene*       scene,
+void update_bvh(scene*       scene,
     const vector<trace_object*>&   updated_objects,
     const vector<trace_shape*>&    updated_shapes,
     const vector<trace_instance*>& updated_instances,
     const trace_params&            params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const camera* camera,
+image<vec4f> trace_image(const scene* scene, const camera* camera,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {});
 
@@ -261,7 +261,7 @@ using trace_process_async = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_async_start(trace_state* state, const trace_scene* scene,
+void trace_async_start(trace_state* state, const scene* scene,
     const camera* camera, const trace_params& params,
     trace_progress       progress_cb       = {},
     trace_progress_image progress_image_cb = {},
@@ -428,7 +428,7 @@ struct trace_light {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct trace_scene {
+struct scene {
   vector<camera*>      cameras      = {};
   vector<trace_object*>      objects      = {};
   vector<trace_shape*>       shapes       = {};
@@ -446,7 +446,7 @@ struct trace_scene {
 #endif
 
   // cleanup
-  ~trace_scene();
+  ~scene();
 };
 
 // State of a pixel during tracing
@@ -487,7 +487,7 @@ struct trace_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
+trace_intersection intersect_scene_bvh(const scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any = false,
