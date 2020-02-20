@@ -407,9 +407,9 @@ struct instance {
 // Object.
 struct object {
   frame3f   frame    = identity3x4f;
-  shape*    shape    = nullptr;
-  material* material = nullptr;
-  instance* instance = nullptr;
+  ytrc::shape*    shape    = nullptr;
+  ytrc::material* material = nullptr;
+  ytrc::instance* instance = nullptr;
 };
 
 // Environment map.
@@ -422,9 +422,9 @@ struct environment {
 
 // Trace lights used during rendering. These are created automatically.
 struct light {
-  object*      object      = nullptr;
+  ytrc::object*      object      = nullptr;
   int          instance    = -1;
-  environment* environment = nullptr;
+  ytrc::environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.

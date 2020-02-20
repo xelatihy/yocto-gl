@@ -200,10 +200,10 @@ struct object {
   // object data
   std::string name     = "";
   frame3f     frame    = identity3x4f;
-  shape*      shape    = nullptr;
-  material*   material = nullptr;
-  instance*   instance = nullptr;
-  subdiv*     subdiv   = nullptr;
+  yscn::shape*      shape    = nullptr;
+  yscn::material*   material = nullptr;
+  yscn::instance*   instance = nullptr;
+  yscn::subdiv*     subdiv   = nullptr;
 };
 
 // Environment map.
