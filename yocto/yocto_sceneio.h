@@ -54,11 +54,22 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Math defitions
-using namespace yocto::math;
 namespace yim = yocto::image;
+namespace ym  = yocto::math;
+// Math defitions
+using ym::byte;
+using ym::frame3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
+using ym::bbox3f;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -75,12 +86,12 @@ namespace yim = yocto::image;
 // and set the aperture to focal length over f-stop.
 struct camera {
   std::string name         = "";
-  frame3f     frame        = identity3x4f;
+  frame3f     frame        = ym::identity3x4f;
   bool        orthographic = false;
   float       lens         = 0.050;
   float       film         = 0.036;
   float       aspect       = 1.500;
-  float       focus        = flt_max;
+  float       focus        = ym::flt_max;
   float       aperture     = 0;
 };
 
@@ -190,7 +201,7 @@ struct instance {
 struct object {
   // object data
   std::string name     = "";
-  frame3f     frame    = identity3x4f;
+  frame3f     frame    = ym::identity3x4f;
   shape*      shape    = nullptr;
   material*   material = nullptr;
   instance*   instance = nullptr;
@@ -200,7 +211,7 @@ struct object {
 // Environment map.
 struct environment {
   std::string name         = "";
-  frame3f     frame        = identity3x4f;
+  frame3f     frame        = ym::identity3x4f;
   vec3f       emission     = {0, 0, 0};
   texture*    emission_tex = nullptr;
 };
@@ -236,13 +247,13 @@ subdiv*      add_subdiv(model* scene, const std::string& name = "");
 texture*     add_texture(model* scene, const std::string& name = "");
 object*      add_complete_object(model* scene, const std::string& name = "");
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace yocto::sceneio {
+namespace ysc {
 
 // Progress callback called when loading.
 using progress_callback =
@@ -259,12 +270,12 @@ bool save_scene(const std::string& filename, const model* scene,
 // get named camera or default if name is empty
 camera* get_camera(const model* scene, const std::string& name = "");
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
@@ -275,12 +286,12 @@ std::vector<std::string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const model* scene);
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdivs(model* scene, progress_callback progress_cb = {});
@@ -296,6 +307,6 @@ inline vec3f eta_to_reflectivity(float eta) {
   return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 #endif

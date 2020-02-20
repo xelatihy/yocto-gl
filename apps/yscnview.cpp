@@ -33,7 +33,6 @@
 #include "yocto_opengl.h"
 using namespace yocto::image;
 namespace ycl = yocto::commonio;
-namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
 
 #include <atomic>
@@ -56,8 +55,8 @@ namespace fs = ghc::filesystem;
 #undef far
 #endif
 
-namespace yocto::sceneio {
-void print_obj_camera(yio::camera* camera);
+namespace ysc {
+void print_obj_camera(ysc::camera* camera);
 };
 
 // Application state
@@ -72,22 +71,22 @@ struct app_state {
   ygl::scene_params drawgl_prms = {};
 
   // scene
-  yio::model*  ioscene  = new yio::model{};
-  yio::camera* iocamera = nullptr;
+  ysc::model*  ioscene  = new ysc::model{};
+  ysc::camera* iocamera = nullptr;
 
   // rendering state
   ygl::scene*  glscene  = new ygl::scene{};
   ygl::camera* glcamera = nullptr;
 
   // editing
-  yio::camera*      selected_camera      = nullptr;
-  yio::object*      selected_object      = nullptr;
-  yio::instance*    selected_instance    = nullptr;
-  yio::shape*       selected_shape       = nullptr;
-  yio::subdiv*      selected_subdiv      = nullptr;
-  yio::material*    selected_material    = nullptr;
-  yio::environment* selected_environment = nullptr;
-  yio::texture*     selected_texture     = nullptr;
+  ysc::camera*      selected_camera      = nullptr;
+  ysc::object*      selected_object      = nullptr;
+  ysc::instance*    selected_instance    = nullptr;
+  ysc::shape*       selected_shape       = nullptr;
+  ysc::subdiv*      selected_subdiv      = nullptr;
+  ysc::material*    selected_material    = nullptr;
+  ysc::environment* selected_environment = nullptr;
+  ysc::texture*     selected_texture     = nullptr;
 
   // loading status
   atomic<bool>       ok           = false;
@@ -142,7 +141,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(ygl::scene* glscene, yio::model* ioscene) {
+void update_lights(ygl::scene* glscene, ysc::model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -172,9 +171,9 @@ void update_lights(ygl::scene* glscene, yio::model* ioscene) {
   }
 }
 
-void init_glscene(ygl::scene* glscene, yio::model* ioscene,
-    ygl::camera*& glcamera, yio::camera* iocamera,
-    yio::progress_callback progress_cb) {
+void init_glscene(ygl::scene* glscene, ysc::model* ioscene,
+    ygl::camera*& glcamera, ysc::camera* iocamera,
+    ysc::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
@@ -186,7 +185,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<yio::camera*, ygl::camera*>{};
+  auto camera_map     = std::unordered_map<ysc::camera*, ygl::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -198,7 +197,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<yio::texture*, ygl::texture*>{};
+  auto texture_map     = std::unordered_map<ysc::texture*, ygl::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -216,7 +215,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // material
-  auto material_map     = std::unordered_map<yio::material*, ygl::material*>{};
+  auto material_map     = std::unordered_map<ysc::material*, ygl::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -245,7 +244,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<yio::shape*, ygl::shape*>{};
+  auto shape_map     = std::unordered_map<ysc::shape*, ygl::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -262,7 +261,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = std::unordered_map<yio::instance*, ygl::instance*>{};
+  auto instance_map     = std::unordered_map<ysc::instance*, ygl::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -289,7 +288,7 @@ void init_glscene(ygl::scene* glscene, yio::model* ioscene,
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::camera* iocamera) {
+    ygl::window* win, ysc::model* ioscene, ysc::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -316,7 +315,7 @@ bool draw_widgets(
 
 /// Visit struct elements.
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::texture* iotexture) {
+    ygl::window* win, ysc::model* ioscene, ysc::texture* iotexture) {
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
@@ -335,7 +334,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::material* iomaterial) {
+    ygl::window* win, ysc::model* ioscene, ysc::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -380,7 +379,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
+bool draw_widgets(ygl::window* win, ysc::model* ioscene, ysc::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -399,7 +398,7 @@ bool draw_widgets(ygl::window* win, yio::model* ioscene, yio::shape* ioshape) {
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::instance* ioinstance) {
+    ygl::window* win, ysc::model* ioscene, ysc::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -409,7 +408,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::object* ioobject) {
+    ygl::window* win, ysc::model* ioscene, ysc::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -427,7 +426,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
+    ygl::window* win, ysc::model* ioscene, ysc::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -442,7 +441,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygl::window* win, yio::model* ioscene, yio::environment* ioenvironment) {
+    ygl::window* win, ysc::model* ioscene, ysc::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);
@@ -542,7 +541,7 @@ void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
     }
     end_glheader(win);
   }
-  auto get_texture = [app](yio::texture* iotexture) {
+  auto get_texture = [app](ysc::texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };

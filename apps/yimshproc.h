@@ -8,7 +8,6 @@
 #include "yocto_opengl.h"
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
-namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
 namespace ybv = yocto::bvh;
 
@@ -25,7 +24,7 @@ struct app_state {
   function<void(app_state*, ygl::window*)>           draw_widgets;
 
   // Geometry data
-  yio::shape shape;
+  ysc::shape shape;
 
   // OpenGL data
   ygl::scene*       glscene        = new ygl::scene{};
@@ -34,7 +33,7 @@ struct app_state {
   // Interaction data
   float         time       = 0;
   bool          show_edges = false;
-  yio::camera   camera;
+  ysc::camera   camera;
   float         camera_focus;
   ybv::bvh_tree bvh;
 
@@ -164,7 +163,7 @@ void update_gledges(app_state* app) {
 
 void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app->camera              = yio::camera{};
+  app->camera              = ysc::camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
   app->camera.orthographic = false;

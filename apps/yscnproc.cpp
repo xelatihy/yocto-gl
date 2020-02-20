@@ -31,7 +31,6 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
 namespace ycl = yocto::commonio;
-namespace yio = yocto::sceneio;
 
 #include <memory>
 using std::string;
@@ -65,7 +64,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = std::make_unique<yio::model>();
+  auto scene_guard = std::make_unique<ysc::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (!load_scene(filename, scene, ioerror, ycl::print_progress))

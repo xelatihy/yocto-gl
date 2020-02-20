@@ -72,9 +72,31 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ysc {
+
+namespace ym = yocto::math;
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan2;
+using ym::cos;
+using ym::exp;
+using ym::fmod;
+using ym::log;
+using ym::pow;
+using ym::sin;
+using ym::tan;
+using ym::sqrt;
+
+}  // namespace ysc
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const std::vector<float>& times, const float& time) {
@@ -131,12 +153,12 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 std::vector<std::string> scene_stats(const model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
@@ -241,12 +263,12 @@ std::vector<std::string> scene_validation(const model* scene, bool notextures) {
   return errs;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 model::~model() {
   for (auto camera : cameras) delete camera;
@@ -605,7 +627,7 @@ std::unique_ptr<subdiv> subdivide_subdiv(
 // Apply displacement to a shape
 std::unique_ptr<subdiv> displace_subdiv(subdiv* subdiv, float displacement,
     texture* displacement_tex, bool smooth) {
-  auto displaced = std::make_unique<sceneio::subdiv>(*subdiv);
+  auto displaced = std::make_unique<ysc::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
@@ -641,8 +663,8 @@ std::unique_ptr<subdiv> displace_subdiv(subdiv* subdiv, float displacement,
 }
 
 void tesselate_subdiv(model* scene, subdiv* subdiv) {
-  auto material = (sceneio::material*)nullptr;
-  auto shape    = (sceneio::shape*)nullptr;
+  auto material = (ysc::material*)nullptr;
+  auto shape    = (ysc::shape*)nullptr;
   for (auto object : scene->objects) {
     if (object->subdiv == subdiv) {
       material = object->material;
@@ -682,12 +704,12 @@ void tesselate_subdivs(model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const std::string& filename, model* scene,
@@ -755,12 +777,12 @@ bool save_scene(const std::string& filename, const model* scene,
   }
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -826,7 +848,7 @@ static bool load_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply::model{};
+    auto ply = yocto::ply::model{};
     if (!load_ply(filename, &ply, error)) return false;
     frames = get_values(&ply, "instance",
         std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
@@ -847,7 +869,7 @@ static bool save_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply::model{};
+    auto ply = yocto::ply::model{};
     add_values(&ply, frames, "instance",
         std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
             "zy", "zz", "ox", "oy", "oz"});
@@ -858,7 +880,7 @@ static bool save_instance(const std::string& filename,
   }
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -891,7 +913,7 @@ inline void from_json(const json& j, frame3f& value) {
 // -----------------------------------------------------------------------------
 // JSON IO
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 using json = nlohmann::json;
 
@@ -1528,12 +1550,12 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Loads an OBJ
 static bool load_obj_scene(const std::string& filename, model* scene,
@@ -1552,7 +1574,7 @@ static bool load_obj_scene(const std::string& filename, model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<obj::model>();
+  auto obj_guard = std::make_unique<yocto::obj::model>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -1575,7 +1597,7 @@ static bool load_obj_scene(const std::string& filename, model* scene,
   // helper to create texture maps
   auto ctexture_map = std::unordered_map<std::string, texture*>{{"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const obj::texture& tinfo) -> texture* {
+                          const yocto::obj::texture& tinfo) -> texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1588,7 +1610,7 @@ static bool load_obj_scene(const std::string& filename, model* scene,
   // helper to create texture maps
   auto stexture_map = std::unordered_map<std::string, texture*>{{"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const obj::texture& tinfo) -> texture* {
+                          const yocto::obj::texture& tinfo) -> texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1599,7 +1621,7 @@ static bool load_obj_scene(const std::string& filename, model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<obj::material*, material*>{};
+  auto material_map = std::unordered_map<yocto::obj::material*, material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1743,14 +1765,14 @@ static bool save_obj_scene(const std::string& filename, const model* scene,
 
   // textures
   auto get_texture = [](texture* texture) {
-    if (!texture) return obj::texture{};
-    auto tinfo = obj::texture{};
+    if (!texture) return yocto::obj::texture{};
+    auto tinfo = yocto::obj::texture{};
     tinfo.path = texture->name;
     return tinfo;
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<material*, obj::material*>{
+  auto material_map = std::unordered_map<material*, yocto::obj::material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
@@ -1856,12 +1878,12 @@ void print_obj_camera(camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 static bool load_ply_scene(const std::string& filename, model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
@@ -1908,12 +1930,12 @@ static bool save_ply_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // Load a scene
 static bool load_gltf_scene(const std::string& filename, model* scene,
@@ -2318,12 +2340,12 @@ static bool load_gltf_scene(const std::string& filename, model* scene,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const std::string& filename, model* scene,
@@ -2338,7 +2360,7 @@ static bool load_pbrt_scene(const std::string& filename, model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt_guard = std::make_unique<pbrt::model>();
+  auto pbrt_guard = std::make_unique<yocto::pbrt::model>();
   auto pbrt       = pbrt_guard.get();
   if (!load_pbrt(filename, pbrt, error)) return false;
 
@@ -2388,7 +2410,7 @@ static bool load_pbrt_scene(const std::string& filename, model* scene,
   };
 
   // convert material
-  auto material_map = std::unordered_map<pbrt::material*, material*>{};
+  auto material_map = std::unordered_map<yocto::pbrt::material*, material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2508,7 +2530,7 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = std::make_unique<pbrt::model>();
+  auto pbrt_guard = std::make_unique<yocto::pbrt::model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
@@ -2525,7 +2547,7 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<material*, pbrt::material*>{};
+  auto material_map = std::unordered_map<material*, yocto::pbrt::material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
@@ -2598,12 +2620,12 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace ysc {
 
 void make_cornellbox_scene(model* scene) {
   scene->name                = "cornellbox";
@@ -2669,4 +2691,4 @@ void make_cornellbox_scene(model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace yocto::sceneio
+}  // namespace ysc

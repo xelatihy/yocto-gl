@@ -33,7 +33,6 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto::image;
 namespace ycl = yocto::commonio;
-namespace yio = yocto::sceneio;
 namespace yim = yocto::image;
 
 #include <map>
@@ -44,8 +43,8 @@ using namespace std::string_literals;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
-    yio::camera* iocamera, yio::progress_callback progress_cb = {}) {
+void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
+    ysc::camera* iocamera, ysc::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -53,7 +52,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<yio::camera*, ytr::camera*>{};
+  auto camera_map     = std::unordered_map<ysc::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -64,7 +63,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<yio::texture*, ytr::texture*>{};
+  auto texture_map     = std::unordered_map<ysc::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -81,7 +80,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<yio::material*, ytr::material*>{};
+  auto material_map     = std::unordered_map<ysc::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -113,7 +112,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<yio::shape*, ytr::shape*>{};
+  auto shape_map     = std::unordered_map<ysc::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -131,7 +130,7 @@ void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<yio::instance*, ytr::instance*>{};
+  auto instance_map     = std::unordered_map<ysc::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -198,7 +197,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<yio::model>();
+  auto ioscene_guard = std::make_unique<ysc::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(filename, ioscene, ioerror, ycl::print_progress))
