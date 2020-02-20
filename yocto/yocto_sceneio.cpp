@@ -323,6 +323,9 @@ yscn::camera* get_camera(const yscn::model* scene, const std::string& name) {
   for (auto camera : scene->cameras) {
     if (camera->name == "camera") return camera;
   }
+  for (auto camera : scene->cameras) {
+    if (camera->name == "camera1") return camera;
+  }
   return scene->cameras.front();
 }
 
