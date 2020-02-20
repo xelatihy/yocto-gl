@@ -2,12 +2,6 @@ cmake_minimum_required (VERSION 3.12)
 
 project (yocto-gl-lib VERSION 2.0)
 
-option(YOCTO_OPENGL "Build OpenGL apps" ON)
-option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
-option(YOCTO_TESTING "Enable testing" ON)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 add_library(yocto 
   yocto_math.h yocto_commonio.h 
   yocto_ply.h yocto_obj.h yocto_pbrt.h 
@@ -30,7 +24,7 @@ if(UNIX AND NOT APPLE)
 endif(UNIX AND NOT APPLE)
 
 if(YOCTO_EMBREE)
-  add_definitions(-DYOCTO_EMBREE)
+  target_compile_definitions(yocto PUBLIC -DYOCTO_EMBREE)
   if(APPLE)
     target_include_directories(yocto PUBLIC /usr/local/include)
     target_link_libraries(yocto /usr/local/lib/libembree3.dylib)
