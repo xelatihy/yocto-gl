@@ -32,34 +32,10 @@
 
 #include "yocto_image.h"
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
-// #ifndef _clang_analyzer__
-
-#define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "ext/stb_image_write.h"
-
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "ext/stb_image_resize.h"
-
-#define TINYEXR_IMPLEMENTATION
 #include "ext/tinyexr.h"
-
-// #endif
-
-#if !defined(_WIN32) && !defined(_WIN64)
-#pragma GCC diagnostic pop
-#endif
 
 #include <atomic>
 #include <future>
