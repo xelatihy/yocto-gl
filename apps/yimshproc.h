@@ -12,7 +12,11 @@ namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
 namespace ybv = yocto::bvh;
 namespace ysh = yocto::shape;
+
 using std::function;
+using std::string;
+using std::vector;
+using namespace std::string_literals;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors

@@ -47,7 +47,6 @@
 #include <deque>
 #include <future>
 #include <memory>
-using std::make_unique;
 
 #include "ext/filesystem.hpp"
 #include "ext/json.hpp"
@@ -203,6 +202,10 @@ vector<string> scene_stats(const model* scene, bool verbose) {
 
   return stats;
 }
+
+using std::unordered_map;
+using std::pair;
+using std::array;
 
 // Checks for validity of the scene->
 vector<string> scene_validation(const model* scene, bool notextures) {
@@ -383,7 +386,6 @@ void add_materials(model* scene) {
 
 // Add a sky environment
 void add_sky(model* scene, float sun_angle) {
-  using yocto::image::make_sunsky;
   auto texture = add_texture(scene, "sky");
   auto sunsky  = image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
@@ -578,6 +580,7 @@ std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>,
 
 // using
 using std::unique_ptr;
+using std::make_unique;
 using yocto::shape::subdivide_catmullclark;
 
 // Apply subdivision and displacement rules.
@@ -875,6 +878,7 @@ static bool save_instance(const string& filename, const vector<frame3f>& frames,
 namespace yocto::math {
 
 using json = nlohmann::json;
+using std::array;
 
 // support for json conversions
 inline void to_json(json& j, const vec3f& value) {

@@ -42,6 +42,8 @@ using yocto::image::is_hdr_filename;
 using std::atomic;
 using std::deque;
 using std::future;
+using std::vector;
+using std::string;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

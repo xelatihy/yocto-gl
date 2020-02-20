@@ -37,6 +37,9 @@ using yocto::image::colorgrade_params;
 using yocto::image::is_hdr_filename; 
 
 #include <future>
+using std::vector;
+using std::string;
+using namespace std::string_literals;
 
 struct app_state {
   // original data

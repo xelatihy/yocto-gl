@@ -45,7 +45,12 @@
 // -----------------------------------------------------------------------------
 namespace yocto::pbrt {
 
-// Using directives
+// Using directives.
+using std::string;
+using std::vector;
+using std::unordered_map;
+using std::pair;
+using namespace std::string_literals;
 using namespace yocto::math;
 
 // Pbrt camera
@@ -490,7 +495,7 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, pair<float, string>& val) {
+    const value& pbrt,  std::pair<float, string>& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
     val.first = 0;
@@ -501,7 +506,7 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, pair<vec3f, string>& val) {
+    const value& pbrt,  std::pair<vec3f, string>& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
     val.first = zero3f;
@@ -693,8 +698,8 @@ template <typename T>
   return true;
 }
 
-inline pair<vec3f, vec3f> get_etak(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+inline  pair<vec3f, vec3f> get_etak(const string& name) {
+  static const unordered_map<string,  std::pair<vec3f, vec3f>> metal_ior_table = {
       {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                   {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
       {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -781,8 +786,8 @@ inline pair<vec3f, vec3f> get_etak(const string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-inline pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> params = {
+inline  std::pair<vec3f, vec3f> get_subsurface(const string& name) {
+  static const unordered_map<string,  std::pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
@@ -1153,9 +1158,9 @@ inline bool convert_texture(texture& ptexture, const command& command,
     ptexture.constant = {1, 0, 0};
     return true;
   } else if (command.type == "checkerboard") {
-    // auto tex1     = if(!get_value(command.values, "tex1", pair{vec3f{1},
+    // auto tex1     = if(!get_value(command.values, "tex1",  std::pair{vec3f{1},
     // ""s}); auto tex2     = if(!get_value(command.values, "tex2",
-    // pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ? tex1.first :
+    //  std::pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ? tex1.first :
     // vec3f{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first :
     // vec3f{0.6f, 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type
     // = proc_image_params::type_t::checker; params.color0 = {rgb1.x, rgb1.y,
@@ -1174,7 +1179,7 @@ inline bool convert_texture(texture& ptexture, const command& command,
     ptexture.constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "mix") {
-    auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
+    auto tex1 =  std::pair{vec3f{0}, ""s}, tex2 =  std::pair{vec3f{1}, ""s};
     if (!get_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_value(command.values, "tex2", tex2)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -1186,7 +1191,7 @@ inline bool convert_texture(texture& ptexture, const command& command,
     }
     return true;
   } else if (command.type == "scale") {
-    auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
+    auto tex1 =  std::pair{vec3f{1}, ""s}, tex2 =  std::pair{vec3f{1}, ""s};
     if (!get_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_value(command.values, "tex2", tex1)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -1237,7 +1242,7 @@ inline bool convert_material(material* pmaterial, const command& command,
   auto get_texture = [&](const vector<value>& values, const string& name,
                          vec3f& color, string& filename,
                          const vec3f& def) -> bool {
-    auto textured = pair{def, ""s};
+    auto textured =  std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color    = textured.first;
@@ -1256,7 +1261,7 @@ inline bool convert_material(material* pmaterial, const command& command,
   };
   auto get_scalar = [&](const vector<value>& values, const string& name,
                         float& scalar, float def) -> bool {
-    auto textured = pair{vec3f{def}, ""s};
+    auto textured =  std::pair{vec3f{def}, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       scalar = mean(textured.first);
@@ -1272,7 +1277,7 @@ inline bool convert_material(material* pmaterial, const command& command,
   };
   auto get_color = [&](const vector<value>& values, const string& name,
                        vec3f& color, const vec3f& def) -> bool {
-    auto textured = pair{def, ""s};
+    auto textured =  std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color = textured.first;
@@ -1289,7 +1294,7 @@ inline bool convert_material(material* pmaterial, const command& command,
 
   auto get_roughness = [&](const vector<value>& values, float& roughness,
                            float def = 0.1) -> bool {
-    auto roughness_ = pair{vec3f{def}, ""s};
+    auto roughness_ =  std::pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
     auto uroughness = roughness_, vroughness = roughness_;
     auto remaproughness = true;
@@ -1630,7 +1635,7 @@ inline bool convert_shape(shape* shape, const command& command,
   auto get_alpha = [&](const vector<value>& values, const string& name,
                        string& filename) -> bool {
     auto def      = 1.0f;
-    auto textured = pair{def, ""s};
+    auto textured =  std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       filename = "";

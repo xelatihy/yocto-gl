@@ -36,6 +36,10 @@ namespace ycl = yocto::commonio;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
+using std::string;
+using std::vector;
+using namespace std::string_literals;
+
 namespace yocto::image {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,

@@ -14,7 +14,7 @@
 // `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
 // We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
-// matrix-matrix and matrix-vector products, transposes and inverses.
+// matrix-matrix and matrix-std::vector products, transposes and inverses.
 // Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
@@ -172,8 +172,6 @@
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -183,12 +181,6 @@ namespace yocto::math {
 
 using byte = unsigned char;
 using uint = unsigned int;
-using std::array;
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
-using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
@@ -287,7 +279,7 @@ struct vec4f {
   const float& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+// Zero std::vector constants.
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
@@ -380,7 +372,7 @@ inline float min(const vec2f& a) { return min(a.x, a.y); }
 inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
 inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
 inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
@@ -481,14 +473,14 @@ inline float angle(const vec3f& a, const vec3f& b) {
 
 // Orthogonal vectors.
 inline vec3f orthogonal(const vec3f& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
 }
 inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
   return normalize(a - b * dot(a, b));
 }
 
-// Reflected and refracted vector.
+// Reflected and refracted std::vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n) {
   return -w + 2 * dot(n, w) * n;
 }
@@ -531,7 +523,7 @@ inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
 inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
@@ -667,7 +659,7 @@ inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec4f abs(const vec4f& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
@@ -791,7 +783,7 @@ struct vec4b {
   const byte& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+// Zero std::vector constants.
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
@@ -865,7 +857,7 @@ inline int max(const vec2i& a) { return max(a.x, a.y); }
 inline int min(const vec2i& a) { return min(a.x, a.y); }
 inline int sum(const vec2i& a) { return a.x + a.y; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
@@ -948,7 +940,7 @@ inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
@@ -1032,7 +1024,7 @@ inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
@@ -1042,7 +1034,7 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 namespace std {
 
-// Hash functor for vector for use with hash_map
+// Hash functor for std::vector for use with hash_map
 template <>
 struct hash<yocto::math::vec2i> {
   size_t operator()(const yocto::math::vec2i& v) const {
@@ -1466,7 +1458,7 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+// Axis aligned bounding box represented as a min/max std::vector pairs.
 struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
@@ -1478,7 +1470,7 @@ struct bbox2f {
   const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+// Axis aligned bounding box represented as a min/max std::vector pairs.
 struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
@@ -1799,7 +1791,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
@@ -1848,14 +1840,14 @@ inline float quad_area(
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
 
@@ -1899,7 +1891,7 @@ inline T interpolate_bezier_derivative(
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -1925,7 +1917,7 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
@@ -2057,7 +2049,7 @@ inline vec3f rand3f(rng_state& rng) {
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(vector<T>& vals, rng_state& rng) {
+inline void shuffle(std::vector<T>& vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
   for (auto i = (int)vals.size() - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
@@ -2143,13 +2135,13 @@ inline int   sample_uniform(int size, float r);
 inline float sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const vector<float>& elements, float r);
-inline float sample_uniform_pdf(const vector<float>& elements);
+inline float sample_uniform(const std::vector<float>& elements, float r);
+inline float sample_uniform_pdf(const std::vector<float>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r);
+inline int sample_discrete(const std::vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
 
 }  // namespace yocto::math
 
@@ -2797,25 +2789,25 @@ inline int sample_uniform(int size, float r) {
 inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const vector<float>& elements, float r) {
+inline float sample_uniform(const std::vector<float>& elements, float r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
-inline float sample_uniform_pdf(const vector<float>& elements) {
+inline float sample_uniform_pdf(const std::vector<float>& elements) {
   if (elements.empty()) return 0;
   return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
+inline int sample_discrete(const std::vector<float>& cdf, float r) {
   r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }

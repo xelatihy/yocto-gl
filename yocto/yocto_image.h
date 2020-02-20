@@ -96,9 +96,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
-
 #include "yocto_math.h"
+
+#include <algorithm>
+#include <vector>
+#include <functional>
+#include <string>
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
@@ -107,6 +110,8 @@ namespace yocto::image {
 
 // Using directives
 using std::function;
+using std::vector;
+using std::string;
 using namespace yocto::math;
 
 // Image container.

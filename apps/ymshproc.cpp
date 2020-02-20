@@ -36,6 +36,10 @@ namespace ysh = yocto::shape;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
+using std::vector;
+using std::string;
+using namespace std::string_literals;
+
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,

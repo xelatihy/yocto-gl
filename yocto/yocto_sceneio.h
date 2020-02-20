@@ -57,6 +57,9 @@
 namespace yocto::sceneio {
 
 // Using directives.
+using std::string;
+using std::vector;
+using namespace std::string_literals;
 using std::function;
 using yocto::image::image;
 using namespace yocto::math;

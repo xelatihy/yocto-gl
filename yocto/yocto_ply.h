@@ -46,6 +46,12 @@
 namespace yocto::ply {
 
 // Using directives
+using std::string;
+using std::vector;
+using std::array;
+using std::unordered_map;
+using std::pair;
+using namespace std::string_literals;
 using namespace yocto::math;
 
 // Ply property

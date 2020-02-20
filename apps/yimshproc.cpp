@@ -1,5 +1,4 @@
 #include "yimshproc.h"
-using namespace yocto;
 
 struct my_data {
   vector<vec3i>       face_adjacency;

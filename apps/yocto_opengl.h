@@ -36,6 +36,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
@@ -49,6 +50,8 @@ struct GLFWwindow;
 namespace yocto::opengl {
 
 // using directives
+using std::vector;
+using std::string;
 using namespace yocto::math;
 using yocto::image::image;
 

@@ -43,6 +43,10 @@ using std::atomic;
 using std::deque;
 using std::future;
 using std::to_string;
+using std::unordered_map;
+using std::string;
+using std::vector;
+using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

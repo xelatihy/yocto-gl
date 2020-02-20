@@ -39,6 +39,11 @@ namespace yio = yocto::sceneio;
 #include <map>
 #include <memory>
 using std::make_unique;
+using std::function;
+using std::string;
+using std::vector;
+using std::unordered_map;
+using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

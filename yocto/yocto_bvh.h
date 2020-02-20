@@ -81,6 +81,8 @@
 
 #include "yocto_math.h"
 
+#include <vector>
+
 #ifdef YOCTO_EMBREE
 #include <memory>
 #endif
@@ -92,6 +94,7 @@ namespace yocto::bvh {
 
 // using directives
 using namespace yocto::math;
+using std::vector;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;

@@ -39,6 +39,11 @@ namespace ygl = yocto::opengl;
 
 #include <future>
 #include <memory>
+using std::function;
+using std::string;
+using std::vector;
+using std::unordered_map;
+using namespace std::string_literals;
 
 // Application state
 struct app_state {

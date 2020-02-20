@@ -79,6 +79,7 @@
 // -----------------------------------------------------------------------------
 
 #include <tuple>
+#include <unordered_map>
 
 #include "yocto_math.h"
 
@@ -87,7 +88,11 @@
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
-// Using directives
+// Using directives.
+using std::pair;
+using std::string;
+using std::vector;
+using std::unordered_map;
 using std::function;
 using namespace yocto::math;
 

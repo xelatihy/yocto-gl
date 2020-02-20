@@ -45,6 +45,8 @@ namespace yocto::trace {
 
 using std::make_unique;
 using std::unique_ptr;
+using std::pair;
+using namespace std::string_literals;
 
 }  // namespace yocto::trace
 

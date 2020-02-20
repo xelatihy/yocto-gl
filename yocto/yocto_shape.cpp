@@ -8,9 +8,13 @@
 
 #include "yocto_shape.h"
 
+#include <string>
 #include <deque>
 #include <memory>
 using std::make_unique;
+using std::unordered_map;
+using std::pair;
+using namespace std::string_literals;
 
 #include "yocto_obj.h"
 #include "yocto_ply.h"
