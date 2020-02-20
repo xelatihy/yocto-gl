@@ -32,15 +32,15 @@
 
 #include "yocto_image.h"
 
-#include "ext/stb_image.h"
-#include "ext/stb_image_write.h"
-#include "ext/stb_image_resize.h"
-#include "ext/tinyexr.h"
-
 #include <atomic>
 #include <future>
 #include <memory>
 #include <thread>
+
+#include "ext/stb_image.h"
+#include "ext/stb_image_resize.h"
+#include "ext/stb_image_write.h"
+#include "ext/tinyexr.h"
 
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
