@@ -1629,7 +1629,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   };
 
   // handler for materials
-  auto material_map = unordered_map<obj::obj_material*, sceneio_material*>{};
+  auto material_map = unordered_map<obj::material*, sceneio_material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);

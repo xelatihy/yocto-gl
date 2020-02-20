@@ -3392,7 +3392,7 @@ static string get_extension(const string& filename) {
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = vector<obj::obj_material*>{};
+    auto materials  = vector<obj::material*>{};
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
@@ -3519,7 +3519,7 @@ static string get_extension(const string& filename) {
     if (obj->shapes.size() > 1) return shape_error();
     auto shape = obj->shapes.front();
     if (shape->faces.empty()) return shape_error();
-    auto materials  = vector<obj::obj_material*>{};
+    auto materials  = vector<obj::material*>{};
     auto ematerials = vector<int>{};
     get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
