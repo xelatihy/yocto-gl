@@ -885,8 +885,8 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
 }
 
 template <typename Shader>
-image<vec4f> make_image(const vec2i& size, Shader&& shader) {
-  auto img   = image<vec4f>{size};
+void make_image(image<vec4f>& img, const vec2i& size, Shader&& shader) {
+  img.resize(size);
   auto scale = 1.0f / max(size);
   for (auto j = 0; j < img.size().y; j++) {
     for (auto i = 0; i < img.size().x; i++) {
@@ -894,13 +894,12 @@ image<vec4f> make_image(const vec2i& size, Shader&& shader) {
       img[{i, j}] = shader(uv);
     }
   }
-  return img;
 };
 
 // Make an image
-image<vec4f> make_grid(
+void make_grid(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick = 0.01f / 2;
@@ -912,9 +911,9 @@ image<vec4f> make_grid(
   });
 }
 
-image<vec4f> make_checker(
+void make_checker(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto c = uv.x <= 0.5f != uv.y <= 0.5f;
@@ -922,9 +921,9 @@ image<vec4f> make_checker(
   });
 }
 
-image<vec4f> make_bumps(
+void make_bumps(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick  = 0.125f;
@@ -939,18 +938,18 @@ image<vec4f> make_bumps(
   });
 }
 
-image<vec4f> make_ramp(
+void make_ramp(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return lerp(color0, color1, uv.x);
   });
 }
 
-image<vec4f> make_gammaramp(
+void make_gammaramp(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     if (uv.y < 1 / 3.0f) {
@@ -963,16 +962,16 @@ image<vec4f> make_gammaramp(
   });
 }
 
-image<vec4f> make_uvramp(const vec2i& size, float scale) {
-  return make_image(size, [=](vec2f uv) {
+void make_uvramp(image<vec4f>& img, const vec2i& size, float scale) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{uv.x, uv.y, 0, 1};
   });
 }
 
-image<vec4f> make_uvgrid(const vec2i& size, float scale, bool colored) {
-  return make_image(size, [=](vec2f uv) {
+void make_uvgrid(image<vec4f>& img, const vec2i& size, float scale, bool colored) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
@@ -999,36 +998,36 @@ image<vec4f> make_uvgrid(const vec2i& size, float scale, bool colored) {
   });
 }
 
-image<vec4f> make_blackbodyramp(
+void make_blackbodyramp(image<vec4f>& img, 
     const vec2i& size, float scale, float from, float to) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{blackbody_to_rgb(lerp(from, to, uv.x)), 1};
   });
 }
 
-image<vec4f> make_noisemap(
+void make_noisemap(image<vec4f>& img, 
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_noise({uv.x, uv.y, 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_fbmmap(const vec2i& size, float scale, const vec4f& noise,
+void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_turbulencemap(const vec2i& size, float scale,
+void make_turbulencemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_turbulence(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
@@ -1036,9 +1035,9 @@ image<vec4f> make_turbulencemap(const vec2i& size, float scale,
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
+void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
@@ -1065,7 +1064,7 @@ image<vec4f> add_border(
 };
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
+void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun, float turbidity,
     bool has_sun, float sun_intensity, float sun_radius,
     const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
@@ -1155,7 +1154,7 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
   };
 
   // Make the sun sky image
-  auto img          = image<vec4f>{size};
+  img          = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1196,14 +1195,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
       }
     }
   }
-
-  return img;
 }
 
 // Make an image of multiple lights.
-image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
+void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
-  auto img = image<vec4f>{size};
+  img = image<vec4f>{size};
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
@@ -1218,7 +1215,6 @@ image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
       img[{i, j}] = {le, 1};
     }
   }
-  return img;
 }
 
 image<vec4b> make_logo(const string& type) {

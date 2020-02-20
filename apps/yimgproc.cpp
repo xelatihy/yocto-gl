@@ -30,7 +30,7 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 using namespace yocto::math;
-using namespace yocto::image;
+using yocto::image::image;
 namespace ycl = yocto::commonio;
 
 #include "ext/filesystem.hpp"
@@ -120,35 +120,36 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    img = make_grid(size);
+    make_grid(img, size);
   } else if (type == "checker") {
-    img = make_checker(size);
+    make_checker(img, size);
   } else if (type == "bumps") {
-    img = make_bumps(size);
+    make_bumps(img, size);
   } else if (type == "uvramp") {
-    img = make_uvramp(size);
+    make_uvramp(img, size);
   } else if (type == "gammaramp") {
-    img = make_gammaramp(size);
+    make_gammaramp(img, size);
   } else if (type == "blackbodyramp") {
-    img = make_blackbodyramp(size);
+    make_blackbodyramp(img, size);
   } else if (type == "uvgrid") {
-    img = make_uvgrid(size);
+    make_uvgrid(img, size);
   } else if (type == "sky") {
-    img = make_sunsky(
+    make_sunsky(img, 
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    img = make_sunsky(
+    make_sunsky(img, 
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    img = make_noisemap(size, 1);
+    make_noisemap(img, size, 1);
   } else if (type == "fbm") {
-    img = make_fbmmap(size, 1);
+    make_fbmmap(img, size, 1);
   } else if (type == "ridge") {
-    img = make_ridgemap(size, 1);
+    make_ridgemap(img, size, 1);
   } else if (type == "turbulence") {
-    img = make_turbulencemap(size, 1);
+    make_turbulencemap(img, size, 1);
   } else if (type == "bump-normal") {
-    img = srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
+    make_bumps(img, size);
+    img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
@@ -185,37 +186,41 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    img = add_border(make_grid(size), 0.0025f);
+    make_grid(img, size);
+    img = add_border(img, 0.0025f);
   } else if (type == "test-grid") {
-    img = make_grid(size);
+    make_grid(img, size);
   } else if (type == "test-checker") {
-    img = make_checker(size);
+    make_checker(img, size);
   } else if (type == "test-bumps") {
-    img = make_bumps(size);
+    make_bumps(img, size);
   } else if (type == "test-uvramp") {
-    img = make_uvramp(size);
+    make_uvramp(img, size);
   } else if (type == "test-gammaramp") {
-    img = make_gammaramp(size);
+    make_gammaramp(img, size);
   } else if (type == "test-blackbodyramp") {
-    img = make_blackbodyramp(size);
+    make_blackbodyramp(img, size);
   } else if (type == "test-uvgrid") {
-    img = make_uvgrid(size);
+    make_uvgrid(img, size);
   } else if (type == "test-sky") {
-    img = make_sunsky(
+    make_sunsky(img, 
         size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    img = make_sunsky(
+    make_sunsky(img,
         size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    img = make_noisemap(size);
+    make_noisemap(img, size);
   } else if (type == "test-fbm") {
-    img = make_noisemap(size);
+    make_noisemap(img, size);
   } else if (type == "test-bumps-normal") {
-    img = bump_to_normal(make_bumps(size), 0.05f);
+    make_bumps(img, size);
+    img = bump_to_normal(img, 0.05f);
   } else if (type == "test-bumps-displacement") {
-    img = srgb_to_rgb(make_bumps(size));
+    make_bumps(img, size);
+    img = srgb_to_rgb(img);
   } else if (type == "test-fbm-displacement") {
-    img = srgb_to_rgb(make_fbmmap(size));
+    make_fbmmap(img, size);
+    img = srgb_to_rgb(img);
   } else {
     error = "unknown preset";
     img   = {};

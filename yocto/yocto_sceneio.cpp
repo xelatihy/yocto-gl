@@ -385,7 +385,8 @@ void add_materials(model* scene) {
 void add_sky(model* scene, float sun_angle) {
   using yocto::image::make_sunsky;
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = make_sunsky({1024, 512}, sun_angle);
+  auto sunsky  = image<vec4f>{{1024, 512}};
+  make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
     for (auto i = 0; j < sunsky.size().x; i++)
