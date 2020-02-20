@@ -432,11 +432,6 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 // -----------------------------------------------------------------------------
 namespace yocto::image {
 
-// Using directives
-using std::function;
-using std::string;
-using std::vector;
-
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
   return img[ij];
@@ -553,7 +548,7 @@ inline void get_region(image<T>& clipped, const image<T>& img,
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
+  auto             futures  = std::vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -1179,11 +1174,11 @@ void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
   }
 }
 
-image<vec4b> make_logo(const string& type) {
+image<vec4b> make_logo(const std::string& type) {
   static const auto logo_medium_size = vec2i{102, 36};
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
-  static const auto logo_medium = vector<byte>{
+  static const auto logo_medium = std::vector<byte>{
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -1221,7 +1216,7 @@ image<vec4b> make_logo(const string& type) {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
   };
-static const auto logo_small = vector<byte> {
+static const auto logo_small = std::vector<byte> {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -1268,7 +1263,7 @@ static const auto logo_small = vector<byte> {
   }
 }
 
-image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
+image<vec4f> add_logo(const image<vec4f>& img, const std::string& type) {
   auto logo   = srgb_to_rgb(make_logo(type));
   auto offset = img.size() - logo.size() - 8;
   auto wlogo  = img;
@@ -1276,7 +1271,7 @@ image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
   return wlogo;
 }
 
-image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
+image<vec4b> add_logo(const image<vec4b>& img, const std::string& type) {
   auto logo   = make_logo(type);
   auto offset = img.size() - logo.size() - 8;
   auto wlogo  = img;
@@ -1364,7 +1359,7 @@ volume<float> make_test(const vec3i& size, float scale, float exponent) {
   return vol;
 }
 
-void make_volume_preset(volume<float>& vol, const string& type) {
+void make_volume_preset(volume<float>& vol, const std::string& type) {
   auto size = vec3i{256, 256, 256};
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
@@ -1372,7 +1367,7 @@ void make_volume_preset(volume<float>& vol, const string& type) {
     throw std::runtime_error("unknown volume preset " + type);
   }
 }
-volume<float> make_volume_preset(const string& type) {
+volume<float> make_volume_preset(const std::string& type) {
   auto vol = volume<float>{};
   make_volume_preset(vol, type);
   return vol;
@@ -1385,9 +1380,9 @@ volume<float> make_volume_preset(const string& type) {
 // -----------------------------------------------------------------------------
 namespace yocto::image {
 
-// Split a string
-static inline vector<string> split_string(const string& str) {
-  auto ret = vector<string>();
+// Split a std::string
+static inline std::vector<std::string> split_string(const std::string& str) {
+  auto ret = std::vector<std::string>();
   if (str.empty()) return ret;
   auto lpos = (size_t)0;
   while (lpos != str.npos) {
@@ -1413,7 +1408,7 @@ static inline float* load_pfm(
 
   // buffer
   char buffer[4096];
-  auto toks = vector<string>();
+  auto toks = std::vector<std::string>();
 
   // read magic
   if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -1547,21 +1542,21 @@ static inline bool save_pfm(
 }
 
 // Get extension (not including '.').
-static string get_extension(const string& filename) {
+static std::string get_extension(const std::string& filename) {
   auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
+  if (pos == std::string::npos) return "";
   return filename.substr(pos);
 }
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
+bool is_hdr_filename(const std::string& filename) {
   auto ext = get_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string& error) {
+    const std::string& filename, image<vec4f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1607,7 +1602,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4f>& img, string& error) {
+    const std::string& filename, const image<vec4f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1642,7 +1637,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4b>& img, string& error) {
+    const std::string& filename, image<vec4b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1673,7 +1668,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4b>& img, string& error) {
+    const std::string& filename, const image<vec4b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1713,7 +1708,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3f>& img, string& error) {
+    const std::string& filename, image<vec3f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1765,7 +1760,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3f>& img, string& error) {
+    const std::string& filename, const image<vec3f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1800,7 +1795,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3b>& img, string& error) {
+    const std::string& filename, image<vec3b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1831,7 +1826,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3b>& img, string& error) {
+    const std::string& filename, const image<vec3b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1871,7 +1866,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<float>& img, string& error) {
+    const std::string& filename, image<float>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1922,7 +1917,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<float>& img, string& error) {
+    const std::string& filename, const image<float>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1964,7 +1959,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<byte>& img, string& error) {
+    const std::string& filename, image<byte>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1995,7 +1990,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<byte>& img, string& error) {
+    const std::string& filename, const image<byte>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2052,7 +2047,7 @@ static inline float* load_yvol(
 
   // buffer
   char buffer[4096];
-  auto toks = vector<string>();
+  auto toks = std::vector<std::string>();
 
   // read magic
   if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -2180,7 +2175,7 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
+bool load_volume(const std::string& filename, volume<float>& vol, std::string& error) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2195,7 +2190,7 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
+    const std::string& filename, const volume<float>& vol, std::string& error) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
     return false;
@@ -2209,13 +2204,13 @@ bool save_volume(
 }  // namespace impl
 
 // Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
+bool load_volume(const std::string& filename, volume<float>& vol, std::string& error) {
   return impl::load_volume(filename, vol, error);
 }
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
+    const std::string& filename, const volume<float>& vol, std::string& error) {
   return impl::save_volume(filename, vol, error);
 }
 
