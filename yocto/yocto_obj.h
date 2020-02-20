@@ -456,7 +456,7 @@ template <typename T>
   return true;
 }
 
-inline void remove_obj_comment(string_view& str, char comment_char = '#') {
+inline void remove_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -544,7 +544,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
+    remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -756,7 +756,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
+    remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -878,7 +878,7 @@ inline bool load_obj(const string& filename, obj_model* obj, string& error,
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
+    remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -1415,7 +1415,7 @@ inline void get_vertices(obj_shape* shape, vector<vec3f>& positions,
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
-inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
+inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
   auto flipped = texcoord;
   for (auto& uv : flipped) uv.y = 1 - uv.y;
   return flipped;
@@ -1511,7 +1511,7 @@ inline void get_fvquads(obj_model* obj, obj_shape* shape,
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
-  texcoords = flipv ? flip_obj_texcoord(shape->texcoords) : shape->texcoords;
+  texcoords = flipv ? flip_texcoord(shape->texcoords) : shape->texcoords;
   materials = shape->materials;
   if (shape->vertices[0].position) quadspos.reserve(shape->faces.size());
   if (shape->vertices[0].normal) quadsnorm.reserve(shape->faces.size());
@@ -1709,7 +1709,7 @@ inline void add_triangles(obj_model* obj, const string& name,
   shape->materials = materials;
   shape->positions = positions;
   shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
   shape->instances = instances;
   shape->vertices.reserve(triangles.size() * 3);
   for (auto idx = 0; idx < triangles.size(); idx++) {
@@ -1735,7 +1735,7 @@ inline void add_quads(obj_model* obj, const string& name,
   shape->materials = materials;
   shape->positions = positions;
   shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
   shape->instances = instances;
   shape->vertices.reserve(quads.size() * 4);
   for (auto idx = 0; idx < quads.size(); idx++) {
@@ -1762,7 +1762,7 @@ inline void add_lines(obj_model* obj, const string& name,
   shape->materials = materials;
   shape->positions = positions;
   shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
   shape->instances = instances;
   shape->vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
@@ -1788,7 +1788,7 @@ inline void add_points(obj_model* obj, const string& name,
   shape->materials = materials;
   shape->positions = positions;
   shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
   shape->instances = instances;
   shape->vertices.reserve(points.size());
   for (auto idx = 0; idx < points.size(); idx++) {
@@ -1813,7 +1813,7 @@ inline void add_fvquads(obj_model* obj, const string& name,
   shape->materials = materials;
   shape->positions = positions;
   shape->normals   = normals;
-  shape->texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
   shape->instances = instances;
   shape->vertices.reserve(quadspos.size() * 4);
   for (auto idx = 0; idx < quadspos.size(); idx++) {

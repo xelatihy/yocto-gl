@@ -437,7 +437,7 @@ template <typename T>
   return true;
 }
 
-inline void remove_ply_comment(string_view& str, char comment_char = '#') {
+inline void remove_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -505,7 +505,7 @@ inline bool load_ply(const string& filename, ply_model* ply, string& error) {
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_ply_comment(str);
+    remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -918,24 +918,24 @@ inline ply_property* get_property(
   throw std::runtime_error("property not found");
 }
 template <typename T, typename T1>
-inline vector<T> convert_ply_property(const vector<T1>& prop) {
+inline vector<T> convert_property(const vector<T1>& prop) {
   auto values = vector<T>(prop.size());
   for (auto i = (size_t)0; i < prop.size(); i++) values[i] = (T)prop[i];
   return values;
 }
 template <typename T>
-inline vector<T> convert_ply_property(ply_property* prop) {
+inline vector<T> convert_property(ply_property* prop) {
   switch (prop->type) {
-    case ply_type::i8: return convert_ply_property<T>(prop->data_i8);
-    case ply_type::i16: return convert_ply_property<T>(prop->data_i16);
-    case ply_type::i32: return convert_ply_property<T>(prop->data_i32);
-    case ply_type::i64: return convert_ply_property<T>(prop->data_i64);
-    case ply_type::u8: return convert_ply_property<T>(prop->data_u8);
-    case ply_type::u16: return convert_ply_property<T>(prop->data_u16);
-    case ply_type::u32: return convert_ply_property<T>(prop->data_u32);
-    case ply_type::u64: return convert_ply_property<T>(prop->data_u64);
-    case ply_type::f32: return convert_ply_property<T>(prop->data_f32);
-    case ply_type::f64: return convert_ply_property<T>(prop->data_f64);
+    case ply_type::i8: return convert_property<T>(prop->data_i8);
+    case ply_type::i16: return convert_property<T>(prop->data_i16);
+    case ply_type::i32: return convert_property<T>(prop->data_i32);
+    case ply_type::i64: return convert_property<T>(prop->data_i64);
+    case ply_type::u8: return convert_property<T>(prop->data_u8);
+    case ply_type::u16: return convert_property<T>(prop->data_u16);
+    case ply_type::u32: return convert_property<T>(prop->data_u32);
+    case ply_type::u64: return convert_property<T>(prop->data_u64);
+    case ply_type::f32: return convert_property<T>(prop->data_f32);
+    case ply_type::f64: return convert_property<T>(prop->data_f64);
   }
   // return here to silence warnings
   std::runtime_error("should not have gotten here");
@@ -946,7 +946,7 @@ inline vector<float> get_values(
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (prop->is_list) return {};
-  return convert_ply_property<float>(prop);
+  return convert_property<float>(prop);
 }
 inline vector<vec2f> get_values(ply_model* ply, const string& element,
     const string& property1, const string& property2) {
@@ -1007,7 +1007,7 @@ inline vector<vector<int>> get_lists(
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
   auto& sizes  = prop->ldata_u8;
-  auto  values = convert_ply_property<int>(prop);
+  auto  values = convert_property<int>(prop);
   auto  lists  = vector<vector<int>>(sizes.size());
   auto  cur    = (size_t)0;
   for (auto i = (size_t)0; i < lists.size(); i++) {
@@ -1030,10 +1030,10 @@ inline vector<int> get_list_values(
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
-  return convert_ply_property<int>(prop);
+  return convert_property<int>(prop);
 }
 
-inline vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoord) {
+inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
   auto flipped = texcoord;
   for (auto& uv : flipped) uv.y = 1 - uv.y;
   return flipped;
@@ -1050,7 +1050,7 @@ inline vector<vec2f> get_texcoords(ply_model* ply, bool flipv) {
   auto texcoord = has_property(ply, "vertex", "u")
                       ? get_values(ply, "vertex", "u", "v")
                       : get_values(ply, "vertex", "s", "t");
-  return flipv ? flip_ply_texcoord(texcoord) : texcoord;
+  return flipv ? flip_texcoord(texcoord) : texcoord;
 }
 inline vector<vec3f> get_colors(ply_model* ply) {
   return get_values(ply, "vertex", "red", "green", "blue");
@@ -1146,7 +1146,7 @@ inline void add_property(ply_model* ply, const string& element,
   }
 }
 template <typename T>
-inline vector<T> make_ply_vector(const T* value, size_t count, int stride) {
+inline vector<T> make_vector(const T* value, size_t count, int stride) {
   auto ret = vector<T>(count);
   for (auto idx = (size_t)0; idx < count; idx++) ret[idx] = value[idx * stride];
   return ret;
@@ -1253,7 +1253,7 @@ inline void add_normals(ply_model* ply, const vector<vec3f>& values) {
 inline void add_texcoords(
     ply_model* ply, const vector<vec2f>& values, bool flipv) {
   return add_values(
-      ply, flipv ? flip_ply_texcoord(values) : values, "vertex", "u", "v");
+      ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
 inline void add_colors(ply_model* ply, const vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "red", "green", "blue");
