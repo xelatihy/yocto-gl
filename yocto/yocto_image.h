@@ -106,10 +106,19 @@
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Math defitions
-using namespace yocto::math;
+namespace ym = yocto::math;
+using ym::byte;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
+using ym::vec4b;
 
 // Image container.
 template <typename T>
@@ -147,7 +156,7 @@ struct image {
 
  private:
   // data
-  vec2i          extent = zero2i;
+  vec2i          extent = {0, 0};
   std::vector<T> pixels = {};
 };
 
@@ -161,12 +170,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 template <typename T>
 inline void swap(image<T>& a, image<T>& b);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
@@ -178,12 +187,12 @@ vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
 vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -262,12 +271,12 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const std::string& filename);
@@ -302,12 +311,12 @@ bool load_image(
 bool save_image(
     const std::string& filename, const image<byte>& img, std::string& error);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Make a grid image.
 void make_grid(image<vec4f>& img, const vec2i& size, float scale = 1,
@@ -360,8 +369,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 void make_lights(image<vec4f>& img, const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = ym::pif / 4,
+    float lwidth = ym::pif / 16, float lheight = ym::pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
@@ -377,12 +386,12 @@ image<vec4f> add_logo(
 image<vec4b> add_logo(
     const image<vec4b>& img, const std::string& name = "logo-medium");
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Volume container.
 template <typename T>
@@ -419,7 +428,7 @@ struct volume {
 
  private:
   // data
-  vec3i              extent = zero3i;
+  vec3i              extent = {0, 0, 0};
   std::vector<float> voxels = {};
 };
 
@@ -433,46 +442,46 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline void swap(volume<T>& a, volume<T>& b);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Evaluates a color image at a point `uv`.
 float eval_volume(const image<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // VOLUME IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Loads/saves a 1 channel volume.
 void load_volume(const std::string& filename, volume<float>& vol);
 void save_volume(const std::string& filename, const volume<float>& vol);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // EXAMPLE VOLUMES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
 void make_volume_preset(volume<float>& vol, const std::string& type);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // RGB color spaces
 enum struct color_space {
@@ -498,12 +507,12 @@ enum struct color_space {
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // constructors
 template <typename T>
@@ -615,12 +624,12 @@ inline void swap(image<T>& a, image<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto::image
+}  // namespace yim
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yim {
 
 // Volume container ----------
 
@@ -732,6 +741,6 @@ inline void swap(volume<T>& a, volume<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto::image
+}  // namespace yim
 
 #endif

@@ -57,7 +57,6 @@
 namespace ysc {
 
 // Math defitions
-namespace yim = yocto::image;
 namespace ym  = yocto::math;
 // Math defitions
 using ym::bbox3f;

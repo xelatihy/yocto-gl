@@ -30,20 +30,20 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 using namespace yocto::math;
+namespace ym = yocto::math;
 namespace ycl = yocto::commonio;
-namespace yim = yocto::image;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yocto::image {
+namespace yim {
 
 yim::image<vec4f> filter_bilateral(const yim::image<vec4f>& img,
     float spatial_sigma, float range_sigma,
     const std::vector<yim::image<vec4f>>& features,
     const std::vector<float>&             features_sigma) {
-  auto filtered     = image{img.size(), zero4f};
+  auto filtered     = yim::image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -61,11 +61,11 @@ yim::image<vec4f> filter_bilateral(const yim::image<vec4f>& img,
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{i, j}];
-          auto w   = (float)exp(-dot(uv, uv) * sw) *
-                   (float)exp(-dot(rgb, rgb) * rw);
+          auto w   = (float)ym::exp(-dot(uv, uv) * sw) *
+                   (float)ym::exp(-dot(rgb, rgb) * rw);
           for (auto fi = 0; fi < features.size(); fi++) {
             auto feat = features[fi][{i, j}] - features[fi][{i, j}];
-            w *= exp(-dot(feat, feat) * fw[fi]);
+            w *= ym::exp(-dot(feat, feat) * fw[fi]);
           }
           av += w * img[{ii, jj}];
           aw += w;
@@ -94,7 +94,7 @@ yim::image<vec4f> filter_bilateral(
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+          auto w   = ym::exp(-dot(uv, uv) * sw) * ym::exp(-dot(rgb, rgb) * rw);
           av += w * img[{ii, jj}];
           aw += w;
         }

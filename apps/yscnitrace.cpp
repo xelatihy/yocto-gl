@@ -34,7 +34,6 @@
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
-namespace yim = yocto::image;
 
 #include <atomic>
 #include <deque>

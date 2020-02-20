@@ -31,9 +31,8 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
-using namespace yocto::image;
+using namespace yocto::math;
 namespace ycl = yocto::commonio;
-namespace yim = yocto::image;
 
 #include <map>
 #include <memory>

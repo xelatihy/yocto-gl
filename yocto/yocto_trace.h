@@ -83,7 +83,6 @@ namespace ytr {
 
 // Math defitions
 namespace ym  = yocto::math;
-namespace yim = yocto::image;
 using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;

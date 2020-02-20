@@ -51,7 +51,6 @@ namespace yocto::opengl {
 
 // using directives
 using namespace yocto::math;
-namespace yim = yocto::image;
 
 // OpenGL image data
 struct image {
