@@ -21,7 +21,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace ysh {
 
-namespace ym = yocto::math;
 using namespace ym;
 // import math symbols for use
 using ym::abs;
@@ -3368,7 +3367,7 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     float thickness) {
   auto bbox = invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
-  auto center              = yocto::math::center(bbox);
+  auto center              = ym::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;

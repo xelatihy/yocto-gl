@@ -58,6 +58,33 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto::opengl {
+
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan;
+using ym::atan2;
+using ym::clamp;
+using ym::cos;
+using ym::exp;
+using ym::exp2;
+using ym::fmod;
+using ym::log;
+using ym::log2;
+using ym::max;
+using ym::min;
+using ym::pow;
+using ym::sin;
+using ym::sqrt;
+using ym::tan;
+
+}  // namespace yocto::opengl
+
+// -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::opengl {

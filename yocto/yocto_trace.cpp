@@ -44,7 +44,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace ytr {
 
-namespace ym = yocto::math;
 using namespace ym;
 // import math symbols for use
 using ym::abs;

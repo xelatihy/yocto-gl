@@ -46,7 +46,6 @@
 namespace yply {
 
 // Math defitions
-namespace ym = yocto::math;
 using ym::byte;
 using ym::frame3f;
 using ym::vec2f;

@@ -109,7 +109,6 @@
 namespace yim {
 
 // Math defitions
-namespace ym = yocto::math;
 using ym::byte;
 using ym::vec2f;
 using ym::vec2i;

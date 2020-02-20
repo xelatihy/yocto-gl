@@ -6,7 +6,7 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::math;
+using namespace ym;
 namespace ygl = yocto::opengl;
 
 using std::function;

@@ -31,7 +31,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "yocto_opengl.h"
-using namespace yocto::math;
+using namespace ym;
 namespace ygl = yocto::opengl;
 
 #include <atomic>

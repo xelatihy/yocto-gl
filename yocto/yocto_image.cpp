@@ -71,7 +71,6 @@
 // -----------------------------------------------------------------------------
 namespace yim {
 
-namespace ym = yocto::math;
 using namespace ym;
 // import math symbols for use
 using ym::abs;
@@ -618,14 +617,12 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++)
-    fl[i] = yocto::math::byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = ym::byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++)
-    bt[i] = yocto::math::float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = ym::float_to_byte(fl[i]);
   return bt;
 }
 
@@ -680,26 +677,24 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.size()};
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::math::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = ym::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.size()};
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::math::rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = ym::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.size()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::math::srgb_to_rgb(yocto::math::byte_to_float(srgb[i]));
+    rgb[i] = ym::srgb_to_rgb(ym::byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.size()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::math::float_to_byte(yocto::math::rgb_to_srgb(rgb[i]));
+    srgb[i] = ym::float_to_byte(ym::rgb_to_srgb(rgb[i]));
   return srgb;
 }
 

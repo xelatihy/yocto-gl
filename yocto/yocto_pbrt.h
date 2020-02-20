@@ -46,7 +46,6 @@
 namespace ypbrt {
 
 // Math defitions
-namespace ym = yocto::math;
 using ym::frame3f;
 using ym::mat4f;
 using ym::vec2f;

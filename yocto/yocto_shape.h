@@ -89,7 +89,6 @@
 namespace ysh {
 
 // Math defitions
-namespace ym = yocto::math;
 using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;

@@ -49,7 +49,6 @@
 namespace yocto::obj {
 
 // Math defitions
-namespace ym = yocto::math;
 using ym::frame3f;
 using ym::vec2f;
 using ym::vec2i;

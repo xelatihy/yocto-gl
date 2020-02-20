@@ -29,8 +29,7 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
-using namespace yocto::math;
-namespace ym = yocto::math;
+using namespace ym;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"

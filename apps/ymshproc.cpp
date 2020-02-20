@@ -29,7 +29,7 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
-using namespace yocto::math;
+using namespace ym;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

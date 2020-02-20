@@ -177,7 +177,7 @@
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 using byte = unsigned char;
 using uint = unsigned int;
@@ -231,12 +231,12 @@ inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
 inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // VECTORS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 struct vec2f {
   float x = 0;
@@ -708,12 +708,12 @@ inline vec4f quat_inverse(const vec4f& a) {
   return quat_conjugate(a) / dot(a, a);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // INTEGER VECTORS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 struct vec2i {
   int x = 0;
@@ -1030,14 +1030,14 @@ inline vec4i abs(const vec4i& a) {
 };
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 namespace std {
 
 // Hash functor for std::vector for use with hash_map
 template <>
-struct hash<yocto::math::vec2i> {
-  size_t operator()(const yocto::math::vec2i& v) const {
+struct hash<ym::vec2i> {
+  size_t operator()(const ym::vec2i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1046,8 +1046,8 @@ struct hash<yocto::math::vec2i> {
   }
 };
 template <>
-struct hash<yocto::math::vec3i> {
-  size_t operator()(const yocto::math::vec3i& v) const {
+struct hash<ym::vec3i> {
+  size_t operator()(const ym::vec3i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1057,8 +1057,8 @@ struct hash<yocto::math::vec3i> {
   }
 };
 template <>
-struct hash<yocto::math::vec4i> {
-  size_t operator()(const yocto::math::vec4i& v) const {
+struct hash<ym::vec4i> {
+  size_t operator()(const ym::vec4i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1074,7 +1074,7 @@ struct hash<yocto::math::vec4i> {
 // -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat2f {
@@ -1261,12 +1261,12 @@ inline mat4f transpose(const mat4f& a) {
   };
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
@@ -1384,12 +1384,12 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
   return {x, y, z, o};
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Quaternions to represent rotations
 struct quat4f {
@@ -1451,12 +1451,12 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
              : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Axis aligned bounding box represented as a min/max std::vector pairs.
 struct bbox2f {
@@ -1551,12 +1551,12 @@ inline bbox3f quad_bounds(
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RAYS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Ray esplison
 inline const auto ray_eps = 1e-4f;
@@ -1586,12 +1586,12 @@ struct ray3f {
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Transforms points, vectors and directions by matrices.
 inline vec2f transform_point(const mat3f& a, const vec2f& b) {
@@ -1805,12 +1805,12 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
       vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Line properties.
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
@@ -1929,12 +1929,12 @@ inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
   }
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // COLOR OPERATIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a);
@@ -1986,12 +1986,12 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // PCG random numbers from http://www.pcg-random.org/
 struct rng_state {
@@ -2059,12 +2059,12 @@ inline void shuffle(std::vector<T>& vals, rng_state& rng) {
   }
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // PERLIN NOISE FUNCTION
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Compute the revised Perlin noise function. Wrap provides a wrapping noise
 // but must be power of two (wraps at 256 anyway). For octave based noise,
@@ -2081,12 +2081,12 @@ inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
 inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec2f& ruv);
@@ -2145,12 +2145,12 @@ inline int sample_discrete(const std::vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
 inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -2177,7 +2177,7 @@ inline void update_fpscam(
 inline ray3f camera_ray(
     const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 //
@@ -2190,7 +2190,7 @@ inline ray3f camera_ray(
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a) {
@@ -2443,12 +2443,12 @@ inline vec3f blackbody_to_rgb(float temperature) {
   return srgb_to_rgb(rgb / 255);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // clang-format off
 inline float _stb__perlin_lerp(float a, float b, float t)
@@ -2673,12 +2673,12 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
       p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec2f& ruv) {
@@ -2814,12 +2814,12 @@ inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
   return cdf.at(idx) - cdf.at(idx - 1);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -2915,7 +2915,7 @@ inline void update_fpscam(
   auto x = cross(y, z);
 
   auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
-             yocto::math::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+             ym::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
              rotation_frame(vec3f{0, 1, 0}, rotate.x);
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
@@ -2934,6 +2934,6 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
   return ray;
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 #endif

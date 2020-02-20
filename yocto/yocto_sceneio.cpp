@@ -75,7 +75,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace ysc {
 
-namespace ym = yocto::math;
 using namespace ym;
 // import math symbols for use
 using ym::abs;
@@ -884,7 +883,7 @@ static bool save_instance(const std::string& filename,
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 using json = nlohmann::json;
 using std::array;
@@ -907,7 +906,7 @@ inline void from_json(const json& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // JSON IO

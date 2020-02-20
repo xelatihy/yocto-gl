@@ -50,7 +50,7 @@ struct GLFWwindow;
 namespace yocto::opengl {
 
 // using directives
-using namespace yocto::math;
+using namespace ym;
 
 // OpenGL image data
 struct image {
