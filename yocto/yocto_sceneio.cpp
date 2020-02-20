@@ -848,7 +848,7 @@ static bool load_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = yocto::ply::model{};
+    auto ply = yply::model{};
     if (!load_ply(filename, &ply, error)) return false;
     frames = get_values(&ply, "instance",
         std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
@@ -869,7 +869,7 @@ static bool save_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = yocto::ply::model{};
+    auto ply = yply::model{};
     add_values(&ply, frames, "instance",
         std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
             "zy", "zz", "ox", "oy", "oz"});

@@ -43,11 +43,18 @@
 // -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yply {
 
-// Using directives
-using namespace yocto::math;
-using namespace std::string_literals;
+// Math defitions
+namespace ym  = yocto::math;
+using ym::frame3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
+using ym::byte;
 
 // Ply property
 struct property {
@@ -195,7 +202,7 @@ inline void add_quads(model* ply, const std::vector<vec4i>& values);
 inline void add_lines(model* ply, const std::vector<vec2i>& values);
 inline void add_points(model* ply, const std::vector<int>& values);
 
-}  // namespace yocto::ply
+}  // namespace yply
 
 // -----------------------------------------------------------------------------
 //
@@ -212,7 +219,10 @@ inline void add_points(model* ply, const std::vector<int>& values);
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yply {
+
+// string literals
+using namespace std::string_literals;
 
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
@@ -1335,6 +1345,6 @@ inline void add_points(model* ply, const std::vector<int>& values) {
   return add_lists(ply, values, "point", "vertex_indices");
 }
 
-}  // namespace yocto::ply
+}  // namespace yply
 
 #endif
