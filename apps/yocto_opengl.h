@@ -53,18 +53,16 @@ namespace ygl {
 using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;
+using ym::identity3x4f;
+using ym::uint;
 using ym::vec2f;
 using ym::vec2i;
 using ym::vec3b;
 using ym::vec3f;
 using ym::vec3i;
+using ym::vec4b;
 using ym::vec4f;
 using ym::vec4i;
-using ym::vec3b;
-using ym::vec4b;
-using ym::uint;
-using ym::byte;
-using ym::identity3x4f;
 
 // OpenGL image data
 struct image {

@@ -60,6 +60,7 @@ namespace ysc {
 using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;
+using ym::identity3x4f;
 using ym::vec2f;
 using ym::vec2i;
 using ym::vec3b;
@@ -67,7 +68,6 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
-using ym::identity3x4f;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,

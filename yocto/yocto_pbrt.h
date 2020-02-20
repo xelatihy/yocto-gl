@@ -47,6 +47,7 @@ namespace ypbrt {
 
 // Math defitions
 using ym::frame3f;
+using ym::identity3x4f;
 using ym::mat4f;
 using ym::vec2f;
 using ym::vec2i;
@@ -54,7 +55,6 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
-using ym::identity3x4f;
 
 // Pbrt camera
 struct camera {
