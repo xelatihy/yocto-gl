@@ -32,7 +32,7 @@
 using namespace yocto::math;
 using namespace yocto::image;
 using namespace yocto::commonio;
-using namespace yocto::opengl;
+namespace ygl = yocto::opengl;
 
 #include <future>
 
@@ -52,8 +52,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
+  ygl::opengl_image*       glimage  = new ygl::opengl_image{};
+  ygl::draw_glimage_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -71,7 +71,7 @@ void update_display(app_state* app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app_guard = make_unique<app_state>();
+  auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
   auto filenames = vector<string>{};
 
@@ -92,12 +92,12 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_guard = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win_guard = ygl::make_glwindow({1280, 720}, "yimgviews", false);
   auto win       = win_guard.get();
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!is_initialized(app->glimage)) {
@@ -109,7 +109,7 @@ int main(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

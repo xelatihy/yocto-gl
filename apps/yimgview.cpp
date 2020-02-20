@@ -32,7 +32,7 @@
 using namespace yocto::math;
 using namespace yocto::image;
 using namespace yocto::commonio;
-using namespace yocto::opengl;
+namespace ygl = yocto::opengl;
 
 #include <atomic>
 #include <deque>
@@ -72,8 +72,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage   = new opengl_image{};
-  draw_glimage_params glparams  = {};
+  ygl::opengl_image*       glimage   = new ygl::opengl_image{};
+  ygl::draw_glimage_params glparams  = {};
   bool                glupdated = true;
 
   // loading status
@@ -165,7 +165,7 @@ void load_image_async(app_states* apps, const string& filename) {
 }
 
 void draw_glwidgets(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
+    ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -269,7 +269,7 @@ void draw_glwidgets(
   }
 }
 
-void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -284,7 +284,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   draw_glimage(app->glimage, app->glparams);
 }
 
-void update(opengl_window* win, app_states* apps) {
+void update(ygl::opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -308,7 +308,7 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto apps_guard = make_unique<app_states>();
+  auto apps_guard = std::make_unique<app_states>();
   auto apps       = apps_guard.get();
   auto filenames  = vector<string>{};
 
@@ -321,24 +321,24 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yimview", true);
+  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yimview", true);
   auto win       = win_guard.get();
 
   // callbacks
   set_update_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         update(win, apps);
       });
   set_draw_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         if (!apps->selected) return;
         auto app = apps->selected;
         // handle mouse
@@ -351,8 +351,8 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](opengl_window* win, const vector<string>& paths,
-               const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const vector<string>& paths,
+               const ygl::opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
 

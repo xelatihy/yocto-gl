@@ -33,8 +33,8 @@
 #include "yocto_opengl.h"
 using namespace yocto::image;
 using namespace yocto::commonio;
-using namespace yocto::opengl;
 namespace yio = yocto::sceneio;
+namespace ygl = yocto::opengl;
 
 #include <atomic>
 #include <deque>
@@ -65,15 +65,15 @@ struct app_state {
   string name      = "";
 
   // options
-  draw_glscene_params drawgl_prms = {};
+  ygl::draw_glscene_params drawgl_prms = {};
 
   // scene
   yio::model*  ioscene  = new yio::model{};
   yio::camera* iocamera = nullptr;
 
   // rendering state
-  opengl_scene*  glscene  = new opengl_scene{};
-  opengl_camera* glcamera = nullptr;
+  ygl::opengl_scene*  glscene  = new ygl::opengl_scene{};
+  ygl::opengl_camera* glcamera = nullptr;
 
   // editing
   yio::camera*      selected_camera      = nullptr;
@@ -107,7 +107,7 @@ struct app_states {
   deque<app_state*>  loading  = {};
 
   // default options
-  draw_glscene_params drawgl_prms = {};
+  ygl::draw_glscene_params drawgl_prms = {};
 
   // cleanup
   ~app_states() {
@@ -137,7 +137,7 @@ void load_scene_async(
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(opengl_scene* glscene, yio::model* ioscene) {
+void update_lights(ygl::opengl_scene* glscene, yio::model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -167,8 +167,8 @@ void update_lights(opengl_scene* glscene, yio::model* ioscene) {
   }
 }
 
-void init_glscene(opengl_scene* glscene, yio::model* ioscene,
-    opengl_camera*& glcamera, yio::camera* iocamera,
+void init_glscene(ygl::opengl_scene* glscene, yio::model* ioscene,
+    ygl::opengl_camera*& glcamera, yio::camera* iocamera,
     yio::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -181,7 +181,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<yio::camera*, opengl_camera*>{};
+  auto camera_map     = unordered_map<yio::camera*, ygl::opengl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -193,7 +193,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<yio::texture*, opengl_texture*>{};
+  auto texture_map     = unordered_map<yio::texture*, ygl::opengl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -211,7 +211,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<yio::material*, opengl_material*>{};
+  auto material_map     = unordered_map<yio::material*, ygl::opengl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -240,7 +240,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = unordered_map<yio::shape*, opengl_shape*>{};
+  auto shape_map     = unordered_map<yio::shape*, ygl::opengl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -257,7 +257,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = unordered_map<yio::instance*, opengl_instance*>{};
+  auto instance_map     = unordered_map<yio::instance*, ygl::opengl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -284,7 +284,7 @@ void init_glscene(opengl_scene* glscene, yio::model* ioscene,
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::camera* iocamera) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -311,7 +311,7 @@ bool draw_glwidgets(
 
 /// Visit struct elements.
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::texture* iotexture) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::texture* iotexture) {
   if (!iotexture) return false;
   draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "colorf",
@@ -330,7 +330,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::material* iomaterial) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -376,7 +376,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::shape* ioshape) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -395,7 +395,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::instance* ioinstance) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -405,7 +405,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::object* ioobject) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -423,7 +423,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
+    ygl::opengl_window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -438,7 +438,7 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(opengl_window* win, yio::model* ioscene,
+bool draw_glwidgets(ygl::opengl_window* win, yio::model* ioscene,
     yio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
@@ -465,7 +465,7 @@ T1* get_element(
 
 // draw with shading
 void draw_glwidgets(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
+    ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
@@ -668,7 +668,7 @@ void draw_glwidgets(
 }
 
 // draw with shading
-void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(ygl::opengl_window* win, app_states* apps, const ygl::opengl_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
   draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
@@ -676,7 +676,7 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
 }
 
 // update
-void update(opengl_window* win, app_states* apps) {
+void update(ygl::opengl_window* win, app_states* apps) {
   auto is_ready = [](const future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -705,7 +705,7 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto apps_guard  = make_unique<app_states>();
+  auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
   auto filenames   = vector<string>{};
   auto camera_name = ""s;
@@ -723,29 +723,29 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnview", true);
+  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yscnview", true);
   auto win       = win_guard.get();
 
   // callbacks
   set_draw_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
-      win, [apps](opengl_window* win, const vector<string>& paths,
-               const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const vector<string>& paths,
+               const ygl::opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         update(win, apps);
       });
   set_uiupdate_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
+      win, [apps](ygl::opengl_window* win, const ygl::opengl_input& input) {
         if (!apps->selected || !apps->selected->ok) return;
         auto app = apps->selected;
 

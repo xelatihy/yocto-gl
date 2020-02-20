@@ -33,9 +33,9 @@
 #include "yocto_opengl.h"
 using namespace yocto::image;
 using namespace yocto::commonio;
-using namespace yocto::opengl;
 namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
+namespace ygl = yocto::opengl;
 
 #include <future>
 #include <memory>
@@ -60,8 +60,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
+  ygl::opengl_image*       glimage  = new ygl::opengl_image{};
+  ygl::draw_glimage_params glparams = {};
 
   // computation
   int        render_sample  = 0;
@@ -229,7 +229,7 @@ void reset_display(app_state* app) {
 
 int main(int argc, const char* argv[]) {
   // application
-  auto app_guard = make_unique<app_state>();
+  auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
   // command line options
@@ -260,7 +260,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = make_unique<yio::model>();
+  auto ioscene_guard = std::make_unique<yio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(app->filename, ioscene, ioerror, print_progress))
@@ -291,12 +291,12 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win_guard = ygl::make_glwindow({1280 + 320, 720}, "yscnitraces", false);
   auto win       = win_guard.get();
 
   // callbacks
   set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -308,8 +308,8 @@ int main(int argc, const char* argv[]) {
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });
-  set_char_glcallback(win, [app](opengl_window* win, unsigned int key,
-                               const opengl_input& input) {
+  set_char_glcallback(win, [app](ygl::opengl_window* win, unsigned int key,
+                               const ygl::opengl_input& input) {
     switch (key) {
       case 'c': {
         auto ncameras = (int)app->scene->cameras.size();
@@ -337,7 +337,7 @@ int main(int argc, const char* argv[]) {
     }
   });
   set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
+      win, [app](ygl::opengl_window* win, const ygl::opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto dolly  = 0.0f;
           auto pan    = zero2f;
