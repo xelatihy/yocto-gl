@@ -50,16 +50,16 @@ using namespace ym;
 using ym::abs;
 using ym::acos;
 using ym::atan2;
+using ym::clamp;
 using ym::cos;
 using ym::exp;
 using ym::fmod;
 using ym::log;
+using ym::max;
+using ym::min;
 using ym::pow;
 using ym::sin;
 using ym::sqrt;
-using ym::clamp;
-using ym::min;
-using ym::max;
 
 }  // namespace ytr
 
