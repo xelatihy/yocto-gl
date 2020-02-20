@@ -46,10 +46,6 @@
 namespace yocto::pbrt {
 
 // Using directives.
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
 using namespace std::string_literals;
 using namespace yocto::math;
 
@@ -68,37 +64,37 @@ struct camera {
 // Pbrt material
 struct material {
   // material parameters
-  string name            = "";
-  vec3f  emission        = zero3f;
-  vec3f  color           = zero3f;
-  float  specular        = 0;
-  float  metallic        = 0;
-  float  transmission    = 0;
-  float  roughness       = 0;
-  float  ior             = 1.5;
-  float  opacity         = 1;
-  string color_tex       = "";
-  string opacity_tex     = "";
-  string alpha_tex       = "";
-  bool   thin            = true;
-  vec3f  volmeanfreepath = zero3f;
-  vec3f  volscatter      = zero3f;
-  float  volscale        = 0.01;
+  std::string name            = "";
+  vec3f       emission        = zero3f;
+  vec3f       color           = zero3f;
+  float       specular        = 0;
+  float       metallic        = 0;
+  float       transmission    = 0;
+  float       roughness       = 0;
+  float       ior             = 1.5;
+  float       opacity         = 1;
+  std::string color_tex       = "";
+  std::string opacity_tex     = "";
+  std::string alpha_tex       = "";
+  bool        thin            = true;
+  vec3f       volmeanfreepath = zero3f;
+  vec3f       volscatter      = zero3f;
+  float       volscale        = 0.01;
 };
 
 // Pbrt shape
 struct shape {
   // frames
-  frame3f         frame     = identity3x4f;
-  frame3f         frend     = identity3x4f;
-  vector<frame3f> instances = {};
-  vector<frame3f> instaends = {};
+  frame3f              frame     = identity3x4f;
+  frame3f              frend     = identity3x4f;
+  std::vector<frame3f> instances = {};
+  std::vector<frame3f> instaends = {};
   // shape
-  string        filename_ = "";
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3i> triangles = {};
+  std::string        filename_ = "";
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
+  std::vector<vec3i> triangles = {};
   // material
   material* material = nullptr;
 };
@@ -113,39 +109,40 @@ struct light {
   vec3f   to       = zero3f;
   bool    distant  = false;
   // arealight approximation
-  vec3f         area_emission  = zero3f;
-  frame3f       area_frame     = identity3x4f;
-  frame3f       area_frend     = identity3x4f;
-  vector<vec3i> area_triangles = {};
-  vector<vec3f> area_positions = {};
-  vector<vec3f> area_normals   = {};
+  vec3f              area_emission  = zero3f;
+  frame3f            area_frame     = identity3x4f;
+  frame3f            area_frend     = identity3x4f;
+  std::vector<vec3i> area_triangles = {};
+  std::vector<vec3f> area_positions = {};
+  std::vector<vec3f> area_normals   = {};
 };
 struct environment {
   // environment approximation
-  frame3f frame        = identity3x4f;
-  frame3f frend        = identity3x4f;
-  vec3f   emission     = zero3f;
-  string  emission_tex = "";
+  frame3f     frame        = identity3x4f;
+  frame3f     frend        = identity3x4f;
+  vec3f       emission     = zero3f;
+  std::string emission_tex = "";
 };
 
 // Pbrt model
 struct model {
   // pbrt data
-  vector<string>       comments     = {};
-  vector<camera*>      cameras      = {};
-  vector<shape*>       shapes       = {};
-  vector<environment*> environments = {};
-  vector<light*>       lights       = {};
-  vector<material*>    materials    = {};
+  std::vector<std::string>  comments     = {};
+  std::vector<camera*>      cameras      = {};
+  std::vector<shape*>       shapes       = {};
+  std::vector<environment*> environments = {};
+  std::vector<light*>       lights       = {};
+  std::vector<material*>    materials    = {};
 
   // cleanup
   ~model();
 };
 
 // Load/save pbrt
-inline bool load_pbrt(const string& filename, model* pbrt, string& error);
-inline bool save_pbrt(const string& filename, model* pbrt, string& error,
-    bool ply_meshes = false);
+inline bool load_pbrt(
+    const std::string& filename, model* pbrt, std::string& error);
+inline bool save_pbrt(const std::string& filename, model* pbrt,
+    std::string& error, bool ply_meshes = false);
 
 // Create pbrt
 inline camera*      add_camera(model* pbrt);
@@ -165,7 +162,6 @@ inline light*       add_light(model* pbrt);
 // -----------------------------------------------------------------------------
 
 #include <cstdio>
-#include <map>
 #include <memory>
 #include <string_view>
 #include <unordered_set>
@@ -179,19 +175,18 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 namespace yocto::pbrt {
 
-using std::string_view;
-
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(string_view& str) {
+inline void skip_whitespace(std::string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-// Parse values from a string
-[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
+// Parse values from a std::string
+[[nodiscard]] inline bool parse_value(
+    std::string_view& str, std::string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -214,20 +209,21 @@ inline void skip_whitespace(string_view& str) {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
-  auto valuev = string_view{};
+[[nodiscard]] inline bool parse_value(
+    std::string_view& str, std::string& value) {
+  auto valuev = std::string_view{};
   if (!parse_value(str, valuev)) return false;
-  value = string{valuev};
+  value = std::string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
@@ -235,60 +231,62 @@ inline void skip_whitespace(string_view& str) {
   return true;
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, vec2f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec3f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vec3f& value) {
   for (auto i = 0; i < 3; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec4f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vec4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, mat4f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
 
-// Formats values to string
-inline void format_value(string& str, const string& value) { str += value; }
-inline void format_value(string& str, const char* value) { str += value; }
-inline void format_value(string& str, int value) {
+// Formats values to std::string
+inline void format_value(std::string& str, const std::string& value) {
+  str += value;
+}
+inline void format_value(std::string& str, const char* value) { str += value; }
+inline void format_value(std::string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, float value) {
+inline void format_value(std::string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
 
-inline void format_value(string& str, const vec2f& value) {
+inline void format_value(std::string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const vec3f& value) {
+inline void format_value(std::string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const vec4f& value) {
+inline void format_value(std::string& str, const vec4f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const mat4f& value) {
+inline void format_value(std::string& str, const mat4f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
@@ -296,16 +294,18 @@ inline void format_value(string& str, const mat4f& value) {
 }
 
 // Foramt to file
-inline void format_values(string& str, const string& fmt) {
+inline void format_values(std::string& str, const std::string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
+  if (pos != std::string::npos)
+    throw std::runtime_error("bad format std::string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-inline void format_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+inline void format_values(std::string& str, const std::string& fmt,
+    const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  if (pos == std::string::npos)
+    throw std::invalid_argument("bad format std::string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -313,7 +313,7 @@ inline void format_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    FILE* fs, const std::string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
@@ -337,31 +337,31 @@ struct value {
     // clang-format on
   };
 
-  string        name     = "";
-  type_t        type     = type_t::real;
-  int           value1i  = 0;
-  float         value1f  = 0;
-  vec2f         value2f  = {0, 0};
-  vec3f         value3f  = {0, 0, 0};
-  bool          value1b  = false;
-  string        value1s  = "";
-  vector<float> vector1f = {};
-  vector<vec2f> vector2f = {};
-  vector<vec3f> vector3f = {};
-  vector<int>   vector1i = {};
+  std::string        name     = "";
+  type_t             type     = type_t::real;
+  int                value1i  = 0;
+  float              value1f  = 0;
+  vec2f              value2f  = {0, 0};
+  vec3f              value3f  = {0, 0, 0};
+  bool               value1b  = false;
+  std::string        value1s  = "";
+  std::vector<float> vector1f = {};
+  std::vector<vec2f> vector2f = {};
+  std::vector<vec3f> vector3f = {};
+  std::vector<int>   vector1i = {};
 };
 
 // Pbrt command
 struct command {
-  string        name   = "";
-  string        type   = "";
-  vector<value> values = {};
-  frame3f       frame  = identity3x4f;
-  frame3f       frend  = identity3x4f;
+  std::string        name   = "";
+  std::string        type   = "";
+  std::vector<value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
 };
 
 // get pbrt value
-[[nodiscard]] inline bool get_value(const value& pbrt, string& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, std::string& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
     val = pbrt.value1s;
@@ -415,7 +415,8 @@ struct command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vector<float>& val) {
+[[nodiscard]] inline bool get_value(
+    const value& pbrt, std::vector<float>& val) {
   if (pbrt.type == value::type_t::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
@@ -427,7 +428,8 @@ struct command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vector<vec2f>& val) {
+[[nodiscard]] inline bool get_value(
+    const value& pbrt, std::vector<vec2f>& val) {
   if (pbrt.type == value::type_t::point2 ||
       pbrt.type == value::type_t::vector2) {
     if (!pbrt.vector2f.empty()) {
@@ -447,7 +449,8 @@ struct command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vector<vec3f>& val) {
+[[nodiscard]] inline bool get_value(
+    const value& pbrt, std::vector<vec3f>& val) {
   if (pbrt.type == value::type_t::point || pbrt.type == value::type_t::vector ||
       pbrt.type == value::type_t::normal || pbrt.type == value::type_t::color) {
     if (!pbrt.vector3f.empty()) {
@@ -469,7 +472,7 @@ struct command {
   }
 }
 
-[[nodiscard]] inline bool get_value(const value& pbrt, vector<int>& val) {
+[[nodiscard]] inline bool get_value(const value& pbrt, std::vector<int>& val) {
   if (pbrt.type == value::type_t::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -481,7 +484,8 @@ struct command {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vector<vec3i>& val) {
+[[nodiscard]] inline bool get_value(
+    const value& pbrt, std::vector<vec3i>& val) {
   if (pbrt.type == value::type_t::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
@@ -495,7 +499,7 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::pair<float, string>& val) {
+    const value& pbrt, std::pair<float, std::string>& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
     val.first = 0;
@@ -506,7 +510,7 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::pair<vec3f, string>& val) {
+    const value& pbrt, std::pair<vec3f, std::string>& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
     val.first = zero3f;
@@ -518,7 +522,7 @@ struct command {
 }
 template <typename T>
 [[nodiscard]] inline bool get_value(
-    const vector<value>& pbrt, const string& name, T& val) {
+    const std::vector<value>& pbrt, const std::string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_value(p, val);
@@ -528,7 +532,7 @@ template <typename T>
 }
 
 // pbrt value construction
-inline value make_value(const string& name, const string& val,
+inline value make_value(const std::string& name, const std::string& val,
     value::type_t type = value::type_t::string) {
   auto pbrt    = value{};
   pbrt.name    = name;
@@ -536,31 +540,31 @@ inline value make_value(const string& name, const string& val,
   pbrt.value1s = val;
   return pbrt;
 }
-inline value make_value(
-    const string& name, bool val, value::type_t type = value::type_t::boolean) {
+inline value make_value(const std::string& name, bool val,
+    value::type_t type = value::type_t::boolean) {
   auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1b = val;
   return pbrt;
 }
-inline value make_value(
-    const string& name, int val, value::type_t type = value::type_t::integer) {
+inline value make_value(const std::string& name, int val,
+    value::type_t type = value::type_t::integer) {
   auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1i = val;
   return pbrt;
 }
-inline value make_value(
-    const string& name, float val, value::type_t type = value::type_t::real) {
+inline value make_value(const std::string& name, float val,
+    value::type_t type = value::type_t::real) {
   auto pbrt    = value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1f = val;
   return pbrt;
 }
-inline value make_value(const string& name, const vec2f& val,
+inline value make_value(const std::string& name, const vec2f& val,
     value::type_t type = value::type_t::point2) {
   auto pbrt    = value{};
   pbrt.name    = name;
@@ -568,7 +572,7 @@ inline value make_value(const string& name, const vec2f& val,
   pbrt.value2f = val;
   return pbrt;
 }
-inline value make_value(const string& name, const vec3f& val,
+inline value make_value(const std::string& name, const vec3f& val,
     value::type_t type = value::type_t::color) {
   auto pbrt    = value{};
   pbrt.name    = name;
@@ -576,7 +580,7 @@ inline value make_value(const string& name, const vec3f& val,
   pbrt.value3f = val;
   return pbrt;
 }
-inline value make_value(const string& name, const vector<vec2f>& val,
+inline value make_value(const std::string& name, const std::vector<vec2f>& val,
     value::type_t type = value::type_t::point2) {
   auto pbrt     = value{};
   pbrt.name     = name;
@@ -584,7 +588,7 @@ inline value make_value(const string& name, const vector<vec2f>& val,
   pbrt.vector2f = val;
   return pbrt;
 }
-inline value make_value(const string& name, const vector<vec3f>& val,
+inline value make_value(const std::string& name, const std::vector<vec3f>& val,
     value::type_t type = value::type_t::point) {
   auto pbrt     = value{};
   pbrt.name     = name;
@@ -592,7 +596,7 @@ inline value make_value(const string& name, const vector<vec3f>& val,
   pbrt.vector3f = val;
   return pbrt;
 }
-inline value make_value(const string& name, const vector<vec3i>& val,
+inline value make_value(const std::string& name, const std::vector<vec3i>& val,
     value::type_t type = value::type_t::integer) {
   auto pbrt     = value{};
   pbrt.name     = name;
@@ -601,9 +605,7 @@ inline value make_value(const string& name, const vector<vec3i>& val,
   return pbrt;
 }
 
-using std::string_view;
-
-inline void remove_comment(string_view& str, char comment_char = '#') {
+inline void remove_comment(std::string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
@@ -616,14 +618,14 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-[[nodiscard]] inline bool read_cmdline(FILE* fs, string& cmd) {
+[[nodiscard]] inline bool read_cmdline(FILE* fs, std::string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs);
   while (fgets(buffer, sizeof(buffer), fs)) {
     // line
-    auto line = string_view{buffer};
+    auto line = std::string_view{buffer};
     remove_comment(line);
     skip_whitespace(line);
     if (line.empty()) continue;
@@ -648,13 +650,14 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   return found;
 }
 
-// parse a quoted string
-[[nodiscard]] inline bool parse_command(string_view& str, string& value) {
+// parse a quoted std::string
+[[nodiscard]] inline bool parse_command(
+    std::string_view& str, std::string& value) {
   skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-  if (pos == string_view::npos) {
+  if (pos == std::string_view::npos) {
     value.assign(str);
     str.remove_prefix(str.size());
   } else {
@@ -666,7 +669,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 
 // parse pbrt value with optional parens
 template <typename T>
-[[nodiscard]] inline bool parse_param(string_view& str, T& value) {
+[[nodiscard]] inline bool parse_param(std::string_view& str, T& value) {
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
@@ -680,27 +683,27 @@ template <typename T>
   return true;
 }
 
-// parse a quoted string
+// parse a quoted std::string
 [[nodiscard]] inline bool parse_nametype(
-    string_view& str_, string& name, string& type) {
+    std::string_view& str_, std::string& name, std::string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
   if (!str_.data()) return false;
-  auto str  = string_view{value};
+  auto str  = std::string_view{value};
   auto pos1 = str.find(' ');
-  if (pos1 == string_view::npos) return false;
-  type = string(str.substr(0, pos1));
+  if (pos1 == std::string_view::npos) return false;
+  type = std::string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
-  if (pos2 == string_view::npos) return false;
+  if (pos2 == std::string_view::npos) return false;
   str.remove_prefix(pos2);
-  name = string(str);
+  name = std::string(str);
   return true;
 }
 
-inline pair<vec3f, vec3f> get_etak(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>> metal_ior_table =
-      {
+inline std::pair<vec3f, vec3f> get_etak(const std::string& name) {
+  static const std::unordered_map<std::string, std::pair<vec3f, vec3f>>
+      metal_ior_table = {
           {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                       {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
           {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -787,98 +790,102 @@ inline pair<vec3f, vec3f> get_etak(const string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>> params = {
-      // From "A Practical Model for Subsurface Light Transport"
-      // Jensen, Marschner, Levoy, Hanrahan
-      // Proc SIGGRAPH 2001
-      {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
-      {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
-      {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
-      {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
-      {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
-      {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
-      {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
-      {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
-      {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
-      {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
-      {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
-      {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
-      // From "Acquiring Scattering Properties of Participating Media by
-      // Dilution",
-      // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
-      // Proc SIGGRAPH 2006
-      {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
-      {"Reduced Milk",
-          {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
-      {"Regular Milk",
-          {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
-      {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
-      {"Mint Mocha Coffee",
-          {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
-      {"Lowfat Soy Milk",
-          {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
-      {"Regular Soy Milk",
-          {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
-      {"Lowfat Chocolate Milk",
-          {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
-      {"Regular Chocolate Milk",
-          {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
-      {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
-      {"Pepsi", {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
-      {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
-                     {0.001886, 0.0018308, 0.0020025}}},
-      {"Gatorade",
-          {{0.0024574, 0.003007, 0.0037325}, {0.024794, 0.019289, 0.008878}}},
-      {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
-                         {0.010782, 0.011855, 0.023997}}},
-      {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
-                              {0.012072, 0.016184, 0.019843}}},
-      {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
-      {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
-                             {0.011492, 0.024911, 0.057786}}},
-      {"Coors Light Beer",
-          {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
-      {"Clorox",
-          {{0.0024035, 0.0031373, 0.003991}, {0.0033542, 0.014892, 0.026297}}},
-      {"Apple Juice",
-          {{0.00013612, 0.00015836, 0.000227}, {0.012957, 0.023741, 0.052184}}},
-      {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
-                              {0.039437, 0.094223, 0.12426}}},
-      {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
-      {"Ruby Grapefruit Juice",
-          {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
-      {"White Grapefruit Juice",
-          {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
-      {"Shampoo",
-          {{0.0007176, 0.0008303, 0.0009016}, {0.014107, 0.045693, 0.061717}}},
-      {"Strawberry Shampoo",
-          {{0.00015671, 0.00015947, 1.518e-05}, {0.01449, 0.05796, 0.075823}}},
-      {"Head & Shoulders Shampoo",
-          {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
-      {"Lemon Tea Powder",
-          {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
-      {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
-                            {0.001449, 0.003441, 0.007863}}},
-      {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
-                                   {0.001165, 0.002366, 0.003195}}},
-      {"Cappuccino Powder",
-          {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
-      {"Salt Powder",
-          {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
-      {"Sugar Powder",
-          {{0.00022272, 0.00025513, 0.000271}, {0.012638, 0.031051, 0.050124}}},
-      {"Suisse Mocha Powder",
-          {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
-      {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
-                                          {0.031845, 0.031324, 0.030147}}},
-  };
+inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
+  static const std::unordered_map<std::string, std::pair<vec3f, vec3f>> params =
+      {
+          // From "A Practical Model for Subsurface Light Transport"
+          // Jensen, Marschner, Levoy, Hanrahan
+          // Proc SIGGRAPH 2001
+          {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
+          {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
+          {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
+          {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
+          {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
+          {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
+          {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
+          {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
+          {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
+          {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
+          {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
+          {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
+          // From "Acquiring Scattering Properties of Participating Media by
+          // Dilution",
+          // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
+          // Proc SIGGRAPH 2006
+          {"Lowfat Milk",
+              {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
+          {"Reduced Milk",
+              {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
+          {"Regular Milk",
+              {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
+          {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
+          {"Mint Mocha Coffee",
+              {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
+          {"Lowfat Soy Milk",
+              {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
+          {"Regular Soy Milk",
+              {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
+          {"Lowfat Chocolate Milk",
+              {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
+          {"Regular Chocolate Milk",
+              {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
+          {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
+          {"Pepsi",
+              {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
+          {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
+                         {0.001886, 0.0018308, 0.0020025}}},
+          {"Gatorade", {{0.0024574, 0.003007, 0.0037325},
+                           {0.024794, 0.019289, 0.008878}}},
+          {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
+                             {0.010782, 0.011855, 0.023997}}},
+          {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
+                                  {0.012072, 0.016184, 0.019843}}},
+          {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
+          {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
+                                 {0.011492, 0.024911, 0.057786}}},
+          {"Coors Light Beer",
+              {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
+          {"Clorox", {{0.0024035, 0.0031373, 0.003991},
+                         {0.0033542, 0.014892, 0.026297}}},
+          {"Apple Juice", {{0.00013612, 0.00015836, 0.000227},
+                              {0.012957, 0.023741, 0.052184}}},
+          {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
+                                  {0.039437, 0.094223, 0.12426}}},
+          {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
+          {"Ruby Grapefruit Juice",
+              {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
+          {"White Grapefruit Juice",
+              {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
+          {"Shampoo", {{0.0007176, 0.0008303, 0.0009016},
+                          {0.014107, 0.045693, 0.061717}}},
+          {"Strawberry Shampoo", {{0.00015671, 0.00015947, 1.518e-05},
+                                     {0.01449, 0.05796, 0.075823}}},
+          {"Head & Shoulders Shampoo",
+              {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
+          {"Lemon Tea Powder",
+              {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
+          {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
+                                {0.001449, 0.003441, 0.007863}}},
+          {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
+                                       {0.001165, 0.002366, 0.003195}}},
+          {"Cappuccino Powder",
+              {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
+          {"Salt Powder",
+              {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
+          {"Sugar Powder", {{0.00022272, 0.00025513, 0.000271},
+                               {0.012638, 0.031051, 0.050124}}},
+          {"Suisse Mocha Powder",
+              {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
+          {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
+                                              {0.031845, 0.031324, 0.030147}}},
+      };
   return params.at(name);
 }
 
 [[nodiscard]] inline bool parse_params(
-    string_view& str, vector<value>& values) {
-  auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
+    std::string_view& str, std::vector<value>& values) {
+  auto parse_pvalues = [](std::string_view& str, auto& value,
+                           auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
     if (str.empty()) return false;
@@ -918,20 +925,20 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "integer") {
       value.type = value::type_t::integer;
       if (!parse_pvalues(str, value.value1i, value.vector1i)) return false;
-    } else if (type == "string") {
-      auto vector1s = vector<string>{};
+    } else if (type == "std::string") {
+      auto vector1s = std::vector<std::string>{};
       value.type    = value::type_t::string;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
-      auto vector1s = vector<string>{};
+      auto vector1s = std::vector<std::string>{};
       value.type    = value::type_t::boolean;
       if (!parse_pvalues(str, value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
-      auto vector1s = vector<string>{};
+      auto vector1s = std::vector<std::string>{};
       value.type    = value::type_t::texture;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
@@ -941,7 +948,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "normal" || type == "normal3") {
       value.type = value::type_t::normal;
       parse_pvalues(str, value.value3f, value.vector3f);
-    } else if (type == "vector" || type == "vector3") {
+    } else if (type == "std::vector" || type == "vector3") {
       value.type = value::type_t::vector;
       parse_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "point2") {
@@ -953,7 +960,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "blackbody") {
       value.type     = value::type_t::color;
       auto blackbody = zero2f;
-      auto vector2f  = vector<vec2f>{};
+      auto vector2f  = std::vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
       value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
@@ -979,7 +986,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
       if (is_string) {
         value.type     = value::type_t::color;
         auto filename  = ""s;
-        auto filenames = vector<string>{};
+        auto filenames = std::vector<std::string>{};
         if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
         auto filenamep = fs::path(filename).filename();
@@ -1015,34 +1022,34 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
 // Other pbrt elements
 struct film {
   // film approximation
-  string filename   = "";
-  vec2i  resolution = zero2i;
+  std::string filename   = "";
+  vec2i       resolution = zero2i;
 };
 
 // Pbrt texture
 struct texture {
   // texture parameters
-  string name     = "";
-  vec3f  constant = vec3f{1, 1, 1};
-  string filename = "";
+  std::string name     = "";
+  vec3f       constant = vec3f{1, 1, 1};
+  std::string filename = "";
 };
 
 // Pbrt area light
 struct arealight {
   // arealight parameters
-  string name     = "";
-  vec3f  emission = zero3f;
+  std::string name     = "";
+  vec3f       emission = zero3f;
 };
 
 // Pbrt medium. Not parsed at the moment.
 struct medium {
   // medium parameters
-  string name = "";
+  std::string name = "";
 };
 
 // convert pbrt films
 inline bool convert_film(film* film, const command& command,
-    const string& filename, string& error, bool verbose = false) {
+    const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1069,7 +1076,7 @@ inline bool convert_film(film* film, const command& command,
 
 // convert pbrt elements
 inline bool convert_camera(camera* pcamera, const command& command,
-    const vec2i& resolution, const string& filename, string& error,
+    const vec2i& resolution, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1126,8 +1133,8 @@ inline bool convert_camera(camera* pcamera, const command& command,
 
 // convert pbrt textures
 inline bool convert_texture(texture& ptexture, const command& command,
-    unordered_map<string, texture>& texture_map, const string& filename,
-    string& error, bool verbose = false) {
+    std::unordered_map<std::string, texture>& texture_map,
+    const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1137,7 +1144,7 @@ inline bool convert_texture(texture& ptexture, const command& command,
     return false;
   };
 
-  auto get_filename = [&texture_map](const string& name) {
+  auto get_filename = [&texture_map](const std::string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
@@ -1220,9 +1227,9 @@ inline bool convert_texture(texture& ptexture, const command& command,
 
 // convert pbrt materials
 inline bool convert_material(material* pmaterial, const command& command,
-    const unordered_map<string, material>& named_materials,
-    const unordered_map<string, texture>&  named_textures,
-    const string& filename, string& error, bool verbose = false) {
+    const std::unordered_map<std::string, material>& named_materials,
+    const std::unordered_map<std::string, texture>&  named_textures,
+    const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1231,19 +1238,19 @@ inline bool convert_material(material* pmaterial, const command& command,
     error = filename + ": unknown type " + command.type;
     return false;
   };
-  auto material_error = [filename, &error](const string& name) {
+  auto material_error = [filename, &error](const std::string& name) {
     error = filename + ": missing material " + name;
     return false;
   };
-  auto bsdf_error = [filename, &error](const string& name) {
+  auto bsdf_error = [filename, &error](const std::string& name) {
     error = filename + ": missing bsdf " + name;
     return false;
   };
 
   // helpers
-  auto get_texture = [&](const vector<value>& values, const string& name,
-                         vec3f& color, string& filename,
-                         const vec3f& def) -> bool {
+  auto get_texture = [&](const std::vector<value>& values,
+                         const std::string& name, vec3f& color,
+                         std::string& filename, const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1261,8 +1268,9 @@ inline bool convert_material(material* pmaterial, const command& command,
     }
     return true;
   };
-  auto get_scalar = [&](const vector<value>& values, const string& name,
-                        float& scalar, float def) -> bool {
+  auto get_scalar = [&](const std::vector<value>& values,
+                        const std::string& name, float& scalar,
+                        float def) -> bool {
     auto textured = std::pair{vec3f{def}, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1277,8 +1285,9 @@ inline bool convert_material(material* pmaterial, const command& command,
     }
     return true;
   };
-  auto get_color = [&](const vector<value>& values, const string& name,
-                       vec3f& color, const vec3f& def) -> bool {
+  auto get_color = [&](const std::vector<value>& values,
+                       const std::string& name, vec3f& color,
+                       const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1294,7 +1303,7 @@ inline bool convert_material(material* pmaterial, const command& command,
     return true;
   };
 
-  auto get_roughness = [&](const vector<value>& values, float& roughness,
+  auto get_roughness = [&](const std::vector<value>& values, float& roughness,
                            float def = 0.1) -> bool {
     auto roughness_ = std::pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
@@ -1502,7 +1511,7 @@ inline bool convert_material(material* pmaterial, const command& command,
   } else if (command.type == "fourier") {
     auto bsdffile = ""s;
     if (!get_value(command.values, "bsdffile", bsdffile)) return parse_error();
-    if (bsdffile.rfind("/") != string::npos)
+    if (bsdffile.rfind("/") != std::string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
       pmaterial->color     = {0.6f, 0.6f, 0.6f};
@@ -1548,8 +1557,9 @@ inline bool convert_material(material* pmaterial, const command& command,
 
 // Make a triangle shape from a quad grid
 template <typename PositionFunc, typename NormalFunc>
-inline void make_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+inline void make_shape(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec2i& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
   auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
   auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
@@ -1574,9 +1584,9 @@ inline void make_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // pbrt sphere
-inline void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float radius) {
+inline void make_sphere(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1589,9 +1599,9 @@ inline void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
         return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
       });
 }
-inline void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float radius) {
+inline void make_disk(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1602,9 +1612,9 @@ inline void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
         return vec3f{0, 0, 1};
       });
 }
-inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float radius) {
+inline void make_quad(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1617,9 +1627,10 @@ inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 inline bool convert_shape(shape* shape, const command& command,
-    string& alphamap, const unordered_map<string, texture>& named_textures,
-    const string& ply_dirname, const string& filename, string& error,
-    bool verbose = false) {
+    std::string&                                    alphamap,
+    const std::unordered_map<std::string, texture>& named_textures,
+    const std::string& ply_dirname, const std::string& filename,
+    std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1634,8 +1645,8 @@ inline bool convert_shape(shape* shape, const command& command,
   };
 
   // helpers
-  auto get_alpha = [&](const vector<value>& values, const string& name,
-                       string& filename) -> bool {
+  auto get_alpha = [&](const std::vector<value>& values,
+                       const std::string& name, std::string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1703,7 +1714,7 @@ inline bool convert_shape(shape* shape, const command& command,
 
 // Convert pbrt arealights
 inline bool convert_arealight(arealight* parealight, const command& command,
-    const string& filename, string& error, bool verbose = false) {
+    const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1727,7 +1738,7 @@ inline bool convert_arealight(arealight* parealight, const command& command,
 
 // Convert pbrt lights
 inline bool convert_light(light* plight, const command& command,
-    const string& filename, string& error, bool verbose = false) {
+    const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1761,7 +1772,7 @@ inline bool convert_light(light* plight, const command& command,
         plight->frend *
         lookat_frame(normalize(plight->from - plight->to) * distant_dist,
             zero3f, {0, 1, 0}, true);
-    auto texcoords = vector<vec2f>{};
+    auto texcoords = std::vector<vec2f>{};
     make_quad(plight->area_triangles, plight->area_positions,
         plight->area_normals, texcoords, {4, 2}, size);
     return true;
@@ -1776,7 +1787,7 @@ inline bool convert_light(light* plight, const command& command,
     plight->area_emission = plight->emission;
     plight->area_frame    = plight->frame * translation_frame(plight->from);
     plight->area_frend    = plight->frend * translation_frame(plight->from);
-    auto texcoords        = vector<vec2f>{};
+    auto texcoords        = std::vector<vec2f>{};
     make_sphere(plight->area_triangles, plight->area_positions,
         plight->area_normals, texcoords, {4, 2}, 0.0025f);
     return true;
@@ -1786,7 +1797,7 @@ inline bool convert_light(light* plight, const command& command,
 }
 
 inline bool convert_environment(environment* penvironment,
-    const command& command, const string& filename, string& error,
+    const command& command, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1832,23 +1843,21 @@ struct stack_element {
 
 // pbrt parsing context
 struct context {
-  vector<stack_element>                 stack           = {};
-  unordered_map<string, stack_element>  coordsys        = {};
-  unordered_map<string, vector<shape*>> objects         = {};
-  string                                cur_object      = "";
-  vec2i                                 film_resolution = {512, 512};
+  std::vector<stack_element>                           stack      = {};
+  std::unordered_map<std::string, stack_element>       coordsys   = {};
+  std::unordered_map<std::string, std::vector<shape*>> objects    = {};
+  std::string                                          cur_object = "";
+  vec2i film_resolution                                           = {512, 512};
 };
 
-using std::map;
-using std::tuple;
-
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename, model* pbrt,
-    string& error, context& ctx,
-    map<tuple<string, string, string>, material*>& material_map,
-    unordered_map<string, material>&               named_materials,
-    unordered_map<string, texture>&                named_textures,
-    unordered_map<string, medium>& named_mediums, const string& ply_dirname) {
+[[nodiscard]] inline bool load_pbrt(const std::string& filename, model* pbrt,
+    std::string& error, context& ctx,
+    std::unordered_map<std::string, material*>& material_map,
+    std::unordered_map<std::string, material>&  named_materials,
+    std::unordered_map<std::string, texture>&   named_textures,
+    std::unordered_map<std::string, medium>&    named_mediums,
+    const std::string&                          ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1866,7 +1875,7 @@ using std::tuple;
     error = filename + ": error in " + error;
     return false;
   };
-  auto command_error = [filename, &error](const string& cmd) {
+  auto command_error = [filename, &error](const std::string& cmd) {
     error = filename + ": unknown command " + cmd;
     return false;
   };
@@ -1892,7 +1901,7 @@ using std::tuple;
   // parse command by command
   auto line = ""s;
   while (read_cmdline(fs, line)) {
-    auto str = string_view{line};
+    auto str = std::string_view{line};
     // get command
     auto cmd = ""s;
     if (!parse_command(str, cmd)) return parse_error();
@@ -2072,9 +2081,8 @@ using std::tuple;
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
               filename, error))
         return false;
-      auto matkey = tuple<string, string, string>{
-          ctx.stack.back().material.name, ctx.stack.back().arealight.name,
-          alphamap};
+      auto matkey = "?!!!?" + ctx.stack.back().material.name + "?!!!?" +
+                    ctx.stack.back().arealight.name + "?!!!?" + alphamap;
       if (material_map.find(matkey) == material_map.end()) {
         auto material  = add_material(pbrt);
         (*material)    = ctx.stack.back().material;
@@ -2168,12 +2176,12 @@ inline light* add_light(model* pbrt) {
 
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(
-    const string& filename, model* pbrt, string& error) {
+    const std::string& filename, model* pbrt, std::string& error) {
   auto ctx             = context{};
-  auto material_map    = map<tuple<string, string, string>, material*>{};
-  auto named_materials = unordered_map<string, material>{{"", {}}};
-  auto named_mediums   = unordered_map<string, medium>{{"", {}}};
-  auto named_textures  = unordered_map<string, texture>{{"", {}}};
+  auto material_map    = std::unordered_map<std::string, material*>{};
+  auto named_materials = std::unordered_map<std::string, material>{{"", {}}};
+  auto named_mediums   = std::unordered_map<std::string, medium>{{"", {}}};
+  auto named_textures  = std::unordered_map<std::string, texture>{{"", {}}};
   auto dirname         = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
@@ -2181,8 +2189,7 @@ inline light* add_light(model* pbrt) {
     return false;
 
   // remove unused materials
-  using std::unordered_set;
-  auto used_materials = unordered_set<material*>{};
+  auto used_materials = std::unordered_set<material*>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
@@ -2196,15 +2203,15 @@ inline light* add_light(model* pbrt) {
   return true;
 }
 
-inline void format_value(string& str, const value& value) {
-  static auto type_labels = unordered_map<value::type_t, string>{
+inline void format_value(std::string& str, const value& value) {
+  static auto type_labels = std::unordered_map<value::type_t, std::string>{
       {value::type_t::real, "float"},
       {value::type_t::integer, "integer"},
       {value::type_t::boolean, "bool"},
-      {value::type_t::string, "string"},
+      {value::type_t::string, "std::string"},
       {value::type_t::point, "point"},
       {value::type_t::normal, "normal"},
-      {value::type_t::vector, "vector"},
+      {value::type_t::vector, "std::vector"},
       {value::type_t::texture, "texture"},
       {value::type_t::color, "rgb"},
       {value::type_t::point2, "point2"},
@@ -2212,7 +2219,7 @@ inline void format_value(string& str, const value& value) {
       {value::type_t::spectrum, "spectrum"},
   };
 
-  auto format_vector = [](string& str, auto& values) {
+  auto format_vector = [](std::string& str, auto& values) {
     str += "[ ";
     for (auto& value : values) {
       str += " ";
@@ -2266,15 +2273,15 @@ inline void format_value(string& str, const value& value) {
   }
 }
 
-inline void format_value(string& str, const vector<value>& values) {
+inline void format_value(std::string& str, const std::vector<value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);
   }
 }
 
-[[nodiscard]] inline bool save_pbrt(
-    const string& filename, model* pbrt, string& error, bool ply_meshes) {
+[[nodiscard]] inline bool save_pbrt(const std::string& filename, model* pbrt,
+    std::string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2414,7 +2421,7 @@ inline void format_value(string& str, const vector<value>& values) {
       }
     }
     if (!format_values(fs,
-            "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+            "MakeNamedMaterial \"{}\" \"std::string type\" \"{}\" {}\n",
             material->name, command.type, command.values))
       return write_error();
   }

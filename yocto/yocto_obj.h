@@ -49,9 +49,6 @@
 namespace yocto::obj {
 
 // Using directives
-using std::string;
-using std::unordered_map;
-using std::vector;
 using namespace std::string_literals;
 using namespace yocto::math;
 
@@ -69,16 +66,16 @@ inline bool operator==(const vertex& a, const vertex& b) {
 
 // Obj texture information.
 struct texture {
-  string path  = "";     // file path
+  std::string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
-  unordered_map<string, vector<float>> props;
+  std::unordered_map<std::string, std::vector<float>> props;
 
   texture() {}
   texture(const char* path) : path{path} {}
-  texture(const string& path) : path{path} {}
+  texture(const std::string& path) : path{path} {}
 };
 
 // Obj element
@@ -90,7 +87,7 @@ struct element {
 // Obj material
 struct material {
   // material name and type
-  string name  = "";
+  std::string name  = "";
   int    illum = 0;
 
   // material colors and values
@@ -150,21 +147,21 @@ struct material {
 
 // Obj shape
 struct shape {
-  string            name      = "";
-  vector<vec3f>     positions = {};
-  vector<vec3f>     normals   = {};
-  vector<vec2f>     texcoords = {};
-  vector<material*> materials = {};
-  vector<vertex>    vertices  = {};
-  vector<element>   faces     = {};
-  vector<element>   lines     = {};
-  vector<element>   points    = {};
-  vector<frame3f>   instances = {};
+  std::string            name      = "";
+  std::vector<vec3f>     positions = {};
+  std::vector<vec3f>     normals   = {};
+  std::vector<vec2f>     texcoords = {};
+  std::vector<material*> materials = {};
+  std::vector<vertex>    vertices  = {};
+  std::vector<element>   faces     = {};
+  std::vector<element>   lines     = {};
+  std::vector<element>   points    = {};
+  std::vector<frame3f>   instances = {};
 };
 
 // Obj camera
 struct camera {
-  string  name     = "";
+  std::string  name     = "";
   frame3f frame    = identity3x4f;
   bool    ortho    = false;
   float   width    = 0.036;
@@ -176,7 +173,7 @@ struct camera {
 
 // Obj environment
 struct environment {
-  string  name         = "";
+  std::string  name         = "";
   frame3f frame        = identity3x4f;
   vec3f   emission     = zero3f;
   texture emission_tex = {};
@@ -184,59 +181,59 @@ struct environment {
 
 // Obj model
 struct model {
-  vector<string>       comments     = {};
-  vector<shape*>       shapes       = {};
-  vector<material*>    materials    = {};
-  vector<camera*>      cameras      = {};
-  vector<environment*> environments = {};
+  std::vector<std::string>       comments     = {};
+  std::vector<shape*>       shapes       = {};
+  std::vector<material*>    materials    = {};
+  std::vector<camera*>      cameras      = {};
+  std::vector<environment*> environments = {};
   ~model();
 };
 
 // Load and save obj
-inline bool load_obj(const string& filename, model* obj, string& error,
+inline bool load_obj(const std::string& filename, model* obj, std::string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-inline bool save_obj(const string& filename, model* obj, string& error);
+inline bool save_obj(const std::string& filename, model* obj, std::string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_triangles(const shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials,
+inline void get_triangles(const shape* shape, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_quads(const shape* shape, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials,
+inline void get_quads(const shape* shape, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_lines(const shape* shape, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials,
+inline void get_lines(const shape* shape, std::vector<vec2i>& lines,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_points(const shape* shape, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials,
+inline void get_points(const shape* shape, std::vector<int>& points,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_fvquads(const shape* shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials,
+inline void get_fvquads(const shape* shape, std::vector<vec4i>& quadspos,
+    std::vector<vec4i>& quadsnorm, std::vector<vec4i>& quadstexcoord,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials,
     bool flip_texcoord = false);
 inline bool has_quads(shape* shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
 inline void get_triangles(const shape* shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-inline void get_quads(const shape* shape, int material, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, bool flip_texcoord = false);
+inline void get_quads(const shape* shape, int material, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flip_texcoord = false);
-inline void get_lines(const shape* shape, int material, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_lines(const shape* shape, int material, std::vector<vec2i>& lines,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flip_texcoord = false);
-inline void get_points(const shape* shape, int material, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_points(const shape* shape, int material, std::vector<int>& points,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flip_texcoord = false);
 
 // Create OBJ
@@ -246,29 +243,29 @@ inline environment* add_environment(model* obj);
 inline shape*       add_shape(model* obj);
 
 // Add obj shape
-inline void set_triangles(shape* shape, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+inline void set_triangles(shape* shape, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_quads(shape* shape, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+inline void add_quads(shape* shape, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_lines(shape* shape, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<material*>& materials = {},
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
-inline void set_points(shape* shape, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+inline void set_lines(shape* shape, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<material*>& materials = {},
+    const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
+inline void set_points(shape* shape, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_fvquads(shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+inline void set_fvquads(shape* shape, const std::vector<vec4i>& quadspos,
+    const std::vector<vec4i>& quadsnorm, const std::vector<vec4i>& quadstexcoord,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_materials(shape* shape, const vector<material*>& materials);
-inline void set_instances(shape* shape, const vector<frame3f>& instances);
+inline void set_materials(shape* shape, const std::vector<material*>& materials);
+inline void set_instances(shape* shape, const std::vector<frame3f>& instances);
 
 }  // namespace yocto::obj
 
@@ -277,7 +274,7 @@ inline void set_instances(shape* shape, const vector<frame3f>& instances);
 // -----------------------------------------------------------------------------
 namespace std {
 
-// Hash functor for vector for use with hash_map
+// Hash functor for std::vector for use with hash_map
 template <>
 struct hash<yocto::obj::vertex> {
   size_t operator()(const yocto::obj::vertex& v) const {
@@ -312,19 +309,17 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 namespace yocto::obj {
 
-using std::string_view;
-
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(string_view& str) {
+inline void skip_whitespace(std::string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-// Parse values from a string
-[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
+// Parse values from a std::string
+[[nodiscard]] inline bool parse_value(std::string_view& str, std::string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -347,26 +342,26 @@ inline void skip_whitespace(string_view& str) {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
-  auto valuev = string_view{};
+[[nodiscard]] inline bool parse_value(std::string_view& str, std::string& value) {
+  auto valuev = std::string_view{};
   if (!parse_value(str, valuev)) return false;
-  value = string{valuev};
+  value = std::string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, bool& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, bool& value) {
   auto valuei = 0;
   if (!parse_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
@@ -374,47 +369,47 @@ inline void skip_whitespace(string_view& str) {
   return true;
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, vec2f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec3f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vec3f& value) {
   for (auto i = 0; i < 3; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, frame3f& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, frame3f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
 
-// Formats values to string
-inline void format_value(string& str, const string& value) { str += value; }
-inline void format_value(string& str, int value) {
+// Formats values to std::string
+inline void format_value(std::string& str, const std::string& value) { str += value; }
+inline void format_value(std::string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, float value) {
+inline void format_value(std::string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-inline void format_value(string& str, const vec2f& value) {
+inline void format_value(std::string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const vec3f& value) {
+inline void format_value(std::string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const frame3f& value) {
+inline void format_value(std::string& str, const frame3f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
@@ -422,16 +417,16 @@ inline void format_value(string& str, const frame3f& value) {
 }
 
 // Foramt to file
-inline void format_values(string& str, const string& fmt) {
+inline void format_values(std::string& str, const std::string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
+  if (pos != std::string::npos) throw std::runtime_error("bad format std::string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
 inline void format_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+    std::string& str, const std::string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  if (pos == std::string::npos) throw std::invalid_argument("bad format std::string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -439,7 +434,7 @@ inline void format_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    FILE* fs, const std::string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
@@ -453,14 +448,14 @@ template <typename T>
   return true;
 }
 
-inline void remove_comment(string_view& str, char comment_char = '#') {
+inline void remove_comment(std::string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, vertex& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, vertex& value) {
   value = vertex{0, 0, 0};
   if (!parse_value(str, value.position)) return false;
   if (!str.empty() && str.front() == '/') {
@@ -480,12 +475,12 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // Input for OBJ textures
-[[nodiscard]] inline bool parse_value(string_view& str, texture& info) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, texture& info) {
   // initialize
   info = texture();
 
   // get tokens
-  auto tokens = vector<string>();
+  auto tokens = std::vector<std::string>();
   skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
@@ -501,7 +496,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
     if (c == '\\') c = '/';
 
   // texture params
-  auto last = string();
+  auto last = std::string();
   for (auto i = 0; i < tokens.size() - 1; i++) {
     if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
@@ -512,7 +507,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_mtl(
-    const string& filename, model* obj, string& error) {
+    const std::string& filename, model* obj, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -539,7 +534,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
-    auto str = string_view{buffer};
+    auto str = std::string_view{buffer};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -721,7 +716,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_objx(
-    const string& filename, model* obj, string& error) {
+    const std::string& filename, model* obj, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -742,7 +737,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<shape*>>{};
+  auto shape_map = std::unordered_map<std::string, std::vector<shape*>>{};
   for (auto shape : obj->shapes) {
     shape_map[shape->name].push_back(shape);
   }
@@ -751,7 +746,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
-    auto str = string_view{buffer};
+    auto str = std::string_view{buffer};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -822,7 +817,7 @@ inline shape* add_shape(model* obj) {
 }
 
 // Read obj
-inline bool load_obj(const string& filename, model* obj, string& error,
+inline bool load_obj(const std::string& filename, model* obj, std::string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -848,15 +843,15 @@ inline bool load_obj(const string& filename, model* obj, string& error,
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parsing state
-  auto opositions   = vector<vec3f>{};
-  auto onormals     = vector<vec3f>{};
-  auto otexcoords   = vector<vec2f>{};
+  auto opositions   = std::vector<vec3f>{};
+  auto onormals     = std::vector<vec3f>{};
+  auto otexcoords   = std::vector<vec2f>{};
   auto vert_size    = vertex{};
   auto oname        = ""s;
   auto gname        = ""s;
   auto mname        = ""s;
-  auto mtllibs      = vector<string>{};
-  auto material_map = unordered_map<string, material*>{};
+  auto mtllibs      = std::vector<std::string>{};
+  auto material_map = std::unordered_map<std::string, material*>{};
 
   // initialize obj
   obj->~model();
@@ -873,7 +868,7 @@ inline bool load_obj(const string& filename, model* obj, string& error,
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
-    auto str = string_view{buffer};
+    auto str = std::string_view{buffer};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -1004,9 +999,9 @@ inline bool load_obj(const string& filename, model* obj, string& error,
   }
 
   // convert vertex data
-  auto ipositions = vector<int>{};
-  auto inormals   = vector<int>{};
-  auto itexcoords = vector<int>{};
+  auto ipositions = std::vector<int>{};
+  auto inormals   = std::vector<int>{};
+  auto itexcoords = std::vector<int>{};
   for (auto shape : obj->shapes) {
     ipositions.assign(opositions.size() + 1, 0);
     inormals.assign(onormals.size() + 1, 0);
@@ -1043,10 +1038,10 @@ inline bool load_obj(const string& filename, model* obj, string& error,
 }
 
 // Format values
-inline void format_value(string& str, const texture& value) {
+inline void format_value(std::string& str, const texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
-inline void format_value(string& str, const vertex& value) {
+inline void format_value(std::string& str, const vertex& value) {
   format_value(str, value.position);
   if (value.texcoord) {
     str += "/";
@@ -1063,7 +1058,7 @@ inline void format_value(string& str, const vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_mtl(
-    const string& filename, model* obj, string& error) {
+    const std::string& filename, model* obj, std::string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1227,7 +1222,7 @@ inline void format_value(string& str, const vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_objx(
-    const string& filename, model* obj, string& error) {
+    const std::string& filename, model* obj, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1287,7 +1282,7 @@ inline void format_value(string& str, const vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_obj(
-    const string& filename, model* obj, string& error) {
+    const std::string& filename, model* obj, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1335,8 +1330,8 @@ inline void format_value(string& str, const vertex& value) {
       if (!format_values(fs, "vn {}\n", n)) return write_error();
     for (auto& t : shape->texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
-    auto element_labels = vector<string>{"f", "l", "p"};
-    auto element_groups = vector<const vector<element>*>{
+    auto element_labels = std::vector<std::string>{"f", "l", "p"};
+    auto element_groups = std::vector<const std::vector<element>*>{
         &shape->faces, &shape->lines, &shape->points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {
       auto& label        = element_labels[element_idx];
@@ -1385,10 +1380,10 @@ inline void format_value(string& str, const vertex& value) {
 }
 
 // Get obj vertices
-inline void get_vertices(const shape* shape, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
+inline void get_vertices(const shape* shape, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<int>& vindex,
     bool flipv) {
-  auto vmap = unordered_map<vertex, int>{};
+  auto vmap = std::unordered_map<vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.reserve(shape->vertices.size());
   for (auto& vert : shape->vertices) {
@@ -1411,18 +1406,18 @@ inline void get_vertices(const shape* shape, vector<vec3f>& positions,
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
-inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
+inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoord) {
   auto flipped = texcoord;
   for (auto& uv : flipped) uv.y = 1 - uv.y;
   return flipped;
 }
 
 // Get obj shape
-inline void get_triangles(const shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_triangles(const shape* shape, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape->materials;
   triangles.reserve(shape->faces.size());
@@ -1437,11 +1432,11 @@ inline void get_triangles(const shape* shape, vector<vec3i>& triangles,
     cur += face.size;
   }
 }
-inline void get_quads(const shape* shape, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_quads(const shape* shape, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape->materials;
   quads.reserve(shape->faces.size());
@@ -1462,11 +1457,11 @@ inline void get_quads(const shape* shape, vector<vec4i>& quads,
     cur += face.size;
   }
 }
-inline void get_lines(const shape* shape, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_lines(const shape* shape, std::vector<vec2i>& lines,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials, bool flipv) {
   if (shape->lines.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape->materials;
   lines.reserve(shape->lines.size());
@@ -1480,11 +1475,11 @@ inline void get_lines(const shape* shape, vector<vec2i>& lines,
     cur += str.size;
   }
 }
-inline void get_points(const shape* shape, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_points(const shape* shape, std::vector<int>& points,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials, bool flipv) {
   if (shape->points.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape->materials;
   points.reserve(shape->points.size());
@@ -1498,10 +1493,10 @@ inline void get_points(const shape* shape, vector<int>& points,
     cur += point.size;
   }
 }
-inline void get_fvquads(const shape* shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
+inline void get_fvquads(const shape* shape, std::vector<vec4i>& quadspos,
+    std::vector<vec4i>& quadsnorm, std::vector<vec4i>& quadstexcoord,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<material*>& materials, std::vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
   normals   = shape->normals;
@@ -1562,9 +1557,9 @@ inline bool has_quads(shape* shape) {
 
 // Get obj vertices
 inline void get_vertices(const shape* shape, int material,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<int>& vindex, bool flipv) {
-  auto used_vertices = vector<bool>(shape->vertices.size(), false);
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<int>& vindex, bool flipv) {
+  auto used_vertices = std::vector<bool>(shape->vertices.size(), false);
   auto count         = 0;
   for (auto& elem : shape->faces) {
     if (elem.material == material) {
@@ -1580,7 +1575,7 @@ inline void get_vertices(const shape* shape, int material,
     }
     count += elem.size;
   }
-  auto vmap = unordered_map<vertex, int>{};
+  auto vmap = std::unordered_map<vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.resize(shape->vertices.size());
   for (auto vid = 0; vid < shape->vertices.size(); vid++) {
@@ -1611,10 +1606,10 @@ inline void get_vertices(const shape* shape, int material,
 
 // Get obj shape
 inline void get_triangles(const shape* shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+    std::vector<vec3i>& triangles, std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, bool flipv) {
   if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
   triangles.reserve(shape->faces.size());
   auto cur = 0;
@@ -1629,11 +1624,11 @@ inline void get_triangles(const shape* shape, int material,
   }
   triangles.shrink_to_fit();
 }
-inline void get_quads(const shape* shape, int material, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_quads(const shape* shape, int material, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flipv) {
   if (shape->faces.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
   quads.reserve(shape->faces.size());
   auto cur = 0;
@@ -1653,11 +1648,11 @@ inline void get_quads(const shape* shape, int material, vector<vec4i>& quads,
   }
   quads.shrink_to_fit();
 }
-inline void get_lines(const shape* shape, int material, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_lines(const shape* shape, int material, std::vector<vec2i>& lines,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flipv) {
   if (shape->lines.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
   lines.reserve(shape->lines.size());
   auto cur = 0;
@@ -1671,11 +1666,11 @@ inline void get_lines(const shape* shape, int material, vector<vec2i>& lines,
   }
   lines.shrink_to_fit();
 }
-inline void get_points(const shape* shape, int material, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_points(const shape* shape, int material, std::vector<int>& points,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     bool flipv) {
   if (shape->points.empty()) return;
-  auto vindex = vector<int>{};
+  auto vindex = std::vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
   points.reserve(shape->points.size());
   auto cur = 0;
@@ -1690,9 +1685,9 @@ inline void get_points(const shape* shape, int material, vector<int>& points,
 }
 
 // Add obj shape
-inline void set_triangles(shape* shape, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+inline void set_triangles(shape* shape, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1710,9 +1705,9 @@ inline void set_triangles(shape* shape, const vector<vec3i>& triangles,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_quads(shape* shape, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+inline void set_quads(shape* shape, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1731,9 +1726,9 @@ inline void set_quads(shape* shape, const vector<vec4i>& quads,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_lines(shape* shape, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+inline void set_lines(shape* shape, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1751,9 +1746,9 @@ inline void set_lines(shape* shape, const vector<vec2i>& lines,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_points(shape* shape, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+inline void set_points(shape* shape, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1769,10 +1764,10 @@ inline void set_points(shape* shape, const vector<int>& points,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_fvquads(shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+inline void set_fvquads(shape* shape, const std::vector<vec4i>& quadspos,
+    const std::vector<vec4i>& quadsnorm, const std::vector<vec4i>& quadstexcoord,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1790,10 +1785,10 @@ inline void set_fvquads(shape* shape, const vector<vec4i>& quadspos,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_materials(shape* shape, const vector<material*>& materials) {
+inline void set_materials(shape* shape, const std::vector<material*>& materials) {
   shape->materials = materials;
 }
-inline void set_instances(shape* shape, const vector<frame3f>& instances) {
+inline void set_instances(shape* shape, const std::vector<frame3f>& instances) {
   shape->instances = instances;
 }
 
