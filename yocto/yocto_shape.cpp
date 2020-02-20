@@ -73,8 +73,8 @@ std::vector<vec3f> compute_normals(
 }
 
 // Compute per-vertex tangents for lines.
-void update_tangents(std::vector<vec3f>& tangents, const std::vector<vec2i>& lines,
-    const std::vector<vec3f>& positions) {
+void update_tangents(std::vector<vec3f>& tangents,
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& positions) {
   if (tangents.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
@@ -89,8 +89,8 @@ void update_tangents(std::vector<vec3f>& tangents, const std::vector<vec2i>& lin
 }
 
 // Compute per-vertex normals for triangles.
-void update_normals(std::vector<vec3f>& normals, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions) {
+void update_normals(std::vector<vec3f>& normals,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions) {
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
@@ -107,8 +107,8 @@ void update_normals(std::vector<vec3f>& normals, const std::vector<vec3i>& trian
 }
 
 // Compute per-vertex normals for quads.
-void update_normals(std::vector<vec3f>& normals, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& positions) {
+void update_normals(std::vector<vec3f>& normals,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions) {
   if (normals.size() != positions.size()) {
     throw std::out_of_range("array should be the same length");
   }
@@ -415,7 +415,8 @@ std::vector<vec3i> face_adjacencies(const std::vector<vec3i>& triangles) {
 
 // Build adjacencies between vertices (sorted counter-clockwise)
 std::vector<std::vector<int>> vertex_adjacencies(
-    const std::vector<vec3i>& triangles, const std::vector<vec3i>& adjacencies) {
+    const std::vector<vec3i>& triangles,
+    const std::vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
     if (v.x == x) return 0;
     if (v.y == x) return 1;
@@ -461,7 +462,8 @@ std::vector<std::vector<int>> vertex_adjacencies(
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
 std::vector<std::vector<int>> vertex_to_faces_adjacencies(
-    const std::vector<vec3i>& triangles, const std::vector<vec3i>& adjacencies) {
+    const std::vector<vec3i>& triangles,
+    const std::vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
     if (v.x == x) return 0;
     if (v.y == x) return 1;
@@ -504,8 +506,9 @@ std::vector<std::vector<int>> vertex_to_faces_adjacencies(
 }
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
-std::vector<std::vector<int>> ordered_boundaries(const std::vector<vec3i>& triangles,
-    const std::vector<vec3i>& adjacency, int num_vertices) {
+std::vector<std::vector<int>> ordered_boundaries(
+    const std::vector<vec3i>& triangles, const std::vector<vec3i>& adjacency,
+    int num_vertices) {
   // map every boundary vertex to its next one
   auto next_vert = std::vector<int>(num_vertices, -1);
   for (int i = 0; i < triangles.size(); ++i) {
@@ -610,8 +613,8 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
     const vec3f& position, float max_radius) {
   find_neighbors(grid, neighbors, position, max_radius, -1);
 }
-void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors, int vertex,
-    float max_radius) {
+void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
+    int vertex, float max_radius) {
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
@@ -625,7 +628,8 @@ namespace yocto::shape {
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
     int selected_tag, int t0, int t1, std::vector<vec3i>& triangles,
-    std::vector<int>& tags, std::vector<vec3f>& positions, std::vector<vec3f>& normals) {
+    std::vector<int>& tags, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals) {
   auto num_triangles = triangles.size();
 
   // Edgemap to keep track of the added vertex on each splitted edge.
@@ -762,12 +766,15 @@ std::vector<vec2i> bezier_to_lines(const std::vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
-split_facevarying(const std::vector<vec4i>& quadspos, const std::vector<vec4i>& quadsnorm,
-    const std::vector<vec4i>& quadstexcoord, const std::vector<vec3f>& positions,
-    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords) {
-  auto split =
-      std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>{};
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+split_facevarying(const std::vector<vec4i>& quadspos,
+    const std::vector<vec4i>&               quadsnorm,
+    const std::vector<vec4i>&               quadstexcoord,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords) {
+  auto split = std::tuple<std::vector<vec4i>, std::vector<vec3f>,
+      std::vector<vec3f>, std::vector<vec2f>>{};
   auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
   // make faces unique
   std::unordered_map<vec3i, int> vert_map;
@@ -868,8 +875,9 @@ std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
   for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
   return {wtriangles, wpositions};
 }
-std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& positions, float threshold) {
+std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
+    float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wquads                = quads;
   for (auto& q : wquads)
@@ -883,8 +891,8 @@ std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(const std::vector<v
 }
 
 // Merge shape elements
-void merge_lines(
-    std::vector<vec2i>& lines, const std::vector<vec2i>& merge_lines, int num_verts) {
+void merge_lines(std::vector<vec2i>& lines,
+    const std::vector<vec2i>& merge_lines, int num_verts) {
   for (auto& l : merge_lines)
     lines.push_back({l.x + num_verts, l.y + num_verts});
 }
@@ -893,15 +901,16 @@ void merge_triangles(std::vector<vec3i>& triangles,
   for (auto& t : merge_triangles)
     triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
-void merge_quads(
-    std::vector<vec4i>& quads, const std::vector<vec4i>& merge_quads, int num_verts) {
+void merge_quads(std::vector<vec4i>& quads,
+    const std::vector<vec4i>& merge_quads, int num_verts) {
   for (auto& q : merge_quads)
     quads.push_back(
         {q.x + num_verts, q.y + num_verts, q.z + num_verts, q.w + num_verts});
 }
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
-    std::vector<vec3f>& tangents, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    const std::vector<vec2i>& merge_lines, const std::vector<vec3f>& merge_positions,
+    std::vector<vec3f>& tangents, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, const std::vector<vec2i>& merge_lines,
+    const std::vector<vec3f>& merge_positions,
     const std::vector<vec3f>& merge_tangents,
     const std::vector<vec2f>& merge_texturecoords,
     const std::vector<float>& merge_radius) {
@@ -915,9 +924,10 @@ void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
       texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
   radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
 }
-void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    const std::vector<vec3i>& merge_triangles, const std::vector<vec3f>& merge_positions,
+void merge_triangles(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const std::vector<vec3i>& merge_triangles,
+    const std::vector<vec3f>& merge_positions,
     const std::vector<vec3f>& merge_normals,
     const std::vector<vec2f>& merge_texturecoords) {
   auto merge_verts = (int)positions.size();
@@ -932,7 +942,8 @@ void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& position
 }
 void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    const std::vector<vec4i>& merge_quads, const std::vector<vec3f>& merge_positions,
+    const std::vector<vec4i>& merge_quads,
+    const std::vector<vec3f>& merge_positions,
     const std::vector<vec3f>& merge_normals,
     const std::vector<vec2f>& merge_texturecoords) {
   auto merge_verts = (int)positions.size();
@@ -946,8 +957,8 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
       texcoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
 }
 
-void merge_triangles_and_quads(
-    std::vector<vec3i>& triangles, std::vector<vec4i>& quads, bool force_triangles) {
+void merge_triangles_and_quads(std::vector<vec3i>& triangles,
+    std::vector<vec4i>& quads, bool force_triangles) {
   if (quads.empty()) return;
   if (force_triangles) {
     auto qtriangles = quads_to_triangles(quads);
@@ -1009,8 +1020,9 @@ std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines_impl(
 
 // Subdivide triangle.
 template <typename T>
-void subdivide_triangles_impl(std::vector<vec3i>& triangles, std::vector<T>& vert,
-    const std::vector<vec3i>& triangles_, const std::vector<T>& vert_, int level) {
+void subdivide_triangles_impl(std::vector<vec3i>& triangles,
+    std::vector<T>& vert, const std::vector<vec3i>& triangles_,
+    const std::vector<T>& vert_, int level) {
   // initialization
   triangles = triangles_;
   vert      = vert_;
@@ -1052,7 +1064,8 @@ void subdivide_triangles_impl(std::vector<vec3i>& triangles, std::vector<T>& ver
 }
 template <typename T>
 std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles_impl(
-    const std::vector<vec3i>& triangles, const std::vector<T>& vert, int level) {
+    const std::vector<vec3i>& triangles, const std::vector<T>& vert,
+    int level) {
   auto tess = std::pair<std::vector<vec3i>, std::vector<T>>{};
   subdivide_triangles_impl(tess.first, tess.second, triangles, vert, level);
   return tess;
@@ -1132,7 +1145,8 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads_impl(
 // Subdivide beziers.
 template <typename T>
 void subdivide_beziers_impl(std::vector<vec4i>& beziers, std::vector<T>& vert,
-    const std::vector<vec4i>& beziers_, const std::vector<T>& vert_, int level) {
+    const std::vector<vec4i>& beziers_, const std::vector<T>& vert_,
+    int level) {
   // initialization
   beziers = beziers_;
   vert    = vert_;
@@ -1179,9 +1193,9 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_beziers_impl(
 
 // Subdivide catmullclark.
 template <typename T>
-void subdivide_catmullclark_impl(std::vector<vec4i>& quads, std::vector<T>& vert,
-    const std::vector<vec4i>& quads_, const std::vector<T>& vert_, int level,
-    bool lock_boundary) {
+void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
+    std::vector<T>& vert, const std::vector<vec4i>& quads_,
+    const std::vector<T>& vert_, int level, bool lock_boundary) {
   // initialization
   quads = quads_;
   vert  = vert_;
@@ -1318,70 +1332,86 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark_impl(
 }
 
 std::pair<std::vector<vec2i>, std::vector<float>> subdivide_lines(
-    const std::vector<vec2i>& lines, const std::vector<float>& vert, int level) {
+    const std::vector<vec2i>& lines, const std::vector<float>& vert,
+    int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 std::pair<std::vector<vec2i>, std::vector<vec2f>> subdivide_lines(
-    const std::vector<vec2i>& lines, const std::vector<vec2f>& vert, int level) {
+    const std::vector<vec2i>& lines, const std::vector<vec2f>& vert,
+    int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 std::pair<std::vector<vec2i>, std::vector<vec3f>> subdivide_lines(
-    const std::vector<vec2i>& lines, const std::vector<vec3f>& vert, int level) {
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& vert,
+    int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 std::pair<std::vector<vec2i>, std::vector<vec4f>> subdivide_lines(
-    const std::vector<vec2i>& lines, const std::vector<vec4f>& vert, int level) {
+    const std::vector<vec2i>& lines, const std::vector<vec4f>& vert,
+    int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 
 std::pair<std::vector<vec3i>, std::vector<float>> subdivide_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<float>& vert, int level) {
+    const std::vector<vec3i>& triangles, const std::vector<float>& vert,
+    int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 std::pair<std::vector<vec3i>, std::vector<vec2f>> subdivide_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<vec2f>& vert, int level) {
+    const std::vector<vec3i>& triangles, const std::vector<vec2f>& vert,
+    int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 std::pair<std::vector<vec3i>, std::vector<vec3f>> subdivide_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& vert, int level) {
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& vert,
+    int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 std::pair<std::vector<vec3i>, std::vector<vec4f>> subdivide_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<vec4f>& vert, int level) {
+    const std::vector<vec3i>& triangles, const std::vector<vec4f>& vert,
+    int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 
 std::pair<std::vector<vec4i>, std::vector<float>> subdivide_quads(
-    const std::vector<vec4i>& quads, const std::vector<float>& vert, int level) {
+    const std::vector<vec4i>& quads, const std::vector<float>& vert,
+    int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec2f>> subdivide_quads(
-    const std::vector<vec4i>& quads, const std::vector<vec2f>& vert, int level) {
+    const std::vector<vec4i>& quads, const std::vector<vec2f>& vert,
+    int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec3f>> subdivide_quads(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& vert, int level) {
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& vert,
+    int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_quads(
-    const std::vector<vec4i>& quads, const std::vector<vec4f>& vert, int level) {
+    const std::vector<vec4i>& quads, const std::vector<vec4f>& vert,
+    int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 
 std::pair<std::vector<vec4i>, std::vector<float>> subdivide_beziers(
-    const std::vector<vec4i>& beziers, const std::vector<float>& vert, int level) {
+    const std::vector<vec4i>& beziers, const std::vector<float>& vert,
+    int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec2f>> subdivide_beziers(
-    const std::vector<vec4i>& beziers, const std::vector<vec2f>& vert, int level) {
+    const std::vector<vec4i>& beziers, const std::vector<vec2f>& vert,
+    int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec3f>> subdivide_beziers(
-    const std::vector<vec4i>& beziers, const std::vector<vec3f>& vert, int level) {
+    const std::vector<vec4i>& beziers, const std::vector<vec3f>& vert,
+    int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_beziers(
-    const std::vector<vec4i>& beziers, const std::vector<vec4f>& vert, int level) {
+    const std::vector<vec4i>& beziers, const std::vector<vec4f>& vert,
+    int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 
@@ -1425,7 +1455,8 @@ std::vector<float> sample_points_cdf(int npoints) {
 }
 
 // Pick a point on lines uniformly.
-std::pair<int, float> sample_lines(const std::vector<float>& cdf, float re, float ru) {
+std::pair<int, float> sample_lines(
+    const std::vector<float>& cdf, float re, float ru) {
   return {sample_discrete(cdf, re), ru};
 }
 std::vector<float> sample_lines_cdf(
@@ -1487,8 +1518,8 @@ std::vector<float> sample_quads_cdf(
 void sample_triangles(std::vector<vec3f>& sampled_positions,
     std::vector<vec3f>& sampled_normals, std::vector<vec2f>& sampled_texcoords,
     const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
-    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords, int npoints,
-    int seed) {
+    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
+    int npoints, int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
   sampled_texcoords.resize(npoints);
@@ -1522,8 +1553,8 @@ void sample_triangles(std::vector<vec3f>& sampled_positions,
 void sample_quads(std::vector<vec3f>& sampled_positions,
     std::vector<vec3f>& sampled_normals, std::vector<vec2f>& sampled_texcoords,
     const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
-    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords, int npoints,
-    int seed) {
+    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
+    int npoints, int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
   sampled_texcoords.resize(npoints);
@@ -1612,7 +1643,8 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
 }
 
 geodesic_solver make_geodesic_solver(const std::vector<vec3i>& triangles,
-    const std::vector<vec3i>& adjacencies, const std::vector<vec3f>& positions) {
+    const std::vector<vec3i>&                                  adjacencies,
+    const std::vector<vec3f>&                                  positions) {
   auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
   for (int face = 0; face < triangles.size(); face++) {
@@ -1639,8 +1671,9 @@ geodesic_solver make_geodesic_solver(const std::vector<vec3i>& triangles,
 // is put into queue. `exit` is a function that tells whether to expand the
 // current node or perform early exit.
 template <typename Update, typename Exit>
-void visit_geodesic_graph(std::vector<float>& field, const geodesic_solver& solver,
-    const std::vector<int>& sources, Update&& update, Exit&& exit) {
+void visit_geodesic_graph(std::vector<float>& field,
+    const geodesic_solver& solver, const std::vector<int>& sources,
+    Update&& update, Exit&& exit) {
   /*
      This algortithm uses the heuristic Small Label Fisrt and Large Label Last
      https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -1742,8 +1775,8 @@ std::vector<float> compute_geodesic_distances(const geodesic_solver& solver,
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assigned its previous node in
 // the path. Graph search early exits when reching end_vertex.
-std::vector<int> compute_geodesic_paths(
-    const geodesic_solver& solver, const std::vector<int>& sources, int end_vertex) {
+std::vector<int> compute_geodesic_paths(const geodesic_solver& solver,
+    const std::vector<int>& sources, int end_vertex) {
   auto parents   = std::vector<int>(solver.graph.size(), -1);
   auto distances = std::vector<float>(solver.graph.size(), flt_max);
   auto update    = [&parents](int node, int neighbor, float new_distance) {
@@ -1794,8 +1827,8 @@ std::vector<std::vector<float>> compute_voronoi_fields(
   return fields;
 }
 
-std::vector<vec3f> colors_from_field(
-    const std::vector<float>& field, float scale, const vec3f& c0, const vec3f& c1) {
+std::vector<vec3f> colors_from_field(const std::vector<float>& field,
+    float scale, const vec3f& c0, const vec3f& c1) {
   auto colors = std::vector<vec3f>{field.size()};
   for (auto i = 0; i < colors.size(); i++) {
     colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
@@ -1972,7 +2005,8 @@ static surface_path::vertex step_from_point(const std::vector<vec3i>& triangles,
 
 surface_path integrate_field(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<vec3i>& adjacency,
-    const std::vector<int>& tags, int tag, const std::vector<float>& field, int from) {
+    const std::vector<int>& tags, int tag, const std::vector<float>& field,
+    int from) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
     for (int i = 0; i < 3; ++i) {
       if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
@@ -2052,8 +2086,8 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
 
 surface_path integrate_field(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<vec3i>& adjacency,
-    const std::vector<int>& tags, int tag, const std::vector<float>& field, int from,
-    int to) {
+    const std::vector<int>& tags, int tag, const std::vector<float>& field,
+    int from, int to) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
     for (int i = 0; i < 3; ++i) {
       if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
@@ -2162,14 +2196,15 @@ std::vector<vec3f> make_positions_from_path(
 // Trace integral path following the gradient of a scalar field
 surface_path integrate_field(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<vec3i>& adjacency,
-    const std::vector<int>& tags, int tag, const std::vector<float>& field, int from) {
+    const std::vector<int>& tags, int tag, const std::vector<float>& field,
+    int from) {
   return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from);
 }
 surface_path integrate_field(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<vec3i>& adjacency,
-    const std::vector<int>& tags, int tag, const std::vector<float>& field, int from,
-    int to) {
+    const std::vector<int>& tags, int tag, const std::vector<float>& field,
+    int from, int to) {
   return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
@@ -2179,8 +2214,8 @@ std::vector<vec3f> make_positions_from_path(
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
-vec3f compute_gradient(const vec3i& triangle, const std::vector<vec3f>& positions,
-    const std::vector<float>& field) {
+vec3f compute_gradient(const vec3i& triangle,
+    const std::vector<vec3f>& positions, const std::vector<float>& field) {
   auto xy     = positions[triangle.y] - positions[triangle.x];
   auto yz     = positions[triangle.z] - positions[triangle.y];
   auto zx     = positions[triangle.x] - positions[triangle.z];
@@ -2201,8 +2236,8 @@ namespace yocto::shape {
 
 // Make a quad.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   positions.resize((steps.x + 1) * (steps.y + 1));
   normals.resize((steps.x + 1) * (steps.y + 1));
   texcoords.resize((steps.x + 1) * (steps.y + 1));
@@ -2227,8 +2262,9 @@ void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_bulged_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale, float height) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale,
+    float height) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (height) {
     height      = min(height, min(scale));
@@ -2244,8 +2280,8 @@ void make_bulged_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 // Make a cube.
 void make_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& scale, const vec3f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
   quads.clear();
   positions.clear();
   normals.clear();
@@ -2303,8 +2339,9 @@ void make_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_rounded_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& scale, const vec3f& uvscale, float radius) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale,
+    float radius) {
   make_box(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
     radius = min(radius, min(scale));
@@ -2340,8 +2377,8 @@ void make_rounded_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_rect_stack(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& scale, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
   auto qquads         = std::vector<vec4i>{};
   auto qpositions     = std::vector<vec3f>{};
   auto qnormals       = std::vector<vec3f>{};
@@ -2356,8 +2393,8 @@ void make_rect_stack(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& p : positions) {
     std::swap(p.y, p.z);
@@ -2367,8 +2404,9 @@ void make_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_bent_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale, float radius) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale,
+    float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
     radius     = min(radius, scale.y);
@@ -2391,8 +2429,8 @@ void make_bent_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 // Generate a sphere
 void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps, float scale,
-    float uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps,
+    float scale, float uvscale) {
   make_box(quads, positions, normals, texcoords, {steps, steps, steps},
       {scale, scale, scale}, {uvscale, uvscale, uvscale});
   for (auto& p : positions) p = normalize(p) * scale;
@@ -2402,8 +2440,8 @@ void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 // Generate a uvsphere
 void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    float scale, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, float scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto uv      = texcoords[i];
@@ -2415,9 +2453,10 @@ void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   }
 }
 
-void make_capped_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    float scale, const vec2f& uvscale, float cap) {
+void make_capped_uvsphere(std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec2i& steps, float scale,
+    const vec2f& uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (cap) {
     cap        = min(cap, scale / 2);
@@ -2438,8 +2477,8 @@ void make_capped_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& positio
 
 // Generate a disk
 void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps, float scale,
-    float uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps,
+    float scale, float uvscale) {
   make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1},
       {uvscale, uvscale});
   for (auto i = 0; i < positions.size(); i++) {
@@ -2453,8 +2492,8 @@ void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 void make_bulged_disk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps, float scale,
-    float uvscale, float height) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps,
+    float scale, float uvscale, float height) {
   make_disk(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (height) {
     height      = min(height, scale);
@@ -2470,8 +2509,8 @@ void make_bulged_disk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 // Generate a uvdisk
 void make_uvdisk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    float scale, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, float scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto uv      = texcoords[i];
@@ -2484,8 +2523,8 @@ void make_uvdisk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 // Generate a uvcylinder
 void make_uvcylinder(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec2f& scale, const vec3f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
   auto qquads     = std::vector<vec4i>{};
   auto qpositions = std::vector<vec3f>{};
   auto qnormals   = std::vector<vec3f>{};
@@ -2534,9 +2573,10 @@ void make_uvcylinder(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 }
 
 // Generate a uvcylinder
-void make_rounded_uvcylinder(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec2f& scale, const vec3f& uvscale, float radius) {
+void make_rounded_uvcylinder(std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, const vec3i& steps, const vec2f& scale,
+    const vec3f& uvscale, float radius) {
   make_uvcylinder(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
     radius = min(radius, min(scale));
@@ -2561,9 +2601,9 @@ void make_rounded_uvcylinder(std::vector<vec4i>& quads, std::vector<vec3f>& posi
 
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    const vec2i& steps, const vec2f& size, const vec2f& uvscale,
-    const vec2f& rad) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    const vec2f& uvscale, const vec2f& rad) {
   auto nverts = (steps.x + 1) * steps.y;
   auto nlines = steps.x * steps.y;
   auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -2604,8 +2644,8 @@ void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
 void make_points(std::vector<int>& points, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    int num, float uvscale, float point_radius) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, int num, float uvscale, float point_radius) {
   points.resize(num);
   for (auto i = 0; i < num; i++) points[i] = i;
   positions.assign(num, {0, 0, 0});
@@ -2618,9 +2658,9 @@ void make_points(std::vector<int>& points, std::vector<vec3f>& positions,
 
 // Generate a point set.
 void make_random_points(std::vector<int>& points, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    int num, const vec3f& size, float uvscale, float point_radius,
-    uint64_t seed) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, int num, const vec3f& size, float uvscale,
+    float point_radius, uint64_t seed) {
   make_points(points, positions, normals, texcoords, radius, num, uvscale,
       point_radius);
   auto rng = make_rng(seed);
@@ -2631,8 +2671,8 @@ void make_random_points(std::vector<int>& points, std::vector<vec3f>& positions,
 
 // Make a point.
 void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    float point_radius) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, float point_radius) {
   points    = {0};
   positions = {{0, 0, 0}};
   normals   = {{0, 0, 1}};
@@ -2644,8 +2684,8 @@ void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
 void make_bezier_circle(
     std::vector<vec4i>& beziers, std::vector<vec3f>& positions, float size) {
   // constant from http://spencermortensen.com/articles/bezier-circle/
-  const auto  c              = 0.551915024494f;
-  static auto circle_pos     = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
+  const auto  c          = 0.551915024494f;
+  static auto circle_pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
       {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
       {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
   static auto circle_beziers = std::vector<vec4i>{
@@ -2658,16 +2698,16 @@ void make_bezier_circle(
 // Make fvquad
 void make_fvrect(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& size, const vec2f& uvscale) {
   make_rect(quadspos, positions, normals, texcoords, steps, size, uvscale);
   quadsnorm     = quadspos;
   quadstexcoord = quadspos;
 }
 void make_fvbox(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec3i& steps, const vec3f& size, const vec3f& uvscale) {
   make_box(quadspos, positions, normals, texcoords, steps, size, uvscale);
   quadsnorm                     = quadspos;
   quadstexcoord                 = quadspos;
@@ -2676,8 +2716,8 @@ void make_fvbox(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
 }
 void make_fvsphere(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps, float size,
-    float uvscale) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, int steps,
+    float size, float uvscale) {
   make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords,
       {steps, steps, steps}, {size, size, size}, {uvscale, uvscale, uvscale});
   quadsnorm = quadspos;
@@ -2686,7 +2726,8 @@ void make_fvsphere(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
 }
 
 // Predefined meshes
-void make_monkey(std::vector<vec4i>& quads, std::vector<vec3f>& positions, float scale) {
+void make_monkey(
+    std::vector<vec4i>& quads, std::vector<vec3f>& positions, float scale) {
   static const auto suzanne_positions = std::vector<vec3f>{
       {0.4375, 0.1640625, 0.765625}, {-0.4375, 0.1640625, 0.765625},
       {0.5, 0.09375, 0.6875}, {-0.5, 0.09375, 0.6875},
@@ -3150,12 +3191,12 @@ void make_quady(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, float scale) {
-  static const auto cube_positions = std::vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
-      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
-      {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1}, {+1, +1, +1},
-      {-1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {-1, +1, -1}, {-1, +1, +1},
-      {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1}, {-1, -1, +1},
-      {-1, -1, -1}, {+1, -1, -1}};
+  static const auto cube_positions = std::vector<vec3f>{{-1, -1, +1},
+      {+1, -1, +1}, {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1},
+      {-1, +1, -1}, {+1, +1, -1}, {+1, -1, +1}, {+1, -1, -1}, {+1, +1, -1},
+      {+1, +1, +1}, {-1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {-1, +1, -1},
+      {-1, +1, +1}, {+1, +1, +1}, {+1, +1, -1}, {-1, +1, -1}, {+1, -1, +1},
+      {-1, -1, +1}, {-1, -1, -1}, {+1, -1, -1}};
   static const auto cube_normals   = std::vector<vec3f>{{0, 0, +1}, {0, 0, +1},
       {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
       {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
@@ -3165,12 +3206,12 @@ void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
       {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
       {1, 1}, {1, 0}, {0, 0}};
-  static const auto cube_quads     = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+  static const auto cube_quads = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
       {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-  quads                            = cube_quads;
-  positions                        = cube_positions;
-  normals                          = cube_normals;
-  texcoords                        = cube_texcoords;
+  quads                        = cube_quads;
+  positions                    = cube_positions;
+  normals                      = cube_normals;
+  texcoords                    = cube_texcoords;
   if (scale != 1) {
     for (auto& p : positions) p *= scale;
   }
@@ -3179,22 +3220,23 @@ void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 void make_fvcube(std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, float scale) {
-  static const auto fvcube_positions = std::vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
-      {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
-      {+1, +1, -1}};
-  static const auto fvcube_normals   = std::vector<vec3f>{{0, 0, +1}, {0, 0, +1},
+  static const auto fvcube_positions = std::vector<vec3f>{{-1, -1, +1},
+      {+1, -1, +1}, {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1},
+      {-1, +1, -1}, {+1, +1, -1}};
+  static const auto fvcube_normals = std::vector<vec3f>{{0, 0, +1}, {0, 0, +1},
       {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
       {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
       {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
       {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-  static const auto fvcube_texcoords = std::vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+  static const auto fvcube_texcoords     = std::vector<vec2f>{{0, 1}, {1, 1},
+      {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0},
       {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
-      {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
-      {1, 1}, {1, 0}, {0, 0}};
-  static const auto fvcube_quadspos  = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
-  static const auto fvcube_quadsnorm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-      {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+      {0, 1}, {1, 1}, {1, 0}, {0, 0}};
+  static const auto fvcube_quadspos      = std::vector<vec4i>{{0, 1, 2, 3},
+      {4, 5, 6, 7}, {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
+  static const auto fvcube_quadsnorm     = std::vector<vec4i>{{0, 1, 2, 3},
+      {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
+      {20, 21, 22, 23}};
   static const auto fvcube_quadstexcoord = std::vector<vec4i>{{0, 1, 2, 3},
       {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
       {20, 21, 22, 23}};
@@ -3214,9 +3256,10 @@ void make_geosphere(
   // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
   const float X                   = 0.525731112119133606f;
   const float Z                   = 0.850650808352039932f;
-  static auto geosphere_positions = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
-      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
-      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+  static auto geosphere_positions = std::vector<vec3f>{{-X, 0.0, Z},
+      {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X},
+      {0.0, -Z, X}, {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0},
+      {-Z, -X, 0.0}};
   static auto geosphere_triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9},
       {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
       {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
@@ -3230,12 +3273,12 @@ void make_geosphere(
 
 // Make a hair ball around a shape
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, std::vector<float>& radius,
-    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
-    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
-    const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, const std::vector<vec3i>& striangles,
+    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
+    const vec2i& steps, const vec2f& len, const vec2f& rad, const vec2f& noise,
+    const vec2f& clump, const vec2f& rotation, int seed) {
   auto alltriangles    = striangles;
   auto quads_triangles = quads_to_triangles(squads);
   alltriangles.insert(
@@ -3300,7 +3343,8 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
 // its normals. Note that this is very much not robust and only useful for
 // trivial cases.
 void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords, float thickness) {
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    float thickness) {
   auto bbox = invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
   auto center              = yocto::math::center(bbox);
@@ -3329,11 +3373,12 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_shape(const std::string& filename, std::vector<int>& points,
-    std::vector<vec2i>& lines, std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<vec3f>& colors, std::vector<float>& radius, std::string& error,
-    bool flip_texcoord) {
+[[nodiscard]] bool load_shape(const std::string& filename,
+    std::vector<int>& points, std::vector<vec2i>& lines,
+    std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
+    std::vector<float>& radius, std::string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3419,12 +3464,13 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_shape(const std::string& filename, const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
-    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
-    const std::vector<vec3f>& colors, const std::vector<float>& radius, std::string& error,
-    bool ascii, bool flip_texcoord) {
+[[nodiscard]] bool save_shape(const std::string& filename,
+    const std::vector<int>& points, const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, const std::vector<vec3f>& colors,
+    const std::vector<float>& radius, std::string& error, bool ascii,
+    bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3477,9 +3523,10 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_fvshape(const std::string& filename, std::vector<vec4i>& quadspos,
-    std::vector<vec4i>& quadsnorm, std::vector<vec4i>& quadstexcoord,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+[[nodiscard]] bool load_fvshape(const std::string& filename,
+    std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
+    std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     std::string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -3532,9 +3579,10 @@ static std::string get_extension(const std::string& filename) {
 // Save ply mesh
 [[nodiscard]] bool save_fvshape(const std::string& filename,
     const std::vector<vec4i>& quadspos, const std::vector<vec4i>& quadsnorm,
-    const std::vector<vec4i>& quadstexcoord, const std::vector<vec3f>& positions,
-    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords, std::string& error,
-    bool ascii, bool flip_texcoord) {
+    const std::vector<vec4i>& quadstexcoord,
+    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
+    const std::vector<vec2f>& texcoords, std::string& error, bool ascii,
+    bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3590,7 +3638,8 @@ namespace yocto::shape {
 std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads, const std::vector<vec4i>& quadspos,
-    const std::vector<vec4i>& quadsnorm, const std::vector<vec4i>& quadstexcoord,
+    const std::vector<vec4i>& quadsnorm,
+    const std::vector<vec4i>& quadstexcoord,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
     const std::vector<vec2f>& texcoords, const std::vector<vec3f>& colors,
     const std::vector<float>& radius, bool verbose) {

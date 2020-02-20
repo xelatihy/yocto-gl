@@ -1570,8 +1570,8 @@ bool draw_message(window* win, const char* lbl, const std::string& message) {
 }
 
 std::deque<std::string> _message_queue = {};
-std::mutex         _message_mutex;
-void               push_message(window* win, const std::string& message) {
+std::mutex              _message_mutex;
+void                    push_message(window* win, const std::string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1624,13 +1624,13 @@ static std::string get_extension(const std::string& filename_) {
 }
 
 struct filedialog_state {
-  std::string                     dirname       = "";
-  std::string                     filename      = "";
+  std::string                               dirname       = "";
+  std::string                               filename      = "";
   std::vector<std::pair<std::string, bool>> entries       = {};
-  bool                            save          = false;
-  bool                            remove_hidden = true;
-  std::string                     filter        = "";
-  std::vector<std::string>             extensions    = {};
+  bool                                      save          = false;
+  bool                                      remove_hidden = true;
+  std::string                               filter        = "";
+  std::vector<std::string>                  extensions    = {};
 
   filedialog_state() {}
   filedialog_state(const std::string& dirname, const std::string& filename,

@@ -230,7 +230,8 @@ vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
   return (rp + rs) / 2;
 }
 
-std::pair<float, int> sample_distance(const vec3f& density, float rl, float rd) {
+std::pair<float, int> sample_distance(
+    const vec3f& density, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
   auto density_channel = density[channel];
   if (density_channel == 0 || rd == 0)
@@ -1106,9 +1107,10 @@ static void init_embree_bvh(scene* scene, const trace_params& params) {
 }
 
 static void update_embree_bvh(scene* scene,
-    const std::vector<object*>&           updated_objects,
-    const std::vector<shape*>&            updated_shapes,
-    const std::vector<instance*>& updated_instances, const trace_params& params) {
+    const std::vector<object*>&      updated_objects,
+    const std::vector<shape*>&       updated_shapes,
+    const std::vector<instance*>&    updated_instances,
+    const trace_params&              params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -1331,8 +1333,8 @@ static std::pair<int, int> split_nodes(
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh_serial(
-    std::vector<bvh_node>& nodes, std::vector<bvh_primitive>& primitives, bvh_type type) {
+static void build_bvh_serial(std::vector<bvh_node>& nodes,
+    std::vector<bvh_primitive>& primitives, bvh_type type) {
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(primitives.size() * 2);
@@ -1662,7 +1664,8 @@ static void update_bvh(shape* shape, const trace_params& params) {
 
 void update_bvh(scene* scene, const std::vector<object*>& updated_objects,
     const std::vector<shape*>&    updated_shapes,
-    const std::vector<instance*>& updated_instances, const trace_params& params) {
+    const std::vector<instance*>& updated_instances,
+    const trace_params&           params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -2561,8 +2564,8 @@ static std::pair<vec3f, bool> trace_naive(const scene* scene, const ray3f& ray_,
 }
 
 // Eyelight for quick previewing.
-static std::pair<vec3f, bool> trace_eyelight(const scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static std::pair<vec3f, bool> trace_eyelight(const scene* scene,
+    const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
@@ -2610,8 +2613,8 @@ static std::pair<vec3f, bool> trace_eyelight(const scene* scene, const ray3f& ra
 }
 
 // False color rendering
-static std::pair<vec3f, bool> trace_falsecolor(const scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params) {
+static std::pair<vec3f, bool> trace_falsecolor(const scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
@@ -2663,8 +2666,8 @@ static std::pair<vec3f, bool> trace_falsecolor(const scene* scene, const ray3f& 
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = std::pair<vec3f, bool> (*)(const scene* scene, const ray3f& ray,
-    rng_state& rng, const trace_params& params);
+using sampler_func = std::pair<vec3f, bool> (*)(const scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case sampler_type::path: return trace_path;
@@ -2895,7 +2898,8 @@ void trace_start(state* state, const scene* scene, const camera* camera,
       });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
-    if (progress_cb) progress_cb("trace yim::image", params.samples, params.samples);
+    if (progress_cb)
+      progress_cb("trace yim::image", params.samples, params.samples);
     if (image_cb) image_cb(state->render, params.samples, params.samples);
   });
 }

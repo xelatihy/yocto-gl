@@ -606,8 +606,8 @@ namespace yocto::bvh {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static std::pair<int, int> split_sah(std::vector<int>& primitives,
-    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers, int start,
-    int end) {
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -670,8 +670,8 @@ static std::pair<int, int> split_sah(std::vector<int>& primitives,
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
 static std::pair<int, int> split_balanced(std::vector<int>& primitives,
-    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers, int start,
-    int end) {
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -709,8 +709,8 @@ static std::pair<int, int> split_balanced(std::vector<int>& primitives,
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
 static std::pair<int, int> split_middle(std::vector<int>& primitives,
-    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers, int start,
-    int end) {
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -747,8 +747,8 @@ static std::pair<int, int> split_middle(std::vector<int>& primitives,
 
 // Split bvh nodes according to a type
 static std::pair<int, int> split_nodes(std::vector<int>& primitives,
-    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers, int start,
-    int end, bvh_type type) {
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end, bvh_type type) {
   switch (type) {
     case bvh_type::default_:
       return split_middle(primitives, bboxes, centers, start, end);
@@ -853,10 +853,10 @@ static void build_bvh_parallel(
   nodes.emplace_back();
 
   // synchronization
-  std::atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
+  std::atomic<int>               num_processed_prims(0);
+  std::mutex                     queue_mutex;
   std::vector<std::future<void>> futures;
-  auto                      nthreads = std::thread::hardware_concurrency();
+  auto                           nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -945,8 +945,8 @@ static void update_bvh(bvh_tree& bvh, const std::vector<bbox3f>& bboxes) {
 
 // Build shape bvh
 void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius, bvh_type type,
-    bool parallel) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -962,8 +962,8 @@ void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
   }
 }
 void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius, bvh_type type,
-    bool parallel) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -980,8 +980,8 @@ void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
   }
 }
 void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius, bvh_type type,
-    bool parallel) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -998,8 +998,8 @@ void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   }
 }
 void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius, bvh_type type,
-    bool parallel) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1054,8 +1054,8 @@ void update_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_quads_bvh(
-    bvh_tree& bvh, const std::vector<vec4i>& quads, const std::vector<vec3f>& positions) {
+void update_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1464,8 +1464,9 @@ void update_shape_bvh(bvh_shape& shape) {
   update_bvh(shape.bvh, bboxes);
 }
 
-void update_scene_bvh(bvh_scene& scene, const std::vector<int>& updated_instances,
-    const std::vector<int>& updated_shapes) {
+void update_scene_bvh(bvh_scene& scene,
+    const std::vector<int>&      updated_instances,
+    const std::vector<int>&      updated_shapes) {
   // update shapes
   for (auto shape : updated_shapes) update_shape_bvh(scene.shapes[shape]);
 

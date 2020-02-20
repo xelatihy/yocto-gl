@@ -97,8 +97,8 @@ inline T keyframe_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f keyframe_slerp(
-    const std::vector<float>& times, const std::vector<vec4f>& vals, float time) {
+inline vec4f keyframe_slerp(const std::vector<float>& times,
+    const std::vector<vec4f>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -261,8 +261,8 @@ model::~model() {
 
 // add an element
 template <typename T>
-static T* add_element(
-    std::vector<T*>& elements, const std::string& name, const std::string& base) {
+static T* add_element(std::vector<T*>& elements, const std::string& name,
+    const std::string& base) {
   auto element  = elements.emplace_back(new T{});
   element->name = name != "" ? name : (base + std::to_string(elements.size()));
   return element;
@@ -523,12 +523,14 @@ static std::vector<vec3f> compute_normals(
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>> static split_facevarying(const std::vector<vec4i>& quadspos,
-    const std::vector<vec4i>& quadsnorm, const std::vector<vec4i>& quadstexcoord,
+    std::vector<vec2f>> static split_facevarying(const std::vector<vec4i>&
+                                                     quadspos,
+    const std::vector<vec4i>&                        quadsnorm,
+    const std::vector<vec4i>&                        quadstexcoord,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
     const std::vector<vec2f>& texcoords) {
-  auto split =
-      std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>{};
+  auto split = std::tuple<std::vector<vec4i>, std::vector<vec3f>,
+      std::vector<vec3f>, std::vector<vec2f>>{};
   auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
   // make faces unique
   std::unordered_map<vec3i, int> vert_map;
@@ -689,32 +691,32 @@ void tesselate_subdivs(model* scene, progress_callback progress_cb) {
 namespace yocto::sceneio {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel);
+static bool load_json_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_json_scene(const std::string& filename, const model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel);
+static bool load_obj_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_obj_scene(const std::string& filename, const model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel);
+static bool load_ply_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_ply_scene(const std::string& filename, const model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel);
+static bool load_gltf_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel);
+static bool load_pbrt_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_pbrt_scene(const std::string& filename, const model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 
@@ -738,8 +740,8 @@ bool load_scene(const std::string& filename, model* scene, std::string& error,
 }
 
 // Save a scene
-bool save_scene(const std::string& filename, const model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+bool save_scene(const std::string& filename, const model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -787,8 +789,9 @@ static bool load_image(const std::string& filename, yim::image<vec3f>& colorf,
     return load_image(filename, colorb, error);
   }
 }
-static bool save_image(const std::string& filename, const yim::image<vec3f>& colorf,
-    const yim::image<vec3b>& colorb, std::string& error) {
+static bool save_image(const std::string& filename,
+    const yim::image<vec3f>& colorf, const yim::image<vec3b>& colorb,
+    std::string& error) {
   if (yim::is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
   } else {
@@ -805,8 +808,9 @@ static bool load_image(const std::string& filename, yim::image<float>& scalarf,
     return load_image(filename, scalarb, error);
   }
 }
-static bool save_image(const std::string& filename, const yim::image<float>& scalarf,
-    const yim::image<byte>& scalarb, std::string& error) {
+static bool save_image(const std::string& filename,
+    const yim::image<float>& scalarf, const yim::image<byte>& scalarb,
+    std::string& error) {
   if (yim::is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
   } else {
@@ -815,8 +819,8 @@ static bool save_image(const std::string& filename, const yim::image<float>& sca
 }
 
 // load instances
-static bool load_instance(
-    const std::string& filename, std::vector<frame3f>& frames, std::string& error) {
+static bool load_instance(const std::string& filename,
+    std::vector<frame3f>& frames, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -826,8 +830,8 @@ static bool load_instance(
     auto ply = ply::model{};
     if (!load_ply(filename, &ply, error)) return false;
     frames = get_values(&ply, "instance",
-        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
-            "ox", "oy", "oz"});
+        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
+            "zy", "zz", "ox", "oy", "oz"});
     return true;
   } else {
     return format_error();
@@ -835,8 +839,9 @@ static bool load_instance(
 }
 
 // save instances
-static bool save_instance(const std::string& filename, const std::vector<frame3f>& frames,
-    std::string& error, bool ascii = false) {
+static bool save_instance(const std::string& filename,
+    const std::vector<frame3f>& frames, std::string& error,
+    bool ascii = false) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -845,8 +850,8 @@ static bool save_instance(const std::string& filename, const std::vector<frame3f
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply::model{};
     add_values(&ply, frames, "instance",
-        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
-            "ox", "oy", "oz"});
+        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
+            "zy", "zz", "ox", "oy", "oz"});
     if (!save_ply(filename, &ply, error)) return false;
     return true;
   } else {
@@ -892,7 +897,8 @@ namespace yocto::sceneio {
 using json = nlohmann::json;
 
 // Load a text file
-inline bool load_text(const std::string& filename, std::string& str, std::string& error) {
+inline bool load_text(
+    const std::string& filename, std::string& str, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -968,8 +974,8 @@ inline bool load_binary(
 }
 
 // Save a binary file
-inline bool save_binary(
-    const std::string& filename, const std::vector<byte>& data, std::string& error) {
+inline bool save_binary(const std::string& filename,
+    const std::vector<byte>& data, std::string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -989,14 +995,16 @@ inline bool save_binary(
 }
 
 // Load a binary file
-inline std::vector<byte> load_binary(const std::string& filename, std::string& error) {
+inline std::vector<byte> load_binary(
+    const std::string& filename, std::string& error) {
   auto data = std::vector<byte>{};
   if (!load_binary(filename, data, error)) return {};
   return data;
 }
 
 // load/save json
-inline bool load_json(const std::string& filename, json& js, std::string& error) {
+inline bool load_json(
+    const std::string& filename, json& js, std::string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -1012,7 +1020,8 @@ inline bool load_json(const std::string& filename, json& js, std::string& error)
   }
 }
 
-inline bool save_json(const std::string& filename, const json& js, std::string& error) {
+inline bool save_json(
+    const std::string& filename, const json& js, std::string& error) {
   return save_text(filename, js.dump(2), error);
 }
 
@@ -1023,8 +1032,8 @@ inline json load_json(const std::string& filename, std::string& error) {
 }
 
 // Save a scene in the builtin JSON format.
-static bool load_json_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+static bool load_json_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1286,7 +1295,8 @@ static bool load_json_scene(const std::string& filename, model* scene, std::stri
   progress.y += scene->instances.size();
 
   // get filename from name
-  auto get_filename = [filename](const std::string& name, const std::string& group,
+  auto get_filename = [filename](const std::string&       name,
+                          const std::string&              group,
                           const std::vector<std::string>& extensions) {
     for (auto& extension : extensions) {
       auto filepath = fs::path(filename).parent_path() / group /
@@ -1470,8 +1480,9 @@ static bool save_json_scene(const std::string& filename, const model* scene,
   if (!save_json(filename, js, error)) return false;
 
   // get filename from name
-  auto get_filename = [filename](const std::string& name, const std::string& group,
-                          const std::string& extension) {
+  auto get_filename = [filename](const std::string& name,
+                          const std::string&        group,
+                          const std::string&        extension) {
     return fs::path(filename).parent_path() / group / (name + extension);
   };
 
@@ -1534,8 +1545,8 @@ static bool save_json_scene(const std::string& filename, const model* scene,
 namespace yocto::sceneio {
 
 // Loads an OBJ
-static bool load_obj_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+static bool load_obj_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1818,8 +1829,9 @@ static bool save_obj_scene(const std::string& filename, const model* scene,
   if (!save_obj(filename, obj, error)) return false;
 
   // get filename from name
-  auto get_filename = [filename](const std::string& name, const std::string& group,
-                          const std::string& extension) {
+  auto get_filename = [filename](const std::string& name,
+                          const std::string&        group,
+                          const std::string&        extension) {
     return fs::path(filename).parent_path() / group / (name + extension);
   };
 
@@ -1860,8 +1872,8 @@ void print_obj_camera(camera* camera) {
 // -----------------------------------------------------------------------------
 namespace yocto::sceneio {
 
-static bool load_ply_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+static bool load_ply_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1919,8 +1931,8 @@ static bool save_ply_scene(const std::string& filename, const model* scene,
 namespace yocto::sceneio {
 
 // Load a scene
-static bool load_gltf_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+static bool load_gltf_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -1999,8 +2011,9 @@ static bool load_gltf_scene(const std::string& filename, model* scene, std::stri
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map = std::unordered_map<std::string, std::pair<texture*, texture*>>{
-      {"", {nullptr, nullptr}}};
+  auto cotexture_map =
+      std::unordered_map<std::string, std::pair<texture*, texture*>>{
+          {"", {nullptr, nullptr}}};
   auto get_cotexture =
       [&scene, &cotexture_map](
           const cgltf_texture_view& ginfo) -> std::pair<texture*, texture*> {
@@ -2015,8 +2028,9 @@ static bool load_gltf_scene(const std::string& filename, model* scene, std::stri
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map = std::unordered_map<std::string, std::pair<texture*, texture*>>{
-      {"", {nullptr, nullptr}}};
+  auto mrtexture_map =
+      std::unordered_map<std::string, std::pair<texture*, texture*>>{
+          {"", {nullptr, nullptr}}};
   auto get_mrtexture =
       [&scene, &mrtexture_map](
           const cgltf_texture_view& ginfo) -> std::pair<texture*, texture*> {
@@ -2058,7 +2072,8 @@ static bool load_gltf_scene(const std::string& filename, model* scene, std::stri
   }
 
   // convert meshes
-  auto mesh_map = std::unordered_map<cgltf_mesh*, std::vector<object*>>{{nullptr, {}}};
+  auto mesh_map = std::unordered_map<cgltf_mesh*, std::vector<object*>>{
+      {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
@@ -2326,8 +2341,8 @@ static bool load_gltf_scene(const std::string& filename, model* scene, std::stri
 namespace yocto::sceneio {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+static bool load_pbrt_scene(const std::string& filename, model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -2357,7 +2372,8 @@ static bool load_pbrt_scene(const std::string& filename, model* scene, std::stri
 
   // convert materials
   auto ctexture_map = std::unordered_map<std::string, texture*>{{"", nullptr}};
-  auto get_ctexture = [&scene, &ctexture_map](const std::string& path) -> texture* {
+  auto get_ctexture = [&scene, &ctexture_map](
+                          const std::string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
@@ -2366,7 +2382,8 @@ static bool load_pbrt_scene(const std::string& filename, model* scene, std::stri
     return texture;
   };
   auto stexture_map = std::unordered_map<std::string, texture*>{{"", nullptr}};
-  auto get_stexture = [&scene, &stexture_map](const std::string& path) -> texture* {
+  auto get_stexture = [&scene, &stexture_map](
+                          const std::string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
@@ -2375,7 +2392,8 @@ static bool load_pbrt_scene(const std::string& filename, model* scene, std::stri
     return texture;
   };
   auto atexture_map = std::unordered_map<std::string, texture*>{{"", nullptr}};
-  auto get_atexture = [&scene, &atexture_map](const std::string& path) -> texture* {
+  auto get_atexture = [&scene, &atexture_map](
+                          const std::string& path) -> texture* {
     if (path == "") return nullptr;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;
@@ -2569,8 +2587,9 @@ static bool save_pbrt_scene(const std::string& filename, const model* scene,
   progress.y += (int)scene->shapes.size() + (int)scene->textures.size();
 
   // get filename from name
-  auto get_filename = [filename](const std::string& name, const std::string& group,
-                          const std::string& extension) {
+  auto get_filename = [filename](const std::string& name,
+                          const std::string&        group,
+                          const std::string&        extension) {
     return fs::path(filename).parent_path() / group / (name + extension);
   };
 
