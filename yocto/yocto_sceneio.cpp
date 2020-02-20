@@ -1568,7 +1568,6 @@ namespace yocto::sceneio {
 // Loads an OBJ
 static bool load_obj_scene(const string& filename, sceneio_model* scene,
     string& error, sceneio_progress progress_cb, bool noparallel) {
-  using namespace yocto::obj;
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1583,7 +1582,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = make_unique<obj_model>();
+  auto obj_guard = make_unique<obj::model>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -1606,7 +1605,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // helper to create texture maps
   auto ctexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const obj_texture_info& info) -> sceneio_texture* {
+                          const obj::texture_info& info) -> sceneio_texture* {
     auto path = info.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1619,7 +1618,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // helper to create texture maps
   auto stexture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const obj_texture_info& info) -> sceneio_texture* {
+                          const obj::texture_info& info) -> sceneio_texture* {
     auto path = info.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1630,7 +1629,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   };
 
   // handler for materials
-  auto material_map = unordered_map<obj_material*, sceneio_material*>{};
+  auto material_map = unordered_map<obj::obj_material*, sceneio_material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1757,7 +1756,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = make_unique<obj_model>();
+  auto obj_guard = make_unique<yocto::obj::model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1775,8 +1774,8 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
 
   // textures
   auto get_texture = [](sceneio_texture* texture) {
-    if (!texture) return obj_texture_info{};
-    auto info = obj_texture_info{};
+    if (!texture) return obj::texture_info{};
+    auto info = obj::texture_info{};
     info.path = texture->name;
     return info;
   };

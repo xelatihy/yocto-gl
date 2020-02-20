@@ -3380,8 +3380,7 @@ static string get_extension(const string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    using namespace yocto::obj;
-    auto obj_guard = make_unique<obj_model>();
+    auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -3393,7 +3392,7 @@ static string get_extension(const string& filename) {
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = vector<obj_material*>{};
+    auto materials  = vector<obj::obj_material*>{};
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
@@ -3452,8 +3451,7 @@ static string get_extension(const string& filename) {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    using namespace yocto::obj;
-    auto obj_guard = make_unique<obj_model>();
+    auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
@@ -3514,15 +3512,14 @@ static string get_extension(const string& filename) {
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    using namespace yocto::obj;
-    auto obj_guard = make_unique<obj_model>();
+    auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
     if (obj->shapes.empty()) return shape_error();
     if (obj->shapes.size() > 1) return shape_error();
     auto shape = obj->shapes.front();
     if (shape->faces.empty()) return shape_error();
-    auto materials  = vector<obj_material*>{};
+    auto materials  = vector<obj::obj_material*>{};
     auto ematerials = vector<int>{};
     get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
@@ -3569,8 +3566,7 @@ static string get_extension(const string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
-    using namespace yocto::obj;
-    auto obj_guard = make_unique<obj_model>();
+    auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
 
     // Add obj data
