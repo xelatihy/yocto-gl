@@ -30,7 +30,6 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
-namespace ycl = yocto::commonio;
 
 #include <memory>
 using std::string;

@@ -30,7 +30,6 @@
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto::math;
-namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
 
 #include <future>

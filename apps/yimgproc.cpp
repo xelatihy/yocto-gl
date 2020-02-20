@@ -31,7 +31,6 @@
 #include "../yocto/yocto_math.h"
 using namespace yocto::math;
 namespace ym = yocto::math;
-namespace ycl = yocto::commonio;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"

@@ -30,7 +30,6 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto::math;
-namespace ycl = yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

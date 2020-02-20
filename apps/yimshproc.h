@@ -7,7 +7,6 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto::math;
-namespace ycl = yocto::commonio;
 namespace ygl = yocto::opengl;
 namespace ybv = yocto::bvh;
 
