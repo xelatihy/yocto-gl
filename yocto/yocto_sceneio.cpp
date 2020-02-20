@@ -1781,7 +1781,8 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
   };
 
   // convert materials and textures
-  auto material_map = unordered_map<sceneio_material*, obj::material*>{{nullptr, nullptr}};
+  auto material_map = unordered_map<sceneio_material*, obj::material*>{
+      {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
     omaterial->name                 = fs::path(material->name).stem();
@@ -1804,7 +1805,7 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     omaterial->pbr_coat_tex         = get_texture(material->coat_tex);
     omaterial->pbr_opacity_tex      = get_texture(material->opacity_tex);
     omaterial->normal_tex           = get_texture(material->normal_tex);
-    material_map[material] = omaterial;
+    material_map[material]          = omaterial;
   }
 
   // convert objects
@@ -1813,27 +1814,22 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
     for (auto& n : normals) n = transform_normal(object->frame, n);
-    auto oshape = add_shape(obj);
-    oshape->name = shape->name;
+    auto oshape       = add_shape(obj);
+    oshape->name      = shape->name;
     oshape->materials = {material_map.at(object->material)};
-    if(object->instance)
-    oshape->instances = object->instance->frames;
+    if (object->instance) oshape->instances = object->instance->frames;
     if (!shape->triangles.empty()) {
       set_triangles(oshape, shape->triangles, positions, normals,
-          shape->texcoords, {},
-          true);
+          shape->texcoords, {}, true);
     } else if (!shape->quads.empty()) {
-      set_quads(oshape, shape->quads, positions, normals,
-          shape->texcoords, {}, 
-          true);
+      set_quads(
+          oshape, shape->quads, positions, normals, shape->texcoords, {}, true);
     } else if (!shape->lines.empty()) {
-      set_lines(oshape, shape->lines, positions, normals,
-          shape->texcoords, {}, 
-          true);
+      set_lines(
+          oshape, shape->lines, positions, normals, shape->texcoords, {}, true);
     } else if (!shape->points.empty()) {
-      set_points(oshape, shape->points, positions, normals,
-          shape->texcoords, {}, 
-          true);
+      set_points(oshape, shape->points, positions, normals, shape->texcoords,
+          {}, true);
     } else {
       return shape_error();
     }

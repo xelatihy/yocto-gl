@@ -577,8 +577,7 @@ inline pbrt_value make_value(const string& name, const vec3f& value,
   pbrt.value3f = value;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec2f>&                        value,
+inline pbrt_value make_value(const string& name, const vector<vec2f>& value,
     pbrt_value_type type = pbrt_value_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -586,16 +585,15 @@ inline pbrt_value make_value(const string& name,
   pbrt.vector2f = value;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec3f>& value, pbrt_value_type type = pbrt_value_type::point) {
+inline pbrt_value make_value(const string& name, const vector<vec3f>& value,
+    pbrt_value_type type = pbrt_value_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = value;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec3i>&                        value,
+inline pbrt_value make_value(const string& name, const vector<vec3i>& value,
     pbrt_value_type type = pbrt_value_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -880,8 +878,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
 
 [[nodiscard]] inline bool parse_params(
     string_view& str, vector<pbrt_value>& values) {
-  auto parse_pvalues = [](string_view& str, auto& value,
-                                auto& values) -> bool {
+  auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
     if (str.empty()) return false;
@@ -995,8 +992,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
                 get_etak(fs::path(filenamep).replace_extension("")).first;
             value.value3f = {eta.x, eta.y, eta.z};
           } else if (fs::path(filenamep).extension() == ".k") {
-            auto k =
-                get_etak(fs::path(filenamep).replace_extension("")).second;
+            auto k = get_etak(fs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
@@ -1006,8 +1002,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
         }
       } else {
         value.type = pbrt_value_type::spectrum;
-        if (!parse_pvalues(str, value.value1f, value.vector1f))
-          return false;
+        if (!parse_pvalues(str, value.value1f, value.vector1f)) return false;
       }
     } else {
       return false;
@@ -1768,8 +1763,8 @@ inline bool convert_light(pbrt_light* light, const pbrt_command& command,
         lookat_frame(normalize(light->from - light->to) * distant_dist, zero3f,
             {0, 1, 0}, true);
     auto texcoords = vector<vec2f>{};
-    make_quad(light->area_triangles, light->area_positions,
-        light->area_normals, texcoords, {4, 2}, size);
+    make_quad(light->area_triangles, light->area_positions, light->area_normals,
+        texcoords, {4, 2}, size);
     return true;
   } else if (command.type == "point" || command.type == "goniometric" ||
              command.type == "spot") {
@@ -2315,10 +2310,8 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
   for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
     command.type = "image";
-    command.values.push_back(
-        make_value("xresolution", camera->resolution.x));
-    command.values.push_back(
-        make_value("yresolution", camera->resolution.y));
+    command.values.push_back(make_value("xresolution", camera->resolution.x));
+    command.values.push_back(make_value("yresolution", camera->resolution.y));
     command.values.push_back(make_value("filename", "image.exr"s));
     if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();
@@ -2328,8 +2321,8 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
     auto command  = pbrt_command{};
     command.type  = "perspective";
     command.frame = camera->frame;
-    command.values.push_back(make_value(
-        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
+    command.values.push_back(
+        make_value("fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
@@ -2363,8 +2356,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
     command.frame = environment->frame;
     command.type  = "infinite";
     command.values.push_back(make_value("L", environment->emission));
-    command.values.push_back(
-        make_value("mapname", environment->emission_tex));
+    command.values.push_back(make_value("mapname", environment->emission_tex));
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", (mat4f)command.frame))
       return write_error();
@@ -2402,12 +2394,11 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
       if (material->color_tex.empty()) {
         command.values.push_back(make_value("Kd", material->color));
       } else if (material->color != zero3f) {
-        command.values.push_back(make_value(
-            "Kd", material->color_tex, pbrt_value_type::texture));
+        command.values.push_back(
+            make_value("Kd", material->color_tex, pbrt_value_type::texture));
       }
       if (material->specular != 0) {
-        command.values.push_back(
-            make_value("Ks", vec3f{material->specular}));
+        command.values.push_back(make_value("Ks", vec3f{material->specular}));
         command.values.push_back(
             make_value("roughness", pow(material->roughness, 2)));
         command.values.push_back(make_value("eta", material->ior));
@@ -2469,8 +2460,7 @@ inline void format_value(string& str, const vector<pbrt_value>& values) {
     if (shape->material->emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
-      acommand.values.push_back(
-          make_value("L", shape->material->emission));
+      acommand.values.push_back(make_value("L", shape->material->emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();

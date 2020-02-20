@@ -3396,8 +3396,8 @@ static string get_extension(const string& filename) {
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
-      get_triangles(shape, triangles, positions, normals, texcoords,
-          materials, ematerials, flip_texcoord);
+      get_triangles(shape, triangles, positions, normals, texcoords, materials,
+          ematerials, flip_texcoord);
     } else if (!shape->faces.empty() && has_quads_) {
       get_quads(shape, quads, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
@@ -3453,19 +3453,19 @@ static string get_extension(const string& filename) {
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
-    auto oshape = add_shape(obj);
+    auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
-      set_triangles(oshape, triangles, positions, normals, texcoords, {}, 
-          flip_texcoord);
+      set_triangles(
+          oshape, triangles, positions, normals, texcoords, {}, flip_texcoord);
     } else if (!quads.empty()) {
-      set_quads(oshape, quads, positions, normals, texcoords, {}, 
-          flip_texcoord);
+      set_quads(
+          oshape, quads, positions, normals, texcoords, {}, flip_texcoord);
     } else if (!lines.empty()) {
-      set_lines(oshape, lines, positions, normals, texcoords, {}, 
-          flip_texcoord);
+      set_lines(
+          oshape, lines, positions, normals, texcoords, {}, flip_texcoord);
     } else if (!points.empty()) {
-      set_points(oshape, points, positions, normals, texcoords, {}, 
-          flip_texcoord);
+      set_points(
+          oshape, points, positions, normals, texcoords, {}, flip_texcoord);
     } else {
       return shape_error();
     }
@@ -3522,8 +3522,8 @@ static string get_extension(const string& filename) {
     if (shape->faces.empty()) return shape_error();
     auto materials  = vector<obj::material*>{};
     auto ematerials = vector<int>{};
-    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, materials, ematerials, flip_texcoord);
+    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, materials, ematerials, flip_texcoord);
     if (positions.empty()) return shape_error();
     return true;
   } else {

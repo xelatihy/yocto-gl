@@ -58,8 +58,8 @@ enum struct property_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 // Ply property
 struct property {
   // description
-  string   name    = "";
-  bool     is_list = false;
+  string        name    = "";
+  bool          is_list = false;
   property_type type    = property_type::f32;
 
   // data if property is loaded
@@ -80,16 +80,16 @@ struct property {
 
 // Ply elements
 struct element {
-  string                name       = "";
-  size_t                count      = 0;
+  string            name       = "";
+  size_t            count      = 0;
   vector<property*> properties = {};
   ~element();
 };
 
 // Ply model
 struct model {
-  format_type           format   = format_type::binary_little_endian;
-  vector<string>       comments = {};
+  format_type      format   = format_type::binary_little_endian;
+  vector<string>   comments = {};
   vector<element*> elements = {};
   ~model();
 };
@@ -462,8 +462,9 @@ inline property* add_property(element* element) {
 // Load ply
 inline bool load_ply(const string& filename, model* ply, string& error) {
   // ply type names
-  static auto type_map = unordered_map<string, property_type>{{"char", property_type::i8},
-      {"short", property_type::i16}, {"int", property_type::i32}, {"long", property_type::i64},
+  static auto type_map = unordered_map<string, property_type>{
+      {"char", property_type::i8}, {"short", property_type::i16},
+      {"int", property_type::i32}, {"long", property_type::i64},
       {"uchar", property_type::u8}, {"ushort", property_type::u16},
       {"uint", property_type::u32}, {"ulong", property_type::u64},
       {"float", property_type::f32}, {"double", property_type::f64},
@@ -548,8 +549,7 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
       if (!parse_value(str, elem->count)) return parse_error();
     } else if (cmd == "property") {
       if (ply->elements.empty()) return parse_error();
-      auto prop = ply->elements.back()->properties.emplace_back(
-          new property{});
+      auto prop = ply->elements.back()->properties.emplace_back(new property{});
       auto tname = ""s;
       if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
@@ -721,8 +721,9 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
 // Save ply
 inline bool save_ply(const string& filename, model* ply, string& error) {
   // ply type names
-  static auto type_map = unordered_map<property_type, string>{{property_type::i8, "char"},
-      {property_type::i16, "short"}, {property_type::i32, "int"}, {property_type::i64, "uint"},
+  static auto type_map = unordered_map<property_type, string>{
+      {property_type::i8, "char"}, {property_type::i16, "short"},
+      {property_type::i32, "int"}, {property_type::i64, "uint"},
       {property_type::u8, "uchar"}, {property_type::u16, "ushort"},
       {property_type::u32, "uint"}, {property_type::u64, "ulong"},
       {property_type::f32, "float"}, {property_type::f64, "double"}};
@@ -990,8 +991,8 @@ inline vector<vec4f> get_values(model* ply, const string& element,
     values[i] = {x[i], y[i], z[i], w};
   return values;
 }
-inline vector<frame3f> get_values(model* ply, const string& element,
-    const array<string, 12>& properties) {
+inline vector<frame3f> get_values(
+    model* ply, const string& element, const array<string, 12>& properties) {
   auto coords = array<vector<float>, 12>{};
   for (auto idx = 0; idx < 12; idx++)
     coords[idx] = get_values(ply, element, properties[idx]);
@@ -1130,7 +1131,8 @@ inline void add_element(model* ply, const string& element_name, size_t count) {
   elem->count = count;
 }
 inline void add_property(model* ply, const string& element_name,
-    const string& property_name, size_t count, property_type type, bool is_list) {
+    const string& property_name, size_t count, property_type type,
+    bool is_list) {
   add_element(ply, element_name, count);
   for (auto elem : ply->elements) {
     if (elem->name != element_name) continue;
@@ -1250,8 +1252,7 @@ inline void add_positions(model* ply, const vector<vec3f>& values) {
 inline void add_normals(model* ply, const vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-inline void add_texcoords(
-    model* ply, const vector<vec2f>& values, bool flipv) {
+inline void add_texcoords(model* ply, const vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
@@ -1264,8 +1265,8 @@ inline void add_radius(model* ply, const vector<float>& values) {
 inline void add_faces(model* ply, const vector<vector<int>>& values) {
   return add_lists(ply, values, "face", "vertex_indices");
 }
-inline void add_faces(model* ply, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
+inline void add_faces(
+    model* ply, const vector<vec3i>& triangles, const vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return;
   if (quads.empty()) {
     return add_lists(ply, triangles, "face", "vertex_indices");

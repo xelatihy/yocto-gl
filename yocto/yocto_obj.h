@@ -143,16 +143,16 @@ struct material {
 
 // Obj shape
 struct shape {
-  string                name      = "";
-  vector<vec3f>         positions = {};
-  vector<vec3f>         normals   = {};
-  vector<vec2f>         texcoords = {};
+  string            name      = "";
+  vector<vec3f>     positions = {};
+  vector<vec3f>     normals   = {};
+  vector<vec2f>     texcoords = {};
   vector<material*> materials = {};
   vector<vertex>    vertices  = {};
   vector<element>   faces     = {};
   vector<element>   lines     = {};
   vector<element>   points    = {};
-  vector<frame3f>       instances = {};
+  vector<frame3f>   instances = {};
 };
 
 // Obj camera
@@ -169,15 +169,15 @@ struct camera {
 
 // Obj environment
 struct environment {
-  string           name         = "";
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = zero3f;
+  string  name         = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = zero3f;
   texture emission_tex = {};
 };
 
 // Obj model
 struct model {
-  vector<string>           comments     = {};
+  vector<string>       comments     = {};
   vector<shape*>       shapes       = {};
   vector<material*>    materials    = {};
   vector<camera*>      cameras      = {};
@@ -195,10 +195,10 @@ inline bool save_obj(const string& filename, model* obj, string& error);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_triangles(const shape* shape,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+inline void get_triangles(const shape* shape, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 inline void get_quads(const shape* shape, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<material*>& materials, vector<int>& ematerials,
@@ -211,10 +211,9 @@ inline void get_points(const shape* shape, vector<int>& points,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<material*>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
-inline void get_fvquads(const shape* shape,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_fvquads(const shape* shape, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<material*>& materials, vector<int>& ematerials,
     bool flip_texcoord = false);
 inline bool has_quads(shape* shape);
@@ -223,15 +222,15 @@ inline bool has_quads(shape* shape);
 inline void get_triangles(const shape* shape, int material,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
-inline void get_quads(const shape* shape, int material,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-inline void get_lines(const shape* shape, int material,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
-inline void get_points(const shape* shape, int material,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
+inline void get_quads(const shape* shape, int material, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+inline void get_lines(const shape* shape, int material, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
+inline void get_points(const shape* shape, int material, vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
 
 // Create OBJ
 inline camera*      add_camera(model* obj);
@@ -240,37 +239,29 @@ inline environment* add_environment(model* obj);
 inline shape*       add_shape(model* obj);
 
 // Add obj shape
-inline void set_triangles(shape* shape, 
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, 
+inline void set_triangles(shape* shape, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_quads(shape* shape, 
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, 
+inline void add_quads(shape* shape, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_lines(shape* shape, 
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<material*>& materials = {},
-    const vector<int>& ematerials = {}, 
+inline void set_lines(shape* shape, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<material*>& materials = {},
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+inline void set_points(shape* shape, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_points(shape* shape, 
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, 
+inline void set_fvquads(shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void set_fvquads(shape* shape, 
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, 
-    bool flip_texcoord = false);
-inline void set_materials(shape* shape, 
-    const vector<material*>& materials);
-inline void set_instances(shape* shape, 
-    const vector<frame3f>& instances);
+inline void set_materials(shape* shape, const vector<material*>& materials);
+inline void set_instances(shape* shape, const vector<frame3f>& instances);
 
 }  // namespace yocto::obj
 
@@ -482,8 +473,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // Input for OBJ textures
-[[nodiscard]] inline bool parse_value(
-    string_view& str, texture& info) {
+[[nodiscard]] inline bool parse_value(string_view& str, texture& info) {
   // initialize
   info = texture();
 
@@ -1421,10 +1411,9 @@ inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-inline void get_triangles(const shape* shape,
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<material*>& materials,
-    vector<int>& ematerials, bool flipv) {
+inline void get_triangles(const shape* shape, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -1502,10 +1491,9 @@ inline void get_points(const shape* shape, vector<int>& points,
     cur += point.size;
   }
 }
-inline void get_fvquads(const shape* shape,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
+inline void get_fvquads(const shape* shape, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<material*>& materials, vector<int>& ematerials, bool flipv) {
   if (shape->faces.empty()) return;
   positions = shape->positions;
@@ -1634,9 +1622,9 @@ inline void get_triangles(const shape* shape, int material,
   }
   triangles.shrink_to_fit();
 }
-inline void get_quads(const shape* shape, int material,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+inline void get_quads(const shape* shape, int material, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -1658,9 +1646,9 @@ inline void get_quads(const shape* shape, int material,
   }
   quads.shrink_to_fit();
 }
-inline void get_lines(const shape* shape, int material,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+inline void get_lines(const shape* shape, int material, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flipv) {
   if (shape->lines.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -1676,9 +1664,9 @@ inline void get_lines(const shape* shape, int material,
   }
   lines.shrink_to_fit();
 }
-inline void get_points(const shape* shape, int material,
-    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flipv) {
+inline void get_points(const shape* shape, int material, vector<int>& points,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flipv) {
   if (shape->points.empty()) return;
   auto vindex = vector<int>{};
   get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
@@ -1695,10 +1683,9 @@ inline void get_points(const shape* shape, int material,
 }
 
 // Add obj shape
-inline void set_triangles(shape* shape,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+inline void set_triangles(shape* shape, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1716,10 +1703,9 @@ inline void set_triangles(shape* shape,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_quads(shape* shape, 
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials,  bool flipv) {
+inline void set_quads(shape* shape, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1738,10 +1724,9 @@ inline void set_quads(shape* shape,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_lines(shape* shape,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+inline void set_lines(shape* shape, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1759,10 +1744,9 @@ inline void set_lines(shape* shape,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_points(shape* shape, 
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+inline void set_points(shape* shape, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1778,11 +1762,10 @@ inline void set_points(shape* shape,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_fvquads(shape* shape,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+inline void set_fvquads(shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1800,14 +1783,12 @@ inline void set_fvquads(shape* shape,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void set_materials(shape* shape, 
-    const vector<material*>& materials) {
-      shape->materials = materials;
-    }
-inline void set_instances(shape* shape, 
-    const vector<frame3f>& instances) {
-      shape->instances = instances;
-    }
+inline void set_materials(shape* shape, const vector<material*>& materials) {
+  shape->materials = materials;
+}
+inline void set_instances(shape* shape, const vector<frame3f>& instances) {
+  shape->instances = instances;
+}
 
 }  // namespace yocto::obj
 
