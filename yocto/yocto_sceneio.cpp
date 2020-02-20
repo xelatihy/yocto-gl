@@ -58,17 +58,7 @@
 namespace fs = ghc::filesystem;
 using namespace std::string_literals;
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-#endif
-
-#define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS

@@ -8,6 +8,8 @@ option(YOCTO_TESTING "Enable testing" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_subdirectory(ext)
+
 add_library(yocto 
   yocto_math.h yocto_commonio.h 
   yocto_ply.h yocto_obj.h yocto_pbrt.h 
@@ -19,6 +21,8 @@ add_library(yocto
 )
 
 set_target_properties(yocto PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+
+target_link_libraries(yocto yocto-ext)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)
