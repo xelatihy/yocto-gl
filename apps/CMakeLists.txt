@@ -32,9 +32,6 @@ if(YOCTO_OPENGL)
   set(GLFW_INSTALL OFF CACHE BOOL " " FORCE)
   add_subdirectory(ext/glfw glfw)
 
-  include_directories(.)
-  add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
-
   add_library(yocto-opengl 
     yocto_opengl.h 
     yocto_opengl.cpp 
@@ -45,6 +42,8 @@ if(YOCTO_OPENGL)
     ext/imgui/imgui_impl_opengl3.cpp 
     ext/glad/glad.c)
   
+  target_include_directories(yocto-opengl PRIVATE .)
+  target_compile_definitions(yocto-opengl PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   set_target_properties(yocto-opengl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
   target_link_libraries(yocto-opengl glfw ${OPENGL_gl_LIBRARY})
