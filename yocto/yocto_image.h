@@ -116,9 +116,9 @@ using ym::vec2i;
 using ym::vec3b;
 using ym::vec3f;
 using ym::vec3i;
+using ym::vec4b;
 using ym::vec4f;
 using ym::vec4i;
-using ym::vec4b;
 
 // Image container.
 template <typename T>

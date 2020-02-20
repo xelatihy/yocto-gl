@@ -229,7 +229,7 @@ bool make_image_preset(
   return true;
 }
 
-}  // namespace yocto::image
+}  // namespace yim
 
 int main(int argc, const char* argv[]) {
   // command line parameters

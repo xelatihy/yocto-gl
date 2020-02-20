@@ -77,20 +77,19 @@ using namespace ym;
 using ym::abs;
 using ym::acos;
 using ym::atan2;
-using ym::sin;
+using ym::clamp;
 using ym::cos;
-using ym::tan;
 using ym::exp;
 using ym::exp2;
 using ym::fmod;
 using ym::log;
 using ym::log2;
+using ym::max;
+using ym::min;
 using ym::pow;
 using ym::sin;
 using ym::sqrt;
-using ym::min;
-using ym::max;
-using ym::clamp;
+using ym::tan;
 
 }  // namespace yim
 

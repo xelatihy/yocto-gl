@@ -26,12 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <memory>
+
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
-
-#include <memory>
 using std::string;
 using namespace std::string_literals;
 
