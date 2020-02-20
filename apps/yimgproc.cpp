@@ -103,8 +103,6 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-}  // namespace yocto::image
-
 bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
@@ -228,6 +226,8 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   }
   return true;
 }
+
+}  // namespace yocto::image
 
 int main(int argc, const char* argv[]) {
   // command line parameters
