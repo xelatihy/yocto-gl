@@ -1661,7 +1661,7 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
   for (auto oshape : obj->shapes) {
-    auto materials = get_materials(obj, oshape);
+    auto& materials = oshape->materials;
     if (materials.empty()) materials.push_back(nullptr);
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
@@ -1670,19 +1670,19 @@ static bool load_obj_scene(const string& filename, sceneio_model* scene,
       object->material = material_map.at(materials[material_idx]);
       auto has_quads_  = has_quads(oshape);
       if (!oshape->faces.empty() && !has_quads_) {
-        get_triangles(obj, oshape, material_idx, object->shape->triangles,
+        get_triangles(oshape, material_idx, object->shape->triangles,
             object->shape->positions, object->shape->normals,
             object->shape->texcoords, true);
       } else if (!oshape->faces.empty() && has_quads_) {
-        get_quads(obj, oshape, material_idx, object->shape->quads,
+        get_quads(oshape, material_idx, object->shape->quads,
             object->shape->positions, object->shape->normals,
             object->shape->texcoords, true);
       } else if (!oshape->lines.empty()) {
-        get_lines(obj, oshape, material_idx, object->shape->lines,
+        get_lines(oshape, material_idx, object->shape->lines,
             object->shape->positions, object->shape->normals,
             object->shape->texcoords, true);
       } else if (!oshape->points.empty()) {
-        get_points(obj, oshape, material_idx, object->shape->points,
+        get_points(oshape, material_idx, object->shape->points,
             object->shape->positions, object->shape->normals,
             object->shape->texcoords, true);
       } else {
@@ -1811,25 +1811,26 @@ static bool save_obj_scene(const string& filename, const sceneio_model* scene,
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
     for (auto& n : normals) n = transform_normal(object->frame, n);
+    auto oshape = add_shape(obj);
+    oshape->name = shape->name;
+    oshape->materials = {material_map.at(object->material)};
+    if(object->instance)
+    oshape->instances = object->instance->frames;
     if (!shape->triangles.empty()) {
-      add_triangles(obj, shape->name, shape->triangles, positions, normals,
-          shape->texcoords, {}, {},
-          object->instance ? object->instance->frames : vector<frame3f>{},
+      set_triangles(oshape, shape->triangles, positions, normals,
+          shape->texcoords, {},
           true);
     } else if (!shape->quads.empty()) {
-      add_quads(obj, shape->name, shape->quads, positions, normals,
-          shape->texcoords, {}, {},
-          object->instance ? object->instance->frames : vector<frame3f>{},
+      set_quads(oshape, shape->quads, positions, normals,
+          shape->texcoords, {}, 
           true);
     } else if (!shape->lines.empty()) {
-      add_lines(obj, shape->name, shape->lines, positions, normals,
-          shape->texcoords, {}, {},
-          object->instance ? object->instance->frames : vector<frame3f>{},
+      set_lines(oshape, shape->lines, positions, normals,
+          shape->texcoords, {}, 
           true);
     } else if (!shape->points.empty()) {
-      add_points(obj, shape->name, shape->points, positions, normals,
-          shape->texcoords, {}, {},
-          object->instance ? object->instance->frames : vector<frame3f>{},
+      set_points(oshape, shape->points, positions, normals,
+          shape->texcoords, {}, 
           true);
     } else {
       return shape_error();

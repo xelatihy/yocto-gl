@@ -3396,16 +3396,16 @@ static string get_extension(const string& filename) {
     auto ematerials = vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
-      get_triangles(obj, shape, triangles, positions, normals, texcoords,
+      get_triangles(shape, triangles, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
     } else if (!shape->faces.empty() && has_quads_) {
-      get_quads(obj, shape, quads, positions, normals, texcoords, materials,
+      get_quads(shape, quads, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else if (!shape->lines.empty()) {
-      get_lines(obj, shape, lines, positions, normals, texcoords, materials,
+      get_lines(shape, lines, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else if (!shape->points.empty()) {
-      get_points(obj, shape, points, positions, normals, texcoords, materials,
+      get_points(shape, points, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else {
       return shape_error();
@@ -3453,17 +3453,18 @@ static string get_extension(const string& filename) {
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj_guard = make_unique<obj::model>();
     auto obj       = obj_guard.get();
+    auto oshape = add_shape(obj);
     if (!triangles.empty()) {
-      add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
-          {}, flip_texcoord);
+      set_triangles(oshape, triangles, positions, normals, texcoords, {}, 
+          flip_texcoord);
     } else if (!quads.empty()) {
-      add_quads(obj, "", quads, positions, normals, texcoords, {}, {}, {},
+      set_quads(oshape, quads, positions, normals, texcoords, {}, 
           flip_texcoord);
     } else if (!lines.empty()) {
-      add_lines(obj, "", lines, positions, normals, texcoords, {}, {}, {},
+      set_lines(oshape, lines, positions, normals, texcoords, {}, 
           flip_texcoord);
     } else if (!points.empty()) {
-      add_points(obj, "", points, positions, normals, texcoords, {}, {}, {},
+      set_points(oshape, points, positions, normals, texcoords, {}, 
           flip_texcoord);
     } else {
       return shape_error();
@@ -3521,7 +3522,7 @@ static string get_extension(const string& filename) {
     if (shape->faces.empty()) return shape_error();
     auto materials  = vector<obj::material*>{};
     auto ematerials = vector<int>{};
-    get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
     if (positions.empty()) return shape_error();
     return true;
@@ -3570,8 +3571,9 @@ static string get_extension(const string& filename) {
     auto obj       = obj_guard.get();
 
     // Add obj data
-    add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, {}, {}, {}, flip_texcoord);
+    auto oshape = add_shape(obj);
+    set_fvquads(oshape, quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, {}, flip_texcoord);
 
     // Save
     if (!save_obj(filename, obj, error)) return false;
