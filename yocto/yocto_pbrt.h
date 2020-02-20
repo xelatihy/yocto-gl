@@ -2343,7 +2343,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
-        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / ym::pif));
+        "fov", 2 * ym::tan(0.036f / (2 * camera->lens)) * 180 / ym::pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
