@@ -88,11 +88,6 @@ int main(int argc, const char* argv[]) {
     }
   }
 
-  // check hack
-  if(std::any_of(scene->shapes.begin(), scene->shapes.end(), [](auto shape){
-    return shape->normals.empty();
-  })) ycli::print_info("SHAPES WITHOUT NORMALS");
-
   // make a directory if needed
   make_dir(fs::path(output).parent_path());
   if (!scene->shapes.empty())
