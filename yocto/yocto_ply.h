@@ -50,17 +50,17 @@ using namespace yocto::math;
 
 // Type of ply file. For best performance, choose binary_little_endian when
 // writing ply files.
-enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
+enum struct format_type { ascii, binary_little_endian, binary_big_endian };
 
 // Type of Ply data
-enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
+enum struct property_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
 // Ply property
-struct ply_property {
+struct property {
   // description
   string   name    = "";
   bool     is_list = false;
-  ply_type type    = ply_type::f32;
+  property_type type    = property_type::f32;
 
   // data if property is loaded
   vector<int8_t>   data_i8  = {};
@@ -79,18 +79,18 @@ struct ply_property {
 };
 
 // Ply elements
-struct ply_element {
+struct element {
   string                name       = "";
   size_t                count      = 0;
-  vector<ply_property*> properties = {};
-  ~ply_element();
+  vector<property*> properties = {};
+  ~element();
 };
 
 // Ply model
 struct model {
-  ply_format           format   = ply_format::binary_little_endian;
+  format_type           format   = format_type::binary_little_endian;
   vector<string>       comments = {};
-  vector<ply_element*> elements = {};
+  vector<element*> elements = {};
   ~model();
 };
 
@@ -101,7 +101,7 @@ inline bool save_ply(const string& filename, model* ply, string& error);
 // Get ply properties
 inline bool has_property(
     model* ply, const string& element, const string& property);
-inline ply_property* get_property(
+inline property* get_property(
     model* ply, const string& element, const string& property);
 
 inline vector<float> get_values(
@@ -444,7 +444,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
-inline ply_element::~ply_element() {
+inline element::~element() {
   for (auto property : properties) delete property;
 }
 inline model::~model() {
@@ -452,26 +452,26 @@ inline model::~model() {
 }
 
 // Make ply
-inline ply_element* add_property(model* ply) {
-  return ply->elements.emplace_back(new ply_element{});
+inline element* add_property(model* ply) {
+  return ply->elements.emplace_back(new element{});
 }
-inline ply_property* add_property(ply_element* element) {
-  return element->properties.emplace_back(new ply_property{});
+inline property* add_property(element* element) {
+  return element->properties.emplace_back(new property{});
 }
 
 // Load ply
 inline bool load_ply(const string& filename, model* ply, string& error) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
-      {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
-      {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
-      {"uint", ply_type::u32}, {"ulong", ply_type::u64},
-      {"float", ply_type::f32}, {"double", ply_type::f64},
-      {"int8", ply_type::i8}, {"int16", ply_type::i16},
-      {"int32", ply_type::i32}, {"int64", ply_type::i64},
-      {"uint8", ply_type::u8}, {"uint16", ply_type::u16},
-      {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
-      {"float32", ply_type::f32}, {"float64", ply_type::f64}};
+  static auto type_map = unordered_map<string, property_type>{{"char", property_type::i8},
+      {"short", property_type::i16}, {"int", property_type::i32}, {"long", property_type::i64},
+      {"uchar", property_type::u8}, {"ushort", property_type::u16},
+      {"uint", property_type::u32}, {"ulong", property_type::u64},
+      {"float", property_type::f32}, {"double", property_type::f64},
+      {"int8", property_type::i8}, {"int16", property_type::i16},
+      {"int32", property_type::i32}, {"int64", property_type::i64},
+      {"uint8", property_type::u8}, {"uint16", property_type::u16},
+      {"uint32", property_type::u32}, {"uint64", property_type::u64},
+      {"float32", property_type::f32}, {"float64", property_type::f64}};
 
   // initialize data
   ply->comments.clear();
@@ -528,11 +528,11 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
       auto fmt = ""s;
       if (!parse_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
-        ply->format = ply_format::ascii;
+        ply->format = format_type::ascii;
       } else if (fmt == "binary_little_endian") {
-        ply->format = ply_format::binary_little_endian;
+        ply->format = format_type::binary_little_endian;
       } else if (fmt == "binary_big_endian") {
-        ply->format = ply_format::binary_big_endian;
+        ply->format = format_type::binary_big_endian;
       } else {
         return parse_error();
       }
@@ -543,20 +543,20 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
       skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
-      auto elem = ply->elements.emplace_back(new ply_element{});
+      auto elem = ply->elements.emplace_back(new element{});
       if (!parse_value(str, elem->name)) return parse_error();
       if (!parse_value(str, elem->count)) return parse_error();
     } else if (cmd == "property") {
       if (ply->elements.empty()) return parse_error();
       auto prop = ply->elements.back()->properties.emplace_back(
-          new ply_property{});
+          new property{});
       auto tname = ""s;
       if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop->is_list = true;
         if (!parse_value(str, tname)) return parse_error();
         auto itype = type_map.at(tname);
-        if (itype != ply_type::u8) return parse_error();
+        if (itype != property_type::u8) return parse_error();
         if (!parse_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end()) return parse_error();
         prop->type = type_map.at(tname);
@@ -582,23 +582,23 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
     for (auto property : element->properties) {
       auto count = property->is_list ? element->count * 3 : element->count;
       switch (property->type) {
-        case ply_type::i8: property->data_i8.reserve(count); break;
-        case ply_type::i16: property->data_i16.reserve(count); break;
-        case ply_type::i32: property->data_i32.reserve(count); break;
-        case ply_type::i64: property->data_i64.reserve(count); break;
-        case ply_type::u8: property->data_u8.reserve(count); break;
-        case ply_type::u16: property->data_u16.reserve(count); break;
-        case ply_type::u32: property->data_u32.reserve(count); break;
-        case ply_type::u64: property->data_u64.reserve(count); break;
-        case ply_type::f32: property->data_f32.reserve(count); break;
-        case ply_type::f64: property->data_f64.reserve(count); break;
+        case property_type::i8: property->data_i8.reserve(count); break;
+        case property_type::i16: property->data_i16.reserve(count); break;
+        case property_type::i32: property->data_i32.reserve(count); break;
+        case property_type::i64: property->data_i64.reserve(count); break;
+        case property_type::u8: property->data_u8.reserve(count); break;
+        case property_type::u16: property->data_u16.reserve(count); break;
+        case property_type::u32: property->data_u32.reserve(count); break;
+        case property_type::u64: property->data_u64.reserve(count); break;
+        case property_type::f32: property->data_f32.reserve(count); break;
+        case property_type::f64: property->data_f64.reserve(count); break;
       }
       if (property->is_list) property->ldata_u8.reserve(element->count);
     }
   }
 
   // read data -------------------------------------
-  if (ply->format == ply_format::ascii) {
+  if (ply->format == format_type::ascii) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -612,43 +612,43 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case ply_type::i8:
+              case property_type::i8:
                 if (!parse_value(str, prop->data_i8.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::i16:
+              case property_type::i16:
                 if (!parse_value(str, prop->data_i16.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::i32:
+              case property_type::i32:
                 if (!parse_value(str, prop->data_i32.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::i64:
+              case property_type::i64:
                 if (!parse_value(str, prop->data_i64.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::u8:
+              case property_type::u8:
                 if (!parse_value(str, prop->data_u8.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::u16:
+              case property_type::u16:
                 if (!parse_value(str, prop->data_u16.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::u32:
+              case property_type::u32:
                 if (!parse_value(str, prop->data_u32.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::u64:
+              case property_type::u64:
                 if (!parse_value(str, prop->data_u64.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::f32:
+              case property_type::f32:
                 if (!parse_value(str, prop->data_f32.emplace_back()))
                   return parse_error();
                 break;
-              case ply_type::f64:
+              case property_type::f64:
                 if (!parse_value(str, prop->data_f64.emplace_back()))
                   return parse_error();
                 break;
@@ -658,7 +658,7 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
       }
     }
   } else {
-    auto big_endian = ply->format == ply_format::binary_big_endian;
+    auto big_endian = ply->format == format_type::binary_big_endian;
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto prop : elem->properties) {
@@ -669,43 +669,43 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case ply_type::i8:
+              case property_type::i8:
                 if (!read_value(fs, prop->data_i8.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::i16:
+              case property_type::i16:
                 if (!read_value(fs, prop->data_i16.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::i32:
+              case property_type::i32:
                 if (!read_value(fs, prop->data_i32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::i64:
+              case property_type::i64:
                 if (!read_value(fs, prop->data_i64.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::u8:
+              case property_type::u8:
                 if (!read_value(fs, prop->data_u8.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::u16:
+              case property_type::u16:
                 if (!read_value(fs, prop->data_u16.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::u32:
+              case property_type::u32:
                 if (!read_value(fs, prop->data_u32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::u64:
+              case property_type::u64:
                 if (!read_value(fs, prop->data_u64.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::f32:
+              case property_type::f32:
                 if (!read_value(fs, prop->data_f32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case ply_type::f64:
+              case property_type::f64:
                 if (!read_value(fs, prop->data_f64.emplace_back(), big_endian))
                   return read_error();
                 break;
@@ -721,15 +721,15 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
 // Save ply
 inline bool save_ply(const string& filename, model* ply, string& error) {
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
-      {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
-      {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
-      {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
-      {ply_type::f32, "float"}, {ply_type::f64, "double"}};
-  static auto format_map = unordered_map<ply_format, string>{
-      {ply_format::ascii, "ascii"},
-      {ply_format::binary_little_endian, "binary_little_endian"},
-      {ply_format::binary_big_endian, "binary_big_endian"}};
+  static auto type_map = unordered_map<property_type, string>{{property_type::i8, "char"},
+      {property_type::i16, "short"}, {property_type::i32, "int"}, {property_type::i64, "uint"},
+      {property_type::u8, "uchar"}, {property_type::u16, "ushort"},
+      {property_type::u32, "uint"}, {property_type::u64, "ulong"},
+      {property_type::f32, "float"}, {property_type::f64, "double"}};
+  static auto format_map = unordered_map<format_type, string>{
+      {format_type::ascii, "ascii"},
+      {format_type::binary_little_endian, "binary_little_endian"},
+      {format_type::binary_big_endian, "binary_big_endian"}};
 
   // error helpers
   auto open_error = [filename, &error]() {
@@ -775,7 +775,7 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
   if (!format_values(fs, "end_header\n")) return write_error();
 
   // properties
-  if (ply->format == ply_format::ascii) {
+  if (ply->format == format_type::ascii) {
     for (auto elem : ply->elements) {
       auto cur = vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -787,43 +787,43 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case ply_type::i8:
+              case property_type::i8:
                 if (!format_values(fs, "{} ", prop->data_i8[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::i16:
+              case property_type::i16:
                 if (!format_values(fs, "{} ", prop->data_i16[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::i32:
+              case property_type::i32:
                 if (!format_values(fs, "{} ", prop->data_i32[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::i64:
+              case property_type::i64:
                 if (!format_values(fs, "{} ", prop->data_i64[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::u8:
+              case property_type::u8:
                 if (!format_values(fs, "{} ", prop->data_u8[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::u16:
+              case property_type::u16:
                 if (!format_values(fs, "{} ", prop->data_u16[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::u32:
+              case property_type::u32:
                 if (!format_values(fs, "{} ", prop->data_u32[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::u64:
+              case property_type::u64:
                 if (!format_values(fs, "{} ", prop->data_u64[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::f32:
+              case property_type::f32:
                 if (!format_values(fs, "{} ", prop->data_f32[cur[idx]++]))
                   return write_error();
                 break;
-              case ply_type::f64:
+              case property_type::f64:
                 if (!format_values(fs, "{} ", prop->data_f64[cur[idx]++]))
                   return write_error();
                 break;
@@ -834,7 +834,7 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
       }
     }
   } else {
-    auto big_endian = ply->format == ply_format::binary_big_endian;
+    auto big_endian = ply->format == format_type::binary_big_endian;
     for (auto elem : ply->elements) {
       auto cur = vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -846,43 +846,43 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case ply_type::i8:
+              case property_type::i8:
                 if (!write_value(fs, prop->data_i8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::i16:
+              case property_type::i16:
                 if (!write_value(fs, prop->data_i16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::i32:
+              case property_type::i32:
                 if (!write_value(fs, prop->data_i32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::i64:
+              case property_type::i64:
                 if (!write_value(fs, prop->data_i64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::u8:
+              case property_type::u8:
                 if (!write_value(fs, prop->data_u8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::u16:
+              case property_type::u16:
                 if (!write_value(fs, prop->data_u16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::u32:
+              case property_type::u32:
                 if (!write_value(fs, prop->data_u32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::u64:
+              case property_type::u64:
                 if (!write_value(fs, prop->data_u64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::f32:
+              case property_type::f32:
                 if (!write_value(fs, prop->data_f32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case ply_type::f64:
+              case property_type::f64:
                 if (!write_value(fs, prop->data_f64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
@@ -907,7 +907,7 @@ inline bool has_property(
   }
   return false;
 }
-inline ply_property* get_property(
+inline property* get_property(
     model* ply, const string& element, const string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
@@ -924,18 +924,18 @@ inline vector<T> convert_property(const vector<T1>& prop) {
   return values;
 }
 template <typename T>
-inline vector<T> convert_property(ply_property* prop) {
+inline vector<T> convert_property(property* prop) {
   switch (prop->type) {
-    case ply_type::i8: return convert_property<T>(prop->data_i8);
-    case ply_type::i16: return convert_property<T>(prop->data_i16);
-    case ply_type::i32: return convert_property<T>(prop->data_i32);
-    case ply_type::i64: return convert_property<T>(prop->data_i64);
-    case ply_type::u8: return convert_property<T>(prop->data_u8);
-    case ply_type::u16: return convert_property<T>(prop->data_u16);
-    case ply_type::u32: return convert_property<T>(prop->data_u32);
-    case ply_type::u64: return convert_property<T>(prop->data_u64);
-    case ply_type::f32: return convert_property<T>(prop->data_f32);
-    case ply_type::f64: return convert_property<T>(prop->data_f64);
+    case property_type::i8: return convert_property<T>(prop->data_i8);
+    case property_type::i16: return convert_property<T>(prop->data_i16);
+    case property_type::i32: return convert_property<T>(prop->data_i32);
+    case property_type::i64: return convert_property<T>(prop->data_i64);
+    case property_type::u8: return convert_property<T>(prop->data_u8);
+    case property_type::u16: return convert_property<T>(prop->data_u16);
+    case property_type::u32: return convert_property<T>(prop->data_u32);
+    case property_type::u64: return convert_property<T>(prop->data_u64);
+    case property_type::f32: return convert_property<T>(prop->data_f32);
+    case property_type::f64: return convert_property<T>(prop->data_f64);
   }
   // return here to silence warnings
   std::runtime_error("should not have gotten here");
@@ -1121,25 +1121,25 @@ inline bool has_quads(model* ply) {
 }
 
 // Add ply properties
-inline void add_element(model* ply, const string& element, size_t count) {
+inline void add_element(model* ply, const string& element_name, size_t count) {
   for (auto elem : ply->elements) {
-    if (elem->name == element) return;
+    if (elem->name == element_name) return;
   }
-  auto elem   = ply->elements.emplace_back(new ply_element{});
-  elem->name  = element;
+  auto elem   = ply->elements.emplace_back(new element{});
+  elem->name  = element_name;
   elem->count = count;
 }
-inline void add_property(model* ply, const string& element,
-    const string& property, size_t count, ply_type type, bool is_list) {
-  add_element(ply, element, count);
+inline void add_property(model* ply, const string& element_name,
+    const string& property_name, size_t count, property_type type, bool is_list) {
+  add_element(ply, element_name, count);
   for (auto elem : ply->elements) {
-    if (elem->name != element) continue;
+    if (elem->name != element_name) continue;
     for (auto prop : elem->properties) {
-      if (prop->name == property)
+      if (prop->name == property_name)
         throw std::runtime_error("property already added");
     }
-    auto prop     = elem->properties.emplace_back(new ply_property{});
-    prop->name    = property;
+    auto prop     = elem->properties.emplace_back(new property{});
+    prop->name    = property_name;
     prop->type    = type;
     prop->is_list = is_list;
     return;
@@ -1156,7 +1156,7 @@ inline void add_values(model* ply, const float* values, size_t count,
     const string& element, const string* properties, int nprops) {
   if (!values) return;
   for (auto p = 0; p < nprops; p++) {
-    add_property(ply, element, properties[p], count, ply_type::f32, false);
+    add_property(ply, element, properties[p], count, property_type::f32, false);
     auto prop = get_property(ply, element, properties[p]);
     prop->data_f32.resize(count);
     for (auto i = 0; i < count; i++) prop->data_f32[i] = values[p + i * nprops];
@@ -1198,7 +1198,7 @@ inline void add_values(model* ply, const vector<frame3f>& values,
 inline void add_lists(model* ply, const vector<vector<int>>& values,
     const string& element, const string& property) {
   if (values.empty()) return;
-  add_property(ply, element, property, values.size(), ply_type::i32, true);
+  add_property(ply, element, property, values.size(), property_type::i32, true);
   auto prop = get_property(ply, element, property);
   prop->data_i32.reserve(values.size() * 4);
   prop->ldata_u8.reserve(values.size());
@@ -1210,7 +1210,7 @@ inline void add_lists(model* ply, const vector<vector<int>>& values,
 inline void add_lists(model* ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property) {
   if (values.empty()) return;
-  add_property(ply, element, property, sizes.size(), ply_type::i32, true);
+  add_property(ply, element, property, sizes.size(), property_type::i32, true);
   auto prop      = get_property(ply, element, property);
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
@@ -1218,7 +1218,7 @@ inline void add_lists(model* ply, const vector<byte>& sizes,
 inline void add_lists(model* ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
   if (!values) return;
-  add_property(ply, element, property, count, ply_type::i32, true);
+  add_property(ply, element, property, count, property_type::i32, true);
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
   prop->ldata_u8.assign(count, size);
