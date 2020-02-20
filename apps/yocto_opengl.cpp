@@ -62,12 +62,6 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto::opengl {
 
-// using directives
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
-
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
   assert(glGetError() == GL_NO_ERROR);
@@ -1355,7 +1349,7 @@ void init_glwindow(window* win, const vec2i& size, const std::string& title,
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
         auto win = (window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
-          auto pathv = std::vector<string>();
+          auto pathv = std::vector<std::string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
           win->drop_cb(win, pathv, win->input);
         }
@@ -1575,7 +1569,7 @@ bool draw_message(window* win, const char* lbl, const std::string& message) {
   }
 }
 
-std::deque<string> _message_queue = {};
+std::deque<std::string> _message_queue = {};
 std::mutex         _message_mutex;
 void               push_message(window* win, const std::string& message) {
   std::lock_guard lock(_message_mutex);
@@ -1632,11 +1626,11 @@ static std::string get_extension(const std::string& filename_) {
 struct filedialog_state {
   std::string                     dirname       = "";
   std::string                     filename      = "";
-  std::vector<pair<string, bool>> entries       = {};
+  std::vector<std::pair<std::string, bool>> entries       = {};
   bool                            save          = false;
   bool                            remove_hidden = true;
   std::string                     filter        = "";
-  std::vector<string>             extensions    = {};
+  std::vector<std::string>             extensions    = {};
 
   filedialog_state() {}
   filedialog_state(const std::string& dirname, const std::string& filename,
@@ -1658,7 +1652,7 @@ struct filedialog_state {
     check_filename();
   }
   void set_filter(const std::string& flt) {
-    auto globs = std::vector<string>{""};
+    auto globs = std::vector<std::string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
         globs.push_back("");
@@ -1731,7 +1725,7 @@ struct filedialog_state {
 bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
     const std::string& dirname, const std::string& filename,
     const std::string& filter) {
-  static auto states = std::unordered_map<string, filedialog_state>{};
+  static auto states = std::unordered_map<std::string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
@@ -1946,7 +1940,7 @@ bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value) {
 }
 
 bool draw_combobox(window* win, const char* lbl, int& value,
-    const std::vector<string>& labels) {
+    const std::vector<std::string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -1960,7 +1954,7 @@ bool draw_combobox(window* win, const char* lbl, int& value,
 }
 
 bool draw_combobox(window* win, const char* lbl, std::string& value,
-    const std::vector<string>& labels) {
+    const std::vector<std::string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
