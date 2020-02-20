@@ -143,7 +143,7 @@ struct material {
 // May contain either points, lines, triangles and quads.
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
-struct sceneio_shape {
+struct shape {
   // shape data
   string name = "";
 
@@ -165,7 +165,7 @@ struct sceneio_shape {
 // Subdiv data represented as indexed meshes of elements.
 // May contain points, lines, triangles, quads or
 // face-varying quads.
-struct sceneio_subdiv {
+struct subdiv {
   // shape data
   string name = "";
 
@@ -181,25 +181,25 @@ struct sceneio_subdiv {
 };
 
 // Instance data.
-struct sceneio_instance {
+struct instance {
   // instance data
   string          name   = "";
   vector<frame3f> frames = {};
 };
 
 // Object.
-struct sceneio_object {
+struct object {
   // object data
   string            name     = "";
   frame3f           frame    = identity3x4f;
-  sceneio_shape*    shape    = nullptr;
+  shape*    shape    = nullptr;
   material* material = nullptr;
-  sceneio_instance* instance = nullptr;
-  sceneio_subdiv*   subdiv   = nullptr;
+  instance* instance = nullptr;
+  subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
-struct sceneio_environment {
+struct environment {
   string           name         = "";
   frame3f          frame        = identity3x4f;
   vec3f            emission     = {0, 0, 0};
@@ -213,31 +213,31 @@ struct sceneio_environment {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct sceneio_model {
+struct model {
   string                       name         = "";
   vector<camera*>      cameras      = {};
-  vector<sceneio_object*>      objects      = {};
-  vector<sceneio_environment*> environments = {};
-  vector<sceneio_shape*>       shapes       = {};
-  vector<sceneio_subdiv*>      subdivs      = {};
+  vector<object*>      objects      = {};
+  vector<environment*> environments = {};
+  vector<shape*>       shapes       = {};
+  vector<subdiv*>      subdivs      = {};
   vector<texture*>     textures     = {};
   vector<material*>    materials    = {};
-  vector<sceneio_instance*>    instances    = {};
-  ~sceneio_model();
+  vector<instance*>    instances    = {};
+  ~model();
 };
 
 // add element to a scene
-camera*      add_camera(sceneio_model* scene, const string& name = "");
-sceneio_environment* add_environment(
-    sceneio_model* scene, const string& name = "");
-sceneio_object*   add_object(sceneio_model* scene, const string& name = "");
-sceneio_instance* add_instance(sceneio_model* scene, const string& name = "");
-material* add_material(sceneio_model* scene, const string& name = "");
-sceneio_shape*    add_shape(sceneio_model* scene, const string& name = "");
-sceneio_subdiv*   add_subdiv(sceneio_model* scene, const string& name = "");
-texture*  add_texture(sceneio_model* scene, const string& name = "");
-sceneio_object*   add_complete_object(
-      sceneio_model* scene, const string& name = "");
+camera*      add_camera(model* scene, const string& name = "");
+environment* add_environment(
+    model* scene, const string& name = "");
+object*   add_object(model* scene, const string& name = "");
+instance* add_instance(model* scene, const string& name = "");
+material* add_material(model* scene, const string& name = "");
+shape*    add_shape(model* scene, const string& name = "");
+subdiv*   add_subdiv(model* scene, const string& name = "");
+texture*  add_texture(model* scene, const string& name = "");
+object*   add_complete_object(
+      model* scene, const string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -253,13 +253,13 @@ using sceneio_progress =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, sceneio_model* scene, string& error,
+bool load_scene(const string& filename, model* scene, string& error,
     sceneio_progress progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const sceneio_model* scene,
+bool save_scene(const string& filename, const model* scene,
     string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
 
 // get named camera or default if name is empty
-camera* get_camera(const sceneio_model* scene, const string& name = "");
+camera* get_camera(const model* scene, const string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -269,13 +269,13 @@ camera* get_camera(const sceneio_model* scene, const string& name = "");
 namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
+vector<string> scene_stats(const model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const sceneio_model* scene, bool notextures = false);
+    const model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const sceneio_model* scene);
+bbox3f compute_bounds(const model* scene);
 
 }  // namespace yocto::sceneio
 
@@ -285,13 +285,13 @@ bbox3f compute_bounds(const sceneio_model* scene);
 namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb = {});
-void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv);
+void tesselate_subdivs(model* scene, sceneio_progress progress_cb = {});
+void tesselate_subdiv(model* scene, subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    sceneio_model* scene, float time = 0, const string& anim_group = "");
+    model* scene, float time = 0, const string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {

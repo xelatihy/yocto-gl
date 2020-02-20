@@ -61,7 +61,7 @@ struct app_state {
   string name      = "";
 
   // scene
-  yio::sceneio_model*  ioscene  = new yio::sceneio_model{};
+  yio::model*  ioscene  = new yio::model{};
   ytr::scene*      scene    = new ytr::scene{};
   yio::camera* iocamera = nullptr;
   ytr::camera*     camera   = nullptr;
@@ -80,12 +80,12 @@ struct app_state {
 
   // editing
   yio::camera*      selected_camera      = nullptr;
-  yio::sceneio_object*      selected_object      = nullptr;
-  yio::sceneio_instance*    selected_instance    = nullptr;
-  yio::sceneio_shape*       selected_shape       = nullptr;
-  yio::sceneio_subdiv*      selected_subdiv      = nullptr;
+  yio::object*      selected_object      = nullptr;
+  yio::instance*    selected_instance    = nullptr;
+  yio::shape*       selected_shape       = nullptr;
+  yio::subdiv*      selected_subdiv      = nullptr;
   yio::material*    selected_material    = nullptr;
-  yio::sceneio_environment* selected_environment = nullptr;
+  yio::environment* selected_environment = nullptr;
   yio::texture*     selected_texture     = nullptr;
 
   // computation
@@ -130,7 +130,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& camera,
+void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     yio::camera* iocamera, yio::sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -203,7 +203,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<yio::sceneio_shape*, ytr::shape*>{};
+  auto shape_map     = unordered_map<yio::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -221,7 +221,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<yio::sceneio_instance*, ytr::instance*>{};
+  auto instance_map     = unordered_map<yio::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -317,7 +317,7 @@ void load_scene_async(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::camera* iocamera) {
+    opengl_window* win, yio::model* ioscene, yio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iocamera->name);
@@ -343,7 +343,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::texture* iotexture) {
+    opengl_window* win, yio::model* ioscene, yio::texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -364,7 +364,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::material* iomaterial) {
+    opengl_window* win, yio::model* ioscene, yio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -409,7 +409,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_shape* ioshape) {
+    opengl_window* win, yio::model* ioscene, yio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioshape->name);
@@ -427,7 +427,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_instance* ioinstance) {
+    opengl_window* win, yio::model* ioscene, yio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioinstance->name);
@@ -436,7 +436,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_object* ioobject) {
+    opengl_window* win, yio::model* ioscene, yio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioobject->name);
@@ -453,7 +453,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_subdiv* iosubdiv) {
+    opengl_window* win, yio::model* ioscene, yio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iosubdiv->name);
@@ -467,8 +467,8 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(opengl_window* win, yio::sceneio_model* ioscene,
-    yio::sceneio_environment* ioenvironment) {
+bool draw_glwidgets(opengl_window* win, yio::model* ioscene,
+    yio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_gllabel(win, "name", ioenvironment->name);

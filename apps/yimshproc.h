@@ -21,7 +21,7 @@ struct app_state {
   function<void(app_state*, opengl_window*)>         draw_glwidgets;
 
   // Geometry data
-  sceneio_shape shape;
+  shape shape;
 
   // OpenGL data
   opengl_scene*       glscene        = new opengl_scene{};

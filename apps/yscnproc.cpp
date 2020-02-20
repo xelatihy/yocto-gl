@@ -66,7 +66,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = make_unique<yio::sceneio_model>();
+  auto scene_guard = make_unique<yio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (!load_scene(filename, scene, ioerror, print_progress))

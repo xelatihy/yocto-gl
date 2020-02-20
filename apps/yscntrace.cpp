@@ -44,7 +44,7 @@ using std::make_unique;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& camera,
+void init_scene(ytr::scene* scene, yio::model* ioscene, ytr::camera*& camera,
     yio::camera* iocamera, yio::sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -113,7 +113,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<yio::sceneio_shape*, ytr::shape*>{};
+  auto shape_map     = unordered_map<yio::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -131,7 +131,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<yio::sceneio_instance*, ytr::instance*>{};
+  auto instance_map     = unordered_map<yio::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -198,7 +198,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = make_unique<yio::sceneio_model>();
+  auto ioscene_guard = make_unique<yio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(filename, ioscene, ioerror, print_progress))
