@@ -197,9 +197,9 @@ struct instance {
 struct object {
   // object properties
   frame3f   frame       = identity3x4f;
-  shape*    shape       = nullptr;
-  material* material    = nullptr;
-  instance* instance    = nullptr;
+  yglu::shape*    shape       = nullptr;
+  yglu::material* material    = nullptr;
+  yglu::instance* instance    = nullptr;
   bool      hidden      = false;
   bool      highlighted = false;
 };
