@@ -198,20 +198,20 @@ struct instance {
 // Object.
 struct object {
   // object data
-  std::string name     = "";
-  frame3f     frame    = identity3x4f;
-  yscn::shape*      shape    = nullptr;
-  yscn::material*   material = nullptr;
-  yscn::instance*   instance = nullptr;
-  yscn::subdiv*     subdiv   = nullptr;
+  std::string     name     = "";
+  frame3f         frame    = identity3x4f;
+  yscn::shape*    shape    = nullptr;
+  yscn::material* material = nullptr;
+  yscn::instance* instance = nullptr;
+  yscn::subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
 struct environment {
-  std::string name         = "";
-  frame3f     frame        = identity3x4f;
-  vec3f       emission     = {0, 0, 0};
-  yscn::texture*    emission_tex = nullptr;
+  std::string    name         = "";
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
+  yscn::texture* emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -222,7 +222,7 @@ struct environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct model {
-  std::string               name         = "";
+  std::string                     name         = "";
   std::vector<yscn::camera*>      cameras      = {};
   std::vector<yscn::object*>      objects      = {};
   std::vector<yscn::environment*> environments = {};
@@ -236,14 +236,16 @@ struct model {
 
 // add element to a scene
 yscn::camera*      add_camera(yscn::model* scene, const std::string& name = "");
-yscn::environment* add_environment(yscn::model* scene, const std::string& name = "");
-yscn::object*      add_object(yscn::model* scene, const std::string& name = "");
-yscn::instance*    add_instance(yscn::model* scene, const std::string& name = "");
-yscn::material*    add_material(yscn::model* scene, const std::string& name = "");
-yscn::shape*       add_shape(yscn::model* scene, const std::string& name = "");
-yscn::subdiv*      add_subdiv(yscn::model* scene, const std::string& name = "");
-yscn::texture*     add_texture(yscn::model* scene, const std::string& name = "");
-yscn::object*      add_complete_object(yscn::model* scene, const std::string& name = "");
+yscn::environment* add_environment(
+    yscn::model* scene, const std::string& name = "");
+yscn::object*   add_object(yscn::model* scene, const std::string& name = "");
+yscn::instance* add_instance(yscn::model* scene, const std::string& name = "");
+yscn::material* add_material(yscn::model* scene, const std::string& name = "");
+yscn::shape*    add_shape(yscn::model* scene, const std::string& name = "");
+yscn::subdiv*   add_subdiv(yscn::model* scene, const std::string& name = "");
+yscn::texture*  add_texture(yscn::model* scene, const std::string& name = "");
+yscn::object*   add_complete_object(
+      yscn::model* scene, const std::string& name = "");
 
 }  // namespace yscn
 
@@ -259,14 +261,16 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const std::string& filename, yscn::model* scene, std::string& error,
-    progress_callback progress_cb = {}, bool noparallel = false);
+bool load_scene(const std::string& filename, yscn::model* scene,
+    std::string& error, progress_callback progress_cb = {},
+    bool noparallel = false);
 bool save_scene(const std::string& filename, const yscn::model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
 
 // get named camera or default if name is empty
-yscn::camera* get_camera(const yscn::model* scene, const std::string& name = "");
+yscn::camera* get_camera(
+    const yscn::model* scene, const std::string& name = "");
 
 }  // namespace yscn
 
@@ -276,7 +280,8 @@ yscn::camera* get_camera(const yscn::model* scene, const std::string& name = "")
 namespace yscn {
 
 // Return scene statistics as list of strings.
-std::vector<std::string> scene_stats(const yscn::model* scene, bool verbose = false);
+std::vector<std::string> scene_stats(
+    const yscn::model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 std::vector<std::string> scene_validation(
     const yscn::model* scene, bool notextures = false);

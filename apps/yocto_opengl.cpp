@@ -320,7 +320,9 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const yglu::image* image) { return (bool)image->program_id; }
+bool is_initialized(const yglu::image* image) {
+  return (bool)image->program_id;
+}
 
 image::~image() {
   if (program_id) glDeleteProgram(program_id);
@@ -352,8 +354,8 @@ void init_glimage(yglu::image* image) {
 }
 
 // update image data
-void set_glimage(
-    yglu::image* image, const yimg::image<vec4f>& img, bool linear, bool mipmap) {
+void set_glimage(yglu::image* image, const yimg::image<vec4f>& img, bool linear,
+    bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -370,8 +372,8 @@ void set_glimage(
   image->texture_linear = linear;
   image->texture_mipmap = mipmap;
 }
-void set_glimage(
-    yglu::image* image, const yimg::image<vec4b>& img, bool linear, bool mipmap) {
+void set_glimage(yglu::image* image, const yimg::image<vec4b>& img, bool linear,
+    bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -755,7 +757,9 @@ bool is_initialized(yglu::scene* glscene) { return (bool)glscene->program_id; }
 yglu::camera* add_camera(yglu::scene* scene) {
   return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(yglu::camera* camera, const frame3f& frame) { camera->frame = frame; }
+void set_frame(yglu::camera* camera, const frame3f& frame) {
+  camera->frame = frame;
+}
 void set_lens(yglu::camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
@@ -890,7 +894,8 @@ void set_texture(
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
-void set_texture(yglu::texture* texture, const yimg::image<byte>& img, bool as_srgb) {
+void set_texture(
+    yglu::texture* texture, const yimg::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
@@ -989,8 +994,12 @@ void set_tangents(yglu::shape* shape, const std::vector<vec4f>& tangents) {
 yglu::object* add_object(yglu::scene* scene) {
   return scene->objects.emplace_back(new object{});
 }
-void set_frame(yglu::object* object, const frame3f& frame) { object->frame = frame; }
-void set_shape(yglu::object* object, yglu::shape* shape) { object->shape = shape; }
+void set_frame(yglu::object* object, const frame3f& frame) {
+  object->frame = frame;
+}
+void set_shape(yglu::object* object, yglu::shape* shape) {
+  object->shape = shape;
+}
 void set_material(yglu::object* object, yglu::material* material) {
   object->material = material;
 }
@@ -1014,16 +1023,18 @@ void set_frames(yglu::instance* instance, const std::vector<frame3f>& frames) {
 yglu::material* add_material(yglu::scene* scene) {
   return scene->materials.emplace_back(new material{});
 }
-void set_emission(
-    yglu::material* material, const vec3f& emission, yglu::texture* emission_tex) {
+void set_emission(yglu::material* material, const vec3f& emission,
+    yglu::texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
-void set_color(yglu::material* material, const vec3f& color, yglu::texture* color_tex) {
+void set_color(
+    yglu::material* material, const vec3f& color, yglu::texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
-void set_specular(yglu::material* material, float specular, yglu::texture* specular_tex) {
+void set_specular(
+    yglu::material* material, float specular, yglu::texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
@@ -1032,10 +1043,12 @@ void set_roughness(
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
-void set_opacity(yglu::material* material, float opacity, yglu::texture* opacity_tex) {
+void set_opacity(
+    yglu::material* material, float opacity, yglu::texture* opacity_tex) {
   material->opacity = opacity;
 }
-void set_metallic(yglu::material* material, float metallic, yglu::texture* metallic_tex) {
+void set_metallic(
+    yglu::material* material, float metallic, yglu::texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
@@ -1060,7 +1073,8 @@ void clear_lights(yglu::scene* scene) {
 bool has_max_lights(yglu::scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
-void draw_object(yglu::scene* glscene, yglu::object* object, const scene_params& params) {
+void draw_object(
+    yglu::scene* glscene, yglu::object* object, const scene_params& params) {
   if (object->hidden) return;
 
   auto instance_xform     = mat4f(object->frame);
@@ -1247,8 +1261,8 @@ void draw_object(yglu::scene* glscene, yglu::object* object, const scene_params&
 }
 
 // Display a scene
-void draw_scene(yglu::scene* glscene, yglu::camera* glcamera, const vec4i& viewport,
-    const scene_params& params) {
+void draw_scene(yglu::scene* glscene, yglu::camera* glcamera,
+    const vec4i& viewport, const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0

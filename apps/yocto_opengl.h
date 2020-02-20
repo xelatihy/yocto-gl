@@ -143,12 +143,12 @@ struct texture {
 // Opengl material
 struct material {
   // material
-  vec3f    emission      = {0, 0, 0};
-  vec3f    color         = {0, 0, 0};
-  float    metallic      = 0;
-  float    roughness     = 0;
-  float    specular      = 0;
-  float    opacity       = 1;
+  vec3f          emission      = {0, 0, 0};
+  vec3f          color         = {0, 0, 0};
+  float          metallic      = 0;
+  float          roughness     = 0;
+  float          specular      = 0;
+  float          opacity       = 1;
   yglu::texture* emission_tex  = nullptr;
   yglu::texture* color_tex     = nullptr;
   yglu::texture* metallic_tex  = nullptr;
@@ -196,12 +196,12 @@ struct instance {
 // Opengl object
 struct object {
   // object properties
-  frame3f   frame       = identity3x4f;
+  frame3f         frame       = identity3x4f;
   yglu::shape*    shape       = nullptr;
   yglu::material* material    = nullptr;
   yglu::instance* instance    = nullptr;
-  bool      hidden      = false;
-  bool      highlighted = false;
+  bool            hidden      = false;
+  bool            highlighted = false;
 };
 
 // Opengl light
@@ -271,30 +271,30 @@ void set_nearfar(yglu::camera* camera, float near, float far);
 // texture properties
 void set_texture(
     yglu::texture* texture, const yimg::image<vec4b>& img, bool as_srgb = true);
-void set_texture(
-    yglu::texture* texture, const yimg::image<vec4f>& img, bool as_float = false);
+void set_texture(yglu::texture* texture, const yimg::image<vec4f>& img,
+    bool as_float = false);
 void set_texture(
     yglu::texture* texture, const yimg::image<vec3b>& img, bool as_srgb = true);
-void set_texture(
-    yglu::texture* texture, const yimg::image<vec3f>& img, bool as_float = false);
+void set_texture(yglu::texture* texture, const yimg::image<vec3f>& img,
+    bool as_float = false);
 void set_texture(
     yglu::texture* texture, const yimg::image<byte>& img, bool as_srgb = true);
-void set_texture(
-    yglu::texture* texture, const yimg::image<float>& img, bool as_float = false);
+void set_texture(yglu::texture* texture, const yimg::image<float>& img,
+    bool as_float = false);
 
 // material properties
-void set_emission(
-    yglu::material* material, const vec3f& emission, yglu::texture* emission_tex = nullptr);
-void set_color(
-    yglu::material* material, const vec3f& color, yglu::texture* color_tex = nullptr);
-void set_metallic(
-    yglu::material* material, float metallic, yglu::texture* metallic_tex = nullptr);
-void set_roughness(
-    yglu::material* material, float roughness, yglu::texture* roughness_tex = nullptr);
-void set_specular(
-    yglu::material* material, float specular, yglu::texture* specular_tex = nullptr);
-void set_opacity(
-    yglu::material* material, float opacity, yglu::texture* opacity_tex = nullptr);
+void set_emission(yglu::material* material, const vec3f& emission,
+    yglu::texture* emission_tex = nullptr);
+void set_color(yglu::material* material, const vec3f& color,
+    yglu::texture* color_tex = nullptr);
+void set_metallic(yglu::material* material, float metallic,
+    yglu::texture* metallic_tex = nullptr);
+void set_roughness(yglu::material* material, float roughness,
+    yglu::texture* roughness_tex = nullptr);
+void set_specular(yglu::material* material, float specular,
+    yglu::texture* specular_tex = nullptr);
+void set_opacity(yglu::material* material, float opacity,
+    yglu::texture* opacity_tex = nullptr);
 void set_normalmap(yglu::material* material, yglu::texture* normal_tex);
 
 // shape properties

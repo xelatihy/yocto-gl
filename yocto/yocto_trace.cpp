@@ -355,8 +355,8 @@ static std::pair<vec3f, vec3f> eval_tangents(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-static T eval_shape(const ytrc::shape* shape, const std::vector<T>& vals, int element,
-    const vec2f& uv, const T& def) {
+static T eval_shape(const ytrc::shape* shape, const std::vector<T>& vals,
+    int element, const vec2f& uv, const T& def) {
   if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -576,8 +576,8 @@ struct trace_point {
 };
 
 // Evaluate point
-static trace_point eval_point(
-    const ytrc::scene* scene, const intersection3f& intersection, const ray3f& ray) {
+static trace_point eval_point(const ytrc::scene* scene,
+    const intersection3f& intersection, const ray3f& ray) {
   // get data
   auto object   = scene->objects[intersection.object];
   auto shape    = object->shape;
@@ -740,8 +740,8 @@ struct volume_point {
 };
 
 // Evaluate point
-static volume_point eval_volume(
-    const ytrc::scene* scene, const intersection3f& intersection, const ray3f& ray) {
+static volume_point eval_volume(const ytrc::scene* scene,
+    const intersection3f& intersection, const ray3f& ray) {
   // get data
   auto& object   = scene->objects[intersection.object];
   auto& shape    = object->shape;
@@ -786,7 +786,8 @@ static volume_point eval_volume(
 }
 
 // Check if an instance as volume scattering
-static bool has_volume(const ytrc::scene* scene, const intersection3f& intersection) {
+static bool has_volume(
+    const ytrc::scene* scene, const intersection3f& intersection) {
   auto object = scene->objects[intersection.object];
   return !object->material->thin && object->material->transmission;
 }
@@ -1133,7 +1134,7 @@ static void update_embree_bvh(ytrc::scene* scene,
     const std::vector<ytrc::object*>&      updated_objects,
     const std::vector<ytrc::shape*>&       updated_shapes,
     const std::vector<ytrc::instance*>&    updated_instances,
-    const trace_params&              params) {
+    const trace_params&                    params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -1172,9 +1173,9 @@ static bool intersect_shape_embree_bvh(ytrc::shape* shape, const ray3f& ray,
   return true;
 }
 
-static bool intersect_scene_embree_bvh(const ytrc::scene* scene, const ray3f& ray,
-    int& shape, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+static bool intersect_scene_embree_bvh(const ytrc::scene* scene,
+    const ray3f& ray, int& shape, int& instance, int& element, vec2f& uv,
+    float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1587,8 +1588,8 @@ static void init_bvh(ytrc::shape* shape, const trace_params& params) {
   }
 }
 
-void init_bvh(
-    ytrc::scene* scene, const trace_params& params, progress_callback progress_cb) {
+void init_bvh(ytrc::scene* scene, const trace_params& params,
+    progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
 
@@ -1685,10 +1686,11 @@ static void update_bvh(ytrc::shape* shape, const trace_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(ytrc::scene* scene, const std::vector<ytrc::object*>& updated_objects,
+void update_bvh(ytrc::scene*            scene,
+    const std::vector<ytrc::object*>&   updated_objects,
     const std::vector<ytrc::shape*>&    updated_shapes,
     const std::vector<ytrc::instance*>& updated_instances,
-    const trace_params&           params) {
+    const trace_params&                 params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1714,8 +1716,8 @@ void update_bvh(ytrc::scene* scene, const std::vector<ytrc::object*>& updated_ob
 }
 
 // Intersect ray with a bvh->
-static bool intersect_shape_bvh(ytrc::shape* shape, const ray3f& ray_, int& element,
-    vec2f& uv, float& distance, bool find_any) {
+static bool intersect_shape_bvh(ytrc::shape* shape, const ray3f& ray_,
+    int& element, vec2f& uv, float& distance, bool find_any) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape->embree_bvh) {
@@ -2313,8 +2315,8 @@ static float sample_scattering_pdf(const volume_point& point) {
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const ytrc::scene* scene, const vec3f& position, float rl,
-    float rel, const vec2f& ruv) {
+static vec3f sample_lights(const ytrc::scene* scene, const vec3f& position,
+    float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform(scene->lights.size(), rl);
   auto& light    = scene->lights[light_id];
   if (light->object) {
@@ -2400,8 +2402,8 @@ static float sample_lights_pdf(
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_path(const ytrc::scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static std::pair<vec3f, bool> trace_path(const ytrc::scene* scene,
+    const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
@@ -2529,8 +2531,8 @@ static std::pair<vec3f, bool> trace_path(const ytrc::scene* scene, const ray3f& 
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_naive(const ytrc::scene* scene, const ray3f& ray_,
-    rng_state& rng, const trace_params& params) {
+static std::pair<vec3f, bool> trace_naive(const ytrc::scene* scene,
+    const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
@@ -2719,8 +2721,8 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(ytrc::state* state, const ytrc::scene* scene, const ytrc::camera* camera,
-    const vec2i& ij, const trace_params& params) {
+vec4f trace_sample(ytrc::state* state, const ytrc::scene* scene,
+    const ytrc::camera* camera, const vec2i& ij, const trace_params& params) {
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state->pixels[ij];
   auto  ray = sample_camera(camera, ij, state->pixels.size(), rand2f(pixel.rng),
@@ -2745,8 +2747,8 @@ vec4f trace_sample(ytrc::state* state, const ytrc::scene* scene, const ytrc::cam
 }
 
 // Init a sequence of random number generators.
-void init_state(ytrc::state* state, const ytrc::scene* scene, const ytrc::camera* camera,
-    const trace_params& params) {
+void init_state(ytrc::state* state, const ytrc::scene* scene,
+    const ytrc::camera* camera, const trace_params& params) {
   auto image_size =
       (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
@@ -2857,9 +2859,9 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-yimg::image<vec4f> trace_image(const ytrc::scene* scene, const ytrc::camera* camera,
-    const trace_params& params, progress_callback progress_cb,
-    image_callback image_cb) {
+yimg::image<vec4f> trace_image(const ytrc::scene* scene,
+    const ytrc::camera* camera, const trace_params& params,
+    progress_callback progress_cb, image_callback image_cb) {
   auto state_guard = std::make_unique<state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
@@ -2887,9 +2889,10 @@ yimg::image<vec4f> trace_image(const ytrc::scene* scene, const ytrc::camera* cam
 }
 
 // [experimental] Asynchronous interface
-void trace_start(ytrc::state* state, const ytrc::scene* scene, const ytrc::camera* camera,
-    const trace_params& params, progress_callback progress_cb,
-    image_callback image_cb, async_callback async_cb) {
+void trace_start(ytrc::state* state, const ytrc::scene* scene,
+    const ytrc::camera* camera, const trace_params& params,
+    progress_callback progress_cb, image_callback image_cb,
+    async_callback async_cb) {
   init_state(state, scene, camera, params);
   state->worker = {};
   state->stop   = false;
@@ -2994,7 +2997,9 @@ ytrc::light* add_light(ytrc::scene* scene) {
 }
 
 // Set cameras
-void set_frame(ytrc::camera* camera, const frame3f& frame) { camera->frame = frame; }
+void set_frame(ytrc::camera* camera, const frame3f& frame) {
+  camera->frame = frame;
+}
 void set_lens(ytrc::camera* camera, float lens, float aspect, float film) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
@@ -3064,8 +3069,12 @@ void set_tangents(ytrc::shape* shape, const std::vector<vec4f>& tangents) {
 }
 
 // Add object
-void set_frame(ytrc::object* object, const frame3f& frame) { object->frame = frame; }
-void set_shape(ytrc::object* object, ytrc::shape* shape) { object->shape = shape; }
+void set_frame(ytrc::object* object, const frame3f& frame) {
+  object->frame = frame;
+}
+void set_shape(ytrc::object* object, ytrc::shape* shape) {
+  object->shape = shape;
+}
 void set_material(ytrc::object* object, ytrc::material* material) {
   object->material = material;
 }
@@ -3080,20 +3089,23 @@ void set_frames(ytrc::instance* instance, const std::vector<frame3f>& frames) {
 }
 
 // Add material
-void set_emission(
-    ytrc::material* material, const vec3f& emission, ytrc::texture* emission_tex) {
+void set_emission(ytrc::material* material, const vec3f& emission,
+    ytrc::texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
-void set_color(ytrc::material* material, const vec3f& color, ytrc::texture* color_tex) {
+void set_color(
+    ytrc::material* material, const vec3f& color, ytrc::texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
-void set_specular(ytrc::material* material, float specular, ytrc::texture* specular_tex) {
+void set_specular(
+    ytrc::material* material, float specular, ytrc::texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
-void set_metallic(ytrc::material* material, float metallic, ytrc::texture* metallic_tex) {
+void set_metallic(
+    ytrc::material* material, float metallic, ytrc::texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
@@ -3111,7 +3123,8 @@ void set_roughness(
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
-void set_opacity(ytrc::material* material, float opacity, ytrc::texture* opacity_tex) {
+void set_opacity(
+    ytrc::material* material, float opacity, ytrc::texture* opacity_tex) {
   material->opacity     = opacity;
   material->opacity_tex = opacity_tex;
 }
@@ -3129,8 +3142,8 @@ void set_normalmap(ytrc::material* material, ytrc::texture* normal_tex) {
 void set_frame(ytrc::environment* environment, const frame3f& frame) {
   environment->frame = frame;
 }
-void set_emission(
-    ytrc::environment* environment, const vec3f& emission, ytrc::texture* emission_tex) {
+void set_emission(ytrc::environment* environment, const vec3f& emission,
+    ytrc::texture* emission_tex) {
   environment->emission     = emission;
   environment->emission_tex = emission_tex;
 }

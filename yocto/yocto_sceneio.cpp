@@ -226,7 +226,8 @@ std::vector<std::string> scene_stats(const yscn::model* scene, bool verbose) {
 }
 
 // Checks for validity of the scene->
-std::vector<std::string> scene_validation(const yscn::model* scene, bool notextures) {
+std::vector<std::string> scene_validation(
+    const yscn::model* scene, bool notextures) {
   auto errs        = std::vector<std::string>();
   auto check_names = [&errs](const auto& vals, const std::string& base) {
     auto used = std::unordered_map<std::string, int>();
@@ -291,7 +292,8 @@ static T* add_element(std::vector<T*>& elements, const std::string& name,
 yscn::camera* add_camera(yscn::model* scene, const std::string& name) {
   return add_element(scene->cameras, name, "camera");
 }
-yscn::environment* add_environment(yscn::model* scene, const std::string& name) {
+yscn::environment* add_environment(
+    yscn::model* scene, const std::string& name) {
   return add_element(scene->environments, name, "environment");
 }
 yscn::shape* add_shape(yscn::model* scene, const std::string& name) {
@@ -623,8 +625,8 @@ std::unique_ptr<subdiv> subdivide_subdiv(
   return tesselated;
 }
 // Apply displacement to a shape
-std::unique_ptr<subdiv> displace_subdiv(yscn::subdiv* subdiv, float displacement,
-    yscn::texture* displacement_tex, bool smooth) {
+std::unique_ptr<subdiv> displace_subdiv(yscn::subdiv* subdiv,
+    float displacement, yscn::texture* displacement_tex, bool smooth) {
   auto displaced = std::make_unique<yscn::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
@@ -712,20 +714,23 @@ namespace yscn {
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const std::string& filename, yscn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_json_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_json_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(const std::string& filename, yscn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_obj_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_obj_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(const std::string& filename, yscn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_ply_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_ply_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
@@ -736,12 +741,13 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
 // are too different to match.
 static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_pbrt_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_pbrt_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load a scene
-bool load_scene(const std::string& filename, yscn::model* scene, std::string& error,
-    progress_callback progress_cb, bool noparallel) {
+bool load_scene(const std::string& filename, yscn::model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -1103,7 +1109,8 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_ctexture = [scene, &ctexture_map, &get_value](const json& ejs,
                           const std::string& name, yscn::texture*& value,
                           const std::string& dirname = "textures/") -> bool {
@@ -1123,7 +1130,8 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_stexture = [scene, &stexture_map, &get_value](const json& ejs,
                           const std::string& name, yscn::texture*& value,
                           const std::string& dirname = "textures/") -> bool {
@@ -1163,7 +1171,8 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto subdiv_map = std::unordered_map<std::string, yscn::subdiv*>{{"", nullptr}};
+  auto subdiv_map = std::unordered_map<std::string, yscn::subdiv*>{
+      {"", nullptr}};
   auto get_subdiv = [scene, &subdiv_map, &get_value](const json& ejs,
                         const std::string& name, yscn::subdiv*& value,
                         const std::string& dirname = "subdivs/") -> bool {
@@ -1183,7 +1192,8 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // load json instance
-  auto instance_map = std::unordered_map<std::string, yscn::instance*>{{"", nullptr}};
+  auto instance_map = std::unordered_map<std::string, yscn::instance*>{
+      {"", nullptr}};
   auto get_instance = [scene, &instance_map, &get_value](const json& ejs,
                           const std::string& name, yscn::instance*& value,
                           const std::string& dirname = "instances/") -> bool {
@@ -1203,7 +1213,8 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // material map
-  auto material_map = std::unordered_map<std::string, yscn::material*>{{"", nullptr}};
+  auto material_map = std::unordered_map<std::string, yscn::material*>{
+      {"", nullptr}};
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
@@ -1385,8 +1396,9 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_json_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;
@@ -1398,7 +1410,8 @@ static bool save_json_scene(const std::string& filename, const yscn::model* scen
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [](json& ejs, const std::string& name, yscn::texture* texture) {
+  auto add_tex = [](json& ejs, const std::string& name,
+                     yscn::texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1593,7 +1606,8 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   }
 
   // helper to create texture maps
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
                           const yobj::texture& tinfo) -> yscn::texture* {
     auto path = tinfo.path;
@@ -1606,7 +1620,8 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   };
 
   // helper to create texture maps
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
                           const yobj::texture& tinfo) -> yscn::texture* {
     auto path = tinfo.path;
@@ -1730,8 +1745,9 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   return true;
 }
 
-static bool save_obj_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_obj_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1907,8 +1923,9 @@ static bool load_ply_scene(const std::string& filename, yscn::model* scene,
   return true;
 }
 
-static bool save_ply_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_ply_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -2003,7 +2020,8 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   }
 
   // convert color textures
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const cgltf_texture_view& ginfo) -> yscn::texture* {
     if (!ginfo.texture || !ginfo.texture->image) return nullptr;
@@ -2016,12 +2034,10 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map =
-      std::unordered_map<std::string, std::pair<yscn::texture*, yscn::texture*>>{
-          {"", {nullptr, nullptr}}};
-  auto get_cotexture =
-      [&scene, &cotexture_map](
-          const cgltf_texture_view& ginfo) -> std::pair<yscn::texture*, yscn::texture*> {
+  auto cotexture_map = std::unordered_map<std::string,
+      std::pair<yscn::texture*, yscn::texture*>>{{"", {nullptr, nullptr}}};
+  auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
+      -> std::pair<yscn::texture*, yscn::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = std::string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2033,12 +2049,10 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map =
-      std::unordered_map<std::string, std::pair<yscn::texture*, yscn::texture*>>{
-          {"", {nullptr, nullptr}}};
-  auto get_mrtexture =
-      [&scene, &mrtexture_map](
-          const cgltf_texture_view& ginfo) -> std::pair<yscn::texture*, yscn::texture*> {
+  auto mrtexture_map = std::unordered_map<std::string,
+      std::pair<yscn::texture*, yscn::texture*>>{{"", {nullptr, nullptr}}};
+  auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
+      -> std::pair<yscn::texture*, yscn::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = std::string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2376,7 +2390,8 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
   }
 
   // convert materials
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const std::string& path) -> yscn::texture* {
     if (path == "") return nullptr;
@@ -2386,7 +2401,8 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
     ctexture_map[path] = texture;
     return texture;
   };
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_stexture = [&scene, &stexture_map](
                           const std::string& path) -> yscn::texture* {
     if (path == "") return nullptr;
@@ -2396,7 +2412,8 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
     stexture_map[path] = texture;
     return texture;
   };
-  auto atexture_map = std::unordered_map<std::string, yscn::texture*>{{"", nullptr}};
+  auto atexture_map = std::unordered_map<std::string, yscn::texture*>{
+      {"", nullptr}};
   auto get_atexture = [&scene, &atexture_map](
                           const std::string& path) -> yscn::texture* {
     if (path == "") return nullptr;
@@ -2516,8 +2533,9 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const std::string& filename, const yscn::model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_pbrt_scene(const std::string& filename,
+    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
     return false;

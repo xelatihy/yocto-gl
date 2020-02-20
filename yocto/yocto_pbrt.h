@@ -134,7 +134,7 @@ struct environment {
 // Pbrt model
 struct model {
   // pbrt data
-  std::vector<std::string>  comments     = {};
+  std::vector<std::string>         comments     = {};
   std::vector<ypbrt::camera*>      cameras      = {};
   std::vector<ypbrt::shape*>       shapes       = {};
   std::vector<ypbrt::environment*> environments = {};
@@ -1728,8 +1728,9 @@ inline bool convert_shape(ypbrt::shape* shape, const command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(ypbrt::arealight* parealight, const command& command,
-    const std::string& filename, std::string& error, bool verbose = false) {
+inline bool convert_arealight(ypbrt::arealight* parealight,
+    const command& command, const std::string& filename, std::string& error,
+    bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1845,34 +1846,34 @@ inline bool convert_environment(ypbrt::environment* penvironment,
 
 // pbrt stack ctm
 struct stack_element {
-  frame3f   transform_start        = identity3x4f;
-  frame3f   transform_end          = identity3x4f;
+  frame3f          transform_start        = identity3x4f;
+  frame3f          transform_end          = identity3x4f;
   ypbrt::material  material               = {};
   ypbrt::arealight arealight              = {};
   ypbrt::medium    interior               = {};
   ypbrt::medium    exterior               = {};
-  bool      reverse                = false;
-  bool      active_transform_start = true;
-  bool      active_transform_end   = true;
+  bool             reverse                = false;
+  bool             active_transform_start = true;
+  bool             active_transform_end   = true;
 };
 
 // pbrt parsing context
 struct context {
-  std::vector<stack_element>                           stack      = {};
-  std::unordered_map<std::string, stack_element>       coordsys   = {};
+  std::vector<stack_element>                                  stack      = {};
+  std::unordered_map<std::string, stack_element>              coordsys   = {};
   std::unordered_map<std::string, std::vector<ypbrt::shape*>> objects    = {};
-  std::string                                          cur_object = "";
-  vec2i film_resolution                                           = {512, 512};
+  std::string                                                 cur_object = "";
+  vec2i film_resolution = {512, 512};
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const std::string& filename, ypbrt::model* pbrt,
-    std::string& error, context& ctx,
+[[nodiscard]] inline bool load_pbrt(const std::string& filename,
+    ypbrt::model* pbrt, std::string& error, context& ctx,
     std::unordered_map<std::string, ypbrt::material*>& material_map,
-    std::unordered_map<std::string, material>&  named_materials,
-    std::unordered_map<std::string, texture>&   named_textures,
-    std::unordered_map<std::string, medium>&    named_mediums,
-    const std::string&                          ply_dirname) {
+    std::unordered_map<std::string, material>&         named_materials,
+    std::unordered_map<std::string, texture>&          named_textures,
+    std::unordered_map<std::string, medium>&           named_mediums,
+    const std::string&                                 ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2295,8 +2296,8 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   }
 }
 
-[[nodiscard]] inline bool save_pbrt(const std::string& filename, ypbrt::model* pbrt,
-    std::string& error, bool ply_meshes) {
+[[nodiscard]] inline bool save_pbrt(const std::string& filename,
+    ypbrt::model* pbrt, std::string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

@@ -153,16 +153,16 @@ struct material {
 
 // Obj shape
 struct shape {
-  std::string            name      = "";
-  std::vector<vec3f>     positions = {};
-  std::vector<vec3f>     normals   = {};
-  std::vector<vec2f>     texcoords = {};
+  std::string                  name      = "";
+  std::vector<vec3f>           positions = {};
+  std::vector<vec3f>           normals   = {};
+  std::vector<vec2f>           texcoords = {};
   std::vector<yobj::material*> materials = {};
-  std::vector<vertex>    vertices  = {};
-  std::vector<element>   faces     = {};
-  std::vector<element>   lines     = {};
-  std::vector<element>   points    = {};
-  std::vector<frame3f>   instances = {};
+  std::vector<vertex>          vertices  = {};
+  std::vector<element>         faces     = {};
+  std::vector<element>         lines     = {};
+  std::vector<element>         points    = {};
+  std::vector<frame3f>         instances = {};
 };
 
 // Obj camera
@@ -187,7 +187,7 @@ struct environment {
 
 // Obj model
 struct model {
-  std::vector<std::string>  comments     = {};
+  std::vector<std::string>        comments     = {};
   std::vector<yobj::shape*>       shapes       = {};
   std::vector<yobj::material*>    materials    = {};
   std::vector<yobj::camera*>      cameras      = {};
@@ -206,10 +206,11 @@ inline bool save_obj(
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_triangles(const yobj::shape* shape, std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, std::vector<yobj::material*>& materials,
-    std::vector<int>& ematerials, bool flip_texcoord = false);
+inline void get_triangles(const yobj::shape* shape,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<yobj::material*>& materials, std::vector<int>& ematerials,
+    bool flip_texcoord = false);
 inline void get_quads(const yobj::shape* shape, std::vector<vec4i>& quads,
     std::vector<vec3f>& positions, std::vector<vec3f>& normals,
     std::vector<vec2f>& texcoords, std::vector<yobj::material*>& materials,
@@ -254,9 +255,9 @@ inline yobj::environment* add_environment(yobj::model* obj);
 inline yobj::shape*       add_shape(yobj::model* obj);
 
 // Add obj shape
-inline void set_triangles(yobj::shape* shape, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>& texcoords,
+inline void set_triangles(yobj::shape* shape,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
+    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void add_quads(yobj::shape* shape, const std::vector<vec4i>& quads,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
@@ -264,7 +265,7 @@ inline void add_quads(yobj::shape* shape, const std::vector<vec4i>& quads,
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void set_lines(yobj::shape* shape, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>&     texcoords,
+    const std::vector<vec2f>&           texcoords,
     const std::vector<yobj::material*>& materials = {},
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void set_points(yobj::shape* shape, const std::vector<int>& points,
@@ -279,7 +280,8 @@ inline void set_fvquads(yobj::shape* shape, const std::vector<vec4i>& quadspos,
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void set_materials(
     yobj::shape* shape, const std::vector<yobj::material*>& materials);
-inline void set_instances(yobj::shape* shape, const std::vector<frame3f>& instances);
+inline void set_instances(
+    yobj::shape* shape, const std::vector<frame3f>& instances);
 
 }  // namespace yobj
 
@@ -1405,9 +1407,9 @@ inline void format_value(std::string& str, const vertex& value) {
 }
 
 // Get obj vertices
-inline void get_vertices(const yobj::shape* shape, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<int>& vindex, bool flipv) {
+inline void get_vertices(const yobj::shape* shape,
+    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
+    std::vector<vec2f>& texcoords, std::vector<int>& vindex, bool flipv) {
   auto vmap = std::unordered_map<vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.reserve(shape->vertices.size());
@@ -1438,10 +1440,11 @@ inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-inline void get_triangles(const yobj::shape* shape, std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, std::vector<yobj::material*>& materials,
-    std::vector<int>& ematerials, bool flipv) {
+inline void get_triangles(const yobj::shape* shape,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<yobj::material*>& materials, std::vector<int>& ematerials,
+    bool flipv) {
   if (shape->faces.empty()) return;
   auto vindex = std::vector<int>{};
   get_vertices(shape, positions, normals, texcoords, vindex, flipv);
@@ -1715,10 +1718,10 @@ inline void get_points(const yobj::shape* shape, int material,
 }
 
 // Add obj shape
-inline void set_triangles(yobj::shape* shape, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials,
-    bool flipv) {
+inline void set_triangles(yobj::shape* shape,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
+    const std::vector<vec3f>& normals, const std::vector<vec2f>& texcoords,
+    const std::vector<int>& ematerials, bool flipv) {
   shape->positions = positions;
   shape->normals   = normals;
   shape->texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -1825,7 +1828,8 @@ inline void set_materials(
     yobj::shape* shape, const std::vector<yobj::material*>& materials) {
   shape->materials = materials;
 }
-inline void set_instances(yobj::shape* shape, const std::vector<frame3f>& instances) {
+inline void set_instances(
+    yobj::shape* shape, const std::vector<frame3f>& instances) {
   shape->instances = instances;
 }
 

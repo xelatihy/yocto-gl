@@ -132,21 +132,21 @@ void set_texture(ytrc::texture* texture, const yimg::image<byte>& img);
 void set_texture(ytrc::texture* texture, const yimg::image<float>& img);
 
 // material properties
-void set_emission(
-    ytrc::material* material, const vec3f& emission, ytrc::texture* emission_tex = nullptr);
-void set_color(
-    ytrc::material* material, const vec3f& color, ytrc::texture* color_tex = nullptr);
-void set_specular(
-    ytrc::material* material, float specular = 1, ytrc::texture* specular_tex = nullptr);
+void set_emission(ytrc::material* material, const vec3f& emission,
+    ytrc::texture* emission_tex = nullptr);
+void set_color(ytrc::material* material, const vec3f& color,
+    ytrc::texture* color_tex = nullptr);
+void set_specular(ytrc::material* material, float specular = 1,
+    ytrc::texture* specular_tex = nullptr);
 void set_ior(ytrc::material* material, float ior);
-void set_metallic(
-    ytrc::material* material, float metallic, ytrc::texture* metallic_tex = nullptr);
+void set_metallic(ytrc::material* material, float metallic,
+    ytrc::texture* metallic_tex = nullptr);
 void set_transmission(ytrc::material* material, float transmission, bool thin,
     float trdepth, ytrc::texture* transmission_tex = nullptr);
-void set_roughness(
-    ytrc::material* material, float roughness, ytrc::texture* roughness_tex = nullptr);
-void set_opacity(
-    ytrc::material* material, float opacity, ytrc::texture* opacity_tex = nullptr);
+void set_roughness(ytrc::material* material, float roughness,
+    ytrc::texture* roughness_tex = nullptr);
+void set_opacity(ytrc::material* material, float opacity,
+    ytrc::texture* opacity_tex = nullptr);
 void set_thin(ytrc::material* material, bool thin);
 void set_scattering(ytrc::material* material, const vec3f& scattering,
     float scanisotropy, ytrc::texture* scattering_tex = nullptr);
@@ -250,15 +250,16 @@ void init_bvh(ytrc::scene* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(ytrc::scene* scene, const std::vector<ytrc::object*>& updated_objects,
+void update_bvh(ytrc::scene*            scene,
+    const std::vector<ytrc::object*>&   updated_objects,
     const std::vector<ytrc::shape*>&    updated_shapes,
     const std::vector<ytrc::instance*>& updated_instances,
-    const trace_params&           params);
+    const trace_params&                 params);
 
 // Progressively computes an image.
-yimg::image<vec4f> trace_image(const ytrc::scene* scene, const ytrc::camera* camera,
-    const trace_params& params, progress_callback progress_cb = {},
-    image_callback image_cb = {});
+yimg::image<vec4f> trace_image(const ytrc::scene* scene,
+    const ytrc::camera* camera, const trace_params& params,
+    progress_callback progress_cb = {}, image_callback image_cb = {});
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
@@ -269,9 +270,10 @@ using async_callback = std::function<void(
 
 // [experimental] Asynchronous interface
 struct state;
-void trace_start(state* state, const ytrc::scene* scene, const ytrc::camera* camera,
-    const trace_params& params, progress_callback progress_cb = {},
-    image_callback image_cb = {}, async_callback async_cb = {});
+void trace_start(state* state, const ytrc::scene* scene,
+    const ytrc::camera* camera, const trace_params& params,
+    progress_callback progress_cb = {}, image_callback image_cb = {},
+    async_callback async_cb = {});
 void trace_stop(state* state);
 
 }  // namespace ytrc
@@ -406,7 +408,7 @@ struct instance {
 
 // Object.
 struct object {
-  frame3f   frame    = identity3x4f;
+  frame3f         frame    = identity3x4f;
   ytrc::shape*    shape    = nullptr;
   ytrc::material* material = nullptr;
   ytrc::instance* instance = nullptr;
@@ -416,14 +418,14 @@ struct object {
 struct environment {
   frame3f            frame        = identity3x4f;
   vec3f              emission     = {0, 0, 0};
-  ytrc::texture*           emission_tex = nullptr;
+  ytrc::texture*     emission_tex = nullptr;
   std::vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct light {
   ytrc::object*      object      = nullptr;
-  int          instance    = -1;
+  int                instance    = -1;
   ytrc::environment* environment = nullptr;
 };
 
@@ -445,7 +447,7 @@ struct scene {
 
   // computed properties
   std::vector<ytrc::light*> lights = {};
-  bvh_tree*           bvh    = nullptr;
+  bvh_tree*                 bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene           embree_bvh       = nullptr;
   std::vector<vec2i> embree_instances = {};
