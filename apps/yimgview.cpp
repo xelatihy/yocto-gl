@@ -71,7 +71,7 @@ struct app_state {
   // viewing properties
   ygl::image*       glimage   = new ygl::image{};
   ygl::image_params glparams  = {};
-  bool                glupdated = true;
+  bool              glupdated = true;
 
   // loading status
   std::atomic<bool> ok           = false;

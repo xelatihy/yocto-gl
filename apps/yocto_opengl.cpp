@@ -299,9 +299,7 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const image* image) {
-  return (bool)image->program_id;
-}
+bool is_initialized(const image* image) { return (bool)image->program_id; }
 
 image::~image() {
   if (program_id) glDeleteProgram(program_id);
@@ -345,8 +343,7 @@ void set_glimage(
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(
-        image->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   image->texture_size   = img.size();
   image->texture_linear = linear;
@@ -364,8 +361,7 @@ void set_glimage(
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(
-        image->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   image->texture_size   = img.size();
   image->texture_linear = linear;
@@ -394,8 +390,7 @@ void draw_glimage(image* image, const image_params& params) {
   glUniform1f(
       glGetUniformLocation(image->program_id, "image_scale"), params.scale);
   glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glEnableVertexAttribArray(
-      glGetAttribLocation(image->program_id, "texcoord"));
+  glEnableVertexAttribArray(glGetAttribLocation(image->program_id, "texcoord"));
   glVertexAttribPointer(glGetAttribLocation(image->program_id, "texcoord"), 2,
       GL_FLOAT, false, 0, nullptr);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
