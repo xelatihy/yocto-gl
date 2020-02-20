@@ -570,7 +570,7 @@ static trace_point eval_point(const scene* scene,
   auto frame = object->instance->frames[intersection.instance] * object->frame;
   auto element                = intersection.element;
   auto uv                     = intersection.uv;
-  auto trace_non_rigid_frames = true;
+  auto non_rigid_frames = true;
 
   // initialize point
   auto point     = trace_point{};
@@ -615,9 +615,9 @@ static trace_point eval_point(const scene* scene,
 
   // transforms
   point.position = transform_point(frame, point.position);
-  point.normal  = transform_normal(frame, point.normal, trace_non_rigid_frames);
+  point.normal  = transform_normal(frame, point.normal, non_rigid_frames);
   point.gnormal = transform_normal(
-      frame, point.gnormal, trace_non_rigid_frames);
+      frame, point.gnormal, non_rigid_frames);
 
   // correct normals
   if (!shape->points.empty()) {
@@ -962,8 +962,8 @@ namespace yocto::trace {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-std::atomic<ssize_t> trace_embree_memory = 0;
-static RTCDevice     trace_embree_device() {
+std::atomic<ssize_t> embree_memory = 0;
+static RTCDevice     embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
@@ -990,7 +990,7 @@ static RTCDevice     trace_embree_device() {
     rtcSetDeviceMemoryMonitorFunction(
         device,
         [](void* userPtr, ssize_t bytes, bool post) {
-          trace_embree_memory += bytes;
+          embree_memory += bytes;
           return true;
         },
         nullptr);
@@ -1000,7 +1000,7 @@ static RTCDevice     trace_embree_device() {
 
 // Initialize Embree BVH
 static void init_embree_bvh(shape* shape, const trace_params& params) {
-  auto edevice = trace_embree_device();
+  auto edevice = embree_device();
   if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
   shape->embree_bvh = rtcNewScene(edevice);
   auto escene       = shape->embree_bvh;
@@ -1090,7 +1090,7 @@ static void init_embree_bvh(shape* shape, const trace_params& params) {
 
 static void init_embree_bvh(scene* scene, const trace_params& params) {
   // scene bvh
-  auto edevice = trace_embree_device();
+  auto edevice = embree_device();
   if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
   scene->embree_bvh = rtcNewScene(edevice);
   auto escene       = scene->embree_bvh;
@@ -1190,7 +1190,7 @@ static bool intersect_scene_embree_bvh(const scene* scene,
 #endif
 
 // primitive used to sort bvh entries
-struct trace_bvh_primitive {
+struct bvh_primitive {
   bbox3f bbox      = invalidb3f;
   vec3f  center    = zero3f;
   vec2i  primitive = {0, 0};
@@ -1198,7 +1198,7 @@ struct trace_bvh_primitive {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static pair<int, int> split_sah(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -1261,7 +1261,7 @@ static pair<int, int> split_sah(
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
 static pair<int, int> split_balanced(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1297,7 +1297,7 @@ static pair<int, int> split_balanced(
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
 static pair<int, int> split_middle(
-    vector<trace_bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1330,7 +1330,7 @@ static pair<int, int> split_middle(
 }
 
 // Split bvh nodes according to a type
-static pair<int, int> split_nodes(vector<trace_bvh_primitive>& primitives,
+static pair<int, int> split_nodes(vector<bvh_primitive>& primitives,
     int start, int end, bvh_type type) {
   switch (type) {
     case bvh_type::default_: return split_middle(primitives, start, end);
@@ -1347,7 +1347,7 @@ const int bvh_max_prims = 4;
 
 // Build BVH nodes
 static void build_bvh_serial(vector<bvh_node>& nodes,
-    vector<trace_bvh_primitive>& primitives, bvh_type type) {
+    vector<bvh_primitive>& primitives, bvh_type type) {
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(primitives.size() * 2);
@@ -1527,7 +1527,7 @@ static void init_bvh(shape* shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto primitives = vector<trace_bvh_primitive>{};
+  auto primitives = vector<bvh_primitive>{};
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < shape->points.size(); idx++) {
       auto& p             = shape->points[idx];
@@ -1601,7 +1601,7 @@ void init_bvh(scene* scene, const trace_params& params,
   if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
-  auto primitives            = vector<trace_bvh_primitive>{};
+  auto primitives            = vector<bvh_primitive>{};
   auto object_id             = 0;
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
   for (auto object : scene->objects) {
@@ -1920,7 +1920,7 @@ intersection3f intersect_instance_bvh(const object* object,
 namespace yocto::trace {
 
 // Set non-rigid frames as default
-static const bool trace_non_rigid_frames = true;
+static const bool non_rigid_frames = true;
 
 static vec3f eval_emission(const trace_point& point) { return point.emission; }
 
@@ -2357,7 +2357,7 @@ static float sample_lights_pdf(
                        intersection.element, intersection.uv, zero3f));
         auto lnormal = transform_normal(frame,
             eval_normal(object->shape, intersection.element),
-            trace_non_rigid_frames);
+            non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = object->shape->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
@@ -2683,9 +2683,9 @@ static pair<vec3f, bool> trace_falsecolor(const scene* scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = pair<vec3f, bool> (*)(const scene* scene,
+using sampler_func = pair<vec3f, bool> (*)(const scene* scene,
     const ray3f& ray, rng_state& rng, const trace_params& params);
-static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
+static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case sampler_type::path: return trace_path;
     case sampler_type::naive: return trace_naive;
