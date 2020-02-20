@@ -1031,14 +1031,14 @@ struct texture {
 };
 
 // Pbrt area light
-struct pbrt_arealight {
+struct arealight {
   // arealight parameters
   string name     = "";
   vec3f  emission = zero3f;
 };
 
 // Pbrt medium. Not parsed at the moment.
-struct pbrt_medium {
+struct medium {
   // medium parameters
   string name = "";
 };
@@ -1705,7 +1705,7 @@ inline bool convert_shape(shape* shape, const pbrt_command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(pbrt_arealight* parealight,
+inline bool convert_arealight(arealight* parealight,
     const pbrt_command& command, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1826,9 +1826,9 @@ struct stack_element {
   frame3f        transform_start        = identity3x4f;
   frame3f        transform_end          = identity3x4f;
   material  material               = {};
-  pbrt_arealight arealight              = {};
-  pbrt_medium    interior               = {};
-  pbrt_medium    exterior               = {};
+  arealight arealight              = {};
+  medium    interior               = {};
+  medium    exterior               = {};
   bool           reverse                = false;
   bool           active_transform_start = true;
   bool           active_transform_end   = true;
@@ -1852,7 +1852,7 @@ using std::tuple;
     map<tuple<string, string, string>, material*>& material_map,
     unordered_map<string, material>&               named_materials,
     unordered_map<string, texture>&                named_textures,
-    unordered_map<string, pbrt_medium>&                 named_mediums,
+    unordered_map<string, medium>&                 named_mediums,
     const string&                                       ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2124,7 +2124,7 @@ using std::tuple;
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium                 = pbrt_medium{};
+      auto medium                 = medium{};
       named_mediums[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -2177,7 +2177,7 @@ inline light* add_light(model* pbrt) {
   auto ctx             = context{};
   auto material_map    = map<tuple<string, string, string>, material*>{};
   auto named_materials = unordered_map<string, material>{{"", {}}};
-  auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
+  auto named_mediums   = unordered_map<string, medium>{{"", {}}};
   auto named_textures  = unordered_map<string, texture>{{"", {}}};
   auto dirname         = fs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
