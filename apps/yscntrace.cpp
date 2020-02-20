@@ -33,7 +33,6 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto::image;
 namespace ycl = yocto::commonio;
-namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace yim = yocto::image;
 

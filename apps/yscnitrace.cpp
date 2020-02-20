@@ -33,7 +33,6 @@
 #include "yocto_opengl.h"
 using namespace yocto::math;
 namespace ycl = yocto::commonio;
-namespace ytr = yocto::trace;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
 namespace yim = yocto::image;

@@ -79,11 +79,22 @@
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // Math defitions
-using namespace yocto::math;
+namespace ym  = yocto::math;
 namespace yim = yocto::image;
+using ym::bbox3f;
+using ym::byte;
+using ym::frame3f;
+using ym::ray3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
 
 // Trace scene
 struct scene;
@@ -264,12 +275,12 @@ void trace_start(state* state, const scene* scene, const camera* camera,
     image_callback image_cb = {}, async_callback async_cb = {});
 void trace_stop(state* state);
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // SCENE AND RENDERING DATA
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -305,11 +316,11 @@ struct bvh_tree {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct camera {
-  frame3f frame        = identity3x4f;
+  frame3f frame        = ym::identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
   vec2f   film         = {0.036, 0.024};
-  float   focus        = flt_max;
+  float   focus        = ym::flt_max;
   float   aperture     = 0;
 };
 
@@ -396,7 +407,7 @@ struct instance {
 
 // Object.
 struct object {
-  frame3f   frame    = identity3x4f;
+  frame3f   frame    = ym::identity3x4f;
   shape*    shape    = nullptr;
   material* material = nullptr;
   instance* instance = nullptr;
@@ -404,7 +415,7 @@ struct object {
 
 // Environment map.
 struct environment {
-  frame3f            frame        = identity3x4f;
+  frame3f            frame        = ym::identity3x4f;
   vec3f              emission     = {0, 0, 0};
   texture*           emission_tex = nullptr;
   std::vector<float> texels_cdf   = {};
@@ -447,10 +458,10 @@ struct scene {
 
 // State of a pixel during tracing
 struct pixel {
-  vec3f     radiance = zero3f;
-  int       hits     = 0;
-  int       samples  = 0;
-  rng_state rng      = {};
+  vec3f         radiance = {0, 0, 0};
+  int           hits     = 0;
+  int           samples  = 0;
+  ym::rng_state rng      = {};
 };
 
 // [experimental] Asynchronous state
@@ -461,12 +472,12 @@ struct state {
   std::atomic<bool> stop   = {};  // async
 };
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // INTERSECTION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -488,6 +499,6 @@ intersection3f intersect_scene_bvh(const scene* scene, const ray3f& ray,
 intersection3f intersect_instance_bvh(const object* object, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 #endif

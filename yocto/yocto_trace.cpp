@@ -40,9 +40,41 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ytr {
+
+namespace ym = yocto::math;
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan2;
+using ym::cos;
+using ym::exp;
+using ym::fmod;
+using ym::log;
+using ym::pow;
+using ym::sin;
+using ym::sqrt;
+// using ym::sqrt;
+// using ym::zero2f;
+// using ym::zero3f;
+// using ym::zero2i;
+// using ym::zero3i;
+// using ym::zero4i;
+// using ym::identity3x4f;
+// using ym::identity3x3f;
+// using ym::invalidb3f;
+// using ym::pif;
+// using ym::flt_max;
+
+}  // namespace ytr
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
@@ -268,12 +300,12 @@ float eval_phasefunction(float cos_theta, float g) {
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // constant values
 static const auto coat_ior       = 1.5;
@@ -782,12 +814,12 @@ static vec3f eval_environment(const scene* scene, const ray3f& ray) {
   return emission;
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // Intersect a ray with a point (approximate)
 inline bool intersect_point(
@@ -919,9 +951,9 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   auto t0   = (bbox.min - ray.o) * invd;
   auto t1   = (bbox.max - ray.o) * invd;
   // flip based on range directions
-  if (invd.x < 0.0f) swap(t0.x, t1.x);
-  if (invd.y < 0.0f) swap(t0.y, t1.y);
-  if (invd.z < 0.0f) swap(t0.z, t1.z);
+  if (invd.x < 0.0f) std::swap(t0.x, t1.x);
+  if (invd.y < 0.0f) std::swap(t0.y, t1.y);
+  if (invd.z < 0.0f) std::swap(t0.z, t1.z);
   auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
   auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
   tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -941,12 +973,12 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -1898,12 +1930,12 @@ intersection3f intersect_instance_bvh(const object* object, int instance,
   return intersection;
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // Set non-rigid frames as default
 static const bool non_rigid_frames = true;
@@ -2909,12 +2941,12 @@ void trace_stop(state* state) {
   if (state->worker.valid()) state->worker.get();
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
 
 // -----------------------------------------------------------------------------
 // SCENE CREATION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace ytr {
 
 // cleanup
 shape::~shape() {
@@ -3112,4 +3144,4 @@ void set_emission(
   environment->emission_tex = emission_tex;
 }
 
-}  // namespace yocto::trace
+}  // namespace ytr
