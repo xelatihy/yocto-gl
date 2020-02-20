@@ -2373,7 +2373,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt_guard = make_unique<pbrt_model>();
+  auto pbrt_guard = make_unique<pbrt::model>();
   auto pbrt       = pbrt_guard.get();
   if (!load_pbrt(filename, pbrt, error)) return false;
 
@@ -2544,7 +2544,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = make_unique<pbrt_model>();
+  auto pbrt_guard = make_unique<pbrt::model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
