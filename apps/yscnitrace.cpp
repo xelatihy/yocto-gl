@@ -84,9 +84,9 @@ struct app_state {
   yio::sceneio_instance*    selected_instance    = nullptr;
   yio::sceneio_shape*       selected_shape       = nullptr;
   yio::sceneio_subdiv*      selected_subdiv      = nullptr;
-  yio::sceneio_material*    selected_material    = nullptr;
+  yio::material*    selected_material    = nullptr;
   yio::sceneio_environment* selected_environment = nullptr;
-  yio::sceneio_texture*     selected_texture     = nullptr;
+  yio::texture*     selected_texture     = nullptr;
 
   // computation
   int        render_sample  = 0;
@@ -151,7 +151,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<yio::sceneio_texture*, ytr::texture*>{};
+  auto texture_map     = unordered_map<yio::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -169,7 +169,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<yio::sceneio_material*, ytr::material*>{};
+  auto material_map     = unordered_map<yio::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -343,7 +343,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_texture* iotexture) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iotexture->name);
@@ -364,7 +364,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_material* iomaterial) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -601,7 +601,7 @@ void draw_glwidgets(
     }
     end_glheader(win);
   }
-  auto get_texture = [app](yio::sceneio_texture* iotexture) {
+  auto get_texture = [app](yio::texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {

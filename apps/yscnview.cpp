@@ -81,9 +81,9 @@ struct app_state {
   yio::sceneio_instance*    selected_instance    = nullptr;
   yio::sceneio_shape*       selected_shape       = nullptr;
   yio::sceneio_subdiv*      selected_subdiv      = nullptr;
-  yio::sceneio_material*    selected_material    = nullptr;
+  yio::material*    selected_material    = nullptr;
   yio::sceneio_environment* selected_environment = nullptr;
-  yio::sceneio_texture*     selected_texture     = nullptr;
+  yio::texture*     selected_texture     = nullptr;
 
   // loading status
   atomic<bool>       ok           = false;
@@ -193,7 +193,7 @@ void init_glscene(opengl_scene* glscene, yio::sceneio_model* ioscene,
   }
 
   // textures
-  auto texture_map     = unordered_map<yio::sceneio_texture*, opengl_texture*>{};
+  auto texture_map     = unordered_map<yio::texture*, opengl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -211,7 +211,7 @@ void init_glscene(opengl_scene* glscene, yio::sceneio_model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<yio::sceneio_material*, opengl_material*>{};
+  auto material_map     = unordered_map<yio::material*, opengl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -311,7 +311,7 @@ bool draw_glwidgets(
 
 /// Visit struct elements.
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_texture* iotexture) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::texture* iotexture) {
   if (!iotexture) return false;
   draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "colorf",
@@ -330,7 +330,7 @@ bool draw_glwidgets(
 }
 
 bool draw_glwidgets(
-    opengl_window* win, yio::sceneio_model* ioscene, yio::sceneio_material* iomaterial) {
+    opengl_window* win, yio::sceneio_model* ioscene, yio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_gllabel(win, "name", iomaterial->name);
@@ -541,7 +541,7 @@ void draw_glwidgets(
     }
     end_glheader(win);
   }
-  auto get_texture = [app](yio::sceneio_texture* iotexture) {
+  auto get_texture = [app](yio::texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };

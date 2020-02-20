@@ -87,7 +87,7 @@ struct camera {
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct sceneio_texture {
+struct texture {
   string       name    = "";
   image<vec3f> colorf  = {};
   image<vec3b> colorb  = {};
@@ -99,7 +99,7 @@ struct sceneio_texture {
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct sceneio_material {
+struct material {
   // material data
   string name = "";
 
@@ -121,18 +121,18 @@ struct sceneio_material {
   bool  thin         = true;
 
   // textures
-  sceneio_texture* emission_tex     = nullptr;
-  sceneio_texture* color_tex        = nullptr;
-  sceneio_texture* specular_tex     = nullptr;
-  sceneio_texture* metallic_tex     = nullptr;
-  sceneio_texture* roughness_tex    = nullptr;
-  sceneio_texture* transmission_tex = nullptr;
-  sceneio_texture* spectint_tex     = nullptr;
-  sceneio_texture* scattering_tex   = nullptr;
-  sceneio_texture* coat_tex         = nullptr;
-  sceneio_texture* opacity_tex      = nullptr;
-  sceneio_texture* normal_tex       = nullptr;
-  sceneio_texture* displacement_tex = nullptr;
+  texture* emission_tex     = nullptr;
+  texture* color_tex        = nullptr;
+  texture* specular_tex     = nullptr;
+  texture* metallic_tex     = nullptr;
+  texture* roughness_tex    = nullptr;
+  texture* transmission_tex = nullptr;
+  texture* spectint_tex     = nullptr;
+  texture* scattering_tex   = nullptr;
+  texture* coat_tex         = nullptr;
+  texture* opacity_tex      = nullptr;
+  texture* normal_tex       = nullptr;
+  texture* displacement_tex = nullptr;
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -193,7 +193,7 @@ struct sceneio_object {
   string            name     = "";
   frame3f           frame    = identity3x4f;
   sceneio_shape*    shape    = nullptr;
-  sceneio_material* material = nullptr;
+  material* material = nullptr;
   sceneio_instance* instance = nullptr;
   sceneio_subdiv*   subdiv   = nullptr;
 };
@@ -203,7 +203,7 @@ struct sceneio_environment {
   string           name         = "";
   frame3f          frame        = identity3x4f;
   vec3f            emission     = {0, 0, 0};
-  sceneio_texture* emission_tex = nullptr;
+  texture* emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -220,8 +220,8 @@ struct sceneio_model {
   vector<sceneio_environment*> environments = {};
   vector<sceneio_shape*>       shapes       = {};
   vector<sceneio_subdiv*>      subdivs      = {};
-  vector<sceneio_texture*>     textures     = {};
-  vector<sceneio_material*>    materials    = {};
+  vector<texture*>     textures     = {};
+  vector<material*>    materials    = {};
   vector<sceneio_instance*>    instances    = {};
   ~sceneio_model();
 };
@@ -232,10 +232,10 @@ sceneio_environment* add_environment(
     sceneio_model* scene, const string& name = "");
 sceneio_object*   add_object(sceneio_model* scene, const string& name = "");
 sceneio_instance* add_instance(sceneio_model* scene, const string& name = "");
-sceneio_material* add_material(sceneio_model* scene, const string& name = "");
+material* add_material(sceneio_model* scene, const string& name = "");
 sceneio_shape*    add_shape(sceneio_model* scene, const string& name = "");
 sceneio_subdiv*   add_subdiv(sceneio_model* scene, const string& name = "");
-sceneio_texture*  add_texture(sceneio_model* scene, const string& name = "");
+texture*  add_texture(sceneio_model* scene, const string& name = "");
 sceneio_object*   add_complete_object(
       sceneio_model* scene, const string& name = "");
 

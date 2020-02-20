@@ -100,7 +100,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<yio::sceneio_texture*, ytr::texture*>{};
+  auto texture_map     = unordered_map<yio::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -118,7 +118,7 @@ void init_scene(ytr::scene* scene, yio::sceneio_model* ioscene, ytr::camera*& ca
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<yio::sceneio_material*, ytr::material*>{};
+  auto material_map     = unordered_map<yio::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
