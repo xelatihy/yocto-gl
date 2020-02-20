@@ -290,11 +290,6 @@ void main() {
 )";
 #endif
 
-unique_ptr<opengl_image> make_glimage() {
-  auto glimage = make_unique<opengl_image>();
-  init_glimage(glimage.get());
-  return glimage;
-}
 bool is_initialized(const opengl_image* glimage) {
   return (bool)glimage->program_id;
 }
@@ -724,12 +719,6 @@ opengl_scene::~opengl_scene() {
 }
 
 // Initialize an OpenGL scene
-unique_ptr<opengl_scene> make_glscene() {
-  auto glscene = make_unique<opengl_scene>();
-  init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
-      glscene->array_id, glscene_vertex, glscene_fragment);
-  return glscene;
-}
 void init_glscene(opengl_scene* glscene) {
   if (glscene->program_id) return;
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,

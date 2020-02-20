@@ -49,8 +49,6 @@ struct GLFWwindow;
 namespace yocto::opengl {
 
 // using directives
-using std::make_unique;
-using std::unique_ptr;
 using namespace yocto::math;
 using yocto::image::image;
 
@@ -75,7 +73,6 @@ struct opengl_image {
 };
 
 // create image drawing program
-unique_ptr<opengl_image> make_glimage();
 void                     init_glimage(opengl_image* glimage);
 bool                     is_initialized(const opengl_image* glimage);
 
@@ -240,7 +237,6 @@ struct draw_glscene_params {
 };
 
 // Initialize an OpenGL scene
-unique_ptr<opengl_scene> make_glscene();
 void                     init_glscene(opengl_scene* glscene);
 bool                     is_initialized(const opengl_scene* glscene);
 
