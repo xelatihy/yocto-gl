@@ -15,7 +15,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G"Visual Studio 16 2019" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF
+        cmake .. -GNinja -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF
     - name: build
       run: |
         cd build
