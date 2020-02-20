@@ -2423,7 +2423,7 @@ static bool load_pbrt_scene(const string& filename, sceneio_model* scene,
   };
 
   // convert material
-  auto material_map = unordered_map<pbrt_material*, sceneio_material*>{};
+  auto material_map = unordered_map<material*, sceneio_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2561,7 +2561,7 @@ static bool save_pbrt_scene(const string& filename, const sceneio_model* scene,
   };
 
   // convert materials
-  auto material_map = unordered_map<sceneio_material*, pbrt_material*>{};
+  auto material_map = unordered_map<sceneio_material*, material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();

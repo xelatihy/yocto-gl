@@ -61,7 +61,7 @@ struct camera {
 };
 
 // Pbrt material
-struct pbrt_material {
+struct material {
   // material parameters
   string name            = "";
   vec3f  emission        = zero3f;
@@ -82,7 +82,7 @@ struct pbrt_material {
 };
 
 // Pbrt shape
-struct pbrt_shape {
+struct shape {
   // frames
   frame3f         frame     = identity3x4f;
   frame3f         frend     = identity3x4f;
@@ -95,11 +95,11 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   // material
-  pbrt_material* material = nullptr;
+  material* material = nullptr;
 };
 
 // Pbrt lights
-struct pbrt_light {
+struct light {
   // light parameters
   frame3f frame    = identity3x4f;
   frame3f frend    = identity3x4f;
@@ -115,7 +115,7 @@ struct pbrt_light {
   vector<vec3f> area_positions = {};
   vector<vec3f> area_normals   = {};
 };
-struct pbrt_environment {
+struct environment {
   // environment approximation
   frame3f frame        = identity3x4f;
   frame3f frend        = identity3x4f;
@@ -128,10 +128,10 @@ struct model {
   // pbrt data
   vector<string>            comments     = {};
   vector<camera*>      cameras      = {};
-  vector<pbrt_shape*>       shapes       = {};
-  vector<pbrt_environment*> environments = {};
-  vector<pbrt_light*>       lights       = {};
-  vector<pbrt_material*>    materials    = {};
+  vector<shape*>       shapes       = {};
+  vector<environment*> environments = {};
+  vector<light*>       lights       = {};
+  vector<material*>    materials    = {};
 
   // cleanup
   ~model();
@@ -144,10 +144,10 @@ inline bool save_pbrt(const string& filename, model* pbrt, string& error,
 
 // Create pbrt
 inline camera*      add_camera(model* pbrt);
-inline pbrt_shape*       add_shape(model* pbrt);
-inline pbrt_material*    add_material(model* pbrt);
-inline pbrt_environment* add_environment(model* pbrt);
-inline pbrt_light*       add_light(model* pbrt);
+inline shape*       add_shape(model* pbrt);
+inline material*    add_material(model* pbrt);
+inline environment* add_environment(model* pbrt);
+inline light*       add_light(model* pbrt);
 
 }  // namespace yocto::pbrt
 
@@ -1221,9 +1221,9 @@ inline bool convert_texture(pbrt_texture& ptexture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(pbrt_material*     pmaterial,
+inline bool convert_material(material*     pmaterial,
     const pbrt_command&                         command,
-    const unordered_map<string, pbrt_material>& named_materials,
+    const unordered_map<string, material>& named_materials,
     const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1619,7 +1619,7 @@ inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // Convert pbrt shapes
-inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
+inline bool convert_shape(shape* shape, const pbrt_command& command,
     string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
     const string& ply_dirname, const string& filename, string& error,
     bool verbose = false) {
@@ -1730,7 +1730,7 @@ inline bool convert_arealight(pbrt_arealight* parealight,
 }
 
 // Convert pbrt lights
-inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
+inline bool convert_light(light* plight, const pbrt_command& command,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1789,7 +1789,7 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
   }
 }
 
-inline bool convert_environment(pbrt_environment* penvironment,
+inline bool convert_environment(environment* penvironment,
     const pbrt_command& command, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1825,7 +1825,7 @@ inline bool convert_environment(pbrt_environment* penvironment,
 struct stack_element {
   frame3f        transform_start        = identity3x4f;
   frame3f        transform_end          = identity3x4f;
-  pbrt_material  material               = {};
+  material  material               = {};
   pbrt_arealight arealight              = {};
   pbrt_medium    interior               = {};
   pbrt_medium    exterior               = {};
@@ -1838,7 +1838,7 @@ struct stack_element {
 struct context {
   vector<stack_element>                 stack           = {};
   unordered_map<string, stack_element>  coordsys        = {};
-  unordered_map<string, vector<pbrt_shape*>> objects         = {};
+  unordered_map<string, vector<shape*>> objects         = {};
   string                                     cur_object      = "";
   vec2i                                      film_resolution = {512, 512};
 };
@@ -1849,8 +1849,8 @@ using std::tuple;
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(const string& filename, model* pbrt,
     string& error, context& ctx,
-    map<tuple<string, string, string>, pbrt_material*>& material_map,
-    unordered_map<string, pbrt_material>&               named_materials,
+    map<tuple<string, string, string>, material*>& material_map,
+    unordered_map<string, material>&               named_materials,
     unordered_map<string, pbrt_texture>&                named_textures,
     unordered_map<string, pbrt_medium>&                 named_mediums,
     const string&                                       ply_dirname) {
@@ -2158,25 +2158,25 @@ inline model::~model() {
 inline camera* add_camera(model* pbrt) {
   return pbrt->cameras.emplace_back(new camera{});
 }
-inline pbrt_shape* add_shape(model* pbrt) {
-  return pbrt->shapes.emplace_back(new pbrt_shape{});
+inline shape* add_shape(model* pbrt) {
+  return pbrt->shapes.emplace_back(new shape{});
 }
-inline pbrt_material* add_material(model* pbrt) {
-  return pbrt->materials.emplace_back(new pbrt_material{});
+inline material* add_material(model* pbrt) {
+  return pbrt->materials.emplace_back(new material{});
 }
-inline pbrt_environment* add_environment(model* pbrt) {
-  return pbrt->environments.emplace_back(new pbrt_environment{});
+inline environment* add_environment(model* pbrt) {
+  return pbrt->environments.emplace_back(new environment{});
 }
-inline pbrt_light* add_light(model* pbrt) {
-  return pbrt->lights.emplace_back(new pbrt_light{});
+inline light* add_light(model* pbrt) {
+  return pbrt->lights.emplace_back(new light{});
 }
 
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(
     const string& filename, model* pbrt, string& error) {
   auto ctx             = context{};
-  auto material_map    = map<tuple<string, string, string>, pbrt_material*>{};
-  auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
+  auto material_map    = map<tuple<string, string, string>, material*>{};
+  auto named_materials = unordered_map<string, material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
   auto dirname         = fs::path(filename).parent_path().string();
@@ -2187,7 +2187,7 @@ inline pbrt_light* add_light(model* pbrt) {
 
   // remove unused materials
   using std::unordered_set;
-  auto used_materials = unordered_set<pbrt_material*>{};
+  auto used_materials = unordered_set<material*>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
