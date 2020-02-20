@@ -31,11 +31,11 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::trace;
 using namespace yocto::sceneio;
 using namespace yocto::image;
 using namespace yocto::commonio;
 using namespace yocto::opengl;
+namespace tr = yocto::trace;
 
 #include <future>
 #include <memory>
@@ -48,11 +48,11 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params params = {};
+  tr::trace_params params = {};
 
   // scene
-  trace_scene*  scene  = new trace_scene{};
-  trace_camera* camera = nullptr;
+  tr::trace_scene*  scene  = new tr::trace_scene{};
+  tr::camera* camera = nullptr;
 
   // rendering state
   image<vec4f> render   = {};
@@ -66,11 +66,11 @@ struct app_state {
   // computation
   int          render_sample  = 0;
   int          render_counter = 0;
-  trace_state* render_state   = new trace_state{};
+  tr::trace_state* render_state   = new tr::trace_state{};
 
   ~app_state() {
     if (render_state) {
-      trace_async_stop(render_state);
+      tr::trace_async_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -79,8 +79,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
+void init_scene(tr::trace_scene* scene, sceneio_model* ioscene,
+    tr::camera*& camera, sceneio_camera* iocamera,
     sceneio_progress print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -89,7 +89,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
+  auto camera_map     = unordered_map<sceneio_camera*, tr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -101,7 +101,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<sceneio_texture*, tr::trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -119,7 +119,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = unordered_map<sceneio_material*, tr::trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -153,7 +153,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<sceneio_shape*, tr::trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -172,7 +172,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<sceneio_instance*, tr::trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -210,11 +210,11 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
 void reset_display(app_state* app) {
   // stop render
-  trace_async_stop(app->render_state);
+  tr::trace_async_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  trace_async_start(
+  tr::trace_async_start(
       app->render_state, app->scene, app->camera, app->params, {},
       [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
@@ -244,9 +244,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      trace_sampler_names);
+      tr::trace_sampler_names);
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
+      "Tracer false color type.", tr::trace_falsecolor_names);
   add_option(
       cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
@@ -254,7 +254,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", app->params.bvh, "Bvh type", trace_bvh_names);
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", tr::trace_bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
@@ -285,7 +285,7 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = trace_sampler_type::eyelight;
+    app->params.sampler = tr::trace_sampler_type::eyelight;
   }
 
   // allocate buffers
@@ -323,17 +323,17 @@ int main(int argc, const char* argv[]) {
             }
           } break;
           case 'f':
-            app->params.sampler = trace_sampler_type::falsecolor;
+            app->params.sampler = tr::trace_sampler_type::falsecolor;
             reset_display(app);
             break;
           case 'p':
-            app->params.sampler = trace_sampler_type::path;
+            app->params.sampler = tr::trace_sampler_type::path;
             reset_display(app);
             break;
           case 'F':
-            app->params.falsecolor = (trace_falsecolor_type)(
+            app->params.falsecolor = (tr::trace_falsecolor_type)(
                 ((int)app->params.falsecolor + 1) %
-                (int)trace_sampler_names.size());
+                (int)tr::trace_sampler_names.size());
             reset_display(app);
             break;
         }

@@ -434,7 +434,7 @@ static vec3f eval_texture(const trace_texture* texture, const vec2f& uv,
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto distance = camera->lens;
   if (camera->focus < flt_max) {
     distance = camera->lens * camera->focus / (camera->focus - camera->lens);
@@ -467,7 +467,7 @@ static ray3f eval_perspective_camera(
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
-    const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   if (camera->aperture) {
     auto scale = 1 / camera->lens;
     auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
@@ -496,7 +496,7 @@ static ray3f eval_orthographic_camera(
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
-    const trace_camera* camera, const vec2f& uv, const vec2f& luv) {
+    const camera* camera, const vec2f& uv, const vec2f& luv) {
   if (camera->orthographic)
     return eval_orthographic_camera(camera, uv, luv);
   else
@@ -504,7 +504,7 @@ static ray3f eval_camera(
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_camera* camera, const vec2i& ij,
+static ray3f sample_camera(const camera* camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
@@ -2714,7 +2714,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 vec4f trace_sample(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const vec2i& ij, const trace_params& params) {
+    const camera* camera, const vec2i& ij, const trace_params& params) {
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state->pixels[ij];
   auto  ray = sample_camera(camera, ij, state->pixels.size(), rand2f(pixel.rng),
@@ -2740,7 +2740,7 @@ vec4f trace_sample(trace_state* state, const trace_scene* scene,
 
 // Init a sequence of random number generators.
 void init_state(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params) {
+    const camera* camera, const trace_params& params) {
   auto image_size =
       (camera->film.x > camera->film.y)
           ? vec2i{params.resolution,
@@ -2848,7 +2848,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const camera* camera,
     const trace_params& params, trace_progress progress_cb,
     trace_progress_image progress_image_cb) {
   auto state_guard = make_unique<trace_state>();
@@ -2880,7 +2880,7 @@ image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
 
 // [experimental] Asynchronous interface
 void trace_async_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
+    const camera* camera, const trace_params& params,
     trace_progress progress_cb, trace_progress_image progress_image_cb,
     trace_process_async progress_async_cb) {
   init_state(state, scene, camera, params);
@@ -2958,18 +2958,18 @@ trace_scene::~trace_scene() {
 }
 
 // Add cameras
-trace_camera* add_camera(trace_scene* scene) {
-  return scene->cameras.emplace_back(new trace_camera{});
+camera* add_camera(trace_scene* scene) {
+  return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(trace_camera* camera, const frame3f& frame) {
+void set_frame(camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(trace_camera* camera, float lens, float aspect, float film) {
+void set_lens(camera* camera, float lens, float aspect, float film) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
 }
-void set_focus(trace_camera* camera, float aperture, float focus) {
+void set_focus(camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
   camera->focus    = focus;
 }

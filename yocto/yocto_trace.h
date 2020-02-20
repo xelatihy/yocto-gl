@@ -88,7 +88,7 @@ using namespace yocto::math;
 
 // Trace scene
 struct trace_scene;
-struct trace_camera;
+struct camera;
 struct trace_environment;
 struct trace_shape;
 struct trace_texture;
@@ -97,7 +97,7 @@ struct trace_instance;
 struct trace_object;
 
 // Add scene elements
-trace_camera*      add_camera(trace_scene* scene);
+camera*      add_camera(trace_scene* scene);
 trace_object*      add_object(trace_scene* scene);
 trace_texture*     add_texture(trace_scene* scene);
 trace_material*    add_material(trace_scene* scene);
@@ -106,9 +106,9 @@ trace_instance*    add_instance(trace_scene* scene);
 trace_environment* add_environment(trace_scene* scene);
 
 // camera properties
-void set_frame(trace_camera* camera, const frame3f& frame);
-void set_lens(trace_camera* camera, float lens, float aspect, float film);
-void set_focus(trace_camera* camera, float aperture, float focus);
+void set_frame(camera* camera, const frame3f& frame);
+void set_lens(camera* camera, float lens, float aspect, float film);
+void set_focus(camera* camera, float aperture, float focus);
 
 // object properties
 void set_frame(trace_object* object, const frame3f& frame);
@@ -248,7 +248,7 @@ void update_bvh(trace_scene*       scene,
     const trace_params&            params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const trace_scene* scene, const camera* camera,
     const trace_params& params, trace_progress progress_cb = {},
     trace_progress_image progress_image_cb = {});
 
@@ -262,7 +262,7 @@ using trace_process_async = function<void(
 // [experimental] Asynchronous interface
 struct trace_state;
 void trace_async_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
+    const camera* camera, const trace_params& params,
     trace_progress       progress_cb       = {},
     trace_progress_image progress_image_cb = {},
     trace_process_async  progress_async_cb = {});
@@ -308,7 +308,7 @@ struct trace_bvh {
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
-struct trace_camera {
+struct camera {
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
@@ -429,7 +429,7 @@ struct trace_light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct trace_scene {
-  vector<trace_camera*>      cameras      = {};
+  vector<camera*>      cameras      = {};
   vector<trace_object*>      objects      = {};
   vector<trace_shape*>       shapes       = {};
   vector<trace_material*>    materials    = {};
