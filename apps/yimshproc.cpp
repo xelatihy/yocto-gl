@@ -4,7 +4,7 @@ using namespace yocto;
 struct my_data {
   vector<vec3i>       face_adjacency;
   vector<vector<int>> vertex_adjacency;
-  geodesic_solver     solver;
+  ysh::geodesic_solver     solver;
   vector<float>       scalar_field;
   vector<vec3f>       vector_field;
 
@@ -13,10 +13,10 @@ struct my_data {
 };
 
 void my_init(my_data& data, app_state* app) {
-  data.face_adjacency   = face_adjacencies(app->shape.triangles);
-  data.vertex_adjacency = vertex_adjacencies(
+  data.face_adjacency   = ysh::face_adjacencies(app->shape.triangles);
+  data.vertex_adjacency = ysh::vertex_adjacencies(
       app->shape.triangles, data.face_adjacency);
-  data.solver = make_geodesic_solver(
+  data.solver = ysh::make_geodesic_solver(
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
@@ -66,7 +66,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
 
       data.vector_field = vector<vec3f>(app->shape.triangles.size());
       for (int i = 0; i < app->shape.triangles.size(); ++i) {
-        data.vector_field[i] = compute_gradient(
+        data.vector_field[i] = ysh::compute_gradient(
             app->shape.triangles[i], app->shape.positions, data.scalar_field);
       }
       update_glvector_field(app, data.vector_field, 100);
@@ -97,10 +97,10 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
 
         // @Speed: Remove tags from function api to avoid this.
         auto dummy_tags = vector<int>(app->shape.triangles.size(), 0);
-        auto path = integrate_field(app->shape.triangles, app->shape.positions,
+        auto path = ysh::integrate_field(app->shape.triangles, app->shape.positions,
             data.face_adjacency, dummy_tags, 0, field, from, to);
 
-        auto ppositions = make_positions_from_path(path, app->shape.positions);
+        auto ppositions = ysh::make_positions_from_path(path, app->shape.positions);
         positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
       update_glpolyline(app, positions);

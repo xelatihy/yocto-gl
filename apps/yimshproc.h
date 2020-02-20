@@ -7,11 +7,12 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto::math;
-using namespace yocto::shape;
 namespace ycl = yocto::commonio;
-using namespace yocto::bvh;
 namespace yio = yocto::sceneio;
 namespace ygl = yocto::opengl;
+namespace ybv = yocto::bvh;
+namespace ysh = yocto::shape;
+using std::function;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
@@ -32,7 +33,7 @@ struct app_state {
   bool        show_edges = false;
   yio::camera camera;
   float       camera_focus;
-  bvh_tree    bvh;
+  ybv::bvh_tree    bvh;
 
   // Internal handles
   ygl::camera*   glcamera    = nullptr;
@@ -273,7 +274,7 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
 
   // init shape
   auto ioerror = ""s;
-  if (!load_shape(input_filename, app->shape.points, app->shape.lines,
+  if (!ysh::load_shape(input_filename, app->shape.points, app->shape.lines,
           app->shape.triangles, app->shape.quads, app->shape.positions,
           app->shape.normals, app->shape.texcoords, app->shape.colors,
           app->shape.radius, ioerror))
