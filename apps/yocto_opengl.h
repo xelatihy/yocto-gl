@@ -47,10 +47,23 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::opengl {
+namespace ygl {
 
-// using directives
-using namespace ym;
+// Math defitions
+using ym::bbox3f;
+using ym::byte;
+using ym::frame3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
+using ym::vec3b;
+using ym::vec4b;
+using ym::uint;
+using ym::byte;
 
 // OpenGL image data
 struct image {
@@ -97,16 +110,16 @@ struct image_params {
 // draw image
 void draw_glimage(image* image, const image_params& params);
 
-}  // namespace yocto::opengl
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::opengl {
+namespace ygl {
 
 // Opengl caemra
 struct camera {
-  frame3f frame  = identity3x4f;
+  frame3f frame  = ym::identity3x4f;
   float   lens   = 0.050;
   float   aspect = 1.000;
   float   film   = 0.036;
@@ -184,7 +197,7 @@ struct instance {
 // Opengl object
 struct object {
   // object properties
-  frame3f   frame       = identity3x4f;
+  frame3f   frame       = ym::identity3x4f;
   shape*    shape       = nullptr;
   material* material    = nullptr;
   instance* instance    = nullptr;
@@ -319,12 +332,12 @@ bool has_max_lights(scene* scene);
 void draw_scene(scene* scene, camera* camera, const vec4i& viewport,
     const scene_params& params);
 
-}  // namespace yocto::opengl
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto::opengl {
+namespace ygl {
 
 // Forward declaration of OpenGL window
 struct window;
@@ -415,12 +428,12 @@ void set_update_callback(window* win, update_callback cb);
 void run_ui(window* win);
 void set_close(window* win, bool close);
 
-}  // namespace yocto::opengl
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto::opengl {
+namespace ygl {
 
 bool begin_glheader(window* win, const char* title);
 void end_glheader(window* win);
@@ -558,6 +571,6 @@ void log_error(window* win, const std::string& msg);
 void clear_log(window* win);
 void draw_log(window* win);
 
-}  // namespace yocto::opengl
+}  // namespace ygl
 
 #endif

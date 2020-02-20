@@ -7,7 +7,6 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace ym;
-namespace ygl = yocto::opengl;
 
 using std::function;
 using std::string;
