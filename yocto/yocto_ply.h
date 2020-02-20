@@ -46,13 +46,8 @@
 namespace yocto::ply {
 
 // Using directives
-using std::array;
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
-using namespace std::string_literals;
 using namespace yocto::math;
+using namespace std::string_literals;
 
 // Ply property
 struct property {
@@ -60,32 +55,32 @@ struct property {
   enum struct type_t { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
   // description
-  string name    = "";
+  std::string name    = "";
   bool   is_list = false;
   type_t type    = type_t::f32;
 
   // data
-  vector<int8_t>   data_i8  = {};
-  vector<int16_t>  data_i16 = {};
-  vector<int32_t>  data_i32 = {};
-  vector<int64_t>  data_i64 = {};
-  vector<uint8_t>  data_u8  = {};
-  vector<uint16_t> data_u16 = {};
-  vector<uint32_t> data_u32 = {};
-  vector<uint64_t> data_u64 = {};
-  vector<float>    data_f32 = {};
-  vector<double>   data_f64 = {};
+  std::vector<int8_t>   data_i8  = {};
+  std::vector<int16_t>  data_i16 = {};
+  std::vector<int32_t>  data_i32 = {};
+  std::vector<int64_t>  data_i64 = {};
+  std::vector<uint8_t>  data_u8  = {};
+  std::vector<uint16_t> data_u16 = {};
+  std::vector<uint32_t> data_u32 = {};
+  std::vector<uint64_t> data_u64 = {};
+  std::vector<float>    data_f32 = {};
+  std::vector<double>   data_f64 = {};
 
   // list length
-  vector<uint8_t> ldata_u8 = {};
+  std::vector<uint8_t> ldata_u8 = {};
 };
 
 // Ply elements
 struct element {
   // element content
-  string            name       = "";
+  std::string            name       = "";
   size_t            count      = 0;
-  vector<property*> properties = {};
+  std::vector<property*> properties = {};
 
   // cleanup
   ~element();
@@ -98,101 +93,101 @@ struct model {
 
   // ply content
   format_t         format   = format_t::binary_little_endian;
-  vector<string>   comments = {};
-  vector<element*> elements = {};
+  std::vector<std::string>   comments = {};
+  std::vector<element*> elements = {};
 
   // cleanup
   ~model();
 };
 
 // Load and save ply
-inline bool load_ply(const string& filename, model* ply, string& error);
-inline bool save_ply(const string& filename, model* ply, string& error);
+inline bool load_ply(const std::string& filename, model* ply, std::string& error);
+inline bool save_ply(const std::string& filename, model* ply, std::string& error);
 
 // Get ply properties
 inline bool has_property(
-    model* ply, const string& element, const string& property);
+    model* ply, const std::string& element, const std::string& property);
 inline property* get_property(
-    model* ply, const string& element, const string& property);
+    model* ply, const std::string& element, const std::string& property);
 
-inline vector<float> get_values(
-    model* ply, const string& element, const string& property);
-inline vector<vec2f>   get_values(model* ply, const string& element,
-      const string& property1, const string& property2);
-inline vector<vec3f>   get_values(model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3);
-inline vector<vec4f>   get_values(model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3,
-      const string& property4);
-inline vector<vec4f>   get_values(model* ply, const string& element,
-      const string& property1, const string& property2, const string& property3,
+inline std::vector<float> get_values(
+    model* ply, const std::string& element, const std::string& property);
+inline std::vector<vec2f>   get_values(model* ply, const std::string& element,
+      const std::string& property1, const std::string& property2);
+inline std::vector<vec3f>   get_values(model* ply, const std::string& element,
+      const std::string& property1, const std::string& property2, const std::string& property3);
+inline std::vector<vec4f>   get_values(model* ply, const std::string& element,
+      const std::string& property1, const std::string& property2, const std::string& property3,
+      const std::string& property4);
+inline std::vector<vec4f>   get_values(model* ply, const std::string& element,
+      const std::string& property1, const std::string& property2, const std::string& property3,
       float property4);
-inline vector<frame3f> get_values(
-    model* ply, const string& element, const array<string, 12>& properties);
+inline std::vector<frame3f> get_values(
+    model* ply, const std::string& element, const std::array<std::string, 12>& properties);
 
-inline vector<vector<int>> get_lists(
-    model* ply, const string& element, const string& property);
-inline vector<byte> get_list_sizes(
-    model* ply, const string& element, const string& property);
-inline vector<int> get_list_values(
-    model* ply, const string& element, const string& property);
+inline std::vector<std::vector<int>> get_lists(
+    model* ply, const std::string& element, const std::string& property);
+inline std::vector<byte> get_list_sizes(
+    model* ply, const std::string& element, const std::string& property);
+inline std::vector<int> get_list_values(
+    model* ply, const std::string& element, const std::string& property);
 inline vec2i get_list_minxmax(
-    model* ply, const string& element, const string& property);
+    model* ply, const std::string& element, const std::string& property);
 
 // Get ply properties for meshes
-inline vector<vec3f>       get_positions(model* ply);
-inline vector<vec3f>       get_normals(model* ply);
-inline vector<vec2f>       get_texcoords(model* ply, bool flipv = false);
-inline vector<vec3f>       get_colors(model* ply);
-inline vector<float>       get_radius(model* ply);
-inline vector<vector<int>> get_faces(model* ply);
-inline vector<vec2i>       get_lines(model* ply);
-inline vector<int>         get_points(model* ply);
-inline vector<vec3i>       get_triangles(model* ply);
-inline vector<vec4i>       get_quads(model* ply);
+inline std::vector<vec3f>       get_positions(model* ply);
+inline std::vector<vec3f>       get_normals(model* ply);
+inline std::vector<vec2f>       get_texcoords(model* ply, bool flipv = false);
+inline std::vector<vec3f>       get_colors(model* ply);
+inline std::vector<float>       get_radius(model* ply);
+inline std::vector<std::vector<int>> get_faces(model* ply);
+inline std::vector<vec2i>       get_lines(model* ply);
+inline std::vector<int>         get_points(model* ply);
+inline std::vector<vec3i>       get_triangles(model* ply);
+inline std::vector<vec4i>       get_quads(model* ply);
 inline bool                has_quads(model* ply);
 
 // Add ply properties
-inline void add_values(model* ply, const vector<float>& values,
-    const string& element, const string& property);
-inline void add_values(model* ply, const vector<vec2f>& values,
-    const string& element, const string& property1, const string& property2);
-inline void add_values(model* ply, const vector<vec3f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3);
-inline void add_values(model* ply, const vector<vec4f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3, const string& property4);
-inline void add_values(model* ply, const vector<frame3f>& values,
-    const string& element, const array<string, 12>& properties);
+inline void add_values(model* ply, const std::vector<float>& values,
+    const std::string& element, const std::string& property);
+inline void add_values(model* ply, const std::vector<vec2f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2);
+inline void add_values(model* ply, const std::vector<vec3f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2,
+    const std::string& property3);
+inline void add_values(model* ply, const std::vector<vec4f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2,
+    const std::string& property3, const std::string& property4);
+inline void add_values(model* ply, const std::vector<frame3f>& values,
+    const std::string& element, const std::array<std::string, 12>& properties);
 
-inline void add_lists(model* ply, const vector<vector<int>>& values,
-    const string& element, const string& property);
-inline void add_lists(model* ply, const vector<byte>& sizes,
-    const vector<int>& values, const string& element, const string& property);
-inline void add_lists(model* ply, const vector<int>& values,
-    const string& element, const string& property);
-inline void add_lists(model* ply, const vector<vec2i>& values,
-    const string& element, const string& property);
-inline void add_lists(model* ply, const vector<vec3i>& values,
-    const string& element, const string& property);
-inline void add_lists(model* ply, const vector<vec4i>& values,
-    const string& element, const string& property);
+inline void add_lists(model* ply, const std::vector<std::vector<int>>& values,
+    const std::string& element, const std::string& property);
+inline void add_lists(model* ply, const std::vector<byte>& sizes,
+    const std::vector<int>& values, const std::string& element, const std::string& property);
+inline void add_lists(model* ply, const std::vector<int>& values,
+    const std::string& element, const std::string& property);
+inline void add_lists(model* ply, const std::vector<vec2i>& values,
+    const std::string& element, const std::string& property);
+inline void add_lists(model* ply, const std::vector<vec3i>& values,
+    const std::string& element, const std::string& property);
+inline void add_lists(model* ply, const std::vector<vec4i>& values,
+    const std::string& element, const std::string& property);
 
 // Add ply properties for meshes
-inline void add_positions(model* ply, const vector<vec3f>& values);
-inline void add_normals(model* ply, const vector<vec3f>& values);
+inline void add_positions(model* ply, const std::vector<vec3f>& values);
+inline void add_normals(model* ply, const std::vector<vec3f>& values);
 inline void add_texcoords(
-    model* ply, const vector<vec2f>& values, bool flipv = false);
-inline void add_colors(model* ply, const vector<vec3f>& values);
-inline void add_radius(model* ply, const vector<float>& values);
-inline void add_faces(model* ply, const vector<vector<int>>& values);
+    model* ply, const std::vector<vec2f>& values, bool flipv = false);
+inline void add_colors(model* ply, const std::vector<vec3f>& values);
+inline void add_radius(model* ply, const std::vector<float>& values);
+inline void add_faces(model* ply, const std::vector<std::vector<int>>& values);
 inline void add_faces(
-    model* ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
-inline void add_triangles(model* ply, const vector<vec3i>& values);
-inline void add_quads(model* ply, const vector<vec4i>& values);
-inline void add_lines(model* ply, const vector<vec2i>& values);
-inline void add_points(model* ply, const vector<int>& values);
+    model* ply, const std::vector<vec3i>& tvalues, const std::vector<vec4i>& qvalues);
+inline void add_triangles(model* ply, const std::vector<vec3i>& values);
+inline void add_quads(model* ply, const std::vector<vec4i>& values);
+inline void add_lines(model* ply, const std::vector<vec2i>& values);
+inline void add_points(model* ply, const std::vector<int>& values);
 
 }  // namespace yocto::ply
 
@@ -213,19 +208,17 @@ inline void add_points(model* ply, const vector<int>& values);
 // -----------------------------------------------------------------------------
 namespace yocto::ply {
 
-using std::string_view;
-
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(string_view& str) {
+inline void skip_whitespace(std::string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-// Parse values from a string
-[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
+// Parse values from a std::string
+[[nodiscard]] inline bool parse_value(std::string_view& str, std::string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -248,76 +241,76 @@ inline void skip_whitespace(string_view& str) {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
-  auto valuev = string_view{};
+[[nodiscard]] inline bool parse_value(std::string_view& str, std::string& value) {
+  auto valuev = std::string_view{};
   if (!parse_value(str, valuev)) return false;
-  value = string{valuev};
+  value = std::string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int8_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int16_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int64_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint8_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint16_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint32_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, uint64_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, double& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -325,7 +318,7 @@ inline void skip_whitespace(string_view& str) {
   return true;
 }
 #ifdef __APPLE__
-[[nodiscard]] inline bool parse_value(string_view& str, size_t& value) {
+[[nodiscard]] inline bool parse_value(std::string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -334,70 +327,70 @@ inline void skip_whitespace(string_view& str) {
 }
 #endif
 
-// Formats values to string
-inline void format_value(string& str, const string& value) { str += value; }
-inline void format_value(string& str, int8_t value) {
+// Formats values to std::string
+inline void format_value(std::string& str, const std::string& value) { str += value; }
+inline void format_value(std::string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, int16_t value) {
+inline void format_value(std::string& str, int16_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, int32_t value) {
+inline void format_value(std::string& str, int32_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, int64_t value) {
+inline void format_value(std::string& str, int64_t value) {
   char buf[256];
   sprintf(buf, "%lld", (long long)value);
   str += buf;
 }
-inline void format_value(string& str, uint8_t value) {
+inline void format_value(std::string& str, uint8_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-inline void format_value(string& str, uint16_t value) {
+inline void format_value(std::string& str, uint16_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-inline void format_value(string& str, uint32_t value) {
+inline void format_value(std::string& str, uint32_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-inline void format_value(string& str, uint64_t value) {
+inline void format_value(std::string& str, uint64_t value) {
   char buf[256];
   sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
-inline void format_value(string& str, float value) {
+inline void format_value(std::string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-inline void format_value(string& str, double value) {
+inline void format_value(std::string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
 
 // Foramt to file
-inline void format_values(string& str, const string& fmt) {
+inline void format_values(std::string& str, const std::string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
+  if (pos != std::string::npos) throw std::runtime_error("bad format std::string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
 inline void format_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+    std::string& str, const std::string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  if (pos == std::string::npos) throw std::invalid_argument("bad format std::string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -405,7 +398,7 @@ inline void format_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    FILE* fs, const std::string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
@@ -448,7 +441,7 @@ template <typename T>
   return true;
 }
 
-inline void remove_comment(string_view& str, char comment_char = '#') {
+inline void remove_comment(std::string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -471,9 +464,9 @@ inline property* add_property(element* element) {
 }
 
 // Load ply
-inline bool load_ply(const string& filename, model* ply, string& error) {
+inline bool load_ply(const std::string& filename, model* ply, std::string& error) {
   // ply type names
-  static auto type_map = unordered_map<string, property::type_t>{
+  static auto type_map = std::unordered_map<std::string, property::type_t>{
       {"char", property::type_t::i8}, {"short", property::type_t::i16},
       {"int", property::type_t::i32}, {"long", property::type_t::i64},
       {"uchar", property::type_t::u8}, {"ushort", property::type_t::u16},
@@ -516,7 +509,7 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
-    auto str = string_view{buffer};
+    auto str = std::string_view{buffer};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -550,7 +543,7 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
-      ply->comments.push_back(string{str});
+      ply->comments.push_back(std::string{str});
     } else if (cmd == "obj_info") {
       skip_whitespace(str);
       // comment is the rest of the str
@@ -614,7 +607,7 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
         if (!fgets(buffer, sizeof(buffer), fs)) return read_error();
-        auto str = string_view{buffer};
+        auto str = std::string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
             if (!parse_value(str, prop->ldata_u8.emplace_back()))
@@ -730,15 +723,15 @@ inline bool load_ply(const string& filename, model* ply, string& error) {
 }
 
 // Save ply
-inline bool save_ply(const string& filename, model* ply, string& error) {
+inline bool save_ply(const std::string& filename, model* ply, std::string& error) {
   // ply type names
-  static auto type_map = unordered_map<property::type_t, string>{
+  static auto type_map = std::unordered_map<property::type_t, std::string>{
       {property::type_t::i8, "char"}, {property::type_t::i16, "short"},
       {property::type_t::i32, "int"}, {property::type_t::i64, "uint"},
       {property::type_t::u8, "uchar"}, {property::type_t::u16, "ushort"},
       {property::type_t::u32, "uint"}, {property::type_t::u64, "ulong"},
       {property::type_t::f32, "float"}, {property::type_t::f64, "double"}};
-  static auto format_map = unordered_map<model::format_t, string>{
+  static auto format_map = std::unordered_map<model::format_t, std::string>{
       {model::format_t::ascii, "ascii"},
       {model::format_t::binary_little_endian, "binary_little_endian"},
       {model::format_t::binary_big_endian, "binary_big_endian"}};
@@ -789,7 +782,7 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
   // properties
   if (ply->format == model::format_t::ascii) {
     for (auto elem : ply->elements) {
-      auto cur = vector<size_t>(elem->properties.size(), 0);
+      auto cur = std::vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
@@ -848,7 +841,7 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
   } else {
     auto big_endian = ply->format == model::format_t::binary_big_endian;
     for (auto elem : ply->elements) {
-      auto cur = vector<size_t>(elem->properties.size(), 0);
+      auto cur = std::vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
@@ -910,7 +903,7 @@ inline bool save_ply(const string& filename, model* ply, string& error) {
 
 // Get ply properties
 inline bool has_property(
-    model* ply, const string& element, const string& property) {
+    model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -920,7 +913,7 @@ inline bool has_property(
   return false;
 }
 inline property* get_property(
-    model* ply, const string& element, const string& property) {
+    model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -930,13 +923,13 @@ inline property* get_property(
   throw std::runtime_error("property not found");
 }
 template <typename T, typename T1>
-inline vector<T> convert_property(const vector<T1>& prop) {
-  auto values = vector<T>(prop.size());
+inline std::vector<T> convert_property(const std::vector<T1>& prop) {
+  auto values = std::vector<T>(prop.size());
   for (auto i = (size_t)0; i < prop.size(); i++) values[i] = (T)prop[i];
   return values;
 }
 template <typename T>
-inline vector<T> convert_property(property* prop) {
+inline std::vector<T> convert_property(property* prop) {
   switch (prop->type) {
     case property::type_t::i8: return convert_property<T>(prop->data_i8);
     case property::type_t::i16: return convert_property<T>(prop->data_i16);
@@ -953,74 +946,74 @@ inline vector<T> convert_property(property* prop) {
   std::runtime_error("should not have gotten here");
   return {};
 }
-inline vector<float> get_values(
-    model* ply, const string& element, const string& property) {
+inline std::vector<float> get_values(
+    model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (prop->is_list) return {};
   return convert_property<float>(prop);
 }
-inline vector<vec2f> get_values(model* ply, const string& element,
-    const string& property1, const string& property2) {
+inline std::vector<vec2f> get_values(model* ply, const std::string& element,
+    const std::string& property1, const std::string& property2) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
-  auto values = vector<vec2f>(x.size());
+  auto values = std::vector<vec2f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return values;
 }
-inline vector<vec3f> get_values(model* ply, const string& element,
-    const string& property1, const string& property2, const string& property3) {
+inline std::vector<vec3f> get_values(model* ply, const std::string& element,
+    const std::string& property1, const std::string& property2, const std::string& property3) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
-  auto values = vector<vec3f>(x.size());
+  auto values = std::vector<vec3f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i]};
   return values;
 }
-inline vector<vec4f> get_values(model* ply, const string& element,
-    const string& property1, const string& property2, const string& property3,
-    const string& property4) {
+inline std::vector<vec4f> get_values(model* ply, const std::string& element,
+    const std::string& property1, const std::string& property2, const std::string& property3,
+    const std::string& property4) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
   auto w      = get_values(ply, element, property4);
-  auto values = vector<vec4f>(x.size());
+  auto values = std::vector<vec4f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i], w[i]};
   return values;
 }
-inline vector<vec4f> get_values(model* ply, const string& element,
-    const string& property1, const string& property2, const string& property3,
+inline std::vector<vec4f> get_values(model* ply, const std::string& element,
+    const std::string& property1, const std::string& property2, const std::string& property3,
     float property4) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
   auto w      = property4;
-  auto values = vector<vec4f>(x.size());
+  auto values = std::vector<vec4f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i], w};
   return values;
 }
-inline vector<frame3f> get_values(
-    model* ply, const string& element, const array<string, 12>& properties) {
-  auto coords = array<vector<float>, 12>{};
+inline std::vector<frame3f> get_values(
+    model* ply, const std::string& element, const std::array<std::string, 12>& properties) {
+  auto coords = std::array<std::vector<float>, 12>{};
   for (auto idx = 0; idx < 12; idx++)
     coords[idx] = get_values(ply, element, properties[idx]);
-  auto values = vector<frame3f>(coords[0].size());
+  auto values = std::vector<frame3f>(coords[0].size());
   for (auto i = (size_t)0; i < values.size(); i++) {
     for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
   }
   return values;
 }
-inline vector<vector<int>> get_lists(
-    model* ply, const string& element, const string& property) {
+inline std::vector<std::vector<int>> get_lists(
+    model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
   auto& sizes  = prop->ldata_u8;
   auto  values = convert_property<int>(prop);
-  auto  lists  = vector<vector<int>>(sizes.size());
+  auto  lists  = std::vector<std::vector<int>>(sizes.size());
   auto  cur    = (size_t)0;
   for (auto i = (size_t)0; i < lists.size(); i++) {
     lists[i].resize(sizes[i]);
@@ -1030,53 +1023,53 @@ inline vector<vector<int>> get_lists(
   }
   return lists;
 }
-inline vector<byte> get_list_sizes(
-    model* ply, const string& element, const string& property) {
+inline std::vector<byte> get_list_sizes(
+    model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
   return prop->ldata_u8;
 }
-inline vector<int> get_list_values(
-    model* ply, const string& element, const string& property) {
+inline std::vector<int> get_list_values(
+    model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
   return convert_property<int>(prop);
 }
 
-inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
+inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoord) {
   auto flipped = texcoord;
   for (auto& uv : flipped) uv.y = 1 - uv.y;
   return flipped;
 }
 
 // Get ply properties for meshes
-inline vector<vec3f> get_positions(model* ply) {
+inline std::vector<vec3f> get_positions(model* ply) {
   return get_values(ply, "vertex", "x", "y", "z");
 }
-inline vector<vec3f> get_normals(model* ply) {
+inline std::vector<vec3f> get_normals(model* ply) {
   return get_values(ply, "vertex", "nx", "ny", "nz");
 }
-inline vector<vec2f> get_texcoords(model* ply, bool flipv) {
+inline std::vector<vec2f> get_texcoords(model* ply, bool flipv) {
   auto texcoord = has_property(ply, "vertex", "u")
                       ? get_values(ply, "vertex", "u", "v")
                       : get_values(ply, "vertex", "s", "t");
   return flipv ? flip_texcoord(texcoord) : texcoord;
 }
-inline vector<vec3f> get_colors(model* ply) {
+inline std::vector<vec3f> get_colors(model* ply) {
   return get_values(ply, "vertex", "red", "green", "blue");
 }
-inline vector<float> get_radius(model* ply) {
+inline std::vector<float> get_radius(model* ply) {
   return get_values(ply, "vertex", "radius");
 }
-inline vector<vector<int>> get_faces(model* ply) {
+inline std::vector<std::vector<int>> get_faces(model* ply) {
   return get_lists(ply, "face", "vertex_indices");
 }
-inline vector<vec3i> get_triangles(model* ply) {
+inline std::vector<vec3i> get_triangles(model* ply) {
   auto indices   = get_list_values(ply, "face", "vertex_indices");
   auto sizes     = get_list_sizes(ply, "face", "vertex_indices");
-  auto triangles = vector<vec3i>{};
+  auto triangles = std::vector<vec3i>{};
   triangles.reserve(sizes.size());
   auto cur = 0;
   for (auto size : sizes) {
@@ -1088,10 +1081,10 @@ inline vector<vec3i> get_triangles(model* ply) {
   }
   return triangles;
 }
-inline vector<vec4i> get_quads(model* ply) {
+inline std::vector<vec4i> get_quads(model* ply) {
   auto indices = get_list_values(ply, "face", "vertex_indices");
   auto sizes   = get_list_sizes(ply, "face", "vertex_indices");
-  auto quads   = vector<vec4i>{};
+  auto quads   = std::vector<vec4i>{};
   quads.reserve(sizes.size());
   auto cur = 0;
   for (auto size : sizes) {
@@ -1108,10 +1101,10 @@ inline vector<vec4i> get_quads(model* ply) {
   }
   return quads;
 }
-inline vector<vec2i> get_lines(model* ply) {
+inline std::vector<vec2i> get_lines(model* ply) {
   auto indices = get_list_values(ply, "str", "vertex_indices");
   auto sizes   = get_list_sizes(ply, "str", "vertex_indices");
-  auto lines   = vector<vec2i>{};
+  auto lines   = std::vector<vec2i>{};
   lines.reserve(sizes.size());
   auto cur = 0;
   for (auto size : sizes) {
@@ -1122,7 +1115,7 @@ inline vector<vec2i> get_lines(model* ply) {
   }
   return lines;
 }
-inline vector<int> get_points(model* ply) {
+inline std::vector<int> get_points(model* ply) {
   return get_list_values(ply, "point", "vertex_indices");
 }
 inline bool has_quads(model* ply) {
@@ -1133,7 +1126,7 @@ inline bool has_quads(model* ply) {
 }
 
 // Add ply properties
-inline void add_element(model* ply, const string& element_name, size_t count) {
+inline void add_element(model* ply, const std::string& element_name, size_t count) {
   for (auto elem : ply->elements) {
     if (elem->name == element_name) return;
   }
@@ -1141,8 +1134,8 @@ inline void add_element(model* ply, const string& element_name, size_t count) {
   elem->name  = element_name;
   elem->count = count;
 }
-inline void add_property(model* ply, const string& element_name,
-    const string& property_name, size_t count, property::type_t type,
+inline void add_property(model* ply, const std::string& element_name,
+    const std::string& property_name, size_t count, property::type_t type,
     bool is_list) {
   add_element(ply, element_name, count);
   for (auto elem : ply->elements) {
@@ -1159,14 +1152,14 @@ inline void add_property(model* ply, const string& element_name,
   }
 }
 template <typename T>
-inline vector<T> make_vector(const T* value, size_t count, int stride) {
-  auto ret = vector<T>(count);
+inline std::vector<T> make_vector(const T* value, size_t count, int stride) {
+  auto ret = std::vector<T>(count);
   for (auto idx = (size_t)0; idx < count; idx++) ret[idx] = value[idx * stride];
   return ret;
 }
 
 inline void add_values(model* ply, const float* values, size_t count,
-    const string& element, const string* properties, int nprops) {
+    const std::string& element, const std::string* properties, int nprops) {
   if (!values) return;
   for (auto p = 0; p < nprops; p++) {
     add_property(
@@ -1177,40 +1170,40 @@ inline void add_values(model* ply, const float* values, size_t count,
   }
 }
 
-inline void add_values(model* ply, const vector<float>& values,
-    const string& element, const string& property) {
-  auto properties = vector{property};
+inline void add_values(model* ply, const std::vector<float>& values,
+    const std::string& element, const std::string& property) {
+  auto properties = std::vector{property};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
-inline void add_values(model* ply, const vector<vec2f>& values,
-    const string& element, const string& property1, const string& property2) {
-  auto properties = vector{property1, property2};
+inline void add_values(model* ply, const std::vector<vec2f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2) {
+  auto properties = std::vector{property1, property2};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
-inline void add_values(model* ply, const vector<vec3f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3) {
-  auto properties = vector{property1, property2, property3};
+inline void add_values(model* ply, const std::vector<vec3f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2,
+    const std::string& property3) {
+  auto properties = std::vector{property1, property2, property3};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
-inline void add_values(model* ply, const vector<vec4f>& values,
-    const string& element, const string& property1, const string& property2,
-    const string& property3, const string& property4) {
-  auto properties = vector{property1, property2, property3, property4};
+inline void add_values(model* ply, const std::vector<vec4f>& values,
+    const std::string& element, const std::string& property1, const std::string& property2,
+    const std::string& property3, const std::string& property4) {
+  auto properties = std::vector{property1, property2, property3, property4};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
-inline void add_values(model* ply, const vector<frame3f>& values,
-    const string& element, const array<string, 12>& properties) {
+inline void add_values(model* ply, const std::vector<frame3f>& values,
+    const std::string& element, const std::array<std::string, 12>& properties) {
   add_values(ply, (float*)values.data(), values.size(), element,
       properties.data(), properties.size());
 }
 
-inline void add_lists(model* ply, const vector<vector<int>>& values,
-    const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<std::vector<int>>& values,
+    const std::string& element, const std::string& property) {
   if (values.empty()) return;
   add_property(
       ply, element, property, values.size(), property::type_t::i32, true);
@@ -1222,8 +1215,8 @@ inline void add_lists(model* ply, const vector<vector<int>>& values,
     prop->ldata_u8.push_back((uint8_t)value.size());
   }
 }
-inline void add_lists(model* ply, const vector<byte>& sizes,
-    const vector<int>& values, const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<byte>& sizes,
+    const std::vector<int>& values, const std::string& element, const std::string& property) {
   if (values.empty()) return;
   add_property(
       ply, element, property, sizes.size(), property::type_t::i32, true);
@@ -1232,55 +1225,55 @@ inline void add_lists(model* ply, const vector<byte>& sizes,
   prop->ldata_u8 = sizes;
 }
 inline void add_lists(model* ply, const int* values, size_t count, int size,
-    const string& element, const string& property) {
+    const std::string& element, const std::string& property) {
   if (!values) return;
   add_property(ply, element, property, count, property::type_t::i32, true);
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
   prop->ldata_u8.assign(count, size);
 }
-inline void add_lists(model* ply, const vector<int>& values,
-    const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<int>& values,
+    const std::string& element, const std::string& property) {
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
-inline void add_lists(model* ply, const vector<vec2i>& values,
-    const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<vec2i>& values,
+    const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 2, element, property);
 }
-inline void add_lists(model* ply, const vector<vec3i>& values,
-    const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<vec3i>& values,
+    const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 3, element, property);
 }
-inline void add_lists(model* ply, const vector<vec4i>& values,
-    const string& element, const string& property) {
+inline void add_lists(model* ply, const std::vector<vec4i>& values,
+    const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
-inline void add_positions(model* ply, const vector<vec3f>& values) {
+inline void add_positions(model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "x", "y", "z");
 }
-inline void add_normals(model* ply, const vector<vec3f>& values) {
+inline void add_normals(model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-inline void add_texcoords(model* ply, const vector<vec2f>& values, bool flipv) {
+inline void add_texcoords(model* ply, const std::vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
-inline void add_colors(model* ply, const vector<vec3f>& values) {
+inline void add_colors(model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "red", "green", "blue");
 }
-inline void add_radius(model* ply, const vector<float>& values) {
+inline void add_radius(model* ply, const std::vector<float>& values) {
   return add_values(ply, values, "vertex", "radius");
 }
-inline void add_faces(model* ply, const vector<vector<int>>& values) {
+inline void add_faces(model* ply, const std::vector<std::vector<int>>& values) {
   return add_lists(ply, values, "face", "vertex_indices");
 }
 inline void add_faces(
-    model* ply, const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    model* ply, const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return;
   if (quads.empty()) {
     return add_lists(ply, triangles, "face", "vertex_indices");
@@ -1289,8 +1282,8 @@ inline void add_faces(
                  [](const vec4i& q) { return q.z != q.w; })) {
     return add_lists(ply, quads, "face", "vertex_indices");
   } else {
-    auto sizes   = vector<uint8_t>();
-    auto indices = vector<int>{};
+    auto sizes   = std::vector<uint8_t>();
+    auto indices = std::vector<int>{};
     sizes.reserve(triangles.size() + quads.size());
     indices.reserve(triangles.size() * 3 + quads.size() * 4);
     for (auto& t : triangles) {
@@ -1309,16 +1302,16 @@ inline void add_faces(
     return add_lists(ply, sizes, indices, "face", "vertex_indices");
   }
 }
-inline void add_triangles(model* ply, const vector<vec3i>& values) {
+inline void add_triangles(model* ply, const std::vector<vec3i>& values) {
   return add_faces(ply, values, {});
 }
-inline void add_quads(model* ply, const vector<vec4i>& values) {
+inline void add_quads(model* ply, const std::vector<vec4i>& values) {
   return add_faces(ply, {}, values);
 }
-inline void add_lines(model* ply, const vector<vec2i>& values) {
+inline void add_lines(model* ply, const std::vector<vec2i>& values) {
   return add_lists(ply, values, "str", "vertex_indices");
 }
-inline void add_points(model* ply, const vector<int>& values) {
+inline void add_points(model* ply, const std::vector<int>& values) {
   return add_lists(ply, values, "point", "vertex_indices");
 }
 
