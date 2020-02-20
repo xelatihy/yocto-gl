@@ -44,9 +44,8 @@ using std::make_unique;
 namespace fs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(tr::scene* scene, sceneio_model* ioscene,
-    tr::camera*& camera, sceneio_camera* iocamera,
-    sceneio_progress progress_cb = {}) {
+void init_scene(tr::scene* scene, sceneio_model* ioscene, tr::camera*& camera,
+    sceneio_camera* iocamera, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +

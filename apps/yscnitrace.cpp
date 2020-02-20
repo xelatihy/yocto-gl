@@ -62,9 +62,9 @@ struct app_state {
 
   // scene
   sceneio_model*  ioscene  = new sceneio_model{};
-  tr::scene*    scene    = new tr::scene{};
+  tr::scene*      scene    = new tr::scene{};
   sceneio_camera* iocamera = nullptr;
-  tr::camera*   camera   = nullptr;
+  tr::camera*     camera   = nullptr;
 
   // options
   tr::trace_params params = {};
@@ -89,8 +89,8 @@ struct app_state {
   sceneio_texture*     selected_texture     = nullptr;
 
   // computation
-  int          render_sample  = 0;
-  int          render_counter = 0;
+  int        render_sample  = 0;
+  int        render_counter = 0;
   tr::state* render_state   = new tr::state{};
 
   // loading status
@@ -121,7 +121,7 @@ struct app_states {
 
   // default options
   tr::trace_params params     = {};
-  bool         add_skyenv = false;
+  bool             add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -130,9 +130,8 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(tr::scene* scene, sceneio_model* ioscene,
-    tr::camera*& camera, sceneio_camera* iocamera,
-    sceneio_progress progress_cb = {}) {
+void init_scene(tr::scene* scene, sceneio_model* ioscene, tr::camera*& camera,
+    sceneio_camera* iocamera, sceneio_progress progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +

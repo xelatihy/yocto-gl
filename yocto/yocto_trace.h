@@ -123,21 +123,21 @@ void set_texture(texture* texture, const image<byte>& img);
 void set_texture(texture* texture, const image<float>& img);
 
 // material properties
-void set_emission(material* material, const vec3f& emission,
-    texture* emission_tex = nullptr);
-void set_color(material* material, const vec3f& color,
-    texture* color_tex = nullptr);
-void set_specular(material* material, float specular = 1,
-    texture* specular_tex = nullptr);
+void set_emission(
+    material* material, const vec3f& emission, texture* emission_tex = nullptr);
+void set_color(
+    material* material, const vec3f& color, texture* color_tex = nullptr);
+void set_specular(
+    material* material, float specular = 1, texture* specular_tex = nullptr);
 void set_ior(material* material, float ior);
-void set_metallic(material* material, float metallic,
-    texture* metallic_tex = nullptr);
+void set_metallic(
+    material* material, float metallic, texture* metallic_tex = nullptr);
 void set_transmission(material* material, float transmission, bool thin,
     float trdepth, texture* transmission_tex = nullptr);
-void set_roughness(material* material, float roughness,
-    texture* roughness_tex = nullptr);
-void set_opacity(material* material, float opacity,
-    texture* opacity_tex = nullptr);
+void set_roughness(
+    material* material, float roughness, texture* roughness_tex = nullptr);
+void set_opacity(
+    material* material, float opacity, texture* opacity_tex = nullptr);
 void set_thin(material* material, bool thin);
 void set_scattering(material* material, const vec3f& scattering,
     float scanisotropy, texture* scattering_tex = nullptr);
@@ -196,29 +196,29 @@ const auto default_seed = 961748941ull;
 
 // Options for trace functions
 struct trace_params {
-  int                   resolution = 1280;
+  int             resolution = 1280;
   sampler_type    sampler    = sampler_type::path;
   falsecolor_type falsecolor = falsecolor_type::diffuse;
-  int                   samples    = 512;
-  int                   bounces    = 8;
-  float                 clamp      = 100;
-  bool                  nocaustics = false;
-  bool                  envhidden  = false;
-  bool                  tentfilter = false;
-  uint64_t              seed       = default_seed;
+  int             samples    = 512;
+  int             bounces    = 8;
+  float           clamp      = 100;
+  bool            nocaustics = false;
+  bool            envhidden  = false;
+  bool            tentfilter = false;
+  uint64_t        seed       = default_seed;
   bvh_type        bvh        = bvh_type::default_;
-  bool                  noparallel = false;
-  int                   pratio     = 8;
-  float                 exposure   = 0;
+  bool            noparallel = false;
+  int             pratio     = 8;
+  float           exposure   = 0;
 };
 
 const auto sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto falsecolor_names = vector<string>{"normal", "frontfacing",
-    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "opacity", "object", "element", "highlight"};
+const auto falsecolor_names = vector<string>{"normal", "frontfacing", "gnormal",
+    "gfrontfacing", "texcoord", "color", "emission", "diffuse", "specular",
+    "coat", "metal", "transmission", "refraction", "roughness", "opacity",
+    "object", "element", "highlight"};
 const auto bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -241,11 +241,9 @@ void init_bvh(scene* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene*       scene,
-    const vector<object*>&   updated_objects,
+void update_bvh(scene* scene, const vector<object*>& updated_objects,
     const vector<shape*>&    updated_shapes,
-    const vector<instance*>& updated_instances,
-    const trace_params&            params);
+    const vector<instance*>& updated_instances, const trace_params& params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const scene* scene, const camera* camera,
@@ -261,11 +259,9 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct state;
-void trace_start(state* state, const scene* scene,
-    const camera* camera, const trace_params& params,
-    progress_callback       progress_cb       = {},
-    image_callback image_cb = {},
-    async_callback  async_cb = {});
+void trace_start(state* state, const scene* scene, const camera* camera,
+    const trace_params& params, progress_callback progress_cb = {},
+    image_callback image_cb = {}, async_callback async_cb = {});
 void trace_stop(state* state);
 
 }  // namespace yocto::trace
@@ -293,7 +289,7 @@ struct bvh_node {
 // Application data is not stored explicitly.
 struct bvh_tree {
   vector<bvh_node> nodes      = {};
-  vector<vec2i>          primitives = {};
+  vector<vec2i>    primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -400,7 +396,7 @@ struct instance {
 
 // Object.
 struct object {
-  frame3f         frame    = identity3x4f;
+  frame3f   frame    = identity3x4f;
   shape*    shape    = nullptr;
   material* material = nullptr;
   instance* instance = nullptr;
@@ -408,16 +404,16 @@ struct object {
 
 // Environment map.
 struct environment {
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
-  texture* emission_tex = nullptr;
-  vector<float>  texels_cdf   = {};
+  frame3f       frame        = identity3x4f;
+  vec3f         emission     = {0, 0, 0};
+  texture*      emission_tex = nullptr;
+  vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct light {
   object*      object      = nullptr;
-  int                instance    = -1;
+  int          instance    = -1;
   environment* environment = nullptr;
 };
 
@@ -439,7 +435,7 @@ struct scene {
 
   // computed properties
   vector<light*> lights = {};
-  bvh_tree*           bvh    = nullptr;
+  bvh_tree*      bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene      embree_bvh       = nullptr;
   vector<vec2i> embree_instances = {};
@@ -459,10 +455,10 @@ struct pixel {
 
 // [experimental] Asynchronous state
 struct state {
-  image<vec4f>       render = {};
-  image<pixel> pixels = {};
-  std::future<void>  worker = {};  // async
-  std::atomic<bool>  stop   = {};  // async
+  image<vec4f>      render = {};
+  image<pixel>      pixels = {};
+  std::future<void> worker = {};  // async
+  std::atomic<bool> stop   = {};  // async
 };
 
 }  // namespace yocto::trace
@@ -487,11 +483,10 @@ struct intersection3f {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-intersection3f intersect_scene_bvh(const scene* scene,
+intersection3f intersect_scene_bvh(const scene* scene, const ray3f& ray,
+    bool find_any = false, bool non_rigid_frames = true);
+intersection3f intersect_instance_bvh(const object* object, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-intersection3f intersect_instance_bvh(const object* object,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
 
 }  // namespace yocto::trace
 
