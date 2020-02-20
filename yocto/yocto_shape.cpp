@@ -24,6 +24,13 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
+// using directives
+using std::function;
+using std::pair;
+using std::string;
+using std::unordered_map;
+using std::vector;
+
 // Compute per-vertex tangents for lines.
 vector<vec3f> compute_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
