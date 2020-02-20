@@ -84,9 +84,9 @@ struct property {
 // Ply elements
 struct element {
   // element content
-  std::string            name       = "";
-  size_t                 count      = 0;
-  std::vector<property*> properties = {};
+  std::string                  name       = "";
+  size_t                       count      = 0;
+  std::vector<yply::property*> properties = {};
 
   // cleanup
   ~element();
@@ -98,9 +98,9 @@ struct model {
   enum struct format_t { ascii, binary_little_endian, binary_big_endian };
 
   // ply content
-  format_t                 format   = format_t::binary_little_endian;
-  std::vector<std::string> comments = {};
-  std::vector<element*>    elements = {};
+  format_t                    format   = format_t::binary_little_endian;
+  std::vector<std::string>    comments = {};
+  std::vector<yply::element*> elements = {};
 
   // cleanup
   ~model();
@@ -108,98 +108,103 @@ struct model {
 
 // Load and save ply
 inline bool load_ply(
-    const std::string& filename, model* ply, std::string& error);
+    const std::string& filename, yply::model* ply, std::string& error);
 inline bool save_ply(
-    const std::string& filename, model* ply, std::string& error);
+    const std::string& filename, yply::model* ply, std::string& error);
 
 // Get ply properties
 inline bool has_property(
-    model* ply, const std::string& element, const std::string& property);
-inline property* get_property(
-    model* ply, const std::string& element, const std::string& property);
+    yply::model* ply, const std::string& element, const std::string& property);
+inline yply::property* get_property(
+    yply::model* ply, const std::string& element, const std::string& property);
 
 inline std::vector<float> get_values(
-    model* ply, const std::string& element, const std::string& property);
-inline std::vector<vec2f>   get_values(model* ply, const std::string& element,
-      const std::string& property1, const std::string& property2);
-inline std::vector<vec3f>   get_values(model* ply, const std::string& element,
-      const std::string& property1, const std::string& property2,
-      const std::string& property3);
-inline std::vector<vec4f>   get_values(model* ply, const std::string& element,
-      const std::string& property1, const std::string& property2,
-      const std::string& property3, const std::string& property4);
-inline std::vector<vec4f>   get_values(model* ply, const std::string& element,
-      const std::string& property1, const std::string& property2,
-      const std::string& property3, float property4);
-inline std::vector<frame3f> get_values(model* ply, const std::string& element,
-    const std::array<std::string, 12>& properties);
+    yply::model* ply, const std::string& element, const std::string& property);
+inline std::vector<vec2f>   get_values(yply::model* ply,
+      const std::string& element, const std::string& property1,
+      const std::string& property2);
+inline std::vector<vec3f>   get_values(yply::model* ply,
+      const std::string& element, const std::string& property1,
+      const std::string& property2, const std::string& property3);
+inline std::vector<vec4f>   get_values(yply::model* ply,
+      const std::string& element, const std::string& property1,
+      const std::string& property2, const std::string& property3,
+      const std::string& property4);
+inline std::vector<vec4f>   get_values(yply::model* ply,
+      const std::string& element, const std::string& property1,
+      const std::string& property2, const std::string& property3,
+      float property4);
+inline std::vector<frame3f> get_values(yply::model* ply,
+    const std::string& element, const std::array<std::string, 12>& properties);
 
 inline std::vector<std::vector<int>> get_lists(
-    model* ply, const std::string& element, const std::string& property);
+    yply::model* ply, const std::string& element, const std::string& property);
 inline std::vector<byte> get_list_sizes(
-    model* ply, const std::string& element, const std::string& property);
+    yply::model* ply, const std::string& element, const std::string& property);
 inline std::vector<int> get_list_values(
-    model* ply, const std::string& element, const std::string& property);
+    yply::model* ply, const std::string& element, const std::string& property);
 inline vec2i get_list_minxmax(
-    model* ply, const std::string& element, const std::string& property);
+    yply::model* ply, const std::string& element, const std::string& property);
 
 // Get ply properties for meshes
-inline std::vector<vec3f> get_positions(model* ply);
-inline std::vector<vec3f> get_normals(model* ply);
-inline std::vector<vec2f> get_texcoords(model* ply, bool flipv = false);
-inline std::vector<vec3f> get_colors(model* ply);
-inline std::vector<float> get_radius(model* ply);
-inline std::vector<std::vector<int>> get_faces(model* ply);
-inline std::vector<vec2i>            get_lines(model* ply);
-inline std::vector<int>              get_points(model* ply);
-inline std::vector<vec3i>            get_triangles(model* ply);
-inline std::vector<vec4i>            get_quads(model* ply);
-inline bool                          has_quads(model* ply);
+inline std::vector<vec3f> get_positions(yply::model* ply);
+inline std::vector<vec3f> get_normals(yply::model* ply);
+inline std::vector<vec2f> get_texcoords(yply::model* ply, bool flipv = false);
+inline std::vector<vec3f> get_colors(yply::model* ply);
+inline std::vector<float> get_radius(yply::model* ply);
+inline std::vector<std::vector<int>> get_faces(yply::model* ply);
+inline std::vector<vec2i>            get_lines(yply::model* ply);
+inline std::vector<int>              get_points(yply::model* ply);
+inline std::vector<vec3i>            get_triangles(yply::model* ply);
+inline std::vector<vec4i>            get_quads(yply::model* ply);
+inline bool                          has_quads(yply::model* ply);
 
 // Add ply properties
-inline void add_values(model* ply, const std::vector<float>& values,
+inline void add_values(yply::model* ply, const std::vector<float>& values,
     const std::string& element, const std::string& property);
-inline void add_values(model* ply, const std::vector<vec2f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec2f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2);
-inline void add_values(model* ply, const std::vector<vec3f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec3f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2, const std::string& property3);
-inline void add_values(model* ply, const std::vector<vec4f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec4f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2, const std::string& property3,
     const std::string& property4);
-inline void add_values(model* ply, const std::vector<frame3f>& values,
+inline void add_values(yply::model* ply, const std::vector<frame3f>& values,
     const std::string& element, const std::array<std::string, 12>& properties);
 
-inline void add_lists(model* ply, const std::vector<std::vector<int>>& values,
-    const std::string& element, const std::string& property);
-inline void add_lists(model* ply, const std::vector<byte>& sizes,
+inline void add_lists(yply::model*       ply,
+    const std::vector<std::vector<int>>& values, const std::string& element,
+    const std::string& property);
+inline void add_lists(yply::model* ply, const std::vector<byte>& sizes,
     const std::vector<int>& values, const std::string& element,
     const std::string& property);
-inline void add_lists(model* ply, const std::vector<int>& values,
+inline void add_lists(yply::model* ply, const std::vector<int>& values,
     const std::string& element, const std::string& property);
-inline void add_lists(model* ply, const std::vector<vec2i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec2i>& values,
     const std::string& element, const std::string& property);
-inline void add_lists(model* ply, const std::vector<vec3i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec3i>& values,
     const std::string& element, const std::string& property);
-inline void add_lists(model* ply, const std::vector<vec4i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec4i>& values,
     const std::string& element, const std::string& property);
 
 // Add ply properties for meshes
-inline void add_positions(model* ply, const std::vector<vec3f>& values);
-inline void add_normals(model* ply, const std::vector<vec3f>& values);
+inline void add_positions(yply::model* ply, const std::vector<vec3f>& values);
+inline void add_normals(yply::model* ply, const std::vector<vec3f>& values);
 inline void add_texcoords(
-    model* ply, const std::vector<vec2f>& values, bool flipv = false);
-inline void add_colors(model* ply, const std::vector<vec3f>& values);
-inline void add_radius(model* ply, const std::vector<float>& values);
-inline void add_faces(model* ply, const std::vector<std::vector<int>>& values);
-inline void add_faces(model* ply, const std::vector<vec3i>& tvalues,
+    yply::model* ply, const std::vector<vec2f>& values, bool flipv = false);
+inline void add_colors(yply::model* ply, const std::vector<vec3f>& values);
+inline void add_radius(yply::model* ply, const std::vector<float>& values);
+inline void add_faces(
+    yply::model* ply, const std::vector<std::vector<int>>& values);
+inline void add_faces(yply::model* ply, const std::vector<vec3i>& tvalues,
     const std::vector<vec4i>& qvalues);
-inline void add_triangles(model* ply, const std::vector<vec3i>& values);
-inline void add_quads(model* ply, const std::vector<vec4i>& values);
-inline void add_lines(model* ply, const std::vector<vec2i>& values);
-inline void add_points(model* ply, const std::vector<int>& values);
+inline void add_triangles(yply::model* ply, const std::vector<vec3i>& values);
+inline void add_quads(yply::model* ply, const std::vector<vec4i>& values);
+inline void add_lines(yply::model* ply, const std::vector<vec2i>& values);
+inline void add_points(yply::model* ply, const std::vector<int>& values);
 
 }  // namespace yply
 
@@ -477,16 +482,16 @@ inline model::~model() {
 }
 
 // Make ply
-inline element* add_property(model* ply) {
+inline yply::element* add_property(yply::model* ply) {
   return ply->elements.emplace_back(new element{});
 }
-inline property* add_property(element* element) {
+inline yply::property* add_property(yply::element* element) {
   return element->properties.emplace_back(new property{});
 }
 
 // Load ply
 inline bool load_ply(
-    const std::string& filename, model* ply, std::string& error) {
+    const std::string& filename, yply::model* ply, std::string& error) {
   // ply type names
   static auto type_map = std::unordered_map<std::string, property::type_t>{
       {"char", property::type_t::i8}, {"short", property::type_t::i16},
@@ -746,7 +751,7 @@ inline bool load_ply(
 
 // Save ply
 inline bool save_ply(
-    const std::string& filename, model* ply, std::string& error) {
+    const std::string& filename, yply::model* ply, std::string& error) {
   // ply type names
   static auto type_map = std::unordered_map<property::type_t, std::string>{
       {property::type_t::i8, "char"}, {property::type_t::i16, "short"},
@@ -926,7 +931,7 @@ inline bool save_ply(
 
 // Get ply properties
 inline bool has_property(
-    model* ply, const std::string& element, const std::string& property) {
+    yply::model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -935,8 +940,8 @@ inline bool has_property(
   }
   return false;
 }
-inline property* get_property(
-    model* ply, const std::string& element, const std::string& property) {
+inline yply::property* get_property(
+    yply::model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -952,7 +957,7 @@ inline std::vector<T> convert_property(const std::vector<T1>& prop) {
   return values;
 }
 template <typename T>
-inline std::vector<T> convert_property(property* prop) {
+inline std::vector<T> convert_property(yply::property* prop) {
   switch (prop->type) {
     case property::type_t::i8: return convert_property<T>(prop->data_i8);
     case property::type_t::i16: return convert_property<T>(prop->data_i16);
@@ -970,23 +975,24 @@ inline std::vector<T> convert_property(property* prop) {
   return {};
 }
 inline std::vector<float> get_values(
-    model* ply, const std::string& element, const std::string& property) {
+    yply::model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (prop->is_list) return {};
   return convert_property<float>(prop);
 }
-inline std::vector<vec2f> get_values(model* ply, const std::string& element,
-    const std::string& property1, const std::string& property2) {
+inline std::vector<vec2f> get_values(yply::model* ply,
+    const std::string& element, const std::string& property1,
+    const std::string& property2) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto values = std::vector<vec2f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return values;
 }
-inline std::vector<vec3f> get_values(model* ply, const std::string& element,
-    const std::string& property1, const std::string& property2,
-    const std::string& property3) {
+inline std::vector<vec3f> get_values(yply::model* ply,
+    const std::string& element, const std::string& property1,
+    const std::string& property2, const std::string& property3) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
@@ -995,9 +1001,10 @@ inline std::vector<vec3f> get_values(model* ply, const std::string& element,
     values[i] = {x[i], y[i], z[i]};
   return values;
 }
-inline std::vector<vec4f> get_values(model* ply, const std::string& element,
-    const std::string& property1, const std::string& property2,
-    const std::string& property3, const std::string& property4) {
+inline std::vector<vec4f> get_values(yply::model* ply,
+    const std::string& element, const std::string& property1,
+    const std::string& property2, const std::string& property3,
+    const std::string& property4) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
@@ -1007,9 +1014,10 @@ inline std::vector<vec4f> get_values(model* ply, const std::string& element,
     values[i] = {x[i], y[i], z[i], w[i]};
   return values;
 }
-inline std::vector<vec4f> get_values(model* ply, const std::string& element,
-    const std::string& property1, const std::string& property2,
-    const std::string& property3, float property4) {
+inline std::vector<vec4f> get_values(yply::model* ply,
+    const std::string& element, const std::string& property1,
+    const std::string& property2, const std::string& property3,
+    float property4) {
   auto x      = get_values(ply, element, property1);
   auto y      = get_values(ply, element, property2);
   auto z      = get_values(ply, element, property3);
@@ -1019,8 +1027,8 @@ inline std::vector<vec4f> get_values(model* ply, const std::string& element,
     values[i] = {x[i], y[i], z[i], w};
   return values;
 }
-inline std::vector<frame3f> get_values(model* ply, const std::string& element,
-    const std::array<std::string, 12>& properties) {
+inline std::vector<frame3f> get_values(yply::model* ply,
+    const std::string& element, const std::array<std::string, 12>& properties) {
   auto coords = std::array<std::vector<float>, 12>{};
   for (auto idx = 0; idx < 12; idx++)
     coords[idx] = get_values(ply, element, properties[idx]);
@@ -1031,7 +1039,7 @@ inline std::vector<frame3f> get_values(model* ply, const std::string& element,
   return values;
 }
 inline std::vector<std::vector<int>> get_lists(
-    model* ply, const std::string& element, const std::string& property) {
+    yply::model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
@@ -1048,14 +1056,14 @@ inline std::vector<std::vector<int>> get_lists(
   return lists;
 }
 inline std::vector<byte> get_list_sizes(
-    model* ply, const std::string& element, const std::string& property) {
+    yply::model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
   return prop->ldata_u8;
 }
 inline std::vector<int> get_list_values(
-    model* ply, const std::string& element, const std::string& property) {
+    yply::model* ply, const std::string& element, const std::string& property) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
   if (!prop->is_list) return {};
@@ -1069,28 +1077,28 @@ inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoord) {
 }
 
 // Get ply properties for meshes
-inline std::vector<vec3f> get_positions(model* ply) {
+inline std::vector<vec3f> get_positions(yply::model* ply) {
   return get_values(ply, "vertex", "x", "y", "z");
 }
-inline std::vector<vec3f> get_normals(model* ply) {
+inline std::vector<vec3f> get_normals(yply::model* ply) {
   return get_values(ply, "vertex", "nx", "ny", "nz");
 }
-inline std::vector<vec2f> get_texcoords(model* ply, bool flipv) {
+inline std::vector<vec2f> get_texcoords(yply::model* ply, bool flipv) {
   auto texcoord = has_property(ply, "vertex", "u")
                       ? get_values(ply, "vertex", "u", "v")
                       : get_values(ply, "vertex", "s", "t");
   return flipv ? flip_texcoord(texcoord) : texcoord;
 }
-inline std::vector<vec3f> get_colors(model* ply) {
+inline std::vector<vec3f> get_colors(yply::model* ply) {
   return get_values(ply, "vertex", "red", "green", "blue");
 }
-inline std::vector<float> get_radius(model* ply) {
+inline std::vector<float> get_radius(yply::model* ply) {
   return get_values(ply, "vertex", "radius");
 }
-inline std::vector<std::vector<int>> get_faces(model* ply) {
+inline std::vector<std::vector<int>> get_faces(yply::model* ply) {
   return get_lists(ply, "face", "vertex_indices");
 }
-inline std::vector<vec3i> get_triangles(model* ply) {
+inline std::vector<vec3i> get_triangles(yply::model* ply) {
   auto indices   = get_list_values(ply, "face", "vertex_indices");
   auto sizes     = get_list_sizes(ply, "face", "vertex_indices");
   auto triangles = std::vector<vec3i>{};
@@ -1105,7 +1113,7 @@ inline std::vector<vec3i> get_triangles(model* ply) {
   }
   return triangles;
 }
-inline std::vector<vec4i> get_quads(model* ply) {
+inline std::vector<vec4i> get_quads(yply::model* ply) {
   auto indices = get_list_values(ply, "face", "vertex_indices");
   auto sizes   = get_list_sizes(ply, "face", "vertex_indices");
   auto quads   = std::vector<vec4i>{};
@@ -1125,7 +1133,7 @@ inline std::vector<vec4i> get_quads(model* ply) {
   }
   return quads;
 }
-inline std::vector<vec2i> get_lines(model* ply) {
+inline std::vector<vec2i> get_lines(yply::model* ply) {
   auto indices = get_list_values(ply, "str", "vertex_indices");
   auto sizes   = get_list_sizes(ply, "str", "vertex_indices");
   auto lines   = std::vector<vec2i>{};
@@ -1139,10 +1147,10 @@ inline std::vector<vec2i> get_lines(model* ply) {
   }
   return lines;
 }
-inline std::vector<int> get_points(model* ply) {
+inline std::vector<int> get_points(yply::model* ply) {
   return get_list_values(ply, "point", "vertex_indices");
 }
-inline bool has_quads(model* ply) {
+inline bool has_quads(yply::model* ply) {
   auto sizes = get_list_sizes(ply, "face", "vertex_indices");
   for (auto size : sizes)
     if (size == 4) return true;
@@ -1151,7 +1159,7 @@ inline bool has_quads(model* ply) {
 
 // Add ply properties
 inline void add_element(
-    model* ply, const std::string& element_name, size_t count) {
+    yply::model* ply, const std::string& element_name, size_t count) {
   for (auto elem : ply->elements) {
     if (elem->name == element_name) return;
   }
@@ -1159,7 +1167,7 @@ inline void add_element(
   elem->name  = element_name;
   elem->count = count;
 }
-inline void add_property(model* ply, const std::string& element_name,
+inline void add_property(yply::model* ply, const std::string& element_name,
     const std::string& property_name, size_t count, property::type_t type,
     bool is_list) {
   add_element(ply, element_name, count);
@@ -1183,7 +1191,7 @@ inline std::vector<T> make_vector(const T* value, size_t count, int stride) {
   return ret;
 }
 
-inline void add_values(model* ply, const float* values, size_t count,
+inline void add_values(yply::model* ply, const float* values, size_t count,
     const std::string& element, const std::string* properties, int nprops) {
   if (!values) return;
   for (auto p = 0; p < nprops; p++) {
@@ -1195,27 +1203,27 @@ inline void add_values(model* ply, const float* values, size_t count,
   }
 }
 
-inline void add_values(model* ply, const std::vector<float>& values,
+inline void add_values(yply::model* ply, const std::vector<float>& values,
     const std::string& element, const std::string& property) {
   auto properties = std::vector{property};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
-inline void add_values(model* ply, const std::vector<vec2f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec2f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2) {
   auto properties = std::vector{property1, property2};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
-inline void add_values(model* ply, const std::vector<vec3f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec3f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2, const std::string& property3) {
   auto properties = std::vector{property1, property2, property3};
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
-inline void add_values(model* ply, const std::vector<vec4f>& values,
+inline void add_values(yply::model* ply, const std::vector<vec4f>& values,
     const std::string& element, const std::string& property1,
     const std::string& property2, const std::string& property3,
     const std::string& property4) {
@@ -1223,14 +1231,15 @@ inline void add_values(model* ply, const std::vector<vec4f>& values,
   add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
-inline void add_values(model* ply, const std::vector<frame3f>& values,
+inline void add_values(yply::model* ply, const std::vector<frame3f>& values,
     const std::string& element, const std::array<std::string, 12>& properties) {
   add_values(ply, (float*)values.data(), values.size(), element,
       properties.data(), properties.size());
 }
 
-inline void add_lists(model* ply, const std::vector<std::vector<int>>& values,
-    const std::string& element, const std::string& property) {
+inline void add_lists(yply::model*       ply,
+    const std::vector<std::vector<int>>& values, const std::string& element,
+    const std::string& property) {
   if (values.empty()) return;
   add_property(
       ply, element, property, values.size(), property::type_t::i32, true);
@@ -1242,7 +1251,7 @@ inline void add_lists(model* ply, const std::vector<std::vector<int>>& values,
     prop->ldata_u8.push_back((uint8_t)value.size());
   }
 }
-inline void add_lists(model* ply, const std::vector<byte>& sizes,
+inline void add_lists(yply::model* ply, const std::vector<byte>& sizes,
     const std::vector<int>& values, const std::string& element,
     const std::string& property) {
   if (values.empty()) return;
@@ -1252,56 +1261,57 @@ inline void add_lists(model* ply, const std::vector<byte>& sizes,
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
 }
-inline void add_lists(model* ply, const int* values, size_t count, int size,
-    const std::string& element, const std::string& property) {
+inline void add_lists(yply::model* ply, const int* values, size_t count,
+    int size, const std::string& element, const std::string& property) {
   if (!values) return;
   add_property(ply, element, property, count, property::type_t::i32, true);
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
   prop->ldata_u8.assign(count, size);
 }
-inline void add_lists(model* ply, const std::vector<int>& values,
+inline void add_lists(yply::model* ply, const std::vector<int>& values,
     const std::string& element, const std::string& property) {
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
-inline void add_lists(model* ply, const std::vector<vec2i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec2i>& values,
     const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 2, element, property);
 }
-inline void add_lists(model* ply, const std::vector<vec3i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec3i>& values,
     const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 3, element, property);
 }
-inline void add_lists(model* ply, const std::vector<vec4i>& values,
+inline void add_lists(yply::model* ply, const std::vector<vec4i>& values,
     const std::string& element, const std::string& property) {
   return add_lists(
       ply, (int*)values.data(), values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
-inline void add_positions(model* ply, const std::vector<vec3f>& values) {
+inline void add_positions(yply::model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "x", "y", "z");
 }
-inline void add_normals(model* ply, const std::vector<vec3f>& values) {
+inline void add_normals(yply::model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "nx", "ny", "nz");
 }
 inline void add_texcoords(
-    model* ply, const std::vector<vec2f>& values, bool flipv) {
+    yply::model* ply, const std::vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
-inline void add_colors(model* ply, const std::vector<vec3f>& values) {
+inline void add_colors(yply::model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, values, "vertex", "red", "green", "blue");
 }
-inline void add_radius(model* ply, const std::vector<float>& values) {
+inline void add_radius(yply::model* ply, const std::vector<float>& values) {
   return add_values(ply, values, "vertex", "radius");
 }
-inline void add_faces(model* ply, const std::vector<std::vector<int>>& values) {
+inline void add_faces(
+    yply::model* ply, const std::vector<std::vector<int>>& values) {
   return add_lists(ply, values, "face", "vertex_indices");
 }
-inline void add_faces(model* ply, const std::vector<vec3i>& triangles,
+inline void add_faces(yply::model* ply, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return;
   if (quads.empty()) {
@@ -1331,16 +1341,16 @@ inline void add_faces(model* ply, const std::vector<vec3i>& triangles,
     return add_lists(ply, sizes, indices, "face", "vertex_indices");
   }
 }
-inline void add_triangles(model* ply, const std::vector<vec3i>& values) {
+inline void add_triangles(yply::model* ply, const std::vector<vec3i>& values) {
   return add_faces(ply, values, {});
 }
-inline void add_quads(model* ply, const std::vector<vec4i>& values) {
+inline void add_quads(yply::model* ply, const std::vector<vec4i>& values) {
   return add_faces(ply, {}, values);
 }
-inline void add_lines(model* ply, const std::vector<vec2i>& values) {
+inline void add_lines(yply::model* ply, const std::vector<vec2i>& values) {
   return add_lists(ply, values, "str", "vertex_indices");
 }
-inline void add_points(model* ply, const std::vector<int>& values) {
+inline void add_points(yply::model* ply, const std::vector<int>& values) {
   return add_lists(ply, values, "point", "vertex_indices");
 }
 

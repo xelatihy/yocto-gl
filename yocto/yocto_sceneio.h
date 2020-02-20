@@ -129,18 +129,18 @@ struct material {
   bool  thin         = true;
 
   // textures
-  texture* emission_tex     = nullptr;
-  texture* color_tex        = nullptr;
-  texture* specular_tex     = nullptr;
-  texture* metallic_tex     = nullptr;
-  texture* roughness_tex    = nullptr;
-  texture* transmission_tex = nullptr;
-  texture* spectint_tex     = nullptr;
-  texture* scattering_tex   = nullptr;
-  texture* coat_tex         = nullptr;
-  texture* opacity_tex      = nullptr;
-  texture* normal_tex       = nullptr;
-  texture* displacement_tex = nullptr;
+  yscn::texture* emission_tex     = nullptr;
+  yscn::texture* color_tex        = nullptr;
+  yscn::texture* specular_tex     = nullptr;
+  yscn::texture* metallic_tex     = nullptr;
+  yscn::texture* roughness_tex    = nullptr;
+  yscn::texture* transmission_tex = nullptr;
+  yscn::texture* spectint_tex     = nullptr;
+  yscn::texture* scattering_tex   = nullptr;
+  yscn::texture* coat_tex         = nullptr;
+  yscn::texture* opacity_tex      = nullptr;
+  yscn::texture* normal_tex       = nullptr;
+  yscn::texture* displacement_tex = nullptr;
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -198,20 +198,20 @@ struct instance {
 // Object.
 struct object {
   // object data
-  std::string name     = "";
-  frame3f     frame    = identity3x4f;
-  shape*      shape    = nullptr;
-  material*   material = nullptr;
-  instance*   instance = nullptr;
-  subdiv*     subdiv   = nullptr;
+  std::string     name     = "";
+  frame3f         frame    = identity3x4f;
+  yscn::shape*    shape    = nullptr;
+  yscn::material* material = nullptr;
+  yscn::instance* instance = nullptr;
+  yscn::subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
 struct environment {
-  std::string name         = "";
-  frame3f     frame        = identity3x4f;
-  vec3f       emission     = {0, 0, 0};
-  texture*    emission_tex = nullptr;
+  std::string    name         = "";
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
+  yscn::texture* emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -222,28 +222,30 @@ struct environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct model {
-  std::string               name         = "";
-  std::vector<camera*>      cameras      = {};
-  std::vector<object*>      objects      = {};
-  std::vector<environment*> environments = {};
-  std::vector<shape*>       shapes       = {};
-  std::vector<subdiv*>      subdivs      = {};
-  std::vector<texture*>     textures     = {};
-  std::vector<material*>    materials    = {};
-  std::vector<instance*>    instances    = {};
+  std::string                     name         = "";
+  std::vector<yscn::camera*>      cameras      = {};
+  std::vector<yscn::object*>      objects      = {};
+  std::vector<yscn::environment*> environments = {};
+  std::vector<yscn::shape*>       shapes       = {};
+  std::vector<yscn::subdiv*>      subdivs      = {};
+  std::vector<yscn::texture*>     textures     = {};
+  std::vector<yscn::material*>    materials    = {};
+  std::vector<yscn::instance*>    instances    = {};
   ~model();
 };
 
 // add element to a scene
-camera*      add_camera(model* scene, const std::string& name = "");
-environment* add_environment(model* scene, const std::string& name = "");
-object*      add_object(model* scene, const std::string& name = "");
-instance*    add_instance(model* scene, const std::string& name = "");
-material*    add_material(model* scene, const std::string& name = "");
-shape*       add_shape(model* scene, const std::string& name = "");
-subdiv*      add_subdiv(model* scene, const std::string& name = "");
-texture*     add_texture(model* scene, const std::string& name = "");
-object*      add_complete_object(model* scene, const std::string& name = "");
+yscn::camera*      add_camera(yscn::model* scene, const std::string& name = "");
+yscn::environment* add_environment(
+    yscn::model* scene, const std::string& name = "");
+yscn::object*   add_object(yscn::model* scene, const std::string& name = "");
+yscn::instance* add_instance(yscn::model* scene, const std::string& name = "");
+yscn::material* add_material(yscn::model* scene, const std::string& name = "");
+yscn::shape*    add_shape(yscn::model* scene, const std::string& name = "");
+yscn::subdiv*   add_subdiv(yscn::model* scene, const std::string& name = "");
+yscn::texture*  add_texture(yscn::model* scene, const std::string& name = "");
+yscn::object*   add_complete_object(
+      yscn::model* scene, const std::string& name = "");
 
 }  // namespace yscn
 
@@ -259,14 +261,16 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const std::string& filename, model* scene, std::string& error,
-    progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const std::string& filename, const model* scene,
+bool load_scene(const std::string& filename, yscn::model* scene,
+    std::string& error, progress_callback progress_cb = {},
+    bool noparallel = false);
+bool save_scene(const std::string& filename, const yscn::model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
 
 // get named camera or default if name is empty
-camera* get_camera(const model* scene, const std::string& name = "");
+yscn::camera* get_camera(
+    const yscn::model* scene, const std::string& name = "");
 
 }  // namespace yscn
 
@@ -276,13 +280,14 @@ camera* get_camera(const model* scene, const std::string& name = "");
 namespace yscn {
 
 // Return scene statistics as list of strings.
-std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
+std::vector<std::string> scene_stats(
+    const yscn::model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 std::vector<std::string> scene_validation(
-    const model* scene, bool notextures = false);
+    const yscn::model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const model* scene);
+bbox3f compute_bounds(const yscn::model* scene);
 
 }  // namespace yscn
 
@@ -292,13 +297,13 @@ bbox3f compute_bounds(const model* scene);
 namespace yscn {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(model* scene, progress_callback progress_cb = {});
-void tesselate_subdiv(model* scene, subdiv* subdiv);
+void tesselate_subdivs(yscn::model* scene, progress_callback progress_cb = {});
+void tesselate_subdiv(yscn::model* scene, yscn::subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    model* scene, float time = 0, const std::string& anim_group = "");
+    yscn::model* scene, float time = 0, const std::string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {
