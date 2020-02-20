@@ -31,79 +31,72 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::trace;
-using namespace yocto::sceneio;
-using namespace yocto::image;
-using namespace yocto::commonio;
-using namespace yocto::opengl;
+using namespace ym;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using std::atomic;
-using std::deque;
-using std::future;
-using std::to_string;
+using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yocto::sceneio {
-void print_obj_camera(sceneio_camera* camera);
-};  // namespace yocto::sceneio
+namespace yscn {
+void print_obj_camera(ysc::camera* camera);
+};  // namespace yscn
 
 // Application scene
 struct app_state {
   // loading options
-  string filename  = "app->yaml";
-  string imagename = "out.png";
-  string outname   = "out.yaml";
-  string name      = "";
+  std::string filename  = "app->yaml";
+  std::string imagename = "out.png";
+  std::string outname   = "out.yaml";
+  std::string name      = "";
 
   // scene
-  sceneio_model*  ioscene  = new sceneio_model{};
-  trace_scene*    scene    = new trace_scene{};
-  sceneio_camera* iocamera = nullptr;
-  trace_camera*   camera   = nullptr;
+  ysc::model*  ioscene  = new ysc::model{};
+  ytr::scene*  scene    = new ytr::scene{};
+  ysc::camera* iocamera = nullptr;
+  ytr::camera* camera   = nullptr;
 
   // options
-  trace_params params = {};
+  ytr::trace_params params = {};
 
   // rendering state
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  yim::image<vec4f> render   = {};
+  yim::image<vec4f> display  = {};
+  float             exposure = 0;
 
   // view scene
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
+  ygl::image*       glimage  = new ygl::image{};
+  ygl::image_params glparams = {};
 
   // editing
-  sceneio_camera*      selected_camera      = nullptr;
-  sceneio_object*      selected_object      = nullptr;
-  sceneio_instance*    selected_instance    = nullptr;
-  sceneio_shape*       selected_shape       = nullptr;
-  sceneio_subdiv*      selected_subdiv      = nullptr;
-  sceneio_material*    selected_material    = nullptr;
-  sceneio_environment* selected_environment = nullptr;
-  sceneio_texture*     selected_texture     = nullptr;
+  ysc::camera*      selected_camera      = nullptr;
+  ysc::object*      selected_object      = nullptr;
+  ysc::instance*    selected_instance    = nullptr;
+  ysc::shape*       selected_shape       = nullptr;
+  ysc::subdiv*      selected_subdiv      = nullptr;
+  ysc::material*    selected_material    = nullptr;
+  ysc::environment* selected_environment = nullptr;
+  ysc::texture*     selected_texture     = nullptr;
 
   // computation
-  int          render_sample  = 0;
-  int          render_counter = 0;
-  trace_state* render_state   = new trace_state{};
+  int         render_sample  = 0;
+  int         render_counter = 0;
+  ytr::state* render_state   = new ytr::state{};
 
   // loading status
-  atomic<bool>       ok           = false;
-  future<void>       loader       = {};
-  string             status       = "";
-  string             error        = "";
+  std::atomic<bool>  ok           = false;
+  std::future<void>  loader       = {};
+  std::string        status       = "";
+  std::string        error        = "";
   std::atomic<float> progress     = 0.5;
-  string             loader_error = "";
+  std::string        loader_error = "";
 
   ~app_state() {
     if (render_state) {
-      trace_async_stop(render_state);
+      ytr::trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -115,13 +108,13 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
-  app_state*         selected = nullptr;
-  deque<app_state*>  loading  = {};
+  std::vector<app_state*> states   = {};
+  app_state*              selected = nullptr;
+  std::deque<app_state*>  loading  = {};
 
   // default options
-  trace_params params     = {};
-  bool         add_skyenv = false;
+  ytr::trace_params params     = {};
+  bool              add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -130,9 +123,8 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, sceneio_model* ioscene,
-    trace_camera*& camera, sceneio_camera* iocamera,
-    sceneio_progress progress_cb = {}) {
+void init_scene(ytr::scene* scene, ysc::model* ioscene, ytr::camera*& camera,
+    ysc::camera* iocamera, ysc::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -140,7 +132,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<sceneio_camera*, trace_camera*>{};
+  auto camera_map     = std::unordered_map<ysc::camera*, ytr::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -152,7 +144,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<sceneio_texture*, trace_texture*>{};
+  auto texture_map     = std::unordered_map<ysc::texture*, ytr::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -170,7 +162,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<sceneio_material*, trace_material*>{};
+  auto material_map     = std::unordered_map<ysc::material*, ytr::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -204,7 +196,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = unordered_map<sceneio_shape*, trace_shape*>{};
+  auto shape_map     = std::unordered_map<ysc::shape*, ytr::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -222,7 +214,7 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<sceneio_instance*, trace_instance*>{};
+  auto instance_map     = std::unordered_map<ysc::instance*, ytr::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -260,35 +252,35 @@ void init_scene(trace_scene* scene, sceneio_model* ioscene,
 
 void stop_display(app_state* app) {
   // stop render
-  trace_async_stop(app->render_state);
+  ytr::trace_stop(app->render_state);
 }
 
 void reset_display(app_state* app) {
   // stop render
-  trace_async_stop(app->render_state);
+  ytr::trace_stop(app->render_state);
 
   // start render
   app->status         = "render";
   app->render_counter = 0;
-  trace_async_start(
+  ytr::trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const string& message, int sample, int nsamples) {
+      [app](const std::string& message, int sample, int nsamples) {
         app->progress = (float)sample / (float)nsamples;
       },
-      [app](const image<vec4f>& render, int current, int total) {
+      [app](const yim::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](
-          const image<vec4f>& render, int current, int total, const vec2i& ij) {
+      [app](const yim::image<vec4f>& render, int current, int total,
+          const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
-void load_scene_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
+void load_scene_async(app_states* apps, const std::string& filename,
+    const std::string& camera_name = "") {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = fs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -297,7 +289,8 @@ void load_scene_async(
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](
+                           const std::string& message, int current, int total) {
       app->progress = (float)current / (float)total;
     };
     if (!load_scene(
@@ -310,31 +303,31 @@ void load_scene_async(
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-      app->params.sampler = trace_sampler_type::eyelight;
+      app->params.sampler = ytr::sampler_type::eyelight;
     }
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_camera* iocamera) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", iocamera->name);
-  edited += draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame.y", iocamera->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame.z", iocamera->frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", iocamera->frame.o, -10, 10);
-  edited += draw_glcheckbox(win, "ortho", iocamera->orthographic);
-  edited += draw_glslider(win, "lens", iocamera->lens, 0.01f, 1);
-  edited += draw_glslider(win, "film", iocamera->film, 0.01f, 0.1f);
-  edited += draw_glslider(win, "focus", iocamera->focus, 0.01f, 1000);
-  edited += draw_glslider(win, "aperture", iocamera->aperture, 0, 5);
+  draw_label(win, "name", iocamera->name);
+  edited += draw_slider(win, "frame.x", iocamera->frame.x, -1, 1);
+  edited += draw_slider(win, "frame.y", iocamera->frame.y, -1, 1);
+  edited += draw_slider(win, "frame.z", iocamera->frame.z, -1, 1);
+  edited += draw_slider(win, "frame.o", iocamera->frame.o, -10, 10);
+  edited += draw_checkbox(win, "ortho", iocamera->orthographic);
+  edited += draw_slider(win, "lens", iocamera->lens, 0.01f, 1);
+  edited += draw_slider(win, "film", iocamera->film, 0.01f, 0.1f);
+  edited += draw_slider(win, "focus", iocamera->focus, 0.01f, 1000);
+  edited += draw_slider(win, "aperture", iocamera->aperture, 0, 5);
   auto from         = iocamera->frame.o,
        to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
-  auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
-  auto to_changed   = draw_glslider(win, "!!to", to, -10, 10);
+  auto from_changed = draw_slider(win, "!!from", from, -10, 10);
+  auto to_changed   = draw_slider(win, "!!to", to, -10, 10);
   if (from_changed || to_changed) {
     iocamera->frame = lookat_frame(from, to, {0, 1, 0});
     iocamera->focus = length(from - to);
@@ -343,149 +336,148 @@ bool draw_glwidgets(
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_texture* iotexture) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", iotexture->name);
-  draw_gllabel(win, "colorf",
+  draw_label(win, "name", iotexture->name);
+  draw_label(win, "colorf",
       std::to_string(iotexture->colorf.size().x) + " x " +
           std::to_string(iotexture->colorf.size().y));
-  draw_gllabel(win, "colorb",
+  draw_label(win, "colorb",
       std::to_string(iotexture->colorb.size().x) + " x " +
           std::to_string(iotexture->colorb.size().y));
-  draw_gllabel(win, "scalarf",
+  draw_label(win, "scalarf",
       std::to_string(iotexture->scalarf.size().x) + " x " +
           std::to_string(iotexture->scalarf.size().y));
-  draw_gllabel(win, "scalarb",
+  draw_label(win, "scalarb",
       std::to_string(iotexture->scalarb.size().x) + " x " +
           std::to_string(iotexture->scalarb.size().y));
   // TODO: load texture
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_material* iomaterial) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", iomaterial->name);
-  edited += draw_glhdrcoloredit(win, "emission", iomaterial->emission);
-  edited += draw_glcoloredit(win, "color", iomaterial->color);
-  edited += draw_glslider(win, "opacity", iomaterial->opacity, 0, 1);
-  edited += draw_glslider(win, "metallic", iomaterial->metallic, 0, 1);
-  edited += draw_glslider(win, "roughness", iomaterial->roughness, 0, 1);
-  edited += draw_glslider(win, "specular", iomaterial->specular, 0, 1);
-  edited += draw_glslider(win, "coat", iomaterial->coat, 0, 1);
-  edited += draw_glslider(win, "transmission", iomaterial->transmission, 0, 1);
-  edited += draw_glcoloredit(win, "spectint", iomaterial->spectint);
-  edited += draw_glcheckbox(win, "thin", iomaterial->thin);
-  edited += draw_glcoloredit(win, "scattering", iomaterial->scattering);
-  edited += draw_glslider(win, "trdepth", iomaterial->trdepth, 0, 1);
-  edited += draw_glslider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
-  edited += draw_glcombobox(
+  draw_label(win, "name", iomaterial->name);
+  edited += draw_hdrcoloredit(win, "emission", iomaterial->emission);
+  edited += draw_coloredit(win, "color", iomaterial->color);
+  edited += draw_slider(win, "opacity", iomaterial->opacity, 0, 1);
+  edited += draw_slider(win, "metallic", iomaterial->metallic, 0, 1);
+  edited += draw_slider(win, "roughness", iomaterial->roughness, 0, 1);
+  edited += draw_slider(win, "specular", iomaterial->specular, 0, 1);
+  edited += draw_slider(win, "coat", iomaterial->coat, 0, 1);
+  edited += draw_slider(win, "transmission", iomaterial->transmission, 0, 1);
+  edited += draw_coloredit(win, "spectint", iomaterial->spectint);
+  edited += draw_checkbox(win, "thin", iomaterial->thin);
+  edited += draw_coloredit(win, "scattering", iomaterial->scattering);
+  edited += draw_slider(win, "trdepth", iomaterial->trdepth, 0, 1);
+  edited += draw_slider(win, "scanisotropy", iomaterial->scanisotropy, -1, 1);
+  edited += draw_combobox(
       win, "emission_tex", iomaterial->emission_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "color_tex", iomaterial->color_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "opacity_tex", iomaterial->opacity_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "metallic_tex", iomaterial->metallic_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "roughness_tex", iomaterial->roughness_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
-  edited += draw_glcombobox(win, "transmission_tex",
-      iomaterial->transmission_tex, ioscene->textures, true);
-  edited += draw_glcombobox(win, "scattering_tex", iomaterial->scattering_tex,
+  edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
       ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_glcombobox(win, "displacement_tex",
-      iomaterial->displacement_tex, ioscene->textures, true);
-  edited += draw_glslider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
-  edited += draw_glcheckbox(win, "smooth", iomaterial->smooth);
+  edited += draw_combobox(win, "displacement_tex", iomaterial->displacement_tex,
+      ioscene->textures, true);
+  edited += draw_slider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
+  edited += draw_checkbox(win, "smooth", iomaterial->smooth);
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_shape* ioshape) {
+bool draw_widgets(ygl::window* win, ysc::model* ioscene, ysc::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", ioshape->name);
-  draw_gllabel(win, "points", to_string(ioshape->points.size()));
-  draw_gllabel(win, "lines", to_string(ioshape->lines.size()));
-  draw_gllabel(win, "triangles", to_string(ioshape->triangles.size()));
-  draw_gllabel(win, "quads", to_string(ioshape->quads.size()));
-  draw_gllabel(win, "positions", to_string(ioshape->positions.size()));
-  draw_gllabel(win, "normals", to_string(ioshape->normals.size()));
-  draw_gllabel(win, "texcoords", to_string(ioshape->texcoords.size()));
-  draw_gllabel(win, "colors", to_string(ioshape->colors.size()));
-  draw_gllabel(win, "radius", to_string(ioshape->radius.size()));
-  draw_gllabel(win, "tangents", to_string(ioshape->tangents.size()));
+  draw_label(win, "name", ioshape->name);
+  draw_label(win, "points", std::to_string(ioshape->points.size()));
+  draw_label(win, "lines", std::to_string(ioshape->lines.size()));
+  draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
+  draw_label(win, "quads", std::to_string(ioshape->quads.size()));
+  draw_label(win, "positions", std::to_string(ioshape->positions.size()));
+  draw_label(win, "normals", std::to_string(ioshape->normals.size()));
+  draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
+  draw_label(win, "colors", std::to_string(ioshape->colors.size()));
+  draw_label(win, "radius", std::to_string(ioshape->radius.size()));
+  draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_instance* ioinstance) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", ioinstance->name);
-  draw_gllabel(win, "frames", to_string(ioinstance->frames.size()));
+  draw_label(win, "name", ioinstance->name);
+  draw_label(win, "frames", std::to_string(ioinstance->frames.size()));
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_object* ioobject) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", ioobject->name);
-  edited += draw_glslider(win, "frame.x", ioobject->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame.y", ioobject->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame.z", ioobject->frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", ioobject->frame.o, -10, 10);
-  edited += draw_glcombobox(win, "shape", ioobject->shape, ioscene->shapes);
-  edited += draw_glcombobox(
+  draw_label(win, "name", ioobject->name);
+  edited += draw_slider(win, "frame.x", ioobject->frame.x, -1, 1);
+  edited += draw_slider(win, "frame.y", ioobject->frame.y, -1, 1);
+  edited += draw_slider(win, "frame.z", ioobject->frame.z, -1, 1);
+  edited += draw_slider(win, "frame.o", ioobject->frame.o, -10, 10);
+  edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
+  edited += draw_combobox(
       win, "material", ioobject->material, ioscene->materials);
-  edited += draw_glcombobox(
+  edited += draw_combobox(
       win, "instance", ioobject->instance, ioscene->instances);
   return edited;
 }
 
-bool draw_glwidgets(
-    opengl_window* win, sceneio_model* ioscene, sceneio_subdiv* iosubdiv) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", iosubdiv->name);
-  draw_gllabel(win, "quads pos", to_string(iosubdiv->quadspos.size()));
-  draw_gllabel(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_gllabel(
-      win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
-  draw_gllabel(win, "pos", to_string(iosubdiv->positions.size()));
-  draw_gllabel(win, "norm", to_string(iosubdiv->normals.size()));
-  draw_gllabel(win, "texcoord", to_string(iosubdiv->texcoords.size()));
+  draw_label(win, "name", iosubdiv->name);
+  draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
+  draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
+  draw_label(
+      win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
+  draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
+  draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
   return edited;
 }
 
-bool draw_glwidgets(opengl_window* win, sceneio_model* ioscene,
-    sceneio_environment* ioenvironment) {
+bool draw_widgets(
+    ygl::window* win, ysc::model* ioscene, ysc::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
-  draw_gllabel(win, "name", ioenvironment->name);
-  edited += draw_glslider(win, "frame.x", ioenvironment->frame.x, -1, 1);
-  edited += draw_glslider(win, "frame.y", ioenvironment->frame.y, -1, 1);
-  edited += draw_glslider(win, "frame.z", ioenvironment->frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", ioenvironment->frame.o, -10, 10);
-  edited += draw_glhdrcoloredit(win, "emission", ioenvironment->emission);
-  edited += draw_glcombobox(win, "emission texture",
-      ioenvironment->emission_tex, ioscene->textures, true);
+  draw_label(win, "name", ioenvironment->name);
+  edited += draw_slider(win, "frame.x", ioenvironment->frame.x, -1, 1);
+  edited += draw_slider(win, "frame.y", ioenvironment->frame.y, -1, 1);
+  edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
+  edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
+  edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
+  edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
+      ioscene->textures, true);
   return edited;
 }
 
 template <typename T, typename T1>
-T1* get_element(
-    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
+T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
+    const std::vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -493,26 +485,24 @@ T1* get_element(
   throw std::runtime_error("element not found");
 }
 
-void draw_glwidgets(
-    opengl_window* win, app_states* apps, const opengl_input& input) {
-  static string load_path = "", save_path = "", error_message = "";
-  if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
-          "./", "", "*.yaml;*.obj;*.pbrt")) {
+void draw_widgets(ygl::window* win, app_states* apps, const ygl::input& input) {
+  static std::string load_path = "", save_path = "", error_message = "";
+  if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
+          "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save",
-          apps->selected && apps->selected->ok, "save", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
+          "save", save_path, true, fs::path(save_path).parent_path(),
+          fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save image",
+  if (draw_filedialog_button(win, "save image",
           apps->selected && apps->selected->ok, "save image", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -522,7 +512,7 @@ void draw_glwidgets(
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", (bool)apps->selected)) {
+  if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
     apps->states.erase(
@@ -530,85 +520,85 @@ void draw_glwidgets(
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
   continue_glline(win);
-  if (draw_glbutton(win, "quit")) {
+  if (draw_button(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(win, "scene", apps->selected, apps->states, false);
+  draw_combobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
-  draw_glprogressbar(
+  draw_progressbar(
       win, apps->selected->status.c_str(), apps->selected->progress);
   if (apps->selected->error != "") {
-    draw_gllabel(win, "error", apps->selected->error);
+    draw_label(win, "error", apps->selected->error);
     return;
   }
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_glheader(win, "trace")) {
     auto edited = 0;
-    if (draw_glcombobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+    if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       app->camera = get_element(
           app->iocamera, app->ioscene->cameras, app->scene->cameras);
       edited += 1;
     }
     auto& tparams = app->params;
-    edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
-    edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
-    edited += draw_glcombobox(
-        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited += draw_glcombobox(
-        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
-    edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
-    edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
+    edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
+    edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
+    edited += draw_combobox(
+        win, "tracer", (int&)tparams.sampler, ytr::sampler_names);
+    edited += draw_combobox(
+        win, "false color", (int&)tparams.falsecolor, ytr::falsecolor_names);
+    edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
+    edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_glline(win);
-    edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
-    edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_glslider(win, "pratio", tparams.pratio, 1, 64);
-    edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
+    edited += draw_checkbox(win, "filter", tparams.tentfilter);
+    edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
+    edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
+    edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", fs::path(app->filename).filename());
-    draw_gllabel(win, "filename", app->filename);
-    draw_gllabel(win, "outname", app->outname);
-    draw_gllabel(win, "imagename", app->imagename);
+    draw_label(win, "scene", fs::path(app->filename).filename());
+    draw_label(win, "filename", app->filename);
+    draw_label(win, "outname", app->outname);
+    draw_label(win, "imagename", app->imagename);
     if (app->ok) {
-      draw_gllabel(win, "image",
-          to_string(app->render.size().x) + " x " +
-              to_string(app->render.size().y) + " @ " +
-              to_string(app->render_sample));
-      draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
-      draw_glcheckbox(win, "zoom to fit", app->glparams.fit);
+      draw_label(win, "image",
+          std::to_string(app->render.size().x) + " x " +
+              std::to_string(app->render.size().y) + " @ " +
+              std::to_string(app->render_sample));
+      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
+      draw_checkbox(win, "zoom to fit", app->glparams.fit);
       continue_glline(win);
-      if (draw_glbutton(win, "print cams")) {
+      if (draw_button(win, "print cams")) {
         for (auto iocamera : app->ioscene->cameras) {
           print_obj_camera(iocamera);
         }
       }
       continue_glline(win);
-      if (draw_glbutton(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
+      if (draw_button(win, "print stats")) {
+        for (auto stat : scene_stats(app->ioscene)) ycl::print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
-      draw_gldragger(win, "mouse", ij);
+      draw_dragger(win, "mouse", ij);
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        draw_glcoloredit(win, "pixel", app->render[{ij.x, ij.y}]);
+        draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
       } else {
         auto zero4f_ = zero4f;
-        draw_glcoloredit(win, "pixel", zero4f_);
+        draw_coloredit(win, "pixel", zero4f_);
       }
     }
     end_glheader(win);
   }
-  auto get_texture = [app](sceneio_texture* iotexture) {
+  auto get_texture = [app](ysc::texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
-    draw_glcombobox(
+    draw_combobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_camera)) {
+    if (draw_widgets(win, app->ioscene, app->selected_camera)) {
       stop_display(app);
       auto iocamera = app->selected_camera;
       auto camera   = get_element(
@@ -622,9 +612,9 @@ void draw_glwidgets(
   }
   if (!app->ioscene->environments.empty() &&
       begin_glheader(win, "environments")) {
-    draw_glcombobox(win, "environment##2", app->selected_environment,
+    draw_combobox(win, "environment##2", app->selected_environment,
         app->ioscene->environments, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_environment)) {
+    if (draw_widgets(win, app->ioscene, app->selected_environment)) {
       stop_display(app);
       auto ioenvironment = app->selected_environment;
       auto environment   = get_element(
@@ -638,9 +628,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
-    draw_glcombobox(
+    draw_combobox(
         win, "object##2", app->selected_object, app->ioscene->objects, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_object)) {
+    if (draw_widgets(win, app->ioscene, app->selected_object)) {
       stop_display(app);
       auto ioobject = app->selected_object;
       auto object   = get_element(
@@ -658,9 +648,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
-    draw_glcombobox(
+    draw_combobox(
         win, "shape##2", app->selected_shape, app->ioscene->shapes, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_shape)) {
+    if (draw_widgets(win, app->ioscene, app->selected_shape)) {
       stop_display(app);
       auto ioshape = app->selected_shape;
       auto shape   = get_element(
@@ -681,9 +671,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->materials.empty() && begin_glheader(win, "materials")) {
-    draw_glcombobox(win, "material##2", app->selected_material,
+    draw_combobox(win, "material##2", app->selected_material,
         app->ioscene->materials, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_material)) {
+    if (draw_widgets(win, app->ioscene, app->selected_material)) {
       stop_display(app);
       auto iomaterial = app->selected_material;
       auto material   = get_element(
@@ -713,9 +703,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->textures.empty() && begin_glheader(win, "textures")) {
-    draw_glcombobox(win, "textures##2", app->selected_texture,
+    draw_combobox(win, "textures##2", app->selected_texture,
         app->ioscene->textures, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_texture)) {
+    if (draw_widgets(win, app->ioscene, app->selected_texture)) {
       stop_display(app);
       auto iotexture = app->selected_texture;
       auto texture   = get_element(
@@ -734,9 +724,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
-    draw_glcombobox(win, "instance##2", app->selected_instance,
+    draw_combobox(win, "instance##2", app->selected_instance,
         app->ioscene->instances, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_instance)) {
+    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
       stop_display(app);
       auto ioinstance = app->selected_instance;
       auto instance   = get_element(
@@ -748,9 +738,9 @@ void draw_glwidgets(
     end_glheader(win);
   }
   if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
-    draw_glcombobox(
+    draw_combobox(
         win, "selection##2", app->selected_subdiv, app->ioscene->subdivs, true);
-    if (draw_glwidgets(win, app->ioscene, app->selected_subdiv)) {
+    if (draw_widgets(win, app->ioscene, app->selected_subdiv)) {
       stop_display(app);
       // TODO: subdiv not implemented yet
       reset_display(app);
@@ -759,7 +749,7 @@ void draw_glwidgets(
   }
 }
 
-void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
+void draw(ygl::window* win, app_states* apps, const ygl::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -774,8 +764,8 @@ void draw(opengl_window* win, app_states* apps, const opengl_input& input) {
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(opengl_window* win, app_states* apps) {
-  auto is_ready = [](const future<void>& result) -> bool {
+void update(ygl::window* win, app_states* apps) {
+  auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
@@ -798,21 +788,21 @@ void update(opengl_window* win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // application
-  auto apps_guard  = make_unique<app_states>();
+  auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = vector<string>{};
+  auto filenames   = std::vector<std::string>{};
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = make_cli("yscnitrace", "progressive path tracing");
+  auto cli = ycl::make_cli("yscnitrace", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      trace_sampler_names);
+      ytr::sampler_names);
   add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", trace_falsecolor_names);
+      "Tracer false color type.", ytr::falsecolor_names);
   add_option(
       cli, "--bounces", apps->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
@@ -820,7 +810,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trace_bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", ytr::bvh_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -828,29 +818,25 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // window
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
+  auto win_guard = std::make_unique<ygl::window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
-  set_draw_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
-        draw(win, apps, input);
-      });
-  set_widgets_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
-        draw_glwidgets(win, apps, input);
-      });
-  set_drop_glcallback(
-      win, [apps](opengl_window* win, const vector<string>& paths,
-               const opengl_input& input) {
+  set_draw_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw(win, apps, input);
+  });
+  set_widgets_callback(win, [apps](ygl::window* win, const ygl::input& input) {
+    draw_widgets(win, apps, input);
+  });
+  set_drop_callback(
+      win, [apps](ygl::window* win, const std::vector<std::string>& paths,
+               const ygl::input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
-  set_update_glcallback(
-      win, [apps](opengl_window* win, const opengl_input& input) {
-        update(win, apps);
-      });
-  set_uiupdate_glcallback(win, [apps](opengl_window*   win,
-                                   const opengl_input& input) {
+  set_update_callback(win,
+      [apps](ygl::window* win, const ygl::input& input) { update(win, apps); });
+  set_uiupdate_callback(win, [apps](ygl::window* win, const ygl::input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 

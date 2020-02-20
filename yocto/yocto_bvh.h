@@ -79,6 +79,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <vector>
+
 #include "yocto_math.h"
 
 #ifdef YOCTO_EMBREE
@@ -88,10 +90,21 @@
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
-// using directives
-using namespace yocto::math;
+// Math defitions
+using ym::bbox3f;
+using ym::byte;
+using ym::frame3f;
+using ym::identity3x4f;
+using ym::ray3f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -113,8 +126,8 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
 struct bvh_tree {
-  vector<bvh_node> nodes      = {};
-  vector<int>      primitives = {};
+  std::vector<bvh_node> nodes      = {};
+  std::vector<int>      primitives = {};
 };
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -144,44 +157,44 @@ enum struct bvh_type {
 };
 
 // Make shape bvh
-void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
+void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
     bvh_type type = bvh_type::default_, bool parallel = false);
-void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
+void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
     bvh_type type = bvh_type::default_, bool parallel = false);
-void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius,
+void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
     bvh_type type = bvh_type::default_, bool parallel = false);
-void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius,
+void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
     bvh_type type = bvh_type::default_, bool parallel = false);
 
 // Updates shape bvh for changes in positions and radia
-void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius);
-void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
-void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-void update_quads_bvh(
-    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
+void update_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
+void update_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions);
+void update_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions);
 
 // Find a shape element or scene instances that intersects a ray,
 // returning either the closest or any overlap depending on `find_any`.
 // Returns the point distance, the instance id, the shape element index and
 // the element barycentric coordinates.
 bvh_intersection intersect_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+    const std::vector<int>& points, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any = false);
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
     const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
     const ray3f& ray, bool find_any = true);
 
 // Find a shape element that overlaps a point within a given distance
@@ -189,40 +202,40 @@ bvh_intersection intersect_quads_bvh(const bvh_tree& bvh,
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
 bvh_intersection overlap_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<int>& points, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
 bvh_intersection overlap_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
 bvh_intersection overlap_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
 bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
   // elements
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-  vector<vec4i> quadspos  = {};
+  std::vector<int>   points    = {};
+  std::vector<vec2i> lines     = {};
+  std::vector<vec3i> triangles = {};
+  std::vector<vec4i> quads     = {};
+  std::vector<vec4i> quadspos  = {};
 
   // vertices
-  vector<vec3f> positions = {};
-  vector<float> radius    = {};
+  std::vector<vec3f> positions = {};
+  std::vector<float> radius    = {};
 
   // nodes
   bvh_tree bvh = {};
@@ -240,8 +253,8 @@ struct bvh_instance {
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
   // instances and shapes
-  vector<bvh_instance> instances = {};
-  vector<bvh_shape>    shapes    = {};
+  std::vector<bvh_instance> instances = {};
+  std::vector<bvh_shape>    shapes    = {};
 
   // nodes
   bvh_tree bvh = {};
@@ -258,8 +271,8 @@ void init_scene_bvh(
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh);
-void update_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes);
+void update_scene_bvh(bvh_scene& bvh, const std::vector<int>& updated_instances,
+    const std::vector<int>& updated_shapes);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -280,6 +293,6 @@ bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
 bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 #endif

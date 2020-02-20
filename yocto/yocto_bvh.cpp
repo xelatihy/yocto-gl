@@ -38,15 +38,39 @@
 #include <deque>
 #include <future>
 #include <thread>
+using namespace std::string_literals;
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ybvh {
+
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan2;
+using ym::clamp;
+using ym::cos;
+using ym::exp;
+using ym::fmod;
+using ym::log;
+using ym::max;
+using ym::min;
+using ym::pow;
+using ym::sin;
+using ym::sqrt;
+
+}  // namespace ybvh
+
+// -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 // Intersect a ray with a point (approximate)
 inline bool intersect_point(
@@ -178,9 +202,9 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   auto t0   = (bbox.min - ray.o) * invd;
   auto t1   = (bbox.max - ray.o) * invd;
   // flip based on range directions
-  if (invd.x < 0.0f) swap(t0.x, t1.x);
-  if (invd.y < 0.0f) swap(t0.y, t1.y);
-  if (invd.z < 0.0f) swap(t0.z, t1.z);
+  if (invd.x < 0.0f) std::swap(t0.x, t1.x);
+  if (invd.y < 0.0f) std::swap(t0.y, t1.y);
+  if (invd.z < 0.0f) std::swap(t0.z, t1.z);
   auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
   auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
   tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -200,12 +224,12 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
@@ -350,12 +374,12 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   return true;
 }
 
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR EMBREE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -406,8 +430,8 @@ void init_shape_embree_bvh(bvh_shape& shape, bvh_type type) {
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape.lines.empty()) {
-    auto elines     = vector<int>{};
-    auto epositions = vector<vec4f>{};
+    auto elines     = std::vector<int>{};
+    auto epositions = std::vector<vec4f>{};
     auto last_index = -1;
     for (auto& l : shape.lines) {
       if (last_index == l.x) {
@@ -532,7 +556,7 @@ void init_scene_embree_bvh(bvh_scene& scene, bvh_type type) {
 }
 
 void update_scene_embree_bvh(
-    bvh_scene& scene, const vector<int>& updated_instances) {
+    bvh_scene& scene, const std::vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
   for (auto instance_id : updated_instances) {
@@ -596,17 +620,17 @@ bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
 }
 #endif
 
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR BVH
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static std::pair<int, int> split_sah(std::vector<int>& primitives,
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -668,9 +692,9 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static pair<int, int> split_balanced(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static std::pair<int, int> split_balanced(std::vector<int>& primitives,
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -707,9 +731,9 @@ static pair<int, int> split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static pair<int, int> split_middle(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static std::pair<int, int> split_middle(std::vector<int>& primitives,
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -745,9 +769,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
 }
 
 // Split bvh nodes according to a type
-static pair<int, int> split_nodes(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end, bvh_type type) {
+static std::pair<int, int> split_nodes(std::vector<int>& primitives,
+    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
+    int start, int end, bvh_type type) {
   switch (type) {
     case bvh_type::default_:
       return split_middle(primitives, bboxes, centers, start, end);
@@ -763,7 +787,7 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 
 // Build BVH nodes
 static void build_bvh_serial(
-    bvh_tree& bvh, vector<bbox3f>& bboxes, bvh_type type) {
+    bvh_tree& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -777,7 +801,7 @@ static void build_bvh_serial(
   for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
 
   // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
+  auto centers = std::vector<vec3f>(bboxes.size());
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
@@ -829,7 +853,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    bvh_tree& bvh, vector<bbox3f>& bboxes, bvh_type type) {
+    bvh_tree& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -843,7 +867,7 @@ static void build_bvh_parallel(
   for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
 
   // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
+  auto centers = std::vector<vec3f>(bboxes.size());
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
@@ -852,10 +876,10 @@ static void build_bvh_parallel(
   nodes.emplace_back();
 
   // synchronization
-  std::atomic<int>          num_processed_prims(0);
-  std::mutex                queue_mutex;
-  vector<std::future<void>> futures;
-  auto                      nthreads = std::thread::hardware_concurrency();
+  std::atomic<int>               num_processed_prims(0);
+  std::mutex                     queue_mutex;
+  std::vector<std::future<void>> futures;
+  auto                           nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -926,7 +950,7 @@ static void build_bvh_parallel(
 }
 
 // Update bvh
-static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(bvh_tree& bvh, const std::vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -943,11 +967,11 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 }
 
 // Build shape bvh
-void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius, bvh_type type,
-    bool parallel) {
+void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
-  auto bboxes = vector<bbox3f>(points.size());
+  auto bboxes = std::vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& p     = points[idx];
     bboxes[idx] = point_bounds(positions[p], radius[p]);
@@ -960,11 +984,11 @@ void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
     build_bvh_parallel(bvh, bboxes, type);
   }
 }
-void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius, bvh_type type,
-    bool parallel) {
+void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
-  auto bboxes = vector<bbox3f>(lines.size());
+  auto bboxes = std::vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
@@ -978,11 +1002,11 @@ void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     build_bvh_parallel(bvh, bboxes, type);
   }
 }
-void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius, bvh_type type,
-    bool parallel) {
+void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
-  auto bboxes = vector<bbox3f>(triangles.size());
+  auto bboxes = std::vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
@@ -996,11 +1020,11 @@ void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     build_bvh_parallel(bvh, bboxes, type);
   }
 }
-void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius, bvh_type type,
-    bool parallel) {
+void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius,
+    bvh_type type, bool parallel) {
   // build primitives
-  auto bboxes = vector<bbox3f>(quads.size());
+  auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
@@ -1015,10 +1039,10 @@ void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
   }
 }
 
-void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius) {
+void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
-  auto bboxes = vector<bbox3f>(points.size());
+  auto bboxes = std::vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& p     = points[idx];
     bboxes[idx] = point_bounds(positions[p], radius[p]);
@@ -1027,10 +1051,10 @@ void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius) {
+void update_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
-  auto bboxes = vector<bbox3f>(lines.size());
+  auto bboxes = std::vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
@@ -1040,10 +1064,10 @@ void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
+void update_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& positions) {
   // build primitives
-  auto bboxes = vector<bbox3f>(triangles.size());
+  auto bboxes = std::vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
@@ -1053,10 +1077,10 @@ void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
   // update nodes
   update_bvh(bvh, bboxes);
 }
-void update_quads_bvh(
-    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
+void update_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& positions) {
   // build primitives
-  auto bboxes = vector<bbox3f>(quads.size());
+  auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
@@ -1132,8 +1156,8 @@ static bool intersect_elements_bvh(const bvh_tree& bvh,
 
 // Intersect ray with a bvh.
 bvh_intersection intersect_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any) {
+    const std::vector<int>& points, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const ray3f& ray, bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_elements_bvh(
       bvh,
@@ -1147,8 +1171,8 @@ bvh_intersection intersect_points_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection intersect_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const ray3f& ray, bool find_any) {
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const ray3f& ray, bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_elements_bvh(
       bvh,
@@ -1163,7 +1187,7 @@ bvh_intersection intersect_lines_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection intersect_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_elements_bvh(
@@ -1179,7 +1203,7 @@ bvh_intersection intersect_triangles_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection intersect_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
     const ray3f& ray, bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_elements_bvh(
@@ -1248,8 +1272,8 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
 bvh_intersection overlap_points_bvh(const bvh_tree& bvh,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<int>& points, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = overlap_elements_bvh(
@@ -1265,8 +1289,8 @@ bvh_intersection overlap_points_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection overlap_lines_bvh(const bvh_tree& bvh,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = overlap_elements_bvh(
@@ -1282,8 +1306,8 @@ bvh_intersection overlap_lines_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection overlap_triangles_bvh(const bvh_tree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = overlap_elements_bvh(
@@ -1300,8 +1324,8 @@ bvh_intersection overlap_triangles_bvh(const bvh_tree& bvh,
   return intersection;
 }
 bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<float>& radius, const vec3f& pos, float max_distance,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions,
+    const std::vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any) {
   auto intersection = bvh_intersection{};
   intersection.hit  = overlap_elements_bvh(
@@ -1318,12 +1342,12 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
   return intersection;
 }
 
-}  // namespace yocto::bvh
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::bvh {
+namespace ybvh {
 
 void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
 #ifdef YOCTO_EMBREE
@@ -1336,36 +1360,36 @@ void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>{};
+  auto bboxes = std::vector<bbox3f>{};
   if (!shape.points.empty()) {
-    bboxes = vector<bbox3f>(shape.points.size());
+    bboxes = std::vector<bbox3f>(shape.points.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& p     = shape.points[idx];
       bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
     }
   } else if (!shape.lines.empty()) {
-    bboxes = vector<bbox3f>(shape.lines.size());
+    bboxes = std::vector<bbox3f>(shape.lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape.lines[idx];
       bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
     }
   } else if (!shape.triangles.empty()) {
-    bboxes = vector<bbox3f>(shape.triangles.size());
+    bboxes = std::vector<bbox3f>(shape.triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
+    bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
   } else if (!shape.quadspos.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
+    bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
@@ -1397,7 +1421,7 @@ void init_scene_bvh(bvh_scene& scene, bvh_type type, bool parallel) {
 #endif
 
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = std::vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
@@ -1422,36 +1446,36 @@ void update_shape_bvh(bvh_shape& shape) {
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>{};
+  auto bboxes = std::vector<bbox3f>{};
   if (!shape.points.empty()) {
-    bboxes = vector<bbox3f>(shape.points.size());
+    bboxes = std::vector<bbox3f>(shape.points.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& p     = shape.points[idx];
       bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
     }
   } else if (!shape.lines.empty()) {
-    bboxes = vector<bbox3f>(shape.lines.size());
+    bboxes = std::vector<bbox3f>(shape.lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape.lines[idx];
       bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
     }
   } else if (!shape.triangles.empty()) {
-    bboxes = vector<bbox3f>(shape.triangles.size());
+    bboxes = std::vector<bbox3f>(shape.triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
+    bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
   } else if (!shape.quadspos.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
+    bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
@@ -1463,8 +1487,9 @@ void update_shape_bvh(bvh_shape& shape) {
   update_bvh(shape.bvh, bboxes);
 }
 
-void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes) {
+void update_scene_bvh(bvh_scene& scene,
+    const std::vector<int>&      updated_instances,
+    const std::vector<int>&      updated_shapes) {
   // update shapes
   for (auto shape : updated_shapes) update_shape_bvh(scene.shapes[shape]);
 
@@ -1475,7 +1500,7 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = std::vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& sbvh     = scene.shapes[instance.shape].bvh;
@@ -1833,7 +1858,7 @@ static bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
     void overlap_bvh_elems(const bvh_scene_data& bvh1, const bvh_scene_data& bvh2,
-                           bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
+                           bool skip_duplicates, bool skip_self, std::vector<vec2i>& overlaps,
                            const OverlapElem& overlap_elems) {
         // node stack
         vec2i node_stack[128];
@@ -1931,4 +1956,4 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
   return intersection;
 }
 
-}  // namespace yocto::bvh
+}  // namespace ybvh

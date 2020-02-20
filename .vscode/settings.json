@@ -80,7 +80,8 @@
     "iostream": "cpp",
     "numeric": "cpp",
     "set": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "__memory": "cpp"
   },
   "json.schemas": [
     {

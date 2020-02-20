@@ -1,22 +1,21 @@
 #include "yimshproc.h"
-using namespace yocto;
 
 struct my_data {
-  vector<vec3i>       face_adjacency;
-  vector<vector<int>> vertex_adjacency;
-  geodesic_solver     solver;
-  vector<float>       scalar_field;
-  vector<vec3f>       vector_field;
+  std::vector<vec3i>       face_adjacency;
+  std::vector<vector<int>> vertex_adjacency;
+  ysh::geodesic_solver     solver;
+  std::vector<float>       scalar_field;
+  std::vector<vec3f>       vector_field;
 
-  int         num_samples      = 500;
-  vector<int> vertex_selection = {};
+  int              num_samples      = 500;
+  std::vector<int> vertex_selection = {};
 };
 
 void my_init(my_data& data, app_state* app) {
-  data.face_adjacency   = face_adjacencies(app->shape.triangles);
-  data.vertex_adjacency = vertex_adjacencies(
+  data.face_adjacency   = ysh::face_adjacencies(app->shape.triangles);
+  data.vertex_adjacency = ysh::vertex_adjacencies(
       app->shape.triangles, data.face_adjacency);
-  data.solver = make_geodesic_solver(
+  data.solver = ysh::make_geodesic_solver(
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
@@ -24,17 +23,17 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
-  print_info(
+  ycl::print_info(
       "press: " + std::to_string((char)key) + " [" + std::to_string(key) + "]");
   auto enter = 257;
   auto esc   = 256;
 
   if (key == enter) {
-    print_info("Enter pressed!");
+    ycl::print_info("Enter pressed!");
   }
 
   if (key == esc) {
-    print_info("Esc pressed!");
+    ycl::print_info("Esc pressed!");
     init_camera(app);
     set_frame(app->glcamera, app->camera.frame);
     set_lens(
@@ -42,42 +41,42 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   }
 
   if (key == 'z') {
-    print_info("Z pressed!");
+    ycl::print_info("Z pressed!");
   }
 }
 
 void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
     int vertex, float distance) {
-  print_info("clicked vertex: " + std::to_string(vertex));
+  ycl::print_info("clicked vertex: " + std::to_string(vertex));
   data.vertex_selection.push_back(vertex);
 
-  auto positions = vector<vec3f>(data.vertex_selection.size());
+  auto positions = std::vector<vec3f>(data.vertex_selection.size());
   for (int i = 0; i < positions.size(); ++i) {
     positions[i] = app->shape.positions[data.vertex_selection[i]];
   }
   update_glpoints(app, positions);
 }
 
-void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
-  if (draw_glbutton(win, "Geodesic gradient field")) {
+void my_draw_glwidgets(my_data& data, app_state* app, ygl::window* win) {
+  if (draw_button(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
 
-      data.vector_field = vector<vec3f>(app->shape.triangles.size());
+      data.vector_field = std::vector<vec3f>(app->shape.triangles.size());
       for (int i = 0; i < app->shape.triangles.size(); ++i) {
-        data.vector_field[i] = compute_gradient(
+        data.vector_field[i] = ysh::compute_gradient(
             app->shape.triangles[i], app->shape.positions, data.scalar_field);
       }
       update_glvector_field(app, data.vector_field, 100);
     }
   }
 
-  if (draw_glbutton(win, "Geodesic distance field")) {
+  if (draw_button(win, "Geodesic distance field")) {
     if (data.vertex_selection.size()) {
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
-      auto colors = vector<vec3f>(data.scalar_field.size());
+      auto colors = std::vector<vec3f>(data.scalar_field.size());
       for (int i = 0; i < colors.size(); ++i) {
         colors[i] = vec3f(data.scalar_field[i]);
       }
@@ -85,9 +84,9 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
     }
   }
 
-  if (draw_glbutton(win, "Compute geodesic path")) {
+  if (draw_button(win, "Compute geodesic path")) {
     if (data.vertex_selection.size() > 1) {
-      auto positions = vector<vec3f>();
+      auto positions = std::vector<vec3f>();
       auto n         = data.vertex_selection.size();
       for (int i = 0; i < n - (n < 3); ++i) {
         auto from  = data.vertex_selection[i];
@@ -96,44 +95,47 @@ void my_draw_glwidgets(my_data& data, app_state* app, opengl_window* win) {
         for (auto& f : field) f = -f;
 
         // @Speed: Remove tags from function api to avoid this.
-        auto dummy_tags = vector<int>(app->shape.triangles.size(), 0);
-        auto path = integrate_field(app->shape.triangles, app->shape.positions,
-            data.face_adjacency, dummy_tags, 0, field, from, to);
+        auto dummy_tags = std::vector<int>(app->shape.triangles.size(), 0);
+        auto path       = ysh::integrate_field(app->shape.triangles,
+            app->shape.positions, data.face_adjacency, dummy_tags, 0, field,
+            from, to);
 
-        auto ppositions = make_positions_from_path(path, app->shape.positions);
+        auto ppositions = ysh::make_positions_from_path(
+            path, app->shape.positions);
         positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
       update_glpolyline(app, positions);
     }
   }
 
-  if (draw_glslider(win, "Sample points", data.num_samples, 0, 10000)) {
+  if (draw_slider(win, "Sample points", data.num_samples, 0, 10000)) {
     data.vertex_selection = sample_vertices_poisson(
         data.solver, data.num_samples);
-    auto positions = vector<vec3f>(data.vertex_selection.size());
+    auto positions = std::vector<vec3f>(data.vertex_selection.size());
     for (int i = 0; i < positions.size(); ++i)
       positions[i] = app->shape.positions[data.vertex_selection[i]];
     update_glpoints(app, positions);
   }
 
-  if (draw_glcheckbox(win, "Show mesh edges", app->show_edges)) {
+  if (draw_checkbox(win, "Show mesh edges", app->show_edges)) {
     if (app->show_edges)
       show_edges(app);
     else
       hide_edges(app);
   }
 
-  if (draw_glbutton(win, "Clear")) {
+  if (draw_button(win, "Clear")) {
     data.vertex_selection.clear();
     clear(app);
   }
 }
 
 int main(int argc, const char* argv[]) {
-  string input_filename = "model.obj";
+  std::string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
+  auto cli = ycl::make_cli(
+      "yimshproc", "interactive viewer for mesh processing");
   add_option(cli, "model", input_filename, "model filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -141,7 +143,7 @@ int main(int argc, const char* argv[]) {
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](app_state* app) {
-    print_info("init my data");
+    ycl::print_info("init my data");
     my_init(data, app);
   };
   auto key_callback = [&data](app_state* app, int key, bool pressing) {
@@ -150,11 +152,11 @@ int main(int argc, const char* argv[]) {
   auto click_callback = [&data](app_state* a, int f, vec2f uv, int v, float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](app_state* app, opengl_window* win) {
+  auto draw_widgets = [&data](app_state* app, ygl::window* win) {
     my_draw_glwidgets(data, app, win);
   };
 
-  yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+  yimshproc(input_filename, init, key_callback, click_callback, draw_widgets);
 
   // done
   return 0;

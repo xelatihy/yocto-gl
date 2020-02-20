@@ -29,31 +29,29 @@
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
-using namespace yocto::math;
-using namespace yocto::image;
-using namespace yocto::commonio;
-using namespace yocto::opengl;
+using namespace ym;
 
 #include <future>
+using namespace std::string_literals;
 
 struct app_state {
   // original data
-  string filename = "image.png";
-  string outname  = "out.png";
+  std::string filename = "image.png";
+  std::string outname  = "out.png";
 
   // image data
-  image<vec4f> source = {};
+  yim::image<vec4f> source = {};
 
   // diplay data
-  image<vec4f>      display    = {};
-  float             exposure   = 0;
-  bool              filmic     = false;
-  colorgrade_params params     = {};
-  bool              colorgrade = false;
+  yim::image<vec4f>      display    = {};
+  float                  exposure   = 0;
+  bool                   filmic     = false;
+  yim::colorgrade_params params     = {};
+  bool                   colorgrade = false;
 
   // viewing properties
-  opengl_image*       glimage  = new opengl_image{};
-  draw_glimage_params glparams = {};
+  ygl::image*       glimage  = new ygl::image{};
+  ygl::image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -71,12 +69,12 @@ void update_display(app_state* app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app_guard = make_unique<app_state>();
+  auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = vector<string>{};
+  auto filenames = std::vector<std::string>{};
 
   // command line options
-  auto cli = make_cli("yimgviews", "view images");
+  auto cli = ycl::make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -84,7 +82,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    print_fatal(ioerror);
+    ycl::print_fatal(ioerror);
     return 1;
   }
 
@@ -92,33 +90,32 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_guard = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win_guard = std::make_unique<ygl::window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
-        app->glparams.window      = input.window_size;
-        app->glparams.framebuffer = input.framebuffer_viewport;
-        if (!is_initialized(app->glimage)) {
-          init_glimage(app->glimage);
-          set_glimage(app->glimage, app->display, false, false);
-        }
-        update_imview(app->glparams.center, app->glparams.scale,
-            app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
-      });
-  set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
-        // handle mouse
-        if (input.mouse_left) {
-          app->glparams.center += input.mouse_pos - input.mouse_last;
-        }
-        if (input.mouse_right) {
-          app->glparams.scale *= powf(
-              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-        }
-      });
+  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
+    if (!is_initialized(app->glimage)) {
+      init_glimage(app->glimage);
+      set_glimage(app->glimage, app->display, false, false);
+    }
+    update_imview(app->glparams.center, app->glparams.scale,
+        app->display.size(), app->glparams.window, app->glparams.fit);
+    draw_glimage(app->glimage, app->glparams);
+  });
+  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    // handle mouse
+    if (input.mouse_left) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  });
 
   // run ui
   run_ui(win);

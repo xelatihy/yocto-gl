@@ -26,26 +26,24 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <memory>
+
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
-using namespace yocto::sceneio;
-using namespace yocto::commonio;
-
-#include <memory>
-#include <set>
-using std::make_unique;
+using std::string;
+using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-void make_dir(const string& dirname) {
+void make_dir(const std::string& dirname) {
   if (fs::exists(dirname)) return;
   try {
     fs::create_directories(dirname);
   } catch (...) {
-    print_fatal("cannot create directory " + dirname);
+    ycl::print_fatal("cannot create directory " + dirname);
   }
 }
 
@@ -57,7 +55,7 @@ int main(int argc, const char* argv[]) {
   auto filename = "scene.json"s;
 
   // parse command line
-  auto cli = make_cli("yscnproc", "Process scene");
+  auto cli = ycl::make_cli("yscnproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
   add_option(cli, "--output,-o", output, "output scene");
@@ -65,21 +63,22 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = make_unique<sceneio_model>();
+  auto scene_guard = std::make_unique<ysc::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
-  if (!load_scene(filename, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!load_scene(filename, scene, ioerror, ycl::print_progress))
+    ycl::print_fatal(ioerror);
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene)) print_info("error: " + error);
+    for (auto& error : scene_validation(scene))
+      ycl::print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    ycl::print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) ycl::print_info(stat);
   }
 
   // tesselate if needed
@@ -101,7 +100,8 @@ int main(int argc, const char* argv[]) {
     make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, ycl::print_progress))
+    ycl::print_fatal(ioerror);
 
   // done
   return 0;

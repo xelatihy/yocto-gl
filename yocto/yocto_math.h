@@ -14,7 +14,7 @@
 // `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
 // We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
-// matrix-matrix and matrix-vector products, transposes and inverses.
+// matrix-matrix and matrix-std::vector products, transposes and inverses.
 // Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
@@ -172,23 +172,15 @@
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 using byte = unsigned char;
 using uint = unsigned int;
-using std::array;
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
-using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
@@ -239,12 +231,12 @@ inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
 inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // VECTORS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 struct vec2f {
   float x = 0;
@@ -287,7 +279,7 @@ struct vec4f {
   const float& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+// Zero std::vector constants.
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
@@ -380,7 +372,7 @@ inline float min(const vec2f& a) { return min(a.x, a.y); }
 inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
 inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
 inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
@@ -481,14 +473,14 @@ inline float angle(const vec3f& a, const vec3f& b) {
 
 // Orthogonal vectors.
 inline vec3f orthogonal(const vec3f& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
 }
 inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
   return normalize(a - b * dot(a, b));
 }
 
-// Reflected and refracted vector.
+// Reflected and refracted std::vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n) {
   return -w + 2 * dot(n, w) * n;
 }
@@ -531,7 +523,7 @@ inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
 inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
 inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
@@ -667,7 +659,7 @@ inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec4f abs(const vec4f& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
@@ -716,12 +708,12 @@ inline vec4f quat_inverse(const vec4f& a) {
   return quat_conjugate(a) / dot(a, a);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // INTEGER VECTORS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 struct vec2i {
   int x = 0;
@@ -791,7 +783,7 @@ struct vec4b {
   const byte& operator[](int i) const { return (&x)[i]; }
 };
 
-// Zero vector constants.
+// Zero std::vector constants.
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
@@ -865,7 +857,7 @@ inline int max(const vec2i& a) { return max(a.x, a.y); }
 inline int min(const vec2i& a) { return min(a.x, a.y); }
 inline int sum(const vec2i& a) { return a.x + a.y; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
@@ -948,7 +940,7 @@ inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
 inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
@@ -1032,20 +1024,20 @@ inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
 inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
 inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
 
-// Functions applied to vector elements
+// Functions applied to std::vector elements
 inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
 };
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 namespace std {
 
-// Hash functor for vector for use with hash_map
+// Hash functor for std::vector for use with hash_map
 template <>
-struct hash<yocto::math::vec2i> {
-  size_t operator()(const yocto::math::vec2i& v) const {
+struct hash<ym::vec2i> {
+  size_t operator()(const ym::vec2i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1054,8 +1046,8 @@ struct hash<yocto::math::vec2i> {
   }
 };
 template <>
-struct hash<yocto::math::vec3i> {
-  size_t operator()(const yocto::math::vec3i& v) const {
+struct hash<ym::vec3i> {
+  size_t operator()(const ym::vec3i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1065,8 +1057,8 @@ struct hash<yocto::math::vec3i> {
   }
 };
 template <>
-struct hash<yocto::math::vec4i> {
-  size_t operator()(const yocto::math::vec4i& v) const {
+struct hash<ym::vec4i> {
+  size_t operator()(const ym::vec4i& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
     h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -1082,7 +1074,7 @@ struct hash<yocto::math::vec4i> {
 // -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat2f {
@@ -1269,12 +1261,12 @@ inline mat4f transpose(const mat4f& a) {
   };
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
@@ -1392,12 +1384,12 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
   return {x, y, z, o};
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Quaternions to represent rotations
 struct quat4f {
@@ -1459,14 +1451,14 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
              : a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+// Axis aligned bounding box represented as a min/max std::vector pairs.
 struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
@@ -1478,7 +1470,7 @@ struct bbox2f {
   const vec2f& operator[](int i) const { return (&min)[i]; }
 };
 
-// Axis aligned bounding box represented as a min/max vector pairs.
+// Axis aligned bounding box represented as a min/max std::vector pairs.
 struct bbox3f {
   vec3f min = {flt_max, flt_max, flt_max};
   vec3f max = {flt_min, flt_min, flt_min};
@@ -1559,12 +1551,12 @@ inline bbox3f quad_bounds(
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RAYS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Ray esplison
 inline const auto ray_eps = 1e-4f;
@@ -1594,12 +1586,12 @@ struct ray3f {
       : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 };
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Transforms points, vectors and directions by matrices.
 inline vec2f transform_point(const mat3f& a, const vec2f& b) {
@@ -1799,7 +1791,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
@@ -1813,12 +1805,12 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
       vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Line properties.
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
@@ -1848,16 +1840,17 @@ inline float quad_area(
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -1899,7 +1892,7 @@ inline T interpolate_bezier_derivative(
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -1925,9 +1918,10 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
+inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
@@ -1935,12 +1929,12 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
   }
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // COLOR OPERATIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a);
@@ -1971,6 +1965,12 @@ inline vec3f contrast(const vec3f& rgb, float contrast);
 inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f});
 
+// Apply tone mapping
+inline vec3f tonemap(
+    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
+inline vec4f tonemap(
+    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb);
 inline vec3f xyz_to_rgb(const vec3f& xyz);
@@ -1986,12 +1986,12 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // PCG random numbers from http://www.pcg-random.org/
 struct rng_state {
@@ -2051,7 +2051,7 @@ inline vec3f rand3f(rng_state& rng) {
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(vector<T>& vals, rng_state& rng) {
+inline void shuffle(std::vector<T>& vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
   for (auto i = (int)vals.size() - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
@@ -2059,12 +2059,12 @@ inline void shuffle(vector<T>& vals, rng_state& rng) {
   }
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // PERLIN NOISE FUNCTION
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Compute the revised Perlin noise function. Wrap provides a wrapping noise
 // but must be power of two (wraps at 256 anyway). For octave based noise,
@@ -2081,12 +2081,12 @@ inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
 inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec2f& ruv);
@@ -2137,20 +2137,20 @@ inline int   sample_uniform(int size, float r);
 inline float sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const vector<float>& elements, float r);
-inline float sample_uniform_pdf(const vector<float>& elements);
+inline float sample_uniform(const std::vector<float>& elements, float r);
+inline float sample_uniform_pdf(const std::vector<float>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r);
+inline int sample_discrete(const std::vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -2177,7 +2177,7 @@ inline void update_fpscam(
 inline ray3f camera_ray(
     const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 //
@@ -2190,7 +2190,7 @@ inline ray3f camera_ray(
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a) {
@@ -2260,6 +2260,50 @@ inline vec3f saturate(
     const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+}
+
+// Filmic tonemapping
+inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+  if (!accurate_fit) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
+               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return max(zero3f, ldr);
+  } else {
+    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+    static const auto ACESInputMat = transpose(mat3f{
+        {0.59719, 0.35458, 0.04823},
+        {0.07600, 0.90834, 0.01566},
+        {0.02840, 0.13383, 0.83777},
+    });
+    // ODT_SAT => XYZ => D60_2_D65 => sRGB
+    static const auto ACESOutputMat = transpose(mat3f{
+        {1.60475, -0.53108, -0.07367},
+        {-0.10208, 1.10813, -0.00605},
+        {-0.00327, -0.07276, 1.07602},
+    });
+    // RRT => ODT
+    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+      return (v * v + v * 0.0245786f - 0.000090537f) /
+             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+    };
+
+    auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
+    return max(zero3f, ldr);
+  }
+}
+
+inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+  auto rgb = hdr;
+  if (exposure != 0) rgb *= exp2(exposure);
+  if (filmic) rgb = tonemap_filmic(rgb);
+  if (srgb) rgb = rgb_to_srgb(rgb);
+  return rgb;
+}
+inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
@@ -2399,12 +2443,12 @@ inline vec3f blackbody_to_rgb(float temperature) {
   return srgb_to_rgb(rgb / 255);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // clang-format off
 inline float _stb__perlin_lerp(float a, float b, float t)
@@ -2629,12 +2673,12 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
       p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere(const vec2f& ruv) {
@@ -2747,35 +2791,35 @@ inline int sample_uniform(int size, float r) {
 inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const vector<float>& elements, float r) {
+inline float sample_uniform(const std::vector<float>& elements, float r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
-inline float sample_uniform_pdf(const vector<float>& elements) {
+inline float sample_uniform_pdf(const std::vector<float>& elements) {
   if (elements.empty()) return 0;
   return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
+inline int sample_discrete(const std::vector<float>& cdf, float r) {
   r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF USER INTERFACE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace ym {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -2871,7 +2915,7 @@ inline void update_fpscam(
   auto x = cross(y, z);
 
   auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
-             yocto::math::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+             ym::frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
              rotation_frame(vec3f{0, 1, 0}, rotate.x);
   auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
@@ -2890,6 +2934,6 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
   return ray;
 }
 
-}  // namespace yocto::math
+}  // namespace ym
 
 #endif

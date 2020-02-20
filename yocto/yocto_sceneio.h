@@ -54,12 +54,20 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yscn {
 
-// Using directives.
-using std::function;
-using yocto::image::image;
-using namespace yocto::math;
+// Math defitions
+using ym::bbox3f;
+using ym::byte;
+using ym::frame3f;
+using ym::identity3x4f;
+using ym::vec2f;
+using ym::vec2i;
+using ym::vec3b;
+using ym::vec3f;
+using ym::vec3i;
+using ym::vec4f;
+using ym::vec4i;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -74,34 +82,34 @@ using namespace yocto::math;
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct sceneio_camera {
-  string  name         = "";
-  frame3f frame        = identity3x4f;
-  bool    orthographic = false;
-  float   lens         = 0.050;
-  float   film         = 0.036;
-  float   aspect       = 1.500;
-  float   focus        = flt_max;
-  float   aperture     = 0;
+struct camera {
+  std::string name         = "";
+  frame3f     frame        = identity3x4f;
+  bool        orthographic = false;
+  float       lens         = 0.050;
+  float       film         = 0.036;
+  float       aspect       = 1.500;
+  float       focus        = ym::flt_max;
+  float       aperture     = 0;
 };
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct sceneio_texture {
-  string       name    = "";
-  image<vec3f> colorf  = {};
-  image<vec3b> colorb  = {};
-  image<float> scalarf = {};
-  image<byte>  scalarb = {};
+struct texture {
+  std::string       name    = "";
+  yim::image<vec3f> colorf  = {};
+  yim::image<vec3b> colorb  = {};
+  yim::image<float> scalarf = {};
+  yim::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct sceneio_material {
+struct material {
   // material data
-  string name = "";
+  std::string name = "";
 
   // material
   vec3f emission     = {0, 0, 0};
@@ -121,18 +129,18 @@ struct sceneio_material {
   bool  thin         = true;
 
   // textures
-  sceneio_texture* emission_tex     = nullptr;
-  sceneio_texture* color_tex        = nullptr;
-  sceneio_texture* specular_tex     = nullptr;
-  sceneio_texture* metallic_tex     = nullptr;
-  sceneio_texture* roughness_tex    = nullptr;
-  sceneio_texture* transmission_tex = nullptr;
-  sceneio_texture* spectint_tex     = nullptr;
-  sceneio_texture* scattering_tex   = nullptr;
-  sceneio_texture* coat_tex         = nullptr;
-  sceneio_texture* opacity_tex      = nullptr;
-  sceneio_texture* normal_tex       = nullptr;
-  sceneio_texture* displacement_tex = nullptr;
+  texture* emission_tex     = nullptr;
+  texture* color_tex        = nullptr;
+  texture* specular_tex     = nullptr;
+  texture* metallic_tex     = nullptr;
+  texture* roughness_tex    = nullptr;
+  texture* transmission_tex = nullptr;
+  texture* spectint_tex     = nullptr;
+  texture* scattering_tex   = nullptr;
+  texture* coat_tex         = nullptr;
+  texture* opacity_tex      = nullptr;
+  texture* normal_tex       = nullptr;
+  texture* displacement_tex = nullptr;
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -143,67 +151,67 @@ struct sceneio_material {
 // May contain either points, lines, triangles and quads.
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
-struct sceneio_shape {
+struct shape {
   // shape data
-  string name = "";
+  std::string name = "";
 
   // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
+  std::vector<int>   points    = {};
+  std::vector<vec2i> lines     = {};
+  std::vector<vec3i> triangles = {};
+  std::vector<vec4i> quads     = {};
 
   // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
+  std::vector<vec3f> colors    = {};
+  std::vector<float> radius    = {};
+  std::vector<vec4f> tangents  = {};
 };
 
 // Subdiv data represented as indexed meshes of elements.
 // May contain points, lines, triangles, quads or
 // face-varying quads.
-struct sceneio_subdiv {
+struct subdiv {
   // shape data
-  string name = "";
+  std::string name = "";
 
   // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
+  std::vector<vec4i> quadspos      = {};
+  std::vector<vec4i> quadsnorm     = {};
+  std::vector<vec4i> quadstexcoord = {};
 
   // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
+  std::vector<vec3f> positions = {};
+  std::vector<vec3f> normals   = {};
+  std::vector<vec2f> texcoords = {};
 };
 
 // Instance data.
-struct sceneio_instance {
+struct instance {
   // instance data
-  string          name   = "";
-  vector<frame3f> frames = {};
+  std::string          name   = "";
+  std::vector<frame3f> frames = {};
 };
 
 // Object.
-struct sceneio_object {
+struct object {
   // object data
-  string            name     = "";
-  frame3f           frame    = identity3x4f;
-  sceneio_shape*    shape    = nullptr;
-  sceneio_material* material = nullptr;
-  sceneio_instance* instance = nullptr;
-  sceneio_subdiv*   subdiv   = nullptr;
+  std::string name     = "";
+  frame3f     frame    = identity3x4f;
+  shape*      shape    = nullptr;
+  material*   material = nullptr;
+  instance*   instance = nullptr;
+  subdiv*     subdiv   = nullptr;
 };
 
 // Environment map.
-struct sceneio_environment {
-  string           name         = "";
-  frame3f          frame        = identity3x4f;
-  vec3f            emission     = {0, 0, 0};
-  sceneio_texture* emission_tex = nullptr;
+struct environment {
+  std::string name         = "";
+  frame3f     frame        = identity3x4f;
+  vec3f       emission     = {0, 0, 0};
+  texture*    emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -213,91 +221,90 @@ struct sceneio_environment {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct sceneio_model {
-  string                       name         = "";
-  vector<sceneio_camera*>      cameras      = {};
-  vector<sceneio_object*>      objects      = {};
-  vector<sceneio_environment*> environments = {};
-  vector<sceneio_shape*>       shapes       = {};
-  vector<sceneio_subdiv*>      subdivs      = {};
-  vector<sceneio_texture*>     textures     = {};
-  vector<sceneio_material*>    materials    = {};
-  vector<sceneio_instance*>    instances    = {};
-  ~sceneio_model();
+struct model {
+  std::string               name         = "";
+  std::vector<camera*>      cameras      = {};
+  std::vector<object*>      objects      = {};
+  std::vector<environment*> environments = {};
+  std::vector<shape*>       shapes       = {};
+  std::vector<subdiv*>      subdivs      = {};
+  std::vector<texture*>     textures     = {};
+  std::vector<material*>    materials    = {};
+  std::vector<instance*>    instances    = {};
+  ~model();
 };
 
 // add element to a scene
-sceneio_camera*      add_camera(sceneio_model* scene, const string& name = "");
-sceneio_environment* add_environment(
-    sceneio_model* scene, const string& name = "");
-sceneio_object*   add_object(sceneio_model* scene, const string& name = "");
-sceneio_instance* add_instance(sceneio_model* scene, const string& name = "");
-sceneio_material* add_material(sceneio_model* scene, const string& name = "");
-sceneio_shape*    add_shape(sceneio_model* scene, const string& name = "");
-sceneio_subdiv*   add_subdiv(sceneio_model* scene, const string& name = "");
-sceneio_texture*  add_texture(sceneio_model* scene, const string& name = "");
-sceneio_object*   add_complete_object(
-      sceneio_model* scene, const string& name = "");
+camera*      add_camera(model* scene, const std::string& name = "");
+environment* add_environment(model* scene, const std::string& name = "");
+object*      add_object(model* scene, const std::string& name = "");
+instance*    add_instance(model* scene, const std::string& name = "");
+material*    add_material(model* scene, const std::string& name = "");
+shape*       add_shape(model* scene, const std::string& name = "");
+subdiv*      add_subdiv(model* scene, const std::string& name = "");
+texture*     add_texture(model* scene, const std::string& name = "");
+object*      add_complete_object(model* scene, const std::string& name = "");
 
-}  // namespace yocto::sceneio
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace yocto::sceneio {
+namespace yscn {
 
 // Progress callback called when loading.
-using sceneio_progress =
-    function<void(const string& message, int current, int total)>;
+using progress_callback =
+    std::function<void(const std::string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, sceneio_model* scene, string& error,
-    sceneio_progress progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const sceneio_model* scene,
-    string& error, sceneio_progress progress_cb = {}, bool noparallel = false);
+bool load_scene(const std::string& filename, model* scene, std::string& error,
+    progress_callback progress_cb = {}, bool noparallel = false);
+bool save_scene(const std::string& filename, const model* scene,
+    std::string& error, progress_callback progress_cb = {},
+    bool noparallel = false);
 
 // get named camera or default if name is empty
-sceneio_camera* get_camera(const sceneio_model* scene, const string& name = "");
+camera* get_camera(const model* scene, const std::string& name = "");
 
-}  // namespace yocto::sceneio
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yscn {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
+std::vector<std::string> scene_stats(const model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> scene_validation(
-    const sceneio_model* scene, bool notextures = false);
+std::vector<std::string> scene_validation(
+    const model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const sceneio_model* scene);
+bbox3f compute_bounds(const model* scene);
 
-}  // namespace yocto::sceneio
+}  // namespace yscn
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yscn {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(sceneio_model* scene, sceneio_progress progress_cb = {});
-void tesselate_subdiv(sceneio_model* scene, sceneio_subdiv* subdiv);
+void tesselate_subdivs(model* scene, progress_callback progress_cb = {});
+void tesselate_subdiv(model* scene, subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    sceneio_model* scene, float time = 0, const string& anim_group = "");
+    model* scene, float time = 0, const std::string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {
   return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yscn
 
 #endif

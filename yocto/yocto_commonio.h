@@ -97,26 +97,14 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto::commonio {
-
-using byte = unsigned char;
-using std::string;
-using std::unordered_map;
-using std::vector;
-
-}  // namespace yocto::commonio
-
-// -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Print a message to the console
-inline void print_info(const string& msg);
+inline void print_info(const std::string& msg);
 // Prints a messgae to the console and exit with an error.
-inline void print_fatal(const string& msg);
+inline void print_fatal(const std::string& msg);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.
@@ -125,111 +113,120 @@ struct print_timer {
   ~print_timer();  // print time if scope ends
 };
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg);
+inline print_timer print_timed(const std::string& msg);
 inline void        print_elapsed(print_timer& timer);
 
 // Print progress
-inline void print_progress(const string& message, int current, int total);
+inline void print_progress(const std::string& message, int current, int total);
 
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
+// Format duration std::string from nanoseconds
+inline std::string format_duration(int64_t duration);
 // Format a large integer number in human readable form
-inline string format_num(uint64_t num);
+inline std::string format_num(uint64_t num);
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Initialize a command line parser.
 struct cli_state;
-inline cli_state make_cli(const string& cmd, const string& usage);
+inline cli_state make_cli(const std::string& cmd, const std::string& usage);
 // parse arguments, checks for errors, and exits on error or help
 inline void parse_cli(cli_state& cli, int argc, const char** argv);
 // parse arguments and checks for errors
 inline bool parse_cli(
-    cli_state& cli, int argc, const char** argv, string& error);
+    cli_state& cli, int argc, const char** argv, std::string& error);
 // gets usage message
-inline string get_usage(const cli_state& cli);
+inline std::string get_usage(const cli_state& cli);
 // gets whether help was invoked
 inline bool get_help(const cli_state& cli);
 
-// Parse an int, float, string, and bool option or positional argument.
+// Parse an int, float, std::string, and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // The library support using many names for the same option/argument
 // separate by commas. Boolean flags are indicated with a pair of names
 // "--name/--no-name", so that we have both options available.
-inline void add_option(cli_state& cli, const string& name, string& value,
-    const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, float& value,
-    const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name,
+    std::string& value, const std::string& usage, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name, int& value,
+    const std::string& usage, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name, float& value,
+    const std::string& usage, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name, bool& value,
+    const std::string& usage, bool req = false);
 // Parse an enum
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name, int& value,
+    const std::string& usage, const std::vector<std::string>& choices,
+    bool req = false);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name, T& value,
+    const std::string& usage, const std::vector<std::string>& choices,
+    bool req = false);
 // Parse all arguments left on the command line.
-inline void add_option(cli_state& cli, const string& name,
-    vector<string>& value, const string& usage, bool req = false);
+inline void add_option(cli_state& cli, const std::string& name,
+    std::vector<std::string>& value, const std::string& usage,
+    bool req = false);
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // These utilities are here only for backward compatibility. They should be
 // considered deprecated.
 
 // Utility to normalize a path
-inline string normalize_path(const string& filename);
+inline std::string normalize_path(const std::string& filename);
 
 // Get directory name (including '/').
-inline string get_dirname(const string& filename);
+inline std::string get_dirname(const std::string& filename);
 
 // Get extension (not including '.').
-inline string get_extension(const string& filename);
+inline std::string get_extension(const std::string& filename);
 
 // Get filename without directory.
-inline string get_filename(const string& filename);
+inline std::string get_filename(const std::string& filename);
 
 // Get extension.
-inline string get_noextension(const string& filename);
+inline std::string get_noextension(const std::string& filename);
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename);
+inline std::string get_basename(const std::string& filename);
 
 // Replaces extensions
-inline string replace_extension(const string& filename, const string& ext);
+inline std::string replace_extension(
+    const std::string& filename, const std::string& ext);
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
-}  // namespace yocto::commonio
+inline bool exists_file(const std::string& filename);
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Load/save a text file
-inline bool load_text(const string& filename, string& str, string& error);
-inline bool save_text(const string& filename, const string& str, string& error);
+inline bool load_text(
+    const std::string& filename, std::string& str, std::string& error);
+inline bool save_text(
+    const std::string& filename, const std::string& str, std::string& error);
+
+// Using directive
+using byte = unsigned char;
 
 // Load/save a binary file
 inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error);
-inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
+    const std::string& filename, std::vector<byte>& data, std::string& error);
+inline bool save_binary(const std::string& filename,
+    const std::vector<byte>& data, std::string& error);
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 //
@@ -242,24 +239,24 @@ inline bool save_binary(
 // -----------------------------------------------------------------------------
 // FORMATTING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // This is a very crude replacement for `std::format()` that will be used when
 // available on all platforms.
 template <typename... Args>
-inline string format(const string& fmt, Args&&... args);
+inline std::string format(const std::string& fmt, Args&&... args);
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Print a message to the console
-inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+inline void print_info(const std::string& msg) { printf("%s\n", msg.c_str()); }
 // Prints a messgae to the console and exit with an error.
-inline void print_fatal(const string& msg) {
+inline void print_fatal(const std::string& msg) {
   printf("%s\n", msg.c_str());
   exit(1);
 }
@@ -269,8 +266,8 @@ inline int64_t get_time_() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
+// Format duration std::string from nanoseconds
+inline std::string format_duration(int64_t duration) {
   auto elapsed = duration / 1000000;  // milliseconds
   auto hours   = (int)(elapsed / 3600000);
   elapsed %= 3600000;
@@ -284,7 +281,7 @@ inline string format_duration(int64_t duration) {
 }
 
 // Format a large integer number in human readable form
-inline string format_num(uint64_t num) {
+inline std::string format_num(uint64_t num) {
   auto rem = num % 1000;
   auto div = num / 1000;
   if (div > 0) return format_num(div) + "," + std::to_string(rem);
@@ -292,7 +289,7 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg) {
+inline print_timer print_timed(const std::string& msg) {
   printf("%s", msg.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
@@ -306,12 +303,12 @@ inline void print_elapsed(print_timer& timer) {
 inline print_timer::~print_timer() { print_elapsed(*this); }
 
 // Print progress
-inline void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(std::max(0, n - (int)str.size()), '0') + str;
+inline void print_progress(const std::string& message, int current, int total) {
+  static auto pad = [](const std::string& str, int n) -> std::string {
+    return std::string(std::max(0, n - (int)str.size()), '0') + str;
   };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(std::max(0, n - (int)str.size()), ' ');
+  static auto pade = [](const std::string& str, int n) -> std::string {
+    return str + std::string(std::max(0, n - (int)str.size()), ' ');
   };
   using clock               = std::chrono::high_resolution_clock;
   static int64_t start_time = 0;
@@ -322,7 +319,7 @@ inline void print_progress(const string& message, int current, int total) {
   auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
   auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
   auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(string(n, '='), 30) + "]";
+  auto bar   = "[" + pade(std::string(n, '='), 30) + "]";
   auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
               pade(message, 30);
   printf("\r%s\r", line.c_str());
@@ -330,15 +327,15 @@ inline void print_progress(const string& message, int current, int total) {
   fflush(stdout);
 }
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Utility to normalize a path
-inline string normalize_path(const string& filename_) {
+inline std::string normalize_path(const std::string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -359,49 +356,50 @@ inline string normalize_path(const string& filename_) {
 }
 
 // Get directory name (including '/').
-inline string get_dirname(const string& filename_) {
+inline std::string get_dirname(const std::string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
+  if (pos == std::string::npos) return "";
   return filename.substr(0, pos + 1);
 }
 
 // Get extension (not including '.').
-inline string get_extension(const string& filename_) {
+inline std::string get_extension(const std::string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
+  if (pos == std::string::npos) return "";
   return filename.substr(pos);
 }
 
 // Get filename without directory.
-inline string get_filename(const string& filename_) {
+inline std::string get_filename(const std::string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
+  if (pos == std::string::npos) return filename;
   return filename.substr(pos + 1);
 }
 
 // Get extension.
-inline string get_noextension(const string& filename_) {
+inline std::string get_noextension(const std::string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
+  if (pos == std::string::npos) return filename;
   return filename.substr(0, pos);
 }
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename) {
+inline std::string get_basename(const std::string& filename) {
   return get_noextension(get_filename(filename));
 }
 
 // Replaces extensions
-inline string replace_extension(const string& filename, const string& ext) {
+inline std::string replace_extension(
+    const std::string& filename, const std::string& ext) {
   return get_noextension(filename) + ext;
 }
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename) {
+inline bool exists_file(const std::string& filename) {
   auto fs = fopen(filename.c_str(), "r");
   if (fs) {
     fclose(fs);
@@ -411,16 +409,17 @@ inline bool exists_file(const string& filename) {
   }
 }
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Load a text file
-inline bool load_text(const string& filename, string& str, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+inline bool load_text(
+    const std::string& filename, std::string& str, std::string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
   auto fs = fopen(filename.c_str(), "rt");
   if (!fs) {
     error = filename + ": file not found";
@@ -440,7 +439,7 @@ inline bool load_text(const string& filename, string& str, string& error) {
 
 // Save a text file
 inline bool save_text(
-    const string& filename, const string& str, string& error) {
+    const std::string& filename, const std::string& str, std::string& error) {
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) {
     error = filename + ": file not found";
@@ -457,8 +456,8 @@ inline bool save_text(
 
 // Load a binary file
 inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+    const std::string& filename, std::vector<byte>& data, std::string& error) {
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) {
     error = filename + ": file not found";
@@ -478,8 +477,8 @@ inline bool load_binary(
 }
 
 // Save a binary file
-inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
+inline bool save_binary(const std::string& filename,
+    const std::vector<byte>& data, std::string& error) {
   auto fs = fopen(filename.c_str(), "wb");
   if (!fs) {
     error = filename + ": file not found";
@@ -494,12 +493,12 @@ inline bool save_binary(
   return true;
 }
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMMAND-LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace ycli {
 
 // Command line parser data. All data should be considered private.
 enum struct cli_type {
@@ -508,25 +507,25 @@ enum struct cli_type {
   // clang-format on
 };
 struct cmdline_option {
-  string         name    = "";
-  string         usage   = "";
-  cli_type       type    = cli_type::string_;
-  void*          value   = nullptr;
-  bool           req     = false;
-  bool           set     = false;
-  vector<string> choices = {};
+  std::string              name    = "";
+  std::string              usage   = "";
+  cli_type                 type    = cli_type::string_;
+  void*                    value   = nullptr;
+  bool                     req     = false;
+  bool                     set     = false;
+  std::vector<std::string> choices = {};
 };
 struct cli_state {
-  string                 name            = "";
-  string                 usage           = "";
-  vector<cmdline_option> options         = {};
-  string                 usage_options   = "";
-  string                 usage_arguments = "";
-  bool                   help            = false;
+  std::string                 name            = "";
+  std::string                 usage           = "";
+  std::vector<cmdline_option> options         = {};
+  std::string                 usage_options   = "";
+  std::string                 usage_arguments = "";
+  bool                        help            = false;
 };
 
 // initialize a command line parser
-inline cli_state make_cli(const string& cmd, const string& usage) {
+inline cli_state make_cli(const std::string& cmd, const std::string& usage) {
   auto cli  = cli_state{};
   cli.name  = cmd;
   cli.usage = usage;
@@ -534,13 +533,13 @@ inline cli_state make_cli(const string& cmd, const string& usage) {
   return cli;
 }
 
-inline vector<string> split_cli_names(const string& name_) {
+inline std::vector<std::string> split_cli_names(const std::string& name_) {
   auto name  = name_;
-  auto split = vector<string>{};
+  auto split = std::vector<std::string>{};
   if (name.empty()) throw std::runtime_error("option name cannot be empty");
-  if (name.find_first_of(" \t\r\n") != string::npos)
+  if (name.find_first_of(" \t\r\n") != std::string::npos)
     throw std::runtime_error("option name cannot contain whitespaces");
-  while (name.find_first_of(",/") != string::npos) {
+  while (name.find_first_of(",/") != std::string::npos) {
     auto pos = name.find_first_of(",/");
     if (pos > 0) split.push_back(name.substr(0, pos));
     name = name.substr(pos + 1);
@@ -553,16 +552,17 @@ inline vector<string> split_cli_names(const string& name_) {
   return split;
 }
 
-inline void add_option(cli_state& cli, const string& name, cli_type type,
-    void* value, const string& usage, bool req, const vector<string>& choices) {
-  static auto type_name = unordered_map<cli_type, string>{
-      {cli_type::string_, "<string>"},
+inline void add_option(cli_state& cli, const std::string& name, cli_type type,
+    void* value, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+  static auto type_name = std::unordered_map<cli_type, std::string>{
+      {cli_type::string_, "<std::string>"},
       {cli_type::int_, "<int>"},
       {cli_type::float_, "<float>"},
       {cli_type::bool_, "<true/false>"},
       {cli_type::flag_, ""},
-      {cli_type::string_vector_, "<[string]>"},
-      {cli_type::enum_, "<string>"},
+      {cli_type::string_vector_, "<[std::string]>"},
+      {cli_type::enum_, "<std::string>"},
   };
   // help message
   auto line = "  " + name + " " + type_name.at(type);
@@ -571,16 +571,16 @@ inline void add_option(cli_state& cli, const string& name, cli_type type,
   if (!req) {
     line += " [";
     switch (type) {
-      case cli_type::string_: line += *(string*)value; break;
+      case cli_type::string_: line += *(std::string*)value; break;
       case cli_type::int_: line += std::to_string(*(int*)value); break;
       case cli_type::float_: line += std::to_string(*(float*)value); break;
       case cli_type::bool_: line += *(bool*)value ? "true" : "false"; break;
       case cli_type::flag_: line += *(bool*)value ? "true" : "false"; break;
       case cli_type::enum_: line += choices.at(*(int*)value); break;
       case cli_type::string_vector_: {
-        for (auto i = 0; i < (*(vector<string>*)value).size(); i++) {
+        for (auto i = 0; i < (*(std::vector<std::string>*)value).size(); i++) {
           if (i) line += ",";
-          line += (*(vector<string>*)value)[i];
+          line += (*(std::vector<std::string>*)value)[i];
         }
       } break;
       default: throw std::runtime_error("unknown type");
@@ -600,45 +600,47 @@ inline void add_option(cli_state& cli, const string& name, cli_type type,
       cmdline_option{name, usage, type, value, req, false, choices});
 }
 
-inline void add_option(cli_state& cli, const string& name, string& value,
-    const string& usage, bool req) {
+inline void add_option(cli_state& cli, const std::string& name,
+    std::string& value, const std::string& usage, bool req) {
   return add_option(cli, name, cli_type::string_, &value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, bool req) {
+inline void add_option(cli_state& cli, const std::string& name, int& value,
+    const std::string& usage, bool req) {
   return add_option(cli, name, cli_type::int_, &value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name, float& value,
-    const string& usage, bool req) {
+inline void add_option(cli_state& cli, const std::string& name, float& value,
+    const std::string& usage, bool req) {
   return add_option(cli, name, cli_type::float_, &value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req) {
+inline void add_option(cli_state& cli, const std::string& name, bool& value,
+    const std::string& usage, bool req) {
   return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name,
-    vector<string>& value, const string& usage, bool req) {
+inline void add_option(cli_state& cli, const std::string& name,
+    std::vector<std::string>& value, const std::string& usage, bool req) {
   return add_option(
       cli, name, cli_type::string_vector_, &value, usage, req, {});
 }
-inline void add_flag(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req) {
+inline void add_flag(cli_state& cli, const std::string& name, bool& value,
+    const std::string& usage, bool req) {
   return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, bool req) {
+inline void add_option(cli_state& cli, const std::string& name, int& value,
+    const std::string& usage, const std::vector<std::string>& choices,
+    bool req) {
   return add_option(cli, name, cli_type::enum_, &value, usage, req, choices);
 }
 template <typename T, typename>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req) {
+inline void add_option(cli_state& cli, const std::string& name, T& value,
+    const std::string& usage, const std::vector<std::string>& choices,
+    bool req) {
   return add_option(cli, name, (int&)value, usage, choices, req);
 }
 
 inline bool get_help(const cli_state& cli) { return cli.help; }
 
-inline string get_usage(const cli_state& cli) {
-  auto message = string{};
+inline std::string get_usage(const cli_state& cli) {
+  auto message = std::string{};
   message +=
       "usage: " + cli.name + (cli.usage_options.empty() ? "" : " [options]") +
       (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage + "\n\n";
@@ -649,17 +651,17 @@ inline string get_usage(const cli_state& cli) {
   return message;
 }
 
-inline bool parse_cli_value(const string& str, int& value) {
+inline bool parse_cli_value(const std::string& str, int& value) {
   auto end = (char*)nullptr;
   value    = (int)strtol(str.c_str(), &end, 10);
   return end != nullptr;
 }
-inline bool parse_cli_value(const string& str, float& value) {
+inline bool parse_cli_value(const std::string& str, float& value) {
   auto end = (char*)nullptr;
   value    = strtof(str.c_str(), &end);
   return end != nullptr;
 }
-inline bool parse_cli_value(const string& str, bool& value) {
+inline bool parse_cli_value(const std::string& str, bool& value) {
   if (str == "true" || str == "1") {
     value = true;
     return true;
@@ -672,14 +674,14 @@ inline bool parse_cli_value(const string& str, bool& value) {
 }
 
 inline bool parse_cli(
-    cli_state& cli, int argc, const char** argv, string& error) {
-  auto cli_error = [&error](const string& message) {
+    cli_state& cli, int argc, const char** argv, std::string& error) {
+  auto cli_error = [&error](const std::string& message) {
     error = message;
     return false;
   };
 
   // check for errors
-  auto used = unordered_map<string, int>{};
+  auto used = std::unordered_map<std::string, int>{};
   for (auto& option : cli.options) {
     if (option.name.empty()) throw std::runtime_error("name cannot be empty");
     auto names = split_cli_names(option.name);
@@ -693,7 +695,7 @@ inline bool parse_cli(
     }
   }
   // prepare args
-  auto args = vector<string>{argv + 1, argv + argc};
+  auto args = std::vector<std::string>{argv + 1, argv + argc};
   // parse options
   for (auto& option : cli.options) {
     if (option.name[0] != '-') continue;
@@ -701,7 +703,7 @@ inline bool parse_cli(
       auto pos = std::find(args.begin(), args.end(), name) - args.begin();
       if (pos >= args.size()) continue;
       if (option.type == cli_type::flag_) {
-        *(bool*)option.value = name.find("--no-") == string::npos;
+        *(bool*)option.value = name.find("--no-") == std::string::npos;
         option.set           = true;
         args.erase(args.begin() + pos);
       } else {
@@ -710,8 +712,8 @@ inline bool parse_cli(
         auto value = args[pos + 1];
         args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cli_type::string_) {
-          *(string*)option.value = value;
-          option.set             = true;
+          *(std::string*)option.value = value;
+          option.set                  = true;
         } else if (option.type == cli_type::int_) {
           if (!parse_cli_value(value, *(int*)option.value))
             return cli_error("incorrect value for " + name);
@@ -750,15 +752,15 @@ inline bool parse_cli(
     if (args.empty()) {
       if (option.req) return cli_error("missing value for " + option.name);
     } else if (option.type == cli_type::string_vector_) {
-      *(vector<string>*)option.value = args;
-      option.set                     = true;
+      *(std::vector<std::string>*)option.value = args;
+      option.set                               = true;
       args.clear();
     } else {
       auto value = args.front();
       args.erase(args.begin());
       if (option.type == cli_type::string_) {
-        *(string*)option.value = value;
-        option.set             = true;
+        *(std::string*)option.value = value;
+        option.set                  = true;
       } else if (option.type == cli_type::int_) {
         if (!parse_cli_value(value, *(int*)option.value))
           return cli_error("incorrect value for " + option.name);
@@ -783,7 +785,7 @@ inline bool parse_cli(
 }
 
 inline void parse_cli(cli_state& cli, int argc, const char** argv) {
-  auto error = string{};
+  auto error = std::string{};
   if (!parse_cli(cli, argc, argv, error)) {
     print_info("error: " + error);
     print_info("");
@@ -795,6 +797,6 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
   }
 }
 
-}  // namespace yocto::commonio
+}  // namespace ycli
 
 #endif

@@ -6,51 +6,51 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
-using namespace yocto::math;
-using namespace yocto::shape;
-using namespace yocto::commonio;
-using namespace yocto::sceneio;
-using namespace yocto::opengl;
-using namespace yocto::bvh;
+using namespace ym;
+
+using std::function;
+using std::string;
+using std::vector;
+using namespace std::string_literals;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, opengl_window*)>         draw_glwidgets;
+  function<void(app_state*, ygl::window*)>           draw_widgets;
 
   // Geometry data
-  sceneio_shape shape;
+  ysc::shape shape;
 
   // OpenGL data
-  opengl_scene*       glscene        = new opengl_scene{};
-  draw_glscene_params opengl_options = {};
+  ygl::scene*       glscene        = new ygl::scene{};
+  ygl::scene_params opengl_options = {};
 
   // Interaction data
   float          time       = 0;
   bool           show_edges = false;
-  sceneio_camera camera;
+  ysc::camera    camera;
   float          camera_focus;
-  bvh_tree       bvh;
+  ybvh::bvh_tree bvh;
 
   // Internal handles
-  opengl_camera*   glcamera    = nullptr;
-  opengl_shape*    glshapes    = nullptr;
-  opengl_shape*    glpoints    = nullptr;
-  opengl_shape*    glvfields   = nullptr;
-  opengl_shape*    gledges     = nullptr;
-  opengl_shape*    glpolylines = nullptr;
-  opengl_material* glshapem    = nullptr;
-  opengl_material* glpointm    = nullptr;
-  opengl_material* glvfieldm   = nullptr;
-  opengl_material* gledgem     = nullptr;
-  opengl_material* glpolylinem = nullptr;
-  opengl_object*   glshapeo    = nullptr;
-  opengl_object*   glpointo    = nullptr;
-  opengl_object*   glvfieldo   = nullptr;
-  opengl_object*   gledgeo     = nullptr;
-  opengl_object*   glpolylineo = nullptr;
+  ygl::camera*   glcamera    = nullptr;
+  ygl::shape*    glshapes    = nullptr;
+  ygl::shape*    glpoints    = nullptr;
+  ygl::shape*    glvfields   = nullptr;
+  ygl::shape*    gledges     = nullptr;
+  ygl::shape*    glpolylines = nullptr;
+  ygl::material* glshapem    = nullptr;
+  ygl::material* glpointm    = nullptr;
+  ygl::material* glvfieldm   = nullptr;
+  ygl::material* gledgem     = nullptr;
+  ygl::material* glpolylinem = nullptr;
+  ygl::object*   glshapeo    = nullptr;
+  ygl::object*   glpointo    = nullptr;
+  ygl::object*   glvfieldo   = nullptr;
+  ygl::object*   gledgeo     = nullptr;
+  ygl::object*   glpolylineo = nullptr;
 
   // cleanup
   ~app_state() {
@@ -73,27 +73,27 @@ void update_glshape(app_state* app) {
   set_colors(app->glshapes, shape.colors);
 }
 
-void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
+void update_glpolyline(app_state* app, const std::vector<vec3f>& vertices) {
   if (vertices.size()) {
-    auto elements = vector<vec2i>(vertices.size() - 1);
+    auto elements = std::vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
     set_positions(app->glpolylines, vertices);
     set_lines(app->glpolylines, elements);
   }
 }
 
-void update_glpoints(app_state* app, const vector<vec3f>& points) {
+void update_glpoints(app_state* app, const std::vector<vec3f>& points) {
   if (points.size()) {
-    auto elements = vector<int>(points.size());
+    auto elements = std::vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
-    auto normals = vector<vec3f>(points.size(), {0, 0, 1});
+    auto normals = std::vector<vec3f>(points.size(), {0, 0, 1});
     set_positions(app->glpolylines, points);
     set_points(app->glpolylines, elements);
   }
 }
 
-void update_glvector_field(
-    app_state* app, const vector<vec3f>& vector_field, float scale = 0.01) {
+void update_glvector_field(app_state* app,
+    const std::vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -103,7 +103,7 @@ void update_glvector_field(
 
   auto size = perface ? app->shape.triangles.size()
                       : app->shape.positions.size();
-  auto positions = vector<vec3f>(size * 2);
+  auto positions = std::vector<vec3f>(size * 2);
 
   // Per-face vector field
   if (perface) {
@@ -128,7 +128,7 @@ void update_glvector_field(
     }
   }
 
-  auto elements = vector<vec2i>(size);
+  auto elements = std::vector<vec2i>(size);
   for (int i = 0; i < elements.size(); i++) {
     elements[i] = {2 * i, 2 * i + 1};
   }
@@ -143,7 +143,7 @@ void update_gledges(app_state* app) {
     positions[i] += app->shape.normals[i] * 0.0001;
   }
 
-  auto elements = vector<vec2i>();
+  auto elements = std::vector<vec2i>();
   elements.reserve(app->shape.triangles.size() * 3);
   for (int i = 0; i < app->shape.triangles.size(); i++) {
     for (int k = 0; k < 3; k++) {
@@ -160,7 +160,7 @@ void update_gledges(app_state* app) {
 
 void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app->camera              = sceneio_camera{};
+  app->camera              = ysc::camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
   app->camera.orthographic = false;
@@ -261,49 +261,51 @@ void clear(app_state* app) {
   // }
   // delete_glarraybuffer(app->glshapes().colors);
   // init_glarraybuffer(app->glshapes().colors,
-  //     vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
+  //     std::vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string& input_filename, function<void(app_state*)> init,
+void yimshproc(const std::string&                      input_filename,
+    function<void(app_state*)>                         init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
-    function<void(app_state*, opengl_window* win)>     draw_glwidgets) {
-  auto app_guard = make_unique<app_state>();
+    function<void(app_state*, ygl::window* win)>       draw_widgets) {
+  auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
   // init shape
   auto ioerror = ""s;
-  if (!load_shape(input_filename, app->shape.points, app->shape.lines,
+  if (!ysh::load_shape(input_filename, app->shape.points, app->shape.lines,
           app->shape.triangles, app->shape.quads, app->shape.positions,
           app->shape.normals, app->shape.texcoords, app->shape.colors,
           app->shape.radius, ioerror))
-    print_fatal(ioerror);
+    ycl::print_fatal(ioerror);
   init_bvh(app);
   init_camera(app);
 
   app->init           = init;
   app->key_callback   = key_callback;
   app->click_callback = click_callback;
-  app->draw_glwidgets = draw_glwidgets;  // @Issue: win not needed for widgets
+  app->draw_widgets   = draw_widgets;  // @Issue: win not needed for widgets
 
   app->init(app);
 
   // Init window.
-  auto win_guard = make_glwindow({1280 + 320, 720}, "yimshproc", true);
+  auto win_guard = std::make_unique<ygl::window>();
   auto win       = win_guard.get();
+  init_glwindow(win, {1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
-        draw_glscene(app->glscene, app->glcamera, input.framebuffer_viewport,
-            app->opengl_options);
+  set_draw_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
+        app->opengl_options);
+  });
+  set_widgets_callback(
+      win, [app, draw_widgets](ygl::window* win, const ygl::input& input) {
+        draw_widgets(app, win);
       });
-  set_widgets_glcallback(
-      win, [app, draw_glwidgets](opengl_window* win,
-               const opengl_input& input) { draw_glwidgets(app, win); });
-  set_click_glcallback(win, [app](opengl_window* win, bool left, bool press,
-                                const opengl_input& input) {
+  set_click_callback(win, [app](ygl::window* win, bool left, bool press,
+                              const ygl::input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
@@ -329,8 +331,8 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
       }
     }
   });
-  set_scroll_glcallback(
-      win, [app](opengl_window* win, float yoffset, const opengl_input& input) {
+  set_scroll_callback(
+      win, [app](ygl::window* win, float yoffset, const ygl::input& input) {
         float zoom = yoffset > 0 ? 0.1 : -0.1;
         update_turntable(
             app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
@@ -338,31 +340,30 @@ void yimshproc(const string& input_filename, function<void(app_state*)> init,
         set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
             app->camera.film);
       });
-  set_key_glcallback(win, [app](opengl_window* win, int key, bool pressing,
-                              const opengl_input& input) {
-    app->key_callback(app, key, pressing);
-  });
-  set_uiupdate_glcallback(
-      win, [app](opengl_window* win, const opengl_input& input) {
-        // Handle mouse and keyboard for navigation.
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-            !input.widgets_active) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-          rotate.y = -rotate.y;
-          pan.x    = -pan.x;
-          update_turntable(
-              app->camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_frame(app->glcamera, app->camera.frame);
-          set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
-              app->camera.film);
-        }
+  set_key_callback(win,
+      [app](ygl::window* win, int key, bool pressing, const ygl::input& input) {
+        app->key_callback(app, key, pressing);
       });
+  set_uiupdate_callback(win, [app](ygl::window* win, const ygl::input& input) {
+    // Handle mouse and keyboard for navigation.
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      rotate.y = -rotate.y;
+      pan.x    = -pan.x;
+      update_turntable(
+          app->camera.frame, app->camera.focus, rotate, dolly, pan);
+      set_frame(app->glcamera, app->camera.frame);
+      set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
+          app->camera.film);
+    }
+  });
 
   // cleanup
   clear_glwindow(win);

@@ -67,9 +67,35 @@
 #include <thread>
 
 // -----------------------------------------------------------------------------
+// MATH FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yimg {
+
+using namespace ym;
+// import math symbols for use
+using ym::abs;
+using ym::acos;
+using ym::atan2;
+using ym::clamp;
+using ym::cos;
+using ym::exp;
+using ym::exp2;
+using ym::fmod;
+using ym::log;
+using ym::log2;
+using ym::max;
+using ym::min;
+using ym::pow;
+using ym::sin;
+using ym::sqrt;
+using ym::tan;
+
+}  // namespace yimg
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 struct color_space_params {
@@ -425,12 +451,12 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
   return xyz_to_color(color_to_xyz(col, from), to);
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
@@ -515,12 +541,12 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 template <typename T>
 inline void set_region(
@@ -548,7 +574,7 @@ inline void get_region(image<T>& clipped, const image<T>& img,
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
+  auto             futures  = std::vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -591,14 +617,12 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++)
-    fl[i] = yocto::math::byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = ym::byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++)
-    bt[i] = yocto::math::float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = ym::float_to_byte(fl[i]);
   return bt;
 }
 
@@ -653,71 +677,25 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.size()};
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::math::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = ym::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.size()};
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::math::rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = ym::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.size()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::math::srgb_to_rgb(yocto::math::byte_to_float(srgb[i]));
+    rgb[i] = ym::srgb_to_rgb(ym::byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.size()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::math::float_to_byte(yocto::math::rgb_to_srgb(rgb[i]));
+    srgb[i] = ym::float_to_byte(ym::rgb_to_srgb(rgb[i]));
   return srgb;
-}
-
-// Filmic tonemapping
-static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
-  if (!accurate_fit) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(zero3f, ldr);
-  } else {
-    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const auto ACESInputMat = transpose(mat3f{
-        {0.59719, 0.35458, 0.04823},
-        {0.07600, 0.90834, 0.01566},
-        {0.02840, 0.13383, 0.83777},
-    });
-    // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const auto ACESOutputMat = transpose(mat3f{
-        {1.60475, -0.53108, -0.07367},
-        {-0.10208, 1.10813, -0.00605},
-        {-0.00327, -0.07276, 1.07602},
-    });
-    // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
-      return (v * v + v * 0.0245786f - 0.000090537f) /
-             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
-    };
-
-    auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max(zero3f, ldr);
-  }
-}
-
-vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
-  auto rgb = hdr;
-  if (exposure != 0) rgb *= exp2(exposure);
-  if (filmic) rgb = tonemap_filmic(rgb);
-  if (srgb) rgb = rgb_to_srgb(rgb);
-  return rgb;
-}
-vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
-  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Apply exposure and filmic tone mapping
@@ -851,12 +829,12 @@ image<vec4f> image_difference(
   return diff;
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
@@ -885,8 +863,8 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
 }
 
 template <typename Shader>
-image<vec4f> make_image(const vec2i& size, Shader&& shader) {
-  auto img   = image<vec4f>{size};
+void make_image(image<vec4f>& img, const vec2i& size, Shader&& shader) {
+  img.resize(size);
   auto scale = 1.0f / max(size);
   for (auto j = 0; j < img.size().y; j++) {
     for (auto i = 0; i < img.size().x; i++) {
@@ -894,13 +872,12 @@ image<vec4f> make_image(const vec2i& size, Shader&& shader) {
       img[{i, j}] = shader(uv);
     }
   }
-  return img;
 };
 
 // Make an image
-image<vec4f> make_grid(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_grid(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick = 0.01f / 2;
@@ -912,9 +889,9 @@ image<vec4f> make_grid(
   });
 }
 
-image<vec4f> make_checker(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_checker(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto c = uv.x <= 0.5f != uv.y <= 0.5f;
@@ -922,9 +899,9 @@ image<vec4f> make_checker(
   });
 }
 
-image<vec4f> make_bumps(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_bumps(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     auto thick  = 0.125f;
@@ -939,18 +916,18 @@ image<vec4f> make_bumps(
   });
 }
 
-image<vec4f> make_ramp(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_ramp(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return lerp(color0, color1, uv.x);
   });
 }
 
-image<vec4f> make_gammaramp(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_gammaramp(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     if (uv.y < 1 / 3.0f) {
@@ -963,16 +940,17 @@ image<vec4f> make_gammaramp(
   });
 }
 
-image<vec4f> make_uvramp(const vec2i& size, float scale) {
-  return make_image(size, [=](vec2f uv) {
+void make_uvramp(image<vec4f>& img, const vec2i& size, float scale) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{uv.x, uv.y, 0, 1};
   });
 }
 
-image<vec4f> make_uvgrid(const vec2i& size, float scale, bool colored) {
-  return make_image(size, [=](vec2f uv) {
+void make_uvgrid(
+    image<vec4f>& img, const vec2i& size, float scale, bool colored) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     uv.y     = 1 - uv.y;
@@ -999,36 +977,36 @@ image<vec4f> make_uvgrid(const vec2i& size, float scale, bool colored) {
   });
 }
 
-image<vec4f> make_blackbodyramp(
-    const vec2i& size, float scale, float from, float to) {
-  return make_image(size, [=](vec2f uv) {
+void make_blackbodyramp(
+    image<vec4f>& img, const vec2i& size, float scale, float from, float to) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
     return vec4f{blackbody_to_rgb(lerp(from, to, uv.x)), 1};
   });
 }
 
-image<vec4f> make_noisemap(
-    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_noisemap(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_noise({uv.x, uv.y, 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_fbmmap(const vec2i& size, float scale, const vec4f& noise,
-    const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& noise, const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_turbulencemap(const vec2i& size, float scale,
+void make_turbulencemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_turbulence(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
@@ -1036,9 +1014,9 @@ image<vec4f> make_turbulencemap(const vec2i& size, float scale,
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
-    const vec4f& color0, const vec4f& color1) {
-  return make_image(size, [=](vec2f uv) {
+void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale,
+    const vec4f& noise, const vec4f& color0, const vec4f& color1) {
+  return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
@@ -1065,8 +1043,8 @@ image<vec4f> add_border(
 };
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_radius,
+void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
+    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
     const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
@@ -1155,7 +1133,7 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
   };
 
   // Make the sun sky image
-  auto img          = image<vec4f>{size};
+  img               = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1196,14 +1174,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
       }
     }
   }
-
-  return img;
 }
 
 // Make an image of multiple lights.
-image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
-    float langle, float lwidth, float lheight) {
-  auto img = image<vec4f>{size};
+void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
+  img = image<vec4f>{size};
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
@@ -1218,14 +1194,13 @@ image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
       img[{i, j}] = {le, 1};
     }
   }
-  return img;
 }
 
-image<vec4b> make_logo(const string& type) {
+image<vec4b> make_logo(const std::string& type) {
   static const auto logo_medium_size = vec2i{102, 36};
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
-  static const auto logo_medium = vector<byte>{
+  static const auto logo_medium = std::vector<byte>{
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -1263,7 +1238,7 @@ image<vec4b> make_logo(const string& type) {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
   };
-static const auto logo_small = vector<byte> {
+static const auto logo_small = std::vector<byte> {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -1310,7 +1285,7 @@ static const auto logo_small = vector<byte> {
   }
 }
 
-image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
+image<vec4f> add_logo(const image<vec4f>& img, const std::string& type) {
   auto logo   = srgb_to_rgb(make_logo(type));
   auto offset = img.size() - logo.size() - 8;
   auto wlogo  = img;
@@ -1318,7 +1293,7 @@ image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
   return wlogo;
 }
 
-image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
+image<vec4b> add_logo(const image<vec4b>& img, const std::string& type) {
   auto logo   = make_logo(type);
   auto offset = img.size() - logo.size() - 8;
   auto wlogo  = img;
@@ -1326,12 +1301,12 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   return wlogo;
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 // Lookup volume
 inline float lookup_volume(
@@ -1377,12 +1352,12 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
          lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 // make a simple example volume
 void make_test(
@@ -1406,7 +1381,7 @@ volume<float> make_test(const vec3i& size, float scale, float exponent) {
   return vol;
 }
 
-void make_volume_preset(volume<float>& vol, const string& type) {
+void make_volume_preset(volume<float>& vol, const std::string& type) {
   auto size = vec3i{256, 256, 256};
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
@@ -1414,22 +1389,22 @@ void make_volume_preset(volume<float>& vol, const string& type) {
     throw std::runtime_error("unknown volume preset " + type);
   }
 }
-volume<float> make_volume_preset(const string& type) {
+volume<float> make_volume_preset(const std::string& type) {
   auto vol = volume<float>{};
   make_volume_preset(vol, type);
   return vol;
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
-// Split a string
-static inline vector<string> split_string(const string& str) {
-  auto ret = vector<string>();
+// Split a std::string
+static inline std::vector<std::string> split_string(const std::string& str) {
+  auto ret = std::vector<std::string>();
   if (str.empty()) return ret;
   auto lpos = (size_t)0;
   while (lpos != str.npos) {
@@ -1455,7 +1430,7 @@ static inline float* load_pfm(
 
   // buffer
   char buffer[4096];
-  auto toks = vector<string>();
+  auto toks = std::vector<std::string>();
 
   // read magic
   if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -1589,21 +1564,21 @@ static inline bool save_pfm(
 }
 
 // Get extension (not including '.').
-static string get_extension(const string& filename) {
+static std::string get_extension(const std::string& filename) {
   auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
+  if (pos == std::string::npos) return "";
   return filename.substr(pos);
 }
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
+bool is_hdr_filename(const std::string& filename) {
   auto ext = get_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string& error) {
+    const std::string& filename, image<vec4f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1649,7 +1624,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4f>& img, string& error) {
+    const std::string& filename, const image<vec4f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1684,7 +1659,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4b>& img, string& error) {
+    const std::string& filename, image<vec4b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1715,7 +1690,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4b>& img, string& error) {
+    const std::string& filename, const image<vec4b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1755,7 +1730,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3f>& img, string& error) {
+    const std::string& filename, image<vec3f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1807,7 +1782,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3f>& img, string& error) {
+    const std::string& filename, const image<vec3f>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1842,7 +1817,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3b>& img, string& error) {
+    const std::string& filename, image<vec3b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1873,7 +1848,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3b>& img, string& error) {
+    const std::string& filename, const image<vec3b>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1913,7 +1888,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<float>& img, string& error) {
+    const std::string& filename, image<float>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -1964,7 +1939,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<float>& img, string& error) {
+    const std::string& filename, const image<float>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2006,7 +1981,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<byte>& img, string& error) {
+    const std::string& filename, image<byte>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2037,7 +2012,7 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<byte>& img, string& error) {
+    const std::string& filename, const image<byte>& img, std::string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2075,12 +2050,12 @@ bool is_hdr_filename(const string& filename) {
   }
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yimg {
 
 namespace impl {
 
@@ -2094,7 +2069,7 @@ static inline float* load_yvol(
 
   // buffer
   char buffer[4096];
-  auto toks = vector<string>();
+  auto toks = std::vector<std::string>();
 
   // read magic
   if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -2222,7 +2197,8 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
+bool load_volume(
+    const std::string& filename, volume<float>& vol, std::string& error) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2237,7 +2213,7 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
+    const std::string& filename, const volume<float>& vol, std::string& error) {
   auto write_error = [filename, &error]() {
     error = filename + ": write error";
     return false;
@@ -2251,14 +2227,15 @@ bool save_volume(
 }  // namespace impl
 
 // Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
+bool load_volume(
+    const std::string& filename, volume<float>& vol, std::string& error) {
   return impl::load_volume(filename, vol, error);
 }
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
+    const std::string& filename, const volume<float>& vol, std::string& error) {
   return impl::save_volume(filename, vol, error);
 }
 
-}  // namespace yocto::image
+}  // namespace yimg
