@@ -30,7 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "yocto_opengl.h"
+#include "yocto_gui.h"
 using namespace ym;
 
 #include <atomic>
@@ -68,8 +68,8 @@ struct app_state {
   float              exposure = 0;
 
   // view scene
-  yglu::image*       glimage  = new yglu::image{};
-  yglu::image_params glparams = {};
+  ygui::image*       glimage  = new ygui::image{};
+  ygui::image_params glparams = {};
 
   // editing
   ysio::camera*      selected_camera      = nullptr;
@@ -311,7 +311,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::camera* iocamera) {
+    ygui::window* win, ysio::model* ioscene, ysio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -337,7 +337,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::texture* iotexture) {
+    ygui::window* win, ysio::model* ioscene, ysio::texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
@@ -358,7 +358,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::material* iomaterial) {
+    ygui::window* win, ysio::model* ioscene, ysio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -403,7 +403,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::shape* ioshape) {
+    ygui::window* win, ysio::model* ioscene, ysio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -421,7 +421,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::instance* ioinstance) {
+    ygui::window* win, ysio::model* ioscene, ysio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -430,7 +430,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::object* ioobject) {
+    ygui::window* win, ysio::model* ioscene, ysio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -447,7 +447,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::subdiv* iosubdiv) {
+    ygui::window* win, ysio::model* ioscene, ysio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -462,7 +462,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    yglu::window* win, ysio::model* ioscene, ysio::environment* ioenvironment) {
+    ygui::window* win, ysio::model* ioscene, ysio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -487,7 +487,7 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
 }
 
 void draw_widgets(
-    yglu::window* win, app_states* apps, const yglu::input& input) {
+    ygui::window* win, app_states* apps, const ygui::input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
@@ -751,7 +751,7 @@ void draw_widgets(
   }
 }
 
-void draw(yglu::window* win, app_states* apps, const yglu::input& input) {
+void draw(ygui::window* win, app_states* apps, const ygui::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -766,7 +766,7 @@ void draw(yglu::window* win, app_states* apps, const yglu::input& input) {
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(yglu::window* win, app_states* apps) {
+void update(ygui::window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -820,28 +820,28 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // window
-  auto win_guard = std::make_unique<yglu::window>();
+  auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
-  set_draw_callback(win, [apps](yglu::window* win, const yglu::input& input) {
+  set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
     draw(win, apps, input);
   });
   set_widgets_callback(
-      win, [apps](yglu::window* win, const yglu::input& input) {
+      win, [apps](ygui::window* win, const ygui::input& input) {
         draw_widgets(win, apps, input);
       });
   set_drop_callback(
-      win, [apps](yglu::window* win, const std::vector<std::string>& paths,
-               const yglu::input& input) {
+      win, [apps](ygui::window* win, const std::vector<std::string>& paths,
+               const ygui::input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
-  set_update_callback(win, [apps](yglu::window* win, const yglu::input& input) {
+  set_update_callback(win, [apps](ygui::window* win, const ygui::input& input) {
     update(win, apps);
   });
   set_uiupdate_callback(win, [apps](
-                                 yglu::window* win, const yglu::input& input) {
+                                 ygui::window* win, const ygui::input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 

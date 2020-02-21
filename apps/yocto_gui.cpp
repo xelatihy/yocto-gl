@@ -27,7 +27,7 @@
 //
 //
 
-#include "yocto_opengl.h"
+#include "yocto_gui.h"
 
 #include <algorithm>
 #include <cstdarg>
@@ -60,7 +60,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 using namespace ym;
 // import math symbols for use
@@ -82,12 +82,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
@@ -255,12 +255,12 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 auto glimage_vertex =
     R"(
@@ -320,7 +320,7 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const yglu::image* image) {
+bool is_initialized(const ygui::image* image) {
   return (bool)image->program_id;
 }
 
@@ -335,7 +335,7 @@ image::~image() {
 }
 
 // init image program
-void init_glimage(yglu::image* image) {
+void init_glimage(ygui::image* image) {
   if (image->program_id) return;
 
   auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
@@ -354,7 +354,7 @@ void init_glimage(yglu::image* image) {
 }
 
 // update image data
-void set_glimage(yglu::image* image, const yimg::image<vec4f>& img, bool linear,
+void set_glimage(ygui::image* image, const yimg::image<vec4f>& img, bool linear,
     bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
@@ -372,7 +372,7 @@ void set_glimage(yglu::image* image, const yimg::image<vec4f>& img, bool linear,
   image->texture_linear = linear;
   image->texture_mipmap = mipmap;
 }
-void set_glimage(yglu::image* image, const yimg::image<vec4b>& img, bool linear,
+void set_glimage(ygui::image* image, const yimg::image<vec4b>& img, bool linear,
     bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
@@ -392,7 +392,7 @@ void set_glimage(yglu::image* image, const yimg::image<vec4b>& img, bool linear,
 }
 
 // draw image
-void draw_glimage(yglu::image* image, const image_params& params) {
+void draw_glimage(ygui::image* image, const image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
@@ -422,12 +422,12 @@ void draw_glimage(yglu::image* image, const image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -746,36 +746,36 @@ scene::~scene() {
 }
 
 // Initialize an OpenGL scene
-void init_glscene(yglu::scene* glscene) {
+void init_glscene(ygui::scene* glscene) {
   if (glscene->program_id) return;
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
       glscene->array_id, glscene_vertex, glscene_fragment);
 }
-bool is_initialized(yglu::scene* glscene) { return (bool)glscene->program_id; }
+bool is_initialized(ygui::scene* glscene) { return (bool)glscene->program_id; }
 
 // add camera
-yglu::camera* add_camera(yglu::scene* scene) {
+ygui::camera* add_camera(ygui::scene* scene) {
   return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(yglu::camera* camera, const frame3f& frame) {
+void set_frame(ygui::camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(yglu::camera* camera, float lens, float aspect, float film) {
+void set_lens(ygui::camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(yglu::camera* camera, float near, float far) {
+void set_nearfar(ygui::camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-yglu::texture* add_texture(yglu::scene* scene) {
+ygui::texture* add_texture(ygui::scene* scene) {
   return scene->textures.emplace_back(new texture{});
 }
 
-void set_texture(yglu::texture* texture, const vec2i& size, int nchan,
+void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
     const byte* img, bool as_srgb) {
   static auto sformat = std::unordered_map<int, uint>{
       {1, GL_SRGB},
@@ -825,7 +825,7 @@ void set_texture(yglu::texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(yglu::texture* texture, const vec2i& size, int nchan,
+void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
     const float* img, bool as_float) {
   static auto fformat = std::unordered_map<int, uint>{
       {1, GL_RGB16F},
@@ -877,34 +877,34 @@ void set_texture(yglu::texture* texture, const vec2i& size, int nchan,
 }
 
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec4b>& img, bool as_srgb) {
+    ygui::texture* texture, const yimg::image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec4f>& img, bool as_float) {
+    ygui::texture* texture, const yimg::image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec3b>& img, bool as_srgb) {
+    ygui::texture* texture, const yimg::image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec3f>& img, bool as_float) {
+    ygui::texture* texture, const yimg::image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    yglu::texture* texture, const yimg::image<byte>& img, bool as_srgb) {
+    ygui::texture* texture, const yimg::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    yglu::texture* texture, const yimg::image<float>& img, bool as_float) {
+    ygui::texture* texture, const yimg::image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
 // add shape
-yglu::shape* add_shape(yglu::scene* scene) {
+ygui::shape* add_shape(ygui::scene* scene) {
   return scene->shapes.emplace_back(new shape{});
 }
 
@@ -947,19 +947,19 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_points(yglu::shape* shape, const std::vector<int>& points) {
+void set_points(ygui::shape* shape, const std::vector<int>& points) {
   set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
       1, (const int*)points.data());
 }
-void set_lines(yglu::shape* shape, const std::vector<vec2i>& lines) {
+void set_lines(ygui::shape* shape, const std::vector<vec2i>& lines) {
   set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_triangles(yglu::shape* shape, const std::vector<vec3i>& triangles) {
+void set_triangles(ygui::shape* shape, const std::vector<vec3i>& triangles) {
   set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_quads(yglu::shape* shape, const std::vector<vec4i>& quads) {
+void set_quads(ygui::shape* shape, const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
@@ -969,95 +969,95 @@ void set_quads(yglu::shape* shape, const std::vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
-void set_positions(yglu::shape* shape, const std::vector<vec3f>& positions) {
+void set_positions(ygui::shape* shape, const std::vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
 }
-void set_normals(yglu::shape* shape, const std::vector<vec3f>& normals) {
+void set_normals(ygui::shape* shape, const std::vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
       normals.size(), 3, (const float*)normals.data());
 }
-void set_texcoords(yglu::shape* shape, const std::vector<vec2f>& texcoords) {
+void set_texcoords(ygui::shape* shape, const std::vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_colors(yglu::shape* shape, const std::vector<vec3f>& colors) {
+void set_colors(ygui::shape* shape, const std::vector<vec3f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       3, (const float*)colors.data());
 }
-void set_tangents(yglu::shape* shape, const std::vector<vec4f>& tangents) {
+void set_tangents(ygui::shape* shape, const std::vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
 }
 
 // add object
-yglu::object* add_object(yglu::scene* scene) {
+ygui::object* add_object(ygui::scene* scene) {
   return scene->objects.emplace_back(new object{});
 }
-void set_frame(yglu::object* object, const frame3f& frame) {
+void set_frame(ygui::object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(yglu::object* object, yglu::shape* shape) {
+void set_shape(ygui::object* object, ygui::shape* shape) {
   object->shape = shape;
 }
-void set_material(yglu::object* object, yglu::material* material) {
+void set_material(ygui::object* object, ygui::material* material) {
   object->material = material;
 }
-void set_instance(yglu::object* object, yglu::instance* instance) {
+void set_instance(ygui::object* object, ygui::instance* instance) {
   object->instance = instance;
 }
-void set_hidden(yglu::object* object, bool hidden) { object->hidden = hidden; }
-void set_highlighted(yglu::object* object, bool highlighted) {
+void set_hidden(ygui::object* object, bool hidden) { object->hidden = hidden; }
+void set_highlighted(ygui::object* object, bool highlighted) {
   object->highlighted = highlighted;
 }
 
 // add instance
-yglu::instance* add_instance(yglu::scene* scene) {
+ygui::instance* add_instance(ygui::scene* scene) {
   return scene->instances.emplace_back(new instance{});
 }
-void set_frames(yglu::instance* instance, const std::vector<frame3f>& frames) {
+void set_frames(ygui::instance* instance, const std::vector<frame3f>& frames) {
   // TODO: instances
 }
 
 // add material
-yglu::material* add_material(yglu::scene* scene) {
+ygui::material* add_material(ygui::scene* scene) {
   return scene->materials.emplace_back(new material{});
 }
-void set_emission(yglu::material* material, const vec3f& emission,
-    yglu::texture* emission_tex) {
+void set_emission(ygui::material* material, const vec3f& emission,
+    ygui::texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    yglu::material* material, const vec3f& color, yglu::texture* color_tex) {
+    ygui::material* material, const vec3f& color, ygui::texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    yglu::material* material, float specular, yglu::texture* specular_tex) {
+    ygui::material* material, float specular, ygui::texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    yglu::material* material, float roughness, yglu::texture* roughness_tex) {
+    ygui::material* material, float roughness, ygui::texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    yglu::material* material, float opacity, yglu::texture* opacity_tex) {
+    ygui::material* material, float opacity, ygui::texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    yglu::material* material, float metallic, yglu::texture* metallic_tex) {
+    ygui::material* material, float metallic, ygui::texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(yglu::material* material, yglu::texture* normal_tex) {
+void set_normalmap(ygui::material* material, ygui::texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // add light
-light* add_light(yglu::scene* scene) {
+light* add_light(ygui::scene* scene) {
   return scene->lights.emplace_back(new light{});
 }
 void set_light(light* light, const vec3f& position, const vec3f& emission,
@@ -1066,15 +1066,15 @@ void set_light(light* light, const vec3f& position, const vec3f& emission,
   light->emission = emission;
   light->type     = directional ? 1 : 0;
 }
-void clear_lights(yglu::scene* scene) {
+void clear_lights(ygui::scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
-bool has_max_lights(yglu::scene* scene) { return scene->lights.size() >= 16; }
+bool has_max_lights(ygui::scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
 void draw_object(
-    yglu::scene* glscene, yglu::object* object, const scene_params& params) {
+    ygui::scene* glscene, ygui::object* object, const scene_params& params) {
   if (object->hidden) return;
 
   auto instance_xform     = mat4f(object->frame);
@@ -1261,7 +1261,7 @@ void draw_object(
 }
 
 // Display a scene
-void draw_scene(yglu::scene* glscene, yglu::camera* glcamera,
+void draw_scene(ygui::scene* glscene, ygui::camera* glcamera,
     const vec4i& viewport, const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -1320,12 +1320,12 @@ void draw_scene(yglu::scene* glscene, yglu::camera* glcamera,
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 static void draw_window(window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
@@ -1557,12 +1557,12 @@ void set_close(window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 void init_glwidgets(window* win, int width, bool left) {
   // init widgets
@@ -2159,4 +2159,4 @@ void draw_log(window* win) {
   _log_mutex.unlock();
 }
 
-}  // namespace yglu
+}  // namespace ygui

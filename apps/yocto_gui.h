@@ -1,11 +1,11 @@
 //
-// Yocto/OpenGL: Utilities to use OpenGL 3, GLFW and ImGui.
+// Yocto/Gui: Utilities for writing simple native GUIs.
 //
 
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,8 @@
 //
 //
 
-#ifndef _YOCTO_OPENGL_
-#define _YOCTO_OPENGL_
+#ifndef _YOCTO_GUI_
+#define _YOCTO_GUI_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -47,7 +47,7 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 // Math defitions
 using ym::bbox3f;
@@ -85,13 +85,13 @@ struct image {
 };
 
 // create image drawing program
-void init_glimage(yglu::image* image);
-bool is_initialized(const yglu::image* image);
+void init_glimage(ygui::image* image);
+bool is_initialized(const ygui::image* image);
 
 // update image data
-void set_glimage(yglu::image* image, const yimg::image<vec4f>& img,
+void set_glimage(ygui::image* image, const yimg::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(yglu::image* image, const yimg::image<vec4b>& img,
+void set_glimage(ygui::image* image, const yimg::image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -107,14 +107,14 @@ struct image_params {
 };
 
 // draw image
-void draw_glimage(yglu::image* image, const image_params& params);
+void draw_glimage(ygui::image* image, const image_params& params);
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 // Opengl caemra
 struct camera {
@@ -149,13 +149,13 @@ struct material {
   float          roughness     = 0;
   float          specular      = 0;
   float          opacity       = 1;
-  yglu::texture* emission_tex  = nullptr;
-  yglu::texture* color_tex     = nullptr;
-  yglu::texture* metallic_tex  = nullptr;
-  yglu::texture* roughness_tex = nullptr;
-  yglu::texture* specular_tex  = nullptr;
-  yglu::texture* opacity_tex   = nullptr;
-  yglu::texture* normal_tex    = nullptr;
+  ygui::texture* emission_tex  = nullptr;
+  ygui::texture* color_tex     = nullptr;
+  ygui::texture* metallic_tex  = nullptr;
+  ygui::texture* roughness_tex = nullptr;
+  ygui::texture* specular_tex  = nullptr;
+  ygui::texture* opacity_tex   = nullptr;
+  ygui::texture* normal_tex    = nullptr;
 };
 
 // Opengl shape
@@ -197,9 +197,9 @@ struct instance {
 struct object {
   // object properties
   frame3f         frame       = identity3x4f;
-  yglu::shape*    shape       = nullptr;
-  yglu::material* material    = nullptr;
-  yglu::instance* instance    = nullptr;
+  ygui::shape*    shape       = nullptr;
+  ygui::material* material    = nullptr;
+  ygui::instance* instance    = nullptr;
   bool            hidden      = false;
   bool            highlighted = false;
 };
@@ -218,13 +218,13 @@ struct scene {
   scene& operator=(const scene&) = delete;
   ~scene();
 
-  std::vector<yglu::camera*>   cameras   = {};
-  std::vector<yglu::object*>   objects   = {};
-  std::vector<yglu::shape*>    shapes    = {};
-  std::vector<yglu::material*> materials = {};
-  std::vector<yglu::instance*> instances = {};
-  std::vector<yglu::texture*>  textures  = {};
-  std::vector<yglu::light*>    lights    = {};
+  std::vector<ygui::camera*>   cameras   = {};
+  std::vector<ygui::object*>   objects   = {};
+  std::vector<ygui::shape*>    shapes    = {};
+  std::vector<ygui::material*> materials = {};
+  std::vector<ygui::instance*> instances = {};
+  std::vector<ygui::texture*>  textures  = {};
+  std::vector<ygui::light*>    lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -251,92 +251,92 @@ struct scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_glscene(yglu::scene* glscene);
-bool is_initialized(const yglu::scene* glscene);
+void init_glscene(ygui::scene* glscene);
+bool is_initialized(const ygui::scene* glscene);
 
 // add scene elements
-yglu::camera*   add_camera(yglu::scene* scene);
-yglu::texture*  add_texture(yglu::scene* scene);
-yglu::material* add_material(yglu::scene* scene);
-yglu::shape*    add_shape(yglu::scene* scene);
-yglu::instance* add_instance(yglu::scene* scene);
-yglu::object*   add_object(yglu::scene* scene);
-yglu::light*    add_light(yglu::scene* scene);
+ygui::camera*   add_camera(ygui::scene* scene);
+ygui::texture*  add_texture(ygui::scene* scene);
+ygui::material* add_material(ygui::scene* scene);
+ygui::shape*    add_shape(ygui::scene* scene);
+ygui::instance* add_instance(ygui::scene* scene);
+ygui::object*   add_object(ygui::scene* scene);
+ygui::light*    add_light(ygui::scene* scene);
 
 // camera properties
-void set_frame(yglu::camera* camera, const frame3f& frame);
-void set_lens(yglu::camera* camera, float lens, float aspect, float film);
-void set_nearfar(yglu::camera* camera, float near, float far);
+void set_frame(ygui::camera* camera, const frame3f& frame);
+void set_lens(ygui::camera* camera, float lens, float aspect, float film);
+void set_nearfar(ygui::camera* camera, float near, float far);
 
 // texture properties
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec4b>& img, bool as_srgb = true);
-void set_texture(yglu::texture* texture, const yimg::image<vec4f>& img,
+    ygui::texture* texture, const yimg::image<vec4b>& img, bool as_srgb = true);
+void set_texture(ygui::texture* texture, const yimg::image<vec4f>& img,
     bool as_float = false);
 void set_texture(
-    yglu::texture* texture, const yimg::image<vec3b>& img, bool as_srgb = true);
-void set_texture(yglu::texture* texture, const yimg::image<vec3f>& img,
+    ygui::texture* texture, const yimg::image<vec3b>& img, bool as_srgb = true);
+void set_texture(ygui::texture* texture, const yimg::image<vec3f>& img,
     bool as_float = false);
 void set_texture(
-    yglu::texture* texture, const yimg::image<byte>& img, bool as_srgb = true);
-void set_texture(yglu::texture* texture, const yimg::image<float>& img,
+    ygui::texture* texture, const yimg::image<byte>& img, bool as_srgb = true);
+void set_texture(ygui::texture* texture, const yimg::image<float>& img,
     bool as_float = false);
 
 // material properties
-void set_emission(yglu::material* material, const vec3f& emission,
-    yglu::texture* emission_tex = nullptr);
-void set_color(yglu::material* material, const vec3f& color,
-    yglu::texture* color_tex = nullptr);
-void set_metallic(yglu::material* material, float metallic,
-    yglu::texture* metallic_tex = nullptr);
-void set_roughness(yglu::material* material, float roughness,
-    yglu::texture* roughness_tex = nullptr);
-void set_specular(yglu::material* material, float specular,
-    yglu::texture* specular_tex = nullptr);
-void set_opacity(yglu::material* material, float opacity,
-    yglu::texture* opacity_tex = nullptr);
-void set_normalmap(yglu::material* material, yglu::texture* normal_tex);
+void set_emission(ygui::material* material, const vec3f& emission,
+    ygui::texture* emission_tex = nullptr);
+void set_color(ygui::material* material, const vec3f& color,
+    ygui::texture* color_tex = nullptr);
+void set_metallic(ygui::material* material, float metallic,
+    ygui::texture* metallic_tex = nullptr);
+void set_roughness(ygui::material* material, float roughness,
+    ygui::texture* roughness_tex = nullptr);
+void set_specular(ygui::material* material, float specular,
+    ygui::texture* specular_tex = nullptr);
+void set_opacity(ygui::material* material, float opacity,
+    ygui::texture* opacity_tex = nullptr);
+void set_normalmap(ygui::material* material, ygui::texture* normal_tex);
 
 // shape properties
-void set_points(yglu::shape* shape, const std::vector<int>& points);
-void set_lines(yglu::shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(yglu::shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(yglu::shape* shape, const std::vector<vec4i>& quads);
-void set_positions(yglu::shape* shape, const std::vector<vec3f>& positions);
-void set_normals(yglu::shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(yglu::shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(yglu::shape* shape, const std::vector<vec3f>& colors);
-void set_tangents(yglu::shape* shape, const std::vector<vec4f>& tangents);
+void set_points(ygui::shape* shape, const std::vector<int>& points);
+void set_lines(ygui::shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(ygui::shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(ygui::shape* shape, const std::vector<vec4i>& quads);
+void set_positions(ygui::shape* shape, const std::vector<vec3f>& positions);
+void set_normals(ygui::shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(ygui::shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(ygui::shape* shape, const std::vector<vec3f>& colors);
+void set_tangents(ygui::shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(yglu::instance* instance, const std::vector<frame3f>& frames);
+void set_frames(ygui::instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
-void set_frame(yglu::object* object, const frame3f& frame);
-void set_shape(yglu::object* object, yglu::shape* shape);
-void set_material(yglu::object* object, yglu::material* material);
-void set_instance(yglu::object* object, yglu::instance* instance);
-void set_hidden(yglu::object* object, bool hidden);
-void set_highlighted(yglu::object* object, bool highlighted);
+void set_frame(ygui::object* object, const frame3f& frame);
+void set_shape(ygui::object* object, ygui::shape* shape);
+void set_material(ygui::object* object, ygui::material* material);
+void set_instance(ygui::object* object, ygui::instance* instance);
+void set_hidden(ygui::object* object, bool hidden);
+void set_highlighted(ygui::object* object, bool highlighted);
 
 // light properties
-void set_light(yglu::light* light, const vec3f& position, const vec3f& emission,
+void set_light(ygui::light* light, const vec3f& position, const vec3f& emission,
     bool directional);
 
 // light size
-void clear_lights(yglu::scene* scene);
-bool has_max_lights(yglu::scene* scene);
+void clear_lights(ygui::scene* scene);
+bool has_max_lights(ygui::scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(yglu::scene* scene, yglu::camera* camera, const vec4i& viewport,
+void draw_scene(ygui::scene* scene, ygui::camera* camera, const vec4i& viewport,
     const scene_params& params);
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 // Forward declaration of OpenGL window
 struct window;
@@ -427,12 +427,12 @@ void set_update_callback(window* win, update_callback cb);
 void run_ui(window* win);
 void set_close(window* win, bool close);
 
-}  // namespace yglu
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yglu {
+namespace ygui {
 
 bool begin_glheader(window* win, const char* title);
 void end_glheader(window* win);
@@ -570,6 +570,6 @@ void log_error(window* win, const std::string& msg);
 void clear_log(window* win);
 void draw_log(window* win);
 
-}  // namespace yglu
+}  // namespace ygui
 
 #endif
