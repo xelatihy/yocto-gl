@@ -35,9 +35,9 @@ if(YOCTO_OPENGL)
   set(GLFW_INSTALL OFF CACHE BOOL " " FORCE)
   add_subdirectory(ext/glfw glfw)
 
-  add_library(yocto-opengl 
-    yocto_opengl.h 
-    yocto_opengl.cpp 
+  add_library(yocto-gui 
+    yocto_gui.h 
+    yocto_gui.cpp 
     ext/imgui/imgui.cpp 
     ext/imgui/imgui_draw.cpp 
     ext/imgui/imgui_widgets.cpp
@@ -45,14 +45,14 @@ if(YOCTO_OPENGL)
     ext/imgui/imgui_impl_opengl3.cpp 
     ext/glad/glad.c)
   
-  target_include_directories(yocto-opengl PRIVATE .)
-  target_compile_definitions(yocto-opengl PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
-  set_target_properties(yocto-opengl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+  target_include_directories(yocto-gui PRIVATE .)
+  target_compile_definitions(yocto-gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
+  set_target_properties(yocto-gui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
-  target_link_libraries(yocto-opengl glfw ${OPENGL_gl_LIBRARY})
+  target_link_libraries(yocto-gui glfw ${OPENGL_gl_LIBRARY})
 
   if(UNIX AND NOT APPLE)
-    target_link_libraries(yocto-opengl dl)
+    target_link_libraries(yocto-gui dl)
   endif(UNIX AND NOT APPLE)
 
   add_executable(yscnview    yscnview.cpp)
@@ -78,10 +78,10 @@ if(YOCTO_OPENGL)
   set_target_properties(yimgview     PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   set_target_properties(yimgviews    PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-  target_link_libraries(yscnview    yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimshproc   yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitrace  yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitraces yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgview    yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgviews   yocto yocto-opengl ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnview    yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimshproc   yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitrace  yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitraces yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgview    yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgviews   yocto yocto-gui ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)

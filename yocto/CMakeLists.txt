@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.12)
 project (yocto-gl-lib VERSION 2.0)
 
 add_library(yocto 
-  yocto_math.h yocto_commonio.h 
+  yocto_math.h yocto_cli.h 
   yocto_ply.h yocto_obj.h yocto_pbrt.h 
   yocto_shape.h yocto_shape.cpp 
   yocto_image.h yocto_image.cpp

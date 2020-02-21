@@ -28,7 +28,7 @@
 
 #include <memory>
 
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_sceneio.h"
@@ -63,7 +63,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene_guard = std::make_unique<yscn::model>();
+  auto scene_guard = std::make_unique<ysio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (!load_scene(filename, scene, ioerror, ycli::print_progress))

@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_image.h"
-#include "yocto_opengl.h"
+#include "yocto_gui.h"
 using namespace ym;
 
 #include <atomic>
@@ -66,8 +66,8 @@ struct app_state {
   bool                    colorgrade = false;
 
   // viewing properties
-  yglu::image*       glimage   = new yglu::image{};
-  yglu::image_params glparams  = {};
+  ygui::image*       glimage   = new ygui::image{};
+  ygui::image_params glparams  = {};
   bool               glupdated = true;
 
   // loading status
@@ -159,7 +159,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
 }
 
 void draw_widgets(
-    yglu::window* win, app_states* apps, const yglu::input& input) {
+    ygui::window* win, app_states* apps, const ygui::input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -262,7 +262,7 @@ void draw_widgets(
   }
 }
 
-void draw(yglu::window* win, app_states* apps, const yglu::input& input) {
+void draw(ygui::window* win, app_states* apps, const ygui::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -277,7 +277,7 @@ void draw(yglu::window* win, app_states* apps, const yglu::input& input) {
   draw_glimage(app->glimage, app->glparams);
 }
 
-void update(yglu::window* win, app_states* apps) {
+void update(ygui::window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -314,23 +314,23 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win_guard = std::make_unique<yglu::window>();
+  auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
-  set_update_callback(win, [apps](yglu::window* win, const yglu::input& input) {
+  set_update_callback(win, [apps](ygui::window* win, const ygui::input& input) {
     update(win, apps);
   });
-  set_draw_callback(win, [apps](yglu::window* win, const yglu::input& input) {
+  set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
     draw(win, apps, input);
   });
   set_widgets_callback(
-      win, [apps](yglu::window* win, const yglu::input& input) {
+      win, [apps](ygui::window* win, const ygui::input& input) {
         draw_widgets(win, apps, input);
       });
   set_uiupdate_callback(
-      win, [apps](yglu::window* win, const yglu::input& input) {
+      win, [apps](ygui::window* win, const ygui::input& input) {
         if (!apps->selected) return;
         auto app = apps->selected;
         // handle mouse
@@ -343,8 +343,8 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_drop_callback(
-      win, [apps](yglu::window* win, const std::vector<std::string>& paths,
-               const yglu::input& input) {
+      win, [apps](ygui::window* win, const std::vector<std::string>& paths,
+               const ygui::input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
 

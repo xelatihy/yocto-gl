@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "yocto_opengl.h"
+#include "yocto_gui.h"
 using namespace ym;
 
 #include <future>
@@ -57,8 +57,8 @@ struct app_state {
   float              exposure = 0;
 
   // view scene
-  yglu::image*       glimage  = new yglu::image{};
-  yglu::image_params glparams = {};
+  ygui::image*       glimage  = new ygui::image{};
+  ygui::image_params glparams = {};
 
   // computation
   int          render_sample  = 0;
@@ -76,8 +76,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
-    yscn::camera* iocamera, yscn::progress_callback print_progress = {}) {
+void init_scene(ytrc::scene* scene, ysio::model* ioscene, ytrc::camera*& camera,
+    ysio::camera* iocamera, ysio::progress_callback print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -85,7 +85,7 @@ void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<yscn::camera*, ytrc::camera*>{};
+  auto camera_map     = std::unordered_map<ysio::camera*, ytrc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -97,7 +97,7 @@ void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<yscn::texture*, ytrc::texture*>{};
+  auto texture_map     = std::unordered_map<ysio::texture*, ytrc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -115,7 +115,7 @@ void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = std::unordered_map<yscn::material*, ytrc::material*>{};
+  auto material_map = std::unordered_map<ysio::material*, ytrc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -149,7 +149,7 @@ void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<yscn::shape*, ytrc::shape*>{};
+  auto shape_map     = std::unordered_map<ysio::shape*, ytrc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -168,7 +168,7 @@ void init_scene(ytrc::scene* scene, yscn::model* ioscene, ytrc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = std::unordered_map<yscn::instance*, ytrc::instance*>{};
+  auto instance_map = std::unordered_map<ysio::instance*, ytrc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -257,7 +257,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<yscn::model>();
+  auto ioscene_guard = std::make_unique<ysio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(app->filename, ioscene, ioerror, ycli::print_progress))
@@ -288,12 +288,12 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win_guard = std::make_unique<yglu::window>();
+  auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
-  set_draw_callback(win, [app](yglu::window* win, const yglu::input& input) {
+  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
     if (!is_initialized(app->glimage)) init_glimage(app->glimage);
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
@@ -306,7 +306,7 @@ int main(int argc, const char* argv[]) {
     if (app->render_counter > 10) app->render_counter = 0;
   });
   set_char_callback(win,
-      [app](yglu::window* win, unsigned int key, const yglu::input& input) {
+      [app](ygui::window* win, unsigned int key, const ygui::input& input) {
         switch (key) {
           case 'c': {
             auto ncameras = (int)app->scene->cameras.size();
@@ -335,7 +335,7 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_uiupdate_callback(
-      win, [app](yglu::window* win, const yglu::input& input) {
+      win, [app](ygui::window* win, const ygui::input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto dolly  = 0.0f;
           auto pan    = zero2f;

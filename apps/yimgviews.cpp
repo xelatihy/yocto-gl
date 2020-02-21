@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_image.h"
-#include "yocto_opengl.h"
+#include "yocto_gui.h"
 using namespace ym;
 
 #include <future>
@@ -50,8 +50,8 @@ struct app_state {
   bool                    colorgrade = false;
 
   // viewing properties
-  yglu::image*       glimage  = new yglu::image{};
-  yglu::image_params glparams = {};
+  ygui::image*       glimage  = new ygui::image{};
+  ygui::image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -90,12 +90,12 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win_guard = std::make_unique<yglu::window>();
+  auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
   init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_callback(win, [app](yglu::window* win, const yglu::input& input) {
+  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
@@ -107,7 +107,7 @@ int main(int argc, const char* argv[]) {
     draw_glimage(app->glimage, app->glparams);
   });
   set_uiupdate_callback(
-      win, [app](yglu::window* win, const yglu::input& input) {
+      win, [app](ygui::window* win, const ygui::input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

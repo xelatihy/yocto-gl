@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 using namespace ym;
