@@ -4790,20 +4790,20 @@ static std::string get_extension(const std::string& filename) {
     if (!load_ply(filename, ply, error)) return false;
 
     // gets vertex
-    positions = get_positions(ply);
-    normals   = get_normals(ply);
-    texcoords = get_texcoords(ply, flip_texcoord);
-    colors    = get_colors(ply);
-    radius    = get_radius(ply);
+    get_positions(ply, positions);
+    get_normals(ply, normals);
+    get_texcoords(ply, texcoords, flip_texcoord);
+    get_colors(ply, colors);
+    get_radius(ply, radius);
 
     // get faces
     if (has_quads(ply)) {
-      quads = get_quads(ply);
+      get_quads(ply, quads);
     } else {
-      triangles = get_triangles(ply);
+      get_triangles(ply, triangles);
     }
-    lines  = get_lines(ply);
-    points = get_points(ply);
+    get_lines(ply, lines);
+    get_points(ply, points);
 
     if (positions.empty()) return shape_error();
     return true;
@@ -4933,10 +4933,10 @@ static std::string get_extension(const std::string& filename) {
     auto ply_guard = std::make_unique<yply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
-    positions = get_positions(ply);
-    normals   = get_normals(ply);
-    texcoords = get_texcoords(ply, flip_texcoord);
-    quadspos  = get_quads(ply);
+    get_positions(ply, positions);
+    get_normals(ply, normals);
+    get_texcoords(ply, texcoords, flip_texcoord);
+    get_quads(ply, quadspos);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
     if (positions.empty()) return shape_error();

@@ -847,9 +847,9 @@ static bool load_instance(const std::string& filename,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = yply::model{};
     if (!load_ply(filename, &ply, error)) return false;
-    frames = get_values(&ply, "instance",
-        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
-            "zy", "zz", "ox", "oy", "oz"});
+    get_values(&ply, "instance",
+        {"xx", "xy", "xz", "yx", "yy", "yz", "zx",
+            "zy", "zz", "ox", "oy", "oz"}, frames);
     return true;
   } else {
     return format_error();
