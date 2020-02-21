@@ -347,11 +347,11 @@ inline vec2f exp(const vec2f& a);
 inline vec2f log(const vec2f& a);
 inline vec2f exp2(const vec2f& a);
 inline vec2f log2(const vec2f& a);
-inline bool isfinite(const vec2f& a);
+inline bool  isfinite(const vec2f& a);
 inline vec2f pow(const vec2f& a, float b);
 inline vec2f pow(const vec2f& a, const vec2f& b);
 inline vec2f gain(const vec2f& a, float b);
-inline void swap(vec2f& a, vec2f& b);
+inline void  swap(vec2f& a, vec2f& b);
 
 // Vector comparison operations.
 inline bool operator==(const vec3f& a, const vec3f& b);
@@ -427,8 +427,8 @@ inline vec3f log2(const vec3f& a);
 inline vec3f pow(const vec3f& a, float b);
 inline vec3f pow(const vec3f& a, const vec3f& b);
 inline vec3f gain(const vec3f& a, float b);
-inline bool isfinite(const vec3f& a);
-inline void swap(vec3f& a, vec3f& b);
+inline bool  isfinite(const vec3f& a);
+inline void  swap(vec3f& a, vec3f& b);
 
 // Vector comparison operations.
 inline bool operator==(const vec4f& a, const vec4f& b);
@@ -493,8 +493,8 @@ inline vec4f log2(const vec4f& a);
 inline vec4f pow(const vec4f& a, float b);
 inline vec4f pow(const vec4f& a, const vec4f& b);
 inline vec4f gain(const vec4f& a, float b);
-inline bool isfinite(const vec4f& a);
-inline void swap(vec4f& a, vec4f& b);
+inline bool  isfinite(const vec4f& a);
+inline void  swap(vec4f& a, vec4f& b);
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
@@ -586,7 +586,7 @@ inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
-inline vec3i&       xyz(vec4i& a) ;
+inline vec3i&       xyz(vec4i& a);
 inline const vec3i& xyz(const vec4i& a);
 
 // Element access
@@ -653,7 +653,7 @@ inline vec3i operator-(const vec3i& a, int b);
 inline vec3i operator-(int a, const vec3i& b);
 inline vec3i operator*(const vec3i& a, const vec3i& b);
 inline vec3i operator*(const vec3i& a, int b);
-inline vec3i operator*(int a, const vec3i& b) ;
+inline vec3i operator*(int a, const vec3i& b);
 inline vec3i operator/(const vec3i& a, const vec3i& b);
 inline vec3i operator/(const vec3i& a, int b);
 inline vec3i operator/(int a, const vec3i& b);
@@ -726,7 +726,7 @@ inline int sum(const vec4i& a);
 
 // Functions applied to std::vector elements
 inline vec4i abs(const vec4i& a);
-inline void swap(vec4i& a, vec4i& b);
+inline void  swap(vec4i& a, vec4i& b);
 
 }  // namespace ym
 
@@ -923,7 +923,7 @@ inline bool operator==(const frame2f& a, const frame2f& b);
 inline bool operator!=(const frame2f& a, const frame2f& b);
 
 // Frame composition, equivalent to affine matrix product.
-inline frame2f operator*(const frame2f& a, const frame2f& b);
+inline frame2f  operator*(const frame2f& a, const frame2f& b);
 inline frame2f& operator*=(frame2f& a, const frame2f& b);
 
 // Frame inverse, equivalent to rigid affine inverse.
@@ -937,7 +937,7 @@ inline bool operator==(const frame3f& a, const frame3f& b);
 inline bool operator!=(const frame3f& a, const frame3f& b);
 
 // Frame composition, equivalent to affine matrix product.
-inline frame3f operator*(const frame3f& a, const frame3f& b);
+inline frame3f  operator*(const frame3f& a, const frame3f& b);
 inline frame3f& operator*=(frame3f& a, const frame3f& b);
 
 // Frame inverse, equivalent to rigid affine inverse.
@@ -976,7 +976,7 @@ inline quat4f operator/(const quat4f& a, float b);
 inline quat4f operator*(const quat4f& a, const quat4f& b);
 
 // Quaterion operations
-inline float dot(const quat4f& a, const quat4f& b);
+inline float  dot(const quat4f& a, const quat4f& b);
 inline float  length(const quat4f& a);
 inline quat4f normalize(const quat4f& a);
 inline quat4f conjugate(const quat4f& a);
@@ -1032,8 +1032,8 @@ inline bool operator!=(const bbox2f& a, const bbox2f& b);
 // Bounding box expansions with points and other boxes.
 inline bbox2f merge(const bbox2f& a, const vec2f& b);
 inline bbox2f merge(const bbox2f& a, const bbox2f& b);
-inline void expand(bbox2f& a, const vec2f& b);
-inline void expand(bbox2f& a, const bbox2f& b);
+inline void   expand(bbox2f& a, const vec2f& b);
+inline void   expand(bbox2f& a, const bbox2f& b);
 
 // Bounding box properties
 inline vec3f center(const bbox3f& a);
@@ -1046,15 +1046,14 @@ inline bool operator!=(const bbox3f& a, const bbox3f& b);
 // Bounding box expansions with points and other boxes.
 inline bbox3f merge(const bbox3f& a, const vec3f& b);
 inline bbox3f merge(const bbox3f& a, const bbox3f& b);
-inline void expand(bbox3f& a, const vec3f& b);
-inline void expand(bbox3f& a, const bbox3f& b);
+inline void   expand(bbox3f& a, const vec3f& b);
+inline void   expand(bbox3f& a, const bbox3f& b);
 
 // Primitive bounds.
 inline bbox3f point_bounds(const vec3f& p);
 inline bbox3f point_bounds(const vec3f& p, float r);
 inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1);
-inline bbox3f line_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1);
+inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1);
 inline bbox3f triangle_bounds(
     const vec3f& p0, const vec3f& p1, const vec3f& p2);
 inline bbox3f quad_bounds(
@@ -1131,8 +1130,8 @@ inline vec3f transform_normal(
     const frame3f& a, const vec3f& b, bool non_rigid = false);
 
 // Transforms rays and bounding boxes by matrices.
-inline ray3f transform_ray(const mat4f& a, const ray3f& b);
-inline ray3f transform_ray(const frame3f& a, const ray3f& b);
+inline ray3f  transform_ray(const mat4f& a, const ray3f& b);
+inline ray3f  transform_ray(const frame3f& a, const ray3f& b);
 inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b);
 inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b);
 
@@ -1158,8 +1157,8 @@ inline mat4f perspective_mat(float fovy, float aspect, float near);
 
 // Rotation conversions.
 inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat);
-inline vec4f rotation_quat(const vec3f& axis, float angle);
-inline vec4f rotation_quat(const vec4f& axisangle);
+inline vec4f                   rotation_quat(const vec3f& axis, float angle);
+inline vec4f                   rotation_quat(const vec4f& axisangle);
 
 }  // namespace ym
 
@@ -1173,8 +1172,7 @@ inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
 inline float line_length(const vec3f& p0, const vec3f& p1);
 
 // Triangle properties.
-inline vec3f triangle_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Quad propeties.
@@ -1252,7 +1250,7 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 inline bool intersect_bbox(
     const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
 
-}  // namespace ybvh
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // POINT-PRIMITIVE DISTANCE FUNCTIONS
@@ -1264,8 +1262,7 @@ inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
     float r, vec2f& uv, float& dist);
 
 // Compute the closest line uv to a give position pos.
-inline float closestuv_line(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1);
+inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
@@ -1293,7 +1290,7 @@ inline bool distance_check_bbox(
 // Check if two bboxe overlap.
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
-}  // namespace ybvh
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // COLOR OPERATIONS
@@ -1608,7 +1605,7 @@ inline vec2f::vec2f() {}
 inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
 inline vec2f::vec2f(float v) : x{v}, y{v} {}
 
-inline float&       vec2f::operator[](int i) { return (&x)[i]; }
+inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 
 // Vec3
@@ -1617,16 +1614,17 @@ inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
 inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
 inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
 
-inline float&       vec3f::operator[](int i) { return (&x)[i]; }
+inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 
 // Vec4
 inline vec4f::vec4f() {}
-inline vec4f::vec4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
+inline vec4f::vec4f(float x, float y, float z, float w)
+    : x{x}, y{y}, z{z}, w{w} {}
 inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
 
-inline float&       vec4f::operator[](int i) { return (&x)[i]; }
+inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 
 // Element access
@@ -2065,7 +2063,7 @@ inline vec2i::vec2i() {}
 inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
 inline vec2i::vec2i(int v) : x{v}, y{v} {}
 
-inline int&       vec2i::operator[](int i) { return (&x)[i]; }
+inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
@@ -2074,7 +2072,7 @@ inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
 inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
 inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
 
-inline int&       vec3i::operator[](int i) { return (&x)[i]; }
+inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
@@ -2083,7 +2081,7 @@ inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
 inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
 
-inline int&       vec4i::operator[](int i) { return (&x)[i]; }
+inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
@@ -2091,7 +2089,7 @@ inline vec3b::vec3b() {}
 inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
 inline vec3b::vec3b(byte v) : x{v}, y{v}, z{v} {}
 
-inline byte&       vec3b::operator[](int i) { return (&x)[i]; }
+inline byte& vec3b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
@@ -2099,7 +2097,7 @@ inline vec4b::vec4b() {}
 inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
 inline vec4b::vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
 
-inline byte&       vec4b::operator[](int i) { return (&x)[i]; }
+inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
 // Element access
@@ -2392,26 +2390,28 @@ struct hash<ym::vec4i> {
 namespace ym {
 
 // Small Fixed-size matrices stored in column major format.
-  inline mat2f::mat2f() {}
-  inline mat2f::mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
+inline mat2f::mat2f() {}
+inline mat2f::mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
 
-  inline vec2f&       mat2f::operator[](int i) { return (&x)[i]; }
-  inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
-
-// Small Fixed-size matrices stored in column major format.
-  inline mat3f::mat3f() {}
-  inline mat3f::mat3f(const vec3f& x, const vec3f& y, const vec3f& z) : x{x}, y{y}, z{z} {}
-
-  inline vec3f&       mat3f::operator[](int i) { return (&x)[i]; }
-  inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
+inline vec2f& mat2f::operator[](int i) { return (&x)[i]; }
+inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
 
 // Small Fixed-size matrices stored in column major format.
-  inline mat4f::mat4f() {}
-  inline mat4f::mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
-      : x{x}, y{y}, z{z}, w{w} {}
+inline mat3f::mat3f() {}
+inline mat3f::mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
+    : x{x}, y{y}, z{z} {}
 
-  inline vec4f&       mat4f::operator[](int i) { return (&x)[i]; }
-  inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
+inline vec3f& mat3f::operator[](int i) { return (&x)[i]; }
+inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
+
+// Small Fixed-size matrices stored in column major format.
+inline mat4f::mat4f() {}
+inline mat4f::mat4f(
+    const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+    : x{x}, y{y}, z{z}, w{w} {}
+
+inline vec4f& mat4f::operator[](int i) { return (&x)[i]; }
+inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
 
 // Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b) {
@@ -2560,32 +2560,39 @@ inline mat4f transpose(const mat4f& a) {
 namespace ym {
 
 // Rigid frames stored as a column-major affine transform matrix.
-  inline frame2f::frame2f() : x{}, y{}, o{} {}
-  inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o) : x{x}, y{y}, o{o} {}
-  inline  frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-  inline frame2f::frame2f(const mat2f& m, const vec2f& t) : x{m.x}, y{m.y}, o{t} {}
-  inline  frame2f::frame2f(const mat3f& m)
-      : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-  inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+inline frame2f::frame2f() : x{}, y{}, o{} {}
+inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
+    : x{x}, y{y}, o{o} {}
+inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
+inline frame2f::frame2f(const mat2f& m, const vec2f& t)
+    : x{m.x}, y{m.y}, o{t} {}
+inline frame2f::frame2f(const mat3f& m)
+    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
-  inline vec2f&       frame2f::operator[](int i) { return (&x)[i]; }
-  inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
+inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
+inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
 
 // Rigid frames stored as a column-major affine transform matrix.
-  inline frame3f::frame3f() : x{}, y{}, z{}, o{} {}
-  inline frame3f::frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
-      : x{x}, y{y}, z{z}, o{o} {}
-  inline  frame3f::frame3f(const vec3f& o) : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-  inline frame3f::frame3f(const mat3f& m, const vec3f& t) : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-  inline  frame3f::frame3f(const mat4f& m)
-      : x{m.x.x, m.x.y, m.x.z}
-      , y{m.y.x, m.y.y, m.y.z}
-      , z{m.z.x, m.z.y, m.z.z}
-      , o{m.w.x, m.w.y, m.w.z} {}
-  inline frame3f::operator mat4f() const { return {{x, 0}, {y, 0}, {z, 0}, {o, 1}}; }
+inline frame3f::frame3f() : x{}, y{}, z{}, o{} {}
+inline frame3f::frame3f(
+    const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+    : x{x}, y{y}, z{z}, o{o} {}
+inline frame3f::frame3f(const vec3f& o)
+    : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
+inline frame3f::frame3f(const mat3f& m, const vec3f& t)
+    : x{m.x}, y{m.y}, z{m.z}, o{t} {}
+inline frame3f::frame3f(const mat4f& m)
+    : x{m.x.x, m.x.y, m.x.z}
+    , y{m.y.x, m.y.y, m.y.z}
+    , z{m.z.x, m.z.y, m.z.z}
+    , o{m.w.x, m.w.y, m.w.z} {}
+inline frame3f::operator mat4f() const {
+  return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+}
 
-  inline vec3f&       frame3f::operator[](int i) { return (&x)[i]; }
-  inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
+inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
+inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
@@ -2665,8 +2672,9 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
 namespace ym {
 
 // Quaternions to represent rotations
-  inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
-  inline quat4f::quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
+inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
+inline quat4f::quat4f(float x, float y, float z, float w)
+    : x{x}, y{y}, z{z}, w{w} {}
 
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b) {
@@ -2721,18 +2729,20 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 namespace ym {
 
 // Axis aligned bounding box represented as a min/max std::vector pairs.
-  inline bbox2f::bbox2f() {}
-  inline bbox2f::bbox2f(const vec2f& min, const vec2f& max) : min{min}, max{max} {}
+inline bbox2f::bbox2f() {}
+inline bbox2f::bbox2f(const vec2f& min, const vec2f& max)
+    : min{min}, max{max} {}
 
-  inline vec2f&       bbox2f::operator[](int i) { return (&min)[i]; }
-  inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
+inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
+inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
 
 // Axis aligned bounding box represented as a min/max std::vector pairs.
-  inline bbox3f::bbox3f() {}
-  inline bbox3f::bbox3f(const vec3f& min, const vec3f& max) : min{min}, max{max} {}
+inline bbox3f::bbox3f() {}
+inline bbox3f::bbox3f(const vec3f& min, const vec3f& max)
+    : min{min}, max{max} {}
 
-  inline vec3f&       bbox3f::operator[](int i) { return (&min)[i]; }
-  inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
+inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
+inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
 
 // Bounding box properties
 inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
@@ -2807,16 +2817,14 @@ inline bbox3f quad_bounds(
 namespace ym {
 
 // Rays with origin, direction and min/max t value.
-  inline ray2f::ray2f() {}
-  inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin,
-      float tmax)
-      : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+inline ray2f::ray2f() {}
+inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin, float tmax)
+    : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 // Rays with origin, direction and min/max t value.
-  inline ray3f::ray3f() {}
-  inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin,
-      float tmax)
-      : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+inline ray3f::ray3f() {}
+inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
+    : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 }  // namespace ym
 
@@ -2980,8 +2988,8 @@ inline frame3f rotation_frame(const mat3f& rot) {
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
-    const vec3f& up, bool inv_xz) {
+inline frame3f lookat_frame(
+    const vec3f& eye, const vec3f& center, const vec3f& up, bool inv_xz) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -3307,7 +3315,7 @@ inline bool intersect_bbox(
   return t0 <= t1;
 }
 
-}  // namespace ybvh
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
@@ -3457,7 +3465,7 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   return true;
 }
 
-}  // namespace ybvh
+}  // namespace ym
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR CONVERSION UTILITIES
