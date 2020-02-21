@@ -776,6 +776,15 @@ bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
 // -----------------------------------------------------------------------------
 namespace yshp {
 
+#if !defined(_WIN32) && !defined(_WIN64)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+#endif
+
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static std::pair<int, int> split_sah(std::vector<int>& primitives,
     const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
@@ -916,6 +925,10 @@ static std::pair<int, int> split_middle(std::vector<int>& primitives,
 
   return {mid, axis};
 }
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#pragma GCC diagnostic pop
+#endif
 
 // Build BVH nodes
 static void build_bvh(bvh_tree& bvh, std::vector<bbox3f>& bboxes) {
