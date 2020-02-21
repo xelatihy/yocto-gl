@@ -1,6 +1,5 @@
 #include <memory>
 
-#include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -32,7 +31,7 @@ struct app_state {
   bool           show_edges = false;
   yscn::camera   camera;
   float          camera_focus;
-  ybvh::bvh_tree bvh;
+  yshp::bvh_tree bvh;
 
   // Internal handles
   yglu::camera*   glcamera    = nullptr;
