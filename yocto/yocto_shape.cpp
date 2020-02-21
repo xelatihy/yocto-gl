@@ -618,13 +618,9 @@ static RTCDevice     bvh_embree_device() {
 }
 
 // Initialize Embree BVH
-void init_shape_embree_bvh(bvh_shape& shape, bvh_type type) {
+void init_shape_embree_bvh(bvh_shape& shape) {
   auto edevice = bvh_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (type == bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (type == bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape.lines.empty()) {
@@ -656,47 +652,29 @@ void init_shape_embree_bvh(bvh_shape& shape, bvh_type type) {
   } else if (!shape.triangles.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (type == bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
-          shape.positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT3, shape.triangles.data(), 0, 3 * 4,
-          shape.triangles.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape.positions.size());
-      auto embree_triangles = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-          shape.triangles.size());
-      memcpy(embree_positions, shape.positions.data(),
-          shape.positions.size() * 12);
-      memcpy(embree_triangles, shape.triangles.data(),
-          shape.triangles.size() * 12);
-    }
+    auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
+        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+        shape.positions.size());
+    auto embree_triangles = rtcSetNewGeometryBuffer(egeometry,
+        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+        shape.triangles.size());
+    memcpy(
+        embree_positions, shape.positions.data(), shape.positions.size() * 12);
+    memcpy(
+        embree_triangles, shape.triangles.data(), shape.triangles.size() * 12);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
   } else if (!shape.quads.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (type == bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
-          shape.positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape.quads.data(), 0, 4 * 4, shape.quads.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape.positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape.quads.size());
-      memcpy(embree_positions, shape.positions.data(),
-          shape.positions.size() * 12);
-      memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
-    }
+    auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
+        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+        shape.positions.size());
+    auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
+        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quads.size());
+    memcpy(
+        embree_positions, shape.positions.data(), shape.positions.size() * 12);
+    memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
   } else {
@@ -706,14 +684,10 @@ void init_shape_embree_bvh(bvh_shape& shape, bvh_type type) {
   shape.embree_bvh = std::shared_ptr<void>{
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
-void init_scene_embree_bvh(bvh_scene& scene, bvh_type type) {
+void init_scene_embree_bvh(bvh_scene& scene) {
   // scene bvh
   auto edevice = bvh_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (type == bvh_type::embree_compact)
-    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (type == bvh_type::embree_highquality)
-    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
     auto& instance  = scene.instances[instance_id];
@@ -943,26 +917,8 @@ static std::pair<int, int> split_middle(std::vector<int>& primitives,
   return {mid, axis};
 }
 
-// Split bvh nodes according to a type
-static std::pair<int, int> split_nodes(std::vector<int>& primitives,
-    const std::vector<bbox3f>& bboxes, const std::vector<vec3f>& centers,
-    int start, int end, bvh_type type) {
-  switch (type) {
-    case bvh_type::default_:
-      return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_type::highquality:
-      return split_sah(primitives, bboxes, centers, start, end);
-    case bvh_type::middle:
-      return split_middle(primitives, bboxes, centers, start, end);
-    case bvh_type::balanced:
-      return split_balanced(primitives, bboxes, centers, start, end);
-    default: throw std::runtime_error("should not have gotten here");
-  }
-}
-
 // Build BVH nodes
-static void build_bvh(
-    bvh_tree& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
+static void build_bvh(bvh_tree& bvh, std::vector<bbox3f>& bboxes) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -1002,8 +958,7 @@ static void build_bvh(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_nodes(
-          primitives, bboxes, centers, start, end, type);
+      auto [mid, axis] = split_middle(primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
@@ -1045,8 +1000,7 @@ static void update_bvh(bvh_tree& bvh, const std::vector<bbox3f>& bboxes) {
 
 // Build shape bvh
 void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1055,11 +1009,10 @@ void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
   }
 
   // build nodes
-    build_bvh(bvh, bboxes, type);
+  build_bvh(bvh, bboxes);
 }
 void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1069,11 +1022,10 @@ void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
   }
 
   // build nodes
-    build_bvh(bvh, bboxes, type);
+  build_bvh(bvh, bboxes);
 }
 void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1083,11 +1035,10 @@ void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   }
 
   // build nodes
-    build_bvh(bvh, bboxes, type);
+  build_bvh(bvh, bboxes);
 }
 void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type) {
+    const std::vector<vec3f>& positions, const std::vector<float>& radius) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1097,7 +1048,7 @@ void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
   }
 
   // build nodes
-    build_bvh(bvh, bboxes, type);
+  build_bvh(bvh, bboxes);
 }
 
 void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
@@ -1410,13 +1361,11 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
 // -----------------------------------------------------------------------------
 namespace yshp {
 
-void init_shape_bvh(bvh_shape& shape, bvh_type type) {
+void init_shape_bvh(bvh_shape& shape, bool embree) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (type == bvh_type::embree_default ||
-      type == bvh_type::embree_highquality ||
-      type == bvh_type::embree_compact) {
-    return init_shape_embree_bvh(shape, type);
+  if (embree) {
+    return init_shape_embree_bvh(shape);
   }
 #endif
 
@@ -1452,21 +1401,19 @@ void init_shape_bvh(bvh_shape& shape, bvh_type type) {
   }
 
   // build nodes
-    build_bvh(shape.bvh, bboxes, type);
+  build_bvh(shape.bvh, bboxes);
 }
 
-void init_scene_bvh(bvh_scene& scene, bvh_type type) {
+void init_scene_bvh(bvh_scene& scene, bool embree) {
   // Make shape bvh
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    init_shape_bvh(scene.shapes[idx], type);
+    init_shape_bvh(scene.shapes[idx], embree);
   }
 
   // embree
 #ifdef YOCTO_EMBREE
-  if (type == bvh_type::embree_default ||
-      type == bvh_type::embree_highquality ||
-      type == bvh_type::embree_compact) {
-    return init_scene_embree_bvh(scene, type);
+  if (embree) {
+    return init_scene_embree_bvh(scene);
   }
 #endif
 
@@ -1481,7 +1428,7 @@ void init_scene_bvh(bvh_scene& scene, bvh_type type) {
   }
 
   // build nodes
-    build_bvh(scene.bvh, bboxes, type);
+  build_bvh(scene.bvh, bboxes);
 }
 
 void update_shape_bvh(bvh_shape& shape) {

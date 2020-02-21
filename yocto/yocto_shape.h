@@ -137,6 +137,7 @@ using ym::bbox3f;
 using ym::byte;
 using ym::frame3f;
 using ym::mat4f;
+using ym::ray3f;
 using ym::vec2f;
 using ym::vec2i;
 using ym::vec3b;
@@ -144,7 +145,6 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
-using ym::ray3f;
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 std::vector<vec3f> compute_tangents(
@@ -301,32 +301,15 @@ struct bvh_intersection {
   bool  hit      = false;
 };
 
-// Bvh build type.
-enum struct bvh_type {
-  default_,
-  highquality,
-  middle,
-  balanced,
-#ifdef YOCTO_EMBREE
-  embree_default,
-  embree_highquality,
-  embree_compact  // only for copy interface
-#endif
-};
-
 // Make shape bvh
 void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_);
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
 void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_);
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
 void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_);
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
 void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_);
+    const std::vector<vec3f>& positions, const std::vector<float>& radius);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
@@ -415,10 +398,8 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-void init_shape_bvh(
-    bvh_shape& bvh, bvh_type type = bvh_type::default_);
-void init_scene_bvh(
-    bvh_scene& bvh, bvh_type type = bvh_type::default_);
+void init_shape_bvh(bvh_shape& bvh, bool embree = false);
+void init_scene_bvh(bvh_scene& bvh, bool embree = false);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh);
