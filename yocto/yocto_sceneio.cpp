@@ -867,9 +867,9 @@ static bool save_instance(const std::string& filename,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = yply::model{};
-    add_values(&ply, frames, "instance",
-        std::array<std::string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx",
-            "zy", "zz", "ox", "oy", "oz"});
+    add_values(&ply, "instance",
+        {"xx", "xy", "xz", "yx", "yy", "yz", "zx",
+            "zy", "zz", "ox", "oy", "oz"}, frames);
     if (!save_ply(filename, &ply, error)) return false;
     return true;
   } else {
