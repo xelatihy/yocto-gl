@@ -3,7 +3,7 @@
 //
 //
 // Yocto/Cli is a collection of utilities used in writing simple command-line
-// apps. We support parsing command line arguments, simple path manipulation, 
+// apps. We support parsing command line arguments, simple path manipulation,
 // file lading/saving, and printing values, timers and progress bars.
 //
 //

@@ -1705,10 +1705,10 @@ inline bool convert_shape(ypbrt::shape* shape, const command& command,
     auto ply = std::make_unique<yply::model>();
     if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
       return dependent_error();
-    shape->positions = get_positions(ply.get());
-    shape->normals   = get_normals(ply.get());
-    shape->texcoords = get_texcoords(ply.get());
-    shape->triangles = get_triangles(ply.get());
+    get_positions(ply.get(), shape->positions);
+    get_normals(ply.get(), shape->normals);
+    get_texcoords(ply.get(), shape->texcoords);
+    get_triangles(ply.get(), shape->triangles);
     return true;
   } else if (command.type == "sphere") {
     auto radius = 1.0f;
