@@ -63,7 +63,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 using namespace ym;
 // import math symbols for use
@@ -79,12 +79,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const std::vector<float>& times, const float& time) {
@@ -141,14 +141,14 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
-std::vector<std::string> scene_stats(const yscn::model* scene, bool verbose) {
+std::vector<std::string> scene_stats(const ysio::model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -217,7 +217,7 @@ std::vector<std::string> scene_stats(const yscn::model* scene, bool verbose) {
 
 // Checks for validity of the scene->
 std::vector<std::string> scene_validation(
-    const yscn::model* scene, bool notextures) {
+    const ysio::model* scene, bool notextures) {
   auto errs        = std::vector<std::string>();
   auto check_names = [&errs](const auto& vals, const std::string& base) {
     auto used = std::unordered_map<std::string, int>();
@@ -231,7 +231,7 @@ std::vector<std::string> scene_validation(
       }
     }
   };
-  auto check_empty_textures = [&errs](const std::vector<yscn::texture*>& vals) {
+  auto check_empty_textures = [&errs](const std::vector<ysio::texture*>& vals) {
     for (auto value : vals) {
       if (value->colorf.empty() && value->colorb.empty() &&
           value->scalarf.empty() && value->scalarb.empty()) {
@@ -252,12 +252,12 @@ std::vector<std::string> scene_validation(
   return errs;
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 model::~model() {
   for (auto camera : cameras) delete camera;
@@ -279,32 +279,32 @@ static T* add_element(std::vector<T*>& elements, const std::string& name,
 }
 
 // add element
-yscn::camera* add_camera(yscn::model* scene, const std::string& name) {
+ysio::camera* add_camera(ysio::model* scene, const std::string& name) {
   return add_element(scene->cameras, name, "camera");
 }
-yscn::environment* add_environment(
-    yscn::model* scene, const std::string& name) {
+ysio::environment* add_environment(
+    ysio::model* scene, const std::string& name) {
   return add_element(scene->environments, name, "environment");
 }
-yscn::shape* add_shape(yscn::model* scene, const std::string& name) {
+ysio::shape* add_shape(ysio::model* scene, const std::string& name) {
   return add_element(scene->shapes, name, "shape");
 }
-yscn::subdiv* add_subdiv(yscn::model* scene, const std::string& name) {
+ysio::subdiv* add_subdiv(ysio::model* scene, const std::string& name) {
   return add_element(scene->subdivs, name, "subdiv");
 }
-yscn::texture* add_texture(yscn::model* scene, const std::string& name) {
+ysio::texture* add_texture(ysio::model* scene, const std::string& name) {
   return add_element(scene->textures, name, "texture");
 }
-yscn::object* add_object(yscn::model* scene, const std::string& name) {
+ysio::object* add_object(ysio::model* scene, const std::string& name) {
   return add_element(scene->objects, name, "object");
 }
-yscn::instance* add_instance(yscn::model* scene, const std::string& name) {
+ysio::instance* add_instance(ysio::model* scene, const std::string& name) {
   return add_element(scene->instances, name, "instance");
 }
-yscn::material* add_material(yscn::model* scene, const std::string& name) {
+ysio::material* add_material(ysio::model* scene, const std::string& name) {
   return add_element(scene->materials, name, "material");
 }
-yscn::object* add_complete_object(yscn::model* scene, const std::string& name) {
+ysio::object* add_complete_object(ysio::model* scene, const std::string& name) {
   auto object      = add_object(scene, name);
   object->shape    = add_shape(scene, name);
   object->material = add_material(scene, name);
@@ -312,7 +312,7 @@ yscn::object* add_complete_object(yscn::model* scene, const std::string& name) {
 }
 
 // get named camera or default if camera is empty
-yscn::camera* get_camera(const yscn::model* scene, const std::string& name) {
+ysio::camera* get_camera(const ysio::model* scene, const std::string& name) {
   if (scene->cameras.empty()) return nullptr;
   for (auto camera : scene->cameras) {
     if (camera->name == name) return camera;
@@ -330,8 +330,8 @@ yscn::camera* get_camera(const yscn::model* scene, const std::string& name) {
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const yscn::model* scene) {
-  auto shape_bbox = std::unordered_map<yscn::shape*, bbox3f>{};
+bbox3f compute_bounds(const ysio::model* scene) {
+  auto shape_bbox = std::unordered_map<ysio::shape*, bbox3f>{};
   auto bbox       = invalidb3f;
   for (auto shape : scene->shapes) {
     auto sbvh = invalidb3f;
@@ -353,7 +353,7 @@ bbox3f compute_bounds(const yscn::model* scene) {
 }
 
 // Add missing cameras.
-void add_cameras(yscn::model* scene) {
+void add_cameras(ysio::model* scene) {
   if (!scene->cameras.empty()) return;
   auto camera          = add_camera(scene, "camera");
   camera->orthographic = false;
@@ -376,7 +376,7 @@ void add_cameras(yscn::model* scene) {
 }
 
 // Add missing radius.
-void add_radius(yscn::model* scene, float radius = 0.001f) {
+void add_radius(ysio::model* scene, float radius = 0.001f) {
   for (auto shape : scene->shapes) {
     if (shape->points.empty() && shape->lines.empty()) continue;
     if (!shape->radius.empty()) continue;
@@ -385,8 +385,8 @@ void add_radius(yscn::model* scene, float radius = 0.001f) {
 }
 
 // Add missing materials.
-void add_materials(yscn::model* scene) {
-  auto default_material = (yscn::material*)nullptr;
+void add_materials(ysio::model* scene) {
+  auto default_material = (ysio::material*)nullptr;
   for (auto& object : scene->objects) {
     if (object->material) continue;
     if (!default_material) {
@@ -398,7 +398,7 @@ void add_materials(yscn::model* scene) {
 }
 
 // Add a sky environment
-void add_sky(yscn::model* scene, float sun_angle) {
+void add_sky(ysio::model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
   auto sunsky  = yimg::image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
@@ -412,7 +412,7 @@ void add_sky(yscn::model* scene, float sun_angle) {
 }
 
 // Reduce memory usage
-void trim_memory(yscn::model* scene) {
+void trim_memory(ysio::model* scene) {
   for (auto shape : scene->shapes) {
     shape->points.shrink_to_fit();
     shape->lines.shrink_to_fit();
@@ -446,7 +446,7 @@ void trim_memory(yscn::model* scene) {
 }
 
 // Check texture size
-static vec2i texture_size(const yscn::texture* texture) {
+static vec2i texture_size(const ysio::texture* texture) {
   if (!texture->colorf.empty()) {
     return texture->colorf.size();
   } else if (!texture->colorb.empty()) {
@@ -462,7 +462,7 @@ static vec2i texture_size(const yscn::texture* texture) {
 
 // Evaluate a texture
 static vec3f lookup_texture(
-    const yscn::texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
+    const ysio::texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (!texture->colorf.empty()) {
     return texture->colorf[ij];
   } else if (!texture->colorb.empty()) {
@@ -480,7 +480,7 @@ static vec3f lookup_texture(
 }
 
 // Evaluate a texture
-static vec3f eval_texture(const yscn::texture* texture, const vec2f& uv,
+static vec3f eval_texture(const ysio::texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
@@ -595,7 +595,7 @@ std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
 
 // Apply subdivision and displacement rules.
 std::unique_ptr<subdiv> subdivide_subdiv(
-    yscn::subdiv* shape, int subdivisions, bool smooth) {
+    ysio::subdiv* shape, int subdivisions, bool smooth) {
   auto tesselated = std::make_unique<subdiv>(*shape);
   if (!subdivisions) return tesselated;
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
@@ -618,9 +618,9 @@ std::unique_ptr<subdiv> subdivide_subdiv(
   return tesselated;
 }
 // Apply displacement to a shape
-std::unique_ptr<subdiv> displace_subdiv(yscn::subdiv* subdiv,
-    float displacement, yscn::texture* displacement_tex, bool smooth) {
-  auto displaced = std::make_unique<yscn::subdiv>(*subdiv);
+std::unique_ptr<subdiv> displace_subdiv(ysio::subdiv* subdiv,
+    float displacement, ysio::texture* displacement_tex, bool smooth) {
+  auto displaced = std::make_unique<ysio::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
   if (subdiv->texcoords.empty())
@@ -655,9 +655,9 @@ std::unique_ptr<subdiv> displace_subdiv(yscn::subdiv* subdiv,
   return displaced;
 }
 
-void tesselate_subdiv(yscn::model* scene, yscn::subdiv* subdiv) {
-  auto material = (yscn::material*)nullptr;
-  auto shape    = (yscn::shape*)nullptr;
+void tesselate_subdiv(ysio::model* scene, ysio::subdiv* subdiv) {
+  auto material = (ysio::material*)nullptr;
+  auto shape    = (ysio::shape*)nullptr;
   for (auto object : scene->objects) {
     if (object->subdiv == subdiv) {
       material = object->material;
@@ -681,7 +681,7 @@ void tesselate_subdiv(yscn::model* scene, yscn::subdiv* subdiv) {
   shape->radius    = {};
 }
 
-void tesselate_subdivs(yscn::model* scene, progress_callback progress_cb) {
+void tesselate_subdivs(ysio::model* scene, progress_callback progress_cb) {
   if (scene->subdivs.empty()) return;
 
   // handle progress
@@ -697,49 +697,49 @@ void tesselate_subdivs(yscn::model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const std::string& filename, yscn::model* scene,
+static bool load_json_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_json_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const std::string& filename, yscn::model* scene,
+static bool load_obj_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_obj_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const std::string& filename, yscn::model* scene,
+static bool load_ply_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_ply_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
+static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
+static bool load_pbrt_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
 static bool save_pbrt_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel);
 
 // Load a scene
-bool load_scene(const std::string& filename, yscn::model* scene,
+bool load_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
@@ -758,7 +758,7 @@ bool load_scene(const std::string& filename, yscn::model* scene,
 }
 
 // Save a scene
-bool save_scene(const std::string& filename, const yscn::model* scene,
+bool save_scene(const std::string& filename, const ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto ext = fs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
@@ -774,12 +774,12 @@ bool save_scene(const std::string& filename, const yscn::model* scene,
   }
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -877,7 +877,7 @@ static bool save_instance(const std::string& filename,
   }
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -910,7 +910,7 @@ inline void from_json(const json& j, frame3f& value) {
 // -----------------------------------------------------------------------------
 // JSON IO
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 using json = nlohmann::json;
 
@@ -1050,7 +1050,7 @@ inline json load_json(const std::string& filename, std::string& error) {
 }
 
 // Save a scene in the builtin JSON format.
-static bool load_json_scene(const std::string& filename, yscn::model* scene,
+static bool load_json_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1102,10 +1102,10 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto ctexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_ctexture = [scene, &ctexture_map, &get_value](const json& ejs,
-                          const std::string& name, yscn::texture*& value,
+                          const std::string& name, ysio::texture*& value,
                           const std::string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
@@ -1123,10 +1123,10 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto stexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_stexture = [scene, &stexture_map, &get_value](const json& ejs,
-                          const std::string& name, yscn::texture*& value,
+                          const std::string& name, ysio::texture*& value,
                           const std::string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
@@ -1144,9 +1144,9 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto shape_map = std::unordered_map<std::string, yscn::shape*>{{"", nullptr}};
+  auto shape_map = std::unordered_map<std::string, ysio::shape*>{{"", nullptr}};
   auto get_shape = [scene, &shape_map, &get_value](const json& ejs,
-                       const std::string& name, yscn::shape*& value,
+                       const std::string& name, ysio::shape*& value,
                        const std::string& dirname = "shapes/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
@@ -1164,10 +1164,10 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // parse json reference
-  auto subdiv_map = std::unordered_map<std::string, yscn::subdiv*>{
+  auto subdiv_map = std::unordered_map<std::string, ysio::subdiv*>{
       {"", nullptr}};
   auto get_subdiv = [scene, &subdiv_map, &get_value](const json& ejs,
-                        const std::string& name, yscn::subdiv*& value,
+                        const std::string& name, ysio::subdiv*& value,
                         const std::string& dirname = "subdivs/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
@@ -1185,10 +1185,10 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // load json instance
-  auto instance_map = std::unordered_map<std::string, yscn::instance*>{
+  auto instance_map = std::unordered_map<std::string, ysio::instance*>{
       {"", nullptr}};
   auto get_instance = [scene, &instance_map, &get_value](const json& ejs,
-                          const std::string& name, yscn::instance*& value,
+                          const std::string& name, ysio::instance*& value,
                           const std::string& dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
@@ -1206,7 +1206,7 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
   };
 
   // material map
-  auto material_map = std::unordered_map<std::string, yscn::material*>{
+  auto material_map = std::unordered_map<std::string, ysio::material*>{
       {"", nullptr}};
 
   // handle progress
@@ -1390,7 +1390,7 @@ static bool load_json_scene(const std::string& filename, yscn::model* scene,
 
 // Save a scene in the builtin JSON format.
 static bool save_json_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
@@ -1404,7 +1404,7 @@ static bool save_json_scene(const std::string& filename,
     ejs[name] = value;
   };
   auto add_tex = [](json& ejs, const std::string& name,
-                     yscn::texture* texture) {
+                     ysio::texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1554,15 +1554,15 @@ static bool save_json_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // Loads an OBJ
-static bool load_obj_scene(const std::string& filename, yscn::model* scene,
+static bool load_obj_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -1599,10 +1599,10 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   }
 
   // helper to create texture maps
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto ctexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const yobj::texture& tinfo) -> yscn::texture* {
+                          const yobj::texture& tinfo) -> ysio::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1613,10 +1613,10 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   };
 
   // helper to create texture maps
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto stexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const yobj::texture& tinfo) -> yscn::texture* {
+                          const yobj::texture& tinfo) -> ysio::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1627,7 +1627,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<yobj::material*, yscn::material*>{};
+  auto material_map = std::unordered_map<yobj::material*, ysio::material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1739,7 +1739,7 @@ static bool load_obj_scene(const std::string& filename, yscn::model* scene,
 }
 
 static bool save_obj_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
@@ -1771,7 +1771,7 @@ static bool save_obj_scene(const std::string& filename,
   }
 
   // textures
-  auto get_texture = [](yscn::texture* texture) {
+  auto get_texture = [](ysio::texture* texture) {
     if (!texture) return yobj::texture{};
     auto tinfo = yobj::texture{};
     tinfo.path = texture->name;
@@ -1779,7 +1779,7 @@ static bool save_obj_scene(const std::string& filename,
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<yscn::material*, yobj::material*>{
+  auto material_map = std::unordered_map<ysio::material*, yobj::material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
@@ -1875,7 +1875,7 @@ static bool save_obj_scene(const std::string& filename,
   return true;
 }
 
-void print_obj_camera(yscn::camera* camera) {
+void print_obj_camera(ysio::camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera->name.c_str(), (int)camera->orthographic, camera->film,
       camera->film / camera->aspect, camera->lens, camera->focus,
@@ -1885,14 +1885,14 @@ void print_obj_camera(yscn::camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
-static bool load_ply_scene(const std::string& filename, yscn::model* scene,
+static bool load_ply_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -1917,7 +1917,7 @@ static bool load_ply_scene(const std::string& filename, yscn::model* scene,
 }
 
 static bool save_ply_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
@@ -1938,15 +1938,15 @@ static bool save_ply_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // Load a scene
-static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
+static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
@@ -2013,10 +2013,10 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   }
 
   // convert color textures
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto ctexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
-                          const cgltf_texture_view& ginfo) -> yscn::texture* {
+                          const cgltf_texture_view& ginfo) -> ysio::texture* {
     if (!ginfo.texture || !ginfo.texture->image) return nullptr;
     auto path = std::string{ginfo.texture->image->uri};
     if (path == "") return nullptr;
@@ -2028,9 +2028,9 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   };
   // convert color opacity textures
   auto cotexture_map = std::unordered_map<std::string,
-      std::pair<yscn::texture*, yscn::texture*>>{{"", {nullptr, nullptr}}};
+      std::pair<ysio::texture*, ysio::texture*>>{{"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
-      -> std::pair<yscn::texture*, yscn::texture*> {
+      -> std::pair<ysio::texture*, ysio::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = std::string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2043,9 +2043,9 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   };
   // convert textures
   auto mrtexture_map = std::unordered_map<std::string,
-      std::pair<yscn::texture*, yscn::texture*>>{{"", {nullptr, nullptr}}};
+      std::pair<ysio::texture*, ysio::texture*>>{{"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
-      -> std::pair<yscn::texture*, yscn::texture*> {
+      -> std::pair<ysio::texture*, ysio::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = std::string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -2058,7 +2058,7 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<cgltf_material*, yscn::material*>{
+  auto material_map = std::unordered_map<cgltf_material*, ysio::material*>{
       {nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmaterial         = &gltf->materials[mid];
@@ -2084,7 +2084,7 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   }
 
   // convert meshes
-  auto mesh_map = std::unordered_map<cgltf_mesh*, std::vector<yscn::object*>>{
+  auto mesh_map = std::unordered_map<cgltf_mesh*, std::vector<ysio::object*>>{
       {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
@@ -2345,15 +2345,15 @@ static bool load_gltf_scene(const std::string& filename, yscn::model* scene,
   return true;
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
+static bool load_pbrt_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
@@ -2383,10 +2383,10 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
   }
 
   // convert materials
-  auto ctexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto ctexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
-                          const std::string& path) -> yscn::texture* {
+                          const std::string& path) -> ysio::texture* {
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
     if (it != ctexture_map.end()) return it->second;
@@ -2394,10 +2394,10 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
     ctexture_map[path] = texture;
     return texture;
   };
-  auto stexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto stexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_stexture = [&scene, &stexture_map](
-                          const std::string& path) -> yscn::texture* {
+                          const std::string& path) -> ysio::texture* {
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
     if (it != stexture_map.end()) return it->second;
@@ -2405,10 +2405,10 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
     stexture_map[path] = texture;
     return texture;
   };
-  auto atexture_map = std::unordered_map<std::string, yscn::texture*>{
+  auto atexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_atexture = [&scene, &atexture_map](
-                          const std::string& path) -> yscn::texture* {
+                          const std::string& path) -> ysio::texture* {
     if (path == "") return nullptr;
     auto it = atexture_map.find(path);
     if (it != atexture_map.end()) return it->second;
@@ -2418,7 +2418,7 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
   };
 
   // convert material
-  auto material_map = std::unordered_map<ypbrt::material*, yscn::material*>{};
+  auto material_map = std::unordered_map<ypbrt::material*, ysio::material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2527,7 +2527,7 @@ static bool load_pbrt_scene(const std::string& filename, yscn::model* scene,
 
 // Save a pbrt scene
 static bool save_pbrt_scene(const std::string& filename,
-    const yscn::model* scene, std::string& error, progress_callback progress_cb,
+    const ysio::model* scene, std::string& error, progress_callback progress_cb,
     bool noparallel) {
   auto dependent_error = [filename, &error]() {
     error = filename + ": error in " + error;
@@ -2551,12 +2551,12 @@ static bool save_pbrt_scene(const std::string& filename,
   pcamera->resolution = {1280, (int)(1280 / pcamera->aspect)};
 
   // get texture name
-  auto get_texture = [](const yscn::texture* texture) {
+  auto get_texture = [](const ysio::texture* texture) {
     return texture ? texture->name : "";
   };
 
   // convert materials
-  auto material_map = std::unordered_map<yscn::material*, ypbrt::material*>{};
+  auto material_map = std::unordered_map<ysio::material*, ypbrt::material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = fs::path(material->name).stem();
@@ -2629,14 +2629,14 @@ static bool save_pbrt_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace yscn
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace yscn {
+namespace ysio {
 
-void make_cornellbox_scene(yscn::model* scene) {
+void make_cornellbox_scene(ysio::model* scene) {
   scene->name                = "cornellbox";
   auto camera                = add_camera(scene);
   camera->frame              = frame3f{{0, 1, 3.9}};
@@ -2700,4 +2700,4 @@ void make_cornellbox_scene(yscn::model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace yscn
+}  // namespace ysio
