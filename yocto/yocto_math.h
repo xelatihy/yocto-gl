@@ -2560,7 +2560,7 @@ inline mat4f transpose(const mat4f& a) {
 namespace ym {
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame2f::frame2f() : x{}, y{}, o{} {}
+inline frame2f::frame2f() {}
 inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
     : x{x}, y{y}, o{o} {}
 inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
@@ -2574,7 +2574,7 @@ inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame3f::frame3f() : x{}, y{}, z{}, o{} {}
+inline frame3f::frame3f() {}
 inline frame3f::frame3f(
     const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
     : x{x}, y{y}, z{z}, o{o} {}
