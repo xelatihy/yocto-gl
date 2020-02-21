@@ -509,7 +509,15 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to);
 }  // namespace yimg
 
 // -----------------------------------------------------------------------------
-// IMAGE DATA AND UTILITIES
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yimg {
 
@@ -626,7 +634,7 @@ inline void swap(image<T>& a, image<T>& b) {
 }  // namespace yimg
 
 // -----------------------------------------------------------------------------
-// VOLUME TYPE AND UTILITIES
+// IMPLEMENTATION OF VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yimg {
 
