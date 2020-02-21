@@ -11,8 +11,6 @@
 #include <deque>
 #include <memory>
 #include <string>
-#include <thread>
-#include <future>
 using namespace std::string_literals;
 
 #include "yocto_obj.h"
@@ -701,29 +699,6 @@ void init_shape_embree_bvh(bvh_shape& shape, bvh_type type) {
     }
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, 0);
-  } else if (!shape.quadspos.empty()) {
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (type == bvh_type::embree_compact) {
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
-          shape.positions.size());
-      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4,
-          shape.quadspos.size());
-    } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
-          shape.positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-          shape.quadspos.size());
-      memcpy(embree_positions, shape.positions.data(),
-          shape.positions.size() * 12);
-      memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
-    }
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, 0);
   } else {
     throw std::runtime_error("empty shapes not supported");
   }
@@ -986,7 +961,7 @@ static std::pair<int, int> split_nodes(std::vector<int>& primitives,
 }
 
 // Build BVH nodes
-static void build_bvh_serial(
+static void build_bvh(
     bvh_tree& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
@@ -1051,104 +1026,6 @@ static void build_bvh_serial(
   nodes.shrink_to_fit();
 }
 
-// Build BVH nodes
-static void build_bvh_parallel(
-    bvh_tree& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
-  // prepare to build nodes
-  nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = std::vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
-
-  // queue up first node
-  auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
-  nodes.emplace_back();
-
-  // synchronization
-  std::atomic<int>               num_processed_prims(0);
-  std::mutex                     queue_mutex;
-  std::vector<std::future<void>> futures;
-  auto                           nthreads = std::thread::hardware_concurrency();
-
-  // create nodes until the queue is empty
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
-                                &num_processed_prims, &queue_mutex, &queue] {
-          while (true) {
-            // exit if needed
-            if (num_processed_prims >= primitives.size()) return;
-
-            // grab node to work on
-            auto next = zero3i;
-            {
-              std::lock_guard<std::mutex> lock{queue_mutex};
-              if (!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
-              }
-            }
-
-            // wait a bit if needed
-            if (next == zero3i) {
-              std::this_thread::sleep_for(std::chrono::microseconds(10));
-              continue;
-            }
-
-            // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
-            auto& node = nodes[nodeid];
-
-            // compute bounds
-            node.bbox = invalidb3f;
-            for (auto i = start; i < end; i++)
-              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
-
-            // split into two children
-            if (end - start > bvh_max_prims) {
-              // get split
-              auto [mid, axis] = split_nodes(
-                  primitives, bboxes, centers, start, end, type);
-
-              // make an internal node
-              {
-                std::lock_guard<std::mutex> lock{queue_mutex};
-                node.internal = true;
-                node.axis     = axis;
-                node.num      = 2;
-                node.start    = (int)nodes.size();
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.start + 0, start, mid});
-                queue.push_back({node.start + 1, mid, end});
-              }
-            } else {
-              // Make a leaf node
-              node.internal = false;
-              node.num      = end - start;
-              node.start    = start;
-              num_processed_prims += node.num;
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-
-  // cleanup
-  nodes.shrink_to_fit();
-}
-
 // Update bvh
 static void update_bvh(bvh_tree& bvh, const std::vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
@@ -1169,7 +1046,7 @@ static void update_bvh(bvh_tree& bvh, const std::vector<bbox3f>& bboxes) {
 // Build shape bvh
 void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type, bool parallel) {
+    bvh_type type) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1178,15 +1055,11 @@ void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(bvh, bboxes, type);
-  }
+    build_bvh(bvh, bboxes, type);
 }
 void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type, bool parallel) {
+    bvh_type type) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1196,15 +1069,11 @@ void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(bvh, bboxes, type);
-  }
+    build_bvh(bvh, bboxes, type);
 }
 void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type, bool parallel) {
+    bvh_type type) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1214,15 +1083,11 @@ void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(bvh, bboxes, type);
-  }
+    build_bvh(bvh, bboxes, type);
 }
 void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type, bool parallel) {
+    bvh_type type) {
   // build primitives
   auto bboxes = std::vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
@@ -1232,11 +1097,7 @@ void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(bvh, bboxes, type);
-  }
+    build_bvh(bvh, bboxes, type);
 }
 
 void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
@@ -1549,7 +1410,7 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
 // -----------------------------------------------------------------------------
 namespace yshp {
 
-void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
+void init_shape_bvh(bvh_shape& shape, bvh_type type) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (type == bvh_type::embree_default ||
@@ -1588,27 +1449,16 @@ void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
-  } else if (!shape.quadspos.empty()) {
-    bboxes = std::vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
-    }
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(shape.bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(shape.bvh, bboxes, type);
-  }
+    build_bvh(shape.bvh, bboxes, type);
 }
 
-void init_scene_bvh(bvh_scene& scene, bvh_type type, bool parallel) {
+void init_scene_bvh(bvh_scene& scene, bvh_type type) {
   // Make shape bvh
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    init_shape_bvh(scene.shapes[idx], type, parallel);
+    init_shape_bvh(scene.shapes[idx], type);
   }
 
   // embree
@@ -1631,11 +1481,7 @@ void init_scene_bvh(bvh_scene& scene, bvh_type type, bool parallel) {
   }
 
   // build nodes
-  if (!parallel) {
-    build_bvh_serial(scene.bvh, bboxes, type);
-  } else {
-    build_bvh_parallel(scene.bvh, bboxes, type);
-  }
+    build_bvh(scene.bvh, bboxes, type);
 }
 
 void update_shape_bvh(bvh_shape& shape) {
@@ -1668,13 +1514,6 @@ void update_shape_bvh(bvh_shape& shape) {
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
-    bboxes = std::vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
-    }
-  } else if (!shape.quadspos.empty()) {
     bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
@@ -1795,16 +1634,6 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     } else if (!shape.quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& q = shape.quads[shape.bvh.primitives[idx]];
-        if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w], uv, distance)) {
-          hit      = true;
-          element  = shape.bvh.primitives[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape.quadspos.empty()) {
-      for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape.quadspos[shape.bvh.primitives[idx]];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
@@ -1972,19 +1801,6 @@ static bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
       for (auto idx = 0; idx < node.num; idx++) {
         auto  primitive = shape.bvh.primitives[node.start + idx];
         auto& q         = shape.quads[primitive];
-        if (overlap_quad(pos, max_distance, shape.positions[q.x],
-                shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
-                shape.radius[q.z], shape.radius[q.w], uv, distance)) {
-          hit          = true;
-          element      = primitive;
-          max_distance = distance;
-        }
-      }
-    } else if (!shape.quadspos.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto  primitive = shape.bvh.primitives[node.start + idx];
-        auto& q         = shape.quadspos[primitive];
         if (overlap_quad(pos, max_distance, shape.positions[q.x],
                 shape.positions[q.y], shape.positions[q.z],
                 shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],

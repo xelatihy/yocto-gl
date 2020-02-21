@@ -317,16 +317,16 @@ enum struct bvh_type {
 // Make shape bvh
 void make_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_);
 void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_);
 void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_);
 void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
     const std::vector<vec3f>& positions, const std::vector<float>& radius,
-    bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const std::vector<int>& points,
@@ -383,7 +383,6 @@ struct bvh_shape {
   std::vector<vec2i> lines     = {};
   std::vector<vec3i> triangles = {};
   std::vector<vec4i> quads     = {};
-  std::vector<vec4i> quadspos  = {};
 
   // vertices
   std::vector<vec3f> positions = {};
@@ -417,9 +416,9 @@ struct bvh_scene {
 
 // Build the bvh acceleration structure.
 void init_shape_bvh(
-    bvh_shape& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_shape& bvh, bvh_type type = bvh_type::default_);
 void init_scene_bvh(
-    bvh_scene& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
+    bvh_scene& bvh, bvh_type type = bvh_type::default_);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh);
