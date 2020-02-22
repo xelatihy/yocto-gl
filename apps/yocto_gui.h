@@ -401,7 +401,7 @@ struct ui_callbacks {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
-    bool widgets, const ui_callbacks& callbaks,
+    const ui_callbacks& callbaks, 
     int widgets_width = 320, bool widgets_left = true);
 
 }

@@ -1329,12 +1329,13 @@ namespace ygui {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
-    bool widgets, const ui_callbacks& callbaks,
+    const ui_callbacks& callbaks, 
     int widgets_width, bool widgets_left) {
 
   auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
-  init_window(win, size, title, widgets, widgets_width, widgets_left);
+  init_window(win, size, title, (bool)callbaks.widgets_cb, 
+    widgets_width, widgets_left);
 
   set_draw_callback(win, callbaks.draw_cb);
   set_widgets_callback(win, callbaks.widgets_cb);

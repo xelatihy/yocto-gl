@@ -287,13 +287,9 @@ int main(int argc, const char* argv[]) {
   // allocate buffers
   reset_display(app);
 
-  // window
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_window(win, {1280 + 320, 720}, "yscnitraces", false);
-
   // callbacks
-  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
+  auto callbacks = ygui::ui_callbacks{};
+  callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
     if (!is_initialized(app->glimage)) init_glimage(app->glimage);
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
@@ -304,9 +300,8 @@ int main(int argc, const char* argv[]) {
     draw_glimage(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
-  });
-  set_char_callback(win,
-      [app](ygui::window* win, unsigned int key, const ygui::input& input) {
+  };
+  callbacks.char_cb = [app](ygui::window* win, unsigned int key, const ygui::input& input) {
         switch (key) {
           case 'c': {
             auto ncameras = (int)app->scene->cameras.size();
@@ -333,9 +328,8 @@ int main(int argc, const char* argv[]) {
             reset_display(app);
             break;
         }
-      });
-  set_uiupdate_callback(
-      win, [app](ygui::window* win, const ygui::input& input) {
+      };
+  callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto dolly  = 0.0f;
           auto pan    = zero2f;
@@ -352,13 +346,10 @@ int main(int argc, const char* argv[]) {
               app->camera->frame, app->camera->focus, rotate, dolly, pan);
           reset_display(app);
         }
-      });
+      };
 
   // run ui
-  run_ui(win);
-
-  // clear
-  clear_window(win);
+  run_ui({1280 + 320, 720}, "yscnitraces", callbacks);
 
   // done
   return 0;
