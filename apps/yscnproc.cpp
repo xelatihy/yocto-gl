@@ -51,12 +51,14 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto validate = false;
   auto info     = false;
+  auto copyright = ""s;
   auto output   = "out.json"s;
   auto filename = "scene.json"s;
 
   // parse command line
   auto cli = ycli::make_cli("yscnproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
+  add_option(cli, "--copyright,-c", copyright, "copyright string");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
   add_option(cli, "--output,-o", output, "output scene");
   add_option(cli, "scene", filename, "input scene", true);
@@ -68,6 +70,11 @@ int main(int argc, const char* argv[]) {
   auto ioerror     = ""s;
   if (!load_scene(filename, scene, ioerror, ycli::print_progress))
     ycli::print_fatal(ioerror);
+
+  // copyright
+  if(copyright != "") {
+    scene->copyright = copyright;
+  }
 
   // validate scene
   if (validate) {
