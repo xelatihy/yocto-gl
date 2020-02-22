@@ -5,10 +5,24 @@
   "description": "The scene format used by Yocto/GL",
   "type": "object",
   "properties": {
+    "asset": {
+      "description": "asset informations",
+      "type": "object",
+      "properties": {
+        "copyright": {
+          "description": "Copyright string",
+          "type": "string"
+        },
+        "generator": {
+          "description": "Generator string",
+          "type": "string"
+        }
+      }
+    },
     "cameras": {
-      "description": "List of cameras",
-      "type": "array",
-      "items": {
+      "description": "Scene cameras",
+      "type": "object",
+      "additionalProperties": {
         "description": "Camera",
         "type": "object",
         "properties": {
@@ -47,9 +61,9 @@
       }
     },
     "environments": {
-      "description": "List of environments",
-      "type": "array",
-      "items": {
+      "description": "Scene environments",
+      "type": "object",
+      "additionalProperties": {
         "description": "Environment",
         "type": "object",
         "properties": {
@@ -79,9 +93,9 @@
       }
     },
     "materials": {
-      "description": "List of materials",
-      "type": "array",
-      "items": {
+      "description": "Scene materials",
+      "type": "object",
+      "additionalProperties": {
         "description": "Object",
         "type": "object",
         "properties": {
@@ -214,8 +228,8 @@
     },
     "objects": {
       "description": "List of objects",
-      "type": "array",
-      "items": {
+      "type": "object",
+      "additionalProperties": {
         "description": "Object",
         "type": "object",
         "properties": {
@@ -240,28 +254,6 @@
           },
           "instance": {
             "description": "Instances filename",
-            "type": "string"
-          }
-        }
-      }
-    },
-    "subdivs": {
-      "description": "List of subdivs",
-      "type": "array",
-      "items": {
-        "description": "Subdiv",
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Name",
-            "type": "string"
-          },
-          "subdiv": {
-            "description": "Geometry filename",
-            "type": "string"
-          },
-          "shape": {
-            "description": "Shape name as a reference",
             "type": "string"
           }
         }

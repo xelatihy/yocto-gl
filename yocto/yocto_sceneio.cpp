@@ -1218,7 +1218,6 @@ static bool load_json_scene(const std::string& filename, ysio::model* scene,
   // asset
   if (js.contains("asset")) {
     auto& ejs = js.at("asset");
-    if (!get_value(ejs, "name", scene->name)) return false;
     if (!get_value(ejs, "copyright", scene->copyright)) return false;
   }
 
@@ -1435,8 +1434,6 @@ static bool save_json_scene(const std::string& filename,
   {
     auto& ejs = js["asset"];
     ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-    ejs["version"] = "2.0";
-    add_opt(ejs, "name", scene->name, ""s);
     add_opt(ejs, "copyright", scene->copyright, ""s);
   }
 
