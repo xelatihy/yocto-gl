@@ -265,6 +265,7 @@ model::~model() {
   for (auto subdiv : subdivs) delete subdiv;
   for (auto material : materials) delete material;
   for (auto instance : instances) delete instance;
+  for (auto object : objects) delete object;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
 }
@@ -1214,7 +1215,12 @@ static bool load_json_scene(const std::string& filename, ysio::model* scene,
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
-  // check for conversion errors
+  // asset
+  if (js.contains("asset")) {
+    auto& ejs = js.at("asset");
+    if (!get_value(ejs, "copyright", scene->copyright)) return false;
+  }
+
   // cameras
   if (js.contains("cameras")) {
     for (auto& [name, ejs] : js.at("cameras").items()) {
@@ -1379,7 +1385,7 @@ static bool load_json_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  scene->name = filename;
+  if(scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1423,7 +1429,13 @@ static bool save_json_scene(const std::string& filename,
 
   // save yaml file
   auto js     = json::object();
-  js["asset"] = json::object();
+  
+  // asset
+  {
+    auto& ejs = js["asset"];
+    ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+    add_opt(ejs, "copyright", scene->copyright, ""s);
+  }
 
   auto def_cam = camera{};
   if (!scene->cameras.empty()) js["cameras"] = json::object();
@@ -1730,7 +1742,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  scene->name = filename;
+  if(scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1908,7 +1920,6 @@ static bool load_ply_scene(const std::string& filename, ysio::model* scene,
     return false;
 
   // fix scene
-  scene->name = filename;
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1988,6 +1999,12 @@ static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
 
   // handle progress
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+
+  // convert asset
+  {
+    auto gast = &gltf->asset;
+    if(gast->copyright) scene->copyright = gast->copyright;
+  }  
 
   // convert cameras
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
@@ -2329,7 +2346,7 @@ static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  scene->name = filename;
+  if(scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2517,7 +2534,7 @@ static bool load_pbrt_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  scene->name = filename;
+  if(scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);

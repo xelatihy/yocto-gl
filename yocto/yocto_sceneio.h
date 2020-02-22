@@ -222,7 +222,7 @@ struct environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct model {
-  std::string                     name         = "";
+  // scene elements
   std::vector<ysio::camera*>      cameras      = {};
   std::vector<ysio::object*>      objects      = {};
   std::vector<ysio::environment*> environments = {};
@@ -231,6 +231,12 @@ struct model {
   std::vector<ysio::texture*>     textures     = {};
   std::vector<ysio::material*>    materials    = {};
   std::vector<ysio::instance*>    instances    = {};
+
+  // additional information
+  std::string name = "";
+  std::string copyright = "";
+
+  // cleanup
   ~model();
 };
 

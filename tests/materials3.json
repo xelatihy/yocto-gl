@@ -1,4 +1,7 @@
 {
+  "asset": {
+    "copyright": "Model by Fabio Pellacini from github.com/~xelatihy/yocto-gl"
+  },
   "cameras": {
     "default": {
       "lens": 0.1,

@@ -178,6 +178,11 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        copyright_options = ''
+        if os.path.exists(f'{dirname}/AUTHOR.txt'):
+            with open(f'{dirname}/AUTHOR.txt') as f: 
+                copyright = f.read().strip()
+            copyright_options += f'--copyright "{copyright}"'
         obj_options = ''
         if 'bunny2' in dirname and outformat == 'obj': obj_options = '--obj-instances'
         if 'ecosys' in dirname and outformat == 'obj': obj_options = '--obj-instances'
@@ -197,7 +202,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
             if format != 'dijson':
-                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {obj_options} {filename}'
+                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {obj_options} {filename} {copyright_options}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
             else:
