@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -89,13 +89,9 @@ int main(int argc, const char* argv[]) {
   // update display
   update_display(app);
 
-  // create window
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_glwindow(win, {1280, 720}, "yimgviews", false);
-
-  // set callbacks
-  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
+  // callbacks
+  auto callbacks    = ygui::ui_callbacks{};
+  callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
@@ -105,24 +101,20 @@ int main(int argc, const char* argv[]) {
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_glimage(app->glimage, app->glparams);
-  });
-  set_uiupdate_callback(
-      win, [app](ygui::window* win, const ygui::input& input) {
-        // handle mouse
-        if (input.mouse_left) {
-          app->glparams.center += input.mouse_pos - input.mouse_last;
-        }
-        if (input.mouse_right) {
-          app->glparams.scale *= powf(
-              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-        }
-      });
+  };
+  callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
+    // handle mouse
+    if (input.mouse_left) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  };
 
   // run ui
-  run_ui(win);
-
-  // cleanup
-  clear_glwindow(win);
+  run_ui({1280, 720}, "yimgviews", callbacks);
 
   // done
   return 0;

@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -724,54 +724,46 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", true);
-
   // callbacks
-  set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  auto callbacks    = ygui::ui_callbacks{};
+  callbacks.draw_cb = [apps](ygui::window* win, const ygui::input& input) {
     draw(win, apps, input);
-  });
-  set_widgets_callback(
-      win, [apps](ygui::window* win, const ygui::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_drop_callback(
-      win, [apps](ygui::window* win, const std::vector<string>& paths,
-               const ygui::input& input) {
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
-  set_update_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  };
+  callbacks.widgets_cb = [apps](ygui::window* win, const ygui::input& input) {
+    draw_widgets(win, apps, input);
+  };
+  callbacks.drop_cb = [apps](ygui::window*           win,
+                          const std::vector<string>& paths,
+                          const ygui::input&         input) {
+    for (auto& path : paths) load_scene_async(apps, path);
+  };
+  callbacks.update_cb = [apps](ygui::window* win, const ygui::input& input) {
     update(win, apps);
-  });
-  set_uiupdate_callback(
-      win, [apps](ygui::window* win, const ygui::input& input) {
-        if (!apps->selected || !apps->selected->ok) return;
-        auto app = apps->selected;
+  };
+  callbacks.uiupdate_cb = [apps](ygui::window* win, const ygui::input& input) {
+    if (!apps->selected || !apps->selected->ok) return;
+    auto app = apps->selected;
 
-        // handle mouse and keyboard for navigation
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-            !input.widgets_active) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-          update_turntable(
-              app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
-          set_frame(app->glcamera, app->iocamera->frame);
-        }
-      });
+    // handle mouse and keyboard for navigation
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      update_turntable(
+          app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
+      set_frame(app->glcamera, app->iocamera->frame);
+    }
+  };
 
   // run ui
-  run_ui(win);
-
-  // clear
-  clear_glwindow(win);
+  run_ui({1280 + 320, 720}, "yscnview", callbacks);
 
   // done
   return 0;

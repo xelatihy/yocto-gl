@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -819,29 +819,23 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
-  // window
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
-
   // callbacks
-  set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  auto callbacks    = ygui::ui_callbacks{};
+  callbacks.draw_cb = [apps](ygui::window* win, const ygui::input& input) {
     draw(win, apps, input);
-  });
-  set_widgets_callback(
-      win, [apps](ygui::window* win, const ygui::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_drop_callback(
-      win, [apps](ygui::window* win, const std::vector<std::string>& paths,
-               const ygui::input& input) {
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
-  set_update_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  };
+  callbacks.widgets_cb = [apps](ygui::window* win, const ygui::input& input) {
+    draw_widgets(win, apps, input);
+  };
+  callbacks.drop_cb = [apps](ygui::window*                win,
+                          const std::vector<std::string>& paths,
+                          const ygui::input&              input) {
+    for (auto& path : paths) load_scene_async(apps, path);
+  };
+  callbacks.update_cb = [apps](ygui::window* win, const ygui::input& input) {
     update(win, apps);
-  });
-  set_uiupdate_callback(win, [apps](
-                                 ygui::window* win, const ygui::input& input) {
+  };
+  callbacks.uiupdate_cb = [apps](ygui::window* win, const ygui::input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 
@@ -885,13 +879,10 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
-  });
+  };
 
   // run ui
-  run_ui(win);
-
-  // clear
-  clear_glwindow(win);
+  run_ui({1280 + 320, 720}, "yscnitrace", callbacks);
 
   // done
   return 0;

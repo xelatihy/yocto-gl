@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -313,46 +313,37 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);
 
-  // window
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yimview", true);
-
   // callbacks
-  set_update_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  auto callbacks      = ygui::ui_callbacks{};
+  callbacks.update_cb = [apps](ygui::window* win, const ygui::input& input) {
     update(win, apps);
-  });
-  set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
+  };
+  callbacks.draw_cb = [apps](ygui::window* win, const ygui::input& input) {
     draw(win, apps, input);
-  });
-  set_widgets_callback(
-      win, [apps](ygui::window* win, const ygui::input& input) {
-        draw_widgets(win, apps, input);
-      });
-  set_uiupdate_callback(
-      win, [apps](ygui::window* win, const ygui::input& input) {
-        if (!apps->selected) return;
-        auto app = apps->selected;
-        // handle mouse
-        if (input.mouse_left && !input.widgets_active) {
-          app->glparams.center += input.mouse_pos - input.mouse_last;
-        }
-        if (input.mouse_right && !input.widgets_active) {
-          app->glparams.scale *= powf(
-              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-        }
-      });
-  set_drop_callback(
-      win, [apps](ygui::window* win, const std::vector<std::string>& paths,
-               const ygui::input& input) {
-        for (auto path : paths) load_image_async(apps, path);
-      });
+  };
+  callbacks.widgets_cb = [apps](ygui::window* win, const ygui::input& input) {
+    draw_widgets(win, apps, input);
+  };
+  callbacks.uiupdate_cb = [apps](ygui::window* win, const ygui::input& input) {
+    if (!apps->selected) return;
+    auto app = apps->selected;
+    // handle mouse
+    if (input.mouse_left && !input.widgets_active) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right && !input.widgets_active) {
+      app->glparams.scale *= powf(
+          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  };
+  callbacks.drop_cb = [apps](ygui::window*                win,
+                          const std::vector<std::string>& paths,
+                          const ygui::input&              input) {
+    for (auto path : paths) load_image_async(apps, path);
+  };
 
   // run ui
-  run_ui(win);
-
-  // cleanup
-  clear_glwindow(win);
+  run_ui({1280 + 320, 720}, "yimview", callbacks);
 
   // done
   return 0;

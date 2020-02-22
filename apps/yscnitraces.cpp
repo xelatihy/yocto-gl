@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2019 Fabio Pellacini
+// Copyright (c) 2016 -- 2020 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -287,13 +287,9 @@ int main(int argc, const char* argv[]) {
   // allocate buffers
   reset_display(app);
 
-  // window
-  auto win_guard = std::make_unique<ygui::window>();
-  auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
-
   // callbacks
-  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
+  auto callbacks    = ygui::ui_callbacks{};
+  callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
     if (!is_initialized(app->glimage)) init_glimage(app->glimage);
     if (!app->render_counter)
       set_glimage(app->glimage, app->display, false, false);
@@ -304,61 +300,57 @@ int main(int argc, const char* argv[]) {
     draw_glimage(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
-  });
-  set_char_callback(win,
-      [app](ygui::window* win, unsigned int key, const ygui::input& input) {
-        switch (key) {
-          case 'c': {
-            auto ncameras = (int)app->scene->cameras.size();
-            for (auto pos = 0; pos < ncameras; pos++) {
-              if (app->scene->cameras[pos] == app->camera) {
-                app->camera = app->scene->cameras[(pos + 1) % ncameras];
-                reset_display(app);
-                break;
-              }
-            }
-          } break;
-          case 'f':
-            app->params.sampler = ytrc::sampler_type::falsecolor;
+  };
+  callbacks.char_cb = [app](ygui::window* win, unsigned int key,
+                          const ygui::input& input) {
+    switch (key) {
+      case 'c': {
+        auto ncameras = (int)app->scene->cameras.size();
+        for (auto pos = 0; pos < ncameras; pos++) {
+          if (app->scene->cameras[pos] == app->camera) {
+            app->camera = app->scene->cameras[(pos + 1) % ncameras];
             reset_display(app);
             break;
-          case 'p':
-            app->params.sampler = ytrc::sampler_type::path;
-            reset_display(app);
-            break;
-          case 'F':
-            app->params.falsecolor = (ytrc::falsecolor_type)(
-                ((int)app->params.falsecolor + 1) %
-                (int)ytrc::sampler_names.size());
-            reset_display(app);
-            break;
+          }
         }
-      });
-  set_uiupdate_callback(
-      win, [app](ygui::window* win, const ygui::input& input) {
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-                  200.0f;
-          pan.x = -pan.x;
-          update_turntable(
-              app->camera->frame, app->camera->focus, rotate, dolly, pan);
-          reset_display(app);
-        }
-      });
+      } break;
+      case 'f':
+        app->params.sampler = ytrc::sampler_type::falsecolor;
+        reset_display(app);
+        break;
+      case 'p':
+        app->params.sampler = ytrc::sampler_type::path;
+        reset_display(app);
+        break;
+      case 'F':
+        app->params.falsecolor = (ytrc::falsecolor_type)(
+            ((int)app->params.falsecolor + 1) %
+            (int)ytrc::sampler_names.size());
+        reset_display(app);
+        break;
+    }
+  };
+  callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+              200.0f;
+      pan.x = -pan.x;
+      update_turntable(
+          app->camera->frame, app->camera->focus, rotate, dolly, pan);
+      reset_display(app);
+    }
+  };
 
   // run ui
-  run_ui(win);
-
-  // clear
-  clear_glwindow(win);
+  run_ui({1280 + 320, 720}, "yscnitraces", callbacks);
 
   // done
   return 0;

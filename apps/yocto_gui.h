@@ -334,7 +334,7 @@ void draw_scene(ygui::scene* scene, ygui::camera* camera, const vec4i& viewport,
 }  // namespace ygui
 
 // -----------------------------------------------------------------------------
-// OPENGL WINDOW
+// UI APPLICATION
 // -----------------------------------------------------------------------------
 namespace ygui {
 
@@ -362,29 +362,55 @@ struct input {
 };
 
 // Draw callback called every frame and when resizing
-using draw_callback = std::function<void(window*, const input& input)>;
+using draw_callback = std::function<void(ygui::window*, const input& input)>;
 // Draw callback for drawing widgets
-using widgets_callback = std::function<void(window*, const input& input)>;
+using widgets_callback = std::function<void(ygui::window*, const input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback = std::function<void(
     window*, const std::vector<std::string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
-using key_callback =
-    std::function<void(window*, int key, bool pressed, const input& input)>;
+using key_callback = std::function<void(
+    ygui::window*, int key, bool pressed, const input& input)>;
 // Char callback that returns ASCII key
 using char_callback =
-    std::function<void(window*, unsigned int key, const input& input)>;
+    std::function<void(ygui::window*, unsigned int key, const input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_callback =
-    std::function<void(window*, bool left, bool pressed, const input& input)>;
+using click_callback = std::function<void(
+    ygui::window*, bool left, bool pressed, const input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_callback =
-    std::function<void(window*, float amount, const input& input)>;
+    std::function<void(ygui::window*, float amount, const input& input)>;
 // Update functions called every frame
-using uiupdate_callback = std::function<void(window*, const input& input)>;
+using uiupdate_callback =
+    std::function<void(ygui::window*, const input& input)>;
 // Update functions called every frame
-using update_callback = std::function<void(window*, const input& input)>;
+using update_callback = std::function<void(ygui::window*, const input& input)>;
+
+// User interface callcaks
+struct ui_callbacks {
+  draw_callback     draw_cb     = {};
+  widgets_callback  widgets_cb  = {};
+  drop_callback     drop_cb     = {};
+  key_callback      key_cb      = {};
+  char_callback     char_cb     = {};
+  click_callback    click_cb    = {};
+  scroll_callback   scroll_cb   = {};
+  update_callback   update_cb   = {};
+  uiupdate_callback uiupdate_cb = {};
+};
+
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const std::string& title,
+    const ui_callbacks& callbaks, int widgets_width = 320,
+    bool widgets_left = true);
+
+}  // namespace ygui
+
+// -----------------------------------------------------------------------------
+// UI WINDOW
+// -----------------------------------------------------------------------------
+namespace ygui {
 
 // OpenGL window wrapper
 struct window {
@@ -406,26 +432,26 @@ struct window {
 };
 
 // Windows initialization
-void init_glwindow(window* win, const vec2i& size, const std::string& title,
+void init_window(ygui::window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
-void clear_glwindow(window* win);
+void clear_window(ygui::window* win);
 
 // Set callbacks
-void set_draw_callback(window* win, draw_callback draw_cb);
-void set_widgets_callback(window* win, widgets_callback widgets_cb);
-void set_drop_callback(window* win, drop_callback drop_cb);
-void set_key_callback(window* win, key_callback cb);
-void set_char_callback(window* win, char_callback cb);
-void set_click_callback(window* win, click_callback cb);
-void set_scroll_callback(window* win, scroll_callback cb);
-void set_uiupdate_callback(window* win, uiupdate_callback cb);
-void set_update_callback(window* win, update_callback cb);
+void set_draw_callback(ygui::window* win, draw_callback draw_cb);
+void set_widgets_callback(ygui::window* win, widgets_callback widgets_cb);
+void set_drop_callback(ygui::window* win, drop_callback drop_cb);
+void set_key_callback(ygui::window* win, key_callback cb);
+void set_char_callback(ygui::window* win, char_callback cb);
+void set_click_callback(ygui::window* win, click_callback cb);
+void set_scroll_callback(ygui::window* win, scroll_callback cb);
+void set_uiupdate_callback(ygui::window* win, uiupdate_callback cb);
+void set_update_callback(ygui::window* win, update_callback cb);
 
 // Run loop
-void run_ui(window* win);
-void set_close(window* win, bool close);
+void run_ui(ygui::window* win);
+void set_close(ygui::window* win, bool close);
 
 }  // namespace ygui
 
@@ -434,17 +460,17 @@ void set_close(window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace ygui {
 
-bool begin_glheader(window* win, const char* title);
-void end_glheader(window* win);
+bool begin_glheader(ygui::window* win, const char* title);
+void end_glheader(ygui::window* win);
 
-void draw_label(window* win, const char* lbl, const std::string& text);
+void draw_label(ygui::window* win, const char* lbl, const std::string& text);
 
-void draw_separator(window* win);
-void continue_glline(window* win);
+void draw_separator(ygui::window* win);
+void continue_glline(ygui::window* win);
 
-bool draw_button(window* win, const char* lbl, bool enabled = true);
+bool draw_button(ygui::window* win, const char* lbl, bool enabled = true);
 
-bool draw_textinput(window* win, const char* lbl, std::string& value);
+bool draw_textinput(ygui::window* win, const char* lbl, std::string& value);
 
 bool draw_slider(
     window* win, const char* lbl, float& value, float min, float max);
@@ -455,60 +481,64 @@ bool draw_slider(
 bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max);
 
-bool draw_slider(window* win, const char* lbl, int& value, int min, int max);
-bool draw_slider(window* win, const char* lbl, vec2i& value, int min, int max);
-bool draw_slider(window* win, const char* lbl, vec3i& value, int min, int max);
-bool draw_slider(window* win, const char* lbl, vec4i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, int& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec4i& value, int min, int max);
 
-bool draw_dragger(window* win, const char* lbl, float& value,
+bool draw_dragger(ygui::window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(window* win, const char* lbl, vec2f& value,
+bool draw_dragger(ygui::window* win, const char* lbl, vec2f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(window* win, const char* lbl, vec3f& value,
+bool draw_dragger(ygui::window* win, const char* lbl, vec3f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(window* win, const char* lbl, vec4f& value,
+bool draw_dragger(ygui::window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(window* win, const char* lbl, int& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec2i& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec3i& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(window* win, const char* lbl, vec4i& value, float speed = 1,
-    int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, int& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec2i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec3i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec4i& value,
+    float speed = 1, int min = 0, int max = 0);
 
-bool draw_checkbox(window* win, const char* lbl, bool& value);
+bool draw_checkbox(ygui::window* win, const char* lbl, bool& value);
 
-bool draw_coloredit(window* win, const char* lbl, vec3f& value);
-bool draw_coloredit(window* win, const char* lbl, vec4f& value);
+bool draw_coloredit(ygui::window* win, const char* lbl, vec3f& value);
+bool draw_coloredit(ygui::window* win, const char* lbl, vec4f& value);
 
-bool draw_hdrcoloredit(window* win, const char* lbl, vec3f& value);
-bool draw_hdrcoloredit(window* win, const char* lbl, vec4f& value);
+bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec3f& value);
+bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(window* win, const char* lbl, int& idx,
+bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
     const std::vector<std::string>& labels);
-bool draw_combobox(window* win, const char* lbl, std::string& value,
+bool draw_combobox(ygui::window* win, const char* lbl, std::string& value,
     const std::vector<std::string>& labels);
-bool draw_combobox(window* win, const char* lbl, int& idx, int num,
+bool draw_combobox(ygui::window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
-inline bool draw_combobox(window* win, const char* lbl, int& idx,
+inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
     const std::vector<T>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(window* win, const char* lbl, int& idx,
+inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
     const std::vector<T*>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(window* win, const char* lbl, T*& value,
+inline bool draw_combobox(ygui::window* win, const char* lbl, T*& value,
     const std::vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -522,14 +552,14 @@ inline bool draw_combobox(window* win, const char* lbl, T*& value,
   return edited;
 }
 template <typename T>
-inline bool draw_combobox(window* win, const char* lbl, int& idx,
+inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
     const std::vector<std::shared_ptr<T>>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(window* win, const char* lbl,
+inline bool draw_combobox(ygui::window* win, const char* lbl,
     std::shared_ptr<T>& value, const std::vector<std::shared_ptr<T>>& vals,
     bool include_null = false) {
   auto idx = -1;
@@ -544,31 +574,31 @@ inline bool draw_combobox(window* win, const char* lbl,
   return edited;
 }
 
-void draw_progressbar(window* win, const char* lbl, float fraction);
+void draw_progressbar(ygui::window* win, const char* lbl, float fraction);
 
 void draw_histogram(
-    window* win, const char* lbl, const std::vector<float>& values);
+    ygui::window* win, const char* lbl, const std::vector<float>& values);
 void draw_histogram(
-    window* win, const char* lbl, const std::vector<vec2f>& values);
+    ygui::window* win, const char* lbl, const std::vector<vec2f>& values);
 void draw_histogram(
-    window* win, const char* lbl, const std::vector<vec3f>& values);
+    ygui::window* win, const char* lbl, const std::vector<vec3f>& values);
 void draw_histogram(
-    window* win, const char* lbl, const std::vector<vec4f>& values);
+    ygui::window* win, const char* lbl, const std::vector<vec4f>& values);
 
-bool draw_messages(window* win);
-void push_message(window* win, const std::string& message);
-bool draw_filedialog(window* win, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
+bool draw_messages(ygui::window* win);
+void push_message(ygui::window* win, const std::string& message);
+bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
+    bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter);
-bool draw_filedialog_button(window* win, const char* button_lbl,
+bool draw_filedialog_button(ygui::window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
     const std::string& dirname, const std::string& filename,
     const std::string& filter);
 
-void log_info(window* win, const std::string& msg);
-void log_error(window* win, const std::string& msg);
-void clear_log(window* win);
-void draw_log(window* win);
+void log_info(ygui::window* win, const std::string& msg);
+void log_error(ygui::window* win, const std::string& msg);
+void clear_log(ygui::window* win);
+void draw_log(ygui::window* win);
 
 }  // namespace ygui
 
