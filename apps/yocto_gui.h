@@ -334,7 +334,7 @@ void draw_scene(ygui::scene* scene, ygui::camera* camera, const vec4i& viewport,
 }  // namespace ygui
 
 // -----------------------------------------------------------------------------
-// OPENGL WINDOW
+// UI APPLICATION
 // -----------------------------------------------------------------------------
 namespace ygui {
 
@@ -398,6 +398,19 @@ struct ui_callbacks {
   update_callback   update_cb     = {};
   uiupdate_callback uiupdate_cb   = {};
 };
+
+// run the user interface with the give callbacks
+void run_ui(const vec2i& size, const std::string& title,
+    bool widgets, const ui_callbacks& callbaks,
+    int widgets_width = 320, bool widgets_left = true);
+
+}
+
+// -----------------------------------------------------------------------------
+// UI WINDOW
+// -----------------------------------------------------------------------------
+namespace ygui {
+
 
 // OpenGL window wrapper
 struct window {
