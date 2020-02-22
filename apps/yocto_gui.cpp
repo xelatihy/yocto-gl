@@ -1329,13 +1329,11 @@ namespace ygui {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
-    const ui_callbacks& callbaks, 
-    int widgets_width, bool widgets_left) {
-
+    const ui_callbacks& callbaks, int widgets_width, bool widgets_left) {
   auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
-  init_window(win, size, title, (bool)callbaks.widgets_cb, 
-    widgets_width, widgets_left);
+  init_window(
+      win, size, title, (bool)callbaks.widgets_cb, widgets_width, widgets_left);
 
   set_draw_callback(win, callbaks.draw_cb);
   set_widgets_callback(win, callbaks.widgets_cb);
@@ -1354,7 +1352,7 @@ void run_ui(const vec2i& size, const std::string& title,
   clear_window(win);
 }
 
-}
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
@@ -1567,7 +1565,9 @@ void run_ui(ygui::window* win) {
   }
 }
 
-void set_draw_callback(ygui::window* win, draw_callback cb) { win->draw_cb = cb; }
+void set_draw_callback(ygui::window* win, draw_callback cb) {
+  win->draw_cb = cb;
+}
 void set_widgets_callback(ygui::window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
@@ -1575,8 +1575,12 @@ void set_drop_callback(ygui::window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
 void set_key_callback(ygui::window* win, key_callback cb) { win->key_cb = cb; }
-void set_char_callback(ygui::window* win, char_callback cb) { win->char_cb = cb; }
-void set_click_callback(ygui::window* win, click_callback cb) { win->click_cb = cb; }
+void set_char_callback(ygui::window* win, char_callback cb) {
+  win->char_cb = cb;
+}
+void set_click_callback(ygui::window* win, click_callback cb) {
+  win->click_cb = cb;
+}
 void set_scroll_callback(ygui::window* win, scroll_callback cb) {
   win->scroll_cb = cb;
 }
@@ -1631,7 +1635,8 @@ bool is_glmodal_open(ygui::window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(ygui::window* win, const char* lbl, const std::string& message) {
+bool draw_message(
+    ygui::window* win, const char* lbl, const std::string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1648,7 +1653,7 @@ bool draw_message(ygui::window* win, const char* lbl, const std::string& message
 
 std::deque<std::string> _message_queue = {};
 std::mutex              _message_mutex;
-void                    push_message(ygui::window* win, const std::string& message) {
+void push_message(ygui::window* win, const std::string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1799,8 +1804,8 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
+bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
+    bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter) {
   static auto states = std::unordered_map<std::string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
@@ -1917,16 +1922,20 @@ bool draw_slider(
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
-bool draw_slider(ygui::window* win, const char* lbl, int& value, int min, int max) {
+bool draw_slider(
+    ygui::window* win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
-bool draw_slider(ygui::window* win, const char* lbl, vec2i& value, int min, int max) {
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
-bool draw_slider(ygui::window* win, const char* lbl, vec3i& value, int min, int max) {
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
-bool draw_slider(ygui::window* win, const char* lbl, vec4i& value, int min, int max) {
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 

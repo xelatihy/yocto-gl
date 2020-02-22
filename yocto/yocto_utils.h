@@ -26,7 +26,8 @@
 // 2. use `enumerate()` to iteratare over a std::vector and number its elements
 // 3. use opeartors + to either concatenate two vectors or a std::vector and an
 //    element
-// 4. use operators += to append an element or a std::vector to a given std::vector
+// 4. use operators += to append an element or a std::vector to a given
+// std::vector
 //
 //
 // ## Concurrency utilities
@@ -113,7 +114,8 @@ inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b);
 template <typename T>
 inline std::vector<T>& operator+=(std::vector<T>& a, const T& b);
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b);
+inline std::vector<T> operator+(
+    const std::vector<T>& a, const std::vector<T>& b);
 template <typename T>
 inline std::vector<T> operator+(const std::vector<T>& a, const T& b);
 
@@ -253,7 +255,8 @@ inline std::vector<T>& operator+=(std::vector<T>& a, const T& b) {
   return a;
 }
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b) {
+inline std::vector<T> operator+(
+    const std::vector<T>& a, const std::vector<T>& b) {
   auto c = a;
   return c += b;
 }

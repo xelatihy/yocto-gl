@@ -369,48 +369,48 @@ using widgets_callback = std::function<void(ygui::window*, const input& input)>;
 using drop_callback = std::function<void(
     window*, const std::vector<std::string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
-using key_callback =
-    std::function<void(ygui::window*, int key, bool pressed, const input& input)>;
+using key_callback = std::function<void(
+    ygui::window*, int key, bool pressed, const input& input)>;
 // Char callback that returns ASCII key
 using char_callback =
     std::function<void(ygui::window*, unsigned int key, const input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_callback =
-    std::function<void(ygui::window*, bool left, bool pressed, const input& input)>;
+using click_callback = std::function<void(
+    ygui::window*, bool left, bool pressed, const input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_callback =
     std::function<void(ygui::window*, float amount, const input& input)>;
 // Update functions called every frame
-using uiupdate_callback = std::function<void(ygui::window*, const input& input)>;
+using uiupdate_callback =
+    std::function<void(ygui::window*, const input& input)>;
 // Update functions called every frame
 using update_callback = std::function<void(ygui::window*, const input& input)>;
 
 // User interface callcaks
 struct ui_callbacks {
-  draw_callback     draw_cb       = {};
-  widgets_callback  widgets_cb    = {};
-  drop_callback     drop_cb       = {};
-  key_callback      key_cb        = {};
-  char_callback     char_cb       = {};
-  click_callback    click_cb      = {};
-  scroll_callback   scroll_cb     = {};
-  update_callback   update_cb     = {};
-  uiupdate_callback uiupdate_cb   = {};
+  draw_callback     draw_cb     = {};
+  widgets_callback  widgets_cb  = {};
+  drop_callback     drop_cb     = {};
+  key_callback      key_cb      = {};
+  char_callback     char_cb     = {};
+  click_callback    click_cb    = {};
+  scroll_callback   scroll_cb   = {};
+  update_callback   update_cb   = {};
+  uiupdate_callback uiupdate_cb = {};
 };
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
-    const ui_callbacks& callbaks, 
-    int widgets_width = 320, bool widgets_left = true);
+    const ui_callbacks& callbaks, int widgets_width = 320,
+    bool widgets_left = true);
 
-}
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
 namespace ygui {
-
 
 // OpenGL window wrapper
 struct window {
@@ -481,10 +481,14 @@ bool draw_slider(
 bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max);
 
-bool draw_slider(ygui::window* win, const char* lbl, int& value, int min, int max);
-bool draw_slider(ygui::window* win, const char* lbl, vec2i& value, int min, int max);
-bool draw_slider(ygui::window* win, const char* lbl, vec3i& value, int min, int max);
-bool draw_slider(ygui::window* win, const char* lbl, vec4i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, int& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_slider(
+    ygui::window* win, const char* lbl, vec4i& value, int min, int max);
 
 bool draw_dragger(ygui::window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
@@ -495,14 +499,14 @@ bool draw_dragger(ygui::window* win, const char* lbl, vec3f& value,
 bool draw_dragger(ygui::window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(ygui::window* win, const char* lbl, int& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec2i& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec3i& value, float speed = 1,
-    int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec4i& value, float speed = 1,
-    int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, int& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec2i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec3i& value,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(ygui::window* win, const char* lbl, vec4i& value,
+    float speed = 1, int min = 0, int max = 0);
 
 bool draw_checkbox(ygui::window* win, const char* lbl, bool& value);
 
@@ -583,8 +587,8 @@ void draw_histogram(
 
 bool draw_messages(ygui::window* win);
 void push_message(ygui::window* win, const std::string& message);
-bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
+bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
+    bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter);
 bool draw_filedialog_button(ygui::window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,

@@ -288,7 +288,7 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // callbacks
-  auto callbacks = ygui::ui_callbacks{};
+  auto callbacks    = ygui::ui_callbacks{};
   callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
     if (!is_initialized(app->glimage)) init_glimage(app->glimage);
     if (!app->render_counter)
@@ -301,52 +301,53 @@ int main(int argc, const char* argv[]) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   };
-  callbacks.char_cb = [app](ygui::window* win, unsigned int key, const ygui::input& input) {
-        switch (key) {
-          case 'c': {
-            auto ncameras = (int)app->scene->cameras.size();
-            for (auto pos = 0; pos < ncameras; pos++) {
-              if (app->scene->cameras[pos] == app->camera) {
-                app->camera = app->scene->cameras[(pos + 1) % ncameras];
-                reset_display(app);
-                break;
-              }
-            }
-          } break;
-          case 'f':
-            app->params.sampler = ytrc::sampler_type::falsecolor;
+  callbacks.char_cb = [app](ygui::window* win, unsigned int key,
+                          const ygui::input& input) {
+    switch (key) {
+      case 'c': {
+        auto ncameras = (int)app->scene->cameras.size();
+        for (auto pos = 0; pos < ncameras; pos++) {
+          if (app->scene->cameras[pos] == app->camera) {
+            app->camera = app->scene->cameras[(pos + 1) % ncameras];
             reset_display(app);
             break;
-          case 'p':
-            app->params.sampler = ytrc::sampler_type::path;
-            reset_display(app);
-            break;
-          case 'F':
-            app->params.falsecolor = (ytrc::falsecolor_type)(
-                ((int)app->params.falsecolor + 1) %
-                (int)ytrc::sampler_names.size());
-            reset_display(app);
-            break;
+          }
         }
-      };
+      } break;
+      case 'f':
+        app->params.sampler = ytrc::sampler_type::falsecolor;
+        reset_display(app);
+        break;
+      case 'p':
+        app->params.sampler = ytrc::sampler_type::path;
+        reset_display(app);
+        break;
+      case 'F':
+        app->params.falsecolor = (ytrc::falsecolor_type)(
+            ((int)app->params.falsecolor + 1) %
+            (int)ytrc::sampler_names.size());
+        reset_display(app);
+        break;
+    }
+  };
   callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_right)
-            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
-                  200.0f;
-          pan.x = -pan.x;
-          update_turntable(
-              app->camera->frame, app->camera->focus, rotate, dolly, pan);
-          reset_display(app);
-        }
-      };
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
+              200.0f;
+      pan.x = -pan.x;
+      update_turntable(
+          app->camera->frame, app->camera->focus, rotate, dolly, pan);
+      reset_display(app);
+    }
+  };
 
   // run ui
   run_ui({1280 + 320, 720}, "yscnitraces", callbacks);
