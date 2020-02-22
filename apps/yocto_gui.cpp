@@ -1361,7 +1361,7 @@ static void draw_window(ygui::window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_glwindow(ygui::window* win, const vec2i& size, const std::string& title,
+void init_window(ygui::window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -1460,7 +1460,7 @@ void init_glwindow(ygui::window* win, const vec2i& size, const std::string& titl
   }
 }
 
-void clear_glwindow(ygui::window* win) {
+void clear_window(ygui::window* win) {
   glfwDestroyWindow(win->win);
   glfwTerminate();
   win->win = nullptr;

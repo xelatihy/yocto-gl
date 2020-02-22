@@ -291,7 +291,7 @@ void yimshproc(const std::string&                      input_filename,
   // Init window.
   auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yimshproc", true);
+  init_window(win, {1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks
@@ -365,5 +365,5 @@ void yimshproc(const std::string&                      input_filename,
       });
 
   // cleanup
-  clear_glwindow(win);
+  clear_window(win);
 }

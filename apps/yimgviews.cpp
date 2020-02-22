@@ -92,7 +92,7 @@ int main(int argc, const char* argv[]) {
   // create window
   auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
-  init_glwindow(win, {1280, 720}, "yimgviews", false);
+  init_window(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
@@ -122,7 +122,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // cleanup
-  clear_glwindow(win);
+  clear_window(win);
 
   // done
   return 0;

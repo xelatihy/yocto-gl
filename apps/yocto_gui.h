@@ -386,6 +386,19 @@ using uiupdate_callback = std::function<void(ygui::window*, const input& input)>
 // Update functions called every frame
 using update_callback = std::function<void(ygui::window*, const input& input)>;
 
+// User interface callcaks
+struct ui_callbacks {
+  draw_callback     draw_cb       = {};
+  widgets_callback  widgets_cb    = {};
+  drop_callback     drop_cb       = {};
+  key_callback      key_cb        = {};
+  char_callback     char_cb       = {};
+  click_callback    click_cb      = {};
+  scroll_callback   scroll_cb     = {};
+  update_callback   update_cb     = {};
+  uiupdate_callback uiupdate_cb   = {};
+};
+
 // OpenGL window wrapper
 struct window {
   GLFWwindow*       win           = nullptr;
@@ -406,11 +419,11 @@ struct window {
 };
 
 // Windows initialization
-void init_glwindow(ygui::window* win, const vec2i& size, const std::string& title,
+void init_window(ygui::window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
-void clear_glwindow(ygui::window* win);
+void clear_window(ygui::window* win);
 
 // Set callbacks
 void set_draw_callback(ygui::window* win, draw_callback draw_cb);

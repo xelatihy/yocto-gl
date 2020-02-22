@@ -822,7 +822,7 @@ int main(int argc, const char* argv[]) {
   // window
   auto win_guard = std::make_unique<ygui::window>();
   auto win       = win_guard.get();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", true);
+  init_window(win, {1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
   set_draw_callback(win, [apps](ygui::window* win, const ygui::input& input) {
@@ -891,7 +891,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // clear
-  clear_glwindow(win);
+  clear_window(win);
 
   // done
   return 0;
