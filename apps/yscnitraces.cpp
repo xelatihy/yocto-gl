@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
