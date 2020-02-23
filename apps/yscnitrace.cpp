@@ -494,7 +494,7 @@ void draw_widgets(
     load_scene_async(apps, load_path);
     load_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save", save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
@@ -503,7 +503,7 @@ void draw_widgets(
     save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save image",
           apps->selected && apps->selected->ok, "save image", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
@@ -513,7 +513,7 @@ void draw_widgets(
     save_image(app->imagename, app->display, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
@@ -521,7 +521,7 @@ void draw_widgets(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
@@ -551,7 +551,7 @@ void draw_widgets(
         win, "false color", (int&)tparams.falsecolor, ytrc::falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-    continue_glline(win);
+    continue_line(win);
     edited += draw_checkbox(win, "filter", tparams.tentfilter);
     edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
     edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
@@ -571,13 +571,13 @@ void draw_widgets(
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
-      continue_glline(win);
+      continue_line(win);
       if (draw_button(win, "print cams")) {
         for (auto iocamera : app->ioscene->cameras) {
           print_obj_camera(iocamera);
         }
       }
-      continue_glline(win);
+      continue_line(win);
       if (draw_button(win, "print stats")) {
         for (auto stat : scene_stats(app->ioscene)) ycli::print_info(stat);
       }

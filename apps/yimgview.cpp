@@ -166,7 +166,7 @@ void draw_widgets(
     load_image_async(apps, load_path);
     load_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save image", save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(),
@@ -176,7 +176,7 @@ void draw_widgets(
     save_image(app->outname, app->display, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
@@ -184,7 +184,7 @@ void draw_widgets(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
@@ -211,9 +211,9 @@ void draw_widgets(
     edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
     edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
     edited += draw_checkbox(win, "filmic", params.filmic);
-    continue_glline(win);
+    continue_line(win);
     edited += draw_checkbox(win, "srgb", params.srgb);
-    continue_glline(win);
+    continue_line(win);
     if (draw_button(win, "auto wb")) {
       auto wb     = 1 / xyz(app->source_stats.average);
       params.tint = wb / max(wb);

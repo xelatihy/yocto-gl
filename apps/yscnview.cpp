@@ -473,7 +473,7 @@ void draw_widgets(
     load_scene_async(apps, load_path);
     load_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save", save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
@@ -482,7 +482,7 @@ void draw_widgets(
     save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
@@ -490,7 +490,7 @@ void draw_widgets(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
@@ -513,9 +513,9 @@ void draw_widgets(
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "eyelight", params.eyelight);
-    continue_glline(win);
+    continue_line(win);
     draw_checkbox(win, "wireframe", params.wireframe);
-    continue_glline(win);
+    continue_line(win);
     draw_checkbox(win, "edges", params.edges);
     draw_slider(win, "exposure", params.exposure, -10, 10);
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
@@ -529,13 +529,13 @@ void draw_widgets(
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
-    continue_glline(win);
+    continue_line(win);
     if (draw_button(win, "print cams")) {
       for (auto iocamera : app->ioscene->cameras) {
         print_obj_camera(iocamera);
       }
     }
-    continue_glline(win);
+    continue_line(win);
     if (draw_button(win, "print stats")) {
       for (auto stat : scene_stats(app->ioscene)) ycli::print_info(stat);
     }

@@ -466,7 +466,7 @@ void end_header(ygui::window* win);
 void draw_label(ygui::window* win, const char* lbl, const std::string& text);
 
 void draw_separator(ygui::window* win);
-void continue_glline(ygui::window* win);
+void continue_line(ygui::window* win);
 
 bool draw_button(ygui::window* win, const char* lbl, bool enabled = true);
 

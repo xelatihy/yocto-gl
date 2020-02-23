@@ -1893,7 +1893,7 @@ void draw_label(ygui::window* win, const char* lbl, const std::string& label) {
 
 void draw_separator(ygui::window* win) { ImGui::Separator(); }
 
-void continue_glline(ygui::window* win) { ImGui::SameLine(); }
+void continue_line(ygui::window* win) { ImGui::SameLine(); }
 
 bool draw_textinput(ygui::window* win, const char* lbl, std::string& value) {
   char buffer[4096];

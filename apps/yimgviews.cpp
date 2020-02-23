@@ -118,7 +118,7 @@ int main(int argc, const char* argv[]) {
       edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
       edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
       edited += draw_checkbox(win, "filmic", params.filmic);
-      continue_glline(win);
+      continue_line(win);
       edited += draw_checkbox(win, "srgb", params.srgb);
       edited += draw_slider(win, "contrast", params.contrast, 0, 1);
       edited += draw_slider(win, "saturation", params.saturation, 0, 1);

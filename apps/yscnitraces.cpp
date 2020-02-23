@@ -317,7 +317,7 @@ int main(int argc, const char* argv[]) {
         win, "false color", (int&)tparams.falsecolor, ytrc::falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-    continue_glline(win);
+    continue_line(win);
     edited += draw_checkbox(win, "filter", tparams.tentfilter);
     edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
     edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
