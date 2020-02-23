@@ -505,7 +505,7 @@ void draw_widgets(
   }
   if (!apps->selected->ok) return;
   auto app = apps->selected;
-  if (begin_glheader(win, "view")) {
+  if (begin_header(win, "view")) {
     if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       app->glcamera = get_element(
           app->iocamera, app->ioscene->cameras, app->glscene->cameras);
@@ -522,9 +522,9 @@ void draw_widgets(
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (begin_header(win, "inspect")) {
     draw_label(win, "scene", fs::path(app->filename).filename());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
@@ -539,13 +539,13 @@ void draw_widgets(
     if (draw_button(win, "print stats")) {
       for (auto stat : scene_stats(app->ioscene)) ycli::print_info(stat);
     }
-    end_glheader(win);
+    end_header(win);
   }
   auto get_texture = [app](ysio::texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };
-  if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
+  if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
     draw_combobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras);
     if (draw_widgets(win, app->ioscene, app->selected_camera)) {
@@ -556,17 +556,17 @@ void draw_widgets(
       set_lens(glcamera, iocamera->lens, iocamera->aspect, iocamera->film);
       set_nearfar(glcamera, 0.001, 10000);
     }
-    end_glheader(win);
+    end_header(win);
   }
   if (!app->ioscene->environments.empty() &&
-      begin_glheader(win, "environments")) {
+      begin_header(win, "environments")) {
     draw_combobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
     if (draw_widgets(win, app->ioscene, app->selected_environment)) {
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
+  if (!app->ioscene->objects.empty() && begin_header(win, "objects")) {
     draw_combobox(
         win, "object##2", app->selected_object, app->ioscene->objects);
     if (!draw_widgets(win, app->ioscene, app->selected_object)) {
@@ -583,9 +583,9 @@ void draw_widgets(
           globject, get_element(ioobject->instance, app->ioscene->instances,
                         app->glscene->instances));
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
+  if (!app->ioscene->shapes.empty() && begin_header(win, "shapes")) {
     draw_combobox(win, "shape##2", app->selected_shape, app->ioscene->shapes);
     if (!draw_widgets(win, app->ioscene, app->selected_shape)) {
       auto ioshape = app->selected_shape;
@@ -600,9 +600,9 @@ void draw_widgets(
       set_triangles(glshape, ioshape->triangles);
       set_quads(glshape, ioshape->quads);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->materials.empty() && begin_glheader(win, "materials")) {
+  if (!app->ioscene->materials.empty() && begin_header(win, "materials")) {
     draw_combobox(
         win, "material##2", app->selected_material, app->ioscene->materials);
     if (draw_widgets(win, app->ioscene, app->selected_material)) {
@@ -625,9 +625,9 @@ void draw_widgets(
           get_texture(iomaterial->opacity_tex));
       set_normalmap(glmaterial, get_texture(iomaterial->normal_tex));
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
+  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
     draw_combobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
     if (!draw_widgets(win, app->ioscene, app->selected_instance)) {
@@ -636,9 +636,9 @@ void draw_widgets(
           ioinstance, app->ioscene->instances, app->glscene->instances);
       set_frames(glinstance, ioinstance->frames);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->textures.empty() && begin_glheader(win, "textures")) {
+  if (!app->ioscene->textures.empty() && begin_header(win, "textures")) {
     draw_combobox(
         win, "texture##2", app->selected_texture, app->ioscene->textures);
     if (draw_widgets(win, app->ioscene, app->selected_texture)) {
@@ -655,15 +655,15 @@ void draw_widgets(
         set_texture(gltexture, iotexture->scalarb);
       }
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
+  if (!app->ioscene->subdivs.empty() && begin_header(win, "subdivs")) {
     draw_combobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene->subdivs);
     if (!draw_widgets(win, app->ioscene, app->selected_subdiv)) {
       // TODO: subdiv updates not implemented yet
     }
-    end_glheader(win);
+    end_header(win);
   }
 }
 

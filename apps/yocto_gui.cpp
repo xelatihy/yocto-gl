@@ -1618,12 +1618,12 @@ void init_glwidgets(ygui::window* win, int width, bool left) {
   win->widgets_left  = left;
 }
 
-bool begin_glheader(ygui::window* win, const char* lbl) {
+bool begin_header(ygui::window* win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_glheader(ygui::window* win) { ImGui::PopID(); }
+void end_header(ygui::window* win) { ImGui::PopID(); }
 
 void open_glmodal(ygui::window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
 void clear_glmodal(ygui::window* win) { ImGui::CloseCurrentPopup(); }

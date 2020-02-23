@@ -104,12 +104,12 @@ int main(int argc, const char* argv[]) {
   };
   callbacks.widgets_cb = [app](ygui::window* win, const ygui::input& input) {
     auto edited = 0;
-    if (begin_glheader(win, "tonemap")) {
+    if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", app->exposure, -5, 5);
       edited += draw_checkbox(win, "filmic", app->filmic);
-      end_glheader(win);
+      end_header(win);
     }
-    if (begin_glheader(win, "colorgrade")) {
+    if (begin_header(win, "colorgrade")) {
       auto& params = app->params;
       edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
       edited += draw_slider(win, "exposure", params.exposure, -5, 5);
@@ -128,7 +128,7 @@ int main(int argc, const char* argv[]) {
       edited += draw_coloredit(win, "shadows color", params.shadows_color);
       edited += draw_coloredit(win, "midtones color", params.midtones_color);
       edited += draw_coloredit(win, "highlights color", params.highlights_color);
-      end_glheader(win);
+      end_header(win);
     }
     if(edited) {
       update_display(app);

@@ -460,8 +460,8 @@ void set_close(ygui::window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace ygui {
 
-bool begin_glheader(ygui::window* win, const char* title);
-void end_glheader(ygui::window* win);
+bool begin_header(ygui::window* win, const char* title);
+void end_header(ygui::window* win);
 
 void draw_label(ygui::window* win, const char* lbl, const std::string& text);
 

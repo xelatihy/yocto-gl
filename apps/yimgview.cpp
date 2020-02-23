@@ -194,14 +194,14 @@ void draw_widgets(
   if (app->status != "") draw_label(win, "status", app->status);
   if (app->error != "") draw_label(win, "error", app->error);
   if (!app->ok) return;
-  if (begin_glheader(win, "tonemap")) {
+  if (begin_header(win, "tonemap")) {
     auto edited = 0;
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     edited += draw_checkbox(win, "filmic", app->filmic);
     if (edited) update_display(app);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "colorgrade")) {
+  if (begin_header(win, "colorgrade")) {
     auto& params = app->params;
     auto  edited = 0;
     edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
@@ -228,9 +228,9 @@ void draw_widgets(
     edited += draw_coloredit(win, "midtones color", params.midtones_color);
     edited += draw_coloredit(win, "highlights color", params.highlights_color);
     if (edited) update_display(app);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (begin_header(win, "inspect")) {
     draw_label(win, "image", fs::path(app->filename).filename());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
@@ -258,7 +258,7 @@ void draw_widgets(
     draw_dragger(win, "display max", app->display_stats.max);
     draw_dragger(win, "display avg", app->display_stats.average);
     draw_histogram(win, "display histo", app->display_stats.histogram);
-    end_glheader(win);
+    end_header(win);
   }
 }
 
