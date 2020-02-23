@@ -26,10 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_cli.h"
-#include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_trace.h"
+#include "../yocto_gl/yocto_cli.h"
+#include "../yocto_gl/yocto_sceneio.h"
+#include "../yocto_gl/yocto_shape.h"
+#include "../yocto_gl/yocto_trace.h"
 #include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 

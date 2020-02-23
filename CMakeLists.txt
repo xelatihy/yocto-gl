@@ -34,7 +34,7 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS "/EHsc")
 endif(MSVC)
 
-add_subdirectory(yocto)
+add_subdirectory(yocto_gl)
 add_subdirectory(yocto_gui)
 add_subdirectory(apps)
 add_subdirectory(tests)

@@ -28,10 +28,10 @@
 
 #include <memory>
 
-#include "../yocto/yocto_cli.h"
-#include "../yocto/yocto_image.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto_gl/yocto_cli.h"
+#include "../yocto_gl/yocto_image.h"
+#include "../yocto_gl/yocto_math.h"
+#include "../yocto_gl/yocto_sceneio.h"
 using std::string;
 using namespace std::string_literals;
 

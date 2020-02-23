@@ -26,8 +26,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_cli.h"
-#include "../yocto/yocto_image.h"
+#include "../yocto_gl/yocto_cli.h"
+#include "../yocto_gl/yocto_image.h"
 #include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
