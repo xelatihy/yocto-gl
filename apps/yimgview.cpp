@@ -28,7 +28,7 @@
 
 #include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_image.h"
-#include "yocto_gui.h"
+#include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
 #include <atomic>
@@ -166,7 +166,7 @@ void draw_widgets(
     load_image_async(apps, load_path);
     load_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save image", save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(),
@@ -176,7 +176,7 @@ void draw_widgets(
     save_image(app->outname, app->display, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
@@ -184,7 +184,7 @@ void draw_widgets(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
@@ -194,14 +194,14 @@ void draw_widgets(
   if (app->status != "") draw_label(win, "status", app->status);
   if (app->error != "") draw_label(win, "error", app->error);
   if (!app->ok) return;
-  if (begin_glheader(win, "tonemap")) {
+  if (begin_header(win, "tonemap")) {
     auto edited = 0;
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     edited += draw_checkbox(win, "filmic", app->filmic);
     if (edited) update_display(app);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "colorgrade")) {
+  if (begin_header(win, "colorgrade")) {
     auto& params = app->params;
     auto  edited = 0;
     edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
@@ -211,9 +211,9 @@ void draw_widgets(
     edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
     edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
     edited += draw_checkbox(win, "filmic", params.filmic);
-    continue_glline(win);
+    continue_line(win);
     edited += draw_checkbox(win, "srgb", params.srgb);
-    continue_glline(win);
+    continue_line(win);
     if (draw_button(win, "auto wb")) {
       auto wb     = 1 / xyz(app->source_stats.average);
       params.tint = wb / max(wb);
@@ -228,9 +228,9 @@ void draw_widgets(
     edited += draw_coloredit(win, "midtones color", params.midtones_color);
     edited += draw_coloredit(win, "highlights color", params.highlights_color);
     if (edited) update_display(app);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (begin_header(win, "inspect")) {
     draw_label(win, "image", fs::path(app->filename).filename());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
@@ -258,7 +258,7 @@ void draw_widgets(
     draw_dragger(win, "display max", app->display_stats.max);
     draw_dragger(win, "display avg", app->display_stats.average);
     draw_histogram(win, "display histo", app->display_stats.histogram);
-    end_glheader(win);
+    end_header(win);
   }
 }
 

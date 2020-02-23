@@ -30,7 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "yocto_gui.h"
+#include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
 #include <atomic>
@@ -494,7 +494,7 @@ void draw_widgets(
     load_scene_async(apps, load_path);
     load_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save", save_path, true, fs::path(save_path).parent_path(),
           fs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
@@ -503,7 +503,7 @@ void draw_widgets(
     save_scene(app->outname, app->ioscene, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_filedialog_button(win, "save image",
           apps->selected && apps->selected->ok, "save image", save_path, true,
           fs::path(save_path).parent_path(), fs::path(save_path).filename(),
@@ -513,7 +513,7 @@ void draw_widgets(
     save_image(app->imagename, app->display, app->error);
     save_path = "";
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
     if (apps->selected->loader.valid()) return;
     delete apps->selected;
@@ -521,7 +521,7 @@ void draw_widgets(
         std::find(apps->states.begin(), apps->states.end(), apps->selected));
     apps->selected = apps->states.empty() ? nullptr : apps->states.front();
   }
-  continue_glline(win);
+  continue_line(win);
   if (draw_button(win, "quit")) {
     set_close(win, true);
   }
@@ -535,7 +535,7 @@ void draw_widgets(
   }
   if (!apps->selected->ok) return;
   auto app = apps->selected;
-  if (begin_glheader(win, "trace")) {
+  if (begin_header(win, "trace")) {
     auto edited = 0;
     if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       app->camera = get_element(
@@ -551,15 +551,15 @@ void draw_widgets(
         win, "false color", (int&)tparams.falsecolor, ytrc::falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
-    continue_glline(win);
+    continue_line(win);
     edited += draw_checkbox(win, "filter", tparams.tentfilter);
     edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
     edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
-    end_glheader(win);
+    end_header(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (begin_header(win, "inspect")) {
     draw_label(win, "scene", fs::path(app->filename).filename());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
@@ -571,13 +571,13 @@ void draw_widgets(
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
-      continue_glline(win);
+      continue_line(win);
       if (draw_button(win, "print cams")) {
         for (auto iocamera : app->ioscene->cameras) {
           print_obj_camera(iocamera);
         }
       }
-      continue_glline(win);
+      continue_line(win);
       if (draw_button(win, "print stats")) {
         for (auto stat : scene_stats(app->ioscene)) ycli::print_info(stat);
       }
@@ -592,12 +592,12 @@ void draw_widgets(
         draw_coloredit(win, "pixel", zero4f_);
       }
     }
-    end_glheader(win);
+    end_header(win);
   }
   auto get_texture = [app](ysio::texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
-  if (!app->ioscene->cameras.empty() && begin_glheader(win, "cameras")) {
+  if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
     draw_combobox(
         win, "camera##2", app->selected_camera, app->ioscene->cameras, true);
     if (draw_widgets(win, app->ioscene, app->selected_camera)) {
@@ -610,10 +610,10 @@ void draw_widgets(
       set_focus(camera, iocamera->aperture, iocamera->focus);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
   if (!app->ioscene->environments.empty() &&
-      begin_glheader(win, "environments")) {
+      begin_header(win, "environments")) {
     draw_combobox(win, "environment##2", app->selected_environment,
         app->ioscene->environments, true);
     if (draw_widgets(win, app->ioscene, app->selected_environment)) {
@@ -627,9 +627,9 @@ void draw_widgets(
       init_lights(app->scene);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->objects.empty() && begin_glheader(win, "objects")) {
+  if (!app->ioscene->objects.empty() && begin_header(win, "objects")) {
     draw_combobox(
         win, "object##2", app->selected_object, app->ioscene->objects, true);
     if (draw_widgets(win, app->ioscene, app->selected_object)) {
@@ -647,9 +647,9 @@ void draw_widgets(
       update_bvh(app->scene, {object}, {}, {}, app->params);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->shapes.empty() && begin_glheader(win, "shapes")) {
+  if (!app->ioscene->shapes.empty() && begin_header(win, "shapes")) {
     draw_combobox(
         win, "shape##2", app->selected_shape, app->ioscene->shapes, true);
     if (draw_widgets(win, app->ioscene, app->selected_shape)) {
@@ -670,9 +670,9 @@ void draw_widgets(
       update_bvh(app->scene, {}, {shape}, {}, app->params);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->materials.empty() && begin_glheader(win, "materials")) {
+  if (!app->ioscene->materials.empty() && begin_header(win, "materials")) {
     draw_combobox(win, "material##2", app->selected_material,
         app->ioscene->materials, true);
     if (draw_widgets(win, app->ioscene, app->selected_material)) {
@@ -702,9 +702,9 @@ void draw_widgets(
       init_lights(app->scene);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->textures.empty() && begin_glheader(win, "textures")) {
+  if (!app->ioscene->textures.empty() && begin_header(win, "textures")) {
     draw_combobox(win, "textures##2", app->selected_texture,
         app->ioscene->textures, true);
     if (draw_widgets(win, app->ioscene, app->selected_texture)) {
@@ -723,9 +723,9 @@ void draw_widgets(
       }
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->instances.empty() && begin_glheader(win, "instances")) {
+  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
     draw_combobox(win, "instance##2", app->selected_instance,
         app->ioscene->instances, true);
     if (draw_widgets(win, app->ioscene, app->selected_instance)) {
@@ -737,9 +737,9 @@ void draw_widgets(
       update_bvh(app->scene, {}, {}, {instance}, app->params);
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
-  if (!app->ioscene->subdivs.empty() && begin_glheader(win, "subdivs")) {
+  if (!app->ioscene->subdivs.empty() && begin_header(win, "subdivs")) {
     draw_combobox(
         win, "selection##2", app->selected_subdiv, app->ioscene->subdivs, true);
     if (draw_widgets(win, app->ioscene, app->selected_subdiv)) {
@@ -747,7 +747,7 @@ void draw_widgets(
       // TODO: subdiv not implemented yet
       reset_display(app);
     }
-    end_glheader(win);
+    end_header(win);
   }
 }
 

@@ -201,11 +201,6 @@ inline float abs(float a);
 inline float min(float a, float b);
 inline float max(float a, float b);
 inline float clamp(float a, float min, float max);
-inline float lerp(float a, float b, float u);
-inline float radians(float a);
-inline float degrees(float a);
-inline float bias(float a, float bias);
-inline float gain(float a, float gain);
 inline float sqrt(float a);
 inline float sin(float a);
 inline float cos(float a);
@@ -221,7 +216,13 @@ inline float pow(float a, float b);
 inline float isfinite(float a);
 inline float atan2(float a, float b);
 inline float fmod(float a, float b);
+inline float radians(float a);
+inline float degrees(float a);
+inline float lerp(float a, float b, float u);
 inline void  swap(float& a, float& b);
+inline float smoothstep(float a, float b, float u);
+inline float bias(float a, float bias);
+inline float gain(float a, float gain);
 
 inline int  abs(int a);
 inline int  min(int a, int b);
@@ -517,6 +518,7 @@ struct vec2i {
   vec2i();
   vec2i(int x, int y);
   explicit vec2i(int v);
+  explicit operator vec2f() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -531,6 +533,7 @@ struct vec3i {
   vec3i(int x, int y, int z);
   vec3i(const vec2i& v, int z);
   explicit vec3i(int v);
+  explicit operator vec3f() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -546,6 +549,7 @@ struct vec4i {
   vec4i(int x, int y, int z, int w);
   vec4i(const vec3i& v, int w);
   explicit vec4i(int v);
+  explicit operator vec4f() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -1559,16 +1563,6 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
-inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float radians(float a) { return a * pif / 180; }
-inline float degrees(float a) { return a * 180 / pif; }
-inline float bias(float a, float bias) {
-  return a / ((1 / bias - 2) * (1 - a) + 1);
-}
-inline float gain(float a, float gain) {
-  return (a < 0.5f) ? bias(a * 2, gain) / 2
-                    : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
-}
 inline float sqrt(float a) { return std::sqrt(a); }
 inline float sin(float a) { return std::sin(a); }
 inline float cos(float a) { return std::cos(a); }
@@ -1585,6 +1579,21 @@ inline float isfinite(float a) { return std::isfinite(a); }
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
+inline float radians(float a) { return a * pif / 180; }
+inline float degrees(float a) { return a * 180 / pif; }
+inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+inline float step(float a, float u) { return u < a ? 0 : 1; }
+inline float smoothstep(float a, float b, float u) {
+  auto t = clamp((u - a) / (b - a), 0.0f, 1.0f);
+  return t * t * (3 - 2 * t);
+}
+inline float bias(float a, float bias) {
+  return a / ((1 / bias - 2) * (1 - a) + 1);
+}
+inline float gain(float a, float gain) {
+  return (a < 0.5f) ? bias(a * 2, gain) / 2
+                    : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
+}
 
 inline int  abs(int a) { return a < 0 ? -a : a; }
 inline int  min(int a, int b) { return (a < b) ? a : b; }
@@ -2062,6 +2071,7 @@ namespace ym {
 inline vec2i::vec2i() {}
 inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
 inline vec2i::vec2i(int v) : x{v}, y{v} {}
+inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
 
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
@@ -2071,6 +2081,7 @@ inline vec3i::vec3i() {}
 inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
 inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
 inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
+inline vec3i::operator vec3f() const { return {(float)x, (float)y, (float)z}; }
 
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
@@ -2080,6 +2091,9 @@ inline vec4i::vec4i() {}
 inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
 inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
+inline vec4i::operator vec4f() const {
+  return {(float)x, (float)y, (float)z, (float)w};
+}
 
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }

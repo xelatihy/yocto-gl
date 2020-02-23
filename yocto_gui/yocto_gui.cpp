@@ -1552,7 +1552,8 @@ void run_ui(ygui::window* win) {
         (double)(win->input.clock_now - win->input.clock_last) / 1000000000.0;
 
     // update ui
-    if (win->uiupdate_cb) win->uiupdate_cb(win, win->input);
+    if (win->uiupdate_cb && !win->input.widgets_active)
+      win->uiupdate_cb(win, win->input);
 
     // update
     if (win->update_cb) win->update_cb(win, win->input);
@@ -1618,12 +1619,12 @@ void init_glwidgets(ygui::window* win, int width, bool left) {
   win->widgets_left  = left;
 }
 
-bool begin_glheader(ygui::window* win, const char* lbl) {
+bool begin_header(ygui::window* win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_glheader(ygui::window* win) { ImGui::PopID(); }
+void end_header(ygui::window* win) { ImGui::PopID(); }
 
 void open_glmodal(ygui::window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
 void clear_glmodal(ygui::window* win) { ImGui::CloseCurrentPopup(); }
@@ -1893,7 +1894,7 @@ void draw_label(ygui::window* win, const char* lbl, const std::string& label) {
 
 void draw_separator(ygui::window* win) { ImGui::Separator(); }
 
-void continue_glline(ygui::window* win) { ImGui::SameLine(); }
+void continue_line(ygui::window* win) { ImGui::SameLine(); }
 
 bool draw_textinput(ygui::window* win, const char* lbl, std::string& value) {
   char buffer[4096];

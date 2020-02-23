@@ -30,7 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "yocto_gui.h"
+#include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
 #include <future>
@@ -301,6 +301,29 @@ int main(int argc, const char* argv[]) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   };
+  callbacks.widgets_cb = [app](ygui::window* win, const ygui::input& input) {
+    auto edited = 0;
+    // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
+    //   app->camera = get_element(
+    //       app->iocamera, app->ioscene->cameras, app->scene->cameras);
+    //   edited += 1;
+    // }
+    auto& tparams = app->params;
+    edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
+    edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
+    edited += draw_combobox(
+        win, "tracer", (int&)tparams.sampler, ytrc::sampler_names);
+    edited += draw_combobox(
+        win, "false color", (int&)tparams.falsecolor, ytrc::falsecolor_names);
+    edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
+    edited += draw_checkbox(win, "envhidden", tparams.envhidden);
+    continue_line(win);
+    edited += draw_checkbox(win, "filter", tparams.tentfilter);
+    edited += draw_slider(win, "seed", (int&)tparams.seed, 0, 1000000);
+    edited += draw_slider(win, "pratio", tparams.pratio, 1, 64);
+    edited += draw_slider(win, "exposure", app->exposure, -5, 5);
+    if (edited) reset_display(app);
+  };
   callbacks.char_cb = [app](ygui::window* win, unsigned int key,
                           const ygui::input& input) {
     switch (key) {
@@ -331,7 +354,8 @@ int main(int argc, const char* argv[]) {
     }
   };
   callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
       auto dolly  = 0.0f;
       auto pan    = zero2f;
       auto rotate = zero2f;

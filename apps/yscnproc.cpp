@@ -49,11 +49,11 @@ void make_dir(const std::string& dirname) {
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto validate = false;
-  auto info     = false;
+  auto validate  = false;
+  auto info      = false;
   auto copyright = ""s;
-  auto output   = "out.json"s;
-  auto filename = "scene.json"s;
+  auto output    = "out.json"s;
+  auto filename  = "scene.json"s;
 
   // parse command line
   auto cli = ycli::make_cli("yscnproc", "Process scene");
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
     ycli::print_fatal(ioerror);
 
   // copyright
-  if(copyright != "") {
+  if (copyright != "") {
     scene->copyright = copyright;
   }
 
