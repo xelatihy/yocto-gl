@@ -102,6 +102,40 @@ int main(int argc, const char* argv[]) {
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_glimage(app->glimage, app->glparams);
   };
+  callbacks.widgets_cb = [app](ygui::window* win, const ygui::input& input) {
+    auto edited = 0;
+    if (begin_glheader(win, "tonemap")) {
+      edited += draw_slider(win, "exposure", app->exposure, -5, 5);
+      edited += draw_checkbox(win, "filmic", app->filmic);
+      end_glheader(win);
+    }
+    if (begin_glheader(win, "colorgrade")) {
+      auto& params = app->params;
+      edited += draw_checkbox(win, "apply colorgrade", app->colorgrade);
+      edited += draw_slider(win, "exposure", params.exposure, -5, 5);
+      edited += draw_coloredit(win, "tint", params.tint);
+      edited += draw_slider(win, "lincontrast", params.lincontrast, 0, 1);
+      edited += draw_slider(win, "logcontrast", params.logcontrast, 0, 1);
+      edited += draw_slider(win, "linsaturation", params.linsaturation, 0, 1);
+      edited += draw_checkbox(win, "filmic", params.filmic);
+      continue_glline(win);
+      edited += draw_checkbox(win, "srgb", params.srgb);
+      edited += draw_slider(win, "contrast", params.contrast, 0, 1);
+      edited += draw_slider(win, "saturation", params.saturation, 0, 1);
+      edited += draw_slider(win, "shadows", params.shadows, 0, 1);
+      edited += draw_slider(win, "midtones", params.midtones, 0, 1);
+      edited += draw_slider(win, "highlights", params.highlights, 0, 1);
+      edited += draw_coloredit(win, "shadows color", params.shadows_color);
+      edited += draw_coloredit(win, "midtones color", params.midtones_color);
+      edited += draw_coloredit(win, "highlights color", params.highlights_color);
+      end_glheader(win);
+    }
+    if(edited) {
+      update_display(app);
+      if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+      set_glimage(app->glimage, app->display, false, false);
+    }
+  };
   callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
     // handle mouse
     if (input.mouse_left) {
