@@ -28,7 +28,7 @@
 
 #include "../yocto/yocto_cli.h"
 #include "../yocto/yocto_image.h"
-#include "yocto_gui.h"
+#include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
 #include <future>

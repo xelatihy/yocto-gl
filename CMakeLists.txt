@@ -35,5 +35,6 @@ if(MSVC)
 endif(MSVC)
 
 add_subdirectory(yocto)
+add_subdirectory(yocto_gui)
 add_subdirectory(apps)
 add_subdirectory(tests)

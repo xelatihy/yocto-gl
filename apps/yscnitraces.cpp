@@ -30,7 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "yocto_gui.h"
+#include "../yocto_gui/yocto_gui.h"
 using namespace ym;
 
 #include <future>
