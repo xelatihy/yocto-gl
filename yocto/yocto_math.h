@@ -1582,10 +1582,10 @@ inline void  swap(float& a, float& b) { std::swap(a, b); }
 inline float radians(float a) { return a * pif / 180; }
 inline float degrees(float a) { return a * 180 / pif; }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float step(float a, float u) { return u < a ? 0: 1; }
-inline float smoothstep(float a, float b, float u) { 
+inline float step(float a, float u) { return u < a ? 0 : 1; }
+inline float smoothstep(float a, float b, float u) {
   auto t = clamp((u - a) / (b - a), 0.0f, 1.0f);
-  return t * t * (3 - 2 * t ); 
+  return t * t * (3 - 2 * t);
 }
 inline float bias(float a, float bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
@@ -2091,7 +2091,9 @@ inline vec4i::vec4i() {}
 inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
 inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4i::operator vec4f() const { return {(float)x, (float)y, (float)z, (float)w}; }
+inline vec4i::operator vec4f() const {
+  return {(float)x, (float)y, (float)z, (float)w};
+}
 
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }

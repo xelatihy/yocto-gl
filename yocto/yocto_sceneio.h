@@ -233,7 +233,7 @@ struct model {
   std::vector<ysio::instance*>    instances    = {};
 
   // additional information
-  std::string name = "";
+  std::string name      = "";
   std::string copyright = "";
 
   // cleanup

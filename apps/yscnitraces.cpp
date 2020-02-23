@@ -354,7 +354,7 @@ int main(int argc, const char* argv[]) {
     }
   };
   callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt&&
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;
       auto pan    = zero2f;

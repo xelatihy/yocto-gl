@@ -1385,7 +1385,7 @@ static bool load_json_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  if(scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1428,11 +1428,11 @@ static bool save_json_scene(const std::string& filename,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save yaml file
-  auto js     = json::object();
-  
+  auto js = json::object();
+
   // asset
   {
-    auto& ejs = js["asset"];
+    auto& ejs        = js["asset"];
     ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
     add_opt(ejs, "copyright", scene->copyright, ""s);
   }
@@ -1742,7 +1742,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  if(scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2003,8 +2003,8 @@ static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
   // convert asset
   {
     auto gast = &gltf->asset;
-    if(gast->copyright) scene->copyright = gast->copyright;
-  }  
+    if (gast->copyright) scene->copyright = gast->copyright;
+  }
 
   // convert cameras
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
@@ -2346,7 +2346,7 @@ static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  if(scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2534,7 +2534,7 @@ static bool load_pbrt_scene(const std::string& filename, ysio::model* scene,
   }
 
   // fix scene
-  if(scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = fs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);

@@ -1552,7 +1552,8 @@ void run_ui(ygui::window* win) {
         (double)(win->input.clock_now - win->input.clock_last) / 1000000000.0;
 
     // update ui
-    if (win->uiupdate_cb) win->uiupdate_cb(win, win->input);
+    if (win->uiupdate_cb && !win->input.widgets_active)
+      win->uiupdate_cb(win, win->input);
 
     // update
     if (win->update_cb) win->update_cb(win, win->input);

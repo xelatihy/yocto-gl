@@ -127,10 +127,27 @@ int main(int argc, const char* argv[]) {
       edited += draw_slider(win, "highlights", params.highlights, 0, 1);
       edited += draw_coloredit(win, "shadows color", params.shadows_color);
       edited += draw_coloredit(win, "midtones color", params.midtones_color);
-      edited += draw_coloredit(win, "highlights color", params.highlights_color);
+      edited += draw_coloredit(
+          win, "highlights color", params.highlights_color);
       end_header(win);
     }
-    if(edited) {
+    if (begin_header(win, "inspect")) {
+      draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
+      draw_checkbox(win, "fit", app->glparams.fit);
+      auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
+          app->glparams.scale, app->source.size());
+      draw_dragger(win, "mouse", ij);
+      auto img_pixel = zero4f, display_pixel = zero4f;
+      if (ij.x >= 0 && ij.x < app->source.size().x && ij.y >= 0 &&
+          ij.y < app->source.size().y) {
+        img_pixel     = app->source[{ij.x, ij.y}];
+        display_pixel = app->display[{ij.x, ij.y}];
+      }
+      draw_coloredit(win, "image", img_pixel);
+      draw_dragger(win, "display", display_pixel);
+      end_header(win);
+    }
+    if (edited) {
       update_display(app);
       if (!is_initialized(app->glimage)) init_glimage(app->glimage);
       set_glimage(app->glimage, app->display, false, false);
@@ -138,10 +155,10 @@ int main(int argc, const char* argv[]) {
   };
   callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
     // handle mouse
-    if (input.mouse_left) {
+    if (input.mouse_left && !input.widgets_active) {
       app->glparams.center += input.mouse_pos - input.mouse_last;
     }
-    if (input.mouse_right) {
+    if (input.mouse_right && !input.widgets_active) {
       app->glparams.scale *= powf(
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
