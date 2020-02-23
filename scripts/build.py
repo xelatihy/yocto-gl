@@ -35,8 +35,8 @@ def clean():
 
 @cli.command()
 def format():
-    os.system('clang-format -i -style=file yocto/y*.h')
-    os.system('clang-format -i -style=file yocto/y*.cpp')
+    os.system('clang-format -i -style=file yocto_gl/y*.h')
+    os.system('clang-format -i -style=file yocto_gl/y*.cpp')
     os.system('clang-format -i -style=file yocto_gui/y*.h')
     os.system('clang-format -i -style=file yocto_gui/y*.cpp')
     os.system('clang-format -i -style=file apps/y*.h')
