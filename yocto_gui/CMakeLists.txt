@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.12)
 
-project (yocto-gl-gui VERSION 2.0)
+project (yocto_gui VERSION 2.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -13,7 +13,7 @@ if(YOCTO_OPENGL)
   set(GLFW_INSTALL OFF CACHE BOOL " " FORCE)
   add_subdirectory(ext/glfw glfw)
 
-  add_library(yocto-gui 
+  add_library(yocto_gui 
     yocto_gui.h 
     yocto_gui.cpp 
     ext/imgui/imgui.cpp 
@@ -23,13 +23,13 @@ if(YOCTO_OPENGL)
     ext/imgui/imgui_impl_opengl3.cpp 
     ext/glad/glad.c)
   
-  target_include_directories(yocto-gui PRIVATE .)
-  target_compile_definitions(yocto-gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
-  set_target_properties(yocto-gui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+  target_include_directories(yocto_gui PRIVATE .)
+  target_compile_definitions(yocto_gui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
+  set_target_properties(yocto_gui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
-  target_link_libraries(yocto-gui glfw ${OPENGL_gl_LIBRARY})
+  target_link_libraries(yocto_gui glfw ${OPENGL_gl_LIBRARY})
 
   if(UNIX AND NOT APPLE)
-    target_link_libraries(yocto-gui dl)
+    target_link_libraries(yocto_gui dl)
   endif(UNIX AND NOT APPLE)
 endif(YOCTO_OPENGL)

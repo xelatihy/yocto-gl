@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.12)
 
-project (yocto-gl-apps VERSION 2.0)
+project (yocto_apps VERSION 2.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -52,10 +52,10 @@ if(YOCTO_OPENGL)
   set_target_properties(yimgview     PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   set_target_properties(yimgviews    PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-  target_link_libraries(yscnview    yocto yocto-gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimshproc   yocto yocto-gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitrace  yocto yocto-gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitraces yocto yocto-gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgview    yocto yocto-gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgviews   yocto yocto-gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnview    yocto yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimshproc   yocto yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitrace  yocto yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitraces yocto yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgview    yocto yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgviews   yocto yocto_gui ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
