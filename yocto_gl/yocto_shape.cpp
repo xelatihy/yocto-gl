@@ -4029,11 +4029,11 @@ void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
 void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     std::vector<float>& radius, float point_radius) {
-  points = {0};
+  points    = {0};
   positions = {{0, 0, 0}};
-  normals = {{0, 0, 1}};
+  normals   = {{0, 0, 1}};
   texcoords = {{0, 0}};
-  radius = {point_radius};
+  radius    = {point_radius};
 }
 
 // Generate a point set with points placed at the origin with texcoords

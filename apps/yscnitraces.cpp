@@ -244,7 +244,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
       "Tracer false color type.", ytrc::falsecolor_names);
   add_option(
-      cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
+      cli, "--bounces,-b", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
   add_option(
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");

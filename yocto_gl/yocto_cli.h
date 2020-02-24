@@ -555,13 +555,13 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
     void* value, const std::string& usage, bool req,
     const std::vector<std::string>& choices) {
   static auto type_name = std::unordered_map<cli_type, std::string>{
-      {cli_type::string_, "<std::string>"},
+      {cli_type::string_, "<string>"},
       {cli_type::int_, "<int>"},
       {cli_type::float_, "<float>"},
       {cli_type::bool_, "<true/false>"},
       {cli_type::flag_, ""},
-      {cli_type::string_vector_, "<[std::string]>"},
-      {cli_type::enum_, "<std::string>"},
+      {cli_type::string_vector_, "<[string]>"},
+      {cli_type::enum_, "<enum>"},
   };
   // help message
   auto line = "  " + name + " " + type_name.at(type);
@@ -589,6 +589,20 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
     line += " [required]";
   }
   line += "\n";
+  if (type == cli_type::enum_ && !choices.empty()) {
+    line += "    with <enum>: ";
+    auto len = 16;
+    for (auto& choice : choices) {
+      if (len + choice.size() + 2 > 78) {
+        line += "\n                 ";
+        len = 16;
+      }
+      line += choice + ", ";
+      len += choice.size() + 2;
+    }
+    line = line.substr(0, line.size() - 2);
+    line += "\n";
+  }
   if (name.find("-") == 0) {
     cli.usage_options += line;
   } else {
