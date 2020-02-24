@@ -561,7 +561,7 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
       {cli_type::bool_, "<true/false>"},
       {cli_type::flag_, ""},
       {cli_type::string_vector_, "<[string]>"},
-      {cli_type::enum_, "<string>"},
+      {cli_type::enum_, "<enum>"},
   };
   // help message
   auto line = "  " + name + " " + type_name.at(type);
@@ -589,6 +589,20 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
     line += " [required]";
   }
   line += "\n";
+  if(type == cli_type::enum_ && !choices.empty()) {
+    line += "    with <enum>: ";
+    auto len = 16;
+    for(auto& choice : choices) {
+      if(len + choice.size() + 2 > 78) {
+        line += "\n                 ";
+        len = 16;
+      }
+      line += choice + ", ";
+      len += choice.size() + 2;
+    }
+    line = line.substr(0, line.size()-2);
+    line += "\n";
+  }
   if (name.find("-") == 0) {
     cli.usage_options += line;
   } else {

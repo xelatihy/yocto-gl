@@ -165,7 +165,6 @@ void init_scene(ytrc::scene* scene, ysio::model* ioscene, ytrc::camera*& camera,
 int main(int argc, const char* argv[]) {
   // options
   auto params      = ytrc::trace_params{};
-  auto batch       = 16;
   auto save_batch  = false;
   auto add_skyenv  = false;
   auto camera_name = ""s;
@@ -181,10 +180,9 @@ int main(int argc, const char* argv[]) {
       cli, "--tracer,-t", params.sampler, "Trace type.", ytrc::sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
       "Tracer false color type.", ytrc::falsecolor_names);
-  add_option(cli, "--bounces", params.bounces, "Maximum number of bounces.");
+  add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
-  add_option(cli, "--batch,-b", batch, "Samples per batch.");
   add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
