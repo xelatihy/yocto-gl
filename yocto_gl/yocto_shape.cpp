@@ -4025,6 +4025,17 @@ void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
   }
 }
 
+// Generate a point at the origin.
+void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, float point_radius) {
+  points = {0};
+  positions = {{0, 0, 0}};
+  normals = {{0, 0, 1}};
+  texcoords = {{0, 0}};
+  radius = {point_radius};
+}
+
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
 void make_points(std::vector<int>& points, std::vector<vec3f>& positions,
@@ -4051,17 +4062,6 @@ void make_random_points(std::vector<int>& points, std::vector<vec3f>& positions,
   for (auto i = 0; i < positions.size(); i++) {
     positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
   }
-}
-
-// Make a point.
-void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
-    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<float>& radius, float point_radius) {
-  points    = {0};
-  positions = {{0, 0, 0}};
-  normals   = {{0, 0, 1}};
-  texcoords = {{0, 0}};
-  radius    = {point_radius};
 }
 
 // Make a bezier circle. Returns bezier, pos.

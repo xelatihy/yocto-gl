@@ -191,6 +191,10 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     yshp::make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
   } else if (type == "test-largearealight2") {
     yshp::make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
+  } else if (type == "test-pointlight1") {
+    yshp::make_point(points, positions, normals, texcoords, radius, 0);
+  } else if (type == "test-pointlight2") {
+    yshp::make_point(points, positions, normals, texcoords, radius, 0);
   } else {
     error = "unknown preset";
     return false;

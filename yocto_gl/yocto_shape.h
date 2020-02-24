@@ -22,7 +22,7 @@
 // 3. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
 // 4. create shapes with `make_proc_image()`, `make_hair()`,
-// `make_points()`
+//    `make_points()`, `make_point()`
 // 5. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 6. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
@@ -873,6 +873,9 @@ void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
     const vec2f& uvscale = {1, 1}, const vec2f& rad = {0.001, 0.001});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
+void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<float>& radius, float point_radius);
 void make_points(std::vector<int>& points, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     std::vector<float>& radius, int num, float uvscale, float point_radius);
