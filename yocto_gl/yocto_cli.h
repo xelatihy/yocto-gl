@@ -589,18 +589,18 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
     line += " [required]";
   }
   line += "\n";
-  if(type == cli_type::enum_ && !choices.empty()) {
+  if (type == cli_type::enum_ && !choices.empty()) {
     line += "    with <enum>: ";
     auto len = 16;
-    for(auto& choice : choices) {
-      if(len + choice.size() + 2 > 78) {
+    for (auto& choice : choices) {
+      if (len + choice.size() + 2 > 78) {
         line += "\n                 ";
         len = 16;
       }
       line += choice + ", ";
       len += choice.size() + 2;
     }
-    line = line.substr(0, line.size()-2);
+    line = line.substr(0, line.size() - 2);
     line += "\n";
   }
   if (name.find("-") == 0) {
