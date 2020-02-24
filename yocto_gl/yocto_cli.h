@@ -555,13 +555,13 @@ inline void add_option(cli_state& cli, const std::string& name, cli_type type,
     void* value, const std::string& usage, bool req,
     const std::vector<std::string>& choices) {
   static auto type_name = std::unordered_map<cli_type, std::string>{
-      {cli_type::string_, "<std::string>"},
+      {cli_type::string_, "<string>"},
       {cli_type::int_, "<int>"},
       {cli_type::float_, "<float>"},
       {cli_type::bool_, "<true/false>"},
       {cli_type::flag_, ""},
-      {cli_type::string_vector_, "<[std::string]>"},
-      {cli_type::enum_, "<std::string>"},
+      {cli_type::string_vector_, "<[string]>"},
+      {cli_type::enum_, "<string>"},
   };
   // help message
   auto line = "  " + name + " " + type_name.at(type);
