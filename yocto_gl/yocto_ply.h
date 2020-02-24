@@ -1358,7 +1358,7 @@ inline bool add_quads(yply::model* ply, const std::vector<vec4i>& values) {
   return add_faces(ply, {}, values);
 }
 inline bool add_lines(yply::model* ply, const std::vector<vec2i>& values) {
-  return add_lists(ply, "str", "vertex_indices", values);
+  return add_lists(ply, "line", "vertex_indices", values);
 }
 inline bool add_points(yply::model* ply, const std::vector<int>& values) {
   return add_lists(ply, "point", "vertex_indices", values);
