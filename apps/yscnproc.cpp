@@ -38,6 +38,19 @@ using namespace std::string_literals;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
+// Shape presets used ofr testing.
+bool make_preset(ysio::model* scene,
+    const std::string& type, std::string& error) {
+  if (type == "cornellbox") {
+    ysio::make_cornellbox(scene);
+    return true;
+  } else {
+    error = "unknown preset";
+    return false;
+  }
+  return true;
+}
+
 void make_dir(const std::string& dirname) {
   if (fs::exists(dirname)) return;
   try {
@@ -65,11 +78,20 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
+  auto ext      = fs::path(filename).extension().string();
+  auto basename = fs::path(filename).stem().string();
   auto scene_guard = std::make_unique<ysio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
-  if (!load_scene(filename, scene, ioerror, ycli::print_progress))
-    ycli::print_fatal(ioerror);
+  if(ext == ".ypreset") {
+    ycli::print_progress("make preset", 0, 1);
+    if(!make_preset(scene, basename, ioerror))
+      ycli::print_fatal(ioerror);
+    ycli::print_progress("make preset", 1, 1);
+  } else {
+    if (!load_scene(filename, scene, ioerror, ycli::print_progress))
+      ycli::print_fatal(ioerror);
+  }
 
   // copyright
   if (copyright != "") {

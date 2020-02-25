@@ -2655,7 +2655,7 @@ static bool save_pbrt_scene(const std::string& filename,
 // -----------------------------------------------------------------------------
 namespace ysio {
 
-void make_cornellbox_scene(ysio::model* scene) {
+void make_cornellbox(ysio::model* scene) {
   scene->name                = "cornellbox";
   auto camera                = add_camera(scene);
   camera->frame              = frame3f{{0, 1, 3.9}};
