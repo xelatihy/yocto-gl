@@ -43,7 +43,10 @@
 // -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yply {
+namespace yocto::ply {
+
+// Namespace aliases
+namespace yply = yocto::ply;
 
 // Math defitions
 using ym::byte;
@@ -197,7 +200,7 @@ inline bool add_quads(yply::model* ply, const std::vector<vec4i>& values);
 inline bool add_lines(yply::model* ply, const std::vector<vec2i>& values);
 inline bool add_points(yply::model* ply, const std::vector<int>& values);
 
-}  // namespace yply
+}  // namespace yocto::ply
 
 // -----------------------------------------------------------------------------
 //
@@ -214,7 +217,7 @@ inline bool add_points(yply::model* ply, const std::vector<int>& values);
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yply {
+namespace yocto::ply {
 
 // string literals
 using namespace std::string_literals;
@@ -1364,6 +1367,6 @@ inline bool add_points(yply::model* ply, const std::vector<int>& values) {
   return add_lists(ply, "point", "vertex_indices", values);
 }
 
-}  // namespace yply
+}  // namespace yocto::ply
 
 #endif

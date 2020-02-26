@@ -178,12 +178,22 @@ inline ypbrt::light*       add_light(ypbrt::model* pbrt);
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
-// PBRT PARSING
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace ypbrt {
 
+// Namespace aliases
+namespace yply = yocto::ply;
+
 // string literals
 using namespace std::string_literals;
+
+}
+
+// -----------------------------------------------------------------------------
+// PBRT PARSING
+// -----------------------------------------------------------------------------
+namespace ypbrt {
 
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }

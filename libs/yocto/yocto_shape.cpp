@@ -17,9 +17,12 @@ using namespace std::string_literals;
 #include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
-// MATH FUNCTIONS
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace yshp {
+
+// Namespace aliases
+namespace yply = yocto::ply;
 
 using namespace ym;
 // import math symbols for use

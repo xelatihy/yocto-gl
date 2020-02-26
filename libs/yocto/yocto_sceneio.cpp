@@ -61,9 +61,12 @@ using namespace std::string_literals;
 #include "ext/cgltf.h"
 
 // -----------------------------------------------------------------------------
-// MATH FUNCTIONS
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace ysio {
+
+// Namespace aliases
+namespace yply = yocto::ply;
 
 using namespace ym;
 // import math symbols for use
