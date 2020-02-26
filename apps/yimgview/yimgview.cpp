@@ -28,7 +28,7 @@
 
 #include <ygl/yocto_cli.h>
 #include <ygl/yocto_image.h>
-#include <ygui/yocto_gui.h>
+#include <ygui/ygui.h>
 using namespace ym;
 
 #include <atomic>

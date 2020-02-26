@@ -8,8 +8,8 @@ if(YOCTO_OPENGL)
   add_subdirectory(ext/glfw glfw)
 
   add_library(ygui 
-    yocto_gui.h 
-    yocto_gui.cpp 
+    ygui.h 
+    ygui.cpp 
     ext/imgui/imgui.cpp 
     ext/imgui/imgui_draw.cpp 
     ext/imgui/imgui_widgets.cpp

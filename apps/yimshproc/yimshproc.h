@@ -4,7 +4,7 @@
 #include <ygl/yocto_sceneio.h>
 #include <ygl/yocto_shape.h>
 #include <ygl/yocto_trace.h>
-#include <ygui/yocto_gui.h>
+#include <ygui/ygui.h>
 using namespace ym;
 
 using std::function;
