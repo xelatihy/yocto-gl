@@ -71,7 +71,7 @@ struct app_state {
   // viewing properties
   gui::image*       glimage   = new gui::image{};
   gui::image_params glparams  = {};
-  bool               glupdated = true;
+  bool              glupdated = true;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -161,8 +161,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_widgets(
-    gui::window* win, app_states* apps, const gui::input& input) {
+void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -339,9 +338,9 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   };
-  callbacks.drop_cb = [apps](gui::window*                win,
+  callbacks.drop_cb = [apps](gui::window*                 win,
                           const std::vector<std::string>& paths,
-                          const gui::input&              input) {
+                          const gui::input&               input) {
     for (auto path : paths) load_image_async(apps, path);
   };
 

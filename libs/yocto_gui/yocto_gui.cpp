@@ -71,17 +71,17 @@ using math::clamp;
 using math::cos;
 using math::exp;
 using math::exp2;
+using math::flt_max;
 using math::fmod;
 using math::log;
 using math::log2;
 using math::max;
 using math::min;
+using math::perspective_mat;
 using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
-using math::perspective_mat;
-using math::flt_max;
 
 }  // namespace yocto::gui
 
@@ -321,9 +321,7 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const gui::image* image) {
-  return (bool)image->program_id;
-}
+bool is_initialized(const gui::image* image) { return (bool)image->program_id; }
 
 image::~image() {
   if (program_id) glDeleteProgram(program_id);
@@ -355,8 +353,8 @@ void init_image(gui::image* image) {
 }
 
 // update image data
-void set_image(gui::image* image, const img::image<vec4f>& img, bool linear,
-    bool mipmap) {
+void set_image(
+    gui::image* image, const img::image<vec4f>& img, bool linear, bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
@@ -373,8 +371,8 @@ void set_image(gui::image* image, const img::image<vec4f>& img, bool linear,
   image->texture_linear = linear;
   image->texture_mipmap = mipmap;
 }
-void set_image(gui::image* image, const img::image<vec4b>& img, bool linear,
-    bool mipmap) {
+void set_image(
+    gui::image* image, const img::image<vec4b>& img, bool linear, bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);

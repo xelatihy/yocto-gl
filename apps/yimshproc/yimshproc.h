@@ -22,7 +22,7 @@ struct app_state {
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, gui::window*)>          draw_widgets;
+  function<void(app_state*, gui::window*)>           draw_widgets;
 
   // Geometry data
   sio::shape shape;
@@ -272,7 +272,7 @@ void yimshproc(const std::string&                      input_filename,
     function<void(app_state*)>                         init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
-    function<void(app_state*, gui::window* win)>      draw_widgets) {
+    function<void(app_state*, gui::window* win)>       draw_widgets) {
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
@@ -345,29 +345,29 @@ void yimshproc(const std::string&                      input_filename,
             app->camera.film);
       });
   set_key_callback(win,
-      [app](gui::window* win, int key, bool pressing,
-          const gui::input& input) { app->key_callback(app, key, pressing); });
-  set_uiupdate_callback(
-      win, [app](gui::window* win, const gui::input& input) {
-        // Handle mouse and keyboard for navigation.
-        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-            !input.widgets_active) {
-          auto dolly  = 0.0f;
-          auto pan    = zero2f;
-          auto rotate = zero2f;
-          if (input.mouse_left && !input.modifier_shift)
-            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-          if (input.mouse_left && input.modifier_shift)
-            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-          rotate.y = -rotate.y;
-          pan.x    = -pan.x;
-          update_turntable(
-              app->camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_frame(app->glcamera, app->camera.frame);
-          set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
-              app->camera.film);
-        }
+      [app](gui::window* win, int key, bool pressing, const gui::input& input) {
+        app->key_callback(app, key, pressing);
       });
+  set_uiupdate_callback(win, [app](gui::window* win, const gui::input& input) {
+    // Handle mouse and keyboard for navigation.
+    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+        !input.widgets_active) {
+      auto dolly  = 0.0f;
+      auto pan    = zero2f;
+      auto rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      rotate.y = -rotate.y;
+      pan.x    = -pan.x;
+      update_turntable(
+          app->camera.frame, app->camera.focus, rotate, dolly, pan);
+      set_frame(app->glcamera, app->camera.frame);
+      set_lens(app->glcamera, app->camera.lens, app->camera.aspect,
+          app->camera.film);
+    }
+  });
 
   // cleanup
   clear_window(win);

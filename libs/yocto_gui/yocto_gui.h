@@ -54,7 +54,11 @@ namespace gui = yocto::gui;
 namespace img = yocto::image;
 
 // Math defitions
+using math::bbox3f;
 using math::byte;
+using math::frame3f;
+using math::identity3x4f;
+using math::mat4f;
 using math::uint;
 using math::vec2f;
 using math::vec2i;
@@ -64,14 +68,10 @@ using math::vec3i;
 using math::vec4b;
 using math::vec4f;
 using math::vec4i;
-using math::bbox3f;
-using math::frame3f;
-using math::mat4f;
-using math::identity3x4f;
-using math::zero2i;
 using math::zero2f;
-using math::zero3i;
+using math::zero2i;
 using math::zero3f;
+using math::zero3i;
 
 }  // namespace yocto::gui
 
@@ -159,12 +159,12 @@ struct texture {
 // Opengl material
 struct material {
   // material
-  vec3f          emission      = {0, 0, 0};
-  vec3f          color         = {0, 0, 0};
-  float          metallic      = 0;
-  float          roughness     = 0;
-  float          specular      = 0;
-  float          opacity       = 1;
+  vec3f         emission      = {0, 0, 0};
+  vec3f         color         = {0, 0, 0};
+  float         metallic      = 0;
+  float         roughness     = 0;
+  float         specular      = 0;
+  float         opacity       = 1;
   gui::texture* emission_tex  = nullptr;
   gui::texture* color_tex     = nullptr;
   gui::texture* metallic_tex  = nullptr;
@@ -212,12 +212,12 @@ struct instance {
 // Opengl object
 struct object {
   // object properties
-  frame3f         frame       = identity3x4f;
+  frame3f        frame       = identity3x4f;
   gui::shape*    shape       = nullptr;
   gui::material* material    = nullptr;
   gui::instance* instance    = nullptr;
-  bool            hidden      = false;
-  bool            highlighted = false;
+  bool           hidden      = false;
+  bool           highlighted = false;
 };
 
 // Opengl light
@@ -287,16 +287,16 @@ void set_nearfar(gui::camera* camera, float near, float far);
 // texture properties
 void set_texture(
     gui::texture* texture, const img::image<vec4b>& img, bool as_srgb = true);
-void set_texture(gui::texture* texture, const img::image<vec4f>& img,
-    bool as_float = false);
+void set_texture(
+    gui::texture* texture, const img::image<vec4f>& img, bool as_float = false);
 void set_texture(
     gui::texture* texture, const img::image<vec3b>& img, bool as_srgb = true);
-void set_texture(gui::texture* texture, const img::image<vec3f>& img,
-    bool as_float = false);
+void set_texture(
+    gui::texture* texture, const img::image<vec3f>& img, bool as_float = false);
 void set_texture(
     gui::texture* texture, const img::image<byte>& img, bool as_srgb = true);
-void set_texture(gui::texture* texture, const img::image<float>& img,
-    bool as_float = false);
+void set_texture(
+    gui::texture* texture, const img::image<float>& img, bool as_float = false);
 
 // material properties
 void set_emission(gui::material* material, const vec3f& emission,
@@ -398,8 +398,7 @@ using click_callback = std::function<void(
 using scroll_callback =
     std::function<void(gui::window*, float amount, const input& input)>;
 // Update functions called every frame
-using uiupdate_callback =
-    std::function<void(gui::window*, const input& input)>;
+using uiupdate_callback = std::function<void(gui::window*, const input& input)>;
 // Update functions called every frame
 using update_callback = std::function<void(gui::window*, const input& input)>;
 

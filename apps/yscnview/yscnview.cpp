@@ -461,8 +461,7 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
 }
 
 // draw with shading
-void draw_widgets(
-    gui::window* win, app_states* apps, const gui::input& input) {
+void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
@@ -728,9 +727,9 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](gui::window* win, const gui::input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui::window*                win,
+  callbacks.drop_cb = [apps](gui::window*                 win,
                           const std::vector<std::string>& paths,
-                          const gui::input&              input) {
+                          const gui::input&               input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](gui::window* win, const gui::input& input) {
