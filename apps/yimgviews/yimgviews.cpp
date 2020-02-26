@@ -30,8 +30,8 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto::math;
-namespace yimg = yocto::image;
-namespace ycli = yocto::commonio;
+namespace img = yocto::image;
+namespace cli = yocto::commonio;
 
 #include <future>
 using namespace std::string_literals;
@@ -42,13 +42,13 @@ struct app_state {
   std::string outname  = "out.png";
 
   // image data
-  yimg::image<vec4f> source = {};
+  img::image<vec4f> source = {};
 
   // diplay data
-  yimg::image<vec4f>      display    = {};
+  img::image<vec4f>      display    = {};
   float                   exposure   = 0;
   bool                    filmic     = false;
-  yimg::colorgrade_params params     = {};
+  img::colorgrade_params params     = {};
   bool                    colorgrade = false;
 
   // viewing properties
@@ -76,7 +76,7 @@ int main(int argc, const char* argv[]) {
   auto filenames = std::vector<std::string>{};
 
   // command line options
-  auto cli = ycli::make_cli("yimgviews", "view images");
+  auto cli = cli::make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -84,7 +84,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    ycli::print_fatal(ioerror);
+    cli::print_fatal(ioerror);
     return 1;
   }
 

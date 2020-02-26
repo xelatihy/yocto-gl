@@ -5,10 +5,10 @@
 #include <yocto_gui/yocto_gui.h>
 
 using namespace yocto::math;
-namespace ysio = yocto::sceneio;
-namespace yshp = yocto::shape;
-namespace ycli = yocto::commonio;
-namespace ytrc = yocto::trace;
+namespace sio = yocto::sceneio;
+namespace shp = yocto::shape;
+namespace cli = yocto::commonio;
+namespace trc = yocto::trace;
 
 #include <memory>
 using std::function;
@@ -24,7 +24,7 @@ struct app_state {
   function<void(app_state*, ygui::window*)>          draw_widgets;
 
   // Geometry data
-  ysio::shape shape;
+  sio::shape shape;
 
   // OpenGL data
   ygui::scene*       glscene        = new ygui::scene{};
@@ -33,9 +33,9 @@ struct app_state {
   // Interaction data
   float          time       = 0;
   bool           show_edges = false;
-  ysio::camera   camera;
+  sio::camera   camera;
   float          camera_focus;
-  yshp::bvh_tree bvh;
+  shp::bvh_tree bvh;
 
   // Internal handles
   ygui::camera*   glcamera    = nullptr;
@@ -163,7 +163,7 @@ void update_gledges(app_state* app) {
 
 void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app->camera              = ysio::camera{};
+  app->camera              = sio::camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
   app->camera.orthographic = false;
@@ -277,11 +277,11 @@ void yimshproc(const std::string&                      input_filename,
 
   // init shape
   auto ioerror = ""s;
-  if (!yshp::load_shape(input_filename, app->shape.points, app->shape.lines,
+  if (!shp::load_shape(input_filename, app->shape.points, app->shape.lines,
           app->shape.triangles, app->shape.quads, app->shape.positions,
           app->shape.normals, app->shape.texcoords, app->shape.colors,
           app->shape.radius, ioerror))
-    ycli::print_fatal(ioerror);
+    cli::print_fatal(ioerror);
   init_bvh(app);
   init_camera(app);
 

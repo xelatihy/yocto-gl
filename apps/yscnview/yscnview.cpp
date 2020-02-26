@@ -32,8 +32,8 @@
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto::math;
-namespace ysio = yocto::sceneio;
-namespace ycli = yocto::commonio;
+namespace sio = yocto::sceneio;
+namespace cli = yocto::commonio;
 
 #include <atomic>
 #include <deque>
@@ -49,7 +49,7 @@ namespace fs = ghc::filesystem;
 #endif
 
 namespace yocto::sceneio {
-void print_obj_camera(ysio::camera* camera);
+void print_obj_camera(sio::camera* camera);
 };
 
 // Application state
@@ -64,22 +64,22 @@ struct app_state {
   ygui::scene_params drawgl_prms = {};
 
   // scene
-  ysio::model*  ioscene  = new ysio::model{};
-  ysio::camera* iocamera = nullptr;
+  sio::model*  ioscene  = new sio::model{};
+  sio::camera* iocamera = nullptr;
 
   // rendering state
   ygui::scene*  glscene  = new ygui::scene{};
   ygui::camera* glcamera = nullptr;
 
   // editing
-  ysio::camera*      selected_camera      = nullptr;
-  ysio::object*      selected_object      = nullptr;
-  ysio::instance*    selected_instance    = nullptr;
-  ysio::shape*       selected_shape       = nullptr;
-  ysio::subdiv*      selected_subdiv      = nullptr;
-  ysio::material*    selected_material    = nullptr;
-  ysio::environment* selected_environment = nullptr;
-  ysio::texture*     selected_texture     = nullptr;
+  sio::camera*      selected_camera      = nullptr;
+  sio::object*      selected_object      = nullptr;
+  sio::instance*    selected_instance    = nullptr;
+  sio::shape*       selected_shape       = nullptr;
+  sio::subdiv*      selected_subdiv      = nullptr;
+  sio::material*    selected_material    = nullptr;
+  sio::environment* selected_environment = nullptr;
+  sio::texture*     selected_texture     = nullptr;
 
   // loading status
   std::atomic<bool>  ok           = false;
@@ -134,7 +134,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
   if (!apps->selected) apps->selected = app;
 }
 
-void update_lights(ygui::scene* glscene, ysio::model* ioscene) {
+void update_lights(ygui::scene* glscene, sio::model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -164,9 +164,9 @@ void update_lights(ygui::scene* glscene, ysio::model* ioscene) {
   }
 }
 
-void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
-    ygui::camera*& glcamera, ysio::camera* iocamera,
-    ysio::progress_callback progress_cb) {
+void init_glscene(ygui::scene* glscene, sio::model* ioscene,
+    ygui::camera*& glcamera, sio::camera* iocamera,
+    sio::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
@@ -178,7 +178,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
   init_glscene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<ysio::camera*, ygui::camera*>{};
+  auto camera_map     = std::unordered_map<sio::camera*, ygui::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -190,7 +190,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<ysio::texture*, ygui::texture*>{};
+  auto texture_map     = std::unordered_map<sio::texture*, ygui::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -208,7 +208,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
   }
 
   // material
-  auto material_map = std::unordered_map<ysio::material*, ygui::material*>{};
+  auto material_map = std::unordered_map<sio::material*, ygui::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -237,7 +237,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<ysio::shape*, ygui::shape*>{};
+  auto shape_map     = std::unordered_map<sio::shape*, ygui::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -254,7 +254,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
   }
 
   // instances
-  auto instance_map = std::unordered_map<ysio::instance*, ygui::instance*>{};
+  auto instance_map = std::unordered_map<sio::instance*, ygui::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -281,7 +281,7 @@ void init_glscene(ygui::scene* glscene, ysio::model* ioscene,
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::camera* iocamera) {
+    ygui::window* win, sio::model* ioscene, sio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -308,7 +308,7 @@ bool draw_widgets(
 
 /// Visit struct elements.
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::texture* iotexture) {
+    ygui::window* win, sio::model* ioscene, sio::texture* iotexture) {
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
@@ -327,7 +327,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::material* iomaterial) {
+    ygui::window* win, sio::model* ioscene, sio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -373,7 +373,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::shape* ioshape) {
+    ygui::window* win, sio::model* ioscene, sio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -392,7 +392,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::instance* ioinstance) {
+    ygui::window* win, sio::model* ioscene, sio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -402,7 +402,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::object* ioobject) {
+    ygui::window* win, sio::model* ioscene, sio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -420,7 +420,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::subdiv* iosubdiv) {
+    ygui::window* win, sio::model* ioscene, sio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -436,7 +436,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    ygui::window* win, ysio::model* ioscene, ysio::environment* ioenvironment) {
+    ygui::window* win, sio::model* ioscene, sio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);
@@ -533,11 +533,11 @@ void draw_widgets(
     }
     continue_line(win);
     if (draw_button(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) ycli::print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) cli::print_info(stat);
     }
     end_header(win);
   }
-  auto get_texture = [app](ysio::texture* iotexture) {
+  auto get_texture = [app](sio::texture* iotexture) {
     return get_element(
         iotexture, app->ioscene->textures, app->glscene->textures);
   };
@@ -708,7 +708,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = ycli::make_cli("yscnview", "views scenes inteactively");
+  auto cli = cli::make_cli("yscnview", "views scenes inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");

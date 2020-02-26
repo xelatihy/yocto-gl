@@ -30,8 +30,8 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 using namespace yocto::math;
-namespace yimg = yocto::image;
-namespace ycli = yocto::commonio;
+namespace img = yocto::image;
+namespace cli = yocto::commonio;
 
 using namespace std::string_literals;
 
@@ -40,11 +40,11 @@ namespace fs = ghc::filesystem;
 
 namespace yocto::image {
 
-yimg::image<vec4f> filter_bilateral(const yimg::image<vec4f>& img,
+img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
     float spatial_sigma, float range_sigma,
-    const std::vector<yimg::image<vec4f>>& features,
+    const std::vector<img::image<vec4f>>& features,
     const std::vector<float>&              features_sigma) {
-  auto filtered     = yimg::image{img.size(), zero4f};
+  auto filtered     = img::image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -78,8 +78,8 @@ yimg::image<vec4f> filter_bilateral(const yimg::image<vec4f>& img,
   return filtered;
 }
 
-yimg::image<vec4f> filter_bilateral(
-    const yimg::image<vec4f>& img, float spatial_sigma, float range_sigma) {
+img::image<vec4f> filter_bilateral(
+    const img::image<vec4f>& img, float spatial_sigma, float range_sigma) {
   auto filtered = image{img.size(), zero4f};
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -108,9 +108,9 @@ yimg::image<vec4f> filter_bilateral(
 }
 
 bool make_image_preset(
-    const std::string& type, yimg::image<vec4f>& img, std::string& error) {
-  auto set_region = [](yimg::image<vec4f>&        img,
-                        const yimg::image<vec4f>& region, const vec2i& offset) {
+    const std::string& type, img::image<vec4f>& img, std::string& error) {
+  auto set_region = [](img::image<vec4f>&        img,
+                        const img::image<vec4f>& region, const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
       for (auto i = 0; i < region.size().x; i++) {
         if (!img.contains({i, j})) continue;
@@ -156,7 +156,7 @@ bool make_image_preset(
   } else if (type == "images1") {
     auto sub_types = std::vector<std::string>{"grid", "uvgrid", "checker",
         "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = std::vector<yimg::image<vec4f>>(sub_types.size());
+    auto sub_imgs  = std::vector<img::image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
@@ -165,7 +165,7 @@ bool make_image_preset(
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img      = yimg::image<vec4f>(montage_size);
+    img      = img::image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
@@ -173,7 +173,7 @@ bool make_image_preset(
     }
   } else if (type == "images2") {
     auto sub_types = std::vector<std::string>{"sky", "sunsky"};
-    auto sub_imgs  = std::vector<yimg::image<vec4f>>(sub_types.size());
+    auto sub_imgs  = std::vector<img::image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
@@ -182,7 +182,7 @@ bool make_image_preset(
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img      = yimg::image<vec4f>(montage_size);
+    img      = img::image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
@@ -254,7 +254,7 @@ int main(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = ycli::make_cli("yimgproc", "Transform images");
+  auto cli = cli::make_cli("yimgproc", "Transform images");
   add_option(cli, "--tonemap/--no-tonemap", tonemap_on, "Tonemap image");
   add_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
   add_option(
@@ -286,28 +286,28 @@ int main(int argc, const char* argv[]) {
   auto ext      = fs::path(filename).extension().string();
   auto basename = fs::path(filename).stem().string();
   auto ioerror  = ""s;
-  auto img      = yimg::image<vec4f>{};
+  auto img      = img::image<vec4f>{};
   if (ext == ".ypreset") {
-    if (!make_image_preset(basename, img, ioerror)) ycli::print_fatal(ioerror);
+    if (!make_image_preset(basename, img, ioerror)) cli::print_fatal(ioerror);
   } else {
-    if (!load_image(filename, img, ioerror)) ycli::print_fatal(ioerror);
+    if (!load_image(filename, img, ioerror)) cli::print_fatal(ioerror);
   }
 
   // set alpha
   if (alpha_filename != "") {
-    auto alpha = yimg::image<vec4f>{};
-    if (!load_image(alpha_filename, alpha, ioerror)) ycli::print_fatal(ioerror);
-    if (img.size() != alpha.size()) ycli::print_fatal("bad image size");
+    auto alpha = img::image<vec4f>{};
+    if (!load_image(alpha_filename, alpha, ioerror)) cli::print_fatal(ioerror);
+    if (img.size() != alpha.size()) cli::print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
   if (coloralpha_filename != "") {
-    auto alpha = yimg::image<vec4f>{};
+    auto alpha = img::image<vec4f>{};
     if (!load_image(coloralpha_filename, alpha, ioerror))
-      ycli::print_fatal(ioerror);
-    if (img.size() != alpha.size()) ycli::print_fatal("bad image size");
+      cli::print_fatal(ioerror);
+    if (img.size() != alpha.size()) cli::print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -320,10 +320,10 @@ int main(int argc, const char* argv[]) {
 
   // diff
   if (diff_filename != "") {
-    auto diff = yimg::image<vec4f>{};
-    if (!load_image(diff_filename, diff, ioerror)) ycli::print_fatal(ioerror);
+    auto diff = img::image<vec4f>{};
+    if (!load_image(diff_filename, diff, ioerror)) cli::print_fatal(ioerror);
     if (img.size() != diff.size())
-      ycli::print_fatal("image sizes are different");
+      cli::print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -344,13 +344,13 @@ int main(int argc, const char* argv[]) {
 
   // save
   if (!save_image(output, logo ? add_logo(img) : img, ioerror))
-    ycli::print_fatal(ioerror);
+    cli::print_fatal(ioerror);
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
       if (max(xyz(c)) > diff_threshold)
-        ycli::print_fatal("image content differs");
+        cli::print_fatal("image content differs");
     }
   }
 

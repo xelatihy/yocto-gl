@@ -3,7 +3,7 @@
 struct my_data {
   std::vector<vec3i>       face_adjacency;
   std::vector<vector<int>> vertex_adjacency;
-  yshp::geodesic_solver    solver;
+  shp::geodesic_solver    solver;
   std::vector<float>       scalar_field;
   std::vector<vec3f>       vector_field;
 
@@ -12,10 +12,10 @@ struct my_data {
 };
 
 void my_init(my_data& data, app_state* app) {
-  data.face_adjacency   = yshp::face_adjacencies(app->shape.triangles);
-  data.vertex_adjacency = yshp::vertex_adjacencies(
+  data.face_adjacency   = shp::face_adjacencies(app->shape.triangles);
+  data.vertex_adjacency = shp::vertex_adjacencies(
       app->shape.triangles, data.face_adjacency);
-  data.solver = yshp::make_geodesic_solver(
+  data.solver = shp::make_geodesic_solver(
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
@@ -23,17 +23,17 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
-  ycli::print_info(
+  cli::print_info(
       "press: " + std::to_string((char)key) + " [" + std::to_string(key) + "]");
   auto enter = 257;
   auto esc   = 256;
 
   if (key == enter) {
-    ycli::print_info("Enter pressed!");
+    cli::print_info("Enter pressed!");
   }
 
   if (key == esc) {
-    ycli::print_info("Esc pressed!");
+    cli::print_info("Esc pressed!");
     init_camera(app);
     set_frame(app->glcamera, app->camera.frame);
     set_lens(
@@ -41,13 +41,13 @@ void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   }
 
   if (key == 'z') {
-    ycli::print_info("Z pressed!");
+    cli::print_info("Z pressed!");
   }
 }
 
 void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
     int vertex, float distance) {
-  ycli::print_info("clicked vertex: " + std::to_string(vertex));
+  cli::print_info("clicked vertex: " + std::to_string(vertex));
   data.vertex_selection.push_back(vertex);
 
   auto positions = std::vector<vec3f>(data.vertex_selection.size());
@@ -65,7 +65,7 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygui::window* win) {
 
       data.vector_field = std::vector<vec3f>(app->shape.triangles.size());
       for (int i = 0; i < app->shape.triangles.size(); ++i) {
-        data.vector_field[i] = yshp::compute_gradient(
+        data.vector_field[i] = shp::compute_gradient(
             app->shape.triangles[i], app->shape.positions, data.scalar_field);
       }
       update_glvector_field(app, data.vector_field, 100);
@@ -96,11 +96,11 @@ void my_draw_glwidgets(my_data& data, app_state* app, ygui::window* win) {
 
         // @Speed: Remove tags from function api to avoid this.
         auto dummy_tags = std::vector<int>(app->shape.triangles.size(), 0);
-        auto path       = yshp::integrate_field(app->shape.triangles,
+        auto path       = shp::integrate_field(app->shape.triangles,
             app->shape.positions, data.face_adjacency, dummy_tags, 0, field,
             from, to);
 
-        auto ppositions = yshp::make_positions_from_path(
+        auto ppositions = shp::make_positions_from_path(
             path, app->shape.positions);
         positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
@@ -134,7 +134,7 @@ int main(int argc, const char* argv[]) {
   std::string input_filename = "model.obj";
 
   // Parse command line.
-  auto cli = ycli::make_cli(
+  auto cli = cli::make_cli(
       "yimshproc", "interactive viewer for mesh processing");
   add_option(cli, "model", input_filename, "model filenames", true);
   parse_cli(cli, argc, argv);
@@ -143,7 +143,7 @@ int main(int argc, const char* argv[]) {
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](app_state* app) {
-    ycli::print_info("init my data");
+    cli::print_info("init my data");
     my_init(data, app);
   };
   auto key_callback = [&data](app_state* app, int key, bool pressing) {

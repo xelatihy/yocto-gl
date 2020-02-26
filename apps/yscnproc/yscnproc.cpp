@@ -31,8 +31,8 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 using namespace yocto::math;
-namespace ysio = yocto::sceneio;
-namespace ycli = yocto::commonio;
+namespace sio = yocto::sceneio;
+namespace cli = yocto::commonio;
 
 #include <memory>
 using std::string;
@@ -43,9 +43,9 @@ namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 bool make_preset(
-    ysio::model* scene, const std::string& type, std::string& error) {
+    sio::model* scene, const std::string& type, std::string& error) {
   if (type == "cornellbox") {
-    ysio::make_cornellbox(scene);
+    sio::make_cornellbox(scene);
     return true;
   } else {
     error = "unknown preset";
@@ -59,7 +59,7 @@ void make_dir(const std::string& dirname) {
   try {
     fs::create_directories(dirname);
   } catch (...) {
-    ycli::print_fatal("cannot create directory " + dirname);
+    cli::print_fatal("cannot create directory " + dirname);
   }
 }
 
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "scene.json"s;
 
   // parse command line
-  auto cli = ycli::make_cli("yscnproc", "Process scene");
+  auto cli = cli::make_cli("yscnproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--copyright,-c", copyright, "copyright string");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
@@ -83,16 +83,16 @@ int main(int argc, const char* argv[]) {
   // load scene
   auto ext         = fs::path(filename).extension().string();
   auto basename    = fs::path(filename).stem().string();
-  auto scene_guard = std::make_unique<ysio::model>();
+  auto scene_guard = std::make_unique<sio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (ext == ".ypreset") {
-    ycli::print_progress("make preset", 0, 1);
-    if (!make_preset(scene, basename, ioerror)) ycli::print_fatal(ioerror);
-    ycli::print_progress("make preset", 1, 1);
+    cli::print_progress("make preset", 0, 1);
+    if (!make_preset(scene, basename, ioerror)) cli::print_fatal(ioerror);
+    cli::print_progress("make preset", 1, 1);
   } else {
-    if (!load_scene(filename, scene, ioerror, ycli::print_progress))
-      ycli::print_fatal(ioerror);
+    if (!load_scene(filename, scene, ioerror, cli::print_progress))
+      cli::print_fatal(ioerror);
   }
 
   // copyright
@@ -103,13 +103,13 @@ int main(int argc, const char* argv[]) {
   // validate scene
   if (validate) {
     for (auto& error : scene_validation(scene))
-      ycli::print_info("error: " + error);
+      cli::print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    ycli::print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) ycli::print_info(stat);
+    cli::print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) cli::print_info(stat);
   }
 
   // tesselate if needed
@@ -131,8 +131,8 @@ int main(int argc, const char* argv[]) {
     make_dir(fs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, ycli::print_progress))
-    ycli::print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, cli::print_progress))
+    cli::print_fatal(ioerror);
 
   // done
   return 0;
