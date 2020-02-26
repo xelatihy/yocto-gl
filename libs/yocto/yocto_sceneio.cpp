@@ -69,6 +69,7 @@ namespace yocto::sceneio {
 namespace yply = yocto::ply;
 namespace yobj = yocto::obj;
 namespace ypbrt = yocto::pbrt;
+namespace yshp = yocto::shape;
 
 using namespace ym;
 // import math symbols for use

@@ -6,6 +6,7 @@
 
 using namespace ym;
 namespace ysio = yocto::sceneio;
+namespace yshp = yocto::shape;
 
 #include <memory>
 using std::function;
