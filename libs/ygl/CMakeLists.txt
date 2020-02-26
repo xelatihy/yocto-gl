@@ -30,3 +30,12 @@ if(YOCTO_EMBREE)
     target_link_libraries(ygl embree3 tbb tbbmalloc)
   endif(MSVC)
 endif(YOCTO_EMBREE)
+
+# warning flags
+if(APPLE)
+  target_compile_options(ygl PRIVATE -Wall)
+endif(APPLE)
+if(MSVC)
+target_compile_options(ygl PRIVATE /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
+target_compile_options(ygl PUBLIC /EHsc)
+endif(MSVC)

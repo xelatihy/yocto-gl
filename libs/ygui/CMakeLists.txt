@@ -28,3 +28,12 @@ if(YOCTO_OPENGL)
     target_link_libraries(ygui dl)
   endif(UNIX AND NOT APPLE)
 endif(YOCTO_OPENGL)
+
+# warning flags
+if(APPLE)
+  target_compile_options(ygl PRIVATE -Wall)
+endif(APPLE)
+if(MSVC)
+target_compile_options(ygl PRIVATE /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
+target_compile_options(ygl PUBLIC /EHsc)
+endif(MSVC)
