@@ -38,7 +38,7 @@ namespace cli = yocto::commonio;
 #include <future>
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 struct image_stats {
   vec4f              min       = zero4f;
@@ -139,8 +139,8 @@ void update_display(app_state* app) {
 void load_image_async(app_states* apps, const std::string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
-  app->outname  = fs::path(filename).replace_extension(".display.png").string();
-  app->name     = fs::path(filename).filename();
+  app->outname  = sfs::path(filename).replace_extension(".display.png").string();
+  app->name     = sfs::path(filename).filename();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;
@@ -170,8 +170,8 @@ void draw_widgets(
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save image", save_path, true, fs::path(save_path).parent_path(),
-          fs::path(save_path).filename(),
+          "save image", save_path, true, sfs::path(save_path).parent_path(),
+          sfs::path(save_path).filename(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
@@ -233,7 +233,7 @@ void draw_widgets(
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "image", fs::path(app->filename).filename());
+    draw_label(win, "image", sfs::path(app->filename).filename());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "image",

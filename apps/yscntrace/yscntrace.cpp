@@ -42,7 +42,7 @@ namespace trc = yocto::trace;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 // construct a scene from io
 void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
@@ -233,8 +233,8 @@ int main(int argc, const char* argv[]) {
           const img::image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
-                   fs::path(imfilename).extension().string();
-        auto outfilename = fs::path(imfilename).replace_extension(ext).string();
+                   sfs::path(imfilename).extension().string();
+        auto outfilename = sfs::path(imfilename).replace_extension(ext).string();
         auto ioerror     = ""s;
         cli::print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror))

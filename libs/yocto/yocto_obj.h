@@ -327,7 +327,7 @@ struct hash<yocto::obj::vertex> {
 #include <string_view>
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR OBJ LOADER AND WRITER
@@ -1014,7 +1014,7 @@ inline bool load_obj(const std::string& filename, obj::model* obj,
       if (!parse_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(fs::path(filename).parent_path() / mtllib, obj, error))
+        if (!load_mtl(sfs::path(filename).parent_path() / mtllib, obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1062,8 +1062,8 @@ inline bool load_obj(const std::string& filename, obj::model* obj,
   if (geom_only) return true;
 
   // load extensions
-  auto extfilename = fs::path(filename).replace_extension(".objx");
-  if (fs::exists(fs::path(extfilename))) {
+  auto extfilename = sfs::path(filename).replace_extension(".objx");
+  if (sfs::exists(sfs::path(extfilename))) {
     if (!load_objx(extfilename, obj, error)) return dependent_error();
   }
 
@@ -1349,7 +1349,7 @@ inline void format_value(std::string& str, const vertex& value) {
   // save material library
   if (!obj->materials.empty()) {
     if (!format_values(fs, "mtllib {}\n\n",
-            fs::path(filename).filename().replace_extension(".mtl")))
+            sfs::path(filename).filename().replace_extension(".mtl")))
       return write_error();
   }
 
@@ -1396,7 +1396,7 @@ inline void format_value(std::string& str, const vertex& value) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    if (!save_mtl(fs::path(filename).replace_extension(".mtl"), obj, error))
+    if (!save_mtl(sfs::path(filename).replace_extension(".mtl"), obj, error))
       return dependent_error();
   }
 
@@ -1404,7 +1404,7 @@ inline void format_value(std::string& str, const vertex& value) {
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    if (!save_objx(fs::path(filename).replace_extension(".objx"), obj, error))
+    if (!save_objx(sfs::path(filename).replace_extension(".objx"), obj, error))
       return dependent_error();
   }
 

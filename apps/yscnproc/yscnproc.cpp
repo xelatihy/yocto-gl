@@ -39,7 +39,7 @@ using std::string;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 bool make_preset(
@@ -55,9 +55,9 @@ bool make_preset(
 }
 
 void make_dir(const std::string& dirname) {
-  if (fs::exists(dirname)) return;
+  if (sfs::exists(dirname)) return;
   try {
-    fs::create_directories(dirname);
+    sfs::create_directories(dirname);
   } catch (...) {
     cli::print_fatal("cannot create directory " + dirname);
   }
@@ -81,8 +81,8 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext         = fs::path(filename).extension().string();
-  auto basename    = fs::path(filename).stem().string();
+  auto ext         = sfs::path(filename).extension().string();
+  auto basename    = sfs::path(filename).stem().string();
   auto scene_guard = std::make_unique<sio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
@@ -113,22 +113,22 @@ int main(int argc, const char* argv[]) {
   }
 
   // tesselate if needed
-  if (fs::path(output).extension() != ".json") {
+  if (sfs::path(output).extension() != ".json") {
     for (auto iosubdiv : scene->subdivs) {
       tesselate_subdiv(scene, iosubdiv);
     }
   }
 
   // make a directory if needed
-  make_dir(fs::path(output).parent_path());
+  make_dir(sfs::path(output).parent_path());
   if (!scene->shapes.empty())
-    make_dir(fs::path(output).parent_path() / "shapes");
+    make_dir(sfs::path(output).parent_path() / "shapes");
   if (!scene->subdivs.empty())
-    make_dir(fs::path(output).parent_path() / "subdivs");
+    make_dir(sfs::path(output).parent_path() / "subdivs");
   if (!scene->textures.empty())
-    make_dir(fs::path(output).parent_path() / "textures");
+    make_dir(sfs::path(output).parent_path() / "textures");
   if (!scene->instances.empty())
-    make_dir(fs::path(output).parent_path() / "instances");
+    make_dir(sfs::path(output).parent_path() / "instances");
 
   // save scene
   if (!save_scene(output, scene, ioerror, cli::print_progress))

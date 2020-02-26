@@ -189,7 +189,7 @@ inline pbrt::light*       add_light(pbrt::model* pbrt);
 
 #include "ext/filesystem.hpp"
 #include "yocto_ply.h"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // ALIASES
@@ -1020,17 +1020,17 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
         auto filenames = std::vector<std::string>{};
         if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
-        auto filenamep = fs::path(filename).filename();
-        if (fs::path(filenamep).extension() == ".spd") {
-          filenamep = fs::path(filenamep).replace_extension("").string();
+        auto filenamep = sfs::path(filename).filename();
+        if (sfs::path(filenamep).extension() == ".spd") {
+          filenamep = sfs::path(filenamep).replace_extension("").string();
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (fs::path(filenamep).extension() == ".eta") {
+          } else if (sfs::path(filenamep).extension() == ".eta") {
             auto eta =
-                get_etak(fs::path(filenamep).replace_extension("")).first;
+                get_etak(sfs::path(filenamep).replace_extension("")).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (fs::path(filenamep).extension() == ".k") {
-            auto k = get_etak(fs::path(filenamep).replace_extension("")).second;
+          } else if (sfs::path(filenamep).extension() == ".k") {
+            auto k = get_etak(sfs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
@@ -2173,7 +2173,7 @@ struct context {
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
-      if (!load_pbrt(fs::path(filename).parent_path() / includename, pbrt,
+      if (!load_pbrt(sfs::path(filename).parent_path() / includename, pbrt,
               error, ctx, material_map, named_materials, named_textures,
               named_mediums, ply_dirname))
         return dependent_error();
@@ -2217,7 +2217,7 @@ inline pbrt::light* add_light(pbrt::model* pbrt) {
   auto named_materials = std::unordered_map<std::string, material>{{"", {}}};
   auto named_mediums   = std::unordered_map<std::string, medium>{{"", {}}};
   auto named_textures  = std::unordered_map<std::string, texture>{{"", {}}};
-  auto dirname         = fs::path(filename).parent_path().string();
+  auto dirname         = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
           named_textures, named_mediums, dirname))
@@ -2487,7 +2487,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
       if (!save_ply(
-              fs::path(filename).parent_path() / shape->filename_, ply, error))
+              sfs::path(filename).parent_path() / shape->filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);

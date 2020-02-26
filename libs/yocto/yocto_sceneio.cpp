@@ -55,7 +55,7 @@
 #include "yocto_pbrt.h"
 #include "yocto_ply.h"
 #include "yocto_shape.h"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 using namespace std::string_literals;
 
 #include "ext/cgltf.h"
@@ -749,7 +749,7 @@ static bool save_pbrt_scene(const std::string& filename,
 // Load a scene
 bool load_scene(const std::string& filename, scn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
-  auto ext = fs::path(filename).extension();
+  auto ext = sfs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -768,7 +768,7 @@ bool load_scene(const std::string& filename, scn::model* scene,
 // Save a scene
 bool save_scene(const std::string& filename, const scn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
-  auto ext = fs::path(filename).extension();
+  auto ext = sfs::path(filename).extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -1337,11 +1337,11 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
                           const std::string&              group,
                           const std::vector<std::string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = fs::path(filename).parent_path() / group /
+      auto filepath = sfs::path(filename).parent_path() / group /
                       (name + extension);
-      if (fs::exists(filepath)) return filepath;
+      if (sfs::exists(filepath)) return filepath;
     }
-    return fs::path(filename).parent_path() / group /
+    return sfs::path(filename).parent_path() / group /
            (name + extensions.front());
   };
 
@@ -1392,7 +1392,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = sfs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1524,7 +1524,7 @@ static bool save_json_scene(const std::string& filename,
   auto get_filename = [filename](const std::string& name,
                           const std::string&        group,
                           const std::string&        extension) {
-    return fs::path(filename).parent_path() / group / (name + extension);
+    return sfs::path(filename).parent_path() / group / (name + extension);
   };
 
   // save shapes
@@ -1726,7 +1726,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
 
   // get filename from name
   auto get_filename = [filename](const std::string& name) {
-    return fs::path(filename).parent_path() / name;
+    return sfs::path(filename).parent_path() / name;
   };
 
   // load textures
@@ -1748,7 +1748,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = sfs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1779,7 +1779,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   // convert cameras
   for (auto camera : scene->cameras) {
     auto ocamera      = add_camera(obj);
-    ocamera->name     = fs::path(camera->name).stem();
+    ocamera->name     = sfs::path(camera->name).stem();
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
     ocamera->width    = camera->film;
@@ -1802,7 +1802,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
-    omaterial->name                 = fs::path(material->name).stem();
+    omaterial->name                 = sfs::path(material->name).stem();
     omaterial->illum                = 2;
     omaterial->as_pbr               = true;
     omaterial->pbr_emission         = material->emission;
@@ -1855,7 +1855,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   // convert environments
   for (auto environment : scene->environments) {
     auto oenvironment          = add_environment(obj);
-    oenvironment->name         = fs::path(environment->name).stem();
+    oenvironment->name         = sfs::path(environment->name).stem();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_tex = get_texture(environment->emission_tex);
@@ -1871,7 +1871,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   auto get_filename = [filename](const std::string& name,
                           const std::string&        group,
                           const std::string&        extension) {
-    return fs::path(filename).parent_path() / group / (name + extension);
+    return sfs::path(filename).parent_path() / group / (name + extension);
   };
 
   // save textures
@@ -1995,7 +1995,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load buffers
-  auto dirname = fs::path(filename).parent_path().string();
+  auto dirname = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success)
@@ -2280,7 +2280,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   ctexture_map.erase("");
   for (auto [path, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(fs::path(filename).parent_path() / path, texture->colorf,
+    if (!load_image(sfs::path(filename).parent_path() / path, texture->colorf,
             texture->colorb, error))
       return dependent_error();
   }
@@ -2291,7 +2291,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = img::image<vec4f>{};
     auto color_opacityb = img::image<vec4b>{};
-    if (!load_image(fs::path(filename).parent_path() / path, color_opacityf,
+    if (!load_image(sfs::path(filename).parent_path() / path, color_opacityf,
             color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
@@ -2324,7 +2324,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = img::image<vec3f>{};
     auto metallic_roughnessb = img::image<vec3b>{};
-    if (!load_image(fs::path(filename).parent_path() / path,
+    if (!load_image(sfs::path(filename).parent_path() / path,
             metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
@@ -2352,7 +2352,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = sfs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2507,7 +2507,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
 
   // get filename from name
   auto get_filename = [filename](const std::string& name) {
-    return fs::path(filename).parent_path() / name;
+    return sfs::path(filename).parent_path() / name;
   };
 
   // load texture
@@ -2540,7 +2540,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = fs::path(filename).stem();
+  if (scene->name == "") scene->name = sfs::path(filename).stem();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2584,7 +2584,7 @@ static bool save_pbrt_scene(const std::string& filename,
   auto material_map = std::unordered_map<scn::material*, ypbrt::material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
-    pmaterial->name         = fs::path(material->name).stem();
+    pmaterial->name         = sfs::path(material->name).stem();
     pmaterial->emission     = material->emission;
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -2601,7 +2601,7 @@ static bool save_pbrt_scene(const std::string& filename,
   // convert instances
   for (auto object : scene->objects) {
     auto pshape       = add_shape(pbrt);
-    pshape->filename_ = fs::path(object->shape->name).replace_extension(".ply");
+    pshape->filename_ = sfs::path(object->shape->name).replace_extension(".ply");
     pshape->frame     = object->frame;
     pshape->frend     = object->frame;
     pshape->material  = material_map.at(object->material);
@@ -2631,7 +2631,7 @@ static bool save_pbrt_scene(const std::string& filename,
   auto get_filename = [filename](const std::string& name,
                           const std::string&        group,
                           const std::string&        extension) {
-    return fs::path(filename).parent_path() / group / (name + extension);
+    return sfs::path(filename).parent_path() / group / (name + extension);
   };
 
   // save textures

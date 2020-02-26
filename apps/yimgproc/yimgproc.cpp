@@ -36,7 +36,7 @@ namespace cli = yocto::commonio;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 namespace yocto::image {
 
@@ -283,8 +283,8 @@ int main(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext      = fs::path(filename).extension().string();
-  auto basename = fs::path(filename).stem().string();
+  auto ext      = sfs::path(filename).extension().string();
+  auto basename = sfs::path(filename).stem().string();
   auto ioerror  = ""s;
   auto img      = img::image<vec4f>{};
   if (ext == ".ypreset") {

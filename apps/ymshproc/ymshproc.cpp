@@ -34,7 +34,7 @@ namespace shp = yocto::shape;
 namespace cli = yocto::commonio;
 
 #include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
+namespace sfs = ghc::filesystem;
 
 using std::string;
 using std::vector;
@@ -309,8 +309,8 @@ int main(int argc, const char* argv[]) {
   auto ioerror = ""s;
   cli::print_progress("load shape", 0, 1);
   if (!facevarying) {
-    auto ext      = fs::path(filename).extension().string();
-    auto basename = fs::path(filename).stem().string();
+    auto ext      = sfs::path(filename).extension().string();
+    auto basename = sfs::path(filename).stem().string();
     if (ext == ".ypreset") {
       if (!make_shape_preset(points, lines, triangles, quads, positions,
               normals, texcoords, colors, radius, basename, ioerror))
@@ -321,8 +321,8 @@ int main(int argc, const char* argv[]) {
         cli::print_fatal(ioerror);
     }
   } else {
-    auto ext      = fs::path(filename).extension().string();
-    auto basename = fs::path(filename).stem().string();
+    auto ext      = sfs::path(filename).extension().string();
+    auto basename = sfs::path(filename).stem().string();
     if (ext == ".ypreset") {
       if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
               normals, texcoords, basename, ioerror))
