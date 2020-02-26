@@ -25,18 +25,28 @@ namespace yocto::shape {
 namespace yply = yocto::ply;
 namespace yobj = yocto::obj;
 
-using namespace ym;
 // import math symbols for use
-using ym::abs;
-using ym::acos;
-using ym::atan2;
-using ym::cos;
-using ym::exp;
-using ym::fmod;
-using ym::log;
-using ym::pow;
-using ym::sin;
-using ym::sqrt;
+using math::abs;
+using math::acos;
+using math::atan2;
+using math::cos;
+using math::exp;
+using math::fmod;
+using math::log;
+using math::pow;
+using math::sin;
+using math::sqrt;
+using math::swap;
+using math::min;
+using math::max;
+using math::clamp;
+using math::lerp;
+using math::zero2f;
+using math::zero3f;
+using math::zero4f;
+using math::invalidb3f;
+using math::flt_max;
+using math::pif;
 
 }  // namespace yocto::shape
 
@@ -2832,9 +2842,10 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
 namespace yocto::shape {
 
 // Pick a point in a point set uniformly.
-int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
+int sample_points(int npoints, float re) { return 
+  math::sample_uniform(npoints, re); }
 int sample_points(const std::vector<float>& cdf, float re) {
-  return sample_discrete(cdf, re);
+  return math::sample_discrete(cdf, re);
 }
 std::vector<float> sample_points_cdf(int npoints) {
   auto cdf = std::vector<float>(npoints);
@@ -2845,7 +2856,7 @@ std::vector<float> sample_points_cdf(int npoints) {
 // Pick a point on lines uniformly.
 std::pair<int, float> sample_lines(
     const std::vector<float>& cdf, float re, float ru) {
-  return {sample_discrete(cdf, re), ru};
+  return {math::sample_discrete(cdf, re), ru};
 }
 std::vector<float> sample_lines_cdf(
     const std::vector<vec2i>& lines, const std::vector<vec3f>& positions) {
@@ -2861,7 +2872,7 @@ std::vector<float> sample_lines_cdf(
 // Pick a point on a triangle mesh uniformly.
 std::pair<int, vec2f> sample_triangles(
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), sample_triangle(ruv)};
+  return {math::sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 std::vector<float> sample_triangles_cdf(
     const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions) {
@@ -2877,11 +2888,11 @@ std::vector<float> sample_triangles_cdf(
 // Pick a point on a quad mesh uniformly.
 std::pair<int, vec2f> sample_quads(
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), ruv};
+  return {math::sample_discrete(cdf, re), ruv};
 }
 std::pair<int, vec2f> sample_quads(const std::vector<vec4i>& quads,
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  auto element = sample_discrete(cdf, re);
+  auto element = math::sample_discrete(cdf, re);
   if (quads[element].z == quads[element].w) {
     return {element, sample_triangle(ruv)};
   } else {
@@ -2912,7 +2923,7 @@ void sample_triangles(std::vector<vec3f>& sampled_positions,
   sampled_normals.resize(npoints);
   sampled_texcoords.resize(npoints);
   auto cdf = sample_triangles_cdf(triangles, positions);
-  auto rng = make_rng(seed);
+  auto rng = math::make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
     auto  sample         = sample_triangles(cdf, rand1f(rng), rand2f(rng));
     auto& t              = triangles[sample.first];
@@ -2947,7 +2958,7 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
   sampled_normals.resize(npoints);
   sampled_texcoords.resize(npoints);
   auto cdf = sample_quads_cdf(quads, positions);
-  auto rng = make_rng(seed);
+  auto rng = math::make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
     auto  sample         = sample_quads(cdf, rand1f(rng), rand2f(rng));
     auto& q              = quads[sample.first];
@@ -4062,7 +4073,7 @@ void make_random_points(std::vector<int>& points, std::vector<vec3f>& positions,
     float point_radius, uint64_t seed) {
   make_points(points, positions, normals, texcoords, radius, num, uvscale,
       point_radius);
-  auto rng = make_rng(seed);
+  auto rng = math::make_rng(seed);
   for (auto i = 0; i < positions.size(); i++) {
     positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
   }
@@ -4677,7 +4688,7 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
   sample_triangles(bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord,
       steps.y, seed);
 
-  auto rng  = make_rng(seed, 3);
+  auto rng  = math::make_rng(seed, 3);
   auto blen = std::vector<float>(bpos.size());
   for (auto& l : blen) {
     l = lerp(len.x, len.y, rand1f(rng));
@@ -4733,9 +4744,9 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
 void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     float thickness) {
-  auto bbox = invalidb3f;
+  auto bbox = math::invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
-  auto center              = ym::center(bbox);
+  auto center              = math::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;

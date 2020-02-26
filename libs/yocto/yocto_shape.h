@@ -132,22 +132,22 @@
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
-// Namespace aliases
-namespace ym = yocto::math; 
-
 // Math defitions
-using ym::bbox3f;
-using ym::byte;
-using ym::frame3f;
-using ym::mat4f;
-using ym::ray3f;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3b;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4f;
-using ym::vec4i;
+using math::byte;
+using math::vec2f;
+using math::vec2i;
+using math::vec3b;
+using math::vec3f;
+using math::vec3i;
+using math::vec4f;
+using math::vec4i;
+using math::ray3f;
+using math::bbox3f;
+using math::frame3f;
+using math::mat3f;
+using math::mat4f;
+using math::identity3x4f;
+using math::flt_max;
 
 }
 
@@ -390,7 +390,7 @@ struct bvh_shape {
 
 // instance
 struct bvh_instance {
-  frame3f frame = ym::identity3x4f;
+  frame3f frame = identity3x4f;
   int     shape = -1;
 };
 
@@ -659,7 +659,7 @@ struct geodesic_solver {
   static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
-    float length = ym::flt_max;
+    float length = flt_max;
   };
 #ifdef YOCTO_ABSEIL
   std::vector<short_vector<adjancency_list, min_arcs>> graph = {};
@@ -675,10 +675,10 @@ geodesic_solver make_geodesic_solver(const std::vector<vec3i>& triangles,
 // Compute geodesic distances
 void update_geodesic_distances(std::vector<float>& distances,
     const geodesic_solver& solver, const std::vector<int>& sources,
-    float max_distance = ym::flt_max);
+    float max_distance = flt_max);
 
 std::vector<float> compute_geodesic_distances(const geodesic_solver& solver,
-    const std::vector<int>& sources, float max_distance = ym::flt_max);
+    const std::vector<int>& sources, float max_distance = flt_max);
 
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assignes its previous node in
