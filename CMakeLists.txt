@@ -34,5 +34,5 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS "/EHsc")
 endif(MSVC)
 
-add_subdirectory(lib)
+add_subdirectory(libs)
 add_subdirectory(apps)

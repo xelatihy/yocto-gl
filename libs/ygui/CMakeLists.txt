@@ -18,7 +18,7 @@ if(YOCTO_OPENGL)
     ext/glad/glad.c)
   
   target_include_directories(ygui PRIVATE .)
-  target_include_directories(ygui PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(ygui PUBLIC ${CMAKE_SOURCE_DIR}/libs)
   target_compile_definitions(ygui PRIVATE -DIMGUI_IMPL_OPENGL_LOADER_GLAD)
   set_target_properties(ygui PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   
