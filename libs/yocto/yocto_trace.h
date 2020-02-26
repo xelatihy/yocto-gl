@@ -82,23 +82,23 @@
 namespace yocto::trace {
 
 // Namespace aliases
-namespace ym = yocto::math; 
-namespace ytrc = yocto::trace;
-namespace yimg = yocto::image;
+namespace trc = yocto::trace;
+namespace img = yocto::image;
 
 // Math defitions
-using ym::bbox3f;
-using ym::byte;
-using ym::frame3f;
-using ym::identity3x4f;
-using ym::ray3f;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3b;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4f;
-using ym::vec4i;
+using math::bbox3f;
+using math::byte;
+using math::frame3f;
+using math::identity3x4f;
+using math::ray3f;
+using math::vec2f;
+using math::vec2i;
+using math::vec3b;
+using math::vec3f;
+using math::vec3i;
+using math::vec4f;
+using math::vec4i;
+using math::rng_state;
 
 }
 
@@ -118,71 +118,71 @@ struct instance;
 struct object;
 
 // Add scene elements
-ytrc::camera*      add_camera(ytrc::scene* scene);
-ytrc::object*      add_object(ytrc::scene* scene);
-ytrc::texture*     add_texture(ytrc::scene* scene);
-ytrc::material*    add_material(ytrc::scene* scene);
-ytrc::shape*       add_shape(ytrc::scene* scene);
-ytrc::instance*    add_instance(ytrc::scene* scene);
-ytrc::environment* add_environment(ytrc::scene* scene);
+trc::camera*      add_camera(trc::scene* scene);
+trc::object*      add_object(trc::scene* scene);
+trc::texture*     add_texture(trc::scene* scene);
+trc::material*    add_material(trc::scene* scene);
+trc::shape*       add_shape(trc::scene* scene);
+trc::instance*    add_instance(trc::scene* scene);
+trc::environment* add_environment(trc::scene* scene);
 
 // camera properties
-void set_frame(ytrc::camera* camera, const frame3f& frame);
-void set_lens(ytrc::camera* camera, float lens, float aspect, float film);
-void set_focus(ytrc::camera* camera, float aperture, float focus);
+void set_frame(trc::camera* camera, const frame3f& frame);
+void set_lens(trc::camera* camera, float lens, float aspect, float film);
+void set_focus(trc::camera* camera, float aperture, float focus);
 
 // object properties
-void set_frame(ytrc::object* object, const frame3f& frame);
-void set_material(ytrc::object* object, ytrc::material* material);
-void set_shape(ytrc::object* object, ytrc::shape* shape);
-void set_instance(ytrc::object* object, ytrc::instance* instance);
+void set_frame(trc::object* object, const frame3f& frame);
+void set_material(trc::object* object, trc::material* material);
+void set_shape(trc::object* object, trc::shape* shape);
+void set_instance(trc::object* object, trc::instance* instance);
 
 // texture properties
-void set_texture(ytrc::texture* texture, const yimg::image<vec3b>& img);
-void set_texture(ytrc::texture* texture, const yimg::image<vec3f>& img);
-void set_texture(ytrc::texture* texture, const yimg::image<byte>& img);
-void set_texture(ytrc::texture* texture, const yimg::image<float>& img);
+void set_texture(trc::texture* texture, const img::image<vec3b>& img);
+void set_texture(trc::texture* texture, const img::image<vec3f>& img);
+void set_texture(trc::texture* texture, const img::image<byte>& img);
+void set_texture(trc::texture* texture, const img::image<float>& img);
 
 // material properties
-void set_emission(ytrc::material* material, const vec3f& emission,
-    ytrc::texture* emission_tex = nullptr);
-void set_color(ytrc::material* material, const vec3f& color,
-    ytrc::texture* color_tex = nullptr);
-void set_specular(ytrc::material* material, float specular = 1,
-    ytrc::texture* specular_tex = nullptr);
-void set_ior(ytrc::material* material, float ior);
-void set_metallic(ytrc::material* material, float metallic,
-    ytrc::texture* metallic_tex = nullptr);
-void set_transmission(ytrc::material* material, float transmission, bool thin,
-    float trdepth, ytrc::texture* transmission_tex = nullptr);
-void set_roughness(ytrc::material* material, float roughness,
-    ytrc::texture* roughness_tex = nullptr);
-void set_opacity(ytrc::material* material, float opacity,
-    ytrc::texture* opacity_tex = nullptr);
-void set_thin(ytrc::material* material, bool thin);
-void set_scattering(ytrc::material* material, const vec3f& scattering,
-    float scanisotropy, ytrc::texture* scattering_tex = nullptr);
-void set_normalmap(ytrc::material* material, ytrc::texture* normal_tex);
+void set_emission(trc::material* material, const vec3f& emission,
+    trc::texture* emission_tex = nullptr);
+void set_color(trc::material* material, const vec3f& color,
+    trc::texture* color_tex = nullptr);
+void set_specular(trc::material* material, float specular = 1,
+    trc::texture* specular_tex = nullptr);
+void set_ior(trc::material* material, float ior);
+void set_metallic(trc::material* material, float metallic,
+    trc::texture* metallic_tex = nullptr);
+void set_transmission(trc::material* material, float transmission, bool thin,
+    float trdepth, trc::texture* transmission_tex = nullptr);
+void set_roughness(trc::material* material, float roughness,
+    trc::texture* roughness_tex = nullptr);
+void set_opacity(trc::material* material, float opacity,
+    trc::texture* opacity_tex = nullptr);
+void set_thin(trc::material* material, bool thin);
+void set_scattering(trc::material* material, const vec3f& scattering,
+    float scanisotropy, trc::texture* scattering_tex = nullptr);
+void set_normalmap(trc::material* material, trc::texture* normal_tex);
 
 // shape properties
-void set_points(ytrc::shape* shape, const std::vector<int>& points);
-void set_lines(ytrc::shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(ytrc::shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(ytrc::shape* shape, const std::vector<vec4i>& quads);
-void set_positions(ytrc::shape* shape, const std::vector<vec3f>& positions);
-void set_normals(ytrc::shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(ytrc::shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(ytrc::shape* shape, const std::vector<vec3f>& colors);
-void set_radius(ytrc::shape* shape, const std::vector<float>& radius);
-void set_tangents(ytrc::shape* shape, const std::vector<vec4f>& tangents);
+void set_points(trc::shape* shape, const std::vector<int>& points);
+void set_lines(trc::shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(trc::shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(trc::shape* shape, const std::vector<vec4i>& quads);
+void set_positions(trc::shape* shape, const std::vector<vec3f>& positions);
+void set_normals(trc::shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(trc::shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(trc::shape* shape, const std::vector<vec3f>& colors);
+void set_radius(trc::shape* shape, const std::vector<float>& radius);
+void set_tangents(trc::shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(ytrc::instance* instance, const std::vector<frame3f>& frames);
+void set_frames(trc::instance* instance, const std::vector<frame3f>& frames);
 
 // environment properties
-void set_frame(ytrc::environment* environment, const frame3f& frame);
-void set_emission(ytrc::environment* environment, const vec3f& emission,
-    ytrc::texture* emission_tex = nullptr);
+void set_frame(trc::environment* environment, const frame3f& frame);
+void set_emission(trc::environment* environment, const vec3f& emission,
+    trc::texture* emission_tex = nullptr);
 
 // Type of tracing algorithm
 enum struct sampler_type {
@@ -252,25 +252,25 @@ using progress_callback =
     std::function<void(const std::string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback = std::function<void(
-    const yimg::image<vec4f>& render, int current, int total)>;
+    const img::image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
-void init_lights(ytrc::scene* scene, progress_callback progress_cb = {});
+void init_lights(trc::scene* scene, progress_callback progress_cb = {});
 
 // Build the bvh acceleration structure.
-void init_bvh(ytrc::scene* scene, const trace_params& params,
+void init_bvh(trc::scene* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(ytrc::scene*            scene,
-    const std::vector<ytrc::object*>&   updated_objects,
-    const std::vector<ytrc::shape*>&    updated_shapes,
-    const std::vector<ytrc::instance*>& updated_instances,
+void update_bvh(trc::scene*            scene,
+    const std::vector<trc::object*>&   updated_objects,
+    const std::vector<trc::shape*>&    updated_shapes,
+    const std::vector<trc::instance*>& updated_instances,
     const trace_params&                 params);
 
 // Progressively computes an image.
-yimg::image<vec4f> trace_image(const ytrc::scene* scene,
-    const ytrc::camera* camera, const trace_params& params,
+img::image<vec4f> trace_image(const trc::scene* scene,
+    const trc::camera* camera, const trace_params& params,
     progress_callback progress_cb = {}, image_callback image_cb = {});
 
 // Check is a sampler requires lights
@@ -278,12 +278,12 @@ bool is_sampler_lit(const trace_params& params);
 
 // [experimental] Callback used to report partially computed image
 using async_callback = std::function<void(
-    const yimg::image<vec4f>& render, int current, int total, const vec2i& ij)>;
+    const img::image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct state;
-void trace_start(state* state, const ytrc::scene* scene,
-    const ytrc::camera* camera, const trace_params& params,
+void trace_start(state* state, const trc::scene* scene,
+    const trc::camera* camera, const trace_params& params,
     progress_callback progress_cb = {}, image_callback image_cb = {},
     async_callback async_cb = {});
 void trace_stop(state* state);
@@ -333,17 +333,17 @@ struct camera {
   bool    orthographic = false;
   float   lens         = 0.050;
   vec2f   film         = {0.036, 0.024};
-  float   focus        = ym::flt_max;
+  float   focus        = 10000;
   float   aperture     = 0;
 };
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  yimg::image<vec3f> colorf  = {};
-  yimg::image<vec3b> colorb  = {};
-  yimg::image<float> scalarf = {};
-  yimg::image<byte>  scalarb = {};
+  img::image<vec3f> colorf  = {};
+  img::image<vec3b> colorb  = {};
+  img::image<float> scalarf = {};
+  img::image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -368,17 +368,17 @@ struct material {
   bool  thin         = false;
 
   // textures
-  ytrc::texture* emission_tex     = nullptr;
-  ytrc::texture* color_tex        = nullptr;
-  ytrc::texture* specular_tex     = nullptr;
-  ytrc::texture* metallic_tex     = nullptr;
-  ytrc::texture* roughness_tex    = nullptr;
-  ytrc::texture* transmission_tex = nullptr;
-  ytrc::texture* spectint_tex     = nullptr;
-  ytrc::texture* scattering_tex   = nullptr;
-  ytrc::texture* coat_tex         = nullptr;
-  ytrc::texture* opacity_tex      = nullptr;
-  ytrc::texture* normal_tex       = nullptr;
+  trc::texture* emission_tex     = nullptr;
+  trc::texture* color_tex        = nullptr;
+  trc::texture* specular_tex     = nullptr;
+  trc::texture* metallic_tex     = nullptr;
+  trc::texture* roughness_tex    = nullptr;
+  trc::texture* transmission_tex = nullptr;
+  trc::texture* spectint_tex     = nullptr;
+  trc::texture* scattering_tex   = nullptr;
+  trc::texture* coat_tex         = nullptr;
+  trc::texture* opacity_tex      = nullptr;
+  trc::texture* normal_tex       = nullptr;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -421,24 +421,24 @@ struct instance {
 // Object.
 struct object {
   frame3f         frame    = identity3x4f;
-  ytrc::shape*    shape    = nullptr;
-  ytrc::material* material = nullptr;
-  ytrc::instance* instance = nullptr;
+  trc::shape*    shape    = nullptr;
+  trc::material* material = nullptr;
+  trc::instance* instance = nullptr;
 };
 
 // Environment map.
 struct environment {
   frame3f            frame        = identity3x4f;
   vec3f              emission     = {0, 0, 0};
-  ytrc::texture*     emission_tex = nullptr;
+  trc::texture*     emission_tex = nullptr;
   std::vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct light {
-  ytrc::object*      object      = nullptr;
+  trc::object*      object      = nullptr;
   int                instance    = -1;
-  ytrc::environment* environment = nullptr;
+  trc::environment* environment = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -449,16 +449,16 @@ struct light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-  std::vector<ytrc::camera*>      cameras      = {};
-  std::vector<ytrc::object*>      objects      = {};
-  std::vector<ytrc::shape*>       shapes       = {};
-  std::vector<ytrc::material*>    materials    = {};
-  std::vector<ytrc::instance*>    instances    = {};
-  std::vector<ytrc::texture*>     textures     = {};
-  std::vector<ytrc::environment*> environments = {};
+  std::vector<trc::camera*>      cameras      = {};
+  std::vector<trc::object*>      objects      = {};
+  std::vector<trc::shape*>       shapes       = {};
+  std::vector<trc::material*>    materials    = {};
+  std::vector<trc::instance*>    instances    = {};
+  std::vector<trc::texture*>     textures     = {};
+  std::vector<trc::environment*> environments = {};
 
   // computed properties
-  std::vector<ytrc::light*> lights = {};
+  std::vector<trc::light*> lights = {};
   bvh_tree*                 bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene           embree_bvh       = nullptr;
@@ -474,13 +474,13 @@ struct pixel {
   vec3f         radiance = {0, 0, 0};
   int           hits     = 0;
   int           samples  = 0;
-  ym::rng_state rng      = {};
+  rng_state rng      = {};
 };
 
 // [experimental] Asynchronous state
 struct state {
-  yimg::image<vec4f> render = {};
-  yimg::image<pixel> pixels = {};
+  img::image<vec4f> render = {};
+  img::image<pixel> pixels = {};
   std::future<void>  worker = {};  // async
   std::atomic<bool>  stop   = {};  // async
 };
@@ -507,9 +507,9 @@ struct intersection3f {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-intersection3f intersect_scene_bvh(const ytrc::scene* scene, const ray3f& ray,
+intersection3f intersect_scene_bvh(const trc::scene* scene, const ray3f& ray,
     bool find_any = false, bool non_rigid_frames = true);
-intersection3f intersect_instance_bvh(const ytrc::object* object, int instance,
+intersection3f intersect_instance_bvh(const trc::object* object, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto::trace
