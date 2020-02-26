@@ -57,22 +57,29 @@
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace ym = yocto::math; 
 namespace ysio = yocto::sceneio;
 namespace yimg = yocto::image;
 
 // Math defitions
-using ym::bbox3f;
-using ym::byte;
-using ym::frame3f;
-using ym::identity3x4f;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3b;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4f;
-using ym::vec4i;
+using math::byte;
+using math::vec2f;
+using math::vec2i;
+using math::vec3b;
+using math::vec3f;
+using math::vec3i;
+using math::vec3b;
+using math::vec4f;
+using math::vec4i;
+using math::vec4b;
+using math::bbox3f;
+using math::frame3f;
+using math::mat4f;
+using math::zero2i;
+using math::zero2f;
+using math::zero3i;
+using math::zero3f;
+using math::identity3x3f;
+using math::identity3x4f;
 
 }
 
@@ -101,7 +108,7 @@ struct camera {
   float       lens         = 0.050;
   float       film         = 0.036;
   float       aspect       = 1.500;
-  float       focus        = ym::flt_max;
+  float       focus        = 10000;
   float       aperture     = 0;
 };
 

@@ -72,19 +72,22 @@ namespace ypbrt = yocto::pbrt;
 namespace yshp = yocto::shape;
 namespace yimg = yocto::image;
 
-using namespace ym;
 // import math symbols for use
-using ym::abs;
-using ym::acos;
-using ym::atan2;
-using ym::cos;
-using ym::exp;
-using ym::fmod;
-using ym::log;
-using ym::pow;
-using ym::sin;
-using ym::sqrt;
-using ym::tan;
+using math::abs;
+using math::acos;
+using math::atan2;
+using math::cos;
+using math::exp;
+using math::fmod;
+using math::log;
+using math::pow;
+using math::sin;
+using math::sqrt;
+using math::tan;
+using math::clamp;
+using math::min;
+using math::max;
+using math::invalidb3f;
 
 }  // namespace yocto::sceneio
 
