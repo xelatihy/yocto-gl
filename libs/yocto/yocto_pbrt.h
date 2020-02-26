@@ -47,7 +47,6 @@ namespace yocto::pbrt {
 
 // Namespace aliases
 namespace ym = yocto::math;
-namespace ypbrt = yocto::pbrt;
 
 // Math defitions
 using ym::frame3f;
@@ -114,7 +113,7 @@ struct shape {
   std::vector<vec2f> texcoords = {};
   std::vector<vec3i> triangles = {};
   // material
-  ypbrt::material* material = nullptr;
+  pbrt::material* material = nullptr;
 };
 
 // Pbrt lights
@@ -146,11 +145,11 @@ struct environment {
 struct model {
   // pbrt data
   std::vector<std::string>         comments     = {};
-  std::vector<ypbrt::camera*>      cameras      = {};
-  std::vector<ypbrt::shape*>       shapes       = {};
-  std::vector<ypbrt::environment*> environments = {};
-  std::vector<ypbrt::light*>       lights       = {};
-  std::vector<ypbrt::material*>    materials    = {};
+  std::vector<pbrt::camera*>      cameras      = {};
+  std::vector<pbrt::shape*>       shapes       = {};
+  std::vector<pbrt::environment*> environments = {};
+  std::vector<pbrt::light*>       lights       = {};
+  std::vector<pbrt::material*>    materials    = {};
 
   // cleanup
   ~model();
@@ -158,16 +157,16 @@ struct model {
 
 // Load/save pbrt
 inline bool load_pbrt(
-    const std::string& filename, ypbrt::model* pbrt, std::string& error);
-inline bool save_pbrt(const std::string& filename, ypbrt::model* pbrt,
+    const std::string& filename, pbrt::model* pbrt, std::string& error);
+inline bool save_pbrt(const std::string& filename, pbrt::model* pbrt,
     std::string& error, bool ply_meshes = false);
 
 // Create pbrt
-inline ypbrt::camera*      add_camera(ypbrt::model* pbrt);
-inline ypbrt::shape*       add_shape(ypbrt::model* pbrt);
-inline ypbrt::material*    add_material(ypbrt::model* pbrt);
-inline ypbrt::environment* add_environment(ypbrt::model* pbrt);
-inline ypbrt::light*       add_light(ypbrt::model* pbrt);
+inline pbrt::camera*      add_camera(pbrt::model* pbrt);
+inline pbrt::shape*       add_shape(pbrt::model* pbrt);
+inline pbrt::material*    add_material(pbrt::model* pbrt);
+inline pbrt::environment* add_environment(pbrt::model* pbrt);
+inline pbrt::light*       add_light(pbrt::model* pbrt);
 
 }  // namespace yocto::pbrt
 
@@ -1076,7 +1075,7 @@ struct medium {
 };
 
 // convert pbrt films
-inline bool convert_film(ypbrt::film* film, const command& command,
+inline bool convert_film(pbrt::film* film, const command& command,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1103,7 +1102,7 @@ inline bool convert_film(ypbrt::film* film, const command& command,
 }
 
 // convert pbrt elements
-inline bool convert_camera(ypbrt::camera* pcamera, const command& command,
+inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     const vec2i& resolution, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1163,7 +1162,7 @@ inline bool convert_camera(ypbrt::camera* pcamera, const command& command,
 }
 
 // convert pbrt textures
-inline bool convert_texture(ypbrt::texture* ptexture, const command& command,
+inline bool convert_texture(pbrt::texture* ptexture, const command& command,
     std::unordered_map<std::string, texture>& texture_map,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1257,7 +1256,7 @@ inline bool convert_texture(ypbrt::texture* ptexture, const command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(ypbrt::material* pmaterial, const command& command,
+inline bool convert_material(pbrt::material* pmaterial, const command& command,
     const std::unordered_map<std::string, material>& named_materials,
     const std::unordered_map<std::string, texture>&  named_textures,
     const std::string& filename, std::string& error, bool verbose = false) {
@@ -1659,7 +1658,7 @@ inline void make_quad(std::vector<vec3i>& triangles,
 }
 
 // Convert pbrt shapes
-inline bool convert_shape(ypbrt::shape* shape, const command& command,
+inline bool convert_shape(pbrt::shape* shape, const command& command,
     std::string&                                    alphamap,
     const std::unordered_map<std::string, texture>& named_textures,
     const std::string& ply_dirname, const std::string& filename,
@@ -1746,7 +1745,7 @@ inline bool convert_shape(ypbrt::shape* shape, const command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(ypbrt::arealight* parealight,
+inline bool convert_arealight(pbrt::arealight* parealight,
     const command& command, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1771,7 +1770,7 @@ inline bool convert_arealight(ypbrt::arealight* parealight,
 }
 
 // Convert pbrt lights
-inline bool convert_light(ypbrt::light* plight, const command& command,
+inline bool convert_light(pbrt::light* plight, const command& command,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1830,7 +1829,7 @@ inline bool convert_light(ypbrt::light* plight, const command& command,
   }
 }
 
-inline bool convert_environment(ypbrt::environment* penvironment,
+inline bool convert_environment(pbrt::environment* penvironment,
     const command& command, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1866,10 +1865,10 @@ inline bool convert_environment(ypbrt::environment* penvironment,
 struct stack_element {
   frame3f          transform_start        = identity3x4f;
   frame3f          transform_end          = identity3x4f;
-  ypbrt::material  material               = {};
-  ypbrt::arealight arealight              = {};
-  ypbrt::medium    interior               = {};
-  ypbrt::medium    exterior               = {};
+  pbrt::material  material               = {};
+  pbrt::arealight arealight              = {};
+  pbrt::medium    interior               = {};
+  pbrt::medium    exterior               = {};
   bool             reverse                = false;
   bool             active_transform_start = true;
   bool             active_transform_end   = true;
@@ -1879,15 +1878,15 @@ struct stack_element {
 struct context {
   std::vector<stack_element>                                  stack      = {};
   std::unordered_map<std::string, stack_element>              coordsys   = {};
-  std::unordered_map<std::string, std::vector<ypbrt::shape*>> objects    = {};
+  std::unordered_map<std::string, std::vector<pbrt::shape*>> objects    = {};
   std::string                                                 cur_object = "";
   vec2i film_resolution = {512, 512};
 };
 
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(const std::string& filename,
-    ypbrt::model* pbrt, std::string& error, context& ctx,
-    std::unordered_map<std::string, ypbrt::material*>& material_map,
+    pbrt::model* pbrt, std::string& error, context& ctx,
+    std::unordered_map<std::string, pbrt::material*>& material_map,
     std::unordered_map<std::string, material>&         named_materials,
     std::unordered_map<std::string, texture>&          named_textures,
     std::unordered_map<std::string, medium>&           named_mediums,
@@ -2034,30 +2033,30 @@ struct context {
         ctx.stack.back().transform_end = ctx.coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Sampler") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "PixelFilter") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Film") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      auto film = ypbrt::film{};
+      auto film = pbrt::film{};
       if (!convert_film(&film, command, filename, error)) return false;
       ctx.film_resolution = film.resolution;
     } else if (cmd == "Accelerator") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Camera") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -2067,7 +2066,7 @@ struct context {
               camera, command, ctx.film_resolution, filename, error))
         return false;
     } else if (cmd == "Texture") {
-      auto command  = ypbrt::command{};
+      auto command  = pbrt::command{};
       auto comptype = ""s;
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_param(str, comptype)) return parse_error();
@@ -2078,7 +2077,7 @@ struct context {
         return false;
     } else if (cmd == "Material") {
       static auto material_id = 0;
-      auto        command     = ypbrt::command{};
+      auto        command     = pbrt::command{};
       command.name = "__unnamed__material__" + std::to_string(material_id++);
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
@@ -2091,7 +2090,7 @@ struct context {
           return false;
       }
     } else if (cmd == "MakeNamedMaterial") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.type = "";
@@ -2105,7 +2104,7 @@ struct context {
       if (!parse_param(str, name)) return parse_error();
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -2131,7 +2130,7 @@ struct context {
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
-      auto        command      = ypbrt::command{};
+      auto        command      = pbrt::command{};
       command.name = "__unnamed__arealight__" + std::to_string(arealight_id++);
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
@@ -2141,7 +2140,7 @@ struct context {
               &ctx.stack.back().arealight, command, filename, error))
         return false;
     } else if (cmd == "LightSource") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -2155,13 +2154,13 @@ struct context {
         if (!convert_light(light, command, filename, error)) return false;
       }
     } else if (cmd == "MakeNamedMedium") {
-      auto command = ypbrt::command{};
+      auto command = pbrt::command{};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium                 = ypbrt::medium{};
+      auto medium                 = pbrt::medium{};
       named_mediums[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -2192,27 +2191,27 @@ inline model::~model() {
 }
 
 // Make pbrt
-inline ypbrt::camera* add_camera(ypbrt::model* pbrt) {
+inline pbrt::camera* add_camera(pbrt::model* pbrt) {
   return pbrt->cameras.emplace_back(new camera{});
 }
-inline ypbrt::shape* add_shape(ypbrt::model* pbrt) {
+inline pbrt::shape* add_shape(pbrt::model* pbrt) {
   return pbrt->shapes.emplace_back(new shape{});
 }
-inline ypbrt::material* add_material(ypbrt::model* pbrt) {
+inline pbrt::material* add_material(pbrt::model* pbrt) {
   return pbrt->materials.emplace_back(new material{});
 }
-inline ypbrt::environment* add_environment(ypbrt::model* pbrt) {
+inline pbrt::environment* add_environment(pbrt::model* pbrt) {
   return pbrt->environments.emplace_back(new environment{});
 }
-inline ypbrt::light* add_light(ypbrt::model* pbrt) {
+inline pbrt::light* add_light(pbrt::model* pbrt) {
   return pbrt->lights.emplace_back(new light{});
 }
 
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(
-    const std::string& filename, ypbrt::model* pbrt, std::string& error) {
+    const std::string& filename, pbrt::model* pbrt, std::string& error) {
   auto ctx             = context{};
-  auto material_map    = std::unordered_map<std::string, ypbrt::material*>{};
+  auto material_map    = std::unordered_map<std::string, pbrt::material*>{};
   auto named_materials = std::unordered_map<std::string, material>{{"", {}}};
   auto named_mediums   = std::unordered_map<std::string, medium>{{"", {}}};
   auto named_textures  = std::unordered_map<std::string, texture>{{"", {}}};
@@ -2223,7 +2222,7 @@ inline ypbrt::light* add_light(ypbrt::model* pbrt) {
     return false;
 
   // remove unused materials
-  auto used_materials = std::unordered_set<ypbrt::material*>{};
+  auto used_materials = std::unordered_set<pbrt::material*>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
@@ -2315,7 +2314,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
 }
 
 [[nodiscard]] inline bool save_pbrt(const std::string& filename,
-    ypbrt::model* pbrt, std::string& error, bool ply_meshes) {
+    pbrt::model* pbrt, std::string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2347,7 +2346,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   if (!format_values(fs, "\n")) return write_error();
 
   for (auto camera : pbrt->cameras) {
-    auto command = ypbrt::command{};
+    auto command = pbrt::command{};
     command.type = "image";
     command.values.push_back(make_value("xresolution", camera->resolution.x));
     command.values.push_back(make_value("yresolution", camera->resolution.y));
@@ -2357,7 +2356,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   }
 
   for (auto camera : pbrt->cameras) {
-    auto command  = ypbrt::command{};
+    auto command  = pbrt::command{};
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
@@ -2372,7 +2371,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   if (!format_values(fs, "\nWorldBegin\n\n")) return write_error();
 
   for (auto light : pbrt->lights) {
-    auto command  = ypbrt::command{};
+    auto command  = pbrt::command{};
     command.frame = light->frame;
     if (light->distant) {
       command.type = "distance";
@@ -2391,7 +2390,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   }
 
   for (auto environment : pbrt->environments) {
-    auto command  = ypbrt::command{};
+    auto command  = pbrt::command{};
     command.frame = environment->frame;
     command.type  = "infinite";
     command.values.push_back(make_value("L", environment->emission));
@@ -2410,7 +2409,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   };
 
   for (auto material : pbrt->materials) {
-    auto command = ypbrt::command{};
+    auto command = pbrt::command{};
     if (material->specular != 0 && material->transmission != 0 &&
         !material->thin) {
       command.type = "glass";
@@ -2462,7 +2461,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
 
   auto object_id = 0;
   for (auto shape : pbrt->shapes) {
-    auto command  = ypbrt::command{};
+    auto command  = pbrt::command{};
     command.frame = shape->frame;
     if (ply_meshes) {
       command.type = "plymesh";
@@ -2497,7 +2496,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     if (!format_values(fs, "Transform {}\n", (mat4f)shape->frame))
       return write_error();
     if (shape->material->emission != ym::zero3f) {
-      auto acommand = ypbrt::command{};
+      auto acommand = pbrt::command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_value("L", shape->material->emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
