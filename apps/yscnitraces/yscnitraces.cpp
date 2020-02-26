@@ -35,6 +35,7 @@ using namespace ym;
 namespace ysio = yocto::sceneio;
 namespace yimg = yocto::image;
 namespace ycli = yocto::commonio;
+namespace ytrc = yocto::trace;
 
 #include <future>
 #include <memory>

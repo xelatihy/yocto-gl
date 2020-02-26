@@ -79,9 +79,10 @@
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // Namespace aliases
+namespace ytrc = yocto::trace;
 namespace yimg = yocto::image;
 
 // Math defitions
@@ -103,7 +104,7 @@ using ym::vec4i;
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // Trace scene
 struct scene;
@@ -286,12 +287,12 @@ void trace_start(state* state, const ytrc::scene* scene,
     async_callback async_cb = {});
 void trace_stop(state* state);
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // SCENE AND RENDERING DATA
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -483,12 +484,12 @@ struct state {
   std::atomic<bool>  stop   = {};  // async
 };
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // INTERSECTION
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -510,6 +511,6 @@ intersection3f intersect_scene_bvh(const ytrc::scene* scene, const ray3f& ray,
 intersection3f intersect_instance_bvh(const ytrc::object* object, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 #endif

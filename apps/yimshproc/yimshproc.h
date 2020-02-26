@@ -8,6 +8,7 @@ using namespace ym;
 namespace ysio = yocto::sceneio;
 namespace yshp = yocto::shape;
 namespace ycli = yocto::commonio;
+namespace ytrc = yocto::trace;
 
 #include <memory>
 using std::function;

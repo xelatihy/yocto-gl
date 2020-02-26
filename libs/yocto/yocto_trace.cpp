@@ -42,9 +42,10 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 using namespace ym;
+
 // import math symbols for use
 using ym::abs;
 using ym::acos;
@@ -60,12 +61,12 @@ using ym::pow;
 using ym::sin;
 using ym::sqrt;
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
@@ -291,12 +292,12 @@ float eval_phasefunction(float cos_theta, float g) {
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // constant values
 static const auto coat_ior       = 1.5;
@@ -806,12 +807,12 @@ static vec3f eval_environment(const ytrc::scene* scene, const ray3f& ray) {
   return emission;
 }
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -1764,12 +1765,12 @@ intersection3f intersect_instance_bvh(const ytrc::object* object, int instance,
   return intersection;
 }
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // Set non-rigid frames as default
 static const bool non_rigid_frames = true;
@@ -2776,12 +2777,12 @@ void trace_stop(ytrc::state* state) {
   if (state->worker.valid()) state->worker.get();
 }
 
-}  // namespace ytrc
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // SCENE CREATION
 // -----------------------------------------------------------------------------
-namespace ytrc {
+namespace yocto::trace {
 
 // cleanup
 shape::~shape() {
@@ -2989,4 +2990,4 @@ void set_emission(ytrc::environment* environment, const vec3f& emission,
   environment->emission_tex = emission_tex;
 }
 
-}  // namespace ytrc
+}  // namespace yocto::trace
