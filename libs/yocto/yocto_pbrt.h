@@ -61,6 +61,7 @@ using math::zero3f;
 using math::zero4f;
 using math::identity3x4f;
 using math::identity4x4f;
+using math::pif;
 
 }
 
@@ -1624,12 +1625,12 @@ inline void make_sphere(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto pt = vec2f{2 * math::pif * uv.x, math::pif * (1 - uv.y)};
+        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         return radius * vec3f{math::cos(pt.x) * math::sin(pt.y),
                             math::sin(pt.x) * math::sin(pt.y), math::cos(pt.y)};
       },
       [](const vec2f& uv) {
-        auto pt = vec2f{2 * math::pif * uv.x, math::pif * (1 - uv.y)};
+        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         return vec3f{math::cos(pt.x) * math::cos(pt.y),
             math::sin(pt.x) * math::cos(pt.y), math::sin(pt.y)};
       });
@@ -1640,7 +1641,7 @@ inline void make_disk(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto a = 2 * math::pif * uv.x;
+        auto a = 2 * pif * uv.x;
         return radius * (1 - uv.y) * vec3f{math::cos(a), math::sin(a), 0};
       },
       [](const vec2f& uv) {
@@ -1797,7 +1798,7 @@ inline bool convert_light(pbrt::light* plight, const command& command,
     if (!get_value(command.values, "to", plight->to)) return parse_error();
     plight->distant       = true;
     auto distant_dist     = 100;
-    auto size             = distant_dist * math::sin(5 * math::pif / 180);
+    auto size             = distant_dist * math::sin(5 * pif / 180);
     plight->area_emission = plight->emission * (distant_dist * distant_dist) /
                             (size * size);
     plight->area_frame =
@@ -2363,7 +2364,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
-        "fov", 2 * math::tan(0.036f / (2 * camera->lens)) * 180 / math::pif));
+        "fov", 2 * math::tan(0.036f / (2 * camera->lens)) * 180 / pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();

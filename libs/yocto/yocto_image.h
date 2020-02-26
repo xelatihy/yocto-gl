@@ -108,19 +108,22 @@
 // -----------------------------------------------------------------------------
 namespace yocto::image {
 
-// Namespace aliases
-namespace ym = yocto::math; 
-
 // Math defitions
-using ym::byte;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3b;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4b;
-using ym::vec4f;
-using ym::vec4i;
+using math::byte;
+using math::vec2f;
+using math::vec2i;
+using math::vec3b;
+using math::vec3f;
+using math::vec3i;
+using math::vec4b;
+using math::vec4f;
+using math::vec4i;
+using math::mat3f;
+using math::zero2i;
+using math::zero3i;
+using math::zero3f;
+using math::zero4f;
+using math::pif;
 
 }
 
@@ -378,8 +381,8 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 void make_lights(image<vec4f>& img, const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = ym::pif / 4,
-    float lwidth = ym::pif / 16, float lheight = ym::pif / 16);
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
