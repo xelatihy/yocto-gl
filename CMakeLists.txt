@@ -25,15 +25,5 @@ if(GENERATOR_IS_MULTI_CONFIG)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 endif(GENERATOR_IS_MULTI_CONFIG)
 
-# platform compile flags
-if(APPLE)
-  add_definitions(-Wall)
-endif(APPLE)
-if(MSVC)
-  add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
-  set(CMAKE_CXX_FLAGS "/EHsc")
-endif(MSVC)
-
-add_subdirectory(yocto_gl)
-add_subdirectory(yocto_gui)
+add_subdirectory(libs)
 add_subdirectory(apps)
