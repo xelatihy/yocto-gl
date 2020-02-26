@@ -47,33 +47,38 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // Namespace aliases
-namespace ym   = yocto::math;
-namespace yimg = yocto::image;
+namespace gui = yocto::gui;
+namespace img = yocto::image;
 
 // Math defitions
-using ym::bbox3f;
-using ym::byte;
-using ym::frame3f;
-using ym::identity3x4f;
-using ym::uint;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3b;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4b;
-using ym::vec4f;
-using ym::vec4i;
+using math::byte;
+using math::uint;
+using math::vec2f;
+using math::vec2i;
+using math::vec3b;
+using math::vec3f;
+using math::vec3i;
+using math::vec4b;
+using math::vec4f;
+using math::vec4i;
+using math::bbox3f;
+using math::frame3f;
+using math::mat4f;
+using math::identity3x4f;
+using math::zero2i;
+using math::zero2f;
+using math::zero3i;
+using math::zero3f;
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // OpenGL image data
 struct image {
@@ -96,13 +101,13 @@ struct image {
 };
 
 // create image drawing program
-void init_glimage(ygui::image* image);
-bool is_initialized(const ygui::image* image);
+void init_image(gui::image* image);
+bool is_initialized(const gui::image* image);
 
 // update image data
-void set_glimage(ygui::image* image, const yimg::image<vec4f>& img,
+void set_image(gui::image* image, const img::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(ygui::image* image, const yimg::image<vec4b>& img,
+void set_image(gui::image* image, const img::image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -118,14 +123,14 @@ struct image_params {
 };
 
 // draw image
-void draw_glimage(ygui::image* image, const image_params& params);
+void draw_image(gui::image* image, const image_params& params);
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // Opengl caemra
 struct camera {
@@ -160,13 +165,13 @@ struct material {
   float          roughness     = 0;
   float          specular      = 0;
   float          opacity       = 1;
-  ygui::texture* emission_tex  = nullptr;
-  ygui::texture* color_tex     = nullptr;
-  ygui::texture* metallic_tex  = nullptr;
-  ygui::texture* roughness_tex = nullptr;
-  ygui::texture* specular_tex  = nullptr;
-  ygui::texture* opacity_tex   = nullptr;
-  ygui::texture* normal_tex    = nullptr;
+  gui::texture* emission_tex  = nullptr;
+  gui::texture* color_tex     = nullptr;
+  gui::texture* metallic_tex  = nullptr;
+  gui::texture* roughness_tex = nullptr;
+  gui::texture* specular_tex  = nullptr;
+  gui::texture* opacity_tex   = nullptr;
+  gui::texture* normal_tex    = nullptr;
 };
 
 // Opengl shape
@@ -208,9 +213,9 @@ struct instance {
 struct object {
   // object properties
   frame3f         frame       = identity3x4f;
-  ygui::shape*    shape       = nullptr;
-  ygui::material* material    = nullptr;
-  ygui::instance* instance    = nullptr;
+  gui::shape*    shape       = nullptr;
+  gui::material* material    = nullptr;
+  gui::instance* instance    = nullptr;
   bool            hidden      = false;
   bool            highlighted = false;
 };
@@ -229,13 +234,13 @@ struct scene {
   scene& operator=(const scene&) = delete;
   ~scene();
 
-  std::vector<ygui::camera*>   cameras   = {};
-  std::vector<ygui::object*>   objects   = {};
-  std::vector<ygui::shape*>    shapes    = {};
-  std::vector<ygui::material*> materials = {};
-  std::vector<ygui::instance*> instances = {};
-  std::vector<ygui::texture*>  textures  = {};
-  std::vector<ygui::light*>    lights    = {};
+  std::vector<gui::camera*>   cameras   = {};
+  std::vector<gui::object*>   objects   = {};
+  std::vector<gui::shape*>    shapes    = {};
+  std::vector<gui::material*> materials = {};
+  std::vector<gui::instance*> instances = {};
+  std::vector<gui::texture*>  textures  = {};
+  std::vector<gui::light*>    lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -262,92 +267,92 @@ struct scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_glscene(ygui::scene* glscene);
-bool is_initialized(const ygui::scene* glscene);
+void init_glscene(gui::scene* glscene);
+bool is_initialized(const gui::scene* glscene);
 
 // add scene elements
-ygui::camera*   add_camera(ygui::scene* scene);
-ygui::texture*  add_texture(ygui::scene* scene);
-ygui::material* add_material(ygui::scene* scene);
-ygui::shape*    add_shape(ygui::scene* scene);
-ygui::instance* add_instance(ygui::scene* scene);
-ygui::object*   add_object(ygui::scene* scene);
-ygui::light*    add_light(ygui::scene* scene);
+gui::camera*   add_camera(gui::scene* scene);
+gui::texture*  add_texture(gui::scene* scene);
+gui::material* add_material(gui::scene* scene);
+gui::shape*    add_shape(gui::scene* scene);
+gui::instance* add_instance(gui::scene* scene);
+gui::object*   add_object(gui::scene* scene);
+gui::light*    add_light(gui::scene* scene);
 
 // camera properties
-void set_frame(ygui::camera* camera, const frame3f& frame);
-void set_lens(ygui::camera* camera, float lens, float aspect, float film);
-void set_nearfar(ygui::camera* camera, float near, float far);
+void set_frame(gui::camera* camera, const frame3f& frame);
+void set_lens(gui::camera* camera, float lens, float aspect, float film);
+void set_nearfar(gui::camera* camera, float near, float far);
 
 // texture properties
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec4b>& img, bool as_srgb = true);
-void set_texture(ygui::texture* texture, const yimg::image<vec4f>& img,
+    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb = true);
+void set_texture(gui::texture* texture, const img::image<vec4f>& img,
     bool as_float = false);
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec3b>& img, bool as_srgb = true);
-void set_texture(ygui::texture* texture, const yimg::image<vec3f>& img,
+    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb = true);
+void set_texture(gui::texture* texture, const img::image<vec3f>& img,
     bool as_float = false);
 void set_texture(
-    ygui::texture* texture, const yimg::image<byte>& img, bool as_srgb = true);
-void set_texture(ygui::texture* texture, const yimg::image<float>& img,
+    gui::texture* texture, const img::image<byte>& img, bool as_srgb = true);
+void set_texture(gui::texture* texture, const img::image<float>& img,
     bool as_float = false);
 
 // material properties
-void set_emission(ygui::material* material, const vec3f& emission,
-    ygui::texture* emission_tex = nullptr);
-void set_color(ygui::material* material, const vec3f& color,
-    ygui::texture* color_tex = nullptr);
-void set_metallic(ygui::material* material, float metallic,
-    ygui::texture* metallic_tex = nullptr);
-void set_roughness(ygui::material* material, float roughness,
-    ygui::texture* roughness_tex = nullptr);
-void set_specular(ygui::material* material, float specular,
-    ygui::texture* specular_tex = nullptr);
-void set_opacity(ygui::material* material, float opacity,
-    ygui::texture* opacity_tex = nullptr);
-void set_normalmap(ygui::material* material, ygui::texture* normal_tex);
+void set_emission(gui::material* material, const vec3f& emission,
+    gui::texture* emission_tex = nullptr);
+void set_color(gui::material* material, const vec3f& color,
+    gui::texture* color_tex = nullptr);
+void set_metallic(gui::material* material, float metallic,
+    gui::texture* metallic_tex = nullptr);
+void set_roughness(gui::material* material, float roughness,
+    gui::texture* roughness_tex = nullptr);
+void set_specular(gui::material* material, float specular,
+    gui::texture* specular_tex = nullptr);
+void set_opacity(gui::material* material, float opacity,
+    gui::texture* opacity_tex = nullptr);
+void set_normalmap(gui::material* material, gui::texture* normal_tex);
 
 // shape properties
-void set_points(ygui::shape* shape, const std::vector<int>& points);
-void set_lines(ygui::shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(ygui::shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(ygui::shape* shape, const std::vector<vec4i>& quads);
-void set_positions(ygui::shape* shape, const std::vector<vec3f>& positions);
-void set_normals(ygui::shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(ygui::shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(ygui::shape* shape, const std::vector<vec3f>& colors);
-void set_tangents(ygui::shape* shape, const std::vector<vec4f>& tangents);
+void set_points(gui::shape* shape, const std::vector<int>& points);
+void set_lines(gui::shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(gui::shape* shape, const std::vector<vec4i>& quads);
+void set_positions(gui::shape* shape, const std::vector<vec3f>& positions);
+void set_normals(gui::shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(gui::shape* shape, const std::vector<vec3f>& colors);
+void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(ygui::instance* instance, const std::vector<frame3f>& frames);
+void set_frames(gui::instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
-void set_frame(ygui::object* object, const frame3f& frame);
-void set_shape(ygui::object* object, ygui::shape* shape);
-void set_material(ygui::object* object, ygui::material* material);
-void set_instance(ygui::object* object, ygui::instance* instance);
-void set_hidden(ygui::object* object, bool hidden);
-void set_highlighted(ygui::object* object, bool highlighted);
+void set_frame(gui::object* object, const frame3f& frame);
+void set_shape(gui::object* object, gui::shape* shape);
+void set_material(gui::object* object, gui::material* material);
+void set_instance(gui::object* object, gui::instance* instance);
+void set_hidden(gui::object* object, bool hidden);
+void set_highlighted(gui::object* object, bool highlighted);
 
 // light properties
-void set_light(ygui::light* light, const vec3f& position, const vec3f& emission,
+void set_light(gui::light* light, const vec3f& position, const vec3f& emission,
     bool directional);
 
 // light size
-void clear_lights(ygui::scene* scene);
-bool has_max_lights(ygui::scene* scene);
+void clear_lights(gui::scene* scene);
+bool has_max_lights(gui::scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(ygui::scene* scene, ygui::camera* camera, const vec4i& viewport,
+void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
     const scene_params& params);
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // UI APPLICATION
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // Forward declaration of OpenGL window
 struct window;
@@ -373,30 +378,30 @@ struct input {
 };
 
 // Draw callback called every frame and when resizing
-using draw_callback = std::function<void(ygui::window*, const input& input)>;
+using draw_callback = std::function<void(gui::window*, const input& input)>;
 // Draw callback for drawing widgets
-using widgets_callback = std::function<void(ygui::window*, const input& input)>;
+using widgets_callback = std::function<void(gui::window*, const input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback = std::function<void(
     window*, const std::vector<std::string>&, const input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback = std::function<void(
-    ygui::window*, int key, bool pressed, const input& input)>;
+    gui::window*, int key, bool pressed, const input& input)>;
 // Char callback that returns ASCII key
 using char_callback =
-    std::function<void(ygui::window*, unsigned int key, const input& input)>;
+    std::function<void(gui::window*, unsigned int key, const input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_callback = std::function<void(
-    ygui::window*, bool left, bool pressed, const input& input)>;
+    gui::window*, bool left, bool pressed, const input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_callback =
-    std::function<void(ygui::window*, float amount, const input& input)>;
+    std::function<void(gui::window*, float amount, const input& input)>;
 // Update functions called every frame
 using uiupdate_callback =
-    std::function<void(ygui::window*, const input& input)>;
+    std::function<void(gui::window*, const input& input)>;
 // Update functions called every frame
-using update_callback = std::function<void(ygui::window*, const input& input)>;
+using update_callback = std::function<void(gui::window*, const input& input)>;
 
 // User interface callcaks
 struct ui_callbacks {
@@ -416,12 +421,12 @@ void run_ui(const vec2i& size, const std::string& title,
     const ui_callbacks& callbaks, int widgets_width = 320,
     bool widgets_left = true);
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // OpenGL window wrapper
 struct window {
@@ -443,45 +448,45 @@ struct window {
 };
 
 // Windows initialization
-void init_window(ygui::window* win, const vec2i& size, const std::string& title,
+void init_window(gui::window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
-void clear_window(ygui::window* win);
+void clear_window(gui::window* win);
 
 // Set callbacks
-void set_draw_callback(ygui::window* win, draw_callback draw_cb);
-void set_widgets_callback(ygui::window* win, widgets_callback widgets_cb);
-void set_drop_callback(ygui::window* win, drop_callback drop_cb);
-void set_key_callback(ygui::window* win, key_callback cb);
-void set_char_callback(ygui::window* win, char_callback cb);
-void set_click_callback(ygui::window* win, click_callback cb);
-void set_scroll_callback(ygui::window* win, scroll_callback cb);
-void set_uiupdate_callback(ygui::window* win, uiupdate_callback cb);
-void set_update_callback(ygui::window* win, update_callback cb);
+void set_draw_callback(gui::window* win, draw_callback draw_cb);
+void set_widgets_callback(gui::window* win, widgets_callback widgets_cb);
+void set_drop_callback(gui::window* win, drop_callback drop_cb);
+void set_key_callback(gui::window* win, key_callback cb);
+void set_char_callback(gui::window* win, char_callback cb);
+void set_click_callback(gui::window* win, click_callback cb);
+void set_scroll_callback(gui::window* win, scroll_callback cb);
+void set_uiupdate_callback(gui::window* win, uiupdate_callback cb);
+void set_update_callback(gui::window* win, update_callback cb);
 
 // Run loop
-void run_ui(ygui::window* win);
-void set_close(ygui::window* win, bool close);
+void run_ui(gui::window* win);
+void set_close(gui::window* win, bool close);
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
-bool begin_header(ygui::window* win, const char* title);
-void end_header(ygui::window* win);
+bool begin_header(gui::window* win, const char* title);
+void end_header(gui::window* win);
 
-void draw_label(ygui::window* win, const char* lbl, const std::string& text);
+void draw_label(gui::window* win, const char* lbl, const std::string& text);
 
-void draw_separator(ygui::window* win);
-void continue_line(ygui::window* win);
+void draw_separator(gui::window* win);
+void continue_line(gui::window* win);
 
-bool draw_button(ygui::window* win, const char* lbl, bool enabled = true);
+bool draw_button(gui::window* win, const char* lbl, bool enabled = true);
 
-bool draw_textinput(ygui::window* win, const char* lbl, std::string& value);
+bool draw_textinput(gui::window* win, const char* lbl, std::string& value);
 
 bool draw_slider(
     window* win, const char* lbl, float& value, float min, float max);
@@ -493,63 +498,63 @@ bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max);
 
 bool draw_slider(
-    ygui::window* win, const char* lbl, int& value, int min, int max);
+    gui::window* win, const char* lbl, int& value, int min, int max);
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec2i& value, int min, int max);
+    gui::window* win, const char* lbl, vec2i& value, int min, int max);
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec3i& value, int min, int max);
+    gui::window* win, const char* lbl, vec3i& value, int min, int max);
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec4i& value, int min, int max);
+    gui::window* win, const char* lbl, vec4i& value, int min, int max);
 
-bool draw_dragger(ygui::window* win, const char* lbl, float& value,
+bool draw_dragger(gui::window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(ygui::window* win, const char* lbl, vec2f& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec2f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(ygui::window* win, const char* lbl, vec3f& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec3f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(ygui::window* win, const char* lbl, vec4f& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(ygui::window* win, const char* lbl, int& value,
+bool draw_dragger(gui::window* win, const char* lbl, int& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec2i& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec2i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec3i& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec3i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(ygui::window* win, const char* lbl, vec4i& value,
+bool draw_dragger(gui::window* win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
-bool draw_checkbox(ygui::window* win, const char* lbl, bool& value);
+bool draw_checkbox(gui::window* win, const char* lbl, bool& value);
 
-bool draw_coloredit(ygui::window* win, const char* lbl, vec3f& value);
-bool draw_coloredit(ygui::window* win, const char* lbl, vec4f& value);
+bool draw_coloredit(gui::window* win, const char* lbl, vec3f& value);
+bool draw_coloredit(gui::window* win, const char* lbl, vec4f& value);
 
-bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec3f& value);
-bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec4f& value);
+bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value);
+bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
+bool draw_combobox(gui::window* win, const char* lbl, int& idx,
     const std::vector<std::string>& labels);
-bool draw_combobox(ygui::window* win, const char* lbl, std::string& value,
+bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
     const std::vector<std::string>& labels);
-bool draw_combobox(ygui::window* win, const char* lbl, int& idx, int num,
+bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
-inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
+inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
     const std::vector<T>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
+inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
     const std::vector<T*>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(ygui::window* win, const char* lbl, T*& value,
+inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
     const std::vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -563,14 +568,14 @@ inline bool draw_combobox(ygui::window* win, const char* lbl, T*& value,
   return edited;
 }
 template <typename T>
-inline bool draw_combobox(ygui::window* win, const char* lbl, int& idx,
+inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
     const std::vector<std::shared_ptr<T>>& vals, bool include_null = false) {
   return draw_combobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox(ygui::window* win, const char* lbl,
+inline bool draw_combobox(gui::window* win, const char* lbl,
     std::shared_ptr<T>& value, const std::vector<std::shared_ptr<T>>& vals,
     bool include_null = false) {
   auto idx = -1;
@@ -585,32 +590,32 @@ inline bool draw_combobox(ygui::window* win, const char* lbl,
   return edited;
 }
 
-void draw_progressbar(ygui::window* win, const char* lbl, float fraction);
+void draw_progressbar(gui::window* win, const char* lbl, float fraction);
 
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<float>& values);
+    gui::window* win, const char* lbl, const std::vector<float>& values);
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec2f>& values);
+    gui::window* win, const char* lbl, const std::vector<vec2f>& values);
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec3f>& values);
+    gui::window* win, const char* lbl, const std::vector<vec3f>& values);
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec4f>& values);
+    gui::window* win, const char* lbl, const std::vector<vec4f>& values);
 
-bool draw_messages(ygui::window* win);
-void push_message(ygui::window* win, const std::string& message);
-bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
+bool draw_messages(gui::window* win);
+void push_message(gui::window* win, const std::string& message);
+bool draw_filedialog(gui::window* win, const char* lbl, std::string& path,
     bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter);
-bool draw_filedialog_button(ygui::window* win, const char* button_lbl,
+bool draw_filedialog_button(gui::window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
     const std::string& dirname, const std::string& filename,
     const std::string& filter);
 
-void log_info(ygui::window* win, const std::string& msg);
-void log_error(ygui::window* win, const std::string& msg);
-void clear_log(ygui::window* win);
-void draw_log(ygui::window* win);
+void log_info(gui::window* win, const std::string& msg);
+void log_error(gui::window* win, const std::string& msg);
+void clear_log(gui::window* win);
+void draw_log(gui::window* win);
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 #endif

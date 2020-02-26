@@ -60,37 +60,35 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
-// Namespace aliases
-namespace yimg = yocto::image;
-
-using namespace ym;
 // import math symbols for use
-using ym::abs;
-using ym::acos;
-using ym::atan;
-using ym::atan2;
-using ym::clamp;
-using ym::cos;
-using ym::exp;
-using ym::exp2;
-using ym::fmod;
-using ym::log;
-using ym::log2;
-using ym::max;
-using ym::min;
-using ym::pow;
-using ym::sin;
-using ym::sqrt;
-using ym::tan;
+using math::abs;
+using math::acos;
+using math::atan;
+using math::atan2;
+using math::clamp;
+using math::cos;
+using math::exp;
+using math::exp2;
+using math::fmod;
+using math::log;
+using math::log2;
+using math::max;
+using math::min;
+using math::pow;
+using math::sin;
+using math::sqrt;
+using math::tan;
+using math::perspective_mat;
+using math::flt_max;
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
@@ -258,12 +256,12 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 auto glimage_vertex =
     R"(
@@ -323,7 +321,7 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const ygui::image* image) {
+bool is_initialized(const gui::image* image) {
   return (bool)image->program_id;
 }
 
@@ -338,7 +336,7 @@ image::~image() {
 }
 
 // init image program
-void init_glimage(ygui::image* image) {
+void init_image(gui::image* image) {
   if (image->program_id) return;
 
   auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
@@ -357,7 +355,7 @@ void init_glimage(ygui::image* image) {
 }
 
 // update image data
-void set_glimage(ygui::image* image, const yimg::image<vec4f>& img, bool linear,
+void set_image(gui::image* image, const img::image<vec4f>& img, bool linear,
     bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
@@ -375,7 +373,7 @@ void set_glimage(ygui::image* image, const yimg::image<vec4f>& img, bool linear,
   image->texture_linear = linear;
   image->texture_mipmap = mipmap;
 }
-void set_glimage(ygui::image* image, const yimg::image<vec4b>& img, bool linear,
+void set_image(gui::image* image, const img::image<vec4b>& img, bool linear,
     bool mipmap) {
   if (!image->texture_id) {
     init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
@@ -395,7 +393,7 @@ void set_glimage(ygui::image* image, const yimg::image<vec4b>& img, bool linear,
 }
 
 // draw image
-void draw_glimage(ygui::image* image, const image_params& params) {
+void draw_image(gui::image* image, const image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
@@ -425,12 +423,12 @@ void draw_glimage(ygui::image* image, const image_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -749,36 +747,36 @@ scene::~scene() {
 }
 
 // Initialize an OpenGL scene
-void init_glscene(ygui::scene* glscene) {
+void init_glscene(gui::scene* glscene) {
   if (glscene->program_id) return;
   init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
       glscene->array_id, glscene_vertex, glscene_fragment);
 }
-bool is_initialized(ygui::scene* glscene) { return (bool)glscene->program_id; }
+bool is_initialized(gui::scene* glscene) { return (bool)glscene->program_id; }
 
 // add camera
-ygui::camera* add_camera(ygui::scene* scene) {
+gui::camera* add_camera(gui::scene* scene) {
   return scene->cameras.emplace_back(new camera{});
 }
-void set_frame(ygui::camera* camera, const frame3f& frame) {
+void set_frame(gui::camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(ygui::camera* camera, float lens, float aspect, float film) {
+void set_lens(gui::camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(ygui::camera* camera, float near, float far) {
+void set_nearfar(gui::camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-ygui::texture* add_texture(ygui::scene* scene) {
+gui::texture* add_texture(gui::scene* scene) {
   return scene->textures.emplace_back(new texture{});
 }
 
-void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
+void set_texture(gui::texture* texture, const vec2i& size, int nchan,
     const byte* img, bool as_srgb) {
   static auto sformat = std::unordered_map<int, uint>{
       {1, GL_SRGB},
@@ -828,7 +826,7 @@ void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
+void set_texture(gui::texture* texture, const vec2i& size, int nchan,
     const float* img, bool as_float) {
   static auto fformat = std::unordered_map<int, uint>{
       {1, GL_RGB16F},
@@ -880,34 +878,34 @@ void set_texture(ygui::texture* texture, const vec2i& size, int nchan,
 }
 
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec4b>& img, bool as_srgb) {
+    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec4f>& img, bool as_float) {
+    gui::texture* texture, const img::image<vec4f>& img, bool as_float) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec3b>& img, bool as_srgb) {
+    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb) {
   set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    ygui::texture* texture, const yimg::image<vec3f>& img, bool as_float) {
+    gui::texture* texture, const img::image<vec3f>& img, bool as_float) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
 }
 
 void set_texture(
-    ygui::texture* texture, const yimg::image<byte>& img, bool as_srgb) {
+    gui::texture* texture, const img::image<byte>& img, bool as_srgb) {
   set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
 }
 void set_texture(
-    ygui::texture* texture, const yimg::image<float>& img, bool as_float) {
+    gui::texture* texture, const img::image<float>& img, bool as_float) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
 }
 
 // add shape
-ygui::shape* add_shape(ygui::scene* scene) {
+gui::shape* add_shape(gui::scene* scene) {
   return scene->shapes.emplace_back(new shape{});
 }
 
@@ -950,19 +948,19 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_points(ygui::shape* shape, const std::vector<int>& points) {
+void set_points(gui::shape* shape, const std::vector<int>& points) {
   set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
       1, (const int*)points.data());
 }
-void set_lines(ygui::shape* shape, const std::vector<vec2i>& lines) {
+void set_lines(gui::shape* shape, const std::vector<vec2i>& lines) {
   set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_triangles(ygui::shape* shape, const std::vector<vec3i>& triangles) {
+void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles) {
   set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_quads(ygui::shape* shape, const std::vector<vec4i>& quads) {
+void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
@@ -972,95 +970,95 @@ void set_quads(ygui::shape* shape, const std::vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
-void set_positions(ygui::shape* shape, const std::vector<vec3f>& positions) {
+void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
 }
-void set_normals(ygui::shape* shape, const std::vector<vec3f>& normals) {
+void set_normals(gui::shape* shape, const std::vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
       normals.size(), 3, (const float*)normals.data());
 }
-void set_texcoords(ygui::shape* shape, const std::vector<vec2f>& texcoords) {
+void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords) {
   set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
 }
-void set_colors(ygui::shape* shape, const std::vector<vec3f>& colors) {
+void set_colors(gui::shape* shape, const std::vector<vec3f>& colors) {
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       3, (const float*)colors.data());
 }
-void set_tangents(ygui::shape* shape, const std::vector<vec4f>& tangents) {
+void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents) {
   set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
 }
 
 // add object
-ygui::object* add_object(ygui::scene* scene) {
+gui::object* add_object(gui::scene* scene) {
   return scene->objects.emplace_back(new object{});
 }
-void set_frame(ygui::object* object, const frame3f& frame) {
+void set_frame(gui::object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(ygui::object* object, ygui::shape* shape) {
+void set_shape(gui::object* object, gui::shape* shape) {
   object->shape = shape;
 }
-void set_material(ygui::object* object, ygui::material* material) {
+void set_material(gui::object* object, gui::material* material) {
   object->material = material;
 }
-void set_instance(ygui::object* object, ygui::instance* instance) {
+void set_instance(gui::object* object, gui::instance* instance) {
   object->instance = instance;
 }
-void set_hidden(ygui::object* object, bool hidden) { object->hidden = hidden; }
-void set_highlighted(ygui::object* object, bool highlighted) {
+void set_hidden(gui::object* object, bool hidden) { object->hidden = hidden; }
+void set_highlighted(gui::object* object, bool highlighted) {
   object->highlighted = highlighted;
 }
 
 // add instance
-ygui::instance* add_instance(ygui::scene* scene) {
+gui::instance* add_instance(gui::scene* scene) {
   return scene->instances.emplace_back(new instance{});
 }
-void set_frames(ygui::instance* instance, const std::vector<frame3f>& frames) {
+void set_frames(gui::instance* instance, const std::vector<frame3f>& frames) {
   // TODO: instances
 }
 
 // add material
-ygui::material* add_material(ygui::scene* scene) {
+gui::material* add_material(gui::scene* scene) {
   return scene->materials.emplace_back(new material{});
 }
-void set_emission(ygui::material* material, const vec3f& emission,
-    ygui::texture* emission_tex) {
+void set_emission(gui::material* material, const vec3f& emission,
+    gui::texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    ygui::material* material, const vec3f& color, ygui::texture* color_tex) {
+    gui::material* material, const vec3f& color, gui::texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    ygui::material* material, float specular, ygui::texture* specular_tex) {
+    gui::material* material, float specular, gui::texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    ygui::material* material, float roughness, ygui::texture* roughness_tex) {
+    gui::material* material, float roughness, gui::texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    ygui::material* material, float opacity, ygui::texture* opacity_tex) {
+    gui::material* material, float opacity, gui::texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    ygui::material* material, float metallic, ygui::texture* metallic_tex) {
+    gui::material* material, float metallic, gui::texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(ygui::material* material, ygui::texture* normal_tex) {
+void set_normalmap(gui::material* material, gui::texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // add light
-light* add_light(ygui::scene* scene) {
+light* add_light(gui::scene* scene) {
   return scene->lights.emplace_back(new light{});
 }
 void set_light(light* light, const vec3f& position, const vec3f& emission,
@@ -1069,15 +1067,15 @@ void set_light(light* light, const vec3f& position, const vec3f& emission,
   light->emission = emission;
   light->type     = directional ? 1 : 0;
 }
-void clear_lights(ygui::scene* scene) {
+void clear_lights(gui::scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
-bool has_max_lights(ygui::scene* scene) { return scene->lights.size() >= 16; }
+bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
 
 // Draw a shape
 void draw_object(
-    ygui::scene* glscene, ygui::object* object, const scene_params& params) {
+    gui::scene* glscene, gui::object* object, const scene_params& params) {
   if (object->hidden) return;
 
   auto instance_xform     = mat4f(object->frame);
@@ -1264,7 +1262,7 @@ void draw_object(
 }
 
 // Display a scene
-void draw_scene(ygui::scene* glscene, ygui::camera* glcamera,
+void draw_scene(gui::scene* glscene, gui::camera* glcamera,
     const vec4i& viewport, const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -1323,17 +1321,17 @@ void draw_scene(ygui::scene* glscene, ygui::camera* glcamera,
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // UI APPLICATION
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
     const ui_callbacks& callbaks, int widgets_width, bool widgets_left) {
-  auto win_guard = std::make_unique<ygui::window>();
+  auto win_guard = std::make_unique<gui::window>();
   auto win       = win_guard.get();
   init_window(
       win, size, title, (bool)callbaks.widgets_cb, widgets_width, widgets_left);
@@ -1355,14 +1353,14 @@ void run_ui(const vec2i& size, const std::string& title,
   clear_window(win);
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
-static void draw_window(ygui::window* win) {
+static void draw_window(gui::window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1396,7 +1394,7 @@ static void draw_window(ygui::window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_window(ygui::window* win, const vec2i& size, const std::string& title,
+void init_window(gui::window* win, const vec2i& size, const std::string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -1420,12 +1418,12 @@ void init_window(ygui::window* win, const vec2i& size, const std::string& title,
 
   // set callbacks
   glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
-    auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+    auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
     draw_window(win);
   });
   glfwSetDropCallback(
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
-        auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
           auto pathv = std::vector<std::string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
@@ -1434,28 +1432,28 @@ void init_window(ygui::window* win, const vec2i& size, const std::string& title,
       });
   glfwSetKeyCallback(win->win,
       [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
-        auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
       });
   glfwSetCharCallback(win->win, [](GLFWwindow* glfw, unsigned int key) {
-    auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+    auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
     if (win->char_cb) win->char_cb(win, key, win->input);
   });
   glfwSetMouseButtonCallback(
       win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
-        auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         if (win->click_cb)
           win->click_cb(
               win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
       });
   glfwSetScrollCallback(
       win->win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
-        auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
   glfwSetWindowSizeCallback(
       win->win, [](GLFWwindow* glfw, int width, int height) {
-        auto win = (ygui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         glfwGetWindowSize(
             win->win, &win->input.window_size.x, &win->input.window_size.y);
         if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
@@ -1495,14 +1493,14 @@ void init_window(ygui::window* win, const vec2i& size, const std::string& title,
   }
 }
 
-void clear_window(ygui::window* win) {
+void clear_window(gui::window* win) {
   glfwDestroyWindow(win->win);
   glfwTerminate();
   win->win = nullptr;
 }
 
 // Run loop
-void run_ui(ygui::window* win) {
+void run_ui(gui::window* win) {
   while (!glfwWindowShouldClose(win->win)) {
     // update input
     win->input.mouse_last = win->input.mouse_pos;
@@ -1569,44 +1567,44 @@ void run_ui(ygui::window* win) {
   }
 }
 
-void set_draw_callback(ygui::window* win, draw_callback cb) {
+void set_draw_callback(gui::window* win, draw_callback cb) {
   win->draw_cb = cb;
 }
-void set_widgets_callback(ygui::window* win, widgets_callback cb) {
+void set_widgets_callback(gui::window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
-void set_drop_callback(ygui::window* win, drop_callback drop_cb) {
+void set_drop_callback(gui::window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
-void set_key_callback(ygui::window* win, key_callback cb) { win->key_cb = cb; }
-void set_char_callback(ygui::window* win, char_callback cb) {
+void set_key_callback(gui::window* win, key_callback cb) { win->key_cb = cb; }
+void set_char_callback(gui::window* win, char_callback cb) {
   win->char_cb = cb;
 }
-void set_click_callback(ygui::window* win, click_callback cb) {
+void set_click_callback(gui::window* win, click_callback cb) {
   win->click_cb = cb;
 }
-void set_scroll_callback(ygui::window* win, scroll_callback cb) {
+void set_scroll_callback(gui::window* win, scroll_callback cb) {
   win->scroll_cb = cb;
 }
-void set_uiupdate_callback(ygui::window* win, uiupdate_callback cb) {
+void set_uiupdate_callback(gui::window* win, uiupdate_callback cb) {
   win->uiupdate_cb = cb;
 }
-void set_update_callback(ygui::window* win, update_callback cb) {
+void set_update_callback(gui::window* win, update_callback cb) {
   win->update_cb = cb;
 }
 
-void set_close(ygui::window* win, bool close) {
+void set_close(gui::window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace ygui {
+namespace yocto::gui {
 
-void init_glwidgets(ygui::window* win, int width, bool left) {
+void init_glwidgets(gui::window* win, int width, bool left) {
   // init widgets
   ImGui::CreateContext();
   ImGui::GetIO().IniFilename       = nullptr;
@@ -1622,25 +1620,25 @@ void init_glwidgets(ygui::window* win, int width, bool left) {
   win->widgets_left  = left;
 }
 
-bool begin_header(ygui::window* win, const char* lbl) {
+bool begin_header(gui::window* win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_header(ygui::window* win) { ImGui::PopID(); }
+void end_header(gui::window* win) { ImGui::PopID(); }
 
-void open_glmodal(ygui::window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
-void clear_glmodal(ygui::window* win) { ImGui::CloseCurrentPopup(); }
-bool begin_glmodal(ygui::window* win, const char* lbl) {
+void open_glmodal(gui::window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
+void clear_glmodal(gui::window* win) { ImGui::CloseCurrentPopup(); }
+bool begin_glmodal(gui::window* win, const char* lbl) {
   return ImGui::BeginPopupModal(lbl);
 }
-void end_glmodal(ygui::window* win) { ImGui::EndPopup(); }
-bool is_glmodal_open(ygui::window* win, const char* lbl) {
+void end_glmodal(gui::window* win) { ImGui::EndPopup(); }
+bool is_glmodal_open(gui::window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
 bool draw_message(
-    ygui::window* win, const char* lbl, const std::string& message) {
+    gui::window* win, const char* lbl, const std::string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1657,11 +1655,11 @@ bool draw_message(
 
 std::deque<std::string> _message_queue = {};
 std::mutex              _message_mutex;
-void push_message(ygui::window* win, const std::string& message) {
+void push_message(gui::window* win, const std::string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
-bool draw_messages(ygui::window* win) {
+bool draw_messages(gui::window* win) {
   std::lock_guard lock(_message_mutex);
   if (_message_queue.empty()) return false;
   if (!is_glmodal_open(win, "<message>")) {
@@ -1808,7 +1806,7 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
+bool draw_filedialog(gui::window* win, const char* lbl, std::string& path,
     bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter) {
   static auto states = std::unordered_map<std::string, filedialog_state>{};
@@ -1864,7 +1862,7 @@ bool draw_filedialog(ygui::window* win, const char* lbl, std::string& path,
     return false;
   }
 }
-bool draw_filedialog_button(ygui::window* win, const char* button_lbl,
+bool draw_filedialog_button(gui::window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
     const std::string& dirname, const std::string& filename,
     const std::string& filter) {
@@ -1878,7 +1876,7 @@ bool draw_filedialog_button(ygui::window* win, const char* button_lbl,
   }
 }
 
-bool draw_button(ygui::window* win, const char* lbl, bool enabled) {
+bool draw_button(gui::window* win, const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
   } else {
@@ -1891,15 +1889,15 @@ bool draw_button(ygui::window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_label(ygui::window* win, const char* lbl, const std::string& label) {
+void draw_label(gui::window* win, const char* lbl, const std::string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
-void draw_separator(ygui::window* win) { ImGui::Separator(); }
+void draw_separator(gui::window* win) { ImGui::Separator(); }
 
-void continue_line(ygui::window* win) { ImGui::SameLine(); }
+void continue_line(gui::window* win) { ImGui::SameLine(); }
 
-bool draw_textinput(ygui::window* win, const char* lbl, std::string& value) {
+bool draw_textinput(gui::window* win, const char* lbl, std::string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -1927,35 +1925,35 @@ bool draw_slider(
 }
 
 bool draw_slider(
-    ygui::window* win, const char* lbl, int& value, int min, int max) {
+    gui::window* win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec2i& value, int min, int max) {
+    gui::window* win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec3i& value, int min, int max) {
+    gui::window* win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    ygui::window* win, const char* lbl, vec4i& value, int min, int max) {
+    gui::window* win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger(ygui::window* win, const char* lbl, float& value, float speed,
+bool draw_dragger(gui::window* win, const char* lbl, float& value, float speed,
     float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger(ygui::window* win, const char* lbl, vec2f& value, float speed,
+bool draw_dragger(gui::window* win, const char* lbl, vec2f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(ygui::window* win, const char* lbl, vec3f& value, float speed,
+bool draw_dragger(gui::window* win, const char* lbl, vec3f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(ygui::window* win, const char* lbl, vec4f& value, float speed,
+bool draw_dragger(gui::window* win, const char* lbl, vec4f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
@@ -1977,21 +1975,21 @@ bool draw_dragger(
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_checkbox(ygui::window* win, const char* lbl, bool& value) {
+bool draw_checkbox(gui::window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_coloredit(ygui::window* win, const char* lbl, vec3f& value) {
+bool draw_coloredit(gui::window* win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
-bool draw_coloredit(ygui::window* win, const char* lbl, vec4f& value) {
+bool draw_coloredit(gui::window* win, const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
-bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec3f& value) {
+bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -2009,7 +2007,7 @@ bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec3f& value) {
     return false;
   }
 }
-bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec4f& value) {
+bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -2029,7 +2027,7 @@ bool draw_hdrcoloredit(ygui::window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_combobox(ygui::window* win, const char* lbl, int& value,
+bool draw_combobox(gui::window* win, const char* lbl, int& value,
     const std::vector<std::string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
@@ -2043,7 +2041,7 @@ bool draw_combobox(ygui::window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_combobox(ygui::window* win, const char* lbl, std::string& value,
+bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
     const std::vector<std::string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
@@ -2058,7 +2056,7 @@ bool draw_combobox(ygui::window* win, const char* lbl, std::string& value,
   return value != old_val;
 }
 
-bool draw_combobox(ygui::window* win, const char* lbl, int& idx, int num,
+bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
     const std::function<const char*(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
@@ -2079,7 +2077,7 @@ bool draw_combobox(ygui::window* win, const char* lbl, int& idx, int num,
   return idx != old_idx;
 }
 
-void draw_progressbar(ygui::window* win, const char* lbl, float fraction) {
+void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -2088,23 +2086,23 @@ void draw_progressbar(ygui::window* win, const char* lbl, float fraction) {
 }
 
 void draw_histogram(
-    ygui::window* win, const char* lbl, const float* values, int count) {
+    gui::window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<float>& values) {
+    gui::window* win, const char* lbl, const std::vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec2f>& values) {
+    gui::window* win, const char* lbl, const std::vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec3f>& values) {
+    gui::window* win, const char* lbl, const std::vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2113,7 +2111,7 @@ void draw_histogram(
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_histogram(
-    ygui::window* win, const char* lbl, const std::vector<vec4f>& values) {
+    gui::window* win, const char* lbl, const std::vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2185,25 +2183,25 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_info(ygui::window* win, const std::string& msg) {
+void        log_info(gui::window* win, const std::string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_error(ygui::window* win, const std::string& msg) {
+void log_error(gui::window* win, const std::string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();
 }
-void clear_log(ygui::window* win) {
+void clear_log(gui::window* win) {
   _log_mutex.lock();
   _log_widget.Clear();
   _log_mutex.unlock();
 }
-void draw_log(ygui::window* win) {
+void draw_log(gui::window* win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();
 }
 
-}  // namespace ygui
+}  // namespace yocto::gui

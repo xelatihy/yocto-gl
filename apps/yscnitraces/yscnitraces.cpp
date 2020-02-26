@@ -36,6 +36,7 @@ namespace sio = yocto::sceneio;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
+namespace gui = yocto::gui;
 
 #include <future>
 #include <memory>
@@ -61,8 +62,8 @@ struct app_state {
   float             exposure = 0;
 
   // view scene
-  ygui::image*       glimage  = new ygui::image{};
-  ygui::image_params glparams = {};
+  gui::image*       glimage  = new gui::image{};
+  gui::image_params glparams = {};
 
   // computation
   int         render_sample  = 0;
@@ -292,20 +293,20 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // callbacks
-  auto callbacks    = ygui::ui_callbacks{};
-  callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
-    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+  auto callbacks    = gui::ui_callbacks{};
+  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+    if (!is_initialized(app->glimage)) init_image(app->glimage);
     if (!app->render_counter)
-      set_glimage(app->glimage, app->display, false, false);
+      set_image(app->glimage, app->display, false, false);
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage, app->glparams);
+    draw_image(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   };
-  callbacks.widgets_cb = [app](ygui::window* win, const ygui::input& input) {
+  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
     auto edited = 0;
     // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
     //   app->camera = get_element(
@@ -328,8 +329,8 @@ int main(int argc, const char* argv[]) {
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
   };
-  callbacks.char_cb = [app](ygui::window* win, unsigned int key,
-                          const ygui::input& input) {
+  callbacks.char_cb = [app](gui::window* win, unsigned int key,
+                          const gui::input& input) {
     switch (key) {
       case 'c': {
         auto ncameras = (int)app->scene->cameras.size();
@@ -356,7 +357,7 @@ int main(int argc, const char* argv[]) {
         break;
     }
   };
-  callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
+  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;

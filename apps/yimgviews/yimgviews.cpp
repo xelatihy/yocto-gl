@@ -32,6 +32,7 @@
 using namespace yocto::math;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;
+namespace gui = yocto::gui;
 
 #include <future>
 using namespace std::string_literals;
@@ -52,8 +53,8 @@ struct app_state {
   bool                   colorgrade = false;
 
   // viewing properties
-  ygui::image*       glimage  = new ygui::image{};
-  ygui::image_params glparams = {};
+  gui::image*       glimage  = new gui::image{};
+  gui::image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -92,19 +93,19 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // callbacks
-  auto callbacks    = ygui::ui_callbacks{};
-  callbacks.draw_cb = [app](ygui::window* win, const ygui::input& input) {
+  auto callbacks    = gui::ui_callbacks{};
+  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
-      init_glimage(app->glimage);
-      set_glimage(app->glimage, app->display, false, false);
+      init_image(app->glimage);
+      set_image(app->glimage, app->display, false, false);
     }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage, app->glparams);
+    draw_image(app->glimage, app->glparams);
   };
-  callbacks.widgets_cb = [app](ygui::window* win, const ygui::input& input) {
+  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
     auto edited = 0;
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", app->exposure, -5, 5);
@@ -151,11 +152,11 @@ int main(int argc, const char* argv[]) {
     }
     if (edited) {
       update_display(app);
-      if (!is_initialized(app->glimage)) init_glimage(app->glimage);
-      set_glimage(app->glimage, app->display, false, false);
+      if (!is_initialized(app->glimage)) init_image(app->glimage);
+      set_image(app->glimage, app->display, false, false);
     }
   };
-  callbacks.uiupdate_cb = [app](ygui::window* win, const ygui::input& input) {
+  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
     // handle mouse
     if (input.mouse_left && !input.widgets_active) {
       app->glparams.center += input.mouse_pos - input.mouse_last;

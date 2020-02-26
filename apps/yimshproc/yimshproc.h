@@ -9,6 +9,7 @@ namespace sio = yocto::sceneio;
 namespace shp = yocto::shape;
 namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
+namespace gui = yocto::gui;
 
 #include <memory>
 using std::function;
@@ -21,14 +22,14 @@ struct app_state {
   function<void(app_state*)>                         init;
   function<void(app_state*, int, bool)>              key_callback;
   function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, ygui::window*)>          draw_widgets;
+  function<void(app_state*, gui::window*)>          draw_widgets;
 
   // Geometry data
   sio::shape shape;
 
   // OpenGL data
-  ygui::scene*       glscene        = new ygui::scene{};
-  ygui::scene_params opengl_options = {};
+  gui::scene*       glscene        = new gui::scene{};
+  gui::scene_params opengl_options = {};
 
   // Interaction data
   float         time       = 0;
@@ -38,22 +39,22 @@ struct app_state {
   shp::bvh_tree bvh;
 
   // Internal handles
-  ygui::camera*   glcamera    = nullptr;
-  ygui::shape*    glshapes    = nullptr;
-  ygui::shape*    glpoints    = nullptr;
-  ygui::shape*    glvfields   = nullptr;
-  ygui::shape*    gledges     = nullptr;
-  ygui::shape*    glpolylines = nullptr;
-  ygui::material* glshapem    = nullptr;
-  ygui::material* glpointm    = nullptr;
-  ygui::material* glvfieldm   = nullptr;
-  ygui::material* gledgem     = nullptr;
-  ygui::material* glpolylinem = nullptr;
-  ygui::object*   glshapeo    = nullptr;
-  ygui::object*   glpointo    = nullptr;
-  ygui::object*   glvfieldo   = nullptr;
-  ygui::object*   gledgeo     = nullptr;
-  ygui::object*   glpolylineo = nullptr;
+  gui::camera*   glcamera    = nullptr;
+  gui::shape*    glshapes    = nullptr;
+  gui::shape*    glpoints    = nullptr;
+  gui::shape*    glvfields   = nullptr;
+  gui::shape*    gledges     = nullptr;
+  gui::shape*    glpolylines = nullptr;
+  gui::material* glshapem    = nullptr;
+  gui::material* glpointm    = nullptr;
+  gui::material* glvfieldm   = nullptr;
+  gui::material* gledgem     = nullptr;
+  gui::material* glpolylinem = nullptr;
+  gui::object*   glshapeo    = nullptr;
+  gui::object*   glpointo    = nullptr;
+  gui::object*   glvfieldo   = nullptr;
+  gui::object*   gledgeo     = nullptr;
+  gui::object*   glpolylineo = nullptr;
 
   // cleanup
   ~app_state() {
@@ -271,7 +272,7 @@ void yimshproc(const std::string&                      input_filename,
     function<void(app_state*)>                         init,
     function<void(app_state*, int, bool)>              key_callback,
     function<void(app_state*, int, vec2f, int, float)> click_callback,
-    function<void(app_state*, ygui::window* win)>      draw_widgets) {
+    function<void(app_state*, gui::window* win)>      draw_widgets) {
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
 
@@ -293,22 +294,22 @@ void yimshproc(const std::string&                      input_filename,
   app->init(app);
 
   // Init window.
-  auto win_guard = std::make_unique<ygui::window>();
+  auto win_guard = std::make_unique<gui::window>();
   auto win       = win_guard.get();
   init_window(win, {1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_callback(win, [app](ygui::window* win, const ygui::input& input) {
+  set_draw_callback(win, [app](gui::window* win, const gui::input& input) {
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->opengl_options);
   });
   set_widgets_callback(
-      win, [app, draw_widgets](ygui::window* win, const ygui::input& input) {
+      win, [app, draw_widgets](gui::window* win, const gui::input& input) {
         draw_widgets(app, win);
       });
-  set_click_callback(win, [app](ygui::window* win, bool left, bool press,
-                              const ygui::input& input) {
+  set_click_callback(win, [app](gui::window* win, bool left, bool press,
+                              const gui::input& input) {
     auto mouse = input.mouse_pos /
                  vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
@@ -335,7 +336,7 @@ void yimshproc(const std::string&                      input_filename,
     }
   });
   set_scroll_callback(
-      win, [app](ygui::window* win, float yoffset, const ygui::input& input) {
+      win, [app](gui::window* win, float yoffset, const gui::input& input) {
         float zoom = yoffset > 0 ? 0.1 : -0.1;
         update_turntable(
             app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
@@ -344,10 +345,10 @@ void yimshproc(const std::string&                      input_filename,
             app->camera.film);
       });
   set_key_callback(win,
-      [app](ygui::window* win, int key, bool pressing,
-          const ygui::input& input) { app->key_callback(app, key, pressing); });
+      [app](gui::window* win, int key, bool pressing,
+          const gui::input& input) { app->key_callback(app, key, pressing); });
   set_uiupdate_callback(
-      win, [app](ygui::window* win, const ygui::input& input) {
+      win, [app](gui::window* win, const gui::input& input) {
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {
