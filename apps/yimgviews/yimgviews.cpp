@@ -30,6 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
+namespace yimg = yocto::image;
 
 #include <future>
 using namespace std::string_literals;

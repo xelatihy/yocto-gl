@@ -58,9 +58,12 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
-// MATH FUNCTIONS
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace ygui {
+
+// Namespace aliases
+namespace yimg = yocto::image;
 
 using namespace ym;
 // import math symbols for use

@@ -33,6 +33,7 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
 namespace ysio = yocto::sceneio;
+namespace yimg = yocto::image;
 
 #include <future>
 #include <memory>

@@ -30,12 +30,13 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 using namespace ym;
+namespace yimg = yocto::image;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace yimg {
+namespace yocto::image {
 
 yimg::image<vec4f> filter_bilateral(const yimg::image<vec4f>& img,
     float spatial_sigma, float range_sigma,
@@ -228,7 +229,7 @@ bool make_image_preset(
   return true;
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 int main(int argc, const char* argv[]) {
   // command line parameters

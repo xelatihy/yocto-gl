@@ -30,6 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
+namespace yimg = yocto::image;
 
 #include <atomic>
 #include <deque>

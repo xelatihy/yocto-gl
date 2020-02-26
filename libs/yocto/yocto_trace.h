@@ -81,6 +81,9 @@
 // -----------------------------------------------------------------------------
 namespace ytrc {
 
+// Namespace aliases
+namespace yimg = yocto::image;
+
 // Math defitions
 using ym::bbox3f;
 using ym::byte;

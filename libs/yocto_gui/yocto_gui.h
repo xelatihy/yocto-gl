@@ -45,9 +45,12 @@
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
-// IMAGE DRAWING
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace ygui {
+
+// Namespace aliases
+namespace yimg = yocto::image;
 
 // Math defitions
 using ym::bbox3f;
@@ -63,6 +66,13 @@ using ym::vec3i;
 using ym::vec4b;
 using ym::vec4f;
 using ym::vec4i;
+
+}
+
+// -----------------------------------------------------------------------------
+// IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace ygui {
 
 // OpenGL image data
 struct image {

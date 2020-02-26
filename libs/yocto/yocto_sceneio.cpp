@@ -70,6 +70,7 @@ namespace yply = yocto::ply;
 namespace yobj = yocto::obj;
 namespace ypbrt = yocto::pbrt;
 namespace yshp = yocto::shape;
+namespace yimg = yocto::image;
 
 using namespace ym;
 // import math symbols for use

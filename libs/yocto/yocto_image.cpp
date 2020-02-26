@@ -45,7 +45,7 @@
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 using namespace ym;
 // import math symbols for use
@@ -66,12 +66,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 struct color_space_params {
@@ -427,12 +427,12 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
   return xyz_to_color(color_to_xyz(col, from), to);
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
@@ -517,12 +517,12 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 template <typename T>
 inline void set_region(
@@ -805,12 +805,12 @@ image<vec4f> image_difference(
   return diff;
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
@@ -1277,12 +1277,12 @@ image<vec4b> add_logo(const image<vec4b>& img, const std::string& type) {
   return wlogo;
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // Lookup volume
 inline float lookup_volume(
@@ -1328,12 +1328,12 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
          lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // make a simple example volume
 void make_test(
@@ -1371,12 +1371,12 @@ volume<float> make_volume_preset(const std::string& type) {
   return vol;
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 // Split a std::string
 static inline std::vector<std::string> split_string(const std::string& str) {
@@ -2026,12 +2026,12 @@ bool is_hdr_filename(const std::string& filename) {
   }
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yimg {
+namespace yocto::image {
 
 namespace impl {
 
@@ -2214,4 +2214,4 @@ bool save_volume(
   return impl::save_volume(filename, vol, error);
 }
 
-}  // namespace yimg
+}  // namespace yocto::image
