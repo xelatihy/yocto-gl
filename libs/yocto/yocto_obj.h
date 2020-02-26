@@ -46,7 +46,10 @@
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace yobj {
+namespace yocto::obj {
+
+// Namespace aliases
+namespace yobj = yocto::obj;
 
 // Math defitions
 using ym::frame3f;
@@ -63,7 +66,7 @@ using ym::vec4i;
 // -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yobj {
+namespace yocto::obj {
 
 // Math defitions
 using ym::frame3f;
@@ -300,7 +303,7 @@ inline void set_materials(
 inline void set_instances(
     yobj::shape* shape, const std::vector<frame3f>& instances);
 
-}  // namespace yobj
+}  // namespace yocto::obj
 
 // -----------------------------------------------------------------------------
 // HELPER FOR DICTIONARIES
@@ -309,8 +312,8 @@ namespace std {
 
 // Hash functor for std::vector for use with hash_map
 template <>
-struct hash<yobj::vertex> {
-  size_t operator()(const yobj::vertex& v) const {
+struct hash<yocto::obj::vertex> {
+  size_t operator()(const yocto::obj::vertex& v) const {
     const std::hash<int> hasher = std::hash<int>();
     auto                 h      = (size_t)0;
     h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -340,7 +343,7 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yobj {
+namespace yocto::obj {
 
 // string literals
 using namespace std::string_literals;
@@ -1850,6 +1853,6 @@ inline void set_instances(
   shape->instances = instances;
 }
 
-}  // namespace yobj
+}  // namespace yocto::obj
 
 #endif

@@ -67,6 +67,7 @@ namespace ysio {
 
 // Namespace aliases
 namespace yply = yocto::ply;
+namespace yobj = yocto::obj;
 
 using namespace ym;
 // import math symbols for use
