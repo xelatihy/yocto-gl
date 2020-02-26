@@ -3,7 +3,7 @@
 struct my_data {
   std::vector<vec3i>       face_adjacency;
   std::vector<vector<int>> vertex_adjacency;
-  shp::geodesic_solver    solver;
+  shp::geodesic_solver     solver;
   std::vector<float>       scalar_field;
   std::vector<vec3f>       vector_field;
 

@@ -58,15 +58,15 @@ struct app_state {
   // rendering state
   img::image<vec4f> render   = {};
   img::image<vec4f> display  = {};
-  float              exposure = 0;
+  float             exposure = 0;
 
   // view scene
   ygui::image*       glimage  = new ygui::image{};
   ygui::image_params glparams = {};
 
   // computation
-  int          render_sample  = 0;
-  int          render_counter = 0;
+  int         render_sample  = 0;
+  int         render_counter = 0;
   trc::state* render_state   = new trc::state{};
 
   ~app_state() {
@@ -119,7 +119,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -172,7 +172,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -351,8 +351,7 @@ int main(int argc, const char* argv[]) {
         break;
       case 'F':
         app->params.falsecolor = (trc::falsecolor_type)(
-            ((int)app->params.falsecolor + 1) %
-            (int)trc::sampler_names.size());
+            ((int)app->params.falsecolor + 1) % (int)trc::sampler_names.size());
         reset_display(app);
         break;
     }

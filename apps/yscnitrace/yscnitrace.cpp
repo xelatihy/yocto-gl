@@ -69,7 +69,7 @@ struct app_state {
   // rendering state
   img::image<vec4f> render   = {};
   img::image<vec4f> display  = {};
-  float              exposure = 0;
+  float             exposure = 0;
 
   // view scene
   ygui::image*       glimage  = new ygui::image{};
@@ -86,8 +86,8 @@ struct app_state {
   sio::texture*     selected_texture     = nullptr;
 
   // computation
-  int          render_sample  = 0;
-  int          render_counter = 0;
+  int         render_sample  = 0;
+  int         render_counter = 0;
   trc::state* render_state   = new trc::state{};
 
   // loading status
@@ -118,7 +118,7 @@ struct app_states {
 
   // default options
   trc::trace_params params     = {};
-  bool               add_skyenv = false;
+  bool              add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -166,7 +166,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -218,7 +218,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -406,8 +406,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    ygui::window* win, sio::model* ioscene, sio::shape* ioshape) {
+bool draw_widgets(ygui::window* win, sio::model* ioscene, sio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);

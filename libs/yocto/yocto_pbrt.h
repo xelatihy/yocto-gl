@@ -1030,7 +1030,8 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
                 get_etak(sfs::path(filenamep).replace_extension("")).first;
             value.value3f = {eta.x, eta.y, eta.z};
           } else if (sfs::path(filenamep).extension() == ".k") {
-            auto k = get_etak(sfs::path(filenamep).replace_extension("")).second;
+            auto k =
+                get_etak(sfs::path(filenamep).replace_extension("")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;

@@ -82,7 +82,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -132,7 +132,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -234,8 +234,9 @@ int main(int argc, const char* argv[]) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    sfs::path(imfilename).extension().string();
-        auto outfilename = sfs::path(imfilename).replace_extension(ext).string();
-        auto ioerror     = ""s;
+        auto outfilename =
+            sfs::path(imfilename).replace_extension(ext).string();
+        auto ioerror = ""s;
         cli::print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror))
           cli::print_fatal(ioerror);

@@ -89,9 +89,9 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     auto base_texcoords = std::vector<vec2f>{};
     shp::make_sphere(
         base_quads, base_positions, base_normals, base_texcoords, pow2(5), 0.8);
-    shp::make_hair(lines, positions, normals, texcoords, radius,
-        base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, {4, 65536}, {0.2, 0.2}, {0.002, 0.001});
+    shp::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
+        {0.2, 0.2}, {0.002, 0.001});
   } else if (type == "default-hairball-interior") {
     shp::make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
   } else if (type == "default-suzanne") {
@@ -141,10 +141,10 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     shp::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
-    shp::make_hair(lines, positions, normals, texcoords, radius,
-        base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100});
+    shp::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
+        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
+        {0.03, 100});
   } else if (type == "test-hairball2") {
     auto base_triangles = std::vector<vec3i>{};
     auto base_quads     = std::vector<vec4i>{};
@@ -154,10 +154,9 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     shp::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
-    shp::make_hair(lines, positions, normals, texcoords, radius,
-        base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f});
+    shp::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
+        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test-hairball3") {
     auto base_triangles = std::vector<vec3i>{};
     auto base_quads     = std::vector<vec4i>{};
@@ -167,10 +166,10 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     shp::make_sphere(base_quads, base_positions, base_normals, base_texcoords,
         32, 0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
-    shp::make_hair(lines, positions, normals, texcoords, radius,
-        base_triangles, base_quads, base_positions, base_normals,
-        base_texcoords, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
-        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128});
+    shp::make_hair(lines, positions, normals, texcoords, radius, base_triangles,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
+        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
+        {0.5, 128});
   } else if (type == "test-hairball-interior") {
     shp::make_sphere(
         quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
@@ -262,8 +261,7 @@ int main(int argc, const char* argv[]) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = cli::make_cli(
-      "ymshproc", "Applies operations on a triangle mesh");
+  auto cli = cli::make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
   add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
   add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
@@ -316,8 +314,8 @@ int main(int argc, const char* argv[]) {
               normals, texcoords, colors, radius, basename, ioerror))
         cli::print_fatal(ioerror);
     } else {
-      if (!shp::load_shape(filename, points, lines, triangles, quads,
-              positions, normals, texcoords, colors, radius, ioerror))
+      if (!shp::load_shape(filename, points, lines, triangles, quads, positions,
+              normals, texcoords, colors, radius, ioerror))
         cli::print_fatal(ioerror);
     }
   } else {
@@ -401,7 +399,7 @@ int main(int argc, const char* argv[]) {
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
     cli::print_progress("compute geodesic", 0, 1);
     auto adjacencies = shp::face_adjacencies(triangles);
-    auto solver = shp::make_geodesic_solver(triangles, adjacencies, positions);
+    auto solver  = shp::make_geodesic_solver(triangles, adjacencies, positions);
     auto sources = std::vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};

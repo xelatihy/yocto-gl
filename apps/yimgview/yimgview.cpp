@@ -62,10 +62,10 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  float                   exposure   = 0;
-  bool                    filmic     = false;
+  float                  exposure   = 0;
+  bool                   filmic     = false;
   img::colorgrade_params params     = {};
-  bool                    colorgrade = false;
+  bool                   colorgrade = false;
 
   // viewing properties
   ygui::image*       glimage   = new ygui::image{};
@@ -93,8 +93,8 @@ struct app_states {
   std::deque<app_state*>  loading  = {};
 
   // default options
-  float                   exposure = 0;
-  bool                    filmic   = false;
+  float                  exposure = 0;
+  bool                   filmic   = false;
   img::colorgrade_params params   = {};
 
   // cleanup
@@ -139,8 +139,8 @@ void update_display(app_state* app) {
 void load_image_async(app_states* apps, const std::string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
-  app->outname  = sfs::path(filename).replace_extension(".display.png").string();
-  app->name     = sfs::path(filename).filename();
+  app->outname = sfs::path(filename).replace_extension(".display.png").string();
+  app->name    = sfs::path(filename).filename();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;

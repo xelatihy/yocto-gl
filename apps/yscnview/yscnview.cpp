@@ -208,7 +208,7 @@ void init_glscene(ygui::scene* glscene, sio::model* ioscene,
   }
 
   // material
-  auto material_map = std::unordered_map<sio::material*, ygui::material*>{};
+  auto material_map     = std::unordered_map<sio::material*, ygui::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -254,7 +254,7 @@ void init_glscene(ygui::scene* glscene, sio::model* ioscene,
   }
 
   // instances
-  auto instance_map = std::unordered_map<sio::instance*, ygui::instance*>{};
+  auto instance_map     = std::unordered_map<sio::instance*, ygui::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -372,8 +372,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(
-    ygui::window* win, sio::model* ioscene, sio::shape* ioshape) {
+bool draw_widgets(ygui::window* win, sio::model* ioscene, sio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);

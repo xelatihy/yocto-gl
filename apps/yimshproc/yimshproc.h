@@ -31,10 +31,10 @@ struct app_state {
   ygui::scene_params opengl_options = {};
 
   // Interaction data
-  float          time       = 0;
-  bool           show_edges = false;
+  float         time       = 0;
+  bool          show_edges = false;
   sio::camera   camera;
-  float          camera_focus;
+  float         camera_focus;
   shp::bvh_tree bvh;
 
   // Internal handles

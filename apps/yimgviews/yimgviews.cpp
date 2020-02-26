@@ -46,10 +46,10 @@ struct app_state {
 
   // diplay data
   img::image<vec4f>      display    = {};
-  float                   exposure   = 0;
-  bool                    filmic     = false;
+  float                  exposure   = 0;
+  bool                   filmic     = false;
   img::colorgrade_params params     = {};
-  bool                    colorgrade = false;
+  bool                   colorgrade = false;
 
   // viewing properties
   ygui::image*       glimage  = new ygui::image{};

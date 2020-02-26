@@ -2600,11 +2600,12 @@ static bool save_pbrt_scene(const std::string& filename,
 
   // convert instances
   for (auto object : scene->objects) {
-    auto pshape       = add_shape(pbrt);
-    pshape->filename_ = sfs::path(object->shape->name).replace_extension(".ply");
-    pshape->frame     = object->frame;
-    pshape->frend     = object->frame;
-    pshape->material  = material_map.at(object->material);
+    auto pshape = add_shape(pbrt);
+    pshape->filename_ =
+        sfs::path(object->shape->name).replace_extension(".ply");
+    pshape->frame    = object->frame;
+    pshape->frend    = object->frame;
+    pshape->material = material_map.at(object->material);
     if (object->instance) {
       pshape->instances = object->instance->frames;
       pshape->instances = object->instance->frames;

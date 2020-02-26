@@ -43,7 +43,7 @@ namespace yocto::image {
 img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
     float spatial_sigma, float range_sigma,
     const std::vector<img::image<vec4f>>& features,
-    const std::vector<float>&              features_sigma) {
+    const std::vector<float>&             features_sigma) {
   auto filtered     = img::image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -109,8 +109,8 @@ img::image<vec4f> filter_bilateral(
 
 bool make_image_preset(
     const std::string& type, img::image<vec4f>& img, std::string& error) {
-  auto set_region = [](img::image<vec4f>&        img,
-                        const img::image<vec4f>& region, const vec2i& offset) {
+  auto set_region = [](img::image<vec4f>& img, const img::image<vec4f>& region,
+                        const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
       for (auto i = 0; i < region.size().x; i++) {
         if (!img.contains({i, j})) continue;
