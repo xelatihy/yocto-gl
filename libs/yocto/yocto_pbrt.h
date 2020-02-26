@@ -41,9 +41,12 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// PBRT LOADER AND WRITER
+// ALIASES
 // -----------------------------------------------------------------------------
-namespace ypbrt {
+namespace yocto::pbrt {
+
+// Namespace aliases
+namespace ypbrt = yocto::pbrt;
 
 // Math defitions
 using ym::frame3f;
@@ -55,6 +58,13 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+
+}
+
+// -----------------------------------------------------------------------------
+// PBRT LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto::pbrt {
 
 // Pbrt camera
 struct camera {
@@ -158,7 +168,7 @@ inline ypbrt::material*    add_material(ypbrt::model* pbrt);
 inline ypbrt::environment* add_environment(ypbrt::model* pbrt);
 inline ypbrt::light*       add_light(ypbrt::model* pbrt);
 
-}  // namespace ypbrt
+}  // namespace yocto::pbrt
 
 // -----------------------------------------------------------------------------
 //
@@ -180,7 +190,7 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ypbrt {
+namespace yocto::pbrt {
 
 // Namespace aliases
 namespace yply = yocto::ply;
@@ -193,7 +203,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // PBRT PARSING
 // -----------------------------------------------------------------------------
-namespace ypbrt {
+namespace yocto::pbrt {
 
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
@@ -2519,6 +2529,6 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   return true;
 }
 
-}  // namespace ypbrt
+}  // namespace yocto::pbrt
 
 #endif
