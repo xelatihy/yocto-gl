@@ -73,7 +73,6 @@ namespace yshp  = yocto::shape;
 namespace yimg  = yocto::image;
 
 // import math symbols for use
-using math::uint;
 using math::abs;
 using math::acos;
 using math::atan2;
@@ -89,6 +88,7 @@ using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
+using math::uint;
 
 }  // namespace yocto::sceneio
 
