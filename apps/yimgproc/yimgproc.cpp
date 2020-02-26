@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <ygl/ycli.h>
-#include <ygl/yimage.h>
-#include <ygl/ymath.h>
+#include <yocto/yocto_cli.h>
+#include <yocto/yocto_image.h>
+#include <yocto/yocto_math.h>
 using namespace ym;
 using namespace std::string_literals;
 

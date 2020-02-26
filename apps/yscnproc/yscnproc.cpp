@@ -26,10 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <ygl/ycli.h>
-#include <ygl/yimage.h>
-#include <ygl/ymath.h>
-#include <ygl/ysceneio.h>
+#include <yocto/yocto_cli.h>
+#include <yocto/yocto_image.h>
+#include <yocto/yocto_math.h>
+#include <yocto/yocto_sceneio.h>
 
 #include <memory>
 using std::string;
