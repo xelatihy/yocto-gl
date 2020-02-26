@@ -110,6 +110,8 @@ namespace yocto::image {
 
 // Math defitions
 using math::byte;
+using math::mat3f;
+using math::pif;
 using math::vec2f;
 using math::vec2i;
 using math::vec3b;
@@ -118,14 +120,12 @@ using math::vec3i;
 using math::vec4b;
 using math::vec4f;
 using math::vec4i;
-using math::mat3f;
 using math::zero2i;
-using math::zero3i;
 using math::zero3f;
+using math::zero3i;
 using math::zero4f;
-using math::pif;
 
-}
+}  // namespace yocto::image
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES

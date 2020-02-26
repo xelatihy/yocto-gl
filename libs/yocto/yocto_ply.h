@@ -55,7 +55,7 @@ using math::vec3i;
 using math::vec4f;
 using math::vec4i;
 
-}
+}  // namespace yocto::ply
 
 // -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER
@@ -91,8 +91,8 @@ struct property {
 // Ply elements
 struct element {
   // element content
-  std::string                  name       = "";
-  size_t                       count      = 0;
+  std::string                 name       = "";
+  size_t                      count      = 0;
   std::vector<ply::property*> properties = {};
 
   // cleanup
@@ -105,8 +105,8 @@ struct model {
   enum struct format_t { ascii, binary_little_endian, binary_big_endian };
 
   // ply content
-  format_t                    format   = format_t::binary_little_endian;
-  std::vector<std::string>    comments = {};
+  format_t                   format   = format_t::binary_little_endian;
+  std::vector<std::string>   comments = {};
   std::vector<ply::element*> elements = {};
 
   // cleanup

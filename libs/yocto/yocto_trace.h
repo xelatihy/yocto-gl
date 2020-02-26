@@ -91,6 +91,7 @@ using math::byte;
 using math::frame3f;
 using math::identity3x4f;
 using math::ray3f;
+using math::rng_state;
 using math::vec2f;
 using math::vec2i;
 using math::vec3b;
@@ -98,9 +99,8 @@ using math::vec3f;
 using math::vec3i;
 using math::vec4f;
 using math::vec4i;
-using math::rng_state;
 
-}
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // HIGH LEVEL API
@@ -266,7 +266,7 @@ void update_bvh(trc::scene*            scene,
     const std::vector<trc::object*>&   updated_objects,
     const std::vector<trc::shape*>&    updated_shapes,
     const std::vector<trc::instance*>& updated_instances,
-    const trace_params&                 params);
+    const trace_params&                params);
 
 // Progressively computes an image.
 img::image<vec4f> trace_image(const trc::scene* scene,
@@ -420,7 +420,7 @@ struct instance {
 
 // Object.
 struct object {
-  frame3f         frame    = identity3x4f;
+  frame3f        frame    = identity3x4f;
   trc::shape*    shape    = nullptr;
   trc::material* material = nullptr;
   trc::instance* instance = nullptr;
@@ -430,14 +430,14 @@ struct object {
 struct environment {
   frame3f            frame        = identity3x4f;
   vec3f              emission     = {0, 0, 0};
-  trc::texture*     emission_tex = nullptr;
+  trc::texture*      emission_tex = nullptr;
   std::vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct light {
   trc::object*      object      = nullptr;
-  int                instance    = -1;
+  int               instance    = -1;
   trc::environment* environment = nullptr;
 };
 
@@ -459,7 +459,7 @@ struct scene {
 
   // computed properties
   std::vector<trc::light*> lights = {};
-  bvh_tree*                 bvh    = nullptr;
+  bvh_tree*                bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene           embree_bvh       = nullptr;
   std::vector<vec2i> embree_instances = {};
@@ -471,9 +471,9 @@ struct scene {
 
 // State of a pixel during tracing
 struct pixel {
-  vec3f         radiance = {0, 0, 0};
-  int           hits     = 0;
-  int           samples  = 0;
+  vec3f     radiance = {0, 0, 0};
+  int       hits     = 0;
+  int       samples  = 0;
   rng_state rng      = {};
 };
 
@@ -481,8 +481,8 @@ struct pixel {
 struct state {
   img::image<vec4f> render = {};
   img::image<pixel> pixels = {};
-  std::future<void>  worker = {};  // async
-  std::atomic<bool>  stop   = {};  // async
+  std::future<void> worker = {};  // async
+  std::atomic<bool> stop   = {};  // async
 };
 
 }  // namespace yocto::trace

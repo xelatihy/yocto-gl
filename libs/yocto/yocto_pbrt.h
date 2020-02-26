@@ -47,23 +47,23 @@ namespace yocto::pbrt {
 
 // Math defitions
 using math::frame3f;
+using math::identity3x4f;
+using math::identity4x4f;
 using math::mat4f;
+using math::pif;
 using math::vec2f;
 using math::vec2i;
 using math::vec3f;
 using math::vec3i;
 using math::vec4f;
 using math::vec4i;
-using math::zero2i;
-using math::zero3i;
 using math::zero2f;
+using math::zero2i;
 using math::zero3f;
+using math::zero3i;
 using math::zero4f;
-using math::identity3x4f;
-using math::identity4x4f;
-using math::pif;
 
-}
+}  // namespace yocto::pbrt
 
 // -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
@@ -148,7 +148,7 @@ struct environment {
 // Pbrt model
 struct model {
   // pbrt data
-  std::vector<std::string>         comments     = {};
+  std::vector<std::string>        comments     = {};
   std::vector<pbrt::camera*>      cameras      = {};
   std::vector<pbrt::shape*>       shapes       = {};
   std::vector<pbrt::environment*> environments = {};
@@ -199,7 +199,7 @@ namespace yocto::pbrt {
 // string literals
 using namespace std::string_literals;
 
-}
+}  // namespace yocto::pbrt
 
 // -----------------------------------------------------------------------------
 // PBRT PARSING
@@ -1123,9 +1123,8 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
   pcamera->frame      = inverse((frame3f)pcamera->frame);
   pcamera->frame.z    = -pcamera->frame.z;
   pcamera->resolution = resolution;
-  auto film_aspect    = (resolution == zero2i)
-                         ? 1
-                         : (float)resolution.x / (float)resolution.y;
+  auto film_aspect =
+      (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
   if (command.type == "perspective") {
     auto fov = 90.0f;
     if (!get_value(command.values, "fov", fov)) return parse_error();
@@ -1349,8 +1348,7 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
       return parse_error();
 
     roughness = 0;
-    if (uroughness.first == zero3f || vroughness.first == zero3f)
-      return true;
+    if (uroughness.first == zero3f || vroughness.first == zero3f) return true;
     roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
     // from pbrt code
     if (remaproughness) {
@@ -1867,23 +1865,23 @@ inline bool convert_environment(pbrt::environment* penvironment,
 
 // pbrt stack ctm
 struct stack_element {
-  frame3f          transform_start        = identity3x4f;
-  frame3f          transform_end          = identity3x4f;
+  frame3f         transform_start        = identity3x4f;
+  frame3f         transform_end          = identity3x4f;
   pbrt::material  material               = {};
   pbrt::arealight arealight              = {};
   pbrt::medium    interior               = {};
   pbrt::medium    exterior               = {};
-  bool             reverse                = false;
-  bool             active_transform_start = true;
-  bool             active_transform_end   = true;
+  bool            reverse                = false;
+  bool            active_transform_start = true;
+  bool            active_transform_end   = true;
 };
 
 // pbrt parsing context
 struct context {
-  std::vector<stack_element>                                  stack      = {};
-  std::unordered_map<std::string, stack_element>              coordsys   = {};
+  std::vector<stack_element>                                 stack      = {};
+  std::unordered_map<std::string, stack_element>             coordsys   = {};
   std::unordered_map<std::string, std::vector<pbrt::shape*>> objects    = {};
-  std::string                                                 cur_object = "";
+  std::string                                                cur_object = "";
   vec2i film_resolution = {512, 512};
 };
 
@@ -1891,10 +1889,10 @@ struct context {
 [[nodiscard]] inline bool load_pbrt(const std::string& filename,
     pbrt::model* pbrt, std::string& error, context& ctx,
     std::unordered_map<std::string, pbrt::material*>& material_map,
-    std::unordered_map<std::string, material>&         named_materials,
-    std::unordered_map<std::string, texture>&          named_textures,
-    std::unordered_map<std::string, medium>&           named_mediums,
-    const std::string&                                 ply_dirname) {
+    std::unordered_map<std::string, material>&        named_materials,
+    std::unordered_map<std::string, texture>&         named_textures,
+    std::unordered_map<std::string, medium>&          named_mediums,
+    const std::string&                                ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

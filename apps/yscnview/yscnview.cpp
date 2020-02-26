@@ -82,8 +82,8 @@ struct app_state {
   ysio::texture*     selected_texture     = nullptr;
 
   // loading status
-  std::atomic<bool>       ok           = false;
-  std::future<void>       loader       = {};
+  std::atomic<bool>  ok           = false;
+  std::future<void>  loader       = {};
   std::string        status       = "";
   std::string        error        = "";
   std::atomic<float> progress     = 0.5;
@@ -100,7 +100,7 @@ struct app_states {
   // data
   std::vector<app_state*> states   = {};
   app_state*              selected = nullptr;
-  std::deque<app_state*>       loading  = {};
+  std::deque<app_state*>  loading  = {};
 
   // default options
   ygui::scene_params drawgl_prms = {};
@@ -426,7 +426,8 @@ bool draw_widgets(
   draw_label(win, "name", iosubdiv->name);
   draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
   draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
-  draw_label(win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(
+      win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
   draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
   draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
   draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
@@ -727,9 +728,9 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](ygui::window* win, const ygui::input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](ygui::window*           win,
+  callbacks.drop_cb = [apps](ygui::window*                win,
                           const std::vector<std::string>& paths,
-                          const ygui::input&         input) {
+                          const ygui::input&              input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](ygui::window* win, const ygui::input& input) {

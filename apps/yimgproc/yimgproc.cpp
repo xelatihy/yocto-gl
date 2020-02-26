@@ -95,7 +95,8 @@ yimg::image<vec4f> filter_bilateral(
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = math::exp(-dot(uv, uv) * sw) * math::exp(-dot(rgb, rgb) * rw);
+          auto w   = math::exp(-dot(uv, uv) * sw) *
+                   math::exp(-dot(rgb, rgb) * rw);
           av += w * img[{ii, jj}];
           aw += w;
         }

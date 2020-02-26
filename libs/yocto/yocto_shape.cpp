@@ -29,30 +29,30 @@ namespace yobj = yocto::obj;
 using math::abs;
 using math::acos;
 using math::atan2;
+using math::clamp;
 using math::cos;
 using math::exp;
-using math::fmod;
-using math::log;
-using math::pow;
-using math::sin;
-using math::sqrt;
-using math::swap;
-using math::min;
-using math::max;
-using math::clamp;
-using math::lerp;
-using math::make_rng;
-using math::zero2f;
-using math::zero3f;
-using math::zero4f;
-using math::invalidb3f;
 using math::flt_max;
+using math::fmod;
+using math::invalidb3f;
+using math::lerp;
+using math::log;
+using math::make_rng;
+using math::max;
+using math::min;
 using math::pif;
+using math::pow;
 using math::rng_state;
 using math::sample_discrete;
 using math::sample_discrete_pdf;
 using math::sample_uniform;
 using math::sample_uniform_pdf;
+using math::sin;
+using math::sqrt;
+using math::swap;
+using math::zero2f;
+using math::zero3f;
+using math::zero4f;
 
 }  // namespace yocto::shape
 
@@ -2848,8 +2848,7 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
 namespace yocto::shape {
 
 // Pick a point in a point set uniformly.
-int sample_points(int npoints, float re) { return 
-  sample_uniform(npoints, re); }
+int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
 int sample_points(const std::vector<float>& cdf, float re) {
   return sample_discrete(cdf, re);
 }

@@ -51,29 +51,29 @@ using math::atan2;
 using math::clamp;
 using math::cos;
 using math::exp;
+using math::flt_max;
 using math::fmod;
+using math::identity3x3f;
+using math::invalidb3f;
 using math::log;
+using math::make_rng;
 using math::max;
 using math::min;
+using math::pif;
 using math::pow;
+using math::rng_state;
+using math::sample_discrete;
+using math::sample_discrete_pdf;
+using math::sample_uniform;
+using math::sample_uniform_pdf;
 using math::sin;
 using math::sqrt;
-using math::make_rng;
 using math::zero2f;
 using math::zero2i;
 using math::zero3f;
 using math::zero3i;
 using math::zero4f;
 using math::zero4i;
-using math::flt_max;
-using math::pif;
-using math::rng_state;
-using math::identity3x3f;
-using math::invalidb3f;
-using math::sample_discrete;
-using math::sample_discrete_pdf;
-using math::sample_uniform;
-using math::sample_uniform_pdf;
 
 }  // namespace yocto::trace
 
@@ -990,7 +990,7 @@ static void update_embree_bvh(trc::scene* scene,
     const std::vector<trc::object*>&      updated_objects,
     const std::vector<trc::shape*>&       updated_shapes,
     const std::vector<trc::instance*>&    updated_instances,
-    const trace_params&                    params) {
+    const trace_params&                   params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -1546,7 +1546,7 @@ void update_bvh(trc::scene*            scene,
     const std::vector<trc::object*>&   updated_objects,
     const std::vector<trc::shape*>&    updated_shapes,
     const std::vector<trc::instance*>& updated_instances,
-    const trace_params&                 params) {
+    const trace_params&                params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE

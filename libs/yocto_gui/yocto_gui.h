@@ -50,7 +50,7 @@ struct GLFWwindow;
 namespace ygui {
 
 // Namespace aliases
-namespace ym = yocto::math;
+namespace ym   = yocto::math;
 namespace yimg = yocto::image;
 
 // Math defitions
@@ -68,7 +68,7 @@ using ym::vec4b;
 using ym::vec4f;
 using ym::vec4i;
 
-}
+}  // namespace ygui
 
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING

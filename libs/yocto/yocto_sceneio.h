@@ -61,27 +61,26 @@ namespace scn = yocto::sceneio;
 namespace img = yocto::image;
 
 // Math defitions
+using math::bbox3f;
 using math::byte;
+using math::frame3f;
+using math::identity3x3f;
+using math::identity3x4f;
+using math::mat4f;
 using math::vec2f;
 using math::vec2i;
 using math::vec3b;
 using math::vec3f;
 using math::vec3i;
-using math::vec3b;
+using math::vec4b;
 using math::vec4f;
 using math::vec4i;
-using math::vec4b;
-using math::bbox3f;
-using math::frame3f;
-using math::mat4f;
-using math::zero2i;
 using math::zero2f;
-using math::zero3i;
+using math::zero2i;
 using math::zero3f;
-using math::identity3x3f;
-using math::identity3x4f;
+using math::zero3i;
 
-}
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -115,7 +114,7 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  std::string        name    = "";
+  std::string       name    = "";
   img::image<vec3f> colorf  = {};
   img::image<vec3b> colorb  = {};
   img::image<float> scalarf = {};
@@ -217,8 +216,8 @@ struct instance {
 // Object.
 struct object {
   // object data
-  std::string     name     = "";
-  frame3f         frame    = identity3x4f;
+  std::string    name     = "";
+  frame3f        frame    = identity3x4f;
   scn::shape*    shape    = nullptr;
   scn::material* material = nullptr;
   scn::instance* instance = nullptr;
@@ -227,9 +226,9 @@ struct object {
 
 // Environment map.
 struct environment {
-  std::string    name         = "";
-  frame3f        frame        = identity3x4f;
-  vec3f          emission     = {0, 0, 0};
+  std::string   name         = "";
+  frame3f       frame        = identity3x4f;
+  vec3f         emission     = {0, 0, 0};
   scn::texture* emission_tex = nullptr;
 };
 
@@ -294,8 +293,7 @@ bool save_scene(const std::string& filename, const scn::model* scene,
     bool noparallel = false);
 
 // get named camera or default if name is empty
-scn::camera* get_camera(
-    const scn::model* scene, const std::string& name = "");
+scn::camera* get_camera(const scn::model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 

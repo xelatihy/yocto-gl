@@ -66,28 +66,28 @@ using namespace std::string_literals;
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace yply = yocto::ply;
-namespace yobj = yocto::obj;
+namespace yply  = yocto::ply;
+namespace yobj  = yocto::obj;
 namespace ypbrt = yocto::pbrt;
-namespace yshp = yocto::shape;
-namespace yimg = yocto::image;
+namespace yshp  = yocto::shape;
+namespace yimg  = yocto::image;
 
 // import math symbols for use
 using math::abs;
 using math::acos;
 using math::atan2;
+using math::clamp;
 using math::cos;
 using math::exp;
 using math::fmod;
+using math::invalidb3f;
 using math::log;
+using math::max;
+using math::min;
 using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
-using math::clamp;
-using math::min;
-using math::max;
-using math::invalidb3f;
 
 }  // namespace yocto::sceneio
 
@@ -293,8 +293,7 @@ static T* add_element(std::vector<T*>& elements, const std::string& name,
 scn::camera* add_camera(scn::model* scene, const std::string& name) {
   return add_element(scene->cameras, name, "camera");
 }
-scn::environment* add_environment(
-    scn::model* scene, const std::string& name) {
+scn::environment* add_environment(scn::model* scene, const std::string& name) {
   return add_element(scene->environments, name, "environment");
 }
 scn::shape* add_shape(scn::model* scene, const std::string& name) {
@@ -629,8 +628,8 @@ std::unique_ptr<subdiv> subdivide_subdiv(
   return tesselated;
 }
 // Apply displacement to a shape
-std::unique_ptr<subdiv> displace_subdiv(scn::subdiv* subdiv,
-    float displacement, scn::texture* displacement_tex, bool smooth) {
+std::unique_ptr<subdiv> displace_subdiv(scn::subdiv* subdiv, float displacement,
+    scn::texture* displacement_tex, bool smooth) {
   auto displaced = std::make_unique<scn::subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
@@ -725,16 +724,14 @@ static bool save_json_scene(const std::string& filename,
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(const std::string& filename, scn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_obj_scene(const std::string& filename,
-    const scn::model* scene, std::string& error, progress_callback progress_cb,
-    bool noparallel);
+static bool save_obj_scene(const std::string& filename, const scn::model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(const std::string& filename, scn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_ply_scene(const std::string& filename,
-    const scn::model* scene, std::string& error, progress_callback progress_cb,
-    bool noparallel);
+static bool save_ply_scene(const std::string& filename, const scn::model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const std::string& filename, scn::model* scene,
@@ -918,7 +915,7 @@ inline void from_json(const json& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
-}  // namespace ym
+}  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
 // JSON IO
@@ -1421,8 +1418,7 @@ static bool save_json_scene(const std::string& filename,
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [](json& ejs, const std::string& name,
-                     scn::texture* texture) {
+  auto add_tex = [](json& ejs, const std::string& name, scn::texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1762,9 +1758,8 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   return true;
 }
 
-static bool save_obj_scene(const std::string& filename,
-    const scn::model* scene, std::string& error, progress_callback progress_cb,
-    bool noparallel) {
+static bool save_obj_scene(const std::string& filename, const scn::model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1939,9 +1934,8 @@ static bool load_ply_scene(const std::string& filename, scn::model* scene,
   return true;
 }
 
-static bool save_ply_scene(const std::string& filename,
-    const scn::model* scene, std::string& error, progress_callback progress_cb,
-    bool noparallel) {
+static bool save_ply_scene(const std::string& filename, const scn::model* scene,
+    std::string& error, progress_callback progress_cb, bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -2056,8 +2050,9 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map = std::unordered_map<std::string,
-      std::pair<scn::texture*, scn::texture*>>{{"", {nullptr, nullptr}}};
+  auto cotexture_map =
+      std::unordered_map<std::string, std::pair<scn::texture*, scn::texture*>>{
+          {"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scn::texture*, scn::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
@@ -2071,8 +2066,9 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map = std::unordered_map<std::string,
-      std::pair<scn::texture*, scn::texture*>>{{"", {nullptr, nullptr}}};
+  auto mrtexture_map =
+      std::unordered_map<std::string, std::pair<scn::texture*, scn::texture*>>{
+          {"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scn::texture*, scn::texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};

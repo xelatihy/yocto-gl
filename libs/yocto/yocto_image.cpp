@@ -56,6 +56,7 @@ using math::cos;
 using math::exp;
 using math::exp2;
 using math::fmod;
+using math::lerp;
 using math::log;
 using math::log2;
 using math::max;
@@ -64,7 +65,6 @@ using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
-using math::lerp;
 
 }  // namespace yocto::image
 
@@ -658,7 +658,8 @@ image<float> srgb_to_rgb(const image<float>& srgb) {
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.size()};
-  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = math::rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++)
+    srgb[i] = math::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
@@ -975,8 +976,9 @@ void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    auto v = math::perlin_fbm(
+        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }

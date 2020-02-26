@@ -49,18 +49,18 @@
 namespace yocto::obj {
 
 // Math defitions
+using math::frame3f;
+using math::identity3x4f;
 using math::vec2f;
 using math::vec2i;
 using math::vec3f;
 using math::vec3i;
 using math::vec4f;
 using math::vec4i;
-using math::frame3f;
 using math::zero2f;
 using math::zero3f;
-using math::identity3x4f;
 
-}
+}  // namespace yocto::obj
 
 // -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER
@@ -162,16 +162,16 @@ struct material {
 
 // Obj shape
 struct shape {
-  std::string                  name      = "";
-  std::vector<vec3f>           positions = {};
-  std::vector<vec3f>           normals   = {};
-  std::vector<vec2f>           texcoords = {};
+  std::string            name      = "";
+  std::vector<vec3f>     positions = {};
+  std::vector<vec3f>     normals   = {};
+  std::vector<vec2f>     texcoords = {};
   std::vector<material*> materials = {};
-  std::vector<vertex>          vertices  = {};
-  std::vector<element>         faces     = {};
-  std::vector<element>         lines     = {};
-  std::vector<element>         points    = {};
-  std::vector<frame3f>         instances = {};
+  std::vector<vertex>    vertices  = {};
+  std::vector<element>   faces     = {};
+  std::vector<element>   lines     = {};
+  std::vector<element>   points    = {};
+  std::vector<frame3f>   instances = {};
 };
 
 // Obj camera
@@ -196,7 +196,7 @@ struct environment {
 
 // Obj model
 struct model {
-  std::vector<std::string>        comments     = {};
+  std::vector<std::string>       comments     = {};
   std::vector<obj::shape*>       shapes       = {};
   std::vector<obj::material*>    materials    = {};
   std::vector<obj::camera*>      cameras      = {};
@@ -274,7 +274,7 @@ inline void add_quads(obj::shape* shape, const std::vector<vec4i>& quads,
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void set_lines(obj::shape* shape, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>&           texcoords,
+    const std::vector<vec2f>&          texcoords,
     const std::vector<obj::material*>& materials = {},
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 inline void set_points(obj::shape* shape, const std::vector<int>& points,
@@ -916,16 +916,13 @@ inline bool load_obj(const std::string& filename, obj::model* obj,
 
     // possible token values
     if (cmd == "v") {
-      if (!parse_value(str, opositions.emplace_back()))
-        return parse_error();
+      if (!parse_value(str, opositions.emplace_back())) return parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if (!parse_value(str, onormals.emplace_back()))
-        return parse_error();
+      if (!parse_value(str, onormals.emplace_back())) return parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if (!parse_value(str, otexcoords.emplace_back()))
-        return parse_error();
+      if (!parse_value(str, otexcoords.emplace_back())) return parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -1416,9 +1413,9 @@ inline void format_value(std::string& str, const vertex& value) {
 }
 
 // Get obj vertices
-inline void get_vertices(const obj::shape* shape,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, std::vector<int>& vindex, bool flipv) {
+inline void get_vertices(const obj::shape* shape, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    std::vector<int>& vindex, bool flipv) {
   auto vmap = std::unordered_map<vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.reserve(shape->vertices.size());
