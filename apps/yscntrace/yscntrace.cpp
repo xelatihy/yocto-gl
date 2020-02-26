@@ -27,9 +27,9 @@
 //
 
 #include <ygl/ycli.h>
-#include <ygl/yocto_image.h>
-#include <ygl/yocto_math.h>
-#include <ygl/yocto_sceneio.h>
+#include <ygl/yimage.h>
+#include <ygl/ymath.h>
+#include <ygl/ysceneio.h>
 #include <ygl/ytrace.h>
 using namespace ym;
 

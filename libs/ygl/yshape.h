@@ -125,7 +125,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "yocto_math.h"
+#include "ymath.h"
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES

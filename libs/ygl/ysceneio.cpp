@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/GL Input and Output functions.
+// Implementation for Yocto/Scene Input and Output functions.
 //
 
 //
@@ -37,7 +37,7 @@
 // TODO: move out animation utilities
 //
 
-#include "yocto_sceneio.h"
+#include "ysceneio.h"
 
 #include <atomic>
 #include <cassert>
@@ -50,11 +50,11 @@
 
 #include "ext/filesystem.hpp"
 #include "ext/json.hpp"
-#include "yocto_image.h"
+#include "yimage.h"
 #include "yobj.h"
 #include "ypbrt.h"
 #include "yply.h"
-#include "yocto_shape.h"
+#include "yshape.h"
 namespace fs = ghc::filesystem;
 using namespace std::string_literals;
 

@@ -27,8 +27,8 @@
 //
 
 #include <ygl/ycli.h>
-#include <ygl/yocto_image.h>
-#include <ygl/yocto_math.h>
+#include <ygl/yimage.h>
+#include <ygl/ymath.h>
 using namespace ym;
 using namespace std::string_literals;
 

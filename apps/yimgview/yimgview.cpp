@@ -27,7 +27,7 @@
 //
 
 #include <ygl/ycli.h>
-#include <ygl/yocto_image.h>
+#include <ygl/yimage.h>
 #include <ygui/ygui.h>
 using namespace ym;
 

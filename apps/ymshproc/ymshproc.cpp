@@ -27,8 +27,8 @@
 //
 
 #include <ygl/ycli.h>
-#include <ygl/yocto_math.h>
-#include <ygl/yocto_shape.h>
+#include <ygl/ymath.h>
+#include <ygl/yshape.h>
 using namespace ym;
 
 #include "ext/filesystem.hpp"

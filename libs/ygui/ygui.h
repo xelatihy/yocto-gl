@@ -38,8 +38,8 @@
 #include <memory>
 #include <vector>
 
-#include <ygl/yocto_image.h>
-#include <ygl/yocto_math.h>
+#include <ygl/yimage.h>
+#include <ygl/ymath.h>
 
 // forward declaration
 struct GLFWwindow;

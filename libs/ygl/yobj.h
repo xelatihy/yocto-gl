@@ -41,7 +41,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "yocto_math.h"
+#include "ymath.h"
 
 // -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER

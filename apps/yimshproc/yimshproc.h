@@ -1,8 +1,8 @@
 #include <memory>
 
 #include <ygl/ycli.h>
-#include <ygl/yocto_sceneio.h>
-#include <ygl/yocto_shape.h>
+#include <ygl/ysceneio.h>
+#include <ygl/yshape.h>
 #include <ygl/ytrace.h>
 #include <ygui/ygui.h>
 using namespace ym;

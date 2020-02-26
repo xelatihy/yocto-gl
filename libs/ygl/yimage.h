@@ -101,7 +101,7 @@
 #include <string>
 #include <vector>
 
-#include "yocto_math.h"
+#include "ymath.h"
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES

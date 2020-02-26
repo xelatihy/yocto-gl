@@ -6,7 +6,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_shape.h"
+#include "yshape.h"
 
 #include <deque>
 #include <memory>

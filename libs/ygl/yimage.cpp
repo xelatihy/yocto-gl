@@ -30,7 +30,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_image.h"
+#include "yimage.h"
 
 #include <atomic>
 #include <future>
