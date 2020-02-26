@@ -45,19 +45,22 @@
 // -----------------------------------------------------------------------------
 namespace yocto::pbrt {
 
-// Namespace aliases
-namespace ym = yocto::math;
-
 // Math defitions
-using ym::frame3f;
-using ym::identity3x4f;
-using ym::mat4f;
-using ym::vec2f;
-using ym::vec2i;
-using ym::vec3f;
-using ym::vec3i;
-using ym::vec4f;
-using ym::vec4i;
+using math::frame3f;
+using math::mat4f;
+using math::vec2f;
+using math::vec2i;
+using math::vec3f;
+using math::vec3i;
+using math::vec4f;
+using math::vec4i;
+using math::zero2i;
+using math::zero3i;
+using math::zero2f;
+using math::zero3f;
+using math::zero4f;
+using math::identity3x4f;
+using math::identity4x4f;
 
 }
 
@@ -540,7 +543,7 @@ struct command {
     const value& pbrt, std::pair<vec3f, std::string>& val) {
   if (pbrt.type == value::type_t::string ||
       pbrt.type == value::type_t::texture) {
-    val.first = ym::zero3f;
+    val.first = zero3f;
     return get_value(pbrt, val.second);
   } else {
     val.second = "";
@@ -986,11 +989,11 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
       value.type     = value::type_t::color;
-      auto blackbody = ym::zero2f;
+      auto blackbody = zero2f;
       auto vector2f  = std::vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
-      value.value3f = ym::blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.value3f = math::blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
       value.type = value::type_t::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -1119,7 +1122,7 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
   pcamera->frame      = inverse((frame3f)pcamera->frame);
   pcamera->frame.z    = -pcamera->frame.z;
   pcamera->resolution = resolution;
-  auto film_aspect    = (resolution == ym::zero2i)
+  auto film_aspect    = (resolution == zero2i)
                          ? 1
                          : (float)resolution.x / (float)resolution.y;
   if (command.type == "perspective") {
@@ -1129,10 +1132,10 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     pcamera->aspect = film_aspect;
     if (pcamera->aspect >= 1) {
       pcamera->lens = (0.036 / pcamera->aspect) /
-                      (2 * ym::tan(ym::radians(fov) / 2));
+                      (2 * math::tan(math::radians(fov) / 2));
     } else {
       pcamera->lens = (0.036 * pcamera->aspect) /
-                      (2 * ym::tan(ym::radians(fov) / 2));
+                      (2 * math::tan(math::radians(fov) / 2));
     }
     if (!get_value(command.values, "frameaspectratio", pcamera->aspect))
       return parse_error();
@@ -1146,7 +1149,7 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     lensfile          = lensfile.substr(0, lensfile.size() - 4);
     lensfile          = lensfile.substr(lensfile.find('.') + 1);
     lensfile          = lensfile.substr(0, lensfile.size() - 2);
-    auto lens         = ym::max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    auto lens         = math::max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
     pcamera->lens     = 2 * atan(0.036f / (2 * lens));
     pcamera->aperture = 0.0f;
     if (!get_value(command.values, "aperturediameter", pcamera->aperture))
@@ -1345,13 +1348,13 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
       return parse_error();
 
     roughness = 0;
-    if (uroughness.first == ym::zero3f || vroughness.first == ym::zero3f)
+    if (uroughness.first == zero3f || vroughness.first == zero3f)
       return true;
     roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
     // from pbrt code
     if (remaproughness) {
-      roughness = ym::max(roughness, 1e-3f);
-      auto x    = ym::log(roughness);
+      roughness = math::max(roughness, 1e-3f);
+      auto x    = math::log(roughness);
       roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
     }
@@ -1360,14 +1363,14 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
   };
 
   auto eta_to_reflectivity = [](const vec3f&  eta,
-                                 const vec3f& etak = ym::zero3f) -> vec3f {
+                                 const vec3f& etak = zero3f) -> vec3f {
     return ((eta - 1) * (eta - 1) + etak * etak) /
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
   pmaterial->name = command.name;
   if (command.type == "uber") {
-    auto diffuse = ym::zero3f, specular = ym::zero3f, transmission = ym::zero3f;
+    auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
     auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
     if (!get_texture(command.values, "Kd", diffuse, diffuse_map, vec3f{0.25}))
       return parse_error();
@@ -1432,7 +1435,7 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
     // get_texture(
     //     values, "Kr", material->specular, material->specular_tex,
     //     vec3f{1});
-    auto eta = ym::zero3f, etak = ym::zero3f;
+    auto eta = zero3f, etak = zero3f;
     if (!get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f}))
       return parse_error();
@@ -1513,7 +1516,7 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
     auto scale = 1.0f;
     if (!get_value(command.values, "scale", scale)) return parse_error();
     pmaterial->volscale = 1 / scale;
-    auto sigma_a = ym::zero3f, sigma_s = ym::zero3f;
+    auto sigma_a = zero3f, sigma_s = zero3f;
     auto sigma_a_tex = ""s, sigma_s_tex = ""s;
     if (!get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
             vec3f{0011, .0024, .014}))
@@ -1621,14 +1624,14 @@ inline void make_sphere(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto pt = vec2f{2 * ym::pif * uv.x, ym::pif * (1 - uv.y)};
-        return radius * vec3f{ym::cos(pt.x) * ym::sin(pt.y),
-                            ym::sin(pt.x) * ym::sin(pt.y), ym::cos(pt.y)};
+        auto pt = vec2f{2 * math::pif * uv.x, math::pif * (1 - uv.y)};
+        return radius * vec3f{math::cos(pt.x) * math::sin(pt.y),
+                            math::sin(pt.x) * math::sin(pt.y), math::cos(pt.y)};
       },
       [](const vec2f& uv) {
-        auto pt = vec2f{2 * ym::pif * uv.x, ym::pif * (1 - uv.y)};
-        return vec3f{ym::cos(pt.x) * ym::cos(pt.y),
-            ym::sin(pt.x) * ym::cos(pt.y), ym::sin(pt.y)};
+        auto pt = vec2f{2 * math::pif * uv.x, math::pif * (1 - uv.y)};
+        return vec3f{math::cos(pt.x) * math::cos(pt.y),
+            math::sin(pt.x) * math::cos(pt.y), math::sin(pt.y)};
       });
 }
 inline void make_disk(std::vector<vec3i>& triangles,
@@ -1637,8 +1640,8 @@ inline void make_disk(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto a = 2 * ym::pif * uv.x;
-        return radius * (1 - uv.y) * vec3f{ym::cos(a), ym::sin(a), 0};
+        auto a = 2 * math::pif * uv.x;
+        return radius * (1 - uv.y) * vec3f{math::cos(a), math::sin(a), 0};
       },
       [](const vec2f& uv) {
         return vec3f{0, 0, 1};
@@ -1794,7 +1797,7 @@ inline bool convert_light(pbrt::light* plight, const command& command,
     if (!get_value(command.values, "to", plight->to)) return parse_error();
     plight->distant       = true;
     auto distant_dist     = 100;
-    auto size             = distant_dist * ym::sin(5 * ym::pif / 180);
+    auto size             = distant_dist * math::sin(5 * math::pif / 180);
     plight->area_emission = plight->emission * (distant_dist * distant_dist) /
                             (size * size);
     plight->area_frame =
@@ -1815,7 +1818,7 @@ inline bool convert_light(pbrt::light* plight, const command& command,
     if (!get_value(command.values, "I", i)) return parse_error();
     if (!get_value(command.values, "scale", scale)) return parse_error();
     plight->emission = i * scale;
-    plight->from     = ym::zero3f;
+    plight->from     = zero3f;
     if (!get_value(command.values, "from", plight->from)) return parse_error();
     plight->area_emission = plight->emission;
     plight->area_frame    = plight->frame * translation_frame(plight->from);
@@ -1990,28 +1993,28 @@ struct context {
         throw std::runtime_error{filename + ": parse error [bad coordsys]"};
       }
     } else if (cmd == "Transform") {
-      auto xf = ym::identity4x4f;
+      auto xf = identity4x4f;
       if (!parse_param(str, xf)) return parse_error();
       set_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "ConcatTransform") {
-      auto xf = ym::identity4x4f;
+      auto xf = identity4x4f;
       if (!parse_param(str, xf)) return parse_error();
       concat_transform(ctx.stack.back(), frame3f{xf});
     } else if (cmd == "Scale") {
-      auto v = ym::zero3f;
+      auto v = zero3f;
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(), scaling_frame(v));
     } else if (cmd == "Translate") {
-      auto v = ym::zero3f;
+      auto v = zero3f;
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(), translation_frame(v));
     } else if (cmd == "Rotate") {
-      auto v = ym::zero4f;
+      auto v = zero4f;
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(),
-          rotation_frame(vec3f{v.y, v.z, v.w}, ym::radians(v.x)));
+          rotation_frame(vec3f{v.y, v.z, v.w}, math::radians(v.x)));
     } else if (cmd == "LookAt") {
-      auto from = ym::zero3f, to = ym::zero3f, up = ym::zero3f;
+      auto from = zero3f, to = zero3f, up = zero3f;
       if (!parse_param(str, from)) return parse_error();
       if (!parse_param(str, to)) return parse_error();
       if (!parse_param(str, up)) return parse_error();
@@ -2360,7 +2363,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
-        "fov", 2 * ym::tan(0.036f / (2 * camera->lens)) * 180 / ym::pif));
+        "fov", 2 * math::tan(0.036f / (2 * camera->lens)) * 180 / math::pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
@@ -2416,14 +2419,14 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
       command.values.push_back(make_value("Kr", vec3f{1, 1, 1}));
       command.values.push_back(make_value("Kt", vec3f{1, 1, 1}));
       command.values.push_back(
-          make_value("roughness", ym::pow(material->roughness, 2)));
+          make_value("roughness", math::pow(material->roughness, 2)));
       command.values.push_back(make_value("eta", material->ior));
       command.values.push_back(make_value("remaproughness", false));
     } else if (material->metallic > 0.1f) {
       command.type = "metal";
       command.values.push_back(make_value("Kr", vec3f{1, 1, 1}));
       command.values.push_back(
-          make_value("roughness", ym::pow(material->roughness, 2)));
+          make_value("roughness", math::pow(material->roughness, 2)));
       command.values.push_back(
           make_value("eta", reflectivity_to_eta(material->color)));
       command.values.push_back(make_value("remaproughness", false));
@@ -2431,14 +2434,14 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
       command.type = "uber";
       if (material->color_tex.empty()) {
         command.values.push_back(make_value("Kd", material->color));
-      } else if (material->color != ym::zero3f) {
+      } else if (material->color != zero3f) {
         command.values.push_back(
             make_value("Kd", material->color_tex, value::type_t::texture));
       }
       if (material->specular != 0) {
         command.values.push_back(make_value("Ks", vec3f{material->specular}));
         command.values.push_back(
-            make_value("roughness", ym::pow(material->roughness, 2)));
+            make_value("roughness", math::pow(material->roughness, 2)));
         command.values.push_back(make_value("eta", material->ior));
         command.values.push_back(make_value("remaproughness", false));
       }
@@ -2495,7 +2498,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     if (!format_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_values(fs, "Transform {}\n", (mat4f)shape->frame))
       return write_error();
-    if (shape->material->emission != ym::zero3f) {
+    if (shape->material->emission != zero3f) {
       auto acommand = pbrt::command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_value("L", shape->material->emission));
