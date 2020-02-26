@@ -34,6 +34,7 @@
 using namespace ym;
 namespace ysio = yocto::sceneio;
 namespace yimg = yocto::image;
+namespace ycli = yocto::commonio;
 
 #include <map>
 #include <memory>

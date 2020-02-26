@@ -31,6 +31,8 @@
 #include <yocto/yocto_math.h>
 using namespace ym;
 namespace yimg = yocto::image;
+namespace ycli = yocto::commonio;
+
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"

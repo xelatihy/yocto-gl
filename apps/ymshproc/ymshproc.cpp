@@ -31,6 +31,7 @@
 #include <yocto/yocto_shape.h>
 using namespace ym;
 namespace yshp = yocto::shape;
+namespace ycli = yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;

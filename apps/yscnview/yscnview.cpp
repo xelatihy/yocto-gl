@@ -33,17 +33,11 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
 namespace ysio = yocto::sceneio;
+namespace ycli = yocto::commonio;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using std::atomic;
-using std::deque;
-using std::future;
-using std::string;
-using std::to_string;
-using std::unordered_map;
-using std::vector;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
@@ -88,8 +82,8 @@ struct app_state {
   ysio::texture*     selected_texture     = nullptr;
 
   // loading status
-  atomic<bool>       ok           = false;
-  future<void>       loader       = {};
+  std::atomic<bool>       ok           = false;
+  std::future<void>       loader       = {};
   std::string        status       = "";
   std::string        error        = "";
   std::atomic<float> progress     = 0.5;
@@ -106,7 +100,7 @@ struct app_states {
   // data
   std::vector<app_state*> states   = {};
   app_state*              selected = nullptr;
-  deque<app_state*>       loading  = {};
+  std::deque<app_state*>       loading  = {};
 
   // default options
   ygui::scene_params drawgl_prms = {};
@@ -383,16 +377,16 @@ bool draw_widgets(
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
-  draw_label(win, "points", to_string(ioshape->points.size()));
-  draw_label(win, "lines", to_string(ioshape->lines.size()));
-  draw_label(win, "triangles", to_string(ioshape->triangles.size()));
-  draw_label(win, "quads", to_string(ioshape->quads.size()));
-  draw_label(win, "positions", to_string(ioshape->positions.size()));
-  draw_label(win, "normals", to_string(ioshape->normals.size()));
-  draw_label(win, "texcoords", to_string(ioshape->texcoords.size()));
-  draw_label(win, "colors", to_string(ioshape->colors.size()));
-  draw_label(win, "radius", to_string(ioshape->radius.size()));
-  draw_label(win, "tangents", to_string(ioshape->tangents.size()));
+  draw_label(win, "points", std::to_string(ioshape->points.size()));
+  draw_label(win, "lines", std::to_string(ioshape->lines.size()));
+  draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
+  draw_label(win, "quads", std::to_string(ioshape->quads.size()));
+  draw_label(win, "positions", std::to_string(ioshape->positions.size()));
+  draw_label(win, "normals", std::to_string(ioshape->normals.size()));
+  draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
+  draw_label(win, "colors", std::to_string(ioshape->colors.size()));
+  draw_label(win, "radius", std::to_string(ioshape->radius.size()));
+  draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
   // TODO: load
   return edited;
 }
@@ -402,7 +396,7 @@ bool draw_widgets(
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
-  draw_label(win, "frames", to_string(ioinstance->frames.size()));
+  draw_label(win, "frames", std::to_string(ioinstance->frames.size()));
   // TODO: load
   return edited;
 }
@@ -430,12 +424,12 @@ bool draw_widgets(
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
-  draw_label(win, "quads pos", to_string(iosubdiv->quadspos.size()));
-  draw_label(win, "quads norm", to_string(iosubdiv->quadsnorm.size()));
-  draw_label(win, "quads texcoord", to_string(iosubdiv->quadstexcoord.size()));
-  draw_label(win, "pos", to_string(iosubdiv->positions.size()));
-  draw_label(win, "norm", to_string(iosubdiv->normals.size()));
-  draw_label(win, "texcoord", to_string(iosubdiv->texcoords.size()));
+  draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
+  draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
+  draw_label(win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
+  draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
+  draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
+  draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
   // TODO: load
   return edited;
 }
@@ -678,7 +672,7 @@ void draw(ygui::window* win, app_states* apps, const ygui::input& input) {
 
 // update
 void update(ygui::window* win, app_states* apps) {
-  auto is_ready = [](const future<void>& result) -> bool {
+  auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
@@ -709,7 +703,7 @@ int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = std::vector<string>{};
+  auto filenames   = std::vector<std::string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -734,7 +728,7 @@ int main(int argc, const char* argv[]) {
     draw_widgets(win, apps, input);
   };
   callbacks.drop_cb = [apps](ygui::window*           win,
-                          const std::vector<string>& paths,
+                          const std::vector<std::string>& paths,
                           const ygui::input&         input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };

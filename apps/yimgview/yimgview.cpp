@@ -31,6 +31,7 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
 namespace yimg = yocto::image;
+namespace ycli = yocto::commonio;
 
 #include <atomic>
 #include <deque>

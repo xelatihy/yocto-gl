@@ -31,6 +31,7 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 namespace ysio = yocto::sceneio;
+namespace ycli = yocto::commonio;
 
 #include <memory>
 using std::string;
