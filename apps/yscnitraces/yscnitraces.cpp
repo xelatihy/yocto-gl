@@ -29,7 +29,7 @@
 #include <ygl/ycli.h>
 #include <ygl/yocto_sceneio.h>
 #include <ygl/yocto_shape.h>
-#include <ygl/yocto_trace.h>
+#include <ygl/ytrace.h>
 #include <ygui/ygui.h>
 using namespace ym;
 

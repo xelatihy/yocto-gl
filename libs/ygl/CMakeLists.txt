@@ -3,7 +3,7 @@ add_library(ygl
   yply.h yobj.h ypbrt.h 
   yocto_shape.h yocto_shape.cpp 
   yocto_image.h yocto_image.cpp
-  yocto_trace.h yocto_trace.cpp
+  ytrace.h ytrace.cpp
   yocto_sceneio.h yocto_sceneio.cpp
   ext/stb_image.h ext/stb_image_resize.h ext/stb_image_write.h ext/stb_image.cpp
   ext/cgltf.h ext/cgltf_write.h ext/cgltf.cpp

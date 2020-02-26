@@ -30,7 +30,7 @@
 #include <ygl/yocto_image.h>
 #include <ygl/yocto_math.h>
 #include <ygl/yocto_sceneio.h>
-#include <ygl/yocto_trace.h>
+#include <ygl/ytrace.h>
 using namespace ym;
 
 #include <map>
