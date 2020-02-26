@@ -1,8 +1,4 @@
-cmake_minimum_required (VERSION 3.12)
-
-project (yocto_gl VERSION 2.0)
-
-add_library(yocto_gl
+add_library(ygl
   yocto_math.h yocto_cli.h 
   yocto_ply.h yocto_obj.h yocto_pbrt.h 
   yocto_shape.h yocto_shape.cpp 
@@ -15,22 +11,22 @@ add_library(yocto_gl
   ext/tinyexr.h ext/tinyexr.cpp
 )
 
-set_target_properties(yocto_gl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+set_target_properties(ygl PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
 if(UNIX AND NOT APPLE)
   find_package(Threads REQUIRED)
-  target_link_libraries(yocto_gl Threads::Threads)
+  target_link_libraries(ygl Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
 if(YOCTO_EMBREE)
-  target_compile_definitions(yocto_gl PUBLIC -DYOCTO_EMBREE)
+  target_compile_definitions(ygl PUBLIC -DYOCTO_EMBREE)
   if(APPLE)
-    target_include_directories(yocto_gl PUBLIC /usr/local/include)
-    target_link_libraries(yocto_gl /usr/local/lib/libembree3.dylib)
+    target_include_directories(ygl PUBLIC /usr/local/include)
+    target_link_libraries(ygl /usr/local/lib/libembree3.dylib)
   endif(APPLE)
   if(MSVC)
-    target_include_directories(yocto PUBLIC "/Program Files/Intel/Embree3 X64/include" "C:/Program Files/Intel/Embree3 X64/include")
+    target_include_directories(ygl PUBLIC "/Program Files/Intel/Embree3 X64/include" "C:/Program Files/Intel/Embree3 X64/include")
     link_directories("/Program Files/Intel/Embree3 X64/lib" "C:/Program Files/Intel/Embree3 X64/lib")
-    target_link_libraries(yocto_gl embree3 tbb tbbmalloc)
+    target_link_libraries(ygl embree3 tbb tbbmalloc)
   endif(MSVC)
 endif(YOCTO_EMBREE)

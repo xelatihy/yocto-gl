@@ -1,9 +1,3 @@
-cmake_minimum_required (VERSION 3.12)
-
-project (yocto_apps VERSION 2.0)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 add_executable(yscntrace yscntrace.cpp)
 add_executable(yscnproc  yscnproc.cpp)
 add_executable(yimgproc  yimgproc.cpp)
@@ -14,10 +8,15 @@ set_target_properties(yscnproc  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
 set_target_properties(yimgproc  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 set_target_properties(ymshproc  PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(yscntrace yocto_gl)
-target_link_libraries(yscnproc  yocto_gl)
-target_link_libraries(yimgproc  yocto_gl)
-target_link_libraries(ymshproc  yocto_gl)
+target_include_directories(yscntrace PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(yscnproc  PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(yimgproc  PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(ymshproc  PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+
+target_link_libraries(yscntrace ygl)
+target_link_libraries(yscnproc  ygl)
+target_link_libraries(yimgproc  ygl)
+target_link_libraries(ymshproc  ygl)
 
 if(YOCTO_EMBREE)
   target_compile_definitions(yscntrace PUBLIC -DYOCTO_EMBREE)
@@ -52,10 +51,17 @@ if(YOCTO_OPENGL)
   set_target_properties(yimgview     PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
   set_target_properties(yimgviews    PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
 
-  target_link_libraries(yscnview    yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimshproc   yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitrace  yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yscnitraces yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgview    yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
-  target_link_libraries(yimgviews   yocto_gl yocto_gui ${GL_EXTRA_LIBRARIES})
+  target_include_directories(yscnview    PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(yimshproc   PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(yscnitrace  PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(yscnitraces PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(yimgview    PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+  target_include_directories(yimgviews   PUBLIC ${CMAKE_SOURCE_DIR}/lib)
+
+  target_link_libraries(yscnview    ygl ygui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimshproc   ygl ygui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitrace  ygl ygui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yscnitraces ygl ygui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgview    ygl ygui ${GL_EXTRA_LIBRARIES})
+  target_link_libraries(yimgviews   ygl ygui ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
