@@ -4,7 +4,7 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 
-using namespace ym;
+using namespace yocto::math;
 namespace ysio = yocto::sceneio;
 namespace yshp = yocto::shape;
 namespace ycli = yocto::commonio;

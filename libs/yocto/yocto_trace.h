@@ -82,6 +82,7 @@
 namespace yocto::trace {
 
 // Namespace aliases
+namespace ym = yocto::math; 
 namespace ytrc = yocto::trace;
 namespace yimg = yocto::image;
 

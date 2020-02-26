@@ -57,6 +57,7 @@
 namespace yocto::sceneio {
 
 // Namespace aliases
+namespace ym = yocto::math; 
 namespace ysio = yocto::sceneio;
 namespace yimg = yocto::image;
 

@@ -29,7 +29,7 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
-using namespace ym;
+using namespace yocto::math;
 namespace yshp = yocto::shape;
 namespace ycli = yocto::commonio;
 

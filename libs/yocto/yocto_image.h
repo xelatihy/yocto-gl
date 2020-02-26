@@ -108,6 +108,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto::image {
 
+// Namespace aliases
+namespace ym = yocto::math; 
+
 // Math defitions
 using ym::byte;
 using ym::vec2f;

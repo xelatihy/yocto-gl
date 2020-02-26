@@ -892,7 +892,7 @@ static bool save_instance(const std::string& filename,
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
 // -----------------------------------------------------------------------------
-namespace ym {
+namespace yocto::math {
 
 using json = nlohmann::json;
 using std::array;

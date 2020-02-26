@@ -46,6 +46,7 @@
 namespace yocto::pbrt {
 
 // Namespace aliases
+namespace ym = yocto::math;
 namespace ypbrt = yocto::pbrt;
 
 // Math defitions

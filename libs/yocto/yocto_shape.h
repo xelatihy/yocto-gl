@@ -132,6 +132,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto::shape {
 
+// Namespace aliases
+namespace ym = yocto::math; 
+
 // Math defitions
 using ym::bbox3f;
 using ym::byte;

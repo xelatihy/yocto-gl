@@ -49,6 +49,7 @@
 namespace yocto::obj {
 
 // Namespace aliases
+namespace ym = yocto::math; 
 namespace yobj = yocto::obj;
 
 // Math defitions

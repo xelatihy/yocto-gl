@@ -46,6 +46,7 @@
 namespace yocto::ply {
 
 // Namespace aliases
+namespace ym = yocto::math;
 namespace yply = yocto::ply;
 
 // Math defitions
