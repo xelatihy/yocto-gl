@@ -4789,7 +4789,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<yply::model>();
+    auto ply_guard = std::make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
@@ -4813,7 +4813,7 @@ static std::string get_extension(const std::string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
-    auto obj_guard = std::make_unique<yobj::model>();
+    auto obj_guard = std::make_unique<obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
 
@@ -4825,7 +4825,7 @@ static std::string get_extension(const std::string& filename) {
       return shape_error();
 
     // decide what to do and get properties
-    auto materials  = std::vector<yobj::material*>{};
+    auto materials  = std::vector<obj::material*>{};
     auto ematerials = std::vector<int>{};
     auto has_quads_ = has_quads(shape);
     if (!shape->faces.empty() && !has_quads_) {
@@ -4871,7 +4871,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<yply::model>();
+    auto ply_guard = std::make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -4884,7 +4884,7 @@ static std::string get_extension(const std::string& filename) {
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<yobj::model>();
+    auto obj_guard = std::make_unique<obj::model>();
     auto obj       = obj_guard.get();
     auto oshape    = add_shape(obj);
     if (!triangles.empty()) {
@@ -4934,7 +4934,7 @@ static std::string get_extension(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard = std::make_unique<yply::model>();
+    auto ply_guard = std::make_unique<ply::model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, positions);
@@ -4946,14 +4946,14 @@ static std::string get_extension(const std::string& filename) {
     if (positions.empty()) return shape_error();
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<yobj::model>();
+    auto obj_guard = std::make_unique<obj::model>();
     auto obj       = obj_guard.get();
     if (!load_obj(filename, obj, error, true)) return false;
     if (obj->shapes.empty()) return shape_error();
     if (obj->shapes.size() > 1) return shape_error();
     auto shape = obj->shapes.front();
     if (shape->faces.empty()) return shape_error();
-    auto materials  = std::vector<yobj::material*>{};
+    auto materials  = std::vector<obj::material*>{};
     auto ematerials = std::vector<int>{};
     get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, materials, ematerials, flip_texcoord);
@@ -4988,7 +4988,7 @@ static std::string get_extension(const std::string& filename) {
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
 
     // ply model
-    auto ply_guard = std::make_unique<yply::model>();
+    auto ply_guard = std::make_unique<ply::model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
@@ -5000,7 +5000,7 @@ static std::string get_extension(const std::string& filename) {
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
-    auto obj_guard = std::make_unique<yobj::model>();
+    auto obj_guard = std::make_unique<obj::model>();
     auto obj       = obj_guard.get();
 
     // Add obj data

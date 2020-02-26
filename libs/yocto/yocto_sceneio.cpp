@@ -853,7 +853,7 @@ static bool load_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = yply::model{};
+    auto ply = ply::model{};
     if (!load_ply(filename, &ply, error)) return false;
     get_values(&ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
@@ -875,7 +875,7 @@ static bool save_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = yply::model{};
+    auto ply = ply::model{};
     add_values(&ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},
@@ -1599,7 +1599,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<yobj::model>();
+  auto obj_guard = std::make_unique<obj::model>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -1623,7 +1623,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   auto ctexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const yobj::texture& tinfo) -> ysio::texture* {
+                          const obj::texture& tinfo) -> ysio::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1637,7 +1637,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   auto stexture_map = std::unordered_map<std::string, ysio::texture*>{
       {"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const yobj::texture& tinfo) -> ysio::texture* {
+                          const obj::texture& tinfo) -> ysio::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1648,7 +1648,7 @@ static bool load_obj_scene(const std::string& filename, ysio::model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<yobj::material*, ysio::material*>{};
+  auto material_map = std::unordered_map<obj::material*, ysio::material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1775,7 +1775,7 @@ static bool save_obj_scene(const std::string& filename,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = std::make_unique<yobj::model>();
+  auto obj_guard = std::make_unique<obj::model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1793,14 +1793,14 @@ static bool save_obj_scene(const std::string& filename,
 
   // textures
   auto get_texture = [](ysio::texture* texture) {
-    if (!texture) return yobj::texture{};
-    auto tinfo = yobj::texture{};
+    if (!texture) return obj::texture{};
+    auto tinfo = obj::texture{};
     tinfo.path = texture->name;
     return tinfo;
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<ysio::material*, yobj::material*>{
+  auto material_map = std::unordered_map<ysio::material*, obj::material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
