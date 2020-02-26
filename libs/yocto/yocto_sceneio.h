@@ -57,7 +57,7 @@
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace ysio = yocto::sceneio;
+namespace scn = yocto::sceneio;
 namespace img = yocto::image;
 
 // Math defitions
@@ -148,18 +148,18 @@ struct material {
   bool  thin         = true;
 
   // textures
-  ysio::texture* emission_tex     = nullptr;
-  ysio::texture* color_tex        = nullptr;
-  ysio::texture* specular_tex     = nullptr;
-  ysio::texture* metallic_tex     = nullptr;
-  ysio::texture* roughness_tex    = nullptr;
-  ysio::texture* transmission_tex = nullptr;
-  ysio::texture* spectint_tex     = nullptr;
-  ysio::texture* scattering_tex   = nullptr;
-  ysio::texture* coat_tex         = nullptr;
-  ysio::texture* opacity_tex      = nullptr;
-  ysio::texture* normal_tex       = nullptr;
-  ysio::texture* displacement_tex = nullptr;
+  scn::texture* emission_tex     = nullptr;
+  scn::texture* color_tex        = nullptr;
+  scn::texture* specular_tex     = nullptr;
+  scn::texture* metallic_tex     = nullptr;
+  scn::texture* roughness_tex    = nullptr;
+  scn::texture* transmission_tex = nullptr;
+  scn::texture* spectint_tex     = nullptr;
+  scn::texture* scattering_tex   = nullptr;
+  scn::texture* coat_tex         = nullptr;
+  scn::texture* opacity_tex      = nullptr;
+  scn::texture* normal_tex       = nullptr;
+  scn::texture* displacement_tex = nullptr;
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -219,10 +219,10 @@ struct object {
   // object data
   std::string     name     = "";
   frame3f         frame    = identity3x4f;
-  ysio::shape*    shape    = nullptr;
-  ysio::material* material = nullptr;
-  ysio::instance* instance = nullptr;
-  ysio::subdiv*   subdiv   = nullptr;
+  scn::shape*    shape    = nullptr;
+  scn::material* material = nullptr;
+  scn::instance* instance = nullptr;
+  scn::subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
@@ -230,7 +230,7 @@ struct environment {
   std::string    name         = "";
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
-  ysio::texture* emission_tex = nullptr;
+  scn::texture* emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -242,14 +242,14 @@ struct environment {
 // updates node transformations only if defined.
 struct model {
   // scene elements
-  std::vector<ysio::camera*>      cameras      = {};
-  std::vector<ysio::object*>      objects      = {};
-  std::vector<ysio::environment*> environments = {};
-  std::vector<ysio::shape*>       shapes       = {};
-  std::vector<ysio::subdiv*>      subdivs      = {};
-  std::vector<ysio::texture*>     textures     = {};
-  std::vector<ysio::material*>    materials    = {};
-  std::vector<ysio::instance*>    instances    = {};
+  std::vector<scn::camera*>      cameras      = {};
+  std::vector<scn::object*>      objects      = {};
+  std::vector<scn::environment*> environments = {};
+  std::vector<scn::shape*>       shapes       = {};
+  std::vector<scn::subdiv*>      subdivs      = {};
+  std::vector<scn::texture*>     textures     = {};
+  std::vector<scn::material*>    materials    = {};
+  std::vector<scn::instance*>    instances    = {};
 
   // additional information
   std::string name      = "";
@@ -260,17 +260,17 @@ struct model {
 };
 
 // add element to a scene
-ysio::camera*      add_camera(ysio::model* scene, const std::string& name = "");
-ysio::environment* add_environment(
-    ysio::model* scene, const std::string& name = "");
-ysio::object*   add_object(ysio::model* scene, const std::string& name = "");
-ysio::instance* add_instance(ysio::model* scene, const std::string& name = "");
-ysio::material* add_material(ysio::model* scene, const std::string& name = "");
-ysio::shape*    add_shape(ysio::model* scene, const std::string& name = "");
-ysio::subdiv*   add_subdiv(ysio::model* scene, const std::string& name = "");
-ysio::texture*  add_texture(ysio::model* scene, const std::string& name = "");
-ysio::object*   add_complete_object(
-      ysio::model* scene, const std::string& name = "");
+scn::camera*      add_camera(scn::model* scene, const std::string& name = "");
+scn::environment* add_environment(
+    scn::model* scene, const std::string& name = "");
+scn::object*   add_object(scn::model* scene, const std::string& name = "");
+scn::instance* add_instance(scn::model* scene, const std::string& name = "");
+scn::material* add_material(scn::model* scene, const std::string& name = "");
+scn::shape*    add_shape(scn::model* scene, const std::string& name = "");
+scn::subdiv*   add_subdiv(scn::model* scene, const std::string& name = "");
+scn::texture*  add_texture(scn::model* scene, const std::string& name = "");
+scn::object*   add_complete_object(
+      scn::model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -286,16 +286,16 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const std::string& filename, ysio::model* scene,
+bool load_scene(const std::string& filename, scn::model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
-bool save_scene(const std::string& filename, const ysio::model* scene,
+bool save_scene(const std::string& filename, const scn::model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
 
 // get named camera or default if name is empty
-ysio::camera* get_camera(
-    const ysio::model* scene, const std::string& name = "");
+scn::camera* get_camera(
+    const scn::model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -305,7 +305,7 @@ ysio::camera* get_camera(
 namespace yocto::sceneio {
 
 // Make Cornell Box scene
-void make_cornellbox(ysio::model* scene);
+void make_cornellbox(scn::model* scene);
 
 }  // namespace yocto::sceneio
 
@@ -316,13 +316,13 @@ namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(
-    const ysio::model* scene, bool verbose = false);
+    const scn::model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 std::vector<std::string> scene_validation(
-    const ysio::model* scene, bool notextures = false);
+    const scn::model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const ysio::model* scene);
+bbox3f compute_bounds(const scn::model* scene);
 
 }  // namespace yocto::sceneio
 
@@ -332,13 +332,13 @@ bbox3f compute_bounds(const ysio::model* scene);
 namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(ysio::model* scene, progress_callback progress_cb = {});
-void tesselate_subdiv(ysio::model* scene, ysio::subdiv* subdiv);
+void tesselate_subdivs(scn::model* scene, progress_callback progress_cb = {});
+void tesselate_subdiv(scn::model* scene, scn::subdiv* subdiv);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    ysio::model* scene, float time = 0, const std::string& anim_group = "");
+    scn::model* scene, float time = 0, const std::string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {
