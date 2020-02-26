@@ -48,8 +48,8 @@
 #include <functional>
 #include <memory>
 
-#include "yimage.h"
-#include "ymath.h"
+#include "yocto_image.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA

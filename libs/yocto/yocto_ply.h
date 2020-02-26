@@ -38,7 +38,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "ymath.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER

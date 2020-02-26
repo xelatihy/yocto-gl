@@ -34,8 +34,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <ygl/yimage.h>
-#include <ygl/ymath.h>
+#include <yocto/yocto_image.h>
+#include <yocto/yocto_math.h>
 
 #include <functional>
 #include <memory>

@@ -38,7 +38,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "ymath.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
@@ -174,7 +174,7 @@ inline ypbrt::light*       add_light(ypbrt::model* pbrt);
 #include <unordered_set>
 
 #include "ext/filesystem.hpp"
-#include "yply.h"
+#include "yocto_ply.h"
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------

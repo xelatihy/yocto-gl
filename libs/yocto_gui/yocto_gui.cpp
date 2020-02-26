@@ -27,7 +27,7 @@
 //
 //
 
-#include "ygui.h"
+#include "yocto_gui.h"
 
 #include <algorithm>
 #include <cstdarg>

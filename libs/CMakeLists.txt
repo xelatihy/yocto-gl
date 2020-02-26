@@ -1,5 +1,5 @@
-add_subdirectory(ygl)
+add_subdirectory(yocto)
 
 if(YOCTO_OPENGL)
-add_subdirectory(ygui)
+add_subdirectory(yocto_gui)
 endif(YOCTO_OPENGL)

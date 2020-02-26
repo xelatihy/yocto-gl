@@ -6,15 +6,15 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yshape.h"
+#include "yocto_shape.h"
 
 #include <deque>
 #include <memory>
 #include <string>
 using namespace std::string_literals;
 
-#include "yobj.h"
-#include "yply.h"
+#include "yocto_obj.h"
+#include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS

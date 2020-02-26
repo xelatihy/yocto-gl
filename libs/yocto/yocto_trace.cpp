@@ -26,7 +26,7 @@
 // SOFTWARE.
 //
 
-#include "ytrace.h"
+#include "yocto_trace.h"
 
 #include <atomic>
 #include <deque>
