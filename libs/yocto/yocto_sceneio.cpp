@@ -73,6 +73,7 @@ namespace yshp  = yocto::shape;
 namespace yimg  = yocto::image;
 
 // import math symbols for use
+using math::uint;
 using math::abs;
 using math::acos;
 using math::atan2;
