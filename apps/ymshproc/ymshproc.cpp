@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <ygl/yocto_cli.h>
+#include <ygl/ycli.h>
 #include <ygl/yocto_math.h>
 #include <ygl/yocto_shape.h>
 using namespace ym;

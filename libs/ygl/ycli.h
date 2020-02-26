@@ -79,8 +79,8 @@
 //
 //
 
-#ifndef _YOCTO_COMMONIO_H_
-#define _YOCTO_COMMONIO_H_
+#ifndef _YOCTO_CLI_H_
+#define _YOCTO_CLI_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

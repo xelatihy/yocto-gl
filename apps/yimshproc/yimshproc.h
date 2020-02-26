@@ -1,6 +1,6 @@
 #include <memory>
 
-#include <ygl/yocto_cli.h>
+#include <ygl/ycli.h>
 #include <ygl/yocto_sceneio.h>
 #include <ygl/yocto_shape.h>
 #include <ygl/yocto_trace.h>

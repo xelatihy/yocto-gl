@@ -1,5 +1,5 @@
 add_library(ygl
-  yocto_math.h yocto_cli.h 
+  yocto_math.h ycli.h 
   yply.h yobj.h ypbrt.h 
   yocto_shape.h yocto_shape.cpp 
   yocto_image.h yocto_image.cpp

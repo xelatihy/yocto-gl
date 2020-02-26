@@ -28,7 +28,7 @@
 
 #include <memory>
 
-#include <ygl/yocto_cli.h>
+#include <ygl/ycli.h>
 #include <ygl/yocto_image.h>
 #include <ygl/yocto_math.h>
 #include <ygl/yocto_sceneio.h>
