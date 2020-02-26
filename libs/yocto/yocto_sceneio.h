@@ -52,7 +52,7 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// SCENE DATA
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace ysio {
 
@@ -68,6 +68,13 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+
+}
+
+// -----------------------------------------------------------------------------
+// SCENE DATA
+// -----------------------------------------------------------------------------
+namespace ysio {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,

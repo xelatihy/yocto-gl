@@ -128,7 +128,7 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// COMPUTATION OF PER_VERTEX PROPETIES
+// ALIASES
 // -----------------------------------------------------------------------------
 namespace yshp {
 
@@ -145,6 +145,13 @@ using ym::vec3f;
 using ym::vec3i;
 using ym::vec4f;
 using ym::vec4i;
+
+}
+
+// -----------------------------------------------------------------------------
+// COMPUTATION OF PER_VERTEX PROPETIES
+// -----------------------------------------------------------------------------
+namespace yshp {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 std::vector<vec3f> compute_tangents(
