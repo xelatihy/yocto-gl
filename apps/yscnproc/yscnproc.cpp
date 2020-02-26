@@ -26,12 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <memory>
-
 #include <ygl/ycli.h>
 #include <ygl/yimage.h>
 #include <ygl/ymath.h>
 #include <ygl/ysceneio.h>
+
+#include <memory>
 using std::string;
 using namespace std::string_literals;
 
@@ -39,8 +39,8 @@ using namespace std::string_literals;
 namespace fs = ghc::filesystem;
 
 // Shape presets used ofr testing.
-bool make_preset(ysio::model* scene,
-    const std::string& type, std::string& error) {
+bool make_preset(
+    ysio::model* scene, const std::string& type, std::string& error) {
   if (type == "cornellbox") {
     ysio::make_cornellbox(scene);
     return true;
@@ -78,15 +78,14 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext      = fs::path(filename).extension().string();
-  auto basename = fs::path(filename).stem().string();
+  auto ext         = fs::path(filename).extension().string();
+  auto basename    = fs::path(filename).stem().string();
   auto scene_guard = std::make_unique<ysio::model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
-  if(ext == ".ypreset") {
+  if (ext == ".ypreset") {
     ycli::print_progress("make preset", 0, 1);
-    if(!make_preset(scene, basename, ioerror))
-      ycli::print_fatal(ioerror);
+    if (!make_preset(scene, basename, ioerror)) ycli::print_fatal(ioerror);
     ycli::print_progress("make preset", 1, 1);
   } else {
     if (!load_scene(filename, scene, ioerror, ycli::print_progress))

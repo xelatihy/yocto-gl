@@ -288,7 +288,7 @@ namespace ysio {
 // Make Cornell Box scene
 void make_cornellbox(ysio::model* scene);
 
-}
+}  // namespace ysio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION

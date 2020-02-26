@@ -34,12 +34,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <ygl/yimage.h>
+#include <ygl/ymath.h>
+
 #include <functional>
 #include <memory>
 #include <vector>
-
-#include <ygl/yimage.h>
-#include <ygl/ymath.h>
 
 // forward declaration
 struct GLFWwindow;
