@@ -13,8 +13,8 @@
 #include <string>
 using namespace std::string_literals;
 
-#include "yocto_obj.h"
-#include "yocto_ply.h"
+#include "yobj.h"
+#include "yply.h"
 
 // -----------------------------------------------------------------------------
 // MATH FUNCTIONS

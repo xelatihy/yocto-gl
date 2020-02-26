@@ -51,9 +51,9 @@
 #include "ext/filesystem.hpp"
 #include "ext/json.hpp"
 #include "yocto_image.h"
-#include "yocto_obj.h"
-#include "yocto_pbrt.h"
-#include "yocto_ply.h"
+#include "yobj.h"
+#include "ypbrt.h"
+#include "yply.h"
 #include "yocto_shape.h"
 namespace fs = ghc::filesystem;
 using namespace std::string_literals;

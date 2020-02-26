@@ -174,7 +174,7 @@ inline ypbrt::light*       add_light(ypbrt::model* pbrt);
 #include <unordered_set>
 
 #include "ext/filesystem.hpp"
-#include "yocto_ply.h"
+#include "yply.h"
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
