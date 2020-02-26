@@ -30,6 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
+namespace ysio = yocto::sceneio;
 
 #include <memory>
 using std::string;

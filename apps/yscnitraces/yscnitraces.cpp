@@ -32,6 +32,7 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
+namespace ysio = yocto::sceneio;
 
 #include <future>
 #include <memory>

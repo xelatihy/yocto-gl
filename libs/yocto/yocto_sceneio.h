@@ -54,7 +54,10 @@
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
+
+// Namespace aliases
+namespace ysio = yocto::sceneio;
 
 // Math defitions
 using ym::bbox3f;
@@ -74,7 +77,7 @@ using ym::vec4i;
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -260,13 +263,13 @@ ysio::texture*  add_texture(ysio::model* scene, const std::string& name = "");
 ysio::object*   add_complete_object(
       ysio::model* scene, const std::string& name = "");
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace ysio {
+namespace yocto::sceneio {
 
 // Progress callback called when loading.
 using progress_callback =
@@ -285,22 +288,22 @@ bool save_scene(const std::string& filename, const ysio::model* scene,
 ysio::camera* get_camera(
     const ysio::model* scene, const std::string& name = "");
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Make Cornell Box scene
 void make_cornellbox(ysio::model* scene);
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(
@@ -312,12 +315,12 @@ std::vector<std::string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const ysio::model* scene);
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdivs(ysio::model* scene, progress_callback progress_cb = {});
@@ -333,6 +336,6 @@ inline vec3f eta_to_reflectivity(float eta) {
   return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 #endif

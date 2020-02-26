@@ -32,6 +32,7 @@
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
+namespace ysio = yocto::sceneio;
 
 #include <atomic>
 #include <deque>
@@ -53,7 +54,7 @@ namespace fs = ghc::filesystem;
 #undef far
 #endif
 
-namespace ysio {
+namespace yocto::sceneio {
 void print_obj_camera(ysio::camera* camera);
 };
 

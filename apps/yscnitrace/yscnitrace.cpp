@@ -32,6 +32,7 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace ym;
+namespace ysio = yocto::sceneio;
 
 #include <atomic>
 #include <deque>
@@ -41,7 +42,7 @@ using namespace std::string_literals;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-namespace ysio {
+namespace yocto::sceneio {
 void print_obj_camera(ysio::camera* camera);
 };  // namespace ysio
 

@@ -32,6 +32,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
 using namespace ym;
+namespace ysio = yocto::sceneio;
 
 #include <map>
 #include <memory>

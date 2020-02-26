@@ -63,7 +63,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // ALIASES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Namespace aliases
 namespace yply = yocto::ply;
@@ -84,12 +84,12 @@ using ym::sin;
 using ym::sqrt;
 using ym::tan;
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const std::vector<float>& times, const float& time) {
@@ -146,12 +146,12 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 std::vector<std::string> scene_stats(const ysio::model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
@@ -257,12 +257,12 @@ std::vector<std::string> scene_validation(
   return errs;
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 model::~model() {
   for (auto camera : cameras) delete camera;
@@ -703,12 +703,12 @@ void tesselate_subdivs(ysio::model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const std::string& filename, ysio::model* scene,
@@ -780,12 +780,12 @@ bool save_scene(const std::string& filename, const ysio::model* scene,
   }
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -885,7 +885,7 @@ static bool save_instance(const std::string& filename,
   }
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -918,7 +918,7 @@ inline void from_json(const json& j, frame3f& value) {
 // -----------------------------------------------------------------------------
 // JSON IO
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 using json = nlohmann::json;
 
@@ -1573,12 +1573,12 @@ static bool save_json_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Loads an OBJ
 static bool load_obj_scene(const std::string& filename, ysio::model* scene,
@@ -1904,12 +1904,12 @@ void print_obj_camera(ysio::camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 static bool load_ply_scene(const std::string& filename, ysio::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
@@ -1956,12 +1956,12 @@ static bool save_ply_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // Load a scene
 static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
@@ -2369,12 +2369,12 @@ static bool load_gltf_scene(const std::string& filename, ysio::model* scene,
   return true;
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const std::string& filename, ysio::model* scene,
@@ -2653,12 +2653,12 @@ static bool save_pbrt_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace ysio {
+namespace yocto::sceneio {
 
 void make_cornellbox(ysio::model* scene) {
   scene->name                = "cornellbox";
@@ -2724,4 +2724,4 @@ void make_cornellbox(ysio::model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace ysio
+}  // namespace yocto::sceneio

@@ -4,9 +4,10 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 
-#include <memory>
 using namespace ym;
+namespace ysio = yocto::sceneio;
 
+#include <memory>
 using std::function;
 using std::string;
 using std::vector;
