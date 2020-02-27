@@ -2669,6 +2669,7 @@ void make_cornellbox(scn::model* scene) {
   camera->frame              = frame3f{{0, 1, 3.9}};
   camera->lens               = 0.035;
   camera->aperture           = 0.0;
+  camera->focus              = 3.9;
   camera->film               = 0.024;
   camera->aspect             = 1;
   auto floor                 = add_complete_object(scene, "floor");
