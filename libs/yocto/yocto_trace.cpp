@@ -465,16 +465,16 @@ static vec3f eval_texture(const trc::texture* texture, const vec2f& uv,
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
     const trc::camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  // focal plane correction --- we skip it since we consider the lens to be 
+  // focal plane correction --- we skip it since we consider the lens to be
   // the effective focal lens
   // if (camera->focus < flt_max) {
   //   distance = camera->lens * camera->focus / (camera->focus - camera->lens);
   // }
   // point on the image plane
-  auto q   = vec3f{camera->film.x * (0.5f - image_uv.x),
+  auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
       camera->film.y * (image_uv.y - 0.5f), camera->lens};
   // ray direction through the lens center
-  auto dc   = -normalize(q);
+  auto dc = -normalize(q);
   // point on the lens
   auto e = vec3f{(lens_uv.x - 0.5f) * camera->aperture,
       (lens_uv.y - 0.5f) * camera->aperture, 0};
@@ -483,8 +483,8 @@ static ray3f eval_perspective_camera(
   // correct ray direction to account for camera focusing
   auto d = normalize(p - e);
   // done
-  return ray3f{transform_point(camera->frame, e),
-      transform_direction(camera->frame, d)};
+  return ray3f{
+      transform_point(camera->frame, e), transform_direction(camera->frame, d)};
 }
 
 // Generates a ray from a camera for img::image plane coordinate uv and
@@ -497,15 +497,14 @@ static ray3f eval_orthographic_camera(
       camera->film.y * (image_uv.y - 0.5f) * scale, camera->lens};
   // point on the lens
   auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera->aperture,
-                                      (lens_uv.y - 0.5f) * camera->aperture,
-                                      0};
+                                      (lens_uv.y - 0.5f) * camera->aperture, 0};
   // point on the focus plane
-  auto p    = vec3f{-q.x, -q.y, -camera->focus};
+  auto p = vec3f{-q.x, -q.y, -camera->focus};
   // correct ray direction to account for camera focusing
-  auto d     = normalize(p - e);
+  auto d = normalize(p - e);
   // done
-  return ray3f{transform_point(camera->frame, e),
-      transform_direction(camera->frame, d)};
+  return ray3f{
+      transform_point(camera->frame, e), transform_direction(camera->frame, d)};
 }
 
 // Generates a ray from a camera for img::image plane coordinate uv and
@@ -2841,7 +2840,8 @@ trc::light* add_light(trc::scene* scene) {
 void set_frame(trc::camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(trc::camera* camera, float lens, float aspect, float film, bool ortho) {
+void set_lens(
+    trc::camera* camera, float lens, float aspect, float film, bool ortho) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
