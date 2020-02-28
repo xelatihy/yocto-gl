@@ -491,29 +491,21 @@ static ray3f eval_perspective_camera(
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
     const trc::camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
-  if (camera->aperture) {
-    auto scale = 1 / camera->lens;
-    auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
-        camera->film.y * (image_uv.y - 0.5f) * scale, scale};
-    auto q1    = vec3f{-q.x, -q.y, -camera->focus};
-    auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera->aperture,
-                                        (lens_uv.y - 0.5f) * camera->aperture,
-                                        0};
-    auto d = normalize(q1 - e);
-    auto ray = ray3f{transform_point(camera->frame, e),
-        transform_direction(camera->frame, d)};
-    return ray;
-  } else {
-    auto scale = 1 / camera->lens;
-    auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
-        camera->film.y * (image_uv.y - 0.5f) * scale, scale};
-    auto q1    = -q;
-    auto e     = vec3f{-q.x, -q.y, 0};
-    auto d     = normalize(q1 - e);
-    auto ray   = ray3f{transform_point(camera->frame, e),
-        transform_direction(camera->frame, d)};
-    return ray;
-  }
+  // point on the image plane
+  auto scale = 1 / camera->lens;
+  auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
+      camera->film.y * (image_uv.y - 0.5f) * scale, camera->lens};
+  // point on the lens
+  auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera->aperture,
+                                      (lens_uv.y - 0.5f) * camera->aperture,
+                                      0};
+  // point on the focus plane
+  auto p    = vec3f{-q.x, -q.y, -camera->focus};
+  // correct ray direction to account for camera focusing
+  auto d     = normalize(p - e);
+  // done
+  return ray3f{transform_point(camera->frame, e),
+      transform_direction(camera->frame, d)};
 }
 
 // Generates a ray from a camera for img::image plane coordinate uv and
@@ -2849,10 +2841,11 @@ trc::light* add_light(trc::scene* scene) {
 void set_frame(trc::camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(trc::camera* camera, float lens, float aspect, float film) {
+void set_lens(trc::camera* camera, float lens, float aspect, float film, bool ortho) {
   camera->lens = lens;
   camera->film = aspect >= 1 ? vec2f{film, film / aspect}
                              : vec2f{film * aspect, film};
+  camera->orthographic = ortho;
 }
 void set_focus(trc::camera* camera, float aperture, float focus) {
   camera->aperture = aperture;
