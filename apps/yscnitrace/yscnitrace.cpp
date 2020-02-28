@@ -144,7 +144,8 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
       progress_cb("converting cameras", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
+        iocamera->orthographic);
     set_focus(camera, iocamera->aperture, iocamera->focus);
     camera_map[iocamera] = camera;
   }
@@ -609,7 +610,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
       auto camera   = get_element(
           iocamera, app->ioscene->cameras, app->scene->cameras);
       set_frame(camera, iocamera->frame);
-      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+      set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
+          iocamera->orthographic);
       set_focus(camera, iocamera->aperture, iocamera->focus);
       reset_display(app);
     }
@@ -860,7 +862,7 @@ int main(int argc, const char* argv[]) {
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
       set_frame(app->camera, app->iocamera->frame);
       set_lens(app->camera, app->iocamera->lens, app->iocamera->aspect,
-          app->iocamera->film);
+          app->iocamera->film, app->iocamera->orthographic);
       set_focus(app->camera, app->iocamera->aperture, app->iocamera->focus);
       reset_display(app);
     }

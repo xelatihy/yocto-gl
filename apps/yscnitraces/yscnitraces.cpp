@@ -97,7 +97,8 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
       print_progress("convert camera", progress.x++, progress.y);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
+        iocamera->orthographic);
     set_focus(camera, iocamera->aperture, iocamera->focus);
     camera_map[iocamera] = camera;
   }

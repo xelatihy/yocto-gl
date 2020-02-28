@@ -128,7 +128,8 @@ trc::environment* add_environment(trc::scene* scene);
 
 // camera properties
 void set_frame(trc::camera* camera, const frame3f& frame);
-void set_lens(trc::camera* camera, float lens, float aspect, float film);
+void set_lens(trc::camera* camera, float lens, float aspect, float film,
+    bool ortho = false);
 void set_focus(trc::camera* camera, float aperture, float focus);
 
 // object properties
