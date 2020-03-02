@@ -101,6 +101,8 @@
 // 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the 
 //    fresnel term for dielectrics or conductors; use `fresnel_schlick()` for 
 //    the Schlick fresnel approximation
+// 2. use `eta_to_reflectivity()` and `reflective_to_eta()` to convert eta to 
+//    reflectivity and vice-versa; use `eta_to_edgetint()` and `edgetint_to_eta()`
 //
 //
 // ## Monte Carlo helpers
@@ -1476,6 +1478,18 @@ inline vec3f fresnel_schlick(const vec3f& specular, float cosine);
 inline float fresnel_dielectric(float eta, float cosine);
 // Compute the fresnel term for metals.
 inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosine);
+
+// Convert eta to reflectivity
+inline vec3f eta_to_reflectivity(const vec3f& eta);
+// Convert reflectivity to  eta.
+inline vec3f reflectivity_to_eta(const vec3f& reflectivity);
+// Convert conductor eta to reflectivity
+inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
+// Convert eta to edge tint parametrization
+inline std::pair<vec3f, vec3f> eta_to_edgetint(const vec3f& eta, const vec3f& etak);
+// Convert reflectivity and edge tint to eta.
+inline std::pair<vec3f, vec3f> edgetint_to_eta(
+    const vec3f& reflectivity, const vec3f& edgetint);
 
 }
 
@@ -4069,6 +4083,45 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) 
   auto rp = rs * (t3 - t4) / (t3 + t4);
 
   return (rp + rs) / 2;
+}
+
+// Convert eta to reflectivity
+inline vec3f eta_to_reflectivity(const vec3f& eta) {
+  return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
+}
+// Convert reflectivity to  eta.
+inline vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+  auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
+  return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+}
+// Convert conductor eta to reflectivity
+inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
+  return ((eta - 1) * (eta - 1) + etak * etak) /
+         ((eta + 1) * (eta + 1) + etak * etak);
+}
+// Convert eta to edge tint parametrization
+inline std::pair<vec3f, vec3f> eta_to_edgetint(const vec3f& eta, const vec3f& etak) {
+  auto reflectivity     = eta_to_reflectivity(eta, etak);
+  auto numer = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
+  auto denom = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - (1 - reflectivity) / (1 + reflectivity);
+  auto edgetint = numer / denom;
+  return {reflectivity, edgetint};
+}
+// Convert reflectivity and edge tint to eta.
+inline std::pair<vec3f, vec3f> edgetint_to_eta(
+    const vec3f& reflectivity, const vec3f& edgetint) {
+  auto r = clamp(reflectivity, 0.0f, 0.99f);
+  auto g = edgetint;
+
+  auto r_sqrt = sqrt(r);
+  auto n_min  = (1 - r) / (1 + r);
+  auto n_max  = (1 + r_sqrt) / (1 - r_sqrt);
+
+  auto n  = lerp(n_max, n_min, g);
+  auto k2 = ((n + 1) * (n + 1) * r - (n - 1) * (n - 1)) / (1 - r);
+  k2      = max(k2, 0.0f);
+  auto k  = sqrt(k2);
+  return {n, k};
 }
 
 }

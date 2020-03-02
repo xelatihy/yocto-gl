@@ -151,43 +151,6 @@ float sample_microfacet_pdf(float roughness, const vec3f& normal,
   return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
 }
 
-// Specular to  eta.
-vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
-  auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
-  return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
-}
-
-// Specular to fresnel eta.
-std::pair<vec3f, vec3f> reflectivity_to_eta(
-    const vec3f& reflectivity, const vec3f& edge_tint) {
-  auto r = clamp(reflectivity, 0.0f, 0.99f);
-  auto g = edge_tint;
-
-  auto r_sqrt = sqrt(r);
-  auto n_min  = (1 - r) / (1 + r);
-  auto n_max  = (1 + r_sqrt) / (1 - r_sqrt);
-
-  auto n  = lerp(n_max, n_min, g);
-  auto k2 = ((n + 1) * (n + 1) * r - (n - 1) * (n - 1)) / (1 - r);
-  k2      = max(k2, 0.0f);
-  auto k  = sqrt(k2);
-  return {n, k};
-}
-
-vec3f eta_to_reflectivity(const vec3f& eta) {
-  return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
-}
-vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
-  return ((eta - 1) * (eta - 1) + etak * etak) /
-         ((eta + 1) * (eta + 1) + etak * etak);
-}
-vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
-  auto r     = eta_to_reflectivity(eta, etak);
-  auto numer = (1 + sqrt(r)) / (1 - sqrt(r)) - eta;
-  auto denom = (1 + sqrt(r)) / (1 - sqrt(r)) - (1 - r) / (1 + r);
-  return numer / denom;
-}
-
 std::pair<float, int> sample_distance(
     const vec3f& density, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
