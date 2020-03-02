@@ -2142,9 +2142,6 @@ static float sample_brdf_pdf(const trace_point& point) {
   auto& outgoing = point.outgoing;
   auto& incoming = point.incoming;
 
-  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
-
   auto pdf = 0.0f;
 
   if (point.diffuse_pdf) {
