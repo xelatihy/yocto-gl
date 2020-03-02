@@ -2076,31 +2076,22 @@ static vec3f eval_delta(const trace_point& point) {
   auto& outgoing = point.outgoing;
   auto& incoming = point.incoming;
 
-  auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
-
   auto brdfcos = zero3f;
 
-  if (point.specular && !point.refraction && same_hemi) {
-    brdfcos += point.specular *
-               fresnel_dielectric(point.ior, dot(normal, outgoing));
+  if (point.specular && !point.refraction) {
+    brdfcos += point.specular * eval_delta_reflection(point.ior, normal, outgoing, incoming);
   }
-  if (point.metal && same_hemi) {
-    brdfcos += point.metal * fresnel_conductor(point.meta, point.metak,
-                                 dot(normal, outgoing));
+  if (point.metal) {
+    brdfcos += point.metal * eval_delta_reflection(point.meta, point.metak, normal, outgoing, incoming);
   }
-  if (point.coat && same_hemi) {
-    brdfcos += point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
+  if (point.coat) {
+    brdfcos += point.coat * eval_delta_reflection(coat_ior, normal, outgoing, incoming);
   }
-  if (point.transmission && !same_hemi) {
-    brdfcos += point.transmission;
+  if (point.transmission) {
+    brdfcos += point.transmission * eval_delta_transmission(point.ior, normal, outgoing, incoming);
   }
-  if (point.refraction && !same_hemi) {
-    brdfcos += point.refraction *
-               (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
-  }
-  if (point.refraction && same_hemi) {
-    brdfcos += point.refraction *
-               fresnel_dielectric(point.ior, dot(normal, outgoing));
+  if (point.refraction) {
+    brdfcos += point.refraction  * eval_delta_refraction(point.ior, normal, outgoing, incoming);
   }
 
   return brdfcos;
