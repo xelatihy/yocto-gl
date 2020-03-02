@@ -85,9 +85,10 @@ using math::zero4i;
 namespace yocto::trace {
 
 // Evaluate the microfacet distribution
-float microfacet_distribution(float roughness, float cosine, bool ggx = true) {
+float microfacet_distribution(float roughness, const vec3f& normal, const vec3f& halfway, bool ggx = true) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  auto cosine = dot(normal, halfway);
   if (cosine <= 0) return 0;
   auto roughness2 = roughness * roughness;
   auto cosine2    = cosine * cosine;
@@ -100,12 +101,15 @@ float microfacet_distribution(float roughness, float cosine, bool ggx = true) {
   }
 }
 
-float microfacet_shadowing(float roughness, float cosineo, float cosinei,
-    float cosineho, float cosinehi, bool ggx = true,
+float microfacet_shadowing(float roughness, const vec3f& normal, const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming, bool ggx = true,
     bool height_correlated = false) {
+  auto cosineo = dot(normal, outgoing);
+  auto cosinei = dot(normal, incoming);
+  auto cosineho = dot(halfway, outgoing);
+  auto cosinehi = dot(halfway, incoming);
+  if (cosineo * cosineho <= 0) return 0;
+  if (cosinei * cosinehi <= 0) return 0;
   if (ggx) {
-    if (cosineo * cosineho <= 0) return 0;
-    if (cosinei * cosinehi <= 0) return 0;
     auto roughness2 = roughness * roughness;
     auto cosinei2   = cosinei * cosinei;
     auto cosineo2   = cosineo * cosineo;
@@ -125,8 +129,6 @@ float microfacet_shadowing(float roughness, float cosineo, float cosinei,
       return 1 / (1 + li + lo);
     }
   } else {
-    if (cosineo * cosineho <= 0) return 0;
-    if (cosinei * cosinehi <= 0) return 0;
     if (!height_correlated) {
       auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
       auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
@@ -195,10 +197,10 @@ vec3f sample_microfacet(
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& half_vector, bool ggx = true) {
-  auto cosine = dot(normal, half_vector);
+    const vec3f& halfway, bool ggx = true) {
+  auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
-  return microfacet_distribution(roughness, cosine, ggx) * cosine;
+  return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
 std::pair<float, int> sample_distance(
@@ -250,9 +252,8 @@ inline vec3f eval_microfacet_reflection(float ior, float roughness,
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
-  auto D       = microfacet_distribution(roughness, dot(normal, halfway));
-  auto G       = microfacet_shadowing(roughness, dot(normal, outgoing),
-      dot(normal, incoming), dot(halfway, outgoing), dot(halfway, incoming));
+  auto D       = microfacet_distribution(roughness, normal, halfway);
+  auto G       = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
   return vec3f{1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
@@ -263,9 +264,8 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, dot(halfway, outgoing));
-  auto D       = microfacet_distribution(roughness, dot(normal, halfway));
-  auto G       = microfacet_shadowing(roughness, dot(normal, outgoing),
-      dot(normal, incoming), dot(halfway, outgoing), dot(halfway, incoming));
+  auto D       = microfacet_distribution(roughness, normal, halfway);
+  auto G       = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
   return F * D * G / (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
@@ -277,9 +277,8 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
   auto halfway   = normalize(ir + outgoing);
   // auto F       = fresnel_schlick(
   //     point.reflectance, abs(dot(halfway, outgoing)), entering);
-  auto D = microfacet_distribution(roughness, dot(up_normal, halfway));
-  auto G = microfacet_shadowing(roughness, dot(up_normal, outgoing),
-      dot(up_normal, ir), dot(halfway, outgoing), dot(halfway, ir));
+  auto D = microfacet_distribution(roughness, up_normal, halfway);
+  auto G = microfacet_shadowing(roughness, up_normal, halfway, outgoing, ir);
   return vec3f{1} * D * G /
          abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
          abs(dot(normal, incoming));
@@ -290,10 +289,8 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
-    auto D       = microfacet_distribution(roughness, dot(up_normal, halfway));
-    auto G       = microfacet_shadowing(roughness, dot(up_normal, outgoing),
-        dot(up_normal, incoming), dot(halfway, outgoing),
-        dot(halfway, incoming));
+    auto D       = microfacet_distribution(roughness, up_normal, halfway);
+    auto G       = microfacet_shadowing(roughness, up_normal, halfway, outgoing, incoming);
     return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
@@ -304,10 +301,8 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto halfway = normalize(halfway_vector);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
     auto F = fresnel_dielectric(ior, dot(normal, outgoing));
-    auto D = microfacet_distribution(roughness, dot(up_normal, halfway));
-    auto G = microfacet_shadowing(roughness, dot(up_normal, outgoing),
-        dot(up_normal, incoming), dot(halfway, outgoing),
-        dot(halfway, incoming));
+    auto D = microfacet_distribution(roughness, up_normal, halfway);
+    auto G = microfacet_shadowing(roughness, up_normal, halfway, outgoing, incoming);
     auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
                      (dot(outgoing, normal) * dot(incoming, normal));
 
