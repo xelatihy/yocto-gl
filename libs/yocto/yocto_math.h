@@ -1473,7 +1473,7 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Schlick approximation of the Fresnel term
+// Schlick approximation of the Fresnel term.
 inline vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& incoming);
 // Compute the fresnel term for dielectrics.
@@ -1487,14 +1487,29 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
 inline vec3f eta_to_reflectivity(const vec3f& eta);
 // Convert reflectivity to  eta.
 inline vec3f reflectivity_to_eta(const vec3f& reflectivity);
-// Convert conductor eta to reflectivity
+// Convert conductor eta to reflectivity.
 inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
-// Convert eta to edge tint parametrization
+// Convert eta to edge tint parametrization.
 inline std::pair<vec3f, vec3f> eta_to_edgetint(
     const vec3f& eta, const vec3f& etak);
 // Convert reflectivity and edge tint to eta.
 inline std::pair<vec3f, vec3f> edgetint_to_eta(
     const vec3f& reflectivity, const vec3f& edgetint);
+
+// Evaluates the microfacet distribution.
+inline float microfacet_distribution(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx = true);
+// Evaluates the microfacet shadowing.
+inline float microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx = true, bool height_correlated = false);
+
+// Samples a microfacet distribution.
+inline vec3f sample_microfacet(
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
+// Pdf for microfacet distribution sampling.
+inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx = true);
 
 }  // namespace yocto::math
 
@@ -4136,6 +4151,106 @@ inline std::pair<vec3f, vec3f> edgetint_to_eta(
   k2      = max(k2, 0.0f);
   auto k  = sqrt(k2);
   return {n, k};
+}
+
+// Evaluate microfacet distribution
+inline float microfacet_distribution(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx) {
+  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  auto cosine = dot(normal, halfway);
+  if (cosine <= 0) return 0;
+  auto roughness2 = roughness * roughness;
+  auto cosine2    = cosine * cosine;
+  if (ggx) {
+    return roughness2 / (pif * (cosine2 * roughness2 + 1 - cosine2) *
+                            (cosine2 * roughness2 + 1 - cosine2));
+  } else {
+    return exp((cosine2 - 1) / (roughness2 * cosine2)) /
+           (pif * roughness2 * cosine2 * cosine2);
+  }
+}
+
+// Evaluate microfacet shadowing
+inline float microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx, bool height_correlated) {
+  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  auto cosineo  = dot(normal, outgoing);
+  auto cosinei  = dot(normal, incoming);
+  auto cosineho = dot(halfway, outgoing);
+  auto cosinehi = dot(halfway, incoming);
+  if (cosineo * cosineho <= 0) return 0;
+  if (cosinei * cosinehi <= 0) return 0;
+  if (ggx) {
+    auto roughness2 = roughness * roughness;
+    auto cosinei2   = cosinei * cosinei;
+    auto cosineo2   = cosineo * cosineo;
+    if (!height_correlated) {
+      auto gi =
+          2 * abs(cosinei) /
+          (abs(cosinei) + sqrt(cosinei2 - roughness2 * cosinei2 + roughness));
+      auto go =
+          2 * abs(cosineo) /
+          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness));
+      return gi * go;
+    } else {
+      auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
+                    (2 * abs(cosinei)) -
+                1.0f / 2;
+      auto lo = sqrt(cosineo2 + roughness2 - roughness2 * cosineo2) /
+                    (2 * abs(cosineo)) -
+                1.0f / 2;
+      return 1 / (1 + li + lo);
+    }
+  } else {
+    if (!height_correlated) {
+      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
+      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
+      auto gi = ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
+                                (1.0f + 2.276f * ci + 2.577f * ci * ci)
+                          : 1.0f;
+      auto go = co < 1.6f ? (3.535f * co + 2.181f * co * co) /
+                                (1.0f + 2.276f * co + 2.577f * co * co)
+                          : 1.0f;
+      return gi * go;
+    } else {
+      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
+      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
+      auto li = ci < 1.6f ? (1 - 1.259f * ci + 0.396f * ci * ci) /
+                                (3.535f * ci + 2.181f * ci * ci)
+                          : 0.0f;
+      auto lo = co < 1.6f ? (1 - 1.259f * co + 0.396f * co * co) /
+                                (3.535f * co + 2.181f * co * co)
+                          : 0.0f;
+      return 1 / (1 + li + lo);
+    }
+  }
+}
+
+// Sample a microfacet ditribution.
+inline vec3f sample_microfacet(
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
+  auto phi        = 2 * pif * rn.x;
+  auto roughness2 = roughness * roughness;
+  auto theta      = 0.0f;
+  if (ggx) {
+    theta = atan(roughness2 * rn.y / (1 - rn.y));
+  } else {
+    theta = atan(-roughness2 * log(1 - rn.y));
+  }
+  auto local_half_vector = vec3f{
+      cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
+  return transform_direction(basis_fromz(normal), local_half_vector);
+}
+
+// Pdf for microfacet distribution sampling.
+inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx) {
+  auto cosine = dot(normal, halfway);
+  if (cosine < 0) return 0;
+  return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
 }  // namespace yocto::math
