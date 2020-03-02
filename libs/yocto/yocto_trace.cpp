@@ -159,18 +159,16 @@ float microfacet_shadowing(float roughness, const vec3f& normal,
 
 vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
-  auto phi              = 2 * pif * rn.x;
-  auto roughness_square = roughness * roughness;
-  auto tangent_square   = 0.0f;
+  auto phi        = 2 * pif * rn.x;
+  auto roughness2 = roughness * roughness;
+  auto theta      = 0.0f;
   if (ggx) {
-    tangent_square = roughness_square * rn.y / (1 - rn.y);
+    theta = atan(roughness2 * rn.y / (1 - rn.y));
   } else {
-    tangent_square = -roughness_square * log(1 - rn.y);
+    theta = atan(-roughness2 * log(1 - rn.y));
   }
-  auto cosine_square     = 1 / (1 + tangent_square);
-  auto cosine            = 1 / sqrt(1 + tangent_square);
-  auto radius            = sqrt(clamp(1 - cosine_square, 0.0f, 1.0f));
-  auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
+  auto local_half_vector = vec3f{
+      cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_pdf(float roughness, const vec3f& normal,
