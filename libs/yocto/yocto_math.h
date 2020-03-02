@@ -52,12 +52,12 @@
 //
 // The library supports basic geomtry functions such as computing
 // line/triangle/quad normals and areas, picking points on triangles
-// and the like. In these functions triangles are parameterized with us written
+// and the like. In these functions, triangles are parameterized with uv written
 // w.r.t the (p1-p0) and (p2-p0) axis respectively. Quads are internally handled
-// as pairs of two triangles p0,p1,p3 and p2,p3,p1, with the u/v coordinates
+// as pairs of two triangles (p0,p1,p3) and (p2,p3,p1), with the uv coordinates
 // of the second triangle corrected as 1-u and 1-v to produce a quad
 // parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
-// represent triangles correctly, an this convention is used throught the
+// represent triangles correctly, and this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
 // TODO: better documentation
@@ -104,6 +104,16 @@
 // 2. use `eta_to_reflectivity()` and `reflective_to_eta()` to convert eta to
 //    reflectivity and vice-versa; use `eta_to_edgetint()` and
 //    `edgetint_to_eta()`
+// 3. use `microfacet_distribution()` and `microfacet_shadowing()` to evaluate
+//    a microfacet distribution and its associated shadowing term
+// 4. evaluate BRDF lobes with
+//    - `eval_diffuse_reflection()`: diffuse brdf
+//    - `eval_microfacet_reflection()`: specular brdf for dielectrics and metals
+//    - `eval_microfacet_transmission()`: transmission brdf for thin dielectrics
+//    - `eval_microfacet_refraction()`: refraction brdf for dielectrics
+// 5. sample BRDF lobes with `sample_XXX()` using the above lobe names
+// 6. compute the PDF for BRDF lobe sampling with `sample_XXX_pdf()` using the 
+//    above lobe names
 //
 //
 // ## Monte Carlo helpers
