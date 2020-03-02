@@ -163,9 +163,9 @@ vec3f sample_microfacet(
   auto roughness_square = roughness * roughness;
   auto tangent_square   = 0.0f;
   if (ggx) {
-    tangent_square = -roughness_square * log(1 - rn.y);
-  } else {
     tangent_square = roughness_square * rn.y / (1 - rn.y);
+  } else {
+    tangent_square = -roughness_square * log(1 - rn.y);
   }
   auto cosine_square     = 1 / (1 + tangent_square);
   auto cosine            = 1 / sqrt(1 + tangent_square);
