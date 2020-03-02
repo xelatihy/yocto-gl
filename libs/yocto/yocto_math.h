@@ -94,6 +94,15 @@
 //    noises
 //
 //
+// ## Shading functions
+//
+// We include a few functions to help writing shaders for path tracing.
+//
+// 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the 
+//    fresnel term for dielectrics or conductors; use `fresnel_schlick()` for 
+//    the Schlick fresnel approximation
+//
+//
 // ## Monte Carlo helpers
 //
 // We include many method to generate random points and directions. These may be
