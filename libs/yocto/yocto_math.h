@@ -245,6 +245,7 @@ struct vec2f {
   vec2f();
   vec2f(float x, float y);
   explicit vec2f(float v);
+  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -259,6 +260,7 @@ struct vec3f {
   vec3f(float x, float y, float z);
   vec3f(const vec2f& v, float z);
   explicit vec3f(float v);
+  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -274,6 +276,7 @@ struct vec4f {
   vec4f(float x, float y, float z, float w);
   vec4f(const vec3f& v, float w);
   explicit vec4f(float v);
+  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -519,6 +522,7 @@ struct vec2i {
   vec2i(int x, int y);
   explicit vec2i(int v);
   explicit operator vec2f() const;
+  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -534,6 +538,7 @@ struct vec3i {
   vec3i(const vec2i& v, int z);
   explicit vec3i(int v);
   explicit operator vec3f() const;
+  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -550,6 +555,7 @@ struct vec4i {
   vec4i(const vec3i& v, int w);
   explicit vec4i(int v);
   explicit operator vec4f() const;
+  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -563,6 +569,7 @@ struct vec3b {
   vec3b();
   vec3b(byte x, byte y, byte z);
   explicit vec3b(byte v);
+  explicit operator bool() const;
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -577,6 +584,7 @@ struct vec4b {
   vec4b();
   vec4b(byte x, byte y, byte z, byte w);
   explicit vec4b(byte v);
+  explicit operator bool() const;
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -1613,6 +1621,7 @@ namespace yocto::math {
 inline vec2f::vec2f() {}
 inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
 inline vec2f::vec2f(float v) : x{v}, y{v} {}
+inline vec2f::operator bool() const { return x && y; }
 
 inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
@@ -1622,6 +1631,7 @@ inline vec3f::vec3f() {}
 inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
 inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
 inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
+inline vec3f::operator bool() const { return x && y && z; }
 
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
@@ -1632,6 +1642,7 @@ inline vec4f::vec4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
 inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
+inline vec4f::operator bool() const { return x && y && z && w; }
 
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
@@ -2072,6 +2083,7 @@ inline vec2i::vec2i() {}
 inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
 inline vec2i::vec2i(int v) : x{v}, y{v} {}
 inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
+inline vec2i::operator bool() const { return x && y; }
 
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
@@ -2082,6 +2094,7 @@ inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
 inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
 inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
 inline vec3i::operator vec3f() const { return {(float)x, (float)y, (float)z}; }
+inline vec3i::operator bool() const { return x && y && z; }
 
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
@@ -2094,6 +2107,7 @@ inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
 inline vec4i::operator vec4f() const {
   return {(float)x, (float)y, (float)z, (float)w};
 }
+inline vec4i::operator bool() const { return x && y && z && w; }
 
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
@@ -2102,6 +2116,7 @@ inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 inline vec3b::vec3b() {}
 inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
 inline vec3b::vec3b(byte v) : x{v}, y{v}, z{v} {}
+inline vec3b::operator bool() const { return x && y && z; }
 
 inline byte& vec3b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
@@ -2110,6 +2125,7 @@ inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 inline vec4b::vec4b() {}
 inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
 inline vec4b::vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
+inline vec4b::operator bool() const { return x && y && z && w; }
 
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }

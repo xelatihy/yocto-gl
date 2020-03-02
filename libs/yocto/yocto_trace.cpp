@@ -307,42 +307,38 @@ float eval_phasefunction(float cos_theta, float g) {
 }
 
 // Evaluate a diffuse BRDF lobe
-inline vec3f eval_diffuse_reflection(const vec3f& weight, const vec3f& normal,
+inline vec3f eval_diffuse_reflection(const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (weight == zero3f) return zero3f;
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return weight / pif * dot(normal, incoming);
+  return vec3f{1} / pif * dot(normal, incoming);
 }
-inline vec3f eval_microfacet_reflection(const vec3f& weight, float ior,
+inline vec3f eval_microfacet_reflection(float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (weight == zero3f) return zero3f;
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
   auto D       = eval_microfacetD(roughness, normal, halfway);
   auto G = eval_microfacetG(roughness, normal, halfway, outgoing, incoming);
-  return weight * F * D * G /
+  return vec3f{1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
-inline vec3f eval_microfacet_reflection(const vec3f& weight, const vec3f& eta,
+inline vec3f eval_microfacet_reflection(const vec3f& eta,
     const vec3f& etak, float roughness, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (weight == zero3f) return zero3f;
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, dot(halfway, outgoing));
   auto D       = eval_microfacetD(roughness, normal, halfway);
   auto G = eval_microfacetG(roughness, normal, halfway, outgoing, incoming);
-  return weight * F * D * G /
+  return F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
-inline vec3f eval_microfacet_transmission(const vec3f& weight, float ior,
+inline vec3f eval_microfacet_transmission(float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (weight == zero3f) return zero3f;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   auto ir        = reflect(-incoming, up_normal);
@@ -351,14 +347,13 @@ inline vec3f eval_microfacet_transmission(const vec3f& weight, float ior,
   //     point.reflectance, abs(dot(halfway, outgoing)), entering);
   auto D = eval_microfacetD(roughness, up_normal, halfway);
   auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, ir);
-  return weight * D * G /
+  return vec3f{1} * D * G /
          abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
          abs(dot(normal, incoming));
 }
-inline vec3f eval_microfacet_refraction(const vec3f& weight, float ior,
+inline vec3f eval_microfacet_refraction(float ior,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (weight == zero3f) return zero3f;
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
@@ -366,7 +361,7 @@ inline vec3f eval_microfacet_refraction(const vec3f& weight, float ior,
     auto D       = eval_microfacetD(roughness, up_normal, halfway);
     auto G       = eval_microfacetG(
         roughness, up_normal, halfway, outgoing, incoming);
-    return weight * F * D * G /
+    return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
@@ -383,7 +378,7 @@ inline vec3f eval_microfacet_refraction(const vec3f& weight, float ior,
                      (dot(outgoing, normal) * dot(incoming, normal));
 
     // [Walter 2007] equation 21
-    return weight * abs(dot_terms) * (1 - F) * D * G /
+    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
            dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 }
@@ -1973,17 +1968,23 @@ static vec3f eval_brdfcos(const trace_point& point) {
 
   // accumulate the lobes
   auto brdfcos = zero3f;
-  brdfcos += eval_diffuse_reflection(point.diffuse, normal, outgoing, incoming);
-  brdfcos += eval_microfacet_reflection(
-      point.specular, point.ior, point.roughness, normal, outgoing, incoming);
-  brdfcos += eval_microfacet_reflection(point.metal, point.meta, point.metak,
+  if(point.diffuse)
+  brdfcos += point.diffuse * eval_diffuse_reflection(normal, outgoing, incoming);
+  if(point.specular)
+  brdfcos += point.specular * eval_microfacet_reflection(
+      point.ior, point.roughness, normal, outgoing, incoming);
+  if(point.metal)
+  brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
       point.roughness, normal, outgoing, incoming);
-  brdfcos += eval_microfacet_reflection(
-      point.coat, coat_ior, coat_roughness, normal, outgoing, incoming);
-  brdfcos += eval_microfacet_transmission(point.transmission, point.ior,
+  if(point.coat)
+  brdfcos += point.coat * eval_microfacet_reflection(
+      coat_ior, coat_roughness, normal, outgoing, incoming);
+  if(point.transmission)
+  brdfcos += point.transmission * eval_microfacet_transmission(point.ior,
       point.roughness, normal, outgoing, incoming);
-  brdfcos += eval_microfacet_refraction(
-      point.refraction, point.ior, point.roughness, normal, outgoing, incoming);
+  if(point.refraction)
+  brdfcos += point.refraction * eval_microfacet_refraction(
+      point.ior, point.roughness, normal, outgoing, incoming);
   return brdfcos;
 }
 
