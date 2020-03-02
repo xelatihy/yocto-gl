@@ -468,6 +468,87 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
   }
 }
 
+
+// Evaluate a diffuse BRDF lobe
+inline vec3f eval_delta_reflection(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
+}
+inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  return fresnel_conductor(eta, etak, dot(normal, outgoing));
+}
+inline vec3f eval_delta_transmission(float ior,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  return vec3f{1};
+}
+inline vec3f eval_delta_refraction(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
+    return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
+  } else {
+    return vec3f{1} - fresnel_dielectric(ior, dot(normal, outgoing));
+  }
+}
+
+// Sample a diffuse BRDF lobe
+inline vec3f sample_delta_reflection(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+  if (dot(normal, outgoing) <= 0) return zero3f;
+  return reflect(outgoing, normal);
+}
+inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& outgoing,
+    const vec2f& rn) {
+  if (dot(normal, outgoing) <= 0) return zero3f;
+  return reflect(outgoing, normal);
+}
+inline vec3f sample_delta_transmission(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+  if (dot(normal, outgoing) <= 0) return zero3f;
+  return -outgoing;
+}
+inline vec3f sample_delta_refraction(float ior, 
+    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  if (rnl < fresnel_dielectric(ior, dot(normal, outgoing))) {
+    return reflect(outgoing, up_normal);
+  } else {
+    return refract_notir(
+        outgoing, up_normal, dot(normal, outgoing) > 0 ? 1 / ior : ior);
+  }
+}
+
+// Sample a diffuse BRDF lobe
+inline float sample_delta_reflection_pdf(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
+  return 1;
+}
+inline float sample_delta_reflection_pdf(const vec3f& eta,
+    const vec3f& etak, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
+  return 1;
+}
+inline float sample_delta_transmission_pdf(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
+  return 1;
+}
+inline float sample_delta_refraction_pdf(float ior, 
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
+    return fresnel_dielectric(ior, dot(normal, outgoing));
+  } else {
+    return (1 - fresnel_dielectric(ior, dot(normal, outgoing)));
+  }
+}
+
 }  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
