@@ -84,7 +84,7 @@ using math::zero4i;
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
-std::pair<float, int> sample_distance(
+static std::pair<float, int> sample_distance(
     const vec3f& density, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
   auto density_channel = density[channel];
@@ -94,16 +94,16 @@ std::pair<float, int> sample_distance(
     return {-log(rd) / density_channel, channel};
 }
 
-float sample_distance_pdf(const vec3f& density, float distance, int channel) {
+static float sample_distance_pdf(const vec3f& density, float distance, int channel) {
   auto density_channel = density[channel];
   return exp(-density_channel * distance);
 }
 
-vec3f eval_transmission(const vec3f& density, float distance) {
+static vec3f eval_transmission(const vec3f& density, float distance) {
   return exp(-density * distance);
 }
 
-vec3f sample_phasefunction(float g, const vec2f& u) {
+static vec3f sample_phasefunction(float g, const vec2f& u) {
   auto cos_theta = 0.0f;
   if (abs(g) < 1e-3f) {
     cos_theta = 1 - 2 * u.x;
@@ -117,7 +117,7 @@ vec3f sample_phasefunction(float g, const vec2f& u) {
   return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
 }
 
-float eval_phasefunction(float cos_theta, float g) {
+static float eval_phasefunction(float cos_theta, float g) {
   auto denom = 1 + g * g + 2 * g * cos_theta;
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
