@@ -157,33 +157,6 @@ float microfacet_shadowing(float roughness, const vec3f& normal,
   }
 }
 
-float evaluate_microfacetG1(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& direction, bool ggx = true) {
-  auto cosine = dot(normal, direction);
-  if (dot(half_vector, direction) * cosine <= 0) return 0;
-  auto roughness_square = roughness * roughness;
-  auto cosine_square    = cosine * cosine;
-  auto tangent_square   = clamp(1 - cosine_square, 0.0f, 1.0f) / cosine_square;
-  if (ggx) {
-    return 2 / (1 + sqrt(1.0f + roughness_square * tangent_square));
-  } else {
-    auto tangent       = sqrt(tangent_square);
-    auto inv_rt        = 1 / (roughness * tangent);
-    auto inv_rt_square = 1 / (roughness_square * tangent_square);
-    if (inv_rt < 1.6f) {
-      return (3.535f * inv_rt + 2.181f * inv_rt_square) /
-             (1.0f + 2.276f * inv_rt + 2.577f * inv_rt_square);
-    } else {
-      return 1.0f;
-    }
-  }
-}
-float eval_microfacetG(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true) {
-  return evaluate_microfacetG1(roughness, normal, half_vector, outgoing, ggx) *
-         evaluate_microfacetG1(roughness, normal, half_vector, incoming, ggx);
-}
 vec3f sample_microfacet(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
   auto phi              = 2 * pif * rn.x;
