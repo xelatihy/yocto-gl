@@ -66,6 +66,8 @@ using math::sample_discrete;
 using math::sample_discrete_pdf;
 using math::sample_uniform;
 using math::sample_uniform_pdf;
+using math::fresnel_dielectric;
+using math::fresnel_conductor;
 using math::sin;
 using math::sqrt;
 using math::zero2f;
@@ -81,13 +83,6 @@ using math::zero4i;
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
-
-// Schlick approximation of the Fresnel term
-vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
-  if (specular == zero3f) return zero3f;
-  return specular + (1 - specular) *
-                        pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
-}
 
 // Evaluates the GGX distribution and geometric term
 float eval_microfacetD(float roughness, const vec3f& normal,
@@ -191,56 +186,6 @@ vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
   auto numer = (1 + sqrt(r)) / (1 - sqrt(r)) - eta;
   auto denom = (1 + sqrt(r)) / (1 - sqrt(r)) - (1 - r) / (1 + r);
   return numer / denom;
-}
-
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-float fresnel_dielectric(float eta, float cosw) {
-  if (cosw < 0) {
-    eta  = 1 / eta;
-    cosw = -cosw;
-  }
-
-  auto sin2 = 1 - cosw * cosw;
-  auto eta2 = eta * eta;
-
-  auto cos2t = 1 - sin2 / eta2;
-  if (cos2t < 0) return 1;  // tir
-
-  auto t0 = sqrt(cos2t);
-  auto t1 = eta * t0;
-  auto t2 = eta * cosw;
-
-  auto rs = (cosw - t1) / (cosw + t1);
-  auto rp = (t0 - t2) / (t0 + t2);
-
-  return (rs * rs + rp * rp) / 2;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
-  if (cosw <= 0) return zero3f;
-  // if (etak == zero3f) return fresnel_dielectric(eta, cosw);
-
-  cosw       = clamp(cosw, (float)-1, (float)1);
-  auto cos2  = cosw * cosw;
-  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
-  auto eta2  = eta * eta;
-  auto etak2 = etak * etak;
-
-  auto t0       = eta2 - etak2 - sin2;
-  auto a2plusb2 = sqrt(t0 * t0 + 4 * eta2 * etak2);
-  auto t1       = a2plusb2 + cos2;
-  auto a        = sqrt((a2plusb2 + t0) / 2);
-  auto t2       = 2 * a * cosw;
-  auto rs       = (t1 - t2) / (t1 + t2);
-
-  auto t3 = cos2 * a2plusb2 + sin2 * sin2;
-  auto t4 = t2 * sin2;
-  auto rp = rs * (t3 - t4) / (t3 + t4);
-
-  return (rp + rs) / 2;
 }
 
 std::pair<float, int> sample_distance(

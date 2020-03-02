@@ -404,8 +404,8 @@ inline vec3f orthonormalize(const vec3f& a, const vec3f& b);
 
 // Reflected and refracted std::vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n);
-inline vec3f refract(const vec3f& w, const vec3f& n, float eta);
-inline vec3f refract_notir(const vec3f& w, const vec3f& n, float eta);
+inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta);
+inline vec3f refract_notir(const vec3f& w, const vec3f& n, float inv_eta);
 
 // Max element and clamp.
 inline vec3f max(const vec3f& a, float b);
@@ -1457,6 +1457,20 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 }  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
+// SHADING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto::math {
+
+// Schlick approximation of the Fresnel term
+inline vec3f fresnel_schlick(const vec3f& specular, float cosine);
+// Compute the fresnel term for dielectrics. 
+inline float fresnel_dielectric(float eta, float cosine);
+// Compute the fresnel term for metals.
+inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosine);
+
+}
+
+// -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto::math {
@@ -1847,15 +1861,15 @@ inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
 inline vec3f reflect(const vec3f& w, const vec3f& n) {
   return -w + 2 * dot(n, w) * n;
 }
-inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
-  auto k = 1 - eta * eta * max((float)0, 1 - dot(n, w) * dot(n, w));
+inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta) {
+  auto k = 1 - inv_eta * inv_eta * max((float)0, 1 - dot(n, w) * dot(n, w));
   if (k < 0) return {0, 0, 0};  // tir
-  return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+  return -w * inv_eta + (inv_eta * dot(n, w) - sqrt(k)) * n;
 }
-inline vec3f refract_notir(const vec3f& w, const vec3f& n, float eta) {
-  auto k = 1 - eta * eta * max((float)0, 1 - dot(n, w) * dot(n, w));
+inline vec3f refract_notir(const vec3f& w, const vec3f& n, float inv_eta) {
+  auto k = 1 - inv_eta * inv_eta * max((float)0, 1 - dot(n, w) * dot(n, w));
   k      = max(k, 0.001f);
-  return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+  return -w * inv_eta + (inv_eta * dot(n, w) - sqrt(k)) * n;
 }
 
 // Max element and clamp.
@@ -3984,6 +3998,71 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
 }
 
 }  // namespace yocto::math
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHADING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto::math {
+
+// Schlick approximation of the Fresnel term
+inline vec3f fresnel_schlick(const vec3f& specular, float cosine) {
+  if (specular == zero3f) return zero3f;
+  return specular + (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
+}
+
+// Compute the fresnel term for dielectrics. 
+inline float fresnel_dielectric(float eta, float cosw) {
+  // Implementation from
+  // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+  if (cosw < 0) {
+    eta  = 1 / eta;
+    cosw = -cosw;
+  }
+
+  auto sin2 = 1 - cosw * cosw;
+  auto eta2 = eta * eta;
+
+  auto cos2t = 1 - sin2 / eta2;
+  if (cos2t < 0) return 1;  // tir
+
+  auto t0 = sqrt(cos2t);
+  auto t1 = eta * t0;
+  auto t2 = eta * cosw;
+
+  auto rs = (cosw - t1) / (cosw + t1);
+  auto rp = (t0 - t2) / (t0 + t2);
+
+  return (rs * rs + rp * rp) / 2;
+}
+
+// Compute the fresnel term for metals.
+inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
+  // Implementation from
+  // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+  if (cosw <= 0) return zero3f;
+  // if (etak == zero3f) return fresnel_dielectric(eta, cosw);
+
+  cosw       = clamp(cosw, (float)-1, (float)1);
+  auto cos2  = cosw * cosw;
+  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+  auto eta2  = eta * eta;
+  auto etak2 = etak * etak;
+
+  auto t0       = eta2 - etak2 - sin2;
+  auto a2plusb2 = sqrt(t0 * t0 + 4 * eta2 * etak2);
+  auto t1       = a2plusb2 + cos2;
+  auto a        = sqrt((a2plusb2 + t0) / 2);
+  auto t2       = 2 * a * cosw;
+  auto rs       = (t1 - t2) / (t1 + t2);
+
+  auto t3 = cos2 * a2plusb2 + sin2 * sin2;
+  auto t4 = t2 * sin2;
+  auto rp = rs * (t3 - t4) / (t3 + t4);
+
+  return (rp + rs) / 2;
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
