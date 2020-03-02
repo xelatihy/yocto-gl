@@ -307,14 +307,13 @@ float eval_phasefunction(float cos_theta, float g) {
 }
 
 // Evaluate a diffuse BRDF lobe
-inline vec3f eval_diffuse_reflection(const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_diffuse_reflection(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   return vec3f{1} / pif * dot(normal, incoming);
 }
-inline vec3f eval_microfacet_reflection(float ior,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline vec3f eval_microfacet_reflection(float ior, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
@@ -324,21 +323,19 @@ inline vec3f eval_microfacet_reflection(float ior,
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
-inline vec3f eval_microfacet_reflection(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
+    float roughness, const vec3f& normal, const vec3f& outgoing,
+    const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, dot(halfway, outgoing));
   auto D       = eval_microfacetD(roughness, normal, halfway);
   auto G = eval_microfacetG(roughness, normal, halfway, outgoing, incoming);
-  return F * D * G /
-         (4 * dot(normal, outgoing) * dot(normal, incoming)) *
+  return F * D * G / (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
-inline vec3f eval_microfacet_transmission(float ior,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline vec3f eval_microfacet_transmission(float ior, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   auto ir        = reflect(-incoming, up_normal);
@@ -351,9 +348,8 @@ inline vec3f eval_microfacet_transmission(float ior,
          abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
          abs(dot(normal, incoming));
 }
-inline vec3f eval_microfacet_refraction(float ior,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+inline vec3f eval_microfacet_refraction(float ior, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
@@ -1968,23 +1964,27 @@ static vec3f eval_brdfcos(const trace_point& point) {
 
   // accumulate the lobes
   auto brdfcos = zero3f;
-  if(point.diffuse)
-  brdfcos += point.diffuse * eval_diffuse_reflection(normal, outgoing, incoming);
-  if(point.specular)
-  brdfcos += point.specular * eval_microfacet_reflection(
-      point.ior, point.roughness, normal, outgoing, incoming);
-  if(point.metal)
-  brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
-      point.roughness, normal, outgoing, incoming);
-  if(point.coat)
-  brdfcos += point.coat * eval_microfacet_reflection(
-      coat_ior, coat_roughness, normal, outgoing, incoming);
-  if(point.transmission)
-  brdfcos += point.transmission * eval_microfacet_transmission(point.ior,
-      point.roughness, normal, outgoing, incoming);
-  if(point.refraction)
-  brdfcos += point.refraction * eval_microfacet_refraction(
-      point.ior, point.roughness, normal, outgoing, incoming);
+  if (point.diffuse)
+    brdfcos += point.diffuse *
+               eval_diffuse_reflection(normal, outgoing, incoming);
+  if (point.specular)
+    brdfcos += point.specular * eval_microfacet_reflection(point.ior,
+                                    point.roughness, normal, outgoing,
+                                    incoming);
+  if (point.metal)
+    brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
+                                 point.roughness, normal, outgoing, incoming);
+  if (point.coat)
+    brdfcos += point.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
+                                normal, outgoing, incoming);
+  if (point.transmission)
+    brdfcos += point.transmission * eval_microfacet_transmission(point.ior,
+                                        point.roughness, normal, outgoing,
+                                        incoming);
+  if (point.refraction)
+    brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
+                                      point.roughness, normal, outgoing,
+                                      incoming);
   return brdfcos;
 }
 
@@ -2146,27 +2146,37 @@ static float sample_brdf_pdf(const trace_point& point) {
   auto pdf = 0.0f;
 
   if (point.diffuse_pdf) {
-    pdf += point.diffuse_pdf * sample_diffuse_reflection_pdf(normal, outgoing, incoming);
+    pdf += point.diffuse_pdf *
+           sample_diffuse_reflection_pdf(normal, outgoing, incoming);
   }
 
   if (point.specular_pdf && !point.refraction_pdf) {
-    pdf += point.specular_pdf * sample_microfacet_reflection_pdf(point.ior, point.roughness, normal, outgoing, incoming);
+    pdf += point.specular_pdf * sample_microfacet_reflection_pdf(point.ior,
+                                    point.roughness, normal, outgoing,
+                                    incoming);
   }
 
   if (point.metal_pdf) {
-    pdf += point.metal_pdf * sample_microfacet_reflection_pdf(point.meta, point.metak, point.roughness, normal, outgoing, incoming);
+    pdf += point.metal_pdf * sample_microfacet_reflection_pdf(point.meta,
+                                 point.metak, point.roughness, normal, outgoing,
+                                 incoming);
   }
 
   if (point.coat_pdf) {
-    pdf += point.coat_pdf * sample_microfacet_reflection_pdf(coat_ior, coat_roughness, normal, outgoing, incoming);
+    pdf += point.coat_pdf * sample_microfacet_reflection_pdf(coat_ior,
+                                coat_roughness, normal, outgoing, incoming);
   }
 
   if (point.transmission_pdf) {
-    pdf += point.transmission_pdf * sample_microfacet_transmission_pdf(point.ior, point.roughness, normal, outgoing, incoming);
+    pdf += point.transmission_pdf *
+           sample_microfacet_transmission_pdf(
+               point.ior, point.roughness, normal, outgoing, incoming);
   }
 
   if (point.refraction_pdf) {
-    pdf += point.refraction_pdf * sample_microfacet_refraction_pdf(point.ior, point.roughness, normal, outgoing, incoming);
+    pdf += point.refraction_pdf * sample_microfacet_refraction_pdf(point.ior,
+                                      point.roughness, normal, outgoing,
+                                      incoming);
   }
 
   return pdf;
