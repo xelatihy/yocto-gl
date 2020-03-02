@@ -4244,8 +4244,8 @@ inline std::pair<vec3f, vec3f> edgetint_to_eta(
 }
 
 // Evaluate microfacet distribution
-inline float microfacet_distribution(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx) {
+inline float microfacet_distribution(
+    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine = dot(normal, halfway);
@@ -4336,8 +4336,8 @@ inline vec3f sample_microfacet(
 }
 
 // Pdf for microfacet distribution sampling.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx) {
+inline float sample_microfacet_pdf(
+    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;

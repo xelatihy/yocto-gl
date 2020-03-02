@@ -94,7 +94,8 @@ static std::pair<float, int> sample_distance(
     return {-log(rd) / density_channel, channel};
 }
 
-static float sample_distance_pdf(const vec3f& density, float distance, int channel) {
+static float sample_distance_pdf(
+    const vec3f& density, float distance, int channel) {
   auto density_channel = density[channel];
   return exp(-density_channel * distance);
 }
