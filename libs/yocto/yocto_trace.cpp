@@ -468,26 +468,24 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
   }
 }
 
-
 // Evaluate a diffuse BRDF lobe
-inline vec3f eval_delta_reflection(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
 }
 inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   return fresnel_conductor(eta, etak, dot(normal, outgoing));
 }
-inline vec3f eval_delta_transmission(float ior,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
   return vec3f{1};
 }
-inline vec3f eval_delta_refraction(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
   } else {
@@ -496,24 +494,23 @@ inline vec3f eval_delta_refraction(float ior,
 }
 
 // Sample a diffuse BRDF lobe
-inline vec3f sample_delta_reflection(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+inline vec3f sample_delta_reflection(
+    float ior, const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
 inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn) {
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
-inline vec3f sample_delta_transmission(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+inline vec3f sample_delta_transmission(
+    float ior, const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return -outgoing;
 }
-inline vec3f sample_delta_refraction(float ior, 
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+inline vec3f sample_delta_refraction(float ior, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (rnl < fresnel_dielectric(ior, dot(normal, outgoing))) {
     return reflect(outgoing, up_normal);
@@ -524,24 +521,23 @@ inline vec3f sample_delta_refraction(float ior,
 }
 
 // Sample a diffuse BRDF lobe
-inline float sample_delta_reflection_pdf(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
-  return 1;
-}
-inline float sample_delta_reflection_pdf(const vec3f& eta,
-    const vec3f& etak, const vec3f& normal,
+inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
-inline float sample_delta_transmission_pdf(float ior, 
+inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
+  return 1;
+}
+inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
   return 1;
 }
-inline float sample_delta_refraction_pdf(float ior, 
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return fresnel_dielectric(ior, dot(normal, outgoing));
   } else {
@@ -2045,27 +2041,33 @@ static vec3f eval_brdfcos(const trace_point& point) {
 
   // accumulate the lobes
   auto brdfcos = zero3f;
-  if (point.diffuse)
+  if (point.diffuse) {
     brdfcos += point.diffuse *
                eval_diffuse_reflection(normal, outgoing, incoming);
-  if (point.specular)
+  }
+  if (point.specular) {
     brdfcos += point.specular * eval_microfacet_reflection(point.ior,
                                     point.roughness, normal, outgoing,
                                     incoming);
-  if (point.metal)
+  }
+  if (point.metal) {
     brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
-                                    point.roughness, normal, outgoing, incoming);
-  if (point.coat)
+                                 point.roughness, normal, outgoing, incoming);
+  }
+  if (point.coat) {
     brdfcos += point.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
                                 normal, outgoing, incoming);
-  if (point.transmission)
+  }
+  if (point.transmission) {
     brdfcos += point.transmission * eval_microfacet_transmission(point.ior,
                                         point.roughness, normal, outgoing,
                                         incoming);
-  if (point.refraction)
+  }
+  if (point.refraction) {
     brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
                                       point.roughness, normal, outgoing,
                                       incoming);
+  }
   return brdfcos;
 }
 
@@ -2079,19 +2081,24 @@ static vec3f eval_delta(const trace_point& point) {
   auto brdfcos = zero3f;
 
   if (point.specular && !point.refraction) {
-    brdfcos += point.specular * eval_delta_reflection(point.ior, normal, outgoing, incoming);
+    brdfcos += point.specular *
+               eval_delta_reflection(point.ior, normal, outgoing, incoming);
   }
   if (point.metal) {
-    brdfcos += point.metal * eval_delta_reflection(point.meta, point.metak, normal, outgoing, incoming);
+    brdfcos += point.metal * eval_delta_reflection(point.meta, point.metak,
+                                 normal, outgoing, incoming);
   }
   if (point.coat) {
-    brdfcos += point.coat * eval_delta_reflection(coat_ior, normal, outgoing, incoming);
+    brdfcos += point.coat *
+               eval_delta_reflection(coat_ior, normal, outgoing, incoming);
   }
   if (point.transmission) {
-    brdfcos += point.transmission * eval_delta_transmission(point.ior, normal, outgoing, incoming);
+    brdfcos += point.transmission *
+               eval_delta_transmission(point.ior, normal, outgoing, incoming);
   }
   if (point.refraction) {
-    brdfcos += point.refraction  * eval_delta_refraction(point.ior, normal, outgoing, incoming);
+    brdfcos += point.refraction *
+               eval_delta_refraction(point.ior, normal, outgoing, incoming);
   }
 
   return brdfcos;
