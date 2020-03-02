@@ -334,6 +334,50 @@ inline vec3f eval_microfacet_reflection(const vec3f& weight, const vec3f& eta, c
               dot(normal, incoming);
 }
 
+inline vec3f eval_microfacet_transmission(const vec3f& weight, float ior, float roughness, const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if(dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  auto ir      = reflect(-incoming, up_normal);
+  auto halfway = normalize(ir + outgoing);
+  // auto F       = fresnel_schlick(
+  //     point.reflectance, abs(dot(halfway, outgoing)), entering);
+  auto D = eval_microfacetD(roughness, up_normal, halfway);
+  auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, ir);
+  return weight * D * G /
+              abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+              abs(dot(normal, incoming));
+}
+
+inline vec3f eval_microfacet_refraction(const vec3f& weight, float ior, float roughness, const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if(dot(normal, incoming) * dot(normal, outgoing) >= 0) {
+    auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+    auto halfway = normalize(incoming + outgoing);
+    auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
+    auto D       = eval_microfacetD(roughness, up_normal, halfway);
+    auto G       = eval_microfacetG(
+        roughness, up_normal, halfway, outgoing, incoming);
+    return weight * F * D * G /
+               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+               abs(dot(normal, incoming));
+  } else {
+    auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+      auto halfway_vector = dot(outgoing, normal) > 0
+                                ? -(outgoing + ior * incoming)
+                                : (ior * outgoing + incoming);
+      auto halfway = normalize(halfway_vector);
+      // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+      auto F = fresnel_dielectric(ior, dot(normal, outgoing));
+      auto D = eval_microfacetD(roughness, up_normal, halfway);
+      auto G = eval_microfacetG(roughness, up_normal, halfway, outgoing, incoming);
+      auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                      (dot(outgoing, normal) * dot(incoming, normal));
+
+      // [Walter 2007] equation 21
+      return weight * abs(dot_terms) * (1 - F) * D * G /
+                dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
+  }
+}
+
 }  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
@@ -1828,60 +1872,14 @@ static vec3f eval_brdfcos(const trace_point& point) {
   auto& outgoing = point.outgoing;
   auto& incoming = point.incoming;
 
-  auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-  auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
-
-  auto brdfcos = zero3f;
-
   // accumulate the lobes
+  auto brdfcos = zero3f;
   brdfcos += eval_diffuse_reflection(point.diffuse, normal, outgoing, incoming);
   brdfcos += eval_microfacet_reflection(point.specular, point.ior, point.roughness, normal, outgoing, incoming);
   brdfcos += eval_microfacet_reflection(point.metal, point.meta, point.metak, point.roughness, normal, outgoing, incoming);
   brdfcos += eval_microfacet_reflection(point.coat, coat_ior, coat_roughness, normal, outgoing, incoming);
-
-  if (point.transmission != zero3f && !same_hemi) {
-    auto ir      = reflect(-incoming, up_normal);
-    auto halfway = normalize(ir + outgoing);
-    // auto F       = fresnel_schlick(
-    //     point.reflectance, abs(dot(halfway, outgoing)), entering);
-    auto D = eval_microfacetD(point.roughness, up_normal, halfway);
-    auto G = eval_microfacetG(
-        point.roughness, up_normal, halfway, outgoing, ir);
-    brdfcos += point.transmission * D * G /
-               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-               abs(dot(normal, incoming));
-  }
-
-  if (point.refraction != zero3f && !same_hemi) {
-    auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + point.ior * incoming)
-                              : (point.ior * outgoing + incoming);
-    auto halfway = normalize(halfway_vector);
-    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(point.ior, dot(normal, outgoing));
-    auto D = eval_microfacetD(point.roughness, up_normal, halfway);
-    auto G = eval_microfacetG(
-        point.roughness, up_normal, halfway, outgoing, incoming);
-
-    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                     (dot(outgoing, normal) * dot(incoming, normal));
-
-    // [Walter 2007] equation 21
-    brdfcos += point.refraction * abs(dot_terms) * (1 - F) * D * G /
-               dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
-  }
-
-  if (point.refraction != zero3f && same_hemi) {
-    auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto D       = eval_microfacetD(point.roughness, up_normal, halfway);
-    auto G       = eval_microfacetG(
-        point.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += point.refraction * F * D * G /
-               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-               abs(dot(normal, incoming));
-  }
-
+  brdfcos += eval_microfacet_transmission(point.transmission, point.ior, point.roughness, normal, outgoing, incoming);
+  brdfcos += eval_microfacet_refraction(point.refraction, point.ior, point.roughness, normal, outgoing, incoming);
   return brdfcos;
 }
 
