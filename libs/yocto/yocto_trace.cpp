@@ -1973,7 +1973,7 @@ static vec3f eval_brdfcos(const trace_point& point) {
                                     incoming);
   if (point.metal)
     brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
-                                 point.roughness, normal, outgoing, incoming);
+                                    point.roughness, normal, outgoing, incoming);
   if (point.coat)
     brdfcos += point.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
                                 normal, outgoing, incoming);
