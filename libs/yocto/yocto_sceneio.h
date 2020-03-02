@@ -333,16 +333,6 @@ namespace yocto::sceneio {
 void tesselate_subdivs(scn::model* scene, progress_callback progress_cb = {});
 void tesselate_subdiv(scn::model* scene, scn::subdiv* subdiv);
 
-// Update node transforms. Eventually this will be deprecated as we do not
-// support animation in this manner long term.
-void update_transforms(
-    scn::model* scene, float time = 0, const std::string& anim_group = "");
-
-// TODO: remove
-inline vec3f eta_to_reflectivity(float eta) {
-  return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
-}
-
 }  // namespace yocto::sceneio
 
 #endif
