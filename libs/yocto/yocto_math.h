@@ -98,11 +98,12 @@
 //
 // We include a few functions to help writing shaders for path tracing.
 //
-// 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the 
-//    fresnel term for dielectrics or conductors; use `fresnel_schlick()` for 
+// 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the
+//    fresnel term for dielectrics or conductors; use `fresnel_schlick()` for
 //    the Schlick fresnel approximation
-// 2. use `eta_to_reflectivity()` and `reflective_to_eta()` to convert eta to 
-//    reflectivity and vice-versa; use `eta_to_edgetint()` and `edgetint_to_eta()`
+// 2. use `eta_to_reflectivity()` and `reflective_to_eta()` to convert eta to
+//    reflectivity and vice-versa; use `eta_to_edgetint()` and
+//    `edgetint_to_eta()`
 //
 //
 // ## Monte Carlo helpers
@@ -1474,10 +1475,11 @@ namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(const vec3f& specular, float cosine);
-// Compute the fresnel term for dielectrics. 
+// Compute the fresnel term for dielectrics.
 inline float fresnel_dielectric(float eta, float cosine);
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosine);
+inline vec3f fresnel_conductor(
+    const vec3f& eta, const vec3f& etak, float cosine);
 
 // Convert eta to reflectivity
 inline vec3f eta_to_reflectivity(const vec3f& eta);
@@ -1486,12 +1488,13 @@ inline vec3f reflectivity_to_eta(const vec3f& reflectivity);
 // Convert conductor eta to reflectivity
 inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
 // Convert eta to edge tint parametrization
-inline std::pair<vec3f, vec3f> eta_to_edgetint(const vec3f& eta, const vec3f& etak);
+inline std::pair<vec3f, vec3f> eta_to_edgetint(
+    const vec3f& eta, const vec3f& etak);
 // Convert reflectivity and edge tint to eta.
 inline std::pair<vec3f, vec3f> edgetint_to_eta(
     const vec3f& reflectivity, const vec3f& edgetint);
 
-}
+}  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
@@ -4030,10 +4033,11 @@ namespace yocto::math {
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(const vec3f& specular, float cosine) {
   if (specular == zero3f) return zero3f;
-  return specular + (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
+  return specular +
+         (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
 }
 
-// Compute the fresnel term for dielectrics. 
+// Compute the fresnel term for dielectrics.
 inline float fresnel_dielectric(float eta, float cosw) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
@@ -4059,7 +4063,8 @@ inline float fresnel_dielectric(float eta, float cosw) {
 }
 
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
+inline vec3f fresnel_conductor(
+    const vec3f& eta, const vec3f& etak, float cosw) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   if (cosw <= 0) return zero3f;
@@ -4100,10 +4105,12 @@ inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
          ((eta + 1) * (eta + 1) + etak * etak);
 }
 // Convert eta to edge tint parametrization
-inline std::pair<vec3f, vec3f> eta_to_edgetint(const vec3f& eta, const vec3f& etak) {
-  auto reflectivity     = eta_to_reflectivity(eta, etak);
-  auto numer = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
-  auto denom = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - (1 - reflectivity) / (1 + reflectivity);
+inline std::pair<vec3f, vec3f> eta_to_edgetint(
+    const vec3f& eta, const vec3f& etak) {
+  auto reflectivity = eta_to_reflectivity(eta, etak);
+  auto numer        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
+  auto denom        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) -
+               (1 - reflectivity) / (1 + reflectivity);
   auto edgetint = numer / denom;
   return {reflectivity, edgetint};
 }
@@ -4124,7 +4131,7 @@ inline std::pair<vec3f, vec3f> edgetint_to_eta(
   return {n, k};
 }
 
-}
+}  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
