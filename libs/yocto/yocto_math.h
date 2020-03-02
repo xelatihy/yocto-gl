@@ -166,7 +166,7 @@
 // LICENCE OF INCLUDED SOFTWARE FOR PERLIN NOISE
 // https://github.com/nothings/stb/blob/master/stb_perlin.h
 //
-// ------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // ALTERNATIVE B - Public Domain (www.unlicense.org)
 // This is free and unencumbered software released into the public domain.
 // Anyone is free to copy, modify, publish, use, compile, sell, or distribute
@@ -184,7 +184,7 @@
 // AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// ------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //
 //
 
