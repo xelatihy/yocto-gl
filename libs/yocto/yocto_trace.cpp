@@ -2147,57 +2147,28 @@ static float sample_brdf_pdf(const trace_point& point) {
 
   auto pdf = 0.0f;
 
-  if (point.diffuse_pdf && same_hemi) {
-    pdf += point.diffuse_pdf * sample_hemisphere_cos_pdf(up_normal, incoming);
+  if (point.diffuse_pdf) {
+    pdf += point.diffuse_pdf * sample_diffuse_reflection_pdf(normal, outgoing, incoming);
   }
 
-  if (point.specular_pdf && !point.refraction_pdf && same_hemi) {
-    auto halfway = normalize(incoming + outgoing);
-    pdf += point.specular_pdf *
-           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
-           (4 * abs(dot(outgoing, halfway)));
+  if (point.specular_pdf && !point.refraction_pdf) {
+    pdf += point.specular_pdf * sample_microfacet_reflection_pdf(point.ior, point.roughness, normal, outgoing, incoming);
   }
 
-  if (point.metal_pdf && same_hemi) {
-    auto halfway = normalize(incoming + outgoing);
-    pdf += point.metal_pdf *
-           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
-           (4 * abs(dot(outgoing, halfway)));
+  if (point.metal_pdf) {
+    pdf += point.metal_pdf * sample_microfacet_reflection_pdf(point.meta, point.metak, point.roughness, normal, outgoing, incoming);
   }
 
-  if (point.coat_pdf && same_hemi) {
-    auto halfway = normalize(incoming + outgoing);
-    pdf += point.coat_pdf *
-           sample_microfacet_pdf(coat_roughness, up_normal, halfway) /
-           (4 * abs(dot(outgoing, halfway)));
+  if (point.coat_pdf) {
+    pdf += point.coat_pdf * sample_microfacet_reflection_pdf(coat_ior, coat_roughness, normal, outgoing, incoming);
   }
 
-  if (point.transmission_pdf && !same_hemi) {
-    auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-    auto ir        = reflect(-incoming, up_normal);
-    auto halfway   = normalize(ir + outgoing);
-    auto d         = sample_microfacet_pdf(point.roughness, up_normal, halfway);
-    pdf += point.transmission_pdf * d / (4 * abs(dot(outgoing, halfway)));
+  if (point.transmission_pdf) {
+    pdf += point.transmission_pdf * sample_microfacet_transmission_pdf(point.ior, point.roughness, normal, outgoing, incoming);
   }
 
-  if (point.refraction_pdf && !same_hemi) {
-    auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + point.ior * incoming)
-                              : (point.ior * outgoing + incoming);
-    auto halfway = normalize(halfway_vector);
-    // [Walter 2007] equation 17
-    pdf += point.refraction_pdf *
-           (1 - fresnel_dielectric(point.ior, dot(normal, outgoing))) *
-           sample_microfacet_pdf(point.roughness, up_normal, halfway) *
-           abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
-  }
-
-  if (point.refraction_pdf && same_hemi) {
-    auto halfway = normalize(incoming + outgoing);
-    pdf += point.refraction_pdf *
-           fresnel_dielectric(point.ior, dot(normal, outgoing)) *
-           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
-           (4 * abs(dot(outgoing, halfway)));
+  if (point.refraction_pdf) {
+    pdf += point.refraction_pdf * sample_microfacet_refraction_pdf(point.ior, point.roughness, normal, outgoing, incoming);
   }
 
   return pdf;
