@@ -86,6 +86,8 @@ namespace yocto::trace {
 
 // Evaluate the microfacet distribution
 float microfacet_distribution(float roughness, float cosine, bool ggx = true) {
+  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   if (cosine <= 0) return 0;
   auto roughness2 = roughness * roughness;
   auto cosine2    = cosine * cosine;
@@ -117,27 +119,34 @@ float microfacet_shadowing(float roughness, float cosineo, float cosinei,
       return gi * go;
     } else {
       auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
-                (2 * abs(cosinei));
+                (2 * abs(cosinei)) - 1.0f / 2;
       auto lo = sqrt(cosineo2 + roughness2 - roughness2 * cosineo2) /
-                (2 * abs(cosineo));
-      return 1 / (li + lo);
+                (2 * abs(cosineo)) - 1.0f / 2;
+      return 1 / (1 + li + lo);
     }
   } else {
     if (cosineo * cosineho <= 0) return 0;
     if (cosinei * cosinehi <= 0) return 0;
     if (!height_correlated) {
-      //       auto tangent       = sqrt(tangent_square);
-      // auto inv_rt        = 1 / (roughness * tangent);
-      // auto inv_rt_square = 1 / (roughness_square * tangent_square);
-      // if (inv_rt < 1.6f) {
-      //   return (3.535f * inv_rt + 2.181f * inv_rt_square) /
-      //          (1.0f + 2.276f * inv_rt + 2.577f * inv_rt_square);
-      // } else {
-      //   return 1.0f;
-      // }
-      return 0;  // TODO
+      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
+      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
+      auto gi = ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
+                                (1.0f + 2.276f * ci + 2.577f * ci * ci)
+                          : 1.0f;
+      auto go = co < 1.6f ? (3.535f * co + 2.181f * co * co) /
+                                (1.0f + 2.276f * co + 2.577f * co * co)
+                          : 1.0f;
+      return gi * go;
     } else {
-      return 0;  // TODO
+      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
+      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
+      auto li = ci < 1.6f ? (1 - 1.259f * ci + 0.396f * ci * ci) /
+                                (3.535f * ci + 2.181f * ci * ci)
+                          : 0.0f;
+      auto lo = co < 1.6f ? (1 - 1.259f * co + 0.396f * co * co) /
+                                (3.535f * co + 2.181f * co * co)
+                          : 0.0f;
+      return 1 / (1 + li + lo);
     }
   }
 }
