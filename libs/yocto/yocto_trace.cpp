@@ -2258,28 +2258,21 @@ static float sample_delta_pdf(const trace_point& point) {
   auto& outgoing = point.outgoing;
   auto& incoming = point.incoming;
 
-  auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
-
   auto pdf = 0.0f;
-  if (point.specular_pdf && !point.refraction_pdf && same_hemi) {
-    pdf += point.specular_pdf;
+  if (point.specular_pdf && !point.refraction_pdf) {
+    pdf += point.specular_pdf * sample_delta_reflection_pdf(point.ior, normal, outgoing, incoming);
   }
-  if (point.metal_pdf && same_hemi) {
-    pdf += point.metal_pdf;
+  if (point.metal_pdf) {
+    pdf += point.metal_pdf * sample_delta_reflection_pdf(point.meta, point.metak, normal, outgoing, incoming);
   }
-  if (point.coat_pdf && same_hemi) {
-    pdf += point.coat_pdf;
+  if (point.coat_pdf) {
+    pdf += point.coat_pdf * sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
   }
-  if (point.transmission_pdf && !same_hemi) {
-    pdf += point.transmission_pdf;
+  if (point.transmission_pdf) {
+    pdf += point.transmission_pdf * sample_delta_transmission_pdf(point.ior, normal, outgoing, incoming);
   }
-  if (point.refraction_pdf && !same_hemi) {
-    pdf += point.refraction_pdf *
-           (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
-  }
-  if (point.refraction_pdf && same_hemi) {
-    pdf += point.refraction_pdf *
-           fresnel_dielectric(point.ior, dot(normal, outgoing));
+  if (point.refraction_pdf) {
+    pdf += point.refraction_pdf * sample_delta_refraction_pdf(point.ior, normal, outgoing, incoming);
   }
   return pdf;
 }
