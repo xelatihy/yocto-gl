@@ -2260,19 +2260,24 @@ static float sample_delta_pdf(const trace_point& point) {
 
   auto pdf = 0.0f;
   if (point.specular_pdf && !point.refraction_pdf) {
-    pdf += point.specular_pdf * sample_delta_reflection_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.specular_pdf *
+           sample_delta_reflection_pdf(point.ior, normal, outgoing, incoming);
   }
   if (point.metal_pdf) {
-    pdf += point.metal_pdf * sample_delta_reflection_pdf(point.meta, point.metak, normal, outgoing, incoming);
+    pdf += point.metal_pdf * sample_delta_reflection_pdf(point.meta,
+                                 point.metak, normal, outgoing, incoming);
   }
   if (point.coat_pdf) {
-    pdf += point.coat_pdf * sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
+    pdf += point.coat_pdf *
+           sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
   }
   if (point.transmission_pdf) {
-    pdf += point.transmission_pdf * sample_delta_transmission_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.transmission_pdf *
+           sample_delta_transmission_pdf(point.ior, normal, outgoing, incoming);
   }
   if (point.refraction_pdf) {
-    pdf += point.refraction_pdf * sample_delta_refraction_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.refraction_pdf *
+           sample_delta_refraction_pdf(point.ior, normal, outgoing, incoming);
   }
   return pdf;
 }
