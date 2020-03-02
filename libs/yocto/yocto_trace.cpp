@@ -1999,25 +1999,25 @@ static vec3f eval_delta(const trace_point& point) {
 
   auto brdfcos = zero3f;
 
-  if (point.specular != zero3f && point.refraction == zero3f && same_hemi) {
+  if (point.specular && !point.refraction && same_hemi) {
     brdfcos += point.specular *
                fresnel_dielectric(point.ior, dot(normal, outgoing));
   }
-  if (point.metal != zero3f && same_hemi) {
+  if (point.metal && same_hemi) {
     brdfcos += point.metal * fresnel_conductor(point.meta, point.metak,
                                  dot(normal, outgoing));
   }
-  if (point.coat != zero3f && same_hemi) {
+  if (point.coat && same_hemi) {
     brdfcos += point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
   }
-  if (point.transmission != zero3f && !same_hemi) {
+  if (point.transmission && !same_hemi) {
     brdfcos += point.transmission;
   }
-  if (point.refraction != zero3f && !same_hemi) {
+  if (point.refraction && !same_hemi) {
     brdfcos += point.refraction *
                (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
   }
-  if (point.refraction != zero3f && same_hemi) {
+  if (point.refraction && same_hemi) {
     brdfcos += point.refraction *
                fresnel_dielectric(point.ior, dot(normal, outgoing));
   }
