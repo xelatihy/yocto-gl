@@ -495,22 +495,22 @@ inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
 
 // Sample a diffuse BRDF lobe
 inline vec3f sample_delta_reflection(
-    float ior, const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    float ior, const vec3f& normal, const vec3f& outgoing) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
 inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    const vec3f& normal, const vec3f& outgoing) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
 inline vec3f sample_delta_transmission(
-    float ior, const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+    float ior, const vec3f& normal, const vec3f& outgoing) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   return -outgoing;
 }
-inline vec3f sample_delta_refraction(float ior, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+inline vec3f sample_delta_refraction(
+    float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (rnl < fresnel_dielectric(ior, dot(normal, outgoing))) {
     return reflect(outgoing, up_normal);
@@ -2162,8 +2162,6 @@ static vec3f sample_delta(const trace_point& point, float rnl) {
   auto& normal   = point.normal;
   auto& outgoing = point.outgoing;
 
-  auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-
   // keep a weight sum to pick a lobe
   auto cdf = 0.0f;
   cdf += point.diffuse_pdf;
@@ -2171,43 +2169,35 @@ static vec3f sample_delta(const trace_point& point, float rnl) {
   if (point.specular_pdf && !point.refraction_pdf) {
     cdf += point.specular_pdf;
     if (rnl < cdf) {
-      return reflect(outgoing, up_normal);
+      return sample_delta_reflection(point.ior, normal, outgoing);
     }
   }
 
   if (point.metal_pdf) {
     cdf += point.metal_pdf;
     if (rnl < cdf) {
-      return reflect(outgoing, up_normal);
+      return sample_delta_reflection(point.meta, point.metak, normal, outgoing);
     }
   }
 
   if (point.coat_pdf) {
     cdf += point.coat_pdf;
     if (rnl < cdf) {
-      return reflect(outgoing, up_normal);
+      return sample_delta_reflection(coat_ior, normal, outgoing);
     }
   }
 
   if (point.transmission_pdf) {
     cdf += point.transmission_pdf;
     if (rnl < cdf) {
-      return -outgoing;
+      return sample_delta_transmission(point.ior, normal, outgoing);
     }
   }
 
   if (point.refraction_pdf) {
     cdf += point.refraction_pdf;
     if (rnl < cdf) {
-      // auto nrnl = (rnl - 1 + point.refraction_pdf) /
-      // point.refraction_pdf;
-      auto nrnl = rnl;
-      if (nrnl < fresnel_dielectric(point.ior, dot(normal, outgoing))) {
-        return reflect(outgoing, up_normal);
-      } else {
-        return refract_notir(outgoing, up_normal,
-            dot(normal, outgoing) > 0 ? 1 / point.ior : point.ior);
-      }
+      return sample_delta_refraction(point.ior, normal, outgoing, rnl);
     }
   }
 
@@ -2271,17 +2261,26 @@ static float sample_delta_pdf(const trace_point& point) {
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto pdf = 0.0f;
-  if (point.specular_pdf && !point.refraction_pdf && same_hemi)
+  if (point.specular_pdf && !point.refraction_pdf && same_hemi) {
     pdf += point.specular_pdf;
-  if (point.metal_pdf && same_hemi) pdf += point.metal_pdf;
-  if (point.coat_pdf && same_hemi) pdf += point.coat_pdf;
-  if (point.transmission_pdf && !same_hemi) pdf += point.transmission_pdf;
-  if (point.refraction_pdf && !same_hemi)
+  }
+  if (point.metal_pdf && same_hemi) {
+    pdf += point.metal_pdf;
+  }
+  if (point.coat_pdf && same_hemi) {
+    pdf += point.coat_pdf;
+  }
+  if (point.transmission_pdf && !same_hemi) {
+    pdf += point.transmission_pdf;
+  }
+  if (point.refraction_pdf && !same_hemi) {
     pdf += point.refraction_pdf *
            (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
-  if (point.refraction_pdf && same_hemi)
+  }
+  if (point.refraction_pdf && same_hemi) {
     pdf += point.refraction_pdf *
            fresnel_dielectric(point.ior, dot(normal, outgoing));
+  }
   return pdf;
 }
 
