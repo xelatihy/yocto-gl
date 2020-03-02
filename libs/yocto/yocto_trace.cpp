@@ -2035,38 +2035,35 @@ static vec3f eval_volemission(const volume_point& point) {
 static vec3f eval_brdfcos(const trace_point& point) {
   if (!point.roughness) return zero3f;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-  auto& incoming = point.incoming;
-
   // accumulate the lobes
   auto brdfcos = zero3f;
   if (point.diffuse) {
-    brdfcos += point.diffuse *
-               eval_diffuse_reflection(normal, outgoing, incoming);
+    brdfcos += point.diffuse * eval_diffuse_reflection(point.normal,
+                                   point.outgoing, point.incoming);
   }
   if (point.specular) {
     brdfcos += point.specular * eval_microfacet_reflection(point.ior,
-                                    point.roughness, normal, outgoing,
-                                    incoming);
+                                    point.roughness, point.normal,
+                                    point.outgoing, point.incoming);
   }
   if (point.metal) {
     brdfcos += point.metal * eval_microfacet_reflection(point.meta, point.metak,
-                                 point.roughness, normal, outgoing, incoming);
+                                 point.roughness, point.normal, point.outgoing,
+                                 point.incoming);
   }
   if (point.coat) {
     brdfcos += point.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
-                                normal, outgoing, incoming);
+                                point.normal, point.outgoing, point.incoming);
   }
   if (point.transmission) {
     brdfcos += point.transmission * eval_microfacet_transmission(point.ior,
-                                        point.roughness, normal, outgoing,
-                                        incoming);
+                                        point.roughness, point.normal,
+                                        point.outgoing, point.incoming);
   }
   if (point.refraction) {
     brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
-                                      point.roughness, normal, outgoing,
-                                      incoming);
+                                      point.roughness, point.normal,
+                                      point.outgoing, point.incoming);
   }
   return brdfcos;
 }
@@ -2074,31 +2071,28 @@ static vec3f eval_brdfcos(const trace_point& point) {
 static vec3f eval_delta(const trace_point& point) {
   if (point.roughness) return zero3f;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-  auto& incoming = point.incoming;
-
   auto brdfcos = zero3f;
 
   if (point.specular && !point.refraction) {
-    brdfcos += point.specular *
-               eval_delta_reflection(point.ior, normal, outgoing, incoming);
+    brdfcos += point.specular * eval_delta_reflection(point.ior, point.normal,
+                                    point.outgoing, point.incoming);
   }
   if (point.metal) {
     brdfcos += point.metal * eval_delta_reflection(point.meta, point.metak,
-                                 normal, outgoing, incoming);
+                                 point.normal, point.outgoing, point.incoming);
   }
   if (point.coat) {
-    brdfcos += point.coat *
-               eval_delta_reflection(coat_ior, normal, outgoing, incoming);
+    brdfcos += point.coat * eval_delta_reflection(coat_ior, point.normal,
+                                point.outgoing, point.incoming);
   }
   if (point.transmission) {
-    brdfcos += point.transmission *
-               eval_delta_transmission(point.ior, normal, outgoing, incoming);
+    brdfcos += point.transmission * eval_delta_transmission(point.ior,
+                                        point.normal, point.outgoing,
+                                        point.incoming);
   }
   if (point.refraction) {
-    brdfcos += point.refraction *
-               eval_delta_refraction(point.ior, normal, outgoing, incoming);
+    brdfcos += point.refraction * eval_delta_refraction(point.ior, point.normal,
+                                      point.outgoing, point.incoming);
   }
 
   return brdfcos;
@@ -2108,49 +2102,47 @@ static vec3f eval_delta(const trace_point& point) {
 static vec3f sample_brdf(const trace_point& point, float rnl, const vec2f& rn) {
   if (!point.roughness) return zero3f;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-
   auto cdf = 0.0f;
 
   if (point.diffuse_pdf) {
     cdf += point.diffuse_pdf;
-    if (rnl < cdf) return sample_diffuse_reflection(normal, outgoing, rn);
+    if (rnl < cdf)
+      return sample_diffuse_reflection(point.normal, point.outgoing, rn);
   }
 
   if (point.specular_pdf && !point.refraction_pdf) {
     cdf += point.specular_pdf;
     if (rnl < cdf)
       return sample_microfacet_reflection(
-          point.ior, point.roughness, normal, outgoing, rn);
+          point.ior, point.roughness, point.normal, point.outgoing, rn);
   }
 
   if (point.metal_pdf) {
     cdf += point.metal_pdf;
     if (rnl < cdf)
-      return sample_microfacet_reflection(
-          point.meta, point.metak, point.roughness, normal, outgoing, rn);
+      return sample_microfacet_reflection(point.meta, point.metak,
+          point.roughness, point.normal, point.outgoing, rn);
   }
 
   if (point.coat_pdf) {
     cdf += point.coat_pdf;
     if (rnl < cdf)
       return sample_microfacet_reflection(
-          coat_ior, coat_roughness, normal, outgoing, rn);
+          coat_ior, coat_roughness, point.normal, point.outgoing, rn);
   }
 
   if (point.transmission_pdf) {
     cdf += point.transmission_pdf;
     if (rnl < cdf)
       return sample_microfacet_transmission(
-          point.ior, point.roughness, normal, outgoing, rn);
+          point.ior, point.roughness, point.normal, point.outgoing, rn);
   }
 
   if (point.refraction_pdf) {
     cdf += point.refraction_pdf;
     if (rnl < cdf)
       return sample_microfacet_refraction(
-          point.ior, point.roughness, normal, outgoing, rnl, rn);
+          point.ior, point.roughness, point.normal, point.outgoing, rnl, rn);
   }
 
   return zero3f;
@@ -2159,9 +2151,6 @@ static vec3f sample_brdf(const trace_point& point, float rnl, const vec2f& rn) {
 static vec3f sample_delta(const trace_point& point, float rnl) {
   if (point.roughness) return zero3f;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-
   // keep a weight sum to pick a lobe
   auto cdf = 0.0f;
   cdf += point.diffuse_pdf;
@@ -2169,35 +2158,37 @@ static vec3f sample_delta(const trace_point& point, float rnl) {
   if (point.specular_pdf && !point.refraction_pdf) {
     cdf += point.specular_pdf;
     if (rnl < cdf) {
-      return sample_delta_reflection(point.ior, normal, outgoing);
+      return sample_delta_reflection(point.ior, point.normal, point.outgoing);
     }
   }
 
   if (point.metal_pdf) {
     cdf += point.metal_pdf;
     if (rnl < cdf) {
-      return sample_delta_reflection(point.meta, point.metak, normal, outgoing);
+      return sample_delta_reflection(
+          point.meta, point.metak, point.normal, point.outgoing);
     }
   }
 
   if (point.coat_pdf) {
     cdf += point.coat_pdf;
     if (rnl < cdf) {
-      return sample_delta_reflection(coat_ior, normal, outgoing);
+      return sample_delta_reflection(coat_ior, point.normal, point.outgoing);
     }
   }
 
   if (point.transmission_pdf) {
     cdf += point.transmission_pdf;
     if (rnl < cdf) {
-      return sample_delta_transmission(point.ior, normal, outgoing);
+      return sample_delta_transmission(point.ior, point.normal, point.outgoing);
     }
   }
 
   if (point.refraction_pdf) {
     cdf += point.refraction_pdf;
     if (rnl < cdf) {
-      return sample_delta_refraction(point.ior, normal, outgoing, rnl);
+      return sample_delta_refraction(
+          point.ior, point.normal, point.outgoing, rnl);
     }
   }
 
@@ -2208,44 +2199,41 @@ static vec3f sample_delta(const trace_point& point, float rnl) {
 static float sample_brdf_pdf(const trace_point& point) {
   if (!point.roughness) return 0;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-  auto& incoming = point.incoming;
-
   auto pdf = 0.0f;
 
   if (point.diffuse_pdf) {
-    pdf += point.diffuse_pdf *
-           sample_diffuse_reflection_pdf(normal, outgoing, incoming);
+    pdf += point.diffuse_pdf * sample_diffuse_reflection_pdf(point.normal,
+                                   point.outgoing, point.incoming);
   }
 
   if (point.specular_pdf && !point.refraction_pdf) {
     pdf += point.specular_pdf * sample_microfacet_reflection_pdf(point.ior,
-                                    point.roughness, normal, outgoing,
-                                    incoming);
+                                    point.roughness, point.normal,
+                                    point.outgoing, point.incoming);
   }
 
   if (point.metal_pdf) {
     pdf += point.metal_pdf * sample_microfacet_reflection_pdf(point.meta,
-                                 point.metak, point.roughness, normal, outgoing,
-                                 incoming);
+                                 point.metak, point.roughness, point.normal,
+                                 point.outgoing, point.incoming);
   }
 
   if (point.coat_pdf) {
     pdf += point.coat_pdf * sample_microfacet_reflection_pdf(coat_ior,
-                                coat_roughness, normal, outgoing, incoming);
+                                coat_roughness, point.normal, point.outgoing,
+                                point.incoming);
   }
 
   if (point.transmission_pdf) {
     pdf += point.transmission_pdf *
-           sample_microfacet_transmission_pdf(
-               point.ior, point.roughness, normal, outgoing, incoming);
+           sample_microfacet_transmission_pdf(point.ior, point.roughness,
+               point.normal, point.outgoing, point.incoming);
   }
 
   if (point.refraction_pdf) {
     pdf += point.refraction_pdf * sample_microfacet_refraction_pdf(point.ior,
-                                      point.roughness, normal, outgoing,
-                                      incoming);
+                                      point.roughness, point.normal,
+                                      point.outgoing, point.incoming);
   }
 
   return pdf;
@@ -2254,30 +2242,30 @@ static float sample_brdf_pdf(const trace_point& point) {
 static float sample_delta_pdf(const trace_point& point) {
   if (point.roughness) return 0;
 
-  auto& normal   = point.normal;
-  auto& outgoing = point.outgoing;
-  auto& incoming = point.incoming;
-
   auto pdf = 0.0f;
   if (point.specular_pdf && !point.refraction_pdf) {
-    pdf += point.specular_pdf *
-           sample_delta_reflection_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.specular_pdf * sample_delta_reflection_pdf(point.ior,
+                                    point.normal, point.outgoing,
+                                    point.incoming);
   }
   if (point.metal_pdf) {
     pdf += point.metal_pdf * sample_delta_reflection_pdf(point.meta,
-                                 point.metak, normal, outgoing, incoming);
+                                 point.metak, point.normal, point.outgoing,
+                                 point.incoming);
   }
   if (point.coat_pdf) {
-    pdf += point.coat_pdf *
-           sample_delta_reflection_pdf(coat_ior, normal, outgoing, incoming);
+    pdf += point.coat_pdf * sample_delta_reflection_pdf(coat_ior, point.normal,
+                                point.outgoing, point.incoming);
   }
   if (point.transmission_pdf) {
-    pdf += point.transmission_pdf *
-           sample_delta_transmission_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.transmission_pdf * sample_delta_transmission_pdf(point.ior,
+                                        point.normal, point.outgoing,
+                                        point.incoming);
   }
   if (point.refraction_pdf) {
-    pdf += point.refraction_pdf *
-           sample_delta_refraction_pdf(point.ior, normal, outgoing, incoming);
+    pdf += point.refraction_pdf * sample_delta_refraction_pdf(point.ior,
+                                      point.normal, point.outgoing,
+                                      point.incoming);
   }
   return pdf;
 }
