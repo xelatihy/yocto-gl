@@ -1474,12 +1474,14 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
-inline vec3f fresnel_schlick(const vec3f& specular, float cosine);
+inline vec3f fresnel_schlick(
+    const vec3f& specular, const vec3f& normal, const vec3f& incoming);
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(float eta, float cosine);
+inline float fresnel_dielectric(
+    float eta, const vec3f& normal, const vec3f& incoming);
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(
-    const vec3f& eta, const vec3f& etak, float cosine);
+inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& incoming);
 
 // Convert eta to reflectivity
 inline vec3f eta_to_reflectivity(const vec3f& eta);
@@ -4031,16 +4033,20 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
-inline vec3f fresnel_schlick(const vec3f& specular, float cosine) {
+inline vec3f fresnel_schlick(
+    const vec3f& specular, const vec3f& normal, const vec3f& incoming) {
   if (specular == zero3f) return zero3f;
+  auto cosine = dot(normal, incoming);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
 }
 
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(float eta, float cosw) {
+inline float fresnel_dielectric(
+    float eta, const vec3f& normal, const vec3f& incoming) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+  auto cosw = dot(normal, incoming);
   if (cosw < 0) {
     eta  = 1 / eta;
     cosw = -cosw;
@@ -4063,10 +4069,11 @@ inline float fresnel_dielectric(float eta, float cosw) {
 }
 
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(
-    const vec3f& eta, const vec3f& etak, float cosw) {
+inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
+    const vec3f& normal, const vec3f& incoming) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+  auto cosw = dot(normal, incoming);
   if (cosw <= 0) return zero3f;
   // if (etak == zero3f) return fresnel_dielectric(eta, cosw);
 

@@ -85,7 +85,8 @@ using math::zero4i;
 namespace yocto::trace {
 
 // Evaluate the microfacet distribution
-float microfacet_distribution(float roughness, const vec3f& normal, const vec3f& halfway, bool ggx = true) {
+float microfacet_distribution(float roughness, const vec3f& normal,
+    const vec3f& halfway, bool ggx = true) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine = dot(normal, halfway);
@@ -101,10 +102,11 @@ float microfacet_distribution(float roughness, const vec3f& normal, const vec3f&
   }
 }
 
-float microfacet_shadowing(float roughness, const vec3f& normal, const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming, bool ggx = true,
-    bool height_correlated = false) {
-  auto cosineo = dot(normal, outgoing);
-  auto cosinei = dot(normal, incoming);
+float microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx = true, bool height_correlated = false) {
+  auto cosineo  = dot(normal, outgoing);
+  auto cosinei  = dot(normal, incoming);
   auto cosineho = dot(halfway, outgoing);
   auto cosinehi = dot(halfway, incoming);
   if (cosineo * cosineho <= 0) return 0;
@@ -123,9 +125,11 @@ float microfacet_shadowing(float roughness, const vec3f& normal, const vec3f& ha
       return gi * go;
     } else {
       auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
-                (2 * abs(cosinei)) - 1.0f / 2;
+                    (2 * abs(cosinei)) -
+                1.0f / 2;
       auto lo = sqrt(cosineo2 + roughness2 - roughness2 * cosineo2) /
-                (2 * abs(cosineo)) - 1.0f / 2;
+                    (2 * abs(cosineo)) -
+                1.0f / 2;
       return 1 / (1 + li + lo);
     }
   } else {
@@ -251,9 +255,9 @@ inline vec3f eval_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
-  auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
+  auto F       = fresnel_dielectric(ior, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
-  auto G       = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
+  auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
   return vec3f{1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
@@ -263,9 +267,9 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
     const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = normalize(incoming + outgoing);
-  auto F       = fresnel_conductor(eta, etak, dot(halfway, outgoing));
+  auto F       = fresnel_conductor(eta, etak, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
-  auto G       = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
+  auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
   return F * D * G / (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
@@ -288,9 +292,10 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(ior, dot(halfway, outgoing));
+    auto F       = fresnel_dielectric(ior, halfway, incoming);
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
-    auto G       = microfacet_shadowing(roughness, up_normal, halfway, outgoing, incoming);
+    auto G       = microfacet_shadowing(
+        roughness, up_normal, halfway, outgoing, incoming);
     return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
@@ -300,9 +305,10 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
                               : (ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, dot(normal, outgoing));
+    auto F = fresnel_dielectric(ior, normal, incoming);
     auto D = microfacet_distribution(roughness, up_normal, halfway);
-    auto G = microfacet_shadowing(roughness, up_normal, halfway, outgoing, incoming);
+    auto G = microfacet_shadowing(
+        roughness, up_normal, halfway, outgoing, incoming);
     auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
                      (dot(outgoing, normal) * dot(incoming, normal));
 
@@ -341,7 +347,7 @@ inline vec3f sample_microfacet_transmission(float ior, float roughness,
 inline vec3f sample_microfacet_refraction(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  if (rnl < fresnel_dielectric(ior, dot(normal, outgoing))) {
+  if (rnl < fresnel_dielectric(ior, normal, outgoing)) {
     auto halfway = sample_microfacet(roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   } else {
@@ -386,7 +392,7 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
-    return fresnel_dielectric(ior, dot(normal, outgoing)) *
+    return fresnel_dielectric(ior, normal, outgoing) *
            sample_microfacet_pdf(roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   } else {
@@ -395,7 +401,7 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
                               : (ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // [Walter 2007] equation 17
-    return (1 - fresnel_dielectric(ior, dot(normal, outgoing))) *
+    return (1 - fresnel_dielectric(ior, normal, outgoing)) *
            sample_microfacet_pdf(roughness, up_normal, halfway) *
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
@@ -405,12 +411,12 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
 inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
+  return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
 }
 inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return fresnel_conductor(eta, etak, dot(normal, outgoing));
+  return fresnel_conductor(eta, etak, normal, outgoing);
 }
 inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -420,9 +426,9 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} * fresnel_dielectric(ior, dot(normal, outgoing));
+    return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
   } else {
-    return vec3f{1} - fresnel_dielectric(ior, dot(normal, outgoing));
+    return vec3f{1} - fresnel_dielectric(ior, normal, outgoing);
   }
 }
 
@@ -445,7 +451,7 @@ inline vec3f sample_delta_transmission(
 inline vec3f sample_delta_refraction(
     float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  if (rnl < fresnel_dielectric(ior, dot(normal, outgoing))) {
+  if (rnl < fresnel_dielectric(ior, normal, outgoing)) {
     return reflect(outgoing, up_normal);
   } else {
     return refract_notir(
@@ -472,9 +478,9 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return fresnel_dielectric(ior, dot(normal, outgoing));
+    return fresnel_dielectric(ior, normal, outgoing);
   } else {
-    return (1 - fresnel_dielectric(ior, dot(normal, outgoing)));
+    return (1 - fresnel_dielectric(ior, normal, outgoing));
   }
 }
 
@@ -856,15 +862,15 @@ static trace_point eval_point(const trc::scene* scene,
   auto weight    = vec3f{1, 1, 1};
   point.emission = weight * emission;
   point.coat     = weight * coat;
-  weight *= 1 - point.coat * fresnel_dielectric(
-                                 coat_ior, dot(point.outgoing, point.normal));
+  weight *= 1 - point.coat *
+                    fresnel_dielectric(coat_ior, point.outgoing, point.normal);
   point.metal = weight * metallic;
   weight *= 1 - metallic;
   point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - (thin ? 0 : transmission);
   point.specular = weight * specular;
-  weight *= 1 - specular *
-                    fresnel_dielectric(ior, dot(point.outgoing, point.normal));
+  weight *= 1 -
+            specular * fresnel_dielectric(ior, point.outgoing, point.normal);
   point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
   point.diffuse   = weight * base;
@@ -886,13 +892,12 @@ static trace_point eval_point(const trc::scene* scene,
 
   // weights
   point.diffuse_pdf  = max(point.diffuse);
-  point.specular_pdf = max(
-      point.specular *
-      fresnel_dielectric(point.ior, dot(point.outgoing, point.normal)));
+  point.specular_pdf = max(point.specular * fresnel_dielectric(point.ior,
+                                                point.normal, point.outgoing));
   point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
-                                          dot(point.outgoing, point.normal)));
-  point.coat_pdf  = max(point.coat * fresnel_dielectric(coat_ior,
-                                        dot(point.outgoing, point.normal)));
+                                          point.normal, point.outgoing));
+  point.coat_pdf  = max(
+      point.coat * fresnel_dielectric(coat_ior, point.normal, point.outgoing));
   point.transmission_pdf = max(point.transmission);
   point.refraction_pdf   = max(point.refraction);
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
