@@ -1513,7 +1513,7 @@ inline float microfacet_distribution(float roughness, const vec3f& normal,
 // Evaluates the microfacet shadowing.
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true, bool height_correlated = false);
+    bool ggx = true);
 
 // Samples a microfacet distribution.
 inline vec3f sample_microfacet(
@@ -4274,63 +4274,33 @@ inline float microfacet_distribution(
 }
 
 // Evaluate the microfacet shadowing1
+inline float microfacet_shadowing1(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& direction,
+    bool ggx) {
+  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  auto cosine  = dot(normal, direction);
+  auto cosineh = dot(halfway, direction);
+  if (cosine * cosineh <= 0) return 0;
+  auto roughness2 = roughness * roughness;
+  auto cosine2   = cosine * cosine;
+  if (ggx) {
+    return 2 * abs(cosine) /
+          (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
+  } else {
+    auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
+    return ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
+                              (1.0f + 2.276f * ci + 2.577f * ci * ci)
+                        : 1.0f;
+  }
+}
 
 // Evaluate microfacet shadowing
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx, bool height_correlated) {
-  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
-  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
-  auto cosineo  = dot(normal, outgoing);
-  auto cosinei  = dot(normal, incoming);
-  auto cosineho = dot(halfway, outgoing);
-  auto cosinehi = dot(halfway, incoming);
-  if (cosineo * cosineho <= 0) return 0;
-  if (cosinei * cosinehi <= 0) return 0;
-  if (ggx) {
-    auto roughness2 = roughness * roughness;
-    auto cosinei2   = cosinei * cosinei;
-    auto cosineo2   = cosineo * cosineo;
-    if (!height_correlated) {
-      auto gi =
-          2 * abs(cosinei) /
-          (abs(cosinei) + sqrt(cosinei2 - roughness2 * cosinei2 + roughness2));
-      auto go =
-          2 * abs(cosineo) /
-          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness2));
-      return gi * go;
-    } else {
-      auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
-                    (2 * abs(cosinei)) -
-                1.0f / 2;
-      auto lo = sqrt(cosineo2 + roughness2 - roughness2 * cosineo2) /
-                    (2 * abs(cosineo)) -
-                1.0f / 2;
-      return 1 / (1 + li + lo);
-    }
-  } else {
-    if (!height_correlated) {
-      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
-      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
-      auto gi = ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
-                                (1.0f + 2.276f * ci + 2.577f * ci * ci)
-                          : 1.0f;
-      auto go = co < 1.6f ? (3.535f * co + 2.181f * co * co) /
-                                (1.0f + 2.276f * co + 2.577f * co * co)
-                          : 1.0f;
-      return gi * go;
-    } else {
-      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
-      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
-      auto li = ci < 1.6f ? (1 - 1.259f * ci + 0.396f * ci * ci) /
-                                (3.535f * ci + 2.181f * ci * ci)
-                          : 0.0f;
-      auto lo = co < 1.6f ? (1 - 1.259f * co + 0.396f * co * co) /
-                                (3.535f * co + 2.181f * co * co)
-                          : 0.0f;
-      return 1 / (1 + li + lo);
-    }
-  }
+    bool ggx) {
+  return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) * 
+    microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet ditribution.
@@ -4399,18 +4369,9 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, bool ggx) {
   if (dot(normal, halfway) < 0) return 0;
   if (dot(halfway, outgoing) < 0) return 0;
-  auto go = 0.0;
-  if (ggx) {
-    auto cosineo    = dot(normal, outgoing);
-    auto cosineo2   = cosineo * cosineo;
-    auto roughness2 = roughness * roughness;
-    go              = 2 * abs(cosineo) /
-         (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness2));
-  } else {
-    throw std::invalid_argument{"not implemented yet"};
-  }
-  return microfacet_distribution(roughness, normal, halfway, ggx) *
-         max(0.0f, dot(halfway, outgoing)) * go / abs(dot(normal, outgoing));
+  return microfacet_distribution(roughness, normal, halfway, ggx) * 
+         microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
+         max(0.0f, dot(halfway, outgoing)) / abs(dot(normal, outgoing));
 }
 
 // Evaluate a diffuse BRDF lobe.
