@@ -96,7 +96,7 @@ struct app_state {
   std::future<void>  loader       = {};
   std::string        status       = "";
   std::string        error        = "";
-  std::atomic<float> progress     = 0.5;
+  std::atomic<float> progress     = 0;
   std::string        loader_error = "";
 
   ~app_state() {

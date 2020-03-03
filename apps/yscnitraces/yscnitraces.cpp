@@ -70,6 +70,9 @@ struct app_state {
   int         render_counter = 0;
   trc::state* render_state   = new trc::state{};
 
+  // status
+  std::atomic<float> progress     = 0;
+
   ~app_state() {
     if (render_state) {
       trc::trace_stop(render_state);
@@ -217,7 +220,10 @@ void reset_display(app_state* app) {
   // start render
   app->render_counter = 0;
   trc::trace_start(
-      app->render_state, app->scene, app->camera, app->params, {},
+      app->render_state, app->scene, app->camera, app->params,
+      [app](const std::string& message, int sample, int nsamples) {
+        app->progress = (float)sample / (float)nsamples;
+      },
       [app](const img::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
@@ -315,6 +321,7 @@ int main(int argc, const char* argv[]) {
     //   edited += 1;
     // }
     auto& tparams = app->params;
+    draw_progressbar(win, "render", app->progress);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
