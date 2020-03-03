@@ -4275,23 +4275,22 @@ inline float microfacet_distribution(
 
 // Evaluate the microfacet shadowing1
 inline float microfacet_shadowing1(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& direction,
-    bool ggx) {
+    const vec3f& halfway, const vec3f& direction, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine  = dot(normal, direction);
   auto cosineh = dot(halfway, direction);
   if (cosine * cosineh <= 0) return 0;
   auto roughness2 = roughness * roughness;
-  auto cosine2   = cosine * cosine;
+  auto cosine2    = cosine * cosine;
   if (ggx) {
     return 2 * abs(cosine) /
-          (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
+           (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
   } else {
     auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
     return ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
-                              (1.0f + 2.276f * ci + 2.577f * ci * ci)
-                        : 1.0f;
+                           (1.0f + 2.276f * ci + 2.577f * ci * ci)
+                     : 1.0f;
   }
 }
 
@@ -4299,8 +4298,8 @@ inline float microfacet_shadowing1(float roughness, const vec3f& normal,
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
     bool ggx) {
-  return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) * 
-    microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
+  return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
+         microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet ditribution.
@@ -4369,7 +4368,7 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, bool ggx) {
   if (dot(normal, halfway) < 0) return 0;
   if (dot(halfway, outgoing) < 0) return 0;
-  return microfacet_distribution(roughness, normal, halfway, ggx) * 
+  return microfacet_distribution(roughness, normal, halfway, ggx) *
          microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
          max(0.0f, dot(halfway, outgoing)) / abs(dot(normal, outgoing));
 }
