@@ -1491,6 +1491,9 @@ inline vec3f fresnel_schlick(
 // Compute the fresnel term for dielectrics.
 inline float fresnel_dielectric(
     float eta, const vec3f& normal, const vec3f& incoming);
+// Compute the fresnel term for dielectrics.
+inline float fresnel_dielectric(float etat,
+    float etai, const vec3f& normal, const vec3f& incoming);
 // Compute the fresnel term for metals.
 inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& incoming);
@@ -4165,11 +4168,7 @@ inline float fresnel_dielectric(
     float eta, const vec3f& normal, const vec3f& incoming) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-  auto cosw = dot(normal, incoming);
-  if (cosw < 0) {
-    eta  = 1 / eta;
-    cosw = -cosw;
-  }
+  auto cosw = abs(dot(normal, incoming));
 
   auto sin2 = 1 - cosw * cosw;
   auto eta2 = eta * eta;
@@ -4187,6 +4186,12 @@ inline float fresnel_dielectric(
   return (rs * rs + rp * rp) / 2;
 }
 
+// Compute the fresnel term for dielectrics.
+inline float fresnel_dielectric(float etat,
+    float etai, const vec3f& normal, const vec3f& incoming) {
+  return fresnel_dielectric(etat/etai, normal, incoming);
+}
+
 // Compute the fresnel term for metals.
 inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& incoming) {
@@ -4194,7 +4199,6 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = dot(normal, incoming);
   if (cosw <= 0) return zero3f;
-  // if (etak == zero3f) return fresnel_dielectric(eta, cosw);
 
   cosw       = clamp(cosw, (float)-1, (float)1);
   auto cos2  = cosw * cosw;
@@ -4393,17 +4397,16 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 // Evaluate a transmission BRDF lobe.
 inline vec3f eval_microfacet_transmission(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
-  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  auto ir        = reflect(-incoming, up_normal);
-  auto halfway   = normalize(ir + outgoing);
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  auto reflected        = reflect(-incoming, normal);
+  auto halfway   = normalize(reflected + outgoing);
   // auto F       = fresnel_schlick(
   //     point.reflectance, abs(dot(halfway, outgoing)), entering);
-  auto D = microfacet_distribution(roughness, up_normal, halfway);
-  auto G = microfacet_shadowing(roughness, up_normal, halfway, outgoing, ir);
+  auto D = microfacet_distribution(roughness, normal, halfway);
+  auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, reflected);
   return vec3f{1} * D * G /
-         abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-         abs(dot(normal, incoming));
+         (4 * dot(normal, outgoing) * dot(normal, reflected)) *
+         (dot(normal, reflected));
 }
 
 // Evaluate a refraction BRDF lobe.
