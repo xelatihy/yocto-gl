@@ -4412,9 +4412,10 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
 // Evaluate a refraction BRDF lobe.
 inline vec3f eval_microfacet_refraction(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  auto entering = dot(normal, incoming) >= 0;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = sign(dot(normal, incoming)) * normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(ior, halfway, incoming);
+    auto F       = fresnel_dielectric(entering ? ior : 1 / ior, halfway, incoming);
     auto D       = microfacet_distribution(roughness, normal, halfway);
     auto G       = microfacet_shadowing(
         roughness, normal, halfway, outgoing, incoming);
@@ -4426,7 +4427,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto etao           = dot(normal, outgoing) >= 0 ? 1 : ior;
     auto halfway        = -normalize(etai * incoming + etao * outgoing);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, halfway, incoming);
+    auto F = fresnel_dielectric(entering ? ior : 1 / ior, halfway, incoming);
     auto D = microfacet_distribution(roughness, normal, halfway);
     auto G = microfacet_shadowing(
         roughness, normal, halfway, outgoing, incoming);
