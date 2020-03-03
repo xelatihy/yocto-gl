@@ -68,6 +68,7 @@ using math::sample_discrete;
 using math::sample_discrete_pdf;
 using math::sample_uniform;
 using math::sample_uniform_pdf;
+using math::sign;
 using math::sin;
 using math::sqrt;
 using math::zero2f;
