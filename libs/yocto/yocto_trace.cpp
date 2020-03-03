@@ -136,36 +136,21 @@ inline vec3f eval_microfacet_refraction_(float ior, float roughness,
     return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
-  } else if(dot(normal, outgoing) >= 0) {
-    auto etai = ior, etao = 1.0f;
-    auto halfway_vector = -(etai * incoming + etao * outgoing);
-    auto halfway = -normalize(etai * incoming + etao * outgoing);
-    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, normal, incoming);
-    auto D = microfacet_distribution(roughness, normal, halfway);
-    auto G = microfacet_shadowing(
-        roughness, normal, halfway, outgoing, incoming);
-    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                     (dot(outgoing, normal) * dot(incoming, normal));
-    // [Walter 2007] equation 21
-    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
-           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
-  } else if(dot(normal, outgoing) < 0) {
-    auto etai = 1.0f, etao = ior;
-    auto halfway_vector = -(etai * incoming + etao * outgoing);
-    auto halfway = -normalize(etai * incoming + etao * outgoing);
-    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, normal, incoming);
-    auto D = microfacet_distribution(roughness, normal, halfway);
-    auto G = microfacet_shadowing(
-        roughness, normal, halfway, outgoing, incoming);
-    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                     (dot(outgoing, normal) * dot(incoming, normal));
-    // [Walter 2007] equation 21
-    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
-           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   } else {
-    return zero3f;
+    auto etai = dot(normal, outgoing) >= 0 ? ior : 1;
+    auto etao = dot(normal, outgoing) >= 0 ? 1 : ior;
+    auto halfway_vector = -(etai * incoming + etao * outgoing);
+    auto halfway = -normalize(etai * incoming + etao * outgoing);
+    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto F = fresnel_dielectric(ior, halfway, incoming);
+    auto D = microfacet_distribution(roughness, normal, halfway);
+    auto G = microfacet_shadowing(
+        roughness, normal, halfway, outgoing, incoming);
+    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                     (dot(outgoing, normal) * dot(incoming, normal));
+    // [Walter 2007] equation 21
+    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
+           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 }
 
