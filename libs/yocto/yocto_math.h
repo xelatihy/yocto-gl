@@ -4598,7 +4598,7 @@ inline vec3f sample_delta_refraction(
   if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing)) {
     return reflect(outgoing, entering ? normal : -normal);
   } else {
-    return refract_notir(outgoing, entering ? normal : -normal, entering ? (1 / ior) : ior);
+    return refract(outgoing, entering ? normal : -normal, entering ? (1 / ior) : ior);
   }
 }
 
