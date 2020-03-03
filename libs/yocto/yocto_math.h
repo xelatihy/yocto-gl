@@ -4411,9 +4411,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
-    auto halfway = entering ? 
-      -normalize(ior * incoming + outgoing):
-       normalize(incoming + ior * outgoing);
+    auto halfway = -normalize(rel_ior * incoming + outgoing) * (entering ? 1 : -1);
     auto F = fresnel_dielectric(rel_ior, halfway, outgoing);
     auto D = microfacet_distribution(roughness, up_normal, halfway);
     auto G = microfacet_shadowing(
@@ -4523,9 +4521,7 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
            sample_microfacet_pdf(roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   } else {
-    auto halfway = entering ? 
-      -normalize(ior * incoming + outgoing):
-       normalize(incoming + ior * outgoing);
+    auto halfway = -normalize(rel_ior * incoming + outgoing) * (entering ? 1 : -1);
     // [Walter 2007] equation 17
     return (1 - fresnel_dielectric(rel_ior, halfway, outgoing)) *
            sample_microfacet_pdf(roughness, up_normal, halfway) * 
