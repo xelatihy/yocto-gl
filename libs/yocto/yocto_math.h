@@ -223,6 +223,7 @@ inline float abs(float a);
 inline float min(float a, float b);
 inline float max(float a, float b);
 inline float clamp(float a, float min, float max);
+inline float sign(float a);
 inline float sqrt(float a);
 inline float sin(float a);
 inline float cos(float a);
@@ -250,6 +251,7 @@ inline int  abs(int a);
 inline int  min(int a, int b);
 inline int  max(int a, int b);
 inline int  clamp(int a, int min, int max);
+inline int sign(int a);
 inline int  pow2(int a);
 inline void swap(int& a, int& b);
 
@@ -1728,6 +1730,7 @@ inline float max(float a, float b) { return (a > b) ? a : b; }
 inline float clamp(float a, float min_, float max_) {
   return min(max(a, min_), max_);
 }
+inline float sign(float a) { return a < 0 ? -1 : 1; }
 inline float sqrt(float a) { return std::sqrt(a); }
 inline float sin(float a) { return std::sin(a); }
 inline float cos(float a) { return std::cos(a); }
@@ -1764,6 +1767,7 @@ inline int  abs(int a) { return a < 0 ? -a : a; }
 inline int  min(int a, int b) { return (a < b) ? a : b; }
 inline int  max(int a, int b) { return (a > b) ? a : b; }
 inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
+inline int sign(int a) { return a < 0 ? -1 : 1; }
 inline int  pow2(int a) { return 1 << a; }
 inline void swap(int& a, int& b) { std::swap(a, b); }
 

@@ -49,6 +49,7 @@ using math::abs;
 using math::acos;
 using math::atan2;
 using math::clamp;
+using math::sign;
 using math::cos;
 using math::exp;
 using math::flt_max;
@@ -126,13 +127,12 @@ static float eval_phasefunction(float cos_theta, float g) {
 // Evaluate a refraction BRDF lobe.
 inline vec3f eval_microfacet_refraction_(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(ior, halfway, outgoing);
-    auto D       = microfacet_distribution(roughness, up_normal, halfway);
+    auto halfway = sign(dot(normal, incoming)) * normalize(incoming + outgoing);
+    auto F       = fresnel_dielectric(ior, halfway, incoming);
+    auto D       = microfacet_distribution(roughness, normal, halfway);
     auto G       = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, incoming);
+        roughness, normal, halfway, outgoing, incoming);
     return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
@@ -141,7 +141,7 @@ inline vec3f eval_microfacet_refraction_(float ior, float roughness,
     auto etao           = dot(normal, outgoing) >= 0 ? 1 : ior;
     auto halfway        = -normalize(etai * incoming + etao * outgoing);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, halfway, outgoing);
+    auto F = fresnel_dielectric(ior, halfway, incoming);
     auto D = microfacet_distribution(roughness, normal, halfway);
     auto G = microfacet_shadowing(
         roughness, normal, halfway, outgoing, incoming);
