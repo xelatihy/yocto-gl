@@ -4552,7 +4552,7 @@ inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
 // Evaluate a delta transmission BRDF lobe.
 inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
   return vec3f{1};
 }
 
@@ -4560,12 +4560,12 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   auto entering = dot(normal, outgoing) >= 0;
+  auto up_normal = entering ? normal : -normal;
+  auto rel_ior = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} *
-           fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing);
+    return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 - fresnel_dielectric(
-                               entering ? ior : (1 / ior), normal, outgoing));
+    return vec3f{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
@@ -4594,11 +4594,12 @@ inline vec3f sample_delta_transmission(
 inline vec3f sample_delta_refraction(
     float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
   auto entering = dot(normal, outgoing) >= 0;
-  if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing)) {
-    return reflect(outgoing, entering ? normal : -normal);
+  auto up_normal = entering ? normal : -normal;
+  auto rel_ior = entering ? ior : (1 / ior);
+  if (rnl < fresnel_dielectric(rel_ior, up_normal, outgoing)) {
+    return reflect(outgoing, up_normal);
   } else {
-    return refract(
-        outgoing, entering ? normal : -normal, entering ? (1 / ior) : ior);
+    return refract(outgoing, up_normal, 1 / rel_ior);
   }
 }
 
@@ -4619,7 +4620,7 @@ inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
 // Pdf for delta transmission BRDF lobe sampling.
 inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
@@ -4627,11 +4628,12 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   auto entering = dot(normal, outgoing) >= 0;
+  auto up_normal = entering ? normal : -normal;
+  auto rel_ior = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing);
+    return fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return (
-        1 - fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing));
+    return (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
