@@ -123,6 +123,54 @@ static float eval_phasefunction(float cos_theta, float g) {
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
+// Evaluate a refraction BRDF lobe.
+inline vec3f eval_microfacet_refraction_(float ior, float roughness,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
+    auto halfway = normalize(incoming + outgoing);
+    auto F       = fresnel_dielectric(ior, halfway, incoming);
+    auto D       = microfacet_distribution(roughness, up_normal, halfway);
+    auto G       = microfacet_shadowing(
+        roughness, up_normal, halfway, outgoing, incoming);
+    return vec3f{1} * F * D * G /
+           abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+           abs(dot(normal, incoming));
+  } else if(dot(normal, outgoing) >= 0) {
+    auto halfway_vector = -(outgoing + ior * incoming);
+    auto halfway = -normalize(outgoing + ior * incoming);
+    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto F = fresnel_dielectric(ior, normal, incoming);
+    auto D = microfacet_distribution(roughness, normal, halfway);
+    auto G = microfacet_shadowing(
+        roughness, normal, halfway, outgoing, incoming);
+    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                     (dot(outgoing, normal) * dot(incoming, normal));
+
+    // [Walter 2007] equation 21
+    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
+           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
+  } else if(dot(normal, outgoing) < 0) {
+    auto halfway_vector = dot(outgoing, normal) > 0
+                              ? -(outgoing + ior * incoming)
+                              : (ior * outgoing + incoming);
+    auto halfway = normalize(halfway_vector);
+    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto F = fresnel_dielectric(ior, normal, incoming);
+    auto D = microfacet_distribution(roughness, up_normal, halfway);
+    auto G = microfacet_shadowing(
+        roughness, up_normal, halfway, outgoing, incoming);
+    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                     (dot(outgoing, normal) * dot(incoming, normal));
+
+    // [Walter 2007] equation 21
+    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
+           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
+  } else {
+    return zero3f;
+  }
+}
+
 }  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
@@ -1638,7 +1686,7 @@ static vec3f eval_brdfcos(const trace_point& point) {
                                         point.outgoing, point.incoming);
   }
   if (point.refraction) {
-    brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
+    brdfcos += point.refraction * eval_microfacet_refraction_(point.ior,
                                       point.roughness, point.normal,
                                       point.outgoing, point.incoming);
   }
