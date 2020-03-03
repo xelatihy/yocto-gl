@@ -429,7 +429,6 @@ inline vec3f orthonormalize(const vec3f& a, const vec3f& b);
 // Reflected and refracted std::vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n);
 inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta);
-inline vec3f refract_notir(const vec3f& w, const vec3f& n, float inv_eta);
 
 // Max element and clamp.
 inline vec3f max(const vec3f& a, float b);
@@ -2004,19 +2003,18 @@ inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
   return normalize(a - b * dot(a, b));
 }
 
-// Reflected and refracted std::vector.
+// Reflected and refracted vector.
 inline vec3f reflect(const vec3f& w, const vec3f& n) {
-  return -w + 2 * dot(n, w) * n;
+  // use abs to make it work on both sides as in [Walter 2007]
+  return -w + 2 * abs(dot(n, w)) * n;
 }
 inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta) {
-  auto k = 1 - inv_eta * inv_eta * max((float)0, 1 - dot(n, w) * dot(n, w));
+  // use sign to make it work on both sides as in [Walter 2007]
+  auto cosine = dot(n, w);
+  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
   if (k < 0) return {0, 0, 0};  // tir
-  return -w * inv_eta + (inv_eta * dot(n, w) - sqrt(k)) * n;
-}
-inline vec3f refract_notir(const vec3f& w, const vec3f& n, float inv_eta) {
-  auto k = 1 - inv_eta * inv_eta * max((float)0, 1 - dot(n, w) * dot(n, w));
-  k      = max(k, 0.001f);
-  return -w * inv_eta + (inv_eta * dot(n, w) - sqrt(k)) * n;
+  return -w * inv_eta +
+         (inv_eta * cosine - sqrt(k) * (cosine >= 0 ? 1 : -1)) * n;
 }
 
 // Max element and clamp.
