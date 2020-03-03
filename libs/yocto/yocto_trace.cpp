@@ -137,8 +137,9 @@ inline vec3f eval_microfacet_refraction_(float ior, float roughness,
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else if(dot(normal, outgoing) >= 0) {
-    auto halfway_vector = -(outgoing + ior * incoming);
-    auto halfway = -normalize(outgoing + ior * incoming);
+    auto etai = ior, etao = 1.0f;
+    auto halfway_vector = -(etai * incoming + etao * outgoing);
+    auto halfway = -normalize(etai * incoming + etao * outgoing);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
     auto F = fresnel_dielectric(ior, normal, incoming);
     auto D = microfacet_distribution(roughness, normal, halfway);
@@ -150,8 +151,9 @@ inline vec3f eval_microfacet_refraction_(float ior, float roughness,
     return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
            dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   } else if(dot(normal, outgoing) < 0) {
-    auto halfway_vector = -(ior * outgoing + incoming);
-    auto halfway = -normalize(ior * outgoing + incoming);
+    auto etai = 1.0f, etao = ior;
+    auto halfway_vector = -(etai * incoming + etao * outgoing);
+    auto halfway = -normalize(etai * incoming + etao * outgoing);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
     auto F = fresnel_dielectric(ior, normal, incoming);
     auto D = microfacet_distribution(roughness, normal, halfway);
