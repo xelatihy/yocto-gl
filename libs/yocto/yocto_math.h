@@ -4412,32 +4412,32 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
 // Evaluate a refraction BRDF lobe.
 inline vec3f eval_microfacet_refraction(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    auto halfway = normalize(incoming + outgoing);
+    auto halfway = sign(dot(normal, incoming)) * normalize(incoming + outgoing);
     auto F       = fresnel_dielectric(ior, halfway, incoming);
-    auto D       = microfacet_distribution(roughness, up_normal, halfway);
+    auto D       = microfacet_distribution(roughness, normal, halfway);
     auto G       = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, incoming);
+        roughness, normal, halfway, outgoing, incoming);
     return vec3f{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
-    auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + ior * incoming)
-                              : (ior * outgoing + incoming);
-    auto halfway = normalize(halfway_vector);
+    auto etai           = dot(normal, outgoing) >= 0 ? ior : 1;
+    auto etao           = dot(normal, outgoing) >= 0 ? 1 : ior;
+    auto halfway        = -normalize(etai * incoming + etao * outgoing);
     // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(ior, normal, incoming);
-    auto D = microfacet_distribution(roughness, up_normal, halfway);
+    auto F = fresnel_dielectric(ior, halfway, incoming);
+    auto D = microfacet_distribution(roughness, normal, halfway);
     auto G = microfacet_shadowing(
-        roughness, up_normal, halfway, outgoing, incoming);
-    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                     (dot(outgoing, normal) * dot(incoming, normal));
-
+        roughness, normal, halfway, outgoing, incoming);
     // [Walter 2007] equation 21
-    return vec3f{1} * abs(dot_terms) * (1 - F) * D * G /
-           dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
+    return vec3f{1} *
+           abs((dot(outgoing, halfway) * dot(incoming, halfway)) /
+               (dot(outgoing, normal) * dot(incoming, normal))) *
+           (1 - F) * D * G / 
+           ((etai * dot(incoming, halfway) + etao * dot(outgoing, halfway)) *
+            (etai * dot(incoming, halfway) + etao * dot(outgoing, halfway))) *
+           abs(dot(normal, incoming));
   }
 }
 
