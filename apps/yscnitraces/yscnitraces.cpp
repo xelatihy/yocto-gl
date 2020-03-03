@@ -53,8 +53,9 @@ struct app_state {
   trc::trace_params params = {};
 
   // scene
-  trc::scene*  scene  = new trc::scene{};
-  trc::camera* camera = nullptr;
+  trc::scene*              scene        = new trc::scene{};
+  trc::camera*             camera       = nullptr;
+  std::vector<std::string> camera_names = {};
 
   // rendering state
   img::image<vec4f> render   = {};
@@ -71,7 +72,7 @@ struct app_state {
   trc::state* render_state   = new trc::state{};
 
   // status
-  std::atomic<float> progress     = 0;
+  std::atomic<float> progress = 0;
 
   ~app_state() {
     if (render_state) {
@@ -213,6 +214,14 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   camera = camera_map.at(iocamera);
 }
 
+// init camera names
+void init_camera_names(std::vector<std::string>& names,
+    const std::vector<sio::camera*>&             iocameras) {
+  for (auto iocamera : iocameras) {
+    names.push_back(iocamera->name);
+  }
+}
+
 void reset_display(app_state* app) {
   // stop render
   trc::trace_stop(app->render_state);
@@ -281,6 +290,9 @@ int main(int argc, const char* argv[]) {
   // conversion
   init_scene(app->scene, ioscene, app->camera, iocamera, cli::print_progress);
 
+  // camera names
+  init_camera_names(app->camera_names, ioscene->cameras);
+
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
@@ -314,14 +326,11 @@ int main(int argc, const char* argv[]) {
     if (app->render_counter > 10) app->render_counter = 0;
   };
   callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
-    auto edited = 0;
-    // if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
-    //   app->camera = get_element(
-    //       app->iocamera, app->ioscene->cameras, app->scene->cameras);
-    //   edited += 1;
-    // }
+    auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->progress);
+    edited += draw_combobox(
+        win, "camera", app->camera, app->scene->cameras, app->camera_names);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(

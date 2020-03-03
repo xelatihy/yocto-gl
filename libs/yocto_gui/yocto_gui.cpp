@@ -2055,9 +2055,10 @@ bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
 }
 
 bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
-    const std::function<const char*(int)>& labels, bool include_null) {
+    const std::function<std::string(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
-  if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
+  if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
+    return false;
   auto old_idx = idx;
   if (include_null) {
     ImGui::PushID(100000);
@@ -2067,7 +2068,7 @@ bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
   }
   for (auto i = 0; i < num; i++) {
     ImGui::PushID(i);
-    if (ImGui::Selectable(labels(i), idx == i)) idx = i;
+    if (ImGui::Selectable(labels(i).c_str(), idx == i)) idx = i;
     if (idx == i) ImGui::SetItemDefaultFocus();
     ImGui::PopID();
   }

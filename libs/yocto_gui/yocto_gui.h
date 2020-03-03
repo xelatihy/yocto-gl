@@ -536,22 +536,8 @@ bool draw_combobox(gui::window* win, const char* lbl, int& idx,
 bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
     const std::vector<std::string>& labels);
 bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
-    const std::function<const char*(int)>& labels, bool include_null = false);
+    const std::function<std::string(int)>& labels, bool include_null = false);
 
-template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
-    const std::vector<T>& vals, bool include_null = false) {
-  return draw_combobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx].name.c_str(); }, include_null);
-}
-template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
-    const std::vector<T*>& vals, bool include_null = false) {
-  return draw_combobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
-}
 template <typename T>
 inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
     const std::vector<T*>& vals, bool include_null = false) {
@@ -559,30 +545,24 @@ inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
   auto edited = draw_combobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return vals[idx]->name; },
+      include_null);
   if (edited) {
     value = idx >= 0 ? vals[idx] : nullptr;
   }
   return edited;
 }
+
 template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl, int& idx,
-    const std::vector<std::shared_ptr<T>>& vals, bool include_null = false) {
-  return draw_combobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
-}
-template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl,
-    std::shared_ptr<T>& value, const std::vector<std::shared_ptr<T>>& vals,
+inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
+    const std::vector<T*>& vals, const std::vector<std::string>& labels,
     bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
   auto edited = draw_combobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
+      win, lbl, idx, (int)vals.size(), [&](int idx) { return labels[idx]; },
+      include_null);
   if (edited) {
     value = idx >= 0 ? vals[idx] : nullptr;
   }
