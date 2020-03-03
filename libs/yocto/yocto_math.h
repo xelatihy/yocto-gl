@@ -4459,8 +4459,8 @@ inline vec3f sample_microfacet_transmission(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
   auto halfway = sample_microfacet(roughness, normal, rn);
-  auto ir      = reflect(outgoing, halfway);
-  return -reflect(ir, normal);
+  auto reflected      = reflect(outgoing, halfway);
+  return -reflect(reflected, normal);
 }
 
 // Sample a refraction BRDF lobe.
@@ -4504,11 +4504,10 @@ inline float sample_microfacet_reflection_pdf(const vec3f& eta,
 // Pdf for transmission BRDF lobe sampling.
 inline float sample_microfacet_transmission_pdf(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
-  auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-  auto ir        = reflect(-incoming, up_normal);
-  auto halfway   = normalize(ir + outgoing);
-  auto d         = sample_microfacet_pdf(roughness, up_normal, halfway);
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
+  auto reflected        = reflect(-incoming, normal);
+  auto halfway   = normalize(reflected + outgoing);
+  auto d         = sample_microfacet_pdf(roughness, normal, halfway);
   return d / (4 * abs(dot(outgoing, halfway)));
 }
 
