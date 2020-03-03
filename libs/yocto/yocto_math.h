@@ -1487,16 +1487,13 @@ namespace yocto::math {
 
 // Schlick approximation of the Fresnel term.
 inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& incoming);
+    const vec3f& specular, const vec3f& normal, const vec3f& outgoing);
 // Compute the fresnel term for dielectrics.
 inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& incoming);
-// Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(float etat,
-    float etai, const vec3f& normal, const vec3f& incoming);
+    float eta, const vec3f& normal, const vec3f& outgoing);
 // Compute the fresnel term for metals.
 inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& incoming);
+    const vec3f& normal, const vec3f& outgoing);
 
 // Convert eta to reflectivity
 inline vec3f eta_to_reflectivity(const vec3f& eta);
@@ -4156,19 +4153,19 @@ namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& incoming) {
+    const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
   if (specular == zero3f) return zero3f;
-  auto cosine = dot(normal, incoming);
+  auto cosine = dot(normal, outgoing);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
 }
 
 // Compute the fresnel term for dielectrics.
 inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& incoming) {
+    float eta, const vec3f& normal, const vec3f& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-  auto cosw = abs(dot(normal, incoming));
+  auto cosw = abs(dot(normal, outgoing));
 
   auto sin2 = 1 - cosw * cosw;
   auto eta2 = eta * eta;
@@ -4186,18 +4183,12 @@ inline float fresnel_dielectric(
   return (rs * rs + rp * rp) / 2;
 }
 
-// Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(float etat,
-    float etai, const vec3f& normal, const vec3f& incoming) {
-  return fresnel_dielectric(etat/etai, normal, incoming);
-}
-
 // Compute the fresnel term for metals.
 inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& incoming) {
+    const vec3f& normal, const vec3f& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-  auto cosw = dot(normal, incoming);
+  auto cosw = dot(normal, outgoing);
   if (cosw <= 0) return zero3f;
 
   cosw       = clamp(cosw, (float)-1, (float)1);
@@ -4571,10 +4562,11 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 // Evaluate a delta refraction BRDF lobe.
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  auto entering = dot(normal, outgoing) >= 0;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
+    return vec3f{1} * fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing);
   } else {
-    return vec3f{1} - fresnel_dielectric(ior, normal, outgoing);
+    return vec3f{1} * (1 - fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing));
   }
 }
 
@@ -4602,12 +4594,11 @@ inline vec3f sample_delta_transmission(
 // Sample a delta refraction BRDF lobe.
 inline vec3f sample_delta_refraction(
     float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
-  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  if (rnl < fresnel_dielectric(ior, normal, outgoing)) {
-    return reflect(outgoing, up_normal);
+  auto entering = dot(normal, outgoing) >= 0;
+  if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), normal, outgoing)) {
+    return reflect(outgoing, entering ? normal : -normal);
   } else {
-    return refract_notir(
-        outgoing, up_normal, dot(normal, outgoing) > 0 ? 1 / ior : ior);
+    return refract_notir(outgoing, entering ? normal : -normal, entering ? (1 / ior) : ior);
   }
 }
 
@@ -4635,10 +4626,11 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 // Pdf for delta refraction BRDF lobe sampling.
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  auto entering = dot(normal, outgoing) >= 0;
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return fresnel_dielectric(ior, normal, outgoing);
+    return fresnel_dielectric(entering ? ior : (1/ior), normal, outgoing);
   } else {
-    return (1 - fresnel_dielectric(ior, normal, outgoing));
+    return (1 - fresnel_dielectric(entering ? ior : (1/ior), normal, outgoing));
   }
 }
 
