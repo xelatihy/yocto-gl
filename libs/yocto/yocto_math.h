@@ -1513,7 +1513,7 @@ inline float microfacet_distribution(float roughness, const vec3f& normal,
 // Evaluates the microfacet shadowing.
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true, bool height_correlated = false);
+    bool ggx = true);
 
 // Samples a microfacet distribution.
 inline vec3f sample_microfacet(
@@ -1521,6 +1521,14 @@ inline vec3f sample_microfacet(
 // Pdf for microfacet distribution sampling.
 inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
     const vec3f& halfway, bool ggx = true);
+
+// Samples a microfacet distribution with the distribution of visible normals.
+inline vec3f sample_microfacet(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn, bool ggx = true);
+// Pdf for microfacet distribution sampling with the distribution of visible
+// normals.
+inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, bool ggx = true);
 
 // Evaluates a diffuse BRDF lobe.
 inline vec3f eval_diffuse_reflection(
@@ -4265,62 +4273,33 @@ inline float microfacet_distribution(
   }
 }
 
+// Evaluate the microfacet shadowing1
+inline float microfacet_shadowing1(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& direction, bool ggx) {
+  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
+  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+  auto cosine  = dot(normal, direction);
+  auto cosineh = dot(halfway, direction);
+  if (cosine * cosineh <= 0) return 0;
+  auto roughness2 = roughness * roughness;
+  auto cosine2    = cosine * cosine;
+  if (ggx) {
+    return 2 * abs(cosine) /
+           (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
+  } else {
+    auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
+    return ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
+                           (1.0f + 2.276f * ci + 2.577f * ci * ci)
+                     : 1.0f;
+  }
+}
+
 // Evaluate microfacet shadowing
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx, bool height_correlated) {
-  // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
-  // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
-  auto cosineo  = dot(normal, outgoing);
-  auto cosinei  = dot(normal, incoming);
-  auto cosineho = dot(halfway, outgoing);
-  auto cosinehi = dot(halfway, incoming);
-  if (cosineo * cosineho <= 0) return 0;
-  if (cosinei * cosinehi <= 0) return 0;
-  if (ggx) {
-    auto roughness2 = roughness * roughness;
-    auto cosinei2   = cosinei * cosinei;
-    auto cosineo2   = cosineo * cosineo;
-    if (!height_correlated) {
-      auto gi =
-          2 * abs(cosinei) /
-          (abs(cosinei) + sqrt(cosinei2 - roughness2 * cosinei2 + roughness));
-      auto go =
-          2 * abs(cosineo) /
-          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness));
-      return gi * go;
-    } else {
-      auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
-                    (2 * abs(cosinei)) -
-                1.0f / 2;
-      auto lo = sqrt(cosineo2 + roughness2 - roughness2 * cosineo2) /
-                    (2 * abs(cosineo)) -
-                1.0f / 2;
-      return 1 / (1 + li + lo);
-    }
-  } else {
-    if (!height_correlated) {
-      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
-      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
-      auto gi = ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
-                                (1.0f + 2.276f * ci + 2.577f * ci * ci)
-                          : 1.0f;
-      auto go = co < 1.6f ? (3.535f * co + 2.181f * co * co) /
-                                (1.0f + 2.276f * co + 2.577f * co * co)
-                          : 1.0f;
-      return gi * go;
-    } else {
-      auto ci = abs(cosinei) / (roughness * sqrt(1 - cosinei * cosinei));
-      auto co = abs(cosineo) / (roughness * sqrt(1 - cosineo * cosineo));
-      auto li = ci < 1.6f ? (1 - 1.259f * ci + 0.396f * ci * ci) /
-                                (3.535f * ci + 2.181f * ci * ci)
-                          : 0.0f;
-      auto lo = co < 1.6f ? (1 - 1.259f * co + 0.396f * co * co) /
-                                (3.535f * co + 2.181f * co * co)
-                          : 0.0f;
-      return 1 / (1 + li + lo);
-    }
-  }
+    bool ggx) {
+  return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
+         microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet ditribution.
@@ -4345,6 +4324,53 @@ inline float sample_microfacet_pdf(
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
+}
+
+// Sample a microfacet ditribution with the distribution of visible normals.
+inline vec3f sample_microfacet(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec2f& rn, bool ggx) {
+  if (ggx) {
+    // move to local coordinate system
+    auto basis   = basis_fromz(normal);
+    auto Ve      = transform_direction(transpose(basis), outgoing);
+    auto alpha_x = roughness, alpha_y = roughness;
+    // Section 3.2: transforming the view direction to the hemisphere
+    // configuration
+    auto Vh = normalize(vec3f{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
+    // Section 4.1: orthonormal basis (with special case if cross product is
+    // zero)
+    auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    auto T1    = lensq > 0 ? vec3f{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
+                        : vec3f{1, 0, 0};
+    auto T2 = cross(Vh, T1);
+    // Section 4.2: parameterization of the projected area
+    auto r   = sqrt(rn.y);
+    auto phi = 2 * pif * rn.x;
+    auto t1  = r * cos(phi);
+    auto t2  = r * sin(phi);
+    auto s   = 0.5f * (1 + Vh.z);
+    t2       = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
+    // Section 4.3: reprojection onto hemisphere
+    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1 - t1 * t1 - t2 * t2)) * Vh;
+    // Section 3.4: transforming the normal back to the ellipsoid configuration
+    auto Ne = normalize(vec3f{alpha_x * Nh.x, alpha_y * Nh.y, max(0.0f, Nh.z)});
+    // move to world coordinate
+    auto local_halfway = Ne;
+    return transform_direction(basis, local_halfway);
+  } else {
+    throw std::invalid_argument{"not implemented yet"};
+  }
+}
+
+// Pdf for microfacet distribution sampling with the distribution of visible
+// normals.
+inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& halfway, const vec3f& outgoing, bool ggx) {
+  if (dot(normal, halfway) < 0) return 0;
+  if (dot(halfway, outgoing) < 0) return 0;
+  return microfacet_distribution(roughness, normal, halfway, ggx) *
+         microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
+         max(0.0f, dot(halfway, outgoing)) / abs(dot(normal, outgoing));
 }
 
 // Evaluate a diffuse BRDF lobe.
@@ -4439,7 +4465,7 @@ inline vec3f sample_diffuse_reflection(
 inline vec3f sample_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
-  auto halfway = sample_microfacet(roughness, normal, rn);
+  auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   return reflect(outgoing, halfway);
 }
 
@@ -4448,7 +4474,7 @@ inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
-  auto halfway = sample_microfacet(roughness, normal, rn);
+  auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   return reflect(outgoing, halfway);
 }
 
@@ -4456,7 +4482,7 @@ inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 inline vec3f sample_microfacet_transmission(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
   if (dot(normal, outgoing) <= 0) return zero3f;
-  auto halfway   = sample_microfacet(roughness, normal, rn);
+  auto halfway   = sample_microfacet(roughness, normal, outgoing, rn);
   auto reflected = reflect(outgoing, halfway);
   return -reflect(reflected, normal);
 }
@@ -4466,7 +4492,7 @@ inline vec3f sample_microfacet_refraction(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
-  auto halfway   = sample_microfacet(roughness, up_normal, rn);
+  auto halfway   = sample_microfacet(roughness, up_normal, outgoing, rn);
   if (rnl < fresnel_dielectric(entering ? ior : (1 / ior), halfway, outgoing)) {
     return reflect(outgoing, halfway);
   } else {
@@ -4486,7 +4512,7 @@ inline float sample_microfacet_reflection_pdf(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
-  return sample_microfacet_pdf(roughness, normal, halfway) /
+  return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
          (4 * abs(dot(outgoing, halfway)));
 }
 
@@ -4496,7 +4522,7 @@ inline float sample_microfacet_reflection_pdf(const vec3f& eta,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
-  return sample_microfacet_pdf(roughness, normal, halfway) /
+  return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
          (4 * abs(dot(outgoing, halfway)));
 }
 
@@ -4506,7 +4532,7 @@ inline float sample_microfacet_transmission_pdf(float ior, float roughness,
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
-  auto d         = sample_microfacet_pdf(roughness, normal, halfway);
+  auto d         = sample_microfacet_pdf(roughness, normal, halfway, outgoing);
   return d / (4 * abs(dot(outgoing, halfway)));
 }
 
@@ -4519,14 +4545,14 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     auto halfway = normalize(incoming + outgoing);
     return fresnel_dielectric(rel_ior, halfway, outgoing) *
-           sample_microfacet_pdf(roughness, up_normal, halfway) /
+           sample_microfacet_pdf(roughness, up_normal, halfway, outgoing) /
            (4 * abs(dot(outgoing, halfway)));
   } else {
     auto halfway = -normalize(rel_ior * incoming + outgoing) *
                    (entering ? 1 : -1);
     // [Walter 2007] equation 17
     return (1 - fresnel_dielectric(rel_ior, halfway, outgoing)) *
-           sample_microfacet_pdf(roughness, up_normal, halfway) *
+           sample_microfacet_pdf(roughness, up_normal, halfway, outgoing) *
            abs(dot(halfway, outgoing)) /
            pow(rel_ior * dot(halfway, incoming) + dot(halfway, outgoing), 2);
   }
