@@ -4265,6 +4265,8 @@ inline float microfacet_distribution(
   }
 }
 
+// Evaluate the microfacet shadowing1
+
 // Evaluate microfacet shadowing
 inline float microfacet_shadowing(float roughness, const vec3f& normal,
     const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
@@ -4284,10 +4286,10 @@ inline float microfacet_shadowing(float roughness, const vec3f& normal,
     if (!height_correlated) {
       auto gi =
           2 * abs(cosinei) /
-          (abs(cosinei) + sqrt(cosinei2 - roughness2 * cosinei2 + roughness));
+          (abs(cosinei) + sqrt(cosinei2 - roughness2 * cosinei2 + roughness2));
       auto go =
           2 * abs(cosineo) /
-          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness));
+          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness2));
       return gi * go;
     } else {
       auto li = sqrt(cosinei2 + roughness2 - roughness2 * cosinei2) /
@@ -4345,6 +4347,59 @@ inline float sample_microfacet_pdf(
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
+}
+
+// Sample a microfacet ditribution with the distribution of visible normals.
+inline vec3f sample_microfacet(
+    float roughness, const vec3f& normal, const vec3f& outgoing, 
+    const vec2f& rn, bool ggx) {
+  if(ggx) {
+    // move to local coordinate system
+    auto basis = basis_fromz(normal);
+    auto Ve = transform_direction(transpose(basis), outgoing);
+    auto alpha_x = roughness, alpha_y = roughness;
+    // Section 3.2: transforming the view direction to the hemisphere configuration
+    auto Vh = normalize(vec3f{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
+    // Section 4.1: orthonormal basis (with special case if cross product is zero)
+    auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    auto T1 = lensq > 0 ? vec3f{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq)) : vec3f{1,0,0};
+    auto T2 = cross(Vh, T1);
+    // Section 4.2: parameterization of the projected area
+    auto r = sqrt(rn.y);
+    auto phi = 2 * pif * rn.x;
+    auto t1 = r * cos(phi);
+    auto t2 = r * sin(phi);
+    auto s = 0.5f * (1 + Vh.z);
+    t2 = (1 - s)*sqrt(1 - t1*t1) + s*t2;
+    // Section 4.3: reprojection onto hemisphere
+    auto Nh = t1*T1 + t2*T2 + sqrt(max(0.0f, 1 - t1*t1 - t2*t2))*Vh;
+    // Section 3.4: transforming the normal back to the ellipsoid configuration
+    auto Ne = normalize(vec3f{alpha_x * Nh.x, alpha_y * Nh.y, max(0.0f, Nh.z)});
+    // move to world coordinate
+    auto local_halfway = Ne;
+    return transform_direction(basis, local_halfway);
+  } else {
+    throw std::invalid_argument{"not implemented yet"};
+  }
+}
+
+// Pdf for microfacet distribution sampling with the distribution of visible normals.
+inline float sample_microfacet_pdf(
+    float roughness, const vec3f& normal, const vec3f& halfway, const vec3f& outgoing, bool ggx) {
+  if (dot(normal, halfway) < 0) return 0;
+  if (dot(halfway, outgoing) < 0) return 0;
+  auto go = 0.0;
+  if(ggx) {
+    auto cosineo = dot(normal, outgoing);
+    auto cosineo2 = cosineo * cosineo;
+    auto roughness2 = roughness * roughness;
+    go =
+          2 * abs(cosineo) /
+          (abs(cosineo) + sqrt(cosineo2 - roughness2 * cosineo2 + roughness2));
+  } else {
+    throw std::invalid_argument{"not implemented yet"};
+  }
+  return microfacet_distribution(roughness, normal, halfway, ggx) * max(0.0f, dot(halfway, outgoing)) * go / abs(dot(normal, outgoing));
 }
 
 // Evaluate a diffuse BRDF lobe.
