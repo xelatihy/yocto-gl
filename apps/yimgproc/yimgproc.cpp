@@ -224,6 +224,8 @@ bool make_image_preset(
   } else if (type == "test-fbm-displacement") {
     make_fbmmap(img, size);
     img = srgb_to_rgb(img);
+  } else if (type == "test-checker-opacity") {
+    make_checker(img, size, 1, {0,0,0,0}, {1,1,1,1});
   } else {
     error = "unknown preset";
     img   = {};
