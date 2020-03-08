@@ -602,6 +602,18 @@ image<byte> float_to_byte(const image<float>& fl) {
   return bt;
 }
 
+// Conversion from/to floats.
+image<float> ushort_to_float(const image<ushort>& bt) {
+  auto fl = image<float>{bt.size()};
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = math::ushort_to_float(bt[i]);
+  return fl;
+}
+image<ushort> float_to_ushort(const image<float>& fl) {
+  auto bt = image<ushort>{fl.size()};
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = math::float_to_ushort(fl[i]);
+  return bt;
+}
+
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
   auto rgb = image<vec4f>{srgb.size()};
@@ -2023,6 +2035,37 @@ bool is_hdr_filename(const std::string& filename) {
     return true;
   } else if (is_hdr_filename(filename)) {
     return save_image(filename, srgb_to_rgb(img), error);
+  } else {
+    return format_error();
+  }
+}
+
+// Loads a 16 bit image.
+[[nodiscard]] bool load_image(
+    const std::string& filename, image<ushort>& img, std::string& error) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+  auto read_error = [filename, &error]() {
+    error = filename + ": read error";
+    return false;
+  };
+
+  auto ext = get_extension(filename);
+  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 1);
+    if (!pixels) return read_error();
+    img = image{{width, height}, (const uint16_t*)pixels};
+    free(pixels);
+    return true;
+  } else if (is_hdr_filename(filename)) {
+    auto imgf = image<float>{};
+    if (!load_image(filename, imgf, error)) return false;
+    img = float_to_ushort(imgf);
+    return true;
   } else {
     return format_error();
   }

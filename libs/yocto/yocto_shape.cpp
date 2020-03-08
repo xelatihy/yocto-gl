@@ -4003,6 +4003,31 @@ void make_rounded_uvcylinder(std::vector<vec4i>& quads,
   }
 }
 
+// Make a quad.
+void make_yrect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
+  for (auto& p : positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : normals) std::swap(n.y, n.z);
+}
+
+void make_bulged_yrect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale,
+    float height) {
+  make_bulged_rect(
+      quads, positions, normals, texcoords, steps, scale, uvscale, height);
+  for (auto& p : positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : normals) std::swap(n.y, n.z);
+}
+
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
@@ -4760,6 +4785,18 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   for (auto& n : inner_normals) n = -n;
   merge_quads(quads, positions, normals, texcoords, inner_quads,
       inner_positions, inner_normals, inner_texturecoords);
+}
+
+// Make a heightfield mesh.
+void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& size, const std::vector<float>& height) {
+  make_yrect(
+      quads, positions, normals, texcoords, size - 1, (vec2f)size / max(size));
+  for (auto j = 0; j < size.y; j++)
+    for (auto i = 0; i < size.x; i++)
+      positions[j * size.x + i].y = height[j * size.x + i];
+  normals = compute_normals(quads, positions);
 }
 
 }  // namespace yocto::shape

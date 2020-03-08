@@ -27,7 +27,7 @@ def itrace(directory='mcguire',scene='*',format='json',mode='path'):
             if format == 'pbrt':
                 with open(filename) as f:
                     if 'WorldBegin' not in f.read(): continue
-            cmd = f'../yocto-gl/bin/yscnitrace {options} {filename}'
+            cmd = f'../yocto-gl/bin/ysceneitrace {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
 
@@ -88,12 +88,12 @@ def trace(directory='mcguire',scene='*',format='json',mode='path'):
             basename = os.path.basename(filename).replace(f'.{format}','')
             os.system(f'mkdir -p {directory}/{outprefix}-{format}')
             imagename = f'{directory}/{outprefix}-{format}/{basename}.{outformat}'
-            cmd = f'../yocto-gl/bin/yscntrace -o {imagename} {options} {filename}'
+            cmd = f'../yocto-gl/bin/yscenetrace -o {imagename} {options} {filename}'
             print(cmd, file=sys.stderr)
             os.system(cmd)
             for cam in extracams:
                 imagename = f'{directory}/{outprefix}-{format}/{basename}-c{cam}.{outformat}'
-                cmd = f'../yocto-gl/bin/yscntrace -o {imagename} --camera {cam} {options} {filename}'
+                cmd = f'../yocto-gl/bin/yscenetrace -o {imagename} --camera {cam} {options} {filename}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
 
@@ -202,7 +202,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
                     if 'WorldBegin' not in f.read(): continue
             outname = filename.replace(f'/source/',f'/{outformat}/').replace(f'.{format}',f'.{outformat}')
             if format != 'dijson':
-                cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {obj_options} {filename} {copyright_options}'
+                cmd = f'../yocto-gl/bin/ysceneproc -o {outname} {options} {obj_options} {filename} {copyright_options}'
                 print(cmd, file=sys.stderr)
                 os.system(cmd)
             else:

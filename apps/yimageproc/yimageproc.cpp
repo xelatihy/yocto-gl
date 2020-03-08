@@ -225,9 +225,9 @@ bool make_image_preset(
     make_fbmmap(img, size);
     img = srgb_to_rgb(img);
   } else if (type == "test-checker-opacity") {
-    make_checker(img, size, 1, {1,1,1,1}, {0,0,0,0});
+    make_checker(img, size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else if (type == "test-grid-opacity") {
-    make_grid(img, size, 1, {1,1,1,1}, {0,0,0,0});
+    make_grid(img, size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
     error = "unknown preset";
     img   = {};

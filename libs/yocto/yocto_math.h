@@ -207,8 +207,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-using byte = unsigned char;
-using uint = unsigned int;
+using byte   = unsigned char;
+using uint   = unsigned int;
+using ushort = unsigned short;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
@@ -1333,12 +1334,14 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 namespace yocto::math {
 
 // Conversion between flots and bytes
-inline vec3b float_to_byte(const vec3f& a);
-inline vec3f byte_to_float(const vec3b& a);
-inline vec4b float_to_byte(const vec4f& a);
-inline vec4f byte_to_float(const vec4b& a);
-inline byte  float_to_byte(float a);
-inline float byte_to_float(byte a);
+inline vec3b  float_to_byte(const vec3f& a);
+inline vec3f  byte_to_float(const vec3b& a);
+inline vec4b  float_to_byte(const vec4f& a);
+inline vec4f  byte_to_float(const vec4b& a);
+inline byte   float_to_byte(float a);
+inline float  byte_to_float(byte a);
+inline ushort float_to_ushort(float a);
+inline float  ushort_to_float(ushort a);
 
 // Luminance
 inline float luminance(const vec3f& a);
@@ -3683,7 +3686,11 @@ inline vec4f byte_to_float(const vec4b& a) {
   return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
-inline float byte_to_float(byte a) { return a / 255.0f; }
+inline float  byte_to_float(byte a) { return a / 255.0f; }
+inline ushort float_to_ushort(float a) {
+  return (ushort)clamp(int(a * 65536), 0, 65535);
+}
+inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
 // Luminance
 inline float luminance(const vec3f& a) {

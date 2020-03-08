@@ -112,6 +112,7 @@ namespace yocto::image {
 using math::byte;
 using math::mat3f;
 using math::pif;
+using math::ushort;
 using math::vec2f;
 using math::vec2i;
 using math::vec3b;
@@ -166,6 +167,10 @@ struct image {
   const T* begin() const;
   const T* end() const;
 
+  // [experimental] data access as vector --- will be replaced by views
+  std::vector<T>&       data_vector();
+  const std::vector<T>& data_vector() const;
+
  private:
   // data
   vec2i          extent = {0, 0};
@@ -207,12 +212,14 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
 namespace yocto::image {
 
 // Conversion from/to floats.
-image<vec4f> byte_to_float(const image<vec4b>& bt);
-image<vec4b> float_to_byte(const image<vec4f>& fl);
-image<vec3f> byte_to_float(const image<vec3b>& bt);
-image<vec3b> float_to_byte(const image<vec3f>& fl);
-image<float> byte_to_float(const image<byte>& bt);
-image<byte>  float_to_byte(const image<float>& fl);
+image<vec4f>  byte_to_float(const image<vec4b>& bt);
+image<vec4b>  float_to_byte(const image<vec4f>& fl);
+image<vec3f>  byte_to_float(const image<vec3b>& bt);
+image<vec3b>  float_to_byte(const image<vec3f>& fl);
+image<float>  byte_to_float(const image<byte>& bt);
+image<byte>   float_to_byte(const image<float>& fl);
+image<float>  ushort_to_float(const image<ushort>& bt);
+image<ushort> float_to_ushort(const image<float>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
@@ -322,6 +329,10 @@ bool load_image(
     const std::string& filename, image<byte>& img, std::string& error);
 bool save_image(
     const std::string& filename, const image<byte>& img, std::string& error);
+
+// Load/saves a 16 bit image in linear color space.
+bool load_image(
+    const std::string& filename, image<ushort>& img, std::string& error);
 
 }  // namespace yocto::image
 
@@ -626,6 +637,16 @@ inline const T* image<T>::begin() const {
 template <typename T>
 inline const T* image<T>::end() const {
   return pixels.data() + pixels.size();
+}
+
+// data access as vector
+template <typename T>
+inline std::vector<T>& image<T>::data_vector() {
+  return pixels;
+}
+template <typename T>
+inline const std::vector<T>& image<T>::data_vector() const {
+  return pixels;
 }
 
 // equality

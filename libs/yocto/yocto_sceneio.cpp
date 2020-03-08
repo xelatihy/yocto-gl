@@ -1925,6 +1925,10 @@ static bool load_ply_scene(const std::string& filename, scn::model* scene,
           shape->colors, shape->radius, error))
     return false;
 
+  // create object
+  auto object   = add_object(scene);
+  object->shape = shape;
+
   // fix scene
   add_cameras(scene);
   add_radius(scene);

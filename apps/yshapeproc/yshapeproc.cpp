@@ -241,13 +241,6 @@ bool make_shape_preset(vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto geodesic_source      = -1;
-  int  p0                   = -1;
-  int  p1                   = -1;
-  int  p2                   = -1;
-  auto num_geodesic_samples = 0;
-  auto geodesic_scale       = 30.0f;
-  auto slice                = false;
   auto facevarying          = false;
   auto positiononly         = false;
   auto trianglesonly        = false;
@@ -257,19 +250,18 @@ int main(int argc, const char* argv[]) {
   auto uscale               = 1.0f;
   auto translate            = zero3f;
   auto info                 = false;
+  auto geodesic_source      = -1;
+  int  p0                   = -1;
+  int  p1                   = -1;
+  int  p2                   = -1;
+  auto num_geodesic_samples = 0;
+  auto geodesic_scale       = 30.0f;
+  auto slice                = false;
   auto output               = "out.ply"s;
   auto filename             = "mesh.ply"s;
 
   // parse command line
   auto cli = cli::make_cli("ymshproc", "Applies operations on a triangle mesh");
-  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
-  add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
-  add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
-  add_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
-  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
-      "Number of sampled geodesic sources");
-  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
-  add_option(cli, "--slice", slice, "Slice mesh along field isolines");
   add_option(cli, "--facevarying", facevarying, "Preserve facevarying");
   add_option(cli, "--positiononly", positiononly, "Remove all but positions");
   add_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
@@ -285,6 +277,14 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
   add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
   add_option(cli, "--info,-i", info, "print mesh info");
+  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
+  add_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
+  add_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
+  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
+      "Number of sampled geodesic sources");
+  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_option(cli, "--slice", slice, "Slice mesh along field isolines");
   add_option(cli, "--output,-o", output, "output mesh");
   add_option(cli, "mesh", filename, "input mesh", true);
   parse_cli(cli, argc, argv);
