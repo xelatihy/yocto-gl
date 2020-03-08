@@ -166,6 +166,10 @@ struct image {
   const T* begin() const;
   const T* end() const;
 
+  // [experimental] data access as vector --- will be replaced by views
+  std::vector<T>&       data_vector();
+  const std::vector<T>& data_vector() const;
+
  private:
   // data
   vec2i          extent = {0, 0};
@@ -626,6 +630,16 @@ inline const T* image<T>::begin() const {
 template <typename T>
 inline const T* image<T>::end() const {
   return pixels.data() + pixels.size();
+}
+
+// data access as vector
+template <typename T>
+inline std::vector<T>& image<T>::data_vector() {
+  return pixels;
+}
+template <typename T>
+inline const std::vector<T>& image<T>::data_vector() const {
+  return pixels;
 }
 
 // equality
