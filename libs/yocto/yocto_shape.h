@@ -936,6 +936,11 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     float thickness);
 
+// Make a heightfield mesh.
+void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& size, const std::vector<float>& height);
+
 }  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
