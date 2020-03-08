@@ -1926,7 +1926,7 @@ static bool load_ply_scene(const std::string& filename, scn::model* scene,
     return false;
 
   // create object
-  auto object = add_object(scene);
+  auto object   = add_object(scene);
   object->shape = shape;
 
   // fix scene

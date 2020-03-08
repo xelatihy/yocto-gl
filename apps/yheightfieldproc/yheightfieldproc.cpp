@@ -27,9 +27,9 @@
 //
 
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
-#include <yocto/yocto_image.h>
 using namespace yocto::math;
 namespace shp = yocto::shape;
 namespace img = yocto::image;
@@ -44,18 +44,19 @@ using namespace std::string_literals;
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto smooth               = false;
-  auto scale                = vec3f{1};
-  auto uscale               = 1.0f;
-  auto height               = 1.0f;
-  auto rotate               = zero3f;
-  auto translate            = zero3f;
-  auto info                 = false;
-  auto output               = "out.ply"s;
-  auto filename             = "heightfield.png"s;
+  auto smooth    = false;
+  auto scale     = vec3f{1};
+  auto uscale    = 1.0f;
+  auto height    = 1.0f;
+  auto rotate    = zero3f;
+  auto translate = zero3f;
+  auto info      = false;
+  auto output    = "out.ply"s;
+  auto filename  = "heightfield.png"s;
 
   // parse command line
-  auto cli = cli::make_cli("yheightfieldproc", "Makes a mesh from a heightfield");
+  auto cli = cli::make_cli(
+      "yheightfieldproc", "Makes a mesh from a heightfield");
   add_option(cli, "--height,-h", height, "Height scale");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
   add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
@@ -74,38 +75,43 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // mesh data
-  auto positions     = std::vector<vec3f>{};
-  auto normals       = std::vector<vec3f>{};
-  auto texcoords     = std::vector<vec2f>{};
-  auto quads         = std::vector<vec4i>{};
+  auto positions = std::vector<vec3f>{};
+  auto normals   = std::vector<vec3f>{};
+  auto texcoords = std::vector<vec2f>{};
+  auto quads     = std::vector<vec4i>{};
 
   // image data
-  auto heightfield   = img::image<float>{};
+  auto heightfield = img::image<float>{};
 
   // load mesh
   auto ioerror = ""s;
   cli::print_progress("load image", 0, 1);
-  if(!img::load_image(filename, heightfield, ioerror))
-    cli::print_fatal(ioerror);
+  if (img::is_hdr_filename(filename)) {
+    if (!img::load_image(filename, heightfield, ioerror))
+      cli::print_fatal(ioerror);
+  } else {
+    auto heightfield16 = img::image<ushort>{};
+    if (!img::load_image(filename, heightfield16, ioerror))
+      cli::print_fatal(ioerror);
+    heightfield = img::ushort_to_float(heightfield16);
+  }
   cli::print_progress("load shape", 1, 1);
 
-  // generate heightfield
-  if(!img::is_hdr_filename(filename)) {
-
-  }
-  if(height != 1) {
-    for(auto& pixel : heightfield) pixel *= height;
+  // adjust height
+  if (height != 1) {
+    for (auto& pixel : heightfield) pixel *= height;
   }
 
   // create heightfield
-  shp::make_heightfield(quads, positions, normals, texcoords, 
-    heightfield.size(), heightfield.data_vector());
+  shp::make_heightfield(quads, positions, normals, texcoords,
+      heightfield.size(), heightfield.data_vector());
+  if (!smooth) normals.clear();
 
   // print info
   if (info) {
     cli::print_info("shape stats ------------");
-    auto stats = shp::shape_stats({}, {}, {}, quads, {},
-        {}, {}, positions, normals, texcoords, {}, {});
+    auto stats = shp::shape_stats(
+        {}, {}, {}, quads, {}, {}, {}, positions, normals, texcoords, {}, {});
     for (auto& stat : stats) cli::print_info(stat);
   }
 
@@ -125,8 +131,8 @@ int main(int argc, const char* argv[]) {
 
   // save mesh
   cli::print_progress("save shape", 0, 1);
-  if (!shp::save_shape(output, {}, {}, {}, quads, positions,
-          normals, texcoords, {}, {}, ioerror))
+  if (!shp::save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
+          {}, {}, ioerror))
     cli::print_fatal(ioerror);
   cli::print_progress("save shape", 1, 1);
 

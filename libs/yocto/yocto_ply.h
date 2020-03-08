@@ -1220,6 +1220,7 @@ inline bool add_values(ply::model* ply, const float* values, size_t count,
 
 inline bool add_value(ply::model* ply, const std::string& element,
     const std::string& property, const std::vector<float>& values) {
+  if (values.empty()) return false;
   auto properties = std::vector{property};
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
@@ -1227,24 +1228,28 @@ inline bool add_value(ply::model* ply, const std::string& element,
 inline bool add_values(ply::model* ply, const std::string& element,
     const std::array<std::string, 2>& properties,
     const std::vector<vec2f>&         values) {
+  if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
 inline bool add_values(ply::model* ply, const std::string& element,
     const std::array<std::string, 3>& properties,
     const std::vector<vec3f>&         values) {
+  if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
 inline bool add_values(ply::model* ply, const std::string& element,
     const std::array<std::string, 4>& properties,
     const std::vector<vec4f>&         values) {
+  if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
 inline bool add_values(ply::model* ply, const std::string& element,
     const std::array<std::string, 12>& properties,
     const std::vector<frame3f>&        values) {
+  if (values.empty()) return false;
   return add_values(ply, (float*)values.data(), values.size(), element,
       properties.data(), properties.size());
 }
@@ -1288,20 +1293,24 @@ inline bool add_lists(ply::model* ply, const int* values, size_t count,
 }
 inline bool add_lists(ply::model* ply, const std::string& element,
     const std::string& property, const std::vector<int>& values) {
+  if (values.empty()) return false;
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
 inline bool add_lists(ply::model* ply, const std::string& element,
     const std::string& property, const std::vector<vec2i>& values) {
+  if (values.empty()) return false;
   return add_lists(
       ply, (int*)values.data(), values.size(), 2, element, property);
 }
 inline bool add_lists(ply::model* ply, const std::string& element,
     const std::string& property, const std::vector<vec3i>& values) {
+  if (values.empty()) return false;
   return add_lists(
       ply, (int*)values.data(), values.size(), 3, element, property);
 }
 inline bool add_lists(ply::model* ply, const std::string& element,
     const std::string& property, const std::vector<vec4i>& values) {
+  if (values.empty()) return false;
   return add_lists(
       ply, (int*)values.data(), values.size(), 4, element, property);
 }
