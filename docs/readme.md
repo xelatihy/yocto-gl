@@ -80,15 +80,15 @@ See each header file for documentation.
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `apps/yscntrace.cpp`:   command-line path-tracer
-- `apps/yscnitrace.cpp`:  interactive path-tracer
-- `apps/yscnitraces.cpp`: simpler version of `apps/yscnitrace.cpp` for demos
-- `apps/yscnproc.cpp`: command-line scene manipulation and conversion
-- `apps/ymshproc.cpp`: command-line mesh manipulation and conversion
-- `apps/yimgview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
-- `apps/yimgviews.cpp`: simpler version of `apps/yimgview.cpp` for demos
-- `apps/yimgproc.cpp`: command-line image manipulation
-- `apps/yscnview.cpp`: simple OpenGL viewer
+- `apps/yscenetrace.cpp`:   command-line path-tracer
+- `apps/ysceneitrace.cpp`:  interactive path-tracer
+- `apps/ysceneitraces.cpp`: simpler version of `apps/ysceneitrace.cpp` for demos
+- `apps/ysceneproc.cpp`: command-line scene manipulation and conversion
+- `apps/yshapeproc.cpp`: command-line mesh manipulation and conversion
+- `apps/yimageview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
+- `apps/yimageviews.cpp`: simpler version of `apps/yimageview.cpp` for demos
+- `apps/yimageproc.cpp`: command-line image manipulation
+- `apps/ysceneview.cpp`: simple OpenGL viewer
 
 Here are some test images rendered with the path tracer. More images are
 included in the [project site](https://xelatihy.github.io/yocto-gl/).
