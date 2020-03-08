@@ -241,13 +241,6 @@ bool make_shape_preset(vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto geodesic_source      = -1;
-  int  p0                   = -1;
-  int  p1                   = -1;
-  int  p2                   = -1;
-  auto num_geodesic_samples = 0;
-  auto geodesic_scale       = 30.0f;
-  auto slice                = false;
   auto facevarying          = false;
   auto positiononly         = false;
   auto trianglesonly        = false;
@@ -257,6 +250,13 @@ int main(int argc, const char* argv[]) {
   auto uscale               = 1.0f;
   auto translate            = zero3f;
   auto info                 = false;
+  auto geodesic_source      = -1;
+  int  p0                   = -1;
+  int  p1                   = -1;
+  int  p2                   = -1;
+  auto num_geodesic_samples = 0;
+  auto geodesic_scale       = 30.0f;
+  auto slice                = false;
   auto output               = "out.ply"s;
   auto filename             = "mesh.ply"s;
 
