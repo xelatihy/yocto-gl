@@ -122,6 +122,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <memory>
 #include <tuple>
 #include <unordered_map>
 
