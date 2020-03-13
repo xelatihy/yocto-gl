@@ -29,6 +29,9 @@ if(YOCTO_EMBREE)
     link_directories("/Program Files/Intel/Embree3 X64/lib" "C:/Program Files/Intel/Embree3 X64/lib")
     target_link_libraries(yocto embree3 tbb tbbmalloc)
   endif(MSVC)
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(yocto embree3)
+  endif()
 endif(YOCTO_EMBREE)
 
 # warning flags

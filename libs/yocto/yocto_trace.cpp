@@ -29,6 +29,7 @@
 #include "yocto_trace.h"
 
 #include <atomic>
+#include <cstring>
 #include <deque>
 #include <future>
 #include <memory>
