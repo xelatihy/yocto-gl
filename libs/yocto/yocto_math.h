@@ -531,43 +531,68 @@ struct hash<yocto::math::vec<T, N>>;
 namespace yocto::math {
 
 // Small Fixed-size matrices stored in column major format.
-struct mat2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
+template<typename T, size_t M, size_t N>
+struct mat;
 
-  mat2f();
-  mat2f(const vec2f& x, const vec2f& y);
+// One-dimensional matrix stored in column major format.
+template<typename T, size_t M>
+struct mat<T, M, 1> {
+  vec<T, M> x = vec<T, M>{0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  mat();
+  mat(const vec<T, M>& x);
+
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
 
-// Small Fixed-size matrices stored in column major format.
-struct mat3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
+// Two-dimensional matrix stored in column major format.
+template<typename T, size_t M>
+struct mat<T, M, 2> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
 
-  mat3f();
-  mat3f(const vec3f& x, const vec3f& y, const vec3f& z);
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y);
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
 
-// Small Fixed-size matrices stored in column major format.
-struct mat4f {
-  vec4f x = {1, 0, 0, 0};
-  vec4f y = {0, 1, 0, 0};
-  vec4f z = {0, 0, 1, 0};
-  vec4f w = {0, 0, 0, 1};
+// Three-dimensional matrix stored in column major format.
+template<typename T, size_t M>
+struct mat<T, M, 3> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
+  vec<T, M> z = vec<T, M>{0};
 
-  mat4f();
-  mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w);
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z);
 
-  vec4f&       operator[](int i);
-  const vec4f& operator[](int i) const;
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
+
+// Four-dimensional matrix stored in column major format.
+template<typename T, size_t M>
+struct mat<T, M, 4> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
+  vec<T, M> z = vec<T, M>{0};
+  vec<T, M> w = vec<T, M>{0};
+
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z, const vec<T, M>& w);
+
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
+};
+
+// Type aliases
+using mat1f = mat<float, 1, 1>;
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
 inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
@@ -2247,28 +2272,51 @@ struct hash<yocto::math::vec<T, N>> {
 namespace yocto::math {
 
 // Small Fixed-size matrices stored in column major format.
-inline mat2f::mat2f() {}
-inline mat2f::mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
+template<typename T, size_t M>
+inline mat<T, M, 1>::mat() {}
+template<typename T, size_t M>
+inline mat<T, M, 1>::mat(const vec<T, M>& x) : x{x} {}
 
-inline vec2f& mat2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
+template<typename T, size_t M>
+inline vec<T, M>& mat<T, M, 1>::operator[](int i) { return (&x)[i]; }
+template<typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 1>::operator[](int i) const { return (&x)[i]; }
 
 // Small Fixed-size matrices stored in column major format.
-inline mat3f::mat3f() {}
-inline mat3f::mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
+template<typename T, size_t M>
+inline mat<T, M, 2>::mat() {}
+template<typename T, size_t M>
+inline mat<T, M, 2>::mat(const vec<T, M>& x, const vec<T, M>& y) : x{x}, y{y} {}
+
+template<typename T, size_t M>
+inline vec<T, M>& mat<T, M, 2>::operator[](int i) { return (&x)[i]; }
+template<typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 2>::operator[](int i) const { return (&x)[i]; }
+
+// Small Fixed-size matrices stored in column major format.
+template<typename T, size_t M>
+inline mat<T, M, 3>::mat() {}
+template<typename T, size_t M>
+inline mat<T, M, 3>::mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z)
     : x{x}, y{y}, z{z} {}
 
-inline vec3f& mat3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
+template<typename T, size_t M>
+inline vec<T, M>& mat<T, M, 3>::operator[](int i) { return (&x)[i]; }
+template<typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 3>::operator[](int i) const { return (&x)[i]; }
 
 // Small Fixed-size matrices stored in column major format.
-inline mat4f::mat4f() {}
-inline mat4f::mat4f(
-    const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+template<typename T, size_t M>
+inline mat<T, M, 4>::mat() {}
+template<typename T, size_t M>
+inline mat<T, M, 4>::mat(
+    const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z, const vec<T, M>& w)
     : x{x}, y{y}, z{z}, w{w} {}
 
-inline vec4f& mat4f::operator[](int i) { return (&x)[i]; }
-inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
+template<typename T, size_t M>
+inline vec<T, M>& mat<T, M, 4>::operator[](int i) { return (&x)[i]; }
+template<typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 4>::operator[](int i) const { return (&x)[i]; }
 
 // Matrix comparisons.
 inline bool operator==(const mat2f& a, const mat2f& b) {
