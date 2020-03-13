@@ -263,58 +263,88 @@ inline void swap(int& a, int& b);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-struct vec2f {
-  float x = 0;
-  float y = 0;
+// Short vector with static size. Implementation uses specializations to support
+// direct member access.
+template<typename T, size_t N>
+struct vec;
 
-  vec2f();
-  vec2f(float x, float y);
-  explicit vec2f(float v);
+// Two-dimensional vector.
+template<typename T>
+struct vec<T, 2> {
+  T x = 0;
+  T y = 0;
+
+  vec();
+  vec(T x, T y);
+  explicit vec(T v);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
 
-struct vec3f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
+// Three-dimensional vector.
+template<typename T>
+struct vec<T, 3> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
 
-  vec3f();
-  vec3f(float x, float y, float z);
-  vec3f(const vec2f& v, float z);
-  explicit vec3f(float v);
+  vec();
+  vec(T x, T y, T z);
+  vec(const vec<T, 2>& v, T z);
+  explicit vec(T v);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
 
-struct vec4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
+// Four-dimensional vector.
+template<typename T>
+struct vec<T, 4> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
 
-  vec4f();
-  vec4f(float x, float y, float z, float w);
-  vec4f(const vec3f& v, float w);
-  explicit vec4f(float v);
+  vec();
+  vec(T x, T y, T z, T w);
+  vec(const vec<T, 3>& v, T w);
+  explicit vec(T v);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
+
+// Type aliases
+using vec2f = vec<float, 2>;
+using vec3f = vec<float, 3>;
+using vec4f = vec<float, 4>;
+using vec2i = vec<int, 2>;
+using vec3i = vec<int, 3>;
+using vec4i = vec<int, 4>;
+using vec2b = vec<byte, 2>;
+using vec3b = vec<byte, 3>;
+using vec4b = vec<byte, 4>;
 
 // Zero std::vector constants.
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
+inline const auto zero2i = vec2i{0, 0};
+inline const auto zero3i = vec3i{0, 0, 0};
+inline const auto zero4i = vec4i{0, 0, 0, 0};
+inline const auto zero3b = vec3b{0, 0, 0};
+inline const auto zero4b = vec4b{0, 0, 0, 0};
+
 
 // Element access
-inline vec3f&       xyz(vec4f& a);
-inline const vec3f& xyz(const vec4f& a);
+template<typename T>
+inline vec<T, 3>&       xyz(vec<T, 4>& a);
+template<typename T>
+inline const vec<T, 3>& xyz(const vec<T, 4>& a);
 
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b);
@@ -537,97 +567,6 @@ inline vec4f quat_inverse(const vec4f& a);
 // INTEGER VECTORS
 // -----------------------------------------------------------------------------
 namespace yocto::math {
-
-struct vec2i {
-  int x = 0;
-  int y = 0;
-
-  vec2i();
-  vec2i(int x, int y);
-  explicit vec2i(int v);
-  explicit operator vec2f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec3i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
-
-  vec3i();
-  vec3i(int x, int y, int z);
-  vec3i(const vec2i& v, int z);
-  explicit vec3i(int v);
-  explicit operator vec3f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec4i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
-  int w = 0;
-
-  vec4i();
-  vec4i(int x, int y, int z, int w);
-  vec4i(const vec3i& v, int w);
-  explicit vec4i(int v);
-  explicit operator vec4f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec3b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-
-  vec3b();
-  vec3b(byte x, byte y, byte z);
-  explicit vec3b(byte v);
-  explicit operator bool() const;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
-struct vec4b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-  byte w = 0;
-
-  vec4b();
-  vec4b(byte x, byte y, byte z, byte w);
-  explicit vec4b(byte v);
-  explicit operator bool() const;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
-// Zero std::vector constants.
-inline const auto zero2i = vec2i{0, 0};
-inline const auto zero3i = vec3i{0, 0, 0};
-inline const auto zero4i = vec4i{0, 0, 0, 0};
-inline const auto zero3b = vec3b{0, 0, 0};
-inline const auto zero4b = vec4b{0, 0, 0, 0};
-
-// Element access
-inline vec3i&       xyz(vec4i& a);
-inline const vec3i& xyz(const vec4i& a);
-
-// Element access
-inline vec3b&       xyz(vec4b& a);
-inline const vec3b& xyz(const vec4b& a);
 
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b);
@@ -1789,38 +1728,59 @@ inline void swap(int& a, int& b) { std::swap(a, b); }
 namespace yocto::math {
 
 // Vec2
-inline vec2f::vec2f() {}
-inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
-inline vec2f::vec2f(float v) : x{v}, y{v} {}
-inline vec2f::operator bool() const { return x && y; }
+template<typename T>
+inline vec<T, 2>::vec() {}
+template<typename T>
+inline vec<T, 2>::vec(T x, T y) : x{x}, y{y} {}
+template<typename T>
+inline vec<T, 2>::vec(T v) : x{v}, y{v} {}
+template<typename T>
+inline vec<T, 2>::operator bool() const { return x && y; }
 
-inline float& vec2f::operator[](int i) { return (&x)[i]; }
-inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
+template<typename T>
+inline T& vec<T, 2>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const T& vec<T, 2>::operator[](int i) const { return (&x)[i]; }
 
 // Vec3
-inline vec3f::vec3f() {}
-inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
-inline vec3f::operator bool() const { return x && y && z; }
+template<typename T>
+inline vec<T, 3>::vec() {}
+template<typename T>
+inline vec<T, 3>::vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
+template<typename T>
+inline vec<T, 3>::vec(const vec<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
+template<typename T>
+inline vec<T, 3>::vec(T v) : x{v}, y{v}, z{v} {}
+template<typename T>
+inline vec<T, 3>::operator bool() const { return x && y && z; }
 
-inline float& vec3f::operator[](int i) { return (&x)[i]; }
-inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
+template<typename T>
+inline T& vec<T, 3>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const T& vec<T, 3>::operator[](int i) const { return (&x)[i]; }
 
 // Vec4
-inline vec4f::vec4f() {}
-inline vec4f::vec4f(float x, float y, float z, float w)
-    : x{x}, y{y}, z{z}, w{w} {}
-inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4f::operator bool() const { return x && y && z && w; }
+template<typename T>
+inline vec<T, 4>::vec() {}
+template<typename T>
+inline vec<T, 4>::vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+template<typename T>
+inline vec<T, 4>::vec(const vec<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+template<typename T>
+inline vec<T, 4>::vec(T v) : x{v}, y{v}, z{v}, w{v} {}
+template<typename T>
+inline vec<T, 4>::operator bool() const { return x && y && z && w; }
 
-inline float& vec4f::operator[](int i) { return (&x)[i]; }
-inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
+template<typename T>
+inline T& vec<T, 4>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const T& vec<T, 4>::operator[](int i) const { return (&x)[i]; }
 
 // Element access
-inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
-inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
+template<typename T>
+inline vec<T, 3>&       xyz(vec<T, 4>& a) { return (vec<T, 3>&)a; }
+template<typename T>
+inline const vec<T, 3>& xyz(const vec<T, 4>& a) { return (const vec<T, 3>&)a; }
 
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
@@ -2244,66 +2204,6 @@ inline vec4f quat_inverse(const vec4f& a) {
 // INTEGER VECTORS
 // -----------------------------------------------------------------------------
 namespace yocto::math {
-
-// Vector data types
-inline vec2i::vec2i() {}
-inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
-inline vec2i::vec2i(int v) : x{v}, y{v} {}
-inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
-inline vec2i::operator bool() const { return x && y; }
-
-inline int& vec2i::operator[](int i) { return (&x)[i]; }
-inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec3i::vec3i() {}
-inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
-inline vec3i::operator vec3f() const { return {(float)x, (float)y, (float)z}; }
-inline vec3i::operator bool() const { return x && y && z; }
-
-inline int& vec3i::operator[](int i) { return (&x)[i]; }
-inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec4i::vec4i() {}
-inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4i::operator vec4f() const {
-  return {(float)x, (float)y, (float)z, (float)w};
-}
-inline vec4i::operator bool() const { return x && y && z && w; }
-
-inline int& vec4i::operator[](int i) { return (&x)[i]; }
-inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec3b::vec3b() {}
-inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
-inline vec3b::vec3b(byte v) : x{v}, y{v}, z{v} {}
-inline vec3b::operator bool() const { return x && y && z; }
-
-inline byte& vec3b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec4b::vec4b() {}
-inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4b::vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4b::operator bool() const { return x && y && z && w; }
-
-inline byte& vec4b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
-
-// Element access
-inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
-inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
-
-// Element access
-inline vec3b&       xyz(vec4b& a) { return (vec3b&)a; }
-inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
 
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b) {
