@@ -419,150 +419,87 @@ template<typename T, size_t N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 
 // Vector products and lengths.
-inline float dot(const vec2f& a, const vec2f& b);
-inline float cross(const vec2f& a, const vec2f& b);
-
-inline float length(const vec2f& a);
-inline vec2f normalize(const vec2f& a);
-inline float distance(const vec2f& a, const vec2f& b);
-inline float distance_squared(const vec2f& a, const vec2f& b);
-
-// Max element and clamp.
-inline vec2f max(const vec2f& a, float b);
-inline vec2f min(const vec2f& a, float b);
-inline vec2f max(const vec2f& a, const vec2f& b);
-inline vec2f min(const vec2f& a, const vec2f& b);
-inline vec2f clamp(const vec2f& x, float min, float max);
-inline vec2f lerp(const vec2f& a, const vec2f& b, float u);
-inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u);
-
-inline float max(const vec2f& a);
-inline float min(const vec2f& a);
-inline float sum(const vec2f& a);
-inline float mean(const vec2f& a);
-
-// Functions applied to std::vector elements
-inline vec2f abs(const vec2f& a);
-inline vec2f sqrt(const vec2f& a);
-inline vec2f exp(const vec2f& a);
-inline vec2f log(const vec2f& a);
-inline vec2f exp2(const vec2f& a);
-inline vec2f log2(const vec2f& a);
-inline bool  isfinite(const vec2f& a);
-inline vec2f pow(const vec2f& a, float b);
-inline vec2f pow(const vec2f& a, const vec2f& b);
-inline vec2f gain(const vec2f& a, float b);
-inline void  swap(vec2f& a, vec2f& b);
-
-// Vector products and lengths.
-inline float dot(const vec3f& a, const vec3f& b);
-inline vec3f cross(const vec3f& a, const vec3f& b);
-
-inline float length(const vec3f& a);
-inline vec3f normalize(const vec3f& a);
-inline float distance(const vec3f& a, const vec3f& b);
-inline float distance_squared(const vec3f& a, const vec3f& b);
-
-inline float angle(const vec3f& a, const vec3f& b);
+template<typename T, size_t N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline T length(const vec<T, N>& a);
+template<typename T, size_t N>
+inline vec<T, N> normalize(const vec<T, N>& a);
+template<typename T, size_t N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T>
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b);
+template<typename T>
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
+template<typename T>
+inline T angle(const vec<T, 3>& a, const vec<T, 3>& b);
 
 // Orthogonal vectors.
-inline vec3f orthogonal(const vec3f& v);
-inline vec3f orthonormalize(const vec3f& a, const vec3f& b);
+template<typename T>
+inline vec<T, 3> orthogonal(const vec<T, 3>& v);
+template<typename T>
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
 
 // Reflected and refracted std::vector.
-inline vec3f reflect(const vec3f& w, const vec3f& n);
-inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta);
+template<typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
+template<typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T inv_eta);
 
-// Max element and clamp.
-inline vec3f max(const vec3f& a, float b);
-inline vec3f min(const vec3f& a, float b);
-inline vec3f max(const vec3f& a, const vec3f& b);
-inline vec3f min(const vec3f& a, const vec3f& b);
-inline vec3f clamp(const vec3f& x, float min, float max);
-inline vec3f lerp(const vec3f& a, const vec3f& b, float u);
-inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u);
-
-inline float max(const vec3f& a);
-inline float min(const vec3f& a);
-inline float sum(const vec3f& a);
-inline float mean(const vec3f& a);
-
-// Functions applied to std::vector elements
-inline vec3f abs(const vec3f& a);
-inline vec3f sqrt(const vec3f& a);
-inline vec3f exp(const vec3f& a);
-inline vec3f log(const vec3f& a);
-inline vec3f exp2(const vec3f& a);
-inline vec3f log2(const vec3f& a);
-inline vec3f pow(const vec3f& a, float b);
-inline vec3f pow(const vec3f& a, const vec3f& b);
-inline vec3f gain(const vec3f& a, float b);
-inline bool  isfinite(const vec3f& a);
-inline void  swap(vec3f& a, vec3f& b);
-
-// Vector products and lengths.
-template<typename T, size_t N>
-inline T dot(const vec<T, 4>& a, const vec<T, 4>& b);
-template<typename T, size_t N>
-inline float length(const vec<T, 4>& a);
-template<typename T, size_t N>
-inline vec<T, 4> normalize(const vec<T, 4>& a);
-template<typename T, size_t N>
-inline T distance(const vec<T, 4>& a, const vec<T, 4>& b);
-template<typename T, size_t N>
-inline T distance_squared(const vec<T, 4>& a, const vec<T, 4>& b);
-
+// Slerp
 template<typename T, size_t N, typename T1>
 inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
 
 // Max element and clamp.
 template<typename T, size_t N, typename T1>
-inline vec<T, 4> max(const vec<T, 4>& a, T1 b);
+inline vec<T, N> max(const vec<T, N>& a, T1 b);
 template<typename T, size_t N, typename T1>
-inline vec<T, 4> min(const vec<T, 4>& a, T1 b);
+inline vec<T, N> min(const vec<T, N>& a, T1 b);
 template<typename T, size_t N>
-inline vec<T, 4> max(const vec<T, 4>& a, const vec<T, 4>& b);
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b);
 template<typename T, size_t N>
-inline vec<T, 4> min(const vec<T, 4>& a, const vec<T, 4>& b);
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1, typename T2>
+inline vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max);
 template<typename T, size_t N, typename T1>
-inline vec<T, 4> clamp(const vec<T, 4>& x, float min, T1 max);
-template<typename T, size_t N, typename T1>
-inline vec<T, 4> lerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u);
 template<typename T, size_t N>
-inline vec<T, 4> lerp(const vec<T, 4>& a, const vec<T, 4>& b, const vec<T, 4>& u);
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u);
 
 template<typename T, size_t N>
-inline T max(const vec<T, 4>& a);
+inline T max(const vec<T, N>& a);
 template<typename T, size_t N>
-inline T min(const vec<T, 4>& a);
+inline T min(const vec<T, N>& a);
 template<typename T, size_t N>
-inline T sum(const vec<T, 4>& a);
+inline T sum(const vec<T, N>& a);
 template<typename T, size_t N>
-inline T mean(const vec<T, 4>& a);
+inline T mean(const vec<T, N>& a);
 
 // Functions applied to std::vector elements
 template<typename T, size_t N>
-inline vec<T, 4> abs(const vec<T, 4>& a);
+inline vec<T, N> abs(const vec<T, N>& a);
 template<typename T, size_t N>
-inline vec<T, 4> sqrt(const vec<T, 4>& a);
+inline vec<T, N> sqrt(const vec<T, N>& a);
 template<typename T, size_t N>
-inline vec<T, 4> exp(const vec<T, 4>& a);
+inline vec<T, N> exp(const vec<T, N>& a);
 template<typename T, size_t N>
-inline vec<T, 4> log(const vec<T, 4>& a);
+inline vec<T, N> log(const vec<T, N>& a);
 template<typename T, size_t N>
-inline vec<T, 4> exp2(const vec<T, 4>& a);
+inline vec<T, N> exp2(const vec<T, N>& a);
 template<typename T, size_t N>
-inline vec<T, 4> log2(const vec<T, 4>& a);
+inline vec<T, N> log2(const vec<T, N>& a);
 template<typename T, size_t N, typename T1>
-inline vec<T, 4> pow(const vec<T, 4>& a, T1 b);
+inline vec<T, N> pow(const vec<T, N>& a, T1 b);
 template<typename T, size_t N>
-inline vec<T, 4> pow(const vec<T, 4>& a, const vec<T, 4>& b);
+inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b);
 template<typename T, size_t N, typename T1>
-inline vec<T, 4> gain(const vec<T, 4>& a, T1 b);
+inline vec<T, N> gain(const vec<T, N>& a, T1 b);
 template<typename T, size_t N>
-inline bool  isfinite(const vec<T, 4>& a);
+inline bool  isfinite(const vec<T, N>& a);
 template<typename T, size_t N>
-inline void  swap(vec<T, 4>& a, vec<T, 4>& b);
+inline void  swap(vec<T, N>& a, vec<T, N>& b);
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
@@ -1898,158 +1835,6 @@ template<typename T, size_t N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) { return a = a / b; }
 
 // Vector products and lengths.
-inline float dot(const vec2f& a, const vec2f& b) {
-  return a.x * b.x + a.y * b.y;
-}
-inline float cross(const vec2f& a, const vec2f& b) {
-  return a.x * b.y - a.y * b.x;
-}
-
-inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
-inline vec2f normalize(const vec2f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline float distance(const vec2f& a, const vec2f& b) { return length(a - b); }
-inline float distance_squared(const vec2f& a, const vec2f& b) {
-  return dot(a - b, a - b);
-}
-
-// Max element and clamp.
-inline vec2f max(const vec2f& a, float b) { return {max(a.x, b), max(a.y, b)}; }
-inline vec2f min(const vec2f& a, float b) { return {min(a.x, b), min(a.y, b)}; }
-inline vec2f max(const vec2f& a, const vec2f& b) {
-  return {max(a.x, b.x), max(a.y, b.y)};
-}
-inline vec2f min(const vec2f& a, const vec2f& b) {
-  return {min(a.x, b.x), min(a.y, b.y)};
-}
-inline vec2f clamp(const vec2f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max)};
-}
-inline vec2f lerp(const vec2f& a, const vec2f& b, float u) {
-  return a * (1 - u) + b * u;
-}
-inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
-  return a * (1 - u) + b * u;
-}
-
-inline float max(const vec2f& a) { return max(a.x, a.y); }
-inline float min(const vec2f& a) { return min(a.x, a.y); }
-inline float sum(const vec2f& a) { return a.x + a.y; }
-inline float mean(const vec2f& a) { return sum(a) / 2; }
-
-// Functions applied to std::vector elements
-inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
-inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
-inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
-inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; };
-inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; };
-inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; };
-inline bool isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); };
-inline vec2f pow(const vec2f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b)};
-};
-inline vec2f pow(const vec2f& a, const vec2f& b) {
-  return {pow(a.x, b.x), pow(a.y, b.y)};
-};
-inline vec2f gain(const vec2f& a, float b) {
-  return {gain(a.x, b), gain(a.y, b)};
-};
-inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
-
-// Vector products and lengths.
-inline float dot(const vec3f& a, const vec3f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-inline vec3f cross(const vec3f& a, const vec3f& b) {
-  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-}
-
-inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
-inline vec3f normalize(const vec3f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline float distance(const vec3f& a, const vec3f& b) { return length(a - b); }
-inline float distance_squared(const vec3f& a, const vec3f& b) {
-  return dot(a - b, a - b);
-}
-
-inline float angle(const vec3f& a, const vec3f& b) {
-  return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
-}
-
-// Orthogonal vectors.
-inline vec3f orthogonal(const vec3f& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
-  return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
-}
-inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
-  return normalize(a - b * dot(a, b));
-}
-
-// Reflected and refracted vector.
-inline vec3f reflect(const vec3f& w, const vec3f& n) {
-  return -w + 2 * dot(n, w) * n;
-}
-inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta) {
-  auto cosine = dot(n, w);
-  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
-  if (k < 0) return {0, 0, 0};  // tir
-  return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
-}
-
-// Max element and clamp.
-inline vec3f max(const vec3f& a, float b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b)};
-}
-inline vec3f min(const vec3f& a, float b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b)};
-}
-inline vec3f max(const vec3f& a, const vec3f& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-}
-inline vec3f min(const vec3f& a, const vec3f& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-}
-inline vec3f clamp(const vec3f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-}
-inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
-  return a * (1 - u) + b * u;
-}
-inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
-  return a * (1 - u) + b * u;
-}
-
-inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
-inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
-inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
-inline float mean(const vec3f& a) { return sum(a) / 3; }
-
-// Functions applied to std::vector elements
-inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
-inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
-inline vec3f log(const vec3f& a) { return {log(a.x), log(a.y), log(a.z)}; };
-inline vec3f exp2(const vec3f& a) { return {exp2(a.x), exp2(a.y), exp2(a.z)}; };
-inline vec3f log2(const vec3f& a) { return {log2(a.x), log2(a.y), log2(a.z)}; };
-inline vec3f pow(const vec3f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
-};
-inline vec3f pow(const vec3f& a, const vec3f& b) {
-  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
-};
-inline vec3f gain(const vec3f& a, float b) {
-  return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
-};
-inline bool isfinite(const vec3f& a) {
-  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
-};
-inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
-
-// Vector products and lengths.
 template<typename T, size_t N>
 inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr(N == 1) {
@@ -2077,7 +1862,44 @@ template<typename T, size_t N>
 inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b) {
   return dot(a - b, a - b);
 }
+template<typename T>
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+  return a.x * b.y - a.y * b.x;
+}
+template<typename T>
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+  return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+}
+template<typename T>
+inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
+}
 
+// Orthogonal vectors.
+template<typename T>
+inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
+  return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
+}
+template<typename T>
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
+  return normalize(a - b * dot(a, b));
+}
+
+// Reflected and refracted vector.
+template<typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
+  return -w + 2 * dot(n, w) * n;
+}
+template<typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T inv_eta) {
+  auto cosine = dot(n, w);
+  auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
+  if (k < 0) return {0, 0, 0};  // tir
+  return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
+}
+
+// Slerp
 template<typename T, size_t N>
 inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   // https://en.wikipedia.org/wiki/Slerp
@@ -2150,17 +1972,17 @@ inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
 }
-template<typename T, size_t N>
-inline vec<T, N> clamp(const vec<T, N>& a, T min, T max) {
+template<typename T, size_t N, typename T1, typename T2>
+inline vec<T, N> clamp(const vec<T, N>& a, T1 min, T2 max) {
   if constexpr(N == 1) {
-  return {clamp(a.x, min, max)};
+  return {clamp(a.x, (T)min, (T)max)};
   } else if constexpr(N == 2) {
-  return {clamp(a.x, min, max), clamp(a.y, min, max)};
+  return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max)};
   } else if constexpr(N == 3) {
-  return {clamp(a.x, min, max), clamp(a.y, min, max), clamp(a.z, min, max)};
+  return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max), clamp(a.z, (T)min, (T)max)};
   } else if constexpr(N == 4) {
-  return {clamp(a.x, min, max), clamp(a.y, min, max), clamp(a.z, min, max),
-      clamp(a.w, min, max)};
+  return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max), clamp(a.z, (T)min, (T)max),
+      clamp(a.w, (T)min, (T)max)};
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
