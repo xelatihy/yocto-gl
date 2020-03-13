@@ -8,6 +8,7 @@
 
 #include "yocto_shape.h"
 
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
