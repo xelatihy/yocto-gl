@@ -268,6 +268,19 @@ namespace yocto::math {
 template<typename T, size_t N>
 struct vec;
 
+// One-dimensional vector.
+template<typename T>
+struct vec<T, 1> {
+  T x = 0;
+
+  vec();
+  explicit vec(T x);
+  explicit operator bool() const;
+
+  T&       operator[](int i);
+  const T& operator[](int i) const;
+};
+
 // Two-dimensional vector.
 template<typename T>
 struct vec<T, 2> {
@@ -319,20 +332,25 @@ struct vec<T, 4> {
 };
 
 // Type aliases
+using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
 using vec3f = vec<float, 3>;
 using vec4f = vec<float, 4>;
+using vec1i = vec<int, 1>;
 using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
+using vec1b = vec<byte, 1>;
 using vec2b = vec<byte, 2>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
 // Zero std::vector constants.
+inline const auto zero1f = vec1f{0};
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
+inline const auto zero1i = vec1i{0};
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
@@ -347,8 +365,10 @@ template<typename T>
 inline const vec<T, 3>& xyz(const vec<T, 4>& a);
 
 // Vector comparison operations.
-inline bool operator==(const vec2f& a, const vec2f& b);
-inline bool operator!=(const vec2f& a, const vec2f& b);
+template<typename T, size_t N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
 
 // Vector operations.
 inline vec2f operator+(const vec2f& a);
@@ -411,10 +431,6 @@ inline vec2f pow(const vec2f& a, float b);
 inline vec2f pow(const vec2f& a, const vec2f& b);
 inline vec2f gain(const vec2f& a, float b);
 inline void  swap(vec2f& a, vec2f& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec3f& a, const vec3f& b);
-inline bool operator!=(const vec3f& a, const vec3f& b);
 
 // Vector operations.
 inline vec3f operator+(const vec3f& a);
@@ -487,10 +503,6 @@ inline vec3f pow(const vec3f& a, const vec3f& b);
 inline vec3f gain(const vec3f& a, float b);
 inline bool  isfinite(const vec3f& a);
 inline void  swap(vec3f& a, vec3f& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec4f& a, const vec4f& b);
-inline bool operator!=(const vec4f& a, const vec4f& b);
 
 // Vector operations.
 inline vec4f operator+(const vec4f& a);
@@ -568,10 +580,6 @@ inline vec4f quat_inverse(const vec4f& a);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Vector comparison operations.
-inline bool operator==(const vec2i& a, const vec2i& b);
-inline bool operator!=(const vec2i& a, const vec2i& b);
-
 // Vector operations.
 inline vec2i operator+(const vec2i& a);
 inline vec2i operator-(const vec2i& a);
@@ -613,10 +621,6 @@ inline int sum(const vec2i& a);
 inline vec2i abs(const vec2i& a);
 inline void  swap(vec2i& a, vec2i& b);
 
-// Vector comparison operations.
-inline bool operator==(const vec3i& a, const vec3i& b);
-inline bool operator!=(const vec3i& a, const vec3i& b);
-
 // Vector operations.
 inline vec3i operator+(const vec3i& a);
 inline vec3i operator-(const vec3i& a);
@@ -657,10 +661,6 @@ inline int sum(const vec3i& a);
 // Functions applied to std::vector elements
 inline vec3i abs(const vec3i& a);
 inline void  swap(vec3i& a, vec3i& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec4i& a, const vec4i& b);
-inline bool operator!=(const vec4i& a, const vec4i& b);
 
 // Vector operations.
 inline vec4i operator+(const vec4i& a);
@@ -1729,6 +1729,19 @@ namespace yocto::math {
 
 // Vec2
 template<typename T>
+inline vec<T, 1>::vec() {}
+template<typename T>
+inline vec<T, 1>::vec(T v) : x{v} {}
+template<typename T>
+inline vec<T, 1>::operator bool() const { return x; }
+
+template<typename T>
+inline T& vec<T, 1>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const T& vec<T, 1>::operator[](int i) const { return (&x)[i]; }
+
+// Vec2
+template<typename T>
 inline vec<T, 2>::vec() {}
 template<typename T>
 inline vec<T, 2>::vec(T x, T y) : x{x}, y{y} {}
@@ -1783,11 +1796,33 @@ template<typename T>
 inline const vec<T, 3>& xyz(const vec<T, 4>& a) { return (const vec<T, 3>&)a; }
 
 // Vector comparison operations.
-inline bool operator==(const vec2f& a, const vec2f& b) {
-  return a.x == b.x && a.y == b.y;
+template<typename T, size_t N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return a.x == b.x;
+  } else if constexpr(N == 2) {
+    return a.x == b.x || a.y == b.y;
+  } else if constexpr(N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr(N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline bool operator!=(const vec2f& a, const vec2f& b) {
-  return a.x != b.x || a.y != b.y;
+template<typename T, size_t N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return a.x != b.x;
+  } else if constexpr(N == 2) {
+    return a.x != b.x || a.y != b.y;
+  } else if constexpr(N == 3) {
+    return a.x != b.x || a.y != b.y || a.z != b.z;
+  } else if constexpr(N == 4) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
 
 // Vector operations.
@@ -1884,14 +1919,6 @@ inline vec2f gain(const vec2f& a, float b) {
   return {gain(a.x, b), gain(a.y, b)};
 };
 inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec3f& a, const vec3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3f& a, const vec3f& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
 
 // Vector operations.
 inline vec3f operator+(const vec3f& a) { return a; }
@@ -2033,14 +2060,6 @@ inline bool isfinite(const vec3f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
 };
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec4f& a, const vec4f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4f& a, const vec4f& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
 
 // Vector operations.
 inline vec4f operator+(const vec4f& a) { return a; }
@@ -2205,14 +2224,6 @@ inline vec4f quat_inverse(const vec4f& a) {
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Vector comparison operations.
-inline bool operator==(const vec2i& a, const vec2i& b) {
-  return a.x == b.x && a.y == b.y;
-}
-inline bool operator!=(const vec2i& a, const vec2i& b) {
-  return a.x != b.x || a.y != b.y;
-}
-
 // Vector operations.
 inline vec2i operator+(const vec2i& a) { return a; }
 inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
@@ -2267,14 +2278,6 @@ inline int sum(const vec2i& a) { return a.x + a.y; }
 // Functions applied to std::vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec3i& a, const vec3i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3i& a, const vec3i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
 
 // Vector operations.
 inline vec3i operator+(const vec3i& a) { return a; }
@@ -2350,14 +2353,6 @@ inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 // Functions applied to std::vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec4i& a, const vec4i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4i& a, const vec4i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
 
 // Vector operations.
 inline vec4i operator+(const vec4i& a) { return a; }
