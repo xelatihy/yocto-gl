@@ -501,177 +501,79 @@ inline bool  isfinite(const vec3f& a);
 inline void  swap(vec3f& a, vec3f& b);
 
 // Vector products and lengths.
-inline float dot(const vec4f& a, const vec4f& b);
-inline float length(const vec4f& a);
-inline vec4f normalize(const vec4f& a);
-inline float distance(const vec4f& a, const vec4f& b);
-inline float distance_squared(const vec4f& a, const vec4f& b);
+template<typename T, size_t N>
+inline T dot(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T, size_t N>
+inline float length(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> normalize(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline T distance(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T, size_t N>
+inline T distance_squared(const vec<T, 4>& a, const vec<T, 4>& b);
 
-inline vec4f slerp(const vec4f& a, const vec4f& b, float u);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
 
 // Max element and clamp.
-inline vec4f max(const vec4f& a, float b);
-inline vec4f min(const vec4f& a, float b);
-inline vec4f max(const vec4f& a, const vec4f& b);
-inline vec4f min(const vec4f& a, const vec4f& b);
-inline vec4f clamp(const vec4f& x, float min, float max);
-inline vec4f lerp(const vec4f& a, const vec4f& b, float u);
-inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> max(const vec<T, 4>& a, T1 b);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> min(const vec<T, 4>& a, T1 b);
+template<typename T, size_t N>
+inline vec<T, 4> max(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T, size_t N>
+inline vec<T, 4> min(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> clamp(const vec<T, 4>& x, float min, T1 max);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> lerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
+template<typename T, size_t N>
+inline vec<T, 4> lerp(const vec<T, 4>& a, const vec<T, 4>& b, const vec<T, 4>& u);
 
-inline float max(const vec4f& a);
-inline float min(const vec4f& a);
-inline float sum(const vec4f& a);
-inline float mean(const vec4f& a);
+template<typename T, size_t N>
+inline T max(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline T min(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline T sum(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline T mean(const vec<T, 4>& a);
 
 // Functions applied to std::vector elements
-inline vec4f abs(const vec4f& a);
-inline vec4f sqrt(const vec4f& a);
-inline vec4f exp(const vec4f& a);
-inline vec4f log(const vec4f& a);
-inline vec4f exp2(const vec4f& a);
-inline vec4f log2(const vec4f& a);
-inline vec4f pow(const vec4f& a, float b);
-inline vec4f pow(const vec4f& a, const vec4f& b);
-inline vec4f gain(const vec4f& a, float b);
-inline bool  isfinite(const vec4f& a);
-inline void  swap(vec4f& a, vec4f& b);
+template<typename T, size_t N>
+inline vec<T, 4> abs(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> sqrt(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> exp(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> log(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> exp2(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline vec<T, 4> log2(const vec<T, 4>& a);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> pow(const vec<T, 4>& a, T1 b);
+template<typename T, size_t N>
+inline vec<T, 4> pow(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, 4> gain(const vec<T, 4>& a, T1 b);
+template<typename T, size_t N>
+inline bool  isfinite(const vec<T, 4>& a);
+template<typename T, size_t N>
+inline void  swap(vec<T, 4>& a, vec<T, 4>& b);
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-inline vec4f quat_mul(const vec4f& a, float b);
-inline vec4f quat_mul(const vec4f& a, const vec4f& b);
-inline vec4f quat_conjugate(const vec4f& a);
-inline vec4f quat_inverse(const vec4f& a);
-
-}  // namespace yocto::math
-
-// -----------------------------------------------------------------------------
-// INTEGER VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto::math {
-
-// Vector operations.
-inline vec2i operator+(const vec2i& a);
-inline vec2i operator-(const vec2i& a);
-inline vec2i operator+(const vec2i& a, const vec2i& b);
-inline vec2i operator+(const vec2i& a, int b);
-inline vec2i operator+(int a, const vec2i& b);
-inline vec2i operator-(const vec2i& a, const vec2i& b);
-inline vec2i operator-(const vec2i& a, int b);
-inline vec2i operator-(int a, const vec2i& b);
-inline vec2i operator*(const vec2i& a, const vec2i& b);
-inline vec2i operator*(const vec2i& a, int b);
-inline vec2i operator*(int a, const vec2i& b);
-inline vec2i operator/(const vec2i& a, const vec2i& b);
-inline vec2i operator/(const vec2i& a, int b);
-inline vec2i operator/(int a, const vec2i& b);
-
-// Vector assignments
-inline vec2i& operator+=(vec2i& a, const vec2i& b);
-inline vec2i& operator+=(vec2i& a, int b);
-inline vec2i& operator-=(vec2i& a, const vec2i& b);
-inline vec2i& operator-=(vec2i& a, int b);
-inline vec2i& operator*=(vec2i& a, const vec2i& b);
-inline vec2i& operator*=(vec2i& a, int b);
-inline vec2i& operator/=(vec2i& a, const vec2i& b);
-inline vec2i& operator/=(vec2i& a, int b);
-
-// Max element and clamp.
-inline vec2i max(const vec2i& a, int b);
-inline vec2i min(const vec2i& a, int b);
-inline vec2i max(const vec2i& a, const vec2i& b);
-inline vec2i min(const vec2i& a, const vec2i& b);
-inline vec2i clamp(const vec2i& x, int min, int max);
-
-inline int max(const vec2i& a);
-inline int min(const vec2i& a);
-inline int sum(const vec2i& a);
-
-// Functions applied to std::vector elements
-inline vec2i abs(const vec2i& a);
-inline void  swap(vec2i& a, vec2i& b);
-
-// Vector operations.
-inline vec3i operator+(const vec3i& a);
-inline vec3i operator-(const vec3i& a);
-inline vec3i operator+(const vec3i& a, const vec3i& b);
-inline vec3i operator+(const vec3i& a, int b);
-inline vec3i operator+(int a, const vec3i& b);
-inline vec3i operator-(const vec3i& a, const vec3i& b);
-inline vec3i operator-(const vec3i& a, int b);
-inline vec3i operator-(int a, const vec3i& b);
-inline vec3i operator*(const vec3i& a, const vec3i& b);
-inline vec3i operator*(const vec3i& a, int b);
-inline vec3i operator*(int a, const vec3i& b);
-inline vec3i operator/(const vec3i& a, const vec3i& b);
-inline vec3i operator/(const vec3i& a, int b);
-inline vec3i operator/(int a, const vec3i& b);
-
-// Vector assignments
-inline vec3i& operator+=(vec3i& a, const vec3i& b);
-inline vec3i& operator+=(vec3i& a, int b);
-inline vec3i& operator-=(vec3i& a, const vec3i& b);
-inline vec3i& operator-=(vec3i& a, int b);
-inline vec3i& operator*=(vec3i& a, const vec3i& b);
-inline vec3i& operator*=(vec3i& a, int b);
-inline vec3i& operator/=(vec3i& a, const vec3i& b);
-inline vec3i& operator/=(vec3i& a, int b);
-
-// Max element and clamp.
-inline vec3i max(const vec3i& a, int b);
-inline vec3i min(const vec3i& a, int b);
-inline vec3i max(const vec3i& a, const vec3i& b);
-inline vec3i min(const vec3i& a, const vec3i& b);
-inline vec3i clamp(const vec3i& x, int min, int max);
-
-inline int max(const vec3i& a);
-inline int min(const vec3i& a);
-inline int sum(const vec3i& a);
-
-// Functions applied to std::vector elements
-inline vec3i abs(const vec3i& a);
-inline void  swap(vec3i& a, vec3i& b);
-
-// Vector operations.
-inline vec4i operator+(const vec4i& a);
-inline vec4i operator-(const vec4i& a);
-inline vec4i operator+(const vec4i& a, const vec4i& b);
-inline vec4i operator+(const vec4i& a, int b);
-inline vec4i operator+(int a, const vec4i& b);
-inline vec4i operator-(const vec4i& a, const vec4i& b);
-inline vec4i operator-(const vec4i& a, int b);
-inline vec4i operator-(int a, const vec4i& b);
-inline vec4i operator*(const vec4i& a, const vec4i& b);
-inline vec4i operator*(const vec4i& a, int b);
-inline vec4i operator*(int a, const vec4i& b);
-inline vec4i operator/(const vec4i& a, const vec4i& b);
-inline vec4i operator/(const vec4i& a, int b);
-inline vec4i operator/(int a, const vec4i& b);
-
-// Vector assignments
-inline vec4i& operator+=(vec4i& a, const vec4i& b);
-inline vec4i& operator+=(vec4i& a, int b);
-inline vec4i& operator-=(vec4i& a, const vec4i& b);
-inline vec4i& operator-=(vec4i& a, int b);
-inline vec4i& operator*=(vec4i& a, const vec4i& b);
-inline vec4i& operator*=(vec4i& a, int b);
-inline vec4i& operator/=(vec4i& a, const vec4i& b);
-inline vec4i& operator/=(vec4i& a, int b);
-
-// Max element and clamp.
-inline vec4i max(const vec4i& a, int b);
-inline vec4i min(const vec4i& a, int b);
-inline vec4i max(const vec4i& a, const vec4i& b);
-inline vec4i min(const vec4i& a, const vec4i& b);
-inline vec4i clamp(const vec4i& x, int min, int max);
-
-inline int max(const vec4i& a);
-inline int min(const vec4i& a);
-inline int sum(const vec4i& a);
-
-// Functions applied to std::vector elements
-inline vec4i abs(const vec4i& a);
-inline void  swap(vec4i& a, vec4i& b);
+template<typename T, typename T1>
+inline vec<T, 4> quat_mul(const vec<T, 4>& a, T1 b);
+template<typename T>
+inline vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b);
+template<typename T>
+inline vec<T, 4> quat_conjugate(const vec<T, 4>& a);
+template<typename T>
+inline vec<T, 4> quat_inverse(const vec<T, 4>& a);
 
 }  // namespace yocto::math
 
@@ -681,12 +583,8 @@ inline void  swap(vec4i& a, vec4i& b);
 namespace std {
 
 // Hash functor for std::vector for use with hash_map
-template <>
-struct hash<yocto::math::vec2i>;
-template <>
-struct hash<yocto::math::vec3i>;
-template <>
-struct hash<yocto::math::vec4i>;
+template <typename T, size_t N>
+struct hash<yocto::math::vec<T, N>>;
 
 }  // namespace std
 
@@ -2152,20 +2050,36 @@ inline bool isfinite(const vec3f& a) {
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
 
 // Vector products and lengths.
-inline float dot(const vec4f& a, const vec4f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+template<typename T, size_t N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return a.x * b.x;
+  } else if constexpr(N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr(N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  } else if constexpr(N == 4) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
-inline vec4f normalize(const vec4f& a) {
+template<typename T, size_t N>
+inline T length(const vec<T, N>& a) { return sqrt(dot(a, a)); }
+template<typename T, size_t N>
+inline vec<T, N> normalize(const vec<T, N>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-inline float distance(const vec4f& a, const vec4f& b) { return length(a - b); }
-inline float distance_squared(const vec4f& a, const vec4f& b) {
+template<typename T, size_t N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b) { return length(a - b); }
+template<typename T, size_t N>
+inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b) {
   return dot(a - b, a - b);
 }
 
-inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
+template<typename T, size_t N>
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
   auto d = dot(an, bn);
@@ -2180,297 +2094,294 @@ inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
 }
 
 // Max element and clamp.
-inline vec4f max(const vec4f& a, float b) {
+template<typename T, size_t N>
+inline vec<T, N> max(const vec<T, N>& a, T b) {
+  if constexpr(N == 1) {
+  return {max(a.x, b)};
+  } else if constexpr(N == 2) {
+  return {max(a.x, b), max(a.y, b)};
+  } else if constexpr(N == 3) {
+  return {max(a.x, b), max(a.y, b), max(a.z, b)};
+  } else if constexpr(N == 4) {
   return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f min(const vec4f& a, float b) {
+template<typename T, size_t N>
+inline vec<T, N> min(const vec<T, N>& a, T b) {
+  if constexpr(N == 1) {
+  return {min(a.x, b)};
+  } else if constexpr(N == 2) {
+  return {min(a.x, b), min(a.y, b)};
+  } else if constexpr(N == 3) {
+  return {min(a.x, b), min(a.y, b), min(a.z, b)};
+  } else if constexpr(N == 4) {
   return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f max(const vec4f& a, const vec4f& b) {
+template<typename T, size_t N>
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+  return {max(a.x, b.x)};
+  } else if constexpr(N == 2) {
+  return {max(a.x, b.x), max(a.y, b.y)};
+  } else if constexpr(N == 3) {
+  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+  } else if constexpr(N == 4) {
   return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f min(const vec4f& a, const vec4f& b) {
+template<typename T, size_t N>
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+  return {min(a.x, b.x)};
+  } else if constexpr(N == 2) {
+  return {min(a.x, b.x), min(a.y, b.y)};
+  } else if constexpr(N == 3) {
+  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+  } else if constexpr(N == 4) {
   return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f clamp(const vec4f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-      clamp(x.w, min, max)};
+template<typename T, size_t N>
+inline vec<T, N> clamp(const vec<T, N>& a, T min, T max) {
+  if constexpr(N == 1) {
+  return {clamp(a.x, min, max)};
+  } else if constexpr(N == 2) {
+  return {clamp(a.x, min, max), clamp(a.y, min, max)};
+  } else if constexpr(N == 3) {
+  return {clamp(a.x, min, max), clamp(a.y, min, max), clamp(a.z, min, max)};
+  } else if constexpr(N == 4) {
+  return {clamp(a.x, min, max), clamp(a.y, min, max), clamp(a.z, min, max),
+      clamp(a.w, min, max)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
+template<typename T, size_t N>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   return a * (1 - u) + b * u;
 }
-inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
+template<typename T, size_t N>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u) {
   return a * (1 - u) + b * u;
 }
 
-inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
-inline float mean(const vec4f& a) { return sum(a) / 4; }
+template<typename T, size_t N>
+inline T max(const vec<T, N>& a) { 
+    if constexpr(N == 1) {
+return a.x; 
+  } else if constexpr(N == 2) {
+return max(a.x, a.y); 
+  } else if constexpr(N == 3) {
+return max(max(a.x, a.y), a.z); 
+  } else if constexpr(N == 4) {
+return max(max(max(a.x, a.y), a.z), a.w); 
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline T min(const vec<T, N>& a) { 
+    if constexpr(N == 1) {
+return a.x;
+  } else if constexpr(N == 2) {
+return min(a.x, a.y);
+  } else if constexpr(N == 3) {
+return min(min(a.x, a.y), a.z);
+  } else if constexpr(N == 4) {
+return min(min(min(a.x, a.y), a.z), a.w);
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline T sum(const vec<T, N>& a) { 
+  if constexpr(N == 1) {
+return a.x ; 
+  } else if constexpr(N == 2) {
+return a.x + a.y; 
+  } else if constexpr(N == 3) {
+return a.x + a.y + a.z; 
+  } else if constexpr(N == 4) {
+return a.x + a.y + a.z + a.w; 
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline T mean(const vec<T, N>& a) { return sum(a) / (T)N; }
 
 // Functions applied to std::vector elements
-inline vec4f abs(const vec4f& a) {
+template<typename T, size_t N>
+inline vec<T, N> abs(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return {abs(a.x)};
+  } else if constexpr(N == 2) {
+  return {abs(a.x), abs(a.y)};
+  } else if constexpr(N == 3) {
+  return {abs(a.x), abs(a.y), abs(a.z)};
+  } else if constexpr(N == 4) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
-inline vec4f sqrt(const vec4f& a) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> sqrt(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return {sqrt(a.x)};
+  } else if constexpr(N == 2) {
+  return {sqrt(a.x), sqrt(a.y)};
+  } else if constexpr(N == 3) {
+  return {sqrt(a.x), sqrt(a.y), sqrt(a.z)};
+  } else if constexpr(N == 4) {
   return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
-};
-inline vec4f exp(const vec4f& a) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> exp(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return {exp(a.x)};
+  } else if constexpr(N == 2) {
+  return {exp(a.x), exp(a.y)};
+  } else if constexpr(N == 3) {
+  return {exp(a.x), exp(a.y), exp(a.z)};
+  } else if constexpr(N == 4) {
   return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
-};
-inline vec4f log(const vec4f& a) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> log(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return {log(a.x)};
+  } else if constexpr(N == 2) {
+  return {log(a.x), log(a.y)};
+  } else if constexpr(N == 3) {
+  return {log(a.x), log(a.y), log(a.z)};
+  } else if constexpr(N == 4) {
   return {log(a.x), log(a.y), log(a.z), log(a.w)};
-};
-inline vec4f exp2(const vec4f& a) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> exp2(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return {exp2(a.x)};
+  } else if constexpr(N == 2) {
+  return {exp2(a.x), exp2(a.y)};
+  } else if constexpr(N == 3) {
+  return {exp2(a.x), exp2(a.y), exp2(a.z)};
+  } else if constexpr(N == 4) {
   return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
-};
-inline vec4f log2(const vec4f& a) {
-  return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
-};
-inline vec4f pow(const vec4f& a, float b) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> log2(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+    return {log2(a.x)};
+  } else if constexpr(N == 2) {
+    return {log2(a.x), log2(a.y)};
+  } else if constexpr(N == 3) {
+    return {log2(a.x), log2(a.y), log2(a.z)};
+  } else if constexpr(N == 4) {
+    return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> pow(const vec<T, N>& a, T b) {
+  if constexpr(N == 1) {
+  return {pow(a.x, b)};
+  } else if constexpr(N == 2) {
+  return {pow(a.x, b), pow(a.y, b)};
+  } else if constexpr(N == 3) {
+  return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
+  } else if constexpr(N == 4) {
   return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
-};
-inline vec4f pow(const vec4f& a, const vec4f& b) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+  return {pow(a.x, b.x)};
+  } else if constexpr(N == 2) {
+  return {pow(a.x, b.x), pow(a.y, b.y)};
+  } else if constexpr(N == 3) {
+  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
+  } else if constexpr(N == 4) {
   return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
-};
-inline vec4f gain(const vec4f& a, float b) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> gain(const vec<T, N>& a, T b) {
+  if constexpr(N == 1) {
+  return {gain(a.x, b)};
+  } else if constexpr(N == 2) {
+  return {gain(a.x, b), gain(a.y, b)};
+  } else if constexpr(N == 3) {
+  return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
+  } else if constexpr(N == 4) {
   return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
-};
-inline bool isfinite(const vec4f& a) {
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline bool isfinite(const vec<T, N>& a) {
+  if constexpr(N == 1) {
+  return isfinite(a.x);
+  } else if constexpr(N == 2) {
+  return isfinite(a.x) && isfinite(a.y);
+  } else if constexpr(N == 3) {
+  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+  } else if constexpr(N == 4) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
-};
-inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline void swap(vec<T, N>& a, vec<T, N>& b) { std::swap(a, b); }
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-inline vec4f quat_mul(const vec4f& a, float b) {
+template<typename T, size_t N, typename T1>
+inline vec<T, N> quat_mul(const vec<T, N>& a, T1 b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
+template<typename T, size_t N>
+inline vec<T, N> quat_mul(const vec<T, N>& a, const vec<T, N>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
-inline vec4f quat_conjugate(const vec4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
-inline vec4f quat_inverse(const vec4f& a) {
+template<typename T, size_t N>
+inline vec<T, N> quat_conjugate(const vec<T, N>& a) { return {-a.x, -a.y, -a.z, a.w}; }
+template<typename T, size_t N>
+inline vec<T, N> quat_inverse(const vec<T, N>& a) {
   return quat_conjugate(a) / dot(a, a);
 }
-
-}  // namespace yocto::math
-
-// -----------------------------------------------------------------------------
-// INTEGER VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto::math {
-
-// Vector operations.
-inline vec2i operator+(const vec2i& a) { return a; }
-inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
-inline vec2i operator+(const vec2i& a, const vec2i& b) {
-  return {a.x + b.x, a.y + b.y};
-}
-inline vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
-inline vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
-inline vec2i operator-(const vec2i& a, const vec2i& b) {
-  return {a.x - b.x, a.y - b.y};
-}
-inline vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
-inline vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
-inline vec2i operator*(const vec2i& a, const vec2i& b) {
-  return {a.x * b.x, a.y * b.y};
-}
-inline vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
-inline vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
-inline vec2i operator/(const vec2i& a, const vec2i& b) {
-  return {a.x / b.x, a.y / b.y};
-}
-inline vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
-inline vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
-
-// Vector assignments
-inline vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
-inline vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
-inline vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
-inline vec2i& operator-=(vec2i& a, int b) { return a = a - b; }
-inline vec2i& operator*=(vec2i& a, const vec2i& b) { return a = a * b; }
-inline vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
-inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
-inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec2i max(const vec2i& a, int b) { return {max(a.x, b), max(a.y, b)}; }
-inline vec2i min(const vec2i& a, int b) { return {min(a.x, b), min(a.y, b)}; }
-inline vec2i max(const vec2i& a, const vec2i& b) {
-  return {max(a.x, b.x), max(a.y, b.y)};
-}
-inline vec2i min(const vec2i& a, const vec2i& b) {
-  return {min(a.x, b.x), min(a.y, b.y)};
-}
-inline vec2i clamp(const vec2i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max)};
-}
-
-inline int max(const vec2i& a) { return max(a.x, a.y); }
-inline int min(const vec2i& a) { return min(a.x, a.y); }
-inline int sum(const vec2i& a) { return a.x + a.y; }
-
-// Functions applied to std::vector elements
-inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
-inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
-
-// Vector operations.
-inline vec3i operator+(const vec3i& a) { return a; }
-inline vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
-inline vec3i operator+(const vec3i& a, const vec3i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline vec3i operator+(const vec3i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline vec3i operator+(int a, const vec3i& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline vec3i operator-(const vec3i& a, const vec3i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline vec3i operator-(const vec3i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline vec3i operator-(int a, const vec3i& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline vec3i operator*(const vec3i& a, const vec3i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline vec3i operator*(const vec3i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline vec3i operator*(int a, const vec3i& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline vec3i operator/(const vec3i& a, const vec3i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline vec3i operator/(const vec3i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline vec3i operator/(int a, const vec3i& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
-inline vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
-inline vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
-inline vec3i& operator-=(vec3i& a, int b) { return a = a - b; }
-inline vec3i& operator*=(vec3i& a, const vec3i& b) { return a = a * b; }
-inline vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
-inline vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
-inline vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec3i max(const vec3i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b)};
-}
-inline vec3i min(const vec3i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b)};
-}
-inline vec3i max(const vec3i& a, const vec3i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-}
-inline vec3i min(const vec3i& a, const vec3i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-}
-inline vec3i clamp(const vec3i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-}
-
-inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
-inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
-inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
-
-// Functions applied to std::vector elements
-inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
-
-// Vector operations.
-inline vec4i operator+(const vec4i& a) { return a; }
-inline vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-inline vec4i operator+(const vec4i& a, const vec4i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline vec4i operator+(const vec4i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline vec4i operator+(int a, const vec4i& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline vec4i operator-(const vec4i& a, const vec4i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline vec4i operator-(const vec4i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline vec4i operator-(int a, const vec4i& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline vec4i operator*(const vec4i& a, const vec4i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline vec4i operator*(const vec4i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4i operator*(int a, const vec4i& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline vec4i operator/(const vec4i& a, const vec4i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline vec4i operator/(const vec4i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4i operator/(int a, const vec4i& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
-inline vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
-inline vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
-inline vec4i& operator-=(vec4i& a, int b) { return a = a - b; }
-inline vec4i& operator*=(vec4i& a, const vec4i& b) { return a = a * b; }
-inline vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
-inline vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
-inline vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec4i max(const vec4i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
-}
-inline vec4i min(const vec4i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
-}
-inline vec4i max(const vec4i& a, const vec4i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
-}
-inline vec4i min(const vec4i& a, const vec4i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
-}
-inline vec4i clamp(const vec4i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-      clamp(x.w, min, max)};
-}
-
-inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-
-// Functions applied to std::vector elements
-inline vec4i abs(const vec4i& a) {
-  return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
-inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 }  // namespace yocto::math
 
@@ -2480,36 +2391,28 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 namespace std {
 
 // Hash functor for std::vector for use with hash_map
-template <>
-struct hash<yocto::math::vec2i> {
-  size_t operator()(const yocto::math::vec2i& v) const {
+template <typename T, size_t N>
+struct hash<yocto::math::vec<T, N>> {
+  size_t operator()(const yocto::math::vec<T, N>& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::math::vec3i> {
-  size_t operator()(const yocto::math::vec3i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::math::vec4i> {
-  size_t operator()(const yocto::math::vec4i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    if constexpr(N == 1) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr(N == 2) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr(N == 3) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr(N == 4) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else {
+      static_assert(N >= 1 && N <= 4, "vector size unsupported");
+    }
     return h;
   }
 };
