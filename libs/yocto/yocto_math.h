@@ -371,30 +371,52 @@ template<typename T, size_t N>
 inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
 
 // Vector operations.
-inline vec2f operator+(const vec2f& a);
-inline vec2f operator-(const vec2f& a);
-inline vec2f operator+(const vec2f& a, const vec2f& b);
-inline vec2f operator+(const vec2f& a, float b);
-inline vec2f operator+(float a, const vec2f& b);
-inline vec2f operator-(const vec2f& a, const vec2f& b);
-inline vec2f operator-(const vec2f& a, float b);
-inline vec2f operator-(float a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, float b);
-inline vec2f operator*(float a, const vec2f& b);
-inline vec2f operator/(const vec2f& a, const vec2f& b);
-inline vec2f operator/(const vec2f& a, float b);
-inline vec2f operator/(float a, const vec2f& b);
+template<typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a);
+template<typename T, size_t N>
+inline vec<T, N> operator-(const vec2f& a);
+template<typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator+(const vec<T, N>& a, T1 b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator+(T1 a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator-(const vec<T, N>& a, T1 b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator-(T1 a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec2f& b);
+template<typename T, size_t N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N>  operator/(const vec<T, N>& a, T1 b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b);
 
 // Vector assignments
-inline vec2f& operator+=(vec2f& a, const vec2f& b);
-inline vec2f& operator+=(vec2f& a, float b);
-inline vec2f& operator-=(vec2f& a, const vec2f& b);
-inline vec2f& operator-=(vec2f& a, float b);
-inline vec2f& operator*=(vec2f& a, const vec2f& b);
-inline vec2f& operator*=(vec2f& a, float b);
-inline vec2f& operator/=(vec2f& a, const vec2f& b);
-inline vec2f& operator/=(vec2f& a, float b);
+template<typename T, size_t N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator+=(vec<T, N>& a, T1 b);
+template<typename T, size_t N>
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator-=(vec<T, N>& a, T1 b);
+template<typename T, size_t N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b);
+template<typename T, size_t N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 
 // Vector products and lengths.
 inline float dot(const vec2f& a, const vec2f& b);
@@ -431,32 +453,6 @@ inline vec2f pow(const vec2f& a, float b);
 inline vec2f pow(const vec2f& a, const vec2f& b);
 inline vec2f gain(const vec2f& a, float b);
 inline void  swap(vec2f& a, vec2f& b);
-
-// Vector operations.
-inline vec3f operator+(const vec3f& a);
-inline vec3f operator-(const vec3f& a);
-inline vec3f operator+(const vec3f& a, const vec3f& b);
-inline vec3f operator+(const vec3f& a, float b);
-inline vec3f operator+(float a, const vec3f& b);
-inline vec3f operator-(const vec3f& a, const vec3f& b);
-inline vec3f operator-(const vec3f& a, float b);
-inline vec3f operator-(float a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, float b);
-inline vec3f operator*(float a, const vec3f& b);
-inline vec3f operator/(const vec3f& a, const vec3f& b);
-inline vec3f operator/(const vec3f& a, float b);
-inline vec3f operator/(float a, const vec3f& b);
-
-// Vector assignments
-inline vec3f& operator+=(vec3f& a, const vec3f& b);
-inline vec3f& operator+=(vec3f& a, float b);
-inline vec3f& operator-=(vec3f& a, const vec3f& b);
-inline vec3f& operator-=(vec3f& a, float b);
-inline vec3f& operator*=(vec3f& a, const vec3f& b);
-inline vec3f& operator*=(vec3f& a, float b);
-inline vec3f& operator/=(vec3f& a, const vec3f& b);
-inline vec3f& operator/=(vec3f& a, float b);
 
 // Vector products and lengths.
 inline float dot(const vec3f& a, const vec3f& b);
@@ -503,32 +499,6 @@ inline vec3f pow(const vec3f& a, const vec3f& b);
 inline vec3f gain(const vec3f& a, float b);
 inline bool  isfinite(const vec3f& a);
 inline void  swap(vec3f& a, vec3f& b);
-
-// Vector operations.
-inline vec4f operator+(const vec4f& a);
-inline vec4f operator-(const vec4f& a);
-inline vec4f operator+(const vec4f& a, const vec4f& b);
-inline vec4f operator+(const vec4f& a, float b);
-inline vec4f operator+(float a, const vec4f& b);
-inline vec4f operator-(const vec4f& a, const vec4f& b);
-inline vec4f operator-(const vec4f& a, float b);
-inline vec4f operator-(float a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, float b);
-inline vec4f operator*(float a, const vec4f& b);
-inline vec4f operator/(const vec4f& a, const vec4f& b);
-inline vec4f operator/(const vec4f& a, float b);
-inline vec4f operator/(float a, const vec4f& b);
-
-// Vector assignments
-inline vec4f& operator+=(vec4f& a, const vec4f& b);
-inline vec4f& operator+=(vec4f& a, float b);
-inline vec4f& operator-=(vec4f& a, const vec4f& b);
-inline vec4f& operator-=(vec4f& a, float b);
-inline vec4f& operator*=(vec4f& a, const vec4f& b);
-inline vec4f& operator*=(vec4f& a, float b);
-inline vec4f& operator/=(vec4f& a, const vec4f& b);
-inline vec4f& operator/=(vec4f& a, float b);
 
 // Vector products and lengths.
 inline float dot(const vec4f& a, const vec4f& b);
@@ -1805,7 +1775,7 @@ inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
   } else if constexpr(N == 3) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
   } else if constexpr(N == 4) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;    
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
@@ -1826,38 +1796,208 @@ inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
 }
 
 // Vector operations.
-inline vec2f operator+(const vec2f& a) { return a; }
-inline vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
-inline vec2f operator+(const vec2f& a, const vec2f& b) {
-  return {a.x + b.x, a.y + b.y};
+template<typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a) { return a; }
+template<typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a) { 
+  if constexpr(N == 1) {
+    return {-a.x};
+  } else if constexpr(N == 2) {
+    return {-a.x, -a.y}; 
+  } else if constexpr(N == 3) {
+    return {-a.x, -a.y, -a.z};
+  } else if constexpr(N == 4) {
+    return {-a.x, -a.y, -a.z, -a.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator+(const vec2f& a, float b) { return {a.x + b, a.y + b}; }
-inline vec2f operator+(float a, const vec2f& b) { return {a + b.x, a + b.y}; }
-inline vec2f operator-(const vec2f& a, const vec2f& b) {
-  return {a.x - b.x, a.y - b.y};
+template<typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return {a.x + b.x};
+  } else if constexpr(N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr(N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr(N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator-(const vec2f& a, float b) { return {a.x - b, a.y - b}; }
-inline vec2f operator-(float a, const vec2f& b) { return {a - b.x, a - b.y}; }
-inline vec2f operator*(const vec2f& a, const vec2f& b) {
-  return {a.x * b.x, a.y * b.y};
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator+(const vec<T, N>& a, T1 b) { 
+  if constexpr(N == 1) {
+    return {a.x + b}; 
+  } else if constexpr(N == 2) {
+    return {a.x + b, a.y + b}; 
+  } else if constexpr(N == 3) {
+    return {a.x + b, a.y + b, a.z + b};
+  } else if constexpr(N == 4) {
+    return {a.x + b, a.y + b, a.z + b, a.w + b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator*(const vec2f& a, float b) { return {a.x * b, a.y * b}; }
-inline vec2f operator*(float a, const vec2f& b) { return {a * b.x, a * b.y}; }
-inline vec2f operator/(const vec2f& a, const vec2f& b) {
-  return {a.x / b.x, a.y / b.y};
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator+(T1 a, const vec<T, N>& b) { 
+  if constexpr(N == 1) {
+    return {a + b.x}; 
+  } else if constexpr(N == 2) {
+    return {a + b.x, a + b.y}; 
+  } else if constexpr(N == 3) {
+    return {a + b.x, a + b.y, a + b.z};
+  } else if constexpr(N == 4) {
+    return {a + b.x, a + b.y, a + b.z, a + b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator/(const vec2f& a, float b) { return {a.x / b, a.y / b}; }
-inline vec2f operator/(float a, const vec2f& b) { return {a / b.x, a / b.y}; }
+template<typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return {a.x - b.x};
+  } else if constexpr(N == 2) {
+    return {a.x - b.x, a.y - b.y};
+  } else if constexpr(N == 3) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+  } else if constexpr(N == 4) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator-(const vec<T, N>& a, T1 b) { 
+  if constexpr(N == 1) {
+    return {a.x - b}; 
+  } else if constexpr(N == 2) {
+    return {a.x - b, a.y - b}; 
+  } else if constexpr(N == 3) {
+    return {a.x - b, a.y - b, a.z - b};
+  } else if constexpr(N == 4) {
+    return {a.x - b, a.y - b, a.z - b, a.w - b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator-(T1 a, const vec<T, N>& b) { 
+  if constexpr(N == 1) {
+    return {a - b.x};
+  } else if constexpr(N == 2) {
+    return {a - b.x, a - b.y};
+  } else if constexpr(N == 3) {
+    return {a - b.x, a - b.y, a - b.z};
+  } else if constexpr(N == 4) {
+    return {a - b.x, a - b.y, a - b.z, a - b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return {a.x * b.x};
+  } else if constexpr(N == 2) {
+    return {a.x * b.x, a.y * b.y};
+  } else if constexpr(N == 3) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+  } else if constexpr(N == 4) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b) { 
+  if constexpr(N == 1) {
+    return {a.x * b}; 
+  } else if constexpr(N == 2) {
+    return {a.x * b, a.y * b}; 
+  } else if constexpr(N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr(N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec<T, N>& b) { 
+  if constexpr(N == 1) {
+    return {a * b.x}; 
+  } else if constexpr(N == 2) {
+    return {a * b.x, a * b.y}; 
+  } else if constexpr(N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr(N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr(N == 1) {
+    return {a.x / b.x};
+  } else if constexpr(N == 2) {
+    return {a.x / b.x, a.y / b.y};
+  } else if constexpr(N == 3) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z};
+  } else if constexpr(N == 4) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b) { 
+  if constexpr(N == 1) {
+    return {a.x / b}; 
+  } else if constexpr(N == 2) {
+    return {a.x / b, a.y / b}; 
+  } else if constexpr(N == 3) {
+    return {a.x / b, a.y / b, a.z / b};
+  } else if constexpr(N == 4) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, size_t N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b) { 
+  if constexpr(N == 1) {
+    return {a / b.x}; 
+  } else if constexpr(N == 2) {
+    return {a / b.x, a / b.y}; 
+  } else if constexpr(N == 3) {
+    return {a / b.x, a / b.y, a / b.z};
+  } else if constexpr(N == 4) {
+    return {a / b.x, a / b.y, a / b.z, a / b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
 
 // Vector assignments
-inline vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
-inline vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
-inline vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
-inline vec2f& operator-=(vec2f& a, float b) { return a = a - b; }
-inline vec2f& operator*=(vec2f& a, const vec2f& b) { return a = a * b; }
-inline vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
-inline vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
-inline vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
+template<typename T, size_t N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) { return a = a + b; }
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator+=(vec<T, N>& a, T1 b) { return a = a + b; }
+template<typename T, size_t N>
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) { return a = a - b; }
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator-=(vec<T, N>& a, T1 b) { return a = a - b; }
+template<typename T, size_t N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) { return a = a * b; }
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) { return a = a * b; }
+template<typename T, size_t N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) { return a = a / b; }
+template<typename T, size_t N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) { return a = a / b; }
 
 // Vector products and lengths.
 inline float dot(const vec2f& a, const vec2f& b) {
@@ -1919,56 +2059,6 @@ inline vec2f gain(const vec2f& a, float b) {
   return {gain(a.x, b), gain(a.y, b)};
 };
 inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
-
-// Vector operations.
-inline vec3f operator+(const vec3f& a) { return a; }
-inline vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
-inline vec3f operator+(const vec3f& a, const vec3f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline vec3f operator+(const vec3f& a, float b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline vec3f operator+(float a, const vec3f& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline vec3f operator-(const vec3f& a, const vec3f& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline vec3f operator-(const vec3f& a, float b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline vec3f operator-(float a, const vec3f& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline vec3f operator*(const vec3f& a, const vec3f& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline vec3f operator*(const vec3f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline vec3f operator*(float a, const vec3f& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline vec3f operator/(const vec3f& a, const vec3f& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline vec3f operator/(const vec3f& a, float b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline vec3f operator/(float a, const vec3f& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
-inline vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
-inline vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
-inline vec3f& operator-=(vec3f& a, float b) { return a = a - b; }
-inline vec3f& operator*=(vec3f& a, const vec3f& b) { return a = a * b; }
-inline vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
-inline vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
-inline vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
 inline float dot(const vec3f& a, const vec3f& b) {
@@ -2060,56 +2150,6 @@ inline bool isfinite(const vec3f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
 };
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
-
-// Vector operations.
-inline vec4f operator+(const vec4f& a) { return a; }
-inline vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-inline vec4f operator+(const vec4f& a, const vec4f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline vec4f operator+(const vec4f& a, float b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline vec4f operator+(float a, const vec4f& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline vec4f operator-(const vec4f& a, const vec4f& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline vec4f operator-(const vec4f& a, float b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline vec4f operator-(float a, const vec4f& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline vec4f operator*(const vec4f& a, const vec4f& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline vec4f operator*(const vec4f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4f operator*(float a, const vec4f& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline vec4f operator/(const vec4f& a, const vec4f& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline vec4f operator/(const vec4f& a, float b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4f operator/(float a, const vec4f& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline vec4f& operator+=(vec4f& a, const vec4f& b) { return a = a + b; }
-inline vec4f& operator+=(vec4f& a, float b) { return a = a + b; }
-inline vec4f& operator-=(vec4f& a, const vec4f& b) { return a = a - b; }
-inline vec4f& operator-=(vec4f& a, float b) { return a = a - b; }
-inline vec4f& operator*=(vec4f& a, const vec4f& b) { return a = a * b; }
-inline vec4f& operator*=(vec4f& a, float b) { return a = a * b; }
-inline vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
-inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
 inline float dot(const vec4f& a, const vec4f& b) {
