@@ -303,7 +303,7 @@ static inline float pq_display_to_linear(float x) {
   return L;
 }
 static inline float pq_linear_to_display(float x) {
-  return pow((0.8359375 + 18.8515625 * pow(x, 0.1593017578125f)) /
+  return pow((0.8359375f + 18.8515625f * pow(x, 0.1593017578125f)) /
                  (1 + 18.6875f * pow(x, 0.1593017578125f)),
       78.84375f);
 }

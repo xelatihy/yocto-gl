@@ -1150,7 +1150,7 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     lensfile          = lensfile.substr(0, lensfile.size() - 4);
     lensfile          = lensfile.substr(lensfile.find('.') + 1);
     lensfile          = lensfile.substr(0, lensfile.size() - 2);
-    auto lens         = math::max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    auto lens         = math::max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
     pcamera->lens     = 2 * atan(0.036f / (2 * lens));
     pcamera->aperture = 0.0f;
     if (!get_value(command.values, "aperturediameter", pcamera->aperture))
