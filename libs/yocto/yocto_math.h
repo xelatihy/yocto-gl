@@ -2231,30 +2231,30 @@ inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
 }
 
 // Max element and clamp.
-template <typename T, size_t N>
-inline vec<T, N> max(const vec<T, N>& a, T b) {
+template <typename T, size_t N, typename T1>
+inline vec<T, N> max(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
-    return {max(a.x, b)};
+    return {max(a.x, (T)b)};
   } else if constexpr (N == 2) {
-    return {max(a.x, b), max(a.y, b)};
+    return {max(a.x, (T)b), max(a.y, (T)b)};
   } else if constexpr (N == 3) {
-    return {max(a.x, b), max(a.y, b), max(a.z, b)};
+    return {max(a.x, (T)b), max(a.y, (T)b), max(a.z, (T)b)};
   } else if constexpr (N == 4) {
-    return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+    return {max(a.x, (T)b), max(a.y, (T)b), max(a.z, (T)b), max(a.w, (T)b)};
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
 }
-template <typename T, size_t N>
-inline vec<T, N> min(const vec<T, N>& a, T b) {
+template <typename T, size_t N, typename T1>
+inline vec<T, N> min(const vec<T, N>& a, T1 b) {
   if constexpr (N == 1) {
-    return {min(a.x, b)};
+    return {min(a.x, (T)b)};
   } else if constexpr (N == 2) {
-    return {min(a.x, b), min(a.y, b)};
+    return {min(a.x, (T)b), min(a.y, (T)b)};
   } else if constexpr (N == 3) {
-    return {min(a.x, b), min(a.y, b), min(a.z, b)};
+    return {min(a.x, (T)b), min(a.y, (T)b), min(a.z, (T)b)};
   } else if constexpr (N == 4) {
-    return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+    return {min(a.x, (T)b), min(a.y, (T)b), min(a.z, (T)b), min(a.w, (T)b)};
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
@@ -4031,7 +4031,7 @@ inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb) {
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
 inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
-  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+  return max(grey + (rgb - grey) * (contrast * 2), 0);
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 template <typename T>
@@ -4040,7 +4040,7 @@ inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(zero3f, exp2(adjusted) - epsilon);
+  return max(exp2(adjusted) - epsilon, 0);
 }
 // Apply an s-shaped contrast.
 template <typename T>
@@ -4052,7 +4052,7 @@ template <typename T>
 inline vec<T, 3> saturate(
     const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
   auto grey = dot(weights, rgb);
-  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+  return max(grey + (rgb - grey) * (saturation * 2), 0);
 }
 
 // Filmic tonemapping
@@ -4064,7 +4064,7 @@ inline vec<T, 3> tonemap_filmic(
     auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
     auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
                (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
-    return max(zero3f, ldr);
+    return max(ldr, 0);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -4086,7 +4086,7 @@ inline vec<T, 3> tonemap_filmic(
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max(zero3f, ldr);
+    return max(ldr, 0);
   }
 }
 
@@ -4130,13 +4130,13 @@ inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 // Convert between CIE XYZ and xyY
 template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
-  if (xyz == zero3f) return zero3f;
+  if (xyz == vec3f{0}) return {0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 template <typename T>
 inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
-  if (xyY.y == 0) return zero3f;
+  if (xyY.y == 0) return vec<T, 3>{0};
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
@@ -4188,7 +4188,7 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
 template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature) {
   // https://github.com/neilbartlett/color-temperature
-  auto rgb = zero3f;
+  auto rgb = vec<T, 3>{0};
   if ((temperature / 100) < 66) {
     rgb.x = 255;
   } else {
@@ -4494,7 +4494,7 @@ namespace yocto::math {
 // Schlick approximation of the Fresnel term
 inline vec3f fresnel_schlick(
     const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
-  if (specular == zero3f) return zero3f;
+  if (specular == vec3f{0}) return vec3f{0};
   auto cosine = dot(normal, outgoing);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
@@ -4529,7 +4529,7 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = dot(normal, outgoing);
-  if (cosw <= 0) return zero3f;
+  if (cosw <= 0) return vec3f{0};
 
   cosw       = clamp(cosw, (float)-1, (float)1);
   auto cos2  = cosw * cosw;
@@ -4715,14 +4715,14 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
 // Evaluate a diffuse BRDF lobe.
 inline vec3f eval_diffuse_reflection(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   return vec3f{1} / pif * dot(normal, incoming);
 }
 
 // Evaluate a specular BRDF lobe.
 inline vec3f eval_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
@@ -4736,7 +4736,7 @@ inline vec3f eval_microfacet_reflection(float ior, float roughness,
 inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
@@ -4748,7 +4748,7 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 // Evaluate a transmission BRDF lobe.
 inline vec3f eval_microfacet_transmission(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
   // auto F       = fresnel_schlick(
@@ -4796,14 +4796,14 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
 // Sample a diffuse BRDF lobe.
 inline vec3f sample_diffuse_reflection(
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   return sample_hemisphere_cos(normal, rn);
 }
 
 // Sample a specular BRDF lobe.
 inline vec3f sample_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
@@ -4813,7 +4813,7 @@ inline vec3f sample_microfacet_reflection(float ior, float roughness,
 inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
     float roughness, const vec3f& normal, const vec3f& outgoing,
     const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
@@ -4822,7 +4822,7 @@ inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 // Sample a transmission BRDF lobe.
 inline vec3f sample_microfacet_transmission(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   auto halfway = sample_microfacet(roughness, normal, rn);
   // auto halfway   = sample_microfacet(roughness, normal, outgoing, rn);
   auto reflected = reflect(outgoing, halfway);
@@ -4910,21 +4910,21 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
 // Evaluate a delta specular BRDF lobe.
 inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
 }
 
 // Evaluate a delta metal BRDF lobe.
 inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   return fresnel_conductor(eta, etak, normal, outgoing);
 }
 
 // Evaluate a delta transmission BRDF lobe.
 inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
   return vec3f{1};
 }
 
@@ -4944,21 +4944,21 @@ inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
 // Sample a delta specular BRDF lobe.
 inline vec3f sample_delta_reflection(
     float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta metal BRDF lobe.
 inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
     const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta transmission BRDF lobe.
 inline vec3f sample_delta_transmission(
     float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+  if (dot(normal, outgoing) <= 0) return vec3f{0};
   return -outgoing;
 }
 
@@ -5267,7 +5267,7 @@ inline void update_fpscam(
 template <typename T>
 inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
     const vec<T, 2>& film, const vec<T, 2>& image_uv) {
-  auto e = zero3f;
+  auto e = vec3f{0};
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
   auto q1  = -q;
