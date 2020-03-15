@@ -220,6 +220,13 @@ inline const auto flt_max = std::numeric_limits<float>::max();
 inline const auto flt_min = std::numeric_limits<float>::lowest();
 inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
+template<typename T>
+inline const auto type_max = std::numeric_limits<T>::max();
+template<typename T>
+inline const auto type_min = std::numeric_limits<T>::lowest();
+template<typename T>
+inline const auto type_eps = std::numeric_limits<T>::epsilon();
+
 template <typename T>
 inline T abs(T a);
 template <typename T>
@@ -840,8 +847,8 @@ namespace yocto::math {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, size_t N>
 struct bbox {
-  vec<T, N> min = vec<T, N>{flt_max};
-  vec<T, N> max = vec<T, N>{flt_min};
+  vec<T, N> min = vec<T, N>{type_max<T>};
+  vec<T, N> max = vec<T, N>{type_min<T>};
 
   bbox();
   bbox(const vec<T, N>& min, const vec<T, N>& max);
