@@ -212,7 +212,7 @@ using uint   = unsigned int;
 using ushort = unsigned short;
 
 inline const double pi  = 3.14159265358979323846;
-inline const float  pif = (float)pi;
+inline const float pif = (float)pi;
 
 inline const auto int_max = std::numeric_limits<int>::max();
 inline const auto int_min = std::numeric_limits<int>::lowest();
@@ -1394,14 +1394,18 @@ namespace yocto::math {
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, float offset = 1,
-    const vec3i& wrap = zero3i);
-inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, const vec3i& wrap = zero3i);
-inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
+template<typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec<int, 3>& wrap = zero3i);
+template<typename T>
+inline T perlin_ridge(const vec<T, 3>& p, T lacunarity = 2,
+    T gain = 0.5, int octaves = 6, T offset = 1,
+    const vec<int, 3>& wrap = zero3i);
+template<typename T>
+inline T perlin_fbm(const vec<T, 3>& p, T lacunarity = 2, T gain = 0.5,
+    int octaves = 6, const vec<int, 3>& wrap = zero3i);
+template<typename T>
+inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity = 2,
+    T gain = 0.5, int octaves = 6, const vec<int, 3>& wrap = zero3i);
 
 }  // namespace yocto::math
 
@@ -4451,29 +4455,33 @@ inline float _stb_perlin_turbulence_noise3(float x, float y, float z, float lacu
 // clang-format on
 
 // adapeted  stb_perlin.h
-inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
-  return _stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
+template<typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec<int, 3>& wrap) {
+  return _stb_perlin_noise3((float)p.x, (float)p.y, (float)p.z, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
-    int octaves, float offset, const vec3i& wrap) {
+template<typename T>
+inline T perlin_ridge(const vec<T, 3>& p, T lacunarity, T gain,
+    int octaves, T offset, const vec<int, 3>& wrap) {
   return _stb_perlin_ridge_noise3(
-      p.x, p.y, p.z, lacunarity, gain, offset, octaves, wrap.x, wrap.y, wrap.z);
+      (float)p.x, (float)p.y, (float)p.z, (float)lacunarity, (float)gain, offset, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+template<typename T>
+inline T perlin_fbm(const vec<T, 3>& p, T lacunarity, T gain,
+    int octaves, const vec<int, 3>& wrap) {
   return _stb_perlin_fbm_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+      (float)p.x, (float)p.y, (float)p.z, (float)lacunarity, (float)gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+template<typename T>
+inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity, T gain,
+    int octaves, const vec<int, 3>& wrap) {
   return _stb_perlin_turbulence_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+      (float)p.x, (float)p.y, (float)p.z, (float)lacunarity, (float)gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 }  // namespace yocto::math

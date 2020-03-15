@@ -979,7 +979,7 @@ void make_noisemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_noise({uv.x, uv.y, 0.5f});
+    auto v = math::perlin_noise(vec3f{uv.x, uv.y, 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
