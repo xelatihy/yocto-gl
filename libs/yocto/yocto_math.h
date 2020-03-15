@@ -1320,66 +1320,26 @@ struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-  rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-  rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+  rng_state();
+  rng_state(uint64_t state, uint64_t inc);
 };
 
-// Next random number, used internally only.
-inline uint32_t _advance_rng(rng_state& rng) {
-  uint64_t oldstate   = rng.state;
-  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
-  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-  uint32_t rot        = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-}
-
 // Init a random number generator with a state state from the sequence seq.
-inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
-  auto rng  = rng_state();
-  rng.state = 0U;
-  rng.inc   = (seq << 1u) | 1u;
-  _advance_rng(rng);
-  rng.state += seed;
-  _advance_rng(rng);
-  return rng;
-}
+inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
-  union {
-    uint32_t u;
-    float    f;
-  } x;
-  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
-  return x.f - 1.0f;
-  // alternate implementation
-  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
-  // return advance_rng(rng) * scale;
-}
-inline vec2f rand2f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  return {x, y};
-}
-inline vec3f rand3f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  auto z = rand1f(rng);
-  return {x, y, z};
-}
+inline int   rand1i(rng_state& rng, int n);
+inline vec2i rand2i(rng_state& rng, int n);
+inline vec3i rand3i(rng_state& rng, int n);
+inline vec4i rand4i(rng_state& rng, int n);
+inline float rand1f(rng_state& rng);
+inline vec2f rand2f(rng_state& rng);
+inline vec3f rand3f(rng_state& rng);
+inline vec4f rand4f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(std::vector<T>& vals, rng_state& rng) {
-  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
-  for (auto i = (int)vals.size() - 1; i > 0; i--) {
-    auto j = rand1i(rng, i + 1);
-    std::swap(vals[j], vals[i]);
-  }
-}
+inline void shuffle(std::vector<T>& vals, rng_state& rng);
 
 }  // namespace yocto::math
 
@@ -3754,7 +3714,7 @@ inline bool intersect_triangle(const ray<T, 3>& ray, const vec<T, 3>& p0,
   // check determinant and exit if triangle and ray are parallel
   // (could use EPSILONS if desired)
   if (det == 0) return false;
-  auto inv_det = 1.0f / det;
+  auto inv_det = 1 / det;
 
   // compute and check first bricentric coordinated
   auto tvec = ray.o - p0;
@@ -3802,7 +3762,7 @@ inline bool intersect_quad(const ray<T, 3>& ray, const vec<T, 3>& p0,
 template <typename T>
 inline bool intersect_bbox(const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
   // determine intersection ranges
-  auto invd = 1.0f / ray.d;
+  auto invd = 1 / ray.d;
   auto t0   = (bbox.min - ray.o) * invd;
   auto t1   = (bbox.max - ray.o) * invd;
   // flip based on range directions
@@ -4331,6 +4291,103 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
 }  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+namespace yocto::math {
+
+// PCG random numbers from http://www.pcg-random.org/
+inline rng_state::rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+
+// Next random number, used internally only.
+inline uint32_t _advance_rng(rng_state& rng) {
+  uint64_t oldstate   = rng.state;
+  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
+  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  uint32_t rot        = (uint32_t)(oldstate >> 59u);
+  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+// Init a random number generator with a state state from the sequence seq.
+inline rng_state make_rng(uint64_t seed, uint64_t seq) {
+  auto rng  = rng_state();
+  rng.state = 0U;
+  rng.inc   = (seq << 1u) | 1u;
+  _advance_rng(rng);
+  rng.state += seed;
+  _advance_rng(rng);
+  return rng;
+}
+
+// Next random numbers: floats in [0,1), ints in [0,n).
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
+inline vec2i rand2i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  return {x, y};
+}
+inline vec3i rand3i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  auto z = rand1i(rng, n);
+  return {x, y, z};
+}
+inline vec4i rand4i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  auto z = rand1i(rng, n);
+  auto w = rand1i(rng, n);
+  return {x, y, z, w};
+}
+inline float rand1f(rng_state& rng) {
+  union {
+    uint32_t u;
+    float    f;
+  } x;
+  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
+  return x.f - 1.0f;
+  // alternate implementation
+  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
+  // return advance_rng(rng) * scale;
+}
+inline vec2f rand2f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  return {x, y};
+}
+inline vec3f rand3f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  return {x, y, z};
+}
+inline vec4f rand4f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  auto w = rand1f(rng);
+  return {x, y, z, w};
+}
+
+// Shuffles a sequence of elements
+template <typename T>
+inline void shuffle(std::vector<T>& vals, rng_state& rng) {
+  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
+  for (auto i = (int)vals.size() - 1; i > 0; i--) {
+    auto j = rand1i(rng, i + 1);
+    std::swap(vals[j], vals[i]);
+  }
+}
+
+}  // namespace yocto::math
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
 namespace yocto::math {
@@ -4576,8 +4633,7 @@ inline vec<T, 3> fresnel_schlick(const vec<T, 3>& specular,
     const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
   if (specular == vec<T, 3>{0}) return vec<T, 3>{0};
   auto cosine = dot(normal, outgoing);
-  return specular +
-         (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
+  return specular + (1 - specular) * pow(clamp(1 - abs(cosine), (T)0, (T)1), 5);
 }
 
 // Compute the fresnel term for dielectrics.
@@ -4715,9 +4771,9 @@ inline T microfacet_shadowing1(T roughness, const vec<T, 3>& normal,
            (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
   } else {
     auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
-    return ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
-                           (1.0f + 2.276f * ci + 2.577f * ci * ci)
-                     : 1.0f;
+    return ci < (T)1.6 ? ((T)3.535 * ci + (T)2.181 * ci * ci) /
+                           ((T)1.0 + (T)2.276 * ci + (T)2.577 * ci * ci)
+                     : (T)1.0;
   }
 }
 
@@ -5160,7 +5216,7 @@ namespace yocto::math {
 template <typename T>
 inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
   auto z   = ruv.y;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto r   = sqrt(clamp(1 - z * z, 0, 1));
   auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
@@ -5189,7 +5245,7 @@ inline T sample_hemisphere_pdf(
 template <typename T>
 inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto z   = 2 * ruv.y - 1;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto r   = sqrt(clamp(1 - z * z, (T)0, (T)1));
   auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
@@ -5307,7 +5363,7 @@ inline T sample_uniform(const std::vector<T>& elements, T r) {
 template <typename T>
 inline T sample_uniform_pdf(const std::vector<T>& elements) {
   if (elements.empty()) return 0;
-  return 1.0f / (int)elements.size();
+  return (T)1 / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
