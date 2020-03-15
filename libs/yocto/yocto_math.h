@@ -4296,8 +4296,10 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
 namespace yocto::math {
 
 // PCG random numbers from http://www.pcg-random.org/
-inline rng_state::rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-inline rng_state::rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+inline rng_state::rng_state()
+    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
 
 // Next random number, used internally only.
 inline uint32_t _advance_rng(rng_state& rng) {
@@ -4772,8 +4774,8 @@ inline T microfacet_shadowing1(T roughness, const vec<T, 3>& normal,
   } else {
     auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
     return ci < (T)1.6 ? ((T)3.535 * ci + (T)2.181 * ci * ci) /
-                           ((T)1.0 + (T)2.276 * ci + (T)2.577 * ci * ci)
-                     : (T)1.0;
+                             ((T)1.0 + (T)2.276 * ci + (T)2.577 * ci * ci)
+                       : (T)1.0;
   }
 }
 
