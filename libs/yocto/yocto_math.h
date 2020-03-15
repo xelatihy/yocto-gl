@@ -905,30 +905,43 @@ inline bbox<T, N> quad_bounds(
 namespace yocto::math {
 
 // Ray esplison
-inline const auto ray_eps = 1e-4f;
+inline const auto ray_eps = 1e-4;
+inline const auto ray_epsd = 1e-4;
+inline const auto ray_epsf = 1e-4f;
 
-struct ray2f {
-  vec2f o    = {0, 0};
-  vec2f d    = {0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+// Ray with origin, direction and min/max t value.
+template<typename T, size_t N>
+struct ray;
 
-  ray2f();
-  ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
-      float tmax = flt_max);
+// Two-dimensional ray with origin, direction and min/max t value.
+template<typename T>
+struct ray<T, 2> {
+  vec<T, 2> o    = {0, 0};
+  vec<T, 2> d    = {0, 1};
+  T tmin = ray_eps;
+  T tmax = flt_max;
+
+  ray();
+  ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin = ray_eps,
+      T tmax = flt_max);
 };
 
-// Rays with origin, direction and min/max t value.
-struct ray3f {
-  vec3f o    = {0, 0, 0};
-  vec3f d    = {0, 0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+// Two-dimensional ray with origin, direction and min/max t value.
+template<typename T>
+struct ray<T, 3> {
+  vec<T, 3> o    = {0, 0, 0};
+  vec<T, 3> d    = {0, 0, 1};
+  T tmin = ray_eps;
+  T tmax = flt_max;
 
-  ray3f();
-  ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
-      float tmax = flt_max);
+  ray();
+  ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = ray_eps,
+      T tmax = flt_max);
 };
+
+// Type alias
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
 
 }  // namespace yocto::math
 
@@ -2873,13 +2886,17 @@ inline bbox<T, N> quad_bounds(
 namespace yocto::math {
 
 // Rays with origin, direction and min/max t value.
-inline ray2f::ray2f() {}
-inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin, float tmax)
+template<typename T>
+inline ray<T, 2>::ray() {}
+template<typename T>
+inline ray<T, 2>::ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin, T tmax)
     : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 // Rays with origin, direction and min/max t value.
-inline ray3f::ray3f() {}
-inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
+template<typename T>
+inline ray<T, 3>::ray() {}
+template<typename T>
+inline ray<T, 3>::ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin, T tmax)
     : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 }  // namespace yocto::math
