@@ -4112,7 +4112,7 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   }
 
   auto chroma = r - (g < b ? g : b);
-  return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + (T)1e-20), r};
+  return {abs(K + (g - b) / (6 * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
