@@ -303,7 +303,7 @@ static inline float pq_display_to_linear(float x) {
   return L;
 }
 static inline float pq_linear_to_display(float x) {
-  return pow((0.8359375 + 18.8515625 * pow(x, 0.1593017578125f)) /
+  return pow((0.8359375f + 18.8515625f * pow(x, 0.1593017578125f)) /
                  (1 + 18.6875f * pow(x, 0.1593017578125f)),
       78.84375f);
 }
@@ -979,7 +979,7 @@ void make_noisemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_noise({uv.x, uv.y, 0.5f});
+    auto v = math::perlin_noise(vec3f{uv.x, uv.y, 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });

@@ -9,28 +9,31 @@
 // ## Small vectors, matrices and frames
 //
 // We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 1-4 dimensional vectors
-// coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
-// `vec1i`, `vec2i`, `vec3i`, `vec4i`).
+// in graphics. In particular, we support 1-4 dimensional vectors `vec<T, N>`
+// with aliases for float and int coordinates (`vec1f`, `vec2f`, `vec3f`, 
+// `vec4f`, `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
-// We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
-// matrix-matrix and matrix-std::vector products, transposes and inverses.
+// We support 1-4 dimensional matrices `mat<T, N>` with aliases for float 
+// coordinates (`mat2f`, `mat3f`, `mat4f`) with
+// matrix-matrix and matrix-vector products, transposes and inverses.
 // Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame2f` and
-// `frame3f`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame<T, N>` with 
+// aliases for float coordinates (`frame2f`, `frame3f`). 
+// The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are fater with this representation.
 //
 //
 // ## Rays and bounding boxes
 //
-// We represent rays in 2-3 dimensions with `ray2f`, `ray3f`.
-// Each ray support initialization and evaluation.
+// We represent 2-3 dimensinal rays as `ray<T, N>` with float alises 
+// (`ray2f`, `ray3f`). Each ray support initialization and evaluation.
 //
-// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`.
+// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float alises 
+// (`bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`).
 // Each bounding box support construction from points and other bounding box.
 // We provide operations to compute bounds for points, lines, triangles and
 // quads.
@@ -81,8 +84,8 @@
 // 1. initialize the random number generator with `make_rng()`
 // 2. if necessary, you can reseed the rng with `seed_rng()`
 // 3. generate random integers in an interval with `rand1i()`
-// 4. generate random floats and double in the [0,1) range with `rand1f()`,
-//    `rand2f()`, `rand3f()`, `rand1d()`
+// 4. generate random floats in the [0,1) range with `rand1f()`,
+//    `rand2f()`, `rand3f()`, `rand4f()`
 //
 //
 // ## Noise Functions
@@ -220,41 +223,71 @@ inline const auto flt_max = std::numeric_limits<float>::max();
 inline const auto flt_min = std::numeric_limits<float>::lowest();
 inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
-inline float abs(float a);
-inline float min(float a, float b);
-inline float max(float a, float b);
-inline float clamp(float a, float min, float max);
-inline float sign(float a);
-inline float sqrt(float a);
-inline float sin(float a);
-inline float cos(float a);
-inline float tan(float a);
-inline float asin(float a);
-inline float acos(float a);
-inline float atan(float a);
-inline float log(float a);
-inline float exp(float a);
-inline float log2(float a);
-inline float exp2(float a);
-inline float pow(float a, float b);
-inline float isfinite(float a);
-inline float atan2(float a, float b);
-inline float fmod(float a, float b);
-inline float radians(float a);
-inline float degrees(float a);
-inline float lerp(float a, float b, float u);
-inline void  swap(float& a, float& b);
-inline float smoothstep(float a, float b, float u);
-inline float bias(float a, float bias);
-inline float gain(float a, float gain);
+template <typename T>
+inline const auto type_max = std::numeric_limits<T>::max();
+template <typename T>
+inline const auto type_min = std::numeric_limits<T>::lowest();
+template <typename T>
+inline const auto type_eps = std::numeric_limits<T>::epsilon();
 
-inline int  abs(int a);
-inline int  min(int a, int b);
-inline int  max(int a, int b);
-inline int  clamp(int a, int min, int max);
-inline int  sign(int a);
-inline int  pow2(int a);
-inline void swap(int& a, int& b);
+template <typename T>
+inline T abs(T a);
+template <typename T>
+inline T min(T a, T b);
+template <typename T>
+inline T max(T a, T b);
+template <typename T>
+inline T clamp(T a, T min, T max);
+template <typename T>
+inline T sign(T a);
+template <typename T>
+inline T sqrt(T a);
+template <typename T>
+inline T sin(T a);
+template <typename T>
+inline T cos(T a);
+template <typename T>
+inline T tan(T a);
+template <typename T>
+inline T asin(T a);
+template <typename T>
+inline T acos(T a);
+template <typename T>
+inline T atan(T a);
+template <typename T>
+inline T log(T a);
+template <typename T>
+inline T exp(T a);
+template <typename T>
+inline T log2(T a);
+template <typename T>
+inline T exp2(T a);
+template <typename T>
+inline T pow(T a, T b);
+template <typename T>
+inline T pow(T a, int b);
+template <typename T>
+inline T isfinite(T a);
+template <typename T>
+inline T atan2(T a, T b);
+template <typename T>
+inline T fmod(T a, T b);
+template <typename T>
+inline T radians(T a);
+template <typename T>
+inline T degrees(T a);
+template <typename T>
+inline T lerp(T a, T b, T u);
+template <typename T>
+inline void swap(T& a, T& b);
+template <typename T>
+inline T smoothstep(T a, T b, T u);
+template <typename T>
+inline T bias(T a, T bias);
+template <typename T>
+inline T gain(T a, T gain);
+template <typename T>
+inline int pow2(int a);
 
 }  // namespace yocto::math
 
@@ -263,358 +296,94 @@ inline void swap(int& a, int& b);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-struct vec2f {
-  float x = 0;
-  float y = 0;
+// Short vector with static size. Implementation uses specializations to support
+// direct member access.
+template <typename T, size_t N>
+struct vec;
 
-  vec2f();
-  vec2f(float x, float y);
-  explicit vec2f(float v);
+// One-dimensional vector.
+template <typename T>
+struct vec<T, 1> {
+  T x = 0;
+
+  vec();
+  explicit vec(T x);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
 
-struct vec3f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
+// Two-dimensional vector.
+template <typename T>
+struct vec<T, 2> {
+  T x = 0;
+  T y = 0;
 
-  vec3f();
-  vec3f(float x, float y, float z);
-  vec3f(const vec2f& v, float z);
-  explicit vec3f(float v);
+  vec();
+  vec(T x, T y);
+  explicit vec(T v);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
 
-struct vec4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
+// Three-dimensional vector.
+template <typename T>
+struct vec<T, 3> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
 
-  vec4f();
-  vec4f(float x, float y, float z, float w);
-  vec4f(const vec3f& v, float w);
-  explicit vec4f(float v);
+  vec();
+  vec(T x, T y, T z);
+  vec(const vec<T, 2>& v, T z);
+  explicit vec(T v);
   explicit operator bool() const;
 
-  float&       operator[](int i);
-  const float& operator[](int i) const;
+  T&       operator[](int i);
+  const T& operator[](int i) const;
 };
+
+// Four-dimensional vector.
+template <typename T>
+struct vec<T, 4> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
+
+  vec();
+  vec(T x, T y, T z, T w);
+  vec(const vec<T, 3>& v, T w);
+  explicit vec(T v);
+  explicit operator bool() const;
+
+  T&       operator[](int i);
+  const T& operator[](int i) const;
+};
+
+// Type aliases
+using vec1f = vec<float, 1>;
+using vec2f = vec<float, 2>;
+using vec3f = vec<float, 3>;
+using vec4f = vec<float, 4>;
+using vec1i = vec<int, 1>;
+using vec2i = vec<int, 2>;
+using vec3i = vec<int, 3>;
+using vec4i = vec<int, 4>;
+using vec1b = vec<byte, 1>;
+using vec2b = vec<byte, 2>;
+using vec3b = vec<byte, 3>;
+using vec4b = vec<byte, 4>;
 
 // Zero std::vector constants.
+inline const auto zero1f = vec1f{0};
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
-
-// Element access
-inline vec3f&       xyz(vec4f& a);
-inline const vec3f& xyz(const vec4f& a);
-
-// Vector comparison operations.
-inline bool operator==(const vec2f& a, const vec2f& b);
-inline bool operator!=(const vec2f& a, const vec2f& b);
-
-// Vector operations.
-inline vec2f operator+(const vec2f& a);
-inline vec2f operator-(const vec2f& a);
-inline vec2f operator+(const vec2f& a, const vec2f& b);
-inline vec2f operator+(const vec2f& a, float b);
-inline vec2f operator+(float a, const vec2f& b);
-inline vec2f operator-(const vec2f& a, const vec2f& b);
-inline vec2f operator-(const vec2f& a, float b);
-inline vec2f operator-(float a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, float b);
-inline vec2f operator*(float a, const vec2f& b);
-inline vec2f operator/(const vec2f& a, const vec2f& b);
-inline vec2f operator/(const vec2f& a, float b);
-inline vec2f operator/(float a, const vec2f& b);
-
-// Vector assignments
-inline vec2f& operator+=(vec2f& a, const vec2f& b);
-inline vec2f& operator+=(vec2f& a, float b);
-inline vec2f& operator-=(vec2f& a, const vec2f& b);
-inline vec2f& operator-=(vec2f& a, float b);
-inline vec2f& operator*=(vec2f& a, const vec2f& b);
-inline vec2f& operator*=(vec2f& a, float b);
-inline vec2f& operator/=(vec2f& a, const vec2f& b);
-inline vec2f& operator/=(vec2f& a, float b);
-
-// Vector products and lengths.
-inline float dot(const vec2f& a, const vec2f& b);
-inline float cross(const vec2f& a, const vec2f& b);
-
-inline float length(const vec2f& a);
-inline vec2f normalize(const vec2f& a);
-inline float distance(const vec2f& a, const vec2f& b);
-inline float distance_squared(const vec2f& a, const vec2f& b);
-
-// Max element and clamp.
-inline vec2f max(const vec2f& a, float b);
-inline vec2f min(const vec2f& a, float b);
-inline vec2f max(const vec2f& a, const vec2f& b);
-inline vec2f min(const vec2f& a, const vec2f& b);
-inline vec2f clamp(const vec2f& x, float min, float max);
-inline vec2f lerp(const vec2f& a, const vec2f& b, float u);
-inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u);
-
-inline float max(const vec2f& a);
-inline float min(const vec2f& a);
-inline float sum(const vec2f& a);
-inline float mean(const vec2f& a);
-
-// Functions applied to std::vector elements
-inline vec2f abs(const vec2f& a);
-inline vec2f sqrt(const vec2f& a);
-inline vec2f exp(const vec2f& a);
-inline vec2f log(const vec2f& a);
-inline vec2f exp2(const vec2f& a);
-inline vec2f log2(const vec2f& a);
-inline bool  isfinite(const vec2f& a);
-inline vec2f pow(const vec2f& a, float b);
-inline vec2f pow(const vec2f& a, const vec2f& b);
-inline vec2f gain(const vec2f& a, float b);
-inline void  swap(vec2f& a, vec2f& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec3f& a, const vec3f& b);
-inline bool operator!=(const vec3f& a, const vec3f& b);
-
-// Vector operations.
-inline vec3f operator+(const vec3f& a);
-inline vec3f operator-(const vec3f& a);
-inline vec3f operator+(const vec3f& a, const vec3f& b);
-inline vec3f operator+(const vec3f& a, float b);
-inline vec3f operator+(float a, const vec3f& b);
-inline vec3f operator-(const vec3f& a, const vec3f& b);
-inline vec3f operator-(const vec3f& a, float b);
-inline vec3f operator-(float a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, float b);
-inline vec3f operator*(float a, const vec3f& b);
-inline vec3f operator/(const vec3f& a, const vec3f& b);
-inline vec3f operator/(const vec3f& a, float b);
-inline vec3f operator/(float a, const vec3f& b);
-
-// Vector assignments
-inline vec3f& operator+=(vec3f& a, const vec3f& b);
-inline vec3f& operator+=(vec3f& a, float b);
-inline vec3f& operator-=(vec3f& a, const vec3f& b);
-inline vec3f& operator-=(vec3f& a, float b);
-inline vec3f& operator*=(vec3f& a, const vec3f& b);
-inline vec3f& operator*=(vec3f& a, float b);
-inline vec3f& operator/=(vec3f& a, const vec3f& b);
-inline vec3f& operator/=(vec3f& a, float b);
-
-// Vector products and lengths.
-inline float dot(const vec3f& a, const vec3f& b);
-inline vec3f cross(const vec3f& a, const vec3f& b);
-
-inline float length(const vec3f& a);
-inline vec3f normalize(const vec3f& a);
-inline float distance(const vec3f& a, const vec3f& b);
-inline float distance_squared(const vec3f& a, const vec3f& b);
-
-inline float angle(const vec3f& a, const vec3f& b);
-
-// Orthogonal vectors.
-inline vec3f orthogonal(const vec3f& v);
-inline vec3f orthonormalize(const vec3f& a, const vec3f& b);
-
-// Reflected and refracted std::vector.
-inline vec3f reflect(const vec3f& w, const vec3f& n);
-inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta);
-
-// Max element and clamp.
-inline vec3f max(const vec3f& a, float b);
-inline vec3f min(const vec3f& a, float b);
-inline vec3f max(const vec3f& a, const vec3f& b);
-inline vec3f min(const vec3f& a, const vec3f& b);
-inline vec3f clamp(const vec3f& x, float min, float max);
-inline vec3f lerp(const vec3f& a, const vec3f& b, float u);
-inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u);
-
-inline float max(const vec3f& a);
-inline float min(const vec3f& a);
-inline float sum(const vec3f& a);
-inline float mean(const vec3f& a);
-
-// Functions applied to std::vector elements
-inline vec3f abs(const vec3f& a);
-inline vec3f sqrt(const vec3f& a);
-inline vec3f exp(const vec3f& a);
-inline vec3f log(const vec3f& a);
-inline vec3f exp2(const vec3f& a);
-inline vec3f log2(const vec3f& a);
-inline vec3f pow(const vec3f& a, float b);
-inline vec3f pow(const vec3f& a, const vec3f& b);
-inline vec3f gain(const vec3f& a, float b);
-inline bool  isfinite(const vec3f& a);
-inline void  swap(vec3f& a, vec3f& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec4f& a, const vec4f& b);
-inline bool operator!=(const vec4f& a, const vec4f& b);
-
-// Vector operations.
-inline vec4f operator+(const vec4f& a);
-inline vec4f operator-(const vec4f& a);
-inline vec4f operator+(const vec4f& a, const vec4f& b);
-inline vec4f operator+(const vec4f& a, float b);
-inline vec4f operator+(float a, const vec4f& b);
-inline vec4f operator-(const vec4f& a, const vec4f& b);
-inline vec4f operator-(const vec4f& a, float b);
-inline vec4f operator-(float a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, float b);
-inline vec4f operator*(float a, const vec4f& b);
-inline vec4f operator/(const vec4f& a, const vec4f& b);
-inline vec4f operator/(const vec4f& a, float b);
-inline vec4f operator/(float a, const vec4f& b);
-
-// Vector assignments
-inline vec4f& operator+=(vec4f& a, const vec4f& b);
-inline vec4f& operator+=(vec4f& a, float b);
-inline vec4f& operator-=(vec4f& a, const vec4f& b);
-inline vec4f& operator-=(vec4f& a, float b);
-inline vec4f& operator*=(vec4f& a, const vec4f& b);
-inline vec4f& operator*=(vec4f& a, float b);
-inline vec4f& operator/=(vec4f& a, const vec4f& b);
-inline vec4f& operator/=(vec4f& a, float b);
-
-// Vector products and lengths.
-inline float dot(const vec4f& a, const vec4f& b);
-inline float length(const vec4f& a);
-inline vec4f normalize(const vec4f& a);
-inline float distance(const vec4f& a, const vec4f& b);
-inline float distance_squared(const vec4f& a, const vec4f& b);
-
-inline vec4f slerp(const vec4f& a, const vec4f& b, float u);
-
-// Max element and clamp.
-inline vec4f max(const vec4f& a, float b);
-inline vec4f min(const vec4f& a, float b);
-inline vec4f max(const vec4f& a, const vec4f& b);
-inline vec4f min(const vec4f& a, const vec4f& b);
-inline vec4f clamp(const vec4f& x, float min, float max);
-inline vec4f lerp(const vec4f& a, const vec4f& b, float u);
-inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u);
-
-inline float max(const vec4f& a);
-inline float min(const vec4f& a);
-inline float sum(const vec4f& a);
-inline float mean(const vec4f& a);
-
-// Functions applied to std::vector elements
-inline vec4f abs(const vec4f& a);
-inline vec4f sqrt(const vec4f& a);
-inline vec4f exp(const vec4f& a);
-inline vec4f log(const vec4f& a);
-inline vec4f exp2(const vec4f& a);
-inline vec4f log2(const vec4f& a);
-inline vec4f pow(const vec4f& a, float b);
-inline vec4f pow(const vec4f& a, const vec4f& b);
-inline vec4f gain(const vec4f& a, float b);
-inline bool  isfinite(const vec4f& a);
-inline void  swap(vec4f& a, vec4f& b);
-
-// Quaternion operatons represented as xi + yj + zk + w
-// const auto identity_quat4f = vec4f{0, 0, 0, 1};
-inline vec4f quat_mul(const vec4f& a, float b);
-inline vec4f quat_mul(const vec4f& a, const vec4f& b);
-inline vec4f quat_conjugate(const vec4f& a);
-inline vec4f quat_inverse(const vec4f& a);
-
-}  // namespace yocto::math
-
-// -----------------------------------------------------------------------------
-// INTEGER VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto::math {
-
-struct vec2i {
-  int x = 0;
-  int y = 0;
-
-  vec2i();
-  vec2i(int x, int y);
-  explicit vec2i(int v);
-  explicit operator vec2f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec3i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
-
-  vec3i();
-  vec3i(int x, int y, int z);
-  vec3i(const vec2i& v, int z);
-  explicit vec3i(int v);
-  explicit operator vec3f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec4i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
-  int w = 0;
-
-  vec4i();
-  vec4i(int x, int y, int z, int w);
-  vec4i(const vec3i& v, int w);
-  explicit vec4i(int v);
-  explicit operator vec4f() const;
-  explicit operator bool() const;
-
-  int&       operator[](int i);
-  const int& operator[](int i) const;
-};
-
-struct vec3b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-
-  vec3b();
-  vec3b(byte x, byte y, byte z);
-  explicit vec3b(byte v);
-  explicit operator bool() const;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
-struct vec4b {
-  byte x = 0;
-  byte y = 0;
-  byte z = 0;
-  byte w = 0;
-
-  vec4b();
-  vec4b(byte x, byte y, byte z, byte w);
-  explicit vec4b(byte v);
-  explicit operator bool() const;
-
-  byte&       operator[](int i);
-  const byte& operator[](int i) const;
-};
-
-// Zero std::vector constants.
+inline const auto zero1i = vec1i{0};
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
@@ -622,147 +391,159 @@ inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
-inline vec3i&       xyz(vec4i& a);
-inline const vec3i& xyz(const vec4i& a);
-
-// Element access
-inline vec3b&       xyz(vec4b& a);
-inline const vec3b& xyz(const vec4b& a);
+template <typename T>
+inline vec<T, 3>& xyz(vec<T, 4>& a);
+template <typename T>
+inline const vec<T, 3>& xyz(const vec<T, 4>& a);
 
 // Vector comparison operations.
-inline bool operator==(const vec2i& a, const vec2i& b);
-inline bool operator!=(const vec2i& a, const vec2i& b);
+template <typename T, size_t N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
 
 // Vector operations.
-inline vec2i operator+(const vec2i& a);
-inline vec2i operator-(const vec2i& a);
-inline vec2i operator+(const vec2i& a, const vec2i& b);
-inline vec2i operator+(const vec2i& a, int b);
-inline vec2i operator+(int a, const vec2i& b);
-inline vec2i operator-(const vec2i& a, const vec2i& b);
-inline vec2i operator-(const vec2i& a, int b);
-inline vec2i operator-(int a, const vec2i& b);
-inline vec2i operator*(const vec2i& a, const vec2i& b);
-inline vec2i operator*(const vec2i& a, int b);
-inline vec2i operator*(int a, const vec2i& b);
-inline vec2i operator/(const vec2i& a, const vec2i& b);
-inline vec2i operator/(const vec2i& a, int b);
-inline vec2i operator/(int a, const vec2i& b);
+template <typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> operator-(const vec2f& a);
+template <typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator+(const vec<T, N>& a, T1 b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator+(T1 a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator-(const vec<T, N>& a, T1 b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator-(T1 a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec2f& b);
+template <typename T, size_t N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b);
 
 // Vector assignments
-inline vec2i& operator+=(vec2i& a, const vec2i& b);
-inline vec2i& operator+=(vec2i& a, int b);
-inline vec2i& operator-=(vec2i& a, const vec2i& b);
-inline vec2i& operator-=(vec2i& a, int b);
-inline vec2i& operator*=(vec2i& a, const vec2i& b);
-inline vec2i& operator*=(vec2i& a, int b);
-inline vec2i& operator/=(vec2i& a, const vec2i& b);
-inline vec2i& operator/=(vec2i& a, int b);
+template <typename T, size_t N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator+=(vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator-=(vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
+
+// Vector products and lengths.
+template <typename T, size_t N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline T length(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> normalize(const vec<T, N>& a);
+template <typename T, size_t N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T>
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline T angle(const vec<T, 3>& a, const vec<T, 3>& b);
+
+// Orthogonal vectors.
+template <typename T>
+inline vec<T, 3> orthogonal(const vec<T, 3>& v);
+template <typename T>
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
+
+// Reflected and refracted std::vector.
+template <typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
+template <typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T inv_eta);
+
+// Slerp
+template <typename T, size_t N, typename T1>
+inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u);
 
 // Max element and clamp.
-inline vec2i max(const vec2i& a, int b);
-inline vec2i min(const vec2i& a, int b);
-inline vec2i max(const vec2i& a, const vec2i& b);
-inline vec2i min(const vec2i& a, const vec2i& b);
-inline vec2i clamp(const vec2i& x, int min, int max);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> max(const vec<T, N>& a, T1 b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> min(const vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1, typename T2>
+inline vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u);
+template <typename T, size_t N>
+inline vec<T, N> lerp(
+    const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u);
 
-inline int max(const vec2i& a);
-inline int min(const vec2i& a);
-inline int sum(const vec2i& a);
-
-// Functions applied to std::vector elements
-inline vec2i abs(const vec2i& a);
-inline void  swap(vec2i& a, vec2i& b);
-
-// Vector comparison operations.
-inline bool operator==(const vec3i& a, const vec3i& b);
-inline bool operator!=(const vec3i& a, const vec3i& b);
-
-// Vector operations.
-inline vec3i operator+(const vec3i& a);
-inline vec3i operator-(const vec3i& a);
-inline vec3i operator+(const vec3i& a, const vec3i& b);
-inline vec3i operator+(const vec3i& a, int b);
-inline vec3i operator+(int a, const vec3i& b);
-inline vec3i operator-(const vec3i& a, const vec3i& b);
-inline vec3i operator-(const vec3i& a, int b);
-inline vec3i operator-(int a, const vec3i& b);
-inline vec3i operator*(const vec3i& a, const vec3i& b);
-inline vec3i operator*(const vec3i& a, int b);
-inline vec3i operator*(int a, const vec3i& b);
-inline vec3i operator/(const vec3i& a, const vec3i& b);
-inline vec3i operator/(const vec3i& a, int b);
-inline vec3i operator/(int a, const vec3i& b);
-
-// Vector assignments
-inline vec3i& operator+=(vec3i& a, const vec3i& b);
-inline vec3i& operator+=(vec3i& a, int b);
-inline vec3i& operator-=(vec3i& a, const vec3i& b);
-inline vec3i& operator-=(vec3i& a, int b);
-inline vec3i& operator*=(vec3i& a, const vec3i& b);
-inline vec3i& operator*=(vec3i& a, int b);
-inline vec3i& operator/=(vec3i& a, const vec3i& b);
-inline vec3i& operator/=(vec3i& a, int b);
-
-// Max element and clamp.
-inline vec3i max(const vec3i& a, int b);
-inline vec3i min(const vec3i& a, int b);
-inline vec3i max(const vec3i& a, const vec3i& b);
-inline vec3i min(const vec3i& a, const vec3i& b);
-inline vec3i clamp(const vec3i& x, int min, int max);
-
-inline int max(const vec3i& a);
-inline int min(const vec3i& a);
-inline int sum(const vec3i& a);
+template <typename T, size_t N>
+inline T max(const vec<T, N>& a);
+template <typename T, size_t N>
+inline T min(const vec<T, N>& a);
+template <typename T, size_t N>
+inline T sum(const vec<T, N>& a);
+template <typename T, size_t N>
+inline T mean(const vec<T, N>& a);
 
 // Functions applied to std::vector elements
-inline vec3i abs(const vec3i& a);
-inline void  swap(vec3i& a, vec3i& b);
+template <typename T, size_t N>
+inline vec<T, N> abs(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> sqrt(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> exp(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> log(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> exp2(const vec<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> log2(const vec<T, N>& a);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> pow(const vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N, typename T1>
+inline vec<T, N> gain(const vec<T, N>& a, T1 b);
+template <typename T, size_t N>
+inline bool isfinite(const vec<T, N>& a);
+template <typename T, size_t N>
+inline void swap(vec<T, N>& a, vec<T, N>& b);
 
-// Vector comparison operations.
-inline bool operator==(const vec4i& a, const vec4i& b);
-inline bool operator!=(const vec4i& a, const vec4i& b);
-
-// Vector operations.
-inline vec4i operator+(const vec4i& a);
-inline vec4i operator-(const vec4i& a);
-inline vec4i operator+(const vec4i& a, const vec4i& b);
-inline vec4i operator+(const vec4i& a, int b);
-inline vec4i operator+(int a, const vec4i& b);
-inline vec4i operator-(const vec4i& a, const vec4i& b);
-inline vec4i operator-(const vec4i& a, int b);
-inline vec4i operator-(int a, const vec4i& b);
-inline vec4i operator*(const vec4i& a, const vec4i& b);
-inline vec4i operator*(const vec4i& a, int b);
-inline vec4i operator*(int a, const vec4i& b);
-inline vec4i operator/(const vec4i& a, const vec4i& b);
-inline vec4i operator/(const vec4i& a, int b);
-inline vec4i operator/(int a, const vec4i& b);
-
-// Vector assignments
-inline vec4i& operator+=(vec4i& a, const vec4i& b);
-inline vec4i& operator+=(vec4i& a, int b);
-inline vec4i& operator-=(vec4i& a, const vec4i& b);
-inline vec4i& operator-=(vec4i& a, int b);
-inline vec4i& operator*=(vec4i& a, const vec4i& b);
-inline vec4i& operator*=(vec4i& a, int b);
-inline vec4i& operator/=(vec4i& a, const vec4i& b);
-inline vec4i& operator/=(vec4i& a, int b);
-
-// Max element and clamp.
-inline vec4i max(const vec4i& a, int b);
-inline vec4i min(const vec4i& a, int b);
-inline vec4i max(const vec4i& a, const vec4i& b);
-inline vec4i min(const vec4i& a, const vec4i& b);
-inline vec4i clamp(const vec4i& x, int min, int max);
-
-inline int max(const vec4i& a);
-inline int min(const vec4i& a);
-inline int sum(const vec4i& a);
-
-// Functions applied to std::vector elements
-inline vec4i abs(const vec4i& a);
-inline void  swap(vec4i& a, vec4i& b);
+// Quaternion operatons represented as xi + yj + zk + w
+// const auto identity_quat4f = vec4f{0, 0, 0, 1};
+template <typename T, typename T1>
+inline vec<T, 4> quat_mul(const vec<T, 4>& a, T1 b);
+template <typename T>
+inline vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b);
+template <typename T>
+inline vec<T, 4> quat_conjugate(const vec<T, 4>& a);
+template <typename T>
+inline vec<T, 4> quat_inverse(const vec<T, 4>& a);
 
 }  // namespace yocto::math
 
@@ -772,12 +553,8 @@ inline void  swap(vec4i& a, vec4i& b);
 namespace std {
 
 // Hash functor for std::vector for use with hash_map
-template <>
-struct hash<yocto::math::vec2i>;
-template <>
-struct hash<yocto::math::vec3i>;
-template <>
-struct hash<yocto::math::vec4i>;
+template <typename T, size_t N>
+struct hash<yocto::math::vec<T, N>>;
 
 }  // namespace std
 
@@ -787,43 +564,69 @@ struct hash<yocto::math::vec4i>;
 namespace yocto::math {
 
 // Small Fixed-size matrices stored in column major format.
-struct mat2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
+template <typename T, size_t M, size_t N>
+struct mat;
 
-  mat2f();
-  mat2f(const vec2f& x, const vec2f& y);
+// One-dimensional matrix stored in column major format.
+template <typename T, size_t M>
+struct mat<T, M, 1> {
+  vec<T, M> x = vec<T, M>{0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  mat();
+  mat(const vec<T, M>& x);
+
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
 
-// Small Fixed-size matrices stored in column major format.
-struct mat3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
+// Two-dimensional matrix stored in column major format.
+template <typename T, size_t M>
+struct mat<T, M, 2> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
 
-  mat3f();
-  mat3f(const vec3f& x, const vec3f& y, const vec3f& z);
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y);
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
 
-// Small Fixed-size matrices stored in column major format.
-struct mat4f {
-  vec4f x = {1, 0, 0, 0};
-  vec4f y = {0, 1, 0, 0};
-  vec4f z = {0, 0, 1, 0};
-  vec4f w = {0, 0, 0, 1};
+// Three-dimensional matrix stored in column major format.
+template <typename T, size_t M>
+struct mat<T, M, 3> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
+  vec<T, M> z = vec<T, M>{0};
 
-  mat4f();
-  mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w);
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z);
 
-  vec4f&       operator[](int i);
-  const vec4f& operator[](int i) const;
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
 };
+
+// Four-dimensional matrix stored in column major format.
+template <typename T, size_t M>
+struct mat<T, M, 4> {
+  vec<T, M> x = vec<T, M>{0};
+  vec<T, M> y = vec<T, M>{0};
+  vec<T, M> z = vec<T, M>{0};
+  vec<T, M> w = vec<T, M>{0};
+
+  mat();
+  mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z,
+      const vec<T, M>& w);
+
+  vec<T, M>&       operator[](int i);
+  const vec<T, M>& operator[](int i) const;
+};
+
+// Type aliases
+using mat1f = mat<float, 1, 1>;
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
 inline const auto identity2x2f = mat2f{{1, 0}, {0, 1}};
@@ -832,77 +635,48 @@ inline const auto identity4x4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-inline bool operator==(const mat2f& a, const mat2f& b);
-inline bool operator!=(const mat2f& a, const mat2f& b);
+template <typename T, size_t M, size_t N>
+inline bool operator==(const mat<T, M, N>& a, const mat<T, M, N>& b);
+template <typename T, size_t M, size_t N>
+inline bool operator!=(const mat<T, M, N>& a, const mat<T, M, N>& b);
 
 // Matrix operations.
-inline mat2f operator+(const mat2f& a, const mat2f& b);
-inline mat2f operator*(const mat2f& a, float b);
-inline vec2f operator*(const mat2f& a, const vec2f& b);
-inline vec2f operator*(const vec2f& a, const mat2f& b);
-inline mat2f operator*(const mat2f& a, const mat2f& b);
+template <typename T, size_t M, size_t N>
+inline mat<T, M, N> operator+(const mat<T, M, N>& a, const mat<T, M, N>& b);
+template <typename T, size_t M, size_t N, typename T1>
+inline mat<T, M, N> operator*(const mat<T, M, N>& a, T1 b);
+template <typename T, size_t M, size_t N>
+inline vec<T, M> operator*(const mat<T, M, N>& a, const vec<T, N>& b);
+template <typename T, size_t M, size_t N>
+inline vec<T, N> operator*(const vec<T, M>& a, const mat<T, M, N>& b);
+template <typename T, size_t M, size_t N, size_t K>
+inline mat<T, M, K> operator*(const mat<T, M, N>& a, const mat<T, N, K>& b);
 
 // Matrix assignments.
-inline mat2f& operator+=(mat2f& a, const mat2f& b);
-inline mat2f& operator*=(mat2f& a, const mat2f& b);
-inline mat2f& operator*=(mat2f& a, float b);
+template <typename T, size_t M, size_t N>
+inline mat<T, M, N>& operator+=(mat<T, M, N>& a, const mat<T, M, N>& b);
+template <typename T, size_t M, size_t N>
+inline mat2f& operator*=(mat<T, M, N>& a, const mat<T, M, N>& b);
+template <typename T, size_t M, size_t N, typename T1>
+inline mat<T, M, N>& operator*=(mat<T, M, N>& a, T1 b);
 
 // Matrix diagonals and transposes.
-inline vec2f diagonal(const mat2f& a);
-inline mat2f transpose(const mat2f& a);
+template <typename T, size_t N>
+inline vec<T, N> diagonal(const mat<T, N, N>& a);
+template <typename T, size_t N>
+inline mat<T, N, N> transpose(const mat<T, N, N>& a);
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat2f& a);
-inline mat2f adjoint(const mat2f& a);
-inline mat2f inverse(const mat2f& a);
-
-// Matrix comparisons.
-inline bool operator==(const mat3f& a, const mat3f& b);
-inline bool operator!=(const mat3f& a, const mat3f& b);
-
-// Matrix operations.
-inline mat3f operator+(const mat3f& a, const mat3f& b);
-inline mat3f operator*(const mat3f& a, float b);
-inline vec3f operator*(const mat3f& a, const vec3f& b);
-inline vec3f operator*(const vec3f& a, const mat3f& b);
-inline mat3f operator*(const mat3f& a, const mat3f& b);
-
-// Matrix assignments.
-inline mat3f& operator+=(mat3f& a, const mat3f& b);
-inline mat3f& operator*=(mat3f& a, const mat3f& b);
-inline mat3f& operator*=(mat3f& a, float b);
-
-// Matrix diagonals and transposes.
-inline vec3f diagonal(const mat3f& a);
-inline mat3f transpose(const mat3f& a);
-
-// Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a);
-inline mat3f adjoint(const mat3f& a);
-inline mat3f inverse(const mat3f& a);
+template <typename T, size_t N>
+inline T determinant(const mat<T, N, N>& a);
+template <typename T, size_t N>
+inline mat<T, N, N> adjoint(const mat<T, N, N>& a);
+template <typename T, size_t N>
+inline mat<T, N, N> inverse(const mat<T, N, N>& a);
 
 // Constructs a basis from a direction
-inline mat3f basis_fromz(const vec3f& v);
-
-// Matrix comparisons.
-inline bool operator==(const mat4f& a, const mat4f& b);
-inline bool operator!=(const mat4f& a, const mat4f& b);
-
-// Matrix operations.
-inline mat4f operator+(const mat4f& a, const mat4f& b);
-inline mat4f operator*(const mat4f& a, float b);
-inline vec4f operator*(const mat4f& a, const vec4f& b);
-inline vec4f operator*(const vec4f& a, const mat4f& b);
-inline mat4f operator*(const mat4f& a, const mat4f& b);
-
-// Matrix assignments.
-inline mat4f& operator+=(mat4f& a, const mat4f& b);
-inline mat4f& operator*=(mat4f& a, const mat4f& b);
-inline mat4f& operator*=(mat4f& a, float b);
-
-// Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a);
-inline mat4f transpose(const mat4f& a);
+template <typename T>
+inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v);
 
 }  // namespace yocto::math
 
@@ -911,40 +685,68 @@ inline mat4f transpose(const mat4f& a);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Rigid frames stored as a column-major affine transform matrix.
-struct frame2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
-  vec2f o = {0, 0};
+// Fixed-size rigid frames stored as a column-major affine transform matrix.
+template <typename T, size_t N>
+struct frame;
 
-  frame2f();
-  frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
-  explicit frame2f(const vec2f& o);
-  frame2f(const mat2f& m, const vec2f& t);
-  explicit frame2f(const mat3f& m);
-  operator mat3f() const;
+// One-dimensional frame stored in column major format.
+template <typename T>
+struct frame<T, 1> {
+  vec<T, 1> x = {1};
+  vec<T, 1> o = {0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  frame();
+  frame(const vec<T, 1>& x, const vec<T, 1>& o);
+  explicit frame(const vec<T, 1>& o);
+  frame(const mat<T, 1, 1>& m, const vec<T, 1>& t);
+  explicit frame(const mat<T, 2, 2>& m);
+  operator mat<T, 2, 2>() const;
+
+  vec<T, 1>&       operator[](int i);
+  const vec<T, 1>& operator[](int i) const;
+};
+
+// Two-dimensional frame stored in column major format.
+template <typename T>
+struct frame<T, 2> {
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
+  vec<T, 2> o = {0, 0};
+
+  frame();
+  frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o);
+  explicit frame(const vec<T, 2>& o);
+  frame(const mat<T, 2, 2>& m, const vec<T, 2>& t);
+  explicit frame(const mat<T, 3, 3>& m);
+  operator mat<T, 3, 3>() const;
+
+  vec<T, 2>&       operator[](int i);
+  const vec<T, 2>& operator[](int i) const;
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
-struct frame3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
-  vec3f o = {0, 0, 0};
+template <typename T>
+struct frame<T, 3> {
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 1, 0};
+  vec<T, 3> z = {0, 0, 1};
+  vec<T, 3> o = {0, 0, 0};
 
-  frame3f();
-  frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
-  explicit frame3f(const vec3f& o);
-  frame3f(const mat3f& m, const vec3f& t);
-  explicit frame3f(const mat4f& m);
-  operator mat4f() const;
+  frame();
+  frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
+      const vec<T, 3>& o);
+  explicit frame(const vec<T, 3>& o);
+  frame(const mat<T, 3, 3>& m, const vec<T, 3>& t);
+  explicit frame(const mat<T, 4, 4>& m);
+  operator mat<T, 4, 4>() const;
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, 3>&       operator[](int i);
+  const vec<T, 3>& operator[](int i) const;
 };
+
+// Type aliases
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
 
 // Indentity frames.
 inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -952,36 +754,31 @@ inline const auto identity3x4f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame properties
-inline const mat2f& rotation(const frame2f& a);
+template <typename T, size_t N>
+inline const mat<T, N, N>& rotation(const frame<T, N>& a);
 
 // Frame comparisons.
-inline bool operator==(const frame2f& a, const frame2f& b);
-inline bool operator!=(const frame2f& a, const frame2f& b);
+template <typename T, size_t N>
+inline bool operator==(const frame<T, N>& a, const frame<T, N>& b);
+template <typename T, size_t N>
+inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b);
 
 // Frame composition, equivalent to affine matrix product.
-inline frame2f  operator*(const frame2f& a, const frame2f& b);
-inline frame2f& operator*=(frame2f& a, const frame2f& b);
+template <typename T, size_t N>
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b);
+template <typename T, size_t N>
+inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b);
 
 // Frame inverse, equivalent to rigid affine inverse.
-inline frame2f inverse(const frame2f& a, bool non_rigid = false);
-
-// Frame properties
-inline const mat3f& rotation(const frame3f& a);
-
-// Frame comparisons.
-inline bool operator==(const frame3f& a, const frame3f& b);
-inline bool operator!=(const frame3f& a, const frame3f& b);
-
-// Frame composition, equivalent to affine matrix product.
-inline frame3f  operator*(const frame3f& a, const frame3f& b);
-inline frame3f& operator*=(frame3f& a, const frame3f& b);
-
-// Frame inverse, equivalent to rigid affine inverse.
-inline frame3f inverse(const frame3f& a, bool non_rigid = false);
+template <typename T, size_t N>
+inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid = false);
 
 // Frame construction from axis.
-inline frame3f frame_fromz(const vec3f& o, const vec3f& v);
-inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_);
+template <typename T>
+inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v);
+template <typename T>
+inline frame<T, 3> frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_);
 
 }  // namespace yocto::math
 
@@ -991,36 +788,57 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_);
 namespace yocto::math {
 
 // Quaternions to represent rotations
-struct quat4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
+template <typename T, size_t N>
+struct quat;
+
+// Quaternions to represent rotations
+template <typename T>
+struct quat<T, 4> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
 
   // constructors
-  quat4f();
-  quat4f(float x, float y, float z, float w);
+  quat();
+  quat(T x, T y, T z, T w);
 };
+
+// Type alias
+using quat4f = quat<float, 4>;
 
 // Constants
 inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b);
-inline quat4f operator*(const quat4f& a, float b);
-inline quat4f operator/(const quat4f& a, float b);
-inline quat4f operator*(const quat4f& a, const quat4f& b);
+template <typename T>
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b);
+template <typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b);
+template <typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b);
+template <typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
 
 // Quaterion operations
-inline float  dot(const quat4f& a, const quat4f& b);
-inline float  length(const quat4f& a);
-inline quat4f normalize(const quat4f& a);
-inline quat4f conjugate(const quat4f& a);
-inline quat4f inverse(const quat4f& a);
-inline float  uangle(const quat4f& a, const quat4f& b);
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
+template <typename T>
+inline T dot(const quat<T, 4>& a, const quat<T, 4>& b);
+template <typename T>
+inline T length(const quat<T, 4>& a);
+template <typename T>
+inline quat<T, 4> normalize(const quat<T, 4>& a);
+template <typename T>
+inline quat<T, 4> conjugate(const quat<T, 4>& a);
+template <typename T>
+inline quat<T, 4> inverse(const quat<T, 4>& a);
+template <typename T>
+inline T uangle(const quat<T, 4>& a, const quat<T, 4>& b);
+template <typename T, typename T1>
+inline quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
+template <typename T, typename T1>
+inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
+template <typename T, typename T1>
+inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 
 }  // namespace yocto::math
 
@@ -1029,71 +847,69 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Axis aligned bounding box represented as a min/max std::vector pairs.
-struct bbox2f {
-  vec2f min = {flt_max, flt_max};
-  vec2f max = {flt_min, flt_min};
+// Axis aligned bounding box represented as a min/max vector pairs.
+template <typename T, size_t N>
+struct bbox {
+  vec<T, N> min = vec<T, N>{type_max<T>};
+  vec<T, N> max = vec<T, N>{type_min<T>};
 
-  bbox2f();
-  bbox2f(const vec2f& min, const vec2f& max);
+  bbox();
+  bbox(const vec<T, N>& min, const vec<T, N>& max);
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  vec<T, N>&       operator[](int i);
+  const vec<T, N>& operator[](int i) const;
 };
 
-// Axis aligned bounding box represented as a min/max std::vector pairs.
-struct bbox3f {
-  vec3f min = {flt_max, flt_max, flt_max};
-  vec3f max = {flt_min, flt_min, flt_min};
-
-  bbox3f();
-  bbox3f(const vec3f& min, const vec3f& max);
-
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
-};
+// Type alias
+using bbox1f = bbox<float, 1>;
+using bbox2f = bbox<float, 2>;
+using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
+inline const auto invalidb1f = bbox1f{};
 inline const auto invalidb2f = bbox2f{};
 inline const auto invalidb3f = bbox3f{};
+inline const auto invalidb4f = bbox4f{};
 
 // Bounding box properties
-inline vec2f center(const bbox2f& a);
-inline vec2f size(const bbox2f& a);
+template <typename T, size_t N>
+inline vec<T, N> center(const bbox<T, N>& a);
+template <typename T, size_t N>
+inline vec<T, N> size(const bbox<T, N>& a);
 
 // Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b);
-inline bool operator!=(const bbox2f& a, const bbox2f& b);
+template <typename T, size_t N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
+template <typename T, size_t N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b);
-inline bbox2f merge(const bbox2f& a, const bbox2f& b);
-inline void   expand(bbox2f& a, const vec2f& b);
-inline void   expand(bbox2f& a, const bbox2f& b);
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a);
-inline vec3f size(const bbox3f& a);
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b);
-inline bool operator!=(const bbox3f& a, const bbox3f& b);
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b);
-inline bbox3f merge(const bbox3f& a, const bbox3f& b);
-inline void   expand(bbox3f& a, const vec3f& b);
-inline void   expand(bbox3f& a, const bbox3f& b);
+template <typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b);
+template <typename T, size_t N>
+inline void expand(bbox<T, N>& a, const vec<T, N>& b);
+template <typename T, size_t N>
+inline void expand(bbox<T, N>& a, const bbox<T, N>& b);
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p);
-inline bbox3f point_bounds(const vec3f& p, float r);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1);
-inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+template <typename T, size_t N>
+inline bbox<T, N> point_bounds(const vec<T, N>& p);
+template <typename T, size_t N, typename T1>
+inline bbox<T, N> point_bounds(const vec<T, N>& p, T1 r);
+template <typename T, size_t N>
+inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1);
+template <typename T, size_t N, typename T1, typename T2>
+inline bbox<T, N> line_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T2 r1);
+template <typename T, size_t N>
+inline bbox<T, N> triangle_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2);
+template <typename T, size_t N>
+inline bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
+    const vec<T, N>& p2, const vec<T, N>& p3);
 
 }  // namespace yocto::math
 
@@ -1103,30 +919,43 @@ inline bbox3f quad_bounds(
 namespace yocto::math {
 
 // Ray esplison
-inline const auto ray_eps = 1e-4f;
+inline const auto ray_eps  = 1e-4;
+inline const auto ray_epsd = 1e-4;
+inline const auto ray_epsf = 1e-4f;
 
-struct ray2f {
-  vec2f o    = {0, 0};
-  vec2f d    = {0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+// Ray with origin, direction and min/max t value.
+template <typename T, size_t N>
+struct ray;
 
-  ray2f();
-  ray2f(const vec2f& o, const vec2f& d, float tmin = ray_eps,
-      float tmax = flt_max);
+// Two-dimensional ray with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 2> {
+  vec<T, 2> o    = {0, 0};
+  vec<T, 2> d    = {0, 1};
+  T         tmin = ray_eps;
+  T         tmax = flt_max;
+
+  ray();
+  ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin = ray_eps,
+      T tmax = flt_max);
 };
 
-// Rays with origin, direction and min/max t value.
-struct ray3f {
-  vec3f o    = {0, 0, 0};
-  vec3f d    = {0, 0, 1};
-  float tmin = ray_eps;
-  float tmax = flt_max;
+// Two-dimensional ray with origin, direction and min/max t value.
+template <typename T>
+struct ray<T, 3> {
+  vec<T, 3> o    = {0, 0, 0};
+  vec<T, 3> d    = {0, 0, 1};
+  T         tmin = ray_eps;
+  T         tmax = flt_max;
 
-  ray3f();
-  ray3f(const vec3f& o, const vec3f& d, float tmin = ray_eps,
-      float tmax = flt_max);
+  ray();
+  ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = ray_eps,
+      T tmax = flt_max);
 };
+
+// Type alias
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
 
 }  // namespace yocto::math
 
@@ -1136,65 +965,106 @@ struct ray3f {
 namespace yocto::math {
 
 // Transforms points, vectors and directions by matrices.
-inline vec2f transform_point(const mat3f& a, const vec2f& b);
-inline vec2f transform_vector(const mat3f& a, const vec2f& b);
-inline vec2f transform_direction(const mat3f& a, const vec2f& b);
-inline vec2f transform_normal(const mat3f& a, const vec2f& b);
-inline vec2f transform_vector(const mat2f& a, const vec2f& b);
-inline vec2f transform_direction(const mat2f& a, const vec2f& b);
-inline vec2f transform_normal(const mat2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> transform_point(const mat<T, 3, 3>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 3, 3>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_direction(const mat<T, 3, 3>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_normal(const mat<T, 3, 3>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 2, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_direction(const mat<T, 2, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_normal(const mat<T, 2, 2>& a, const vec<T, 2>& b);
 
-inline vec3f transform_point(const mat4f& a, const vec3f& b);
-inline vec3f transform_vector(const mat4f& a, const vec3f& b);
-inline vec3f transform_direction(const mat4f& a, const vec3f& b);
-inline vec3f transform_vector(const mat3f& a, const vec3f& b);
-inline vec3f transform_direction(const mat3f& a, const vec3f& b);
-inline vec3f transform_normal(const mat3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_point(const mat<T, 4, 4>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 4, 4>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_direction(const mat<T, 4, 4>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 3, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_direction(const mat<T, 3, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_normal(const mat<T, 3, 3>& a, const vec<T, 3>& b);
 
 // Transforms points, vectors and directions by frames.
-inline vec2f transform_point(const frame2f& a, const vec2f& b);
-inline vec2f transform_vector(const frame2f& a, const vec2f& b);
-inline vec2f transform_direction(const frame2f& a, const vec2f& b);
-inline vec2f transform_normal(
-    const frame2f& a, const vec2f& b, bool non_rigid = false);
+template <typename T>
+inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_direction(const frame<T, 2>& a, const vec<T, 2>& b);
+template <typename T>
+inline vec<T, 2> transform_normal(
+    const frame<T, 2>& a, const vec<T, 2>& b, bool non_rigid = false);
 
 // Transforms points, vectors and directions by frames.
-inline vec3f transform_point(const frame3f& a, const vec3f& b);
-inline vec3f transform_vector(const frame3f& a, const vec3f& b);
-inline vec3f transform_direction(const frame3f& a, const vec3f& b);
-inline vec3f transform_normal(
-    const frame3f& a, const vec3f& b, bool non_rigid = false);
+template <typename T>
+inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b);
+template <typename T>
+inline vec<T, 3> transform_normal(
+    const frame<T, 3>& a, const vec<T, 3>& b, bool non_rigid = false);
 
 // Transforms rays and bounding boxes by matrices.
-inline ray3f  transform_ray(const mat4f& a, const ray3f& b);
-inline ray3f  transform_ray(const frame3f& a, const ray3f& b);
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b);
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b);
+template <typename T>
+inline ray<T, 3> transform_ray(const mat<T, 4, 4>& a, const ray<T, 3>& b);
+template <typename T>
+inline ray<T, 3> transform_ray(const frame<T, 3>& a, const ray<T, 3>& b);
+template <typename T>
+inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b);
+template <typename T>
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b);
 
 // Translation, scaling and rotations transforms.
-inline frame3f translation_frame(const vec3f& a);
-inline frame3f scaling_frame(const vec3f& a);
-inline frame3f rotation_frame(const vec3f& axis, float angle);
-inline frame3f rotation_frame(const vec4f& quat);
-inline frame3f rotation_frame(const quat4f& quat);
-inline frame3f rotation_frame(const mat3f& rot);
+template <typename T>
+inline frame<T, 3> translation_frame(const vec<T, 3>& a);
+template <typename T>
+inline frame<T, 3> scaling_frame(const vec<T, 3>& a);
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle);
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat);
+template <typename T>
+inline frame<T, 3> rotation_frame(const quat4f& quat);
+template <typename T>
+inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot);
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-inline frame3f lookat_frame(const vec3f& eye, const vec3f& center,
-    const vec3f& up, bool inv_xz = false);
+template <typename T>
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
+    const vec<T, 3>& up, bool inv_xz = false);
 
 // OpenGL frustum, ortho and perspecgive matrices.
-inline mat4f frustum_mat(float l, float r, float b, float t, float n, float f);
-inline mat4f ortho_mat(float l, float r, float b, float t, float n, float f);
-inline mat4f ortho2d_mat(float left, float right, float bottom, float top);
-inline mat4f ortho_mat(float xmag, float ymag, float near, float far);
-inline mat4f perspective_mat(float fovy, float aspect, float near, float far);
-inline mat4f perspective_mat(float fovy, float aspect, float near);
+template <typename T>
+inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f);
+template <typename T>
+inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f);
+template <typename T>
+inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top);
+template <typename T>
+inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far);
+template <typename T>
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far);
+template <typename T>
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near);
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat);
-inline vec4f                   rotation_quat(const vec3f& axis, float angle);
-inline vec4f                   rotation_quat(const vec4f& axisangle);
+template <typename T>
+inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat);
+template <typename T, typename T1>
+inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle);
+template <typename T>
+inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle);
 
 }  // namespace yocto::math
 
@@ -1204,57 +1074,67 @@ inline vec4f                   rotation_quat(const vec4f& axisangle);
 namespace yocto::math {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
-inline float line_length(const vec3f& p0, const vec3f& p1);
+template <typename T>
+inline vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1);
+template <typename T>
+inline T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1);
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
+template <typename T>
+inline vec<T, 3> triangle_normal(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
+template <typename T>
+inline T triangle_area(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Quad propeties.
-inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
-inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+template <typename T>
+inline vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3);
+template <typename T>
+inline T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3);
 
 // Triangle tangent and bitangent from uv
-inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2);
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
-    const vec2f& current_uv);
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
+    const vec<T, 2>& uv3, const vec<T, 2>& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u);
+template <typename T, typename T1>
+inline T interpolate_line(const T& p0, const T& p1, T1 u);
 
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv);
 
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv);
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u);
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u);
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u);
 
 }  // namespace yocto::math
 
@@ -1264,27 +1144,34 @@ inline T interpolate_bezier_derivative(
 namespace yocto::math {
 
 // Intersect a ray with a point (approximate)
+template <typename T>
 inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
+    const ray<T, 3>& ray, const vec<T, 3>& p, T r, vec<T, 2>& uv, T& dist);
 
 // Intersect a ray with a line
-inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, vec2f& uv, float& dist);
+template <typename T>
+inline bool intersect_line(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, T r0, T r1, vec<T, 2>& uv, T& dist);
 
 // Intersect a ray with a triangle
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
+template <typename T>
+inline bool intersect_triangle(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, vec<T, 2>& uv, T& dist);
 
 // Intersect a ray with a quad.
-inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
+template <typename T>
+inline bool intersect_quad(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    vec<T, 2>& uv, T& dist);
 
 // Intersect a ray with a axis-aligned bounding box
-inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
+template <typename T>
+inline bool intersect_bbox(const ray<T, 3>& ray, const bbox<T, 3>& bbox);
 
 // Intersect a ray with a axis-aligned bounding box
+template <typename T>
 inline bool intersect_bbox(
-    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
+    const ray<T, 3>& ray, const vec<T, 3>& ray_dinv, const bbox<T, 3>& bbox);
 
 }  // namespace yocto::math
 
@@ -1294,37 +1181,46 @@ inline bool intersect_bbox(
 namespace yocto::math {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
-    float r, vec2f& uv, float& dist);
+template <typename T>
+inline bool overlap_point(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p,
+    T r, vec<T, 2>& uv, T& dist);
 
 // Compute the closest line uv to a give position pos.
-inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
+template <typename T>
+inline T closestuv_line(
+    const vec<T, 3>& pos, const vec<T, 3>& p0, const vec<T, 3>& p1);
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
+template <typename T>
+inline bool overlap_line(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, T r0, T r1, vec<T, 2>& uv, T& dist);
 
 // Compute the closest triangle uv to a give position pos.
-inline vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+template <typename T>
+inline vec<T, 2> closestuv_triangle(const vec<T, 3>& pos, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
-    float& dist);
+template <typename T>
+inline bool overlap_triangle(const vec<T, 3>& pos, T dist_max,
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, T r0, T r1,
+    T r2, vec<T, 2>& uv, T& dist);
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, vec2f& uv, float& dist);
+template <typename T>
+inline bool overlap_quad(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3, T r0, T r1,
+    T r2, T r3, vec<T, 2>& uv, T& dist);
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
+template <typename T>
 inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox);
+    const vec<T, 3>& pos, T dist_max, const bbox<T, 3>& bbox);
 
 // Check if two bboxe overlap.
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+template <typename T>
+inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2);
 
 }  // namespace yocto::math
 
@@ -1343,47 +1239,77 @@ inline float  byte_to_float(byte a);
 inline ushort float_to_ushort(float a);
 inline float  ushort_to_float(ushort a);
 
+// Conversion between reals in [0,1] and normalized ints [0, max_int]
+template <typename I, typename T>
+inline I real_to_nint(T a);
+template <typename T, typename I>
+inline T nint_to_real(I a);
+template <typename I, typename T, size_t N>
+inline vec<I, N> real_to_nint(const vec<T, N>& a);
+template <typename T, typename I, size_t N>
+inline vec<T, N> nint_to_real(const vec<I, N>& a);
+
 // Luminance
-inline float luminance(const vec3f& a);
+template <typename T>
+inline T luminance(const vec<T, 3>& a);
 
 // sRGB non-linear curve
-inline float srgb_to_rgb(float srgb);
-inline float rgb_to_srgb(float rgb);
-inline vec3f srgb_to_rgb(const vec3f& srgb);
-inline vec4f srgb_to_rgb(const vec4f& srgb);
-inline vec3f rgb_to_srgb(const vec3f& rgb);
-inline vec4f rgb_to_srgb(const vec4f& rgb);
+template <typename T>
+inline T srgb_to_rgb(T srgb);
+template <typename T>
+inline T rgb_to_srgb(T rgb);
+template <typename T>
+inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb);
+template <typename T>
+inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb);
+template <typename T>
+inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb);
+template <typename T>
+inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
+template <typename T>
+inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+template <typename T>
+inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast);
+template <typename T>
+inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast);
 // Apply saturation.
-inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f});
+template <typename T>
+inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
+    const vec<T, 3>& weights = vec<T, 3>{0.333333});
 
 // Apply tone mapping
-inline vec3f tonemap(
-    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
-inline vec4f tonemap(
-    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+template <typename T>
+inline vec<T, 3> tonemap(
+    const vec<T, 3>& hdr, T exposure, bool filmic = false, bool srgb = true);
+template <typename T>
+inline vec<T, 4> tonemap(
+    const vec<T, 4>& hdr, T exposure, bool filmic = false, bool srgb = true);
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb);
-inline vec3f xyz_to_rgb(const vec3f& xyz);
+template <typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb);
+template <typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz);
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz);
-inline vec3f xyY_to_xyz(const vec3f& xyY);
+template <typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
+template <typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
 
 // Converts between HSV and RGB color spaces.
-inline vec3f hsv_to_rgb(const vec3f& hsv);
-inline vec3f rgb_to_hsv(const vec3f& rgb);
+template <typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
+template <typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature);
+template <typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature);
 
 }  // namespace yocto::math
 
@@ -1397,66 +1323,26 @@ struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-  rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-  rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+  rng_state();
+  rng_state(uint64_t state, uint64_t inc);
 };
 
-// Next random number, used internally only.
-inline uint32_t _advance_rng(rng_state& rng) {
-  uint64_t oldstate   = rng.state;
-  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
-  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-  uint32_t rot        = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-}
-
 // Init a random number generator with a state state from the sequence seq.
-inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
-  auto rng  = rng_state();
-  rng.state = 0U;
-  rng.inc   = (seq << 1u) | 1u;
-  _advance_rng(rng);
-  rng.state += seed;
-  _advance_rng(rng);
-  return rng;
-}
+inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
-  union {
-    uint32_t u;
-    float    f;
-  } x;
-  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
-  return x.f - 1.0f;
-  // alternate implementation
-  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
-  // return advance_rng(rng) * scale;
-}
-inline vec2f rand2f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  return {x, y};
-}
-inline vec3f rand3f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  auto z = rand1f(rng);
-  return {x, y, z};
-}
+inline int   rand1i(rng_state& rng, int n);
+inline vec2i rand2i(rng_state& rng, int n);
+inline vec3i rand3i(rng_state& rng, int n);
+inline vec4i rand4i(rng_state& rng, int n);
+inline float rand1f(rng_state& rng);
+inline vec2f rand2f(rng_state& rng);
+inline vec3f rand3f(rng_state& rng);
+inline vec4f rand4f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(std::vector<T>& vals, rng_state& rng) {
-  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
-  for (auto i = (int)vals.size() - 1; i > 0; i--) {
-    auto j = rand1i(rng, i + 1);
-    std::swap(vals[j], vals[i]);
-  }
-}
+inline void shuffle(std::vector<T>& vals, rng_state& rng);
 
 }  // namespace yocto::math
 
@@ -1471,14 +1357,17 @@ namespace yocto::math {
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, float offset = 1,
-    const vec3i& wrap = zero3i);
-inline float perlin_fbm(const vec3f& p, float lacunarity = 2, float gain = 0.5,
-    int octaves = 6, const vec3i& wrap = zero3i);
-inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
-    float gain = 0.5, int octaves = 6, const vec3i& wrap = zero3i);
+template <typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec<int, 3>& wrap = zero3i);
+template <typename T>
+inline T perlin_ridge(const vec<T, 3>& p, T lacunarity = 2, T gain = 0.5,
+    int octaves = 6, T offset = 1, const vec<int, 3>& wrap = zero3i);
+template <typename T>
+inline T perlin_fbm(const vec<T, 3>& p, T lacunarity = 2, T gain = 0.5,
+    int octaves = 6, const vec<int, 3>& wrap = zero3i);
+template <typename T>
+inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity = 2, T gain = 0.5,
+    int octaves = 6, const vec<int, 3>& wrap = zero3i);
 
 }  // namespace yocto::math
 
@@ -1488,140 +1377,191 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term.
-inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline vec<T, 3> fresnel_schlick(const vec<T, 3>& specular,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline T fresnel_dielectric(
+    T eta, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline vec<T, 3> fresnel_conductor(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 
 // Convert eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta);
+template <typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta);
 // Convert reflectivity to  eta.
-inline vec3f reflectivity_to_eta(const vec3f& reflectivity);
+template <typename T>
+inline vec<T, 3> reflectivity_to_eta(const vec<T, 3>& reflectivity);
 // Convert conductor eta to reflectivity.
-inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
+template <typename T>
+inline vec<T, 3> eta_to_reflectivity(
+    const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert eta to edge tint parametrization.
-inline std::pair<vec3f, vec3f> eta_to_edgetint(
-    const vec3f& eta, const vec3f& etak);
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+    const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert reflectivity and edge tint to eta.
-inline std::pair<vec3f, vec3f> edgetint_to_eta(
-    const vec3f& reflectivity, const vec3f& edgetint);
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+    const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint);
 
 // Evaluates the microfacet distribution.
-inline float microfacet_distribution(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx = true);
+template <typename T>
+inline T microfacet_distribution(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, bool ggx = true);
 // Evaluates the microfacet shadowing.
-inline float microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true);
+template <typename T>
+inline T microfacet_shadowing(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming, bool ggx = true);
 
 // Samples a microfacet distribution.
-inline vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
+template <typename T>
+inline vec<T, 3> sample_microfacet(
+    T roughness, const vec<T, 3>& normal, const vec<T, 2>& rn, bool ggx = true);
 // Pdf for microfacet distribution sampling.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx = true);
+template <typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, bool ggx = true);
 
 // Samples a microfacet distribution with the distribution of visible normals.
-inline vec3f sample_microfacet(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec2f& rn, bool ggx = true);
+template <typename T>
+inline vec<T, 3> sample_microfacet(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn, bool ggx = true);
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, bool ggx = true);
+template <typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, bool ggx = true);
 
 // Evaluates a diffuse BRDF lobe.
-inline vec3f eval_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_diffuse_reflection(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a specular BRDF lobe.
-inline vec3f eval_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Evaluates a metal BRDF lobe.
-inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_microfacet_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a transmission BRDF lobe.
-inline vec3f eval_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Evaluates a refraction BRDF lobe.
-inline vec3f eval_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 
 // Sample a diffuse BRDF lobe.
-inline vec3f sample_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template <typename T>
+inline vec<T, 3> sample_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a specular BRDF lobe.
-inline vec3f sample_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template <typename T>
+inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a metal BRDF lobe.
-inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn);
+template <typename T>
+inline vec<T, 3> sample_microfacet_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a transmission BRDF lobe.
-inline vec3f sample_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template <typename T>
+inline vec<T, 3> sample_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a refraction BRDF lobe.
-inline vec3f sample_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn);
+template <typename T>
+inline vec<T, 3> sample_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl,
+    const vec<T, 2>& rn);
 
 // Pdf for diffuse BRDF lobe sampling.
-inline float sample_diffuse_reflection_pdf(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_diffuse_reflection_pdf(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for specular BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_microfacet_reflection_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Pdf for metal BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_microfacet_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_microfacet_transmission_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_microfacet_transmission_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Pdf for refraction BRDF lobe sampling.
-inline float sample_microfacet_refraction_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_microfacet_refraction_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 
 // Evaluate a delta specular BRDF lobe.
-inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_delta_reflection(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_delta_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_delta_transmission(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluate a delta refraction BRDF lobe.
-inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline vec<T, 3> eval_delta_refraction(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 // Sample a delta specular BRDF lobe.
-inline vec3f sample_delta_reflection(
-    float ior, const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline vec<T, 3> sample_delta_reflection(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline vec<T, 3> sample_delta_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_delta_transmission(
-    float ior, const vec3f& normal, const vec3f& outgoing);
+template <typename T>
+inline vec<T, 3> sample_delta_transmission(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta refraction BRDF lobe.
-inline vec3f sample_delta_refraction(
-    float ior, const vec3f& normal, const vec3f& outgoing, float rnl);
+template <typename T>
+inline vec<T, 3> sample_delta_refraction(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl);
 
 // Pdf for delta specular BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_delta_reflection_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_delta_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for delta refraction BRDF lobe sampling.
-inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template <typename T>
+inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 }  // namespace yocto::math
 
@@ -1631,61 +1571,88 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 namespace yocto::math {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& direction);
+template <typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& normal, const vec3f& direction);
+template <typename T>
+inline vec<T, 3> sample_hemisphere(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv);
-inline float sample_sphere_pdf(const vec3f& w);
+template <typename T>
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_sphere_pdf(const vec<T, 3>& w);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv);
-inline float sample_hemisphere_cos_pdf(const vec3f& direction);
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv);
-inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction);
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cos(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_cos_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction);
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_hemisphere_cospower_pdf(T exponent, const vec<T, 3>& direction);
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv);
-inline float sample_disk_pdf();
+template <typename T>
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_disk_pdf(const vec<T, 2>& point);
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv);
-inline float sample_cylinder_pdf();
+template <typename T>
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv);
+template <typename T>
+inline T sample_cylinder_pdf(const vec<T, 3>& point);
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv);
+template <typename T>
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv);
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv);
+template <typename T>
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 2>& ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+template <typename T>
+inline T sample_triangle_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Sample an index with uniform distribution.
-inline int   sample_uniform(int size, float r);
-inline float sample_uniform_pdf(int size);
+template <typename T>
+inline int sample_uniform(int size, T r);
+template <typename T>
+inline T sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const std::vector<float>& elements, float r);
-inline float sample_uniform_pdf(const std::vector<float>& elements);
+template <typename T>
+inline T sample_uniform(const std::vector<T>& elements, T r);
+template <typename T>
+inline T sample_uniform_pdf(const std::vector<T>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r);
+template <typename T>
+inline int sample_discrete(const std::vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
+template <typename T>
+inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx);
 
 }  // namespace yocto::math
 
@@ -1696,28 +1663,34 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size);
+template <typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<int, 2>& txt_size);
 
 // Center image and autofit.
-inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit);
+template <typename T>
+inline void update_imview(vec<T, 2>& center, T& scale,
+    const vec<int, 2>& imsize, const vec<int, 2>& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation.
-inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan);
+template <typename T>
+inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 
 // Turntable for UI navigation.
-inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan);
+template <typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 
 // FPS camera for UI navigation for a frame parametrization.
+template <typename T>
 inline void update_fpscam(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate);
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 // Generate a ray from a camera
-inline ray3f camera_ray(
-    const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
+template <typename T>
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
+    const vec<T, 2>& film, const vec<T, 2>& image_uv);
 
 }  // namespace yocto::math
 
@@ -1734,52 +1707,128 @@ inline ray3f camera_ray(
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-inline float abs(float a) { return a < 0 ? -a : a; }
-inline float min(float a, float b) { return (a < b) ? a : b; }
-inline float max(float a, float b) { return (a > b) ? a : b; }
-inline float clamp(float a, float min_, float max_) {
+template <typename T>
+inline T abs(T a) {
+  return a < 0 ? -a : a;
+}
+template <typename T>
+inline T min(T a, T b) {
+  return (a < b) ? a : b;
+}
+template <typename T>
+inline T max(T a, T b) {
+  return (a > b) ? a : b;
+}
+template <typename T>
+inline T clamp(T a, T min_, T max_) {
   return min(max(a, min_), max_);
 }
-inline float sign(float a) { return a < 0 ? -1 : 1; }
-inline float sqrt(float a) { return std::sqrt(a); }
-inline float sin(float a) { return std::sin(a); }
-inline float cos(float a) { return std::cos(a); }
-inline float tan(float a) { return std::tan(a); }
-inline float asin(float a) { return std::asin(a); }
-inline float acos(float a) { return std::acos(a); }
-inline float atan(float a) { return std::atan(a); }
-inline float log(float a) { return std::log(a); }
-inline float exp(float a) { return std::exp(a); }
-inline float log2(float a) { return std::log2(a); }
-inline float exp2(float a) { return std::exp2(a); }
-inline float pow(float a, float b) { return std::pow(a, b); }
-inline float isfinite(float a) { return std::isfinite(a); }
-inline float atan2(float a, float b) { return std::atan2(a, b); }
-inline float fmod(float a, float b) { return std::fmod(a, b); }
-inline void  swap(float& a, float& b) { std::swap(a, b); }
-inline float radians(float a) { return a * pif / 180; }
-inline float degrees(float a) { return a * 180 / pif; }
-inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline float step(float a, float u) { return u < a ? 0 : 1; }
-inline float smoothstep(float a, float b, float u) {
-  auto t = clamp((u - a) / (b - a), 0.0f, 1.0f);
+template <typename T>
+inline T sign(T a) {
+  return a < 0 ? -1 : 1;
+}
+template <typename T>
+inline T sqrt(T a) {
+  return std::sqrt(a);
+}
+template <typename T>
+inline T sin(T a) {
+  return std::sin(a);
+}
+template <typename T>
+inline T cos(T a) {
+  return std::cos(a);
+}
+template <typename T>
+inline T tan(T a) {
+  return std::tan(a);
+}
+template <typename T>
+inline T asin(T a) {
+  return std::asin(a);
+}
+template <typename T>
+inline T acos(T a) {
+  return std::acos(a);
+}
+template <typename T>
+inline T atan(T a) {
+  return std::atan(a);
+}
+template <typename T>
+inline T log(T a) {
+  return std::log(a);
+}
+template <typename T>
+inline T exp(T a) {
+  return std::exp(a);
+}
+template <typename T>
+inline T log2(T a) {
+  return std::log2(a);
+}
+template <typename T>
+inline T exp2(T a) {
+  return std::exp2(a);
+}
+template <typename T>
+inline T pow(T a, T b) {
+  return std::pow(a, b);
+}
+template <typename T>
+inline T pow(T a, int b) {
+  return std::pow(a, (T)b);
+}
+template <typename T>
+inline T isfinite(T a) {
+  return std::isfinite(a);
+}
+template <typename T>
+inline T atan2(T a, T b) {
+  return std::atan2(a, b);
+}
+template <typename T>
+inline T fmod(T a, T b) {
+  return std::fmod(a, b);
+}
+template <typename T>
+inline void swap(T& a, T& b) {
+  std::swap(a, b);
+}
+template <typename T>
+inline T radians(T a) {
+  return a * (T)pi / 180;
+}
+template <typename T>
+inline T degrees(T a) {
+  return a * 180 / (T)pi;
+}
+template <typename T>
+inline T lerp(T a, T b, T u) {
+  return a * (1 - u) + b * u;
+}
+template <typename T>
+inline T step(T a, T u) {
+  return u < a ? 0 : 1;
+}
+template <typename T>
+inline T smoothstep(T a, T b, T u) {
+  auto t = clamp((u - a) / (b - a), (T)0, (T)1);
   return t * t * (3 - 2 * t);
 }
-inline float bias(float a, float bias) {
+template <typename T>
+inline T bias(T a, T bias) {
   return a / ((1 / bias - 2) * (1 - a) + 1);
 }
-inline float gain(float a, float gain) {
+template <typename T>
+inline T gain(T a, T gain) {
   return (a < 0.5f) ? bias(a * 2, gain) / 2
                     : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
 }
-
-inline int  abs(int a) { return a < 0 ? -a : a; }
-inline int  min(int a, int b) { return (a < b) ? a : b; }
-inline int  max(int a, int b) { return (a > b) ? a : b; }
-inline int  clamp(int a, int min_, int max_) { return min(max(a, min_), max_); }
-inline int  sign(int a) { return a < 0 ? -1 : 1; }
-inline int  pow2(int a) { return 1 << a; }
-inline void swap(int& a, int& b) { std::swap(a, b); }
+template <typename T>
+inline T pow2(T a) {
+  return 1 << a;
+}
 
 }  // namespace yocto::math
 
@@ -1789,364 +1838,426 @@ inline void swap(int& a, int& b) { std::swap(a, b); }
 namespace yocto::math {
 
 // Vec2
-inline vec2f::vec2f() {}
-inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
-inline vec2f::vec2f(float v) : x{v}, y{v} {}
-inline vec2f::operator bool() const { return x && y; }
+template <typename T>
+inline vec<T, 1>::vec() {}
+template <typename T>
+inline vec<T, 1>::vec(T v) : x{v} {}
+template <typename T>
+inline vec<T, 1>::operator bool() const {
+  return x;
+}
 
-inline float& vec2f::operator[](int i) { return (&x)[i]; }
-inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline T& vec<T, 1>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const T& vec<T, 1>::operator[](int i) const {
+  return (&x)[i];
+}
+
+// Vec2
+template <typename T>
+inline vec<T, 2>::vec() {}
+template <typename T>
+inline vec<T, 2>::vec(T x, T y) : x{x}, y{y} {}
+template <typename T>
+inline vec<T, 2>::vec(T v) : x{v}, y{v} {}
+template <typename T>
+inline vec<T, 2>::operator bool() const {
+  return x && y;
+}
+
+template <typename T>
+inline T& vec<T, 2>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const T& vec<T, 2>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Vec3
-inline vec3f::vec3f() {}
-inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
-inline vec3f::operator bool() const { return x && y && z; }
+template <typename T>
+inline vec<T, 3>::vec() {}
+template <typename T>
+inline vec<T, 3>::vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
+template <typename T>
+inline vec<T, 3>::vec(const vec<T, 2>& v, T z) : x{v.x}, y{v.y}, z{z} {}
+template <typename T>
+inline vec<T, 3>::vec(T v) : x{v}, y{v}, z{v} {}
+template <typename T>
+inline vec<T, 3>::operator bool() const {
+  return x && y && z;
+}
 
-inline float& vec3f::operator[](int i) { return (&x)[i]; }
-inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline T& vec<T, 3>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const T& vec<T, 3>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Vec4
-inline vec4f::vec4f() {}
-inline vec4f::vec4f(float x, float y, float z, float w)
-    : x{x}, y{y}, z{z}, w{w} {}
-inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4f::operator bool() const { return x && y && z && w; }
+template <typename T>
+inline vec<T, 4>::vec() {}
+template <typename T>
+inline vec<T, 4>::vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+template <typename T>
+inline vec<T, 4>::vec(const vec<T, 3>& v, T w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
+template <typename T>
+inline vec<T, 4>::vec(T v) : x{v}, y{v}, z{v}, w{v} {}
+template <typename T>
+inline vec<T, 4>::operator bool() const {
+  return x && y && z && w;
+}
 
-inline float& vec4f::operator[](int i) { return (&x)[i]; }
-inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline T& vec<T, 4>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const T& vec<T, 4>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Element access
-inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
-inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
+template <typename T>
+inline vec<T, 3>& xyz(vec<T, 4>& a) {
+  return (vec<T, 3>&)a;
+}
+template <typename T>
+inline const vec<T, 3>& xyz(const vec<T, 4>& a) {
+  return (const vec<T, 3>&)a;
+}
 
 // Vector comparison operations.
-inline bool operator==(const vec2f& a, const vec2f& b) {
-  return a.x == b.x && a.y == b.y;
+template <typename T, size_t N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x == b.x;
+  } else if constexpr (N == 2) {
+    return a.x == b.x || a.y == b.y;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr (N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline bool operator!=(const vec2f& a, const vec2f& b) {
-  return a.x != b.x || a.y != b.y;
+template <typename T, size_t N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x != b.x;
+  } else if constexpr (N == 2) {
+    return a.x != b.x || a.y != b.y;
+  } else if constexpr (N == 3) {
+    return a.x != b.x || a.y != b.y || a.z != b.z;
+  } else if constexpr (N == 4) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
 
 // Vector operations.
-inline vec2f operator+(const vec2f& a) { return a; }
-inline vec2f operator-(const vec2f& a) { return {-a.x, -a.y}; }
-inline vec2f operator+(const vec2f& a, const vec2f& b) {
-  return {a.x + b.x, a.y + b.y};
+template <typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a) {
+  return a;
 }
-inline vec2f operator+(const vec2f& a, float b) { return {a.x + b, a.y + b}; }
-inline vec2f operator+(float a, const vec2f& b) { return {a + b.x, a + b.y}; }
-inline vec2f operator-(const vec2f& a, const vec2f& b) {
-  return {a.x - b.x, a.y - b.y};
+template <typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {-a.x};
+  } else if constexpr (N == 2) {
+    return {-a.x, -a.y};
+  } else if constexpr (N == 3) {
+    return {-a.x, -a.y, -a.z};
+  } else if constexpr (N == 4) {
+    return {-a.x, -a.y, -a.z, -a.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator-(const vec2f& a, float b) { return {a.x - b, a.y - b}; }
-inline vec2f operator-(float a, const vec2f& b) { return {a - b.x, a - b.y}; }
-inline vec2f operator*(const vec2f& a, const vec2f& b) {
-  return {a.x * b.x, a.y * b.y};
+template <typename T, size_t N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr (N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator*(const vec2f& a, float b) { return {a.x * b, a.y * b}; }
-inline vec2f operator*(float a, const vec2f& b) { return {a * b.x, a * b.y}; }
-inline vec2f operator/(const vec2f& a, const vec2f& b) {
-  return {a.x / b.x, a.y / b.y};
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x + b};
+  } else if constexpr (N == 2) {
+    return {a.x + b, a.y + b};
+  } else if constexpr (N == 3) {
+    return {a.x + b, a.y + b, a.z + b};
+  } else if constexpr (N == 4) {
+    return {a.x + b, a.y + b, a.z + b, a.w + b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec2f operator/(const vec2f& a, float b) { return {a.x / b, a.y / b}; }
-inline vec2f operator/(float a, const vec2f& b) { return {a / b.x, a / b.y}; }
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a + b.x};
+  } else if constexpr (N == 2) {
+    return {a + b.x, a + b.y};
+  } else if constexpr (N == 3) {
+    return {a + b.x, a + b.y, a + b.z};
+  } else if constexpr (N == 4) {
+    return {a + b.x, a + b.y, a + b.z, a + b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x - b.x};
+  } else if constexpr (N == 2) {
+    return {a.x - b.x, a.y - b.y};
+  } else if constexpr (N == 3) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+  } else if constexpr (N == 4) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x - b};
+  } else if constexpr (N == 2) {
+    return {a.x - b, a.y - b};
+  } else if constexpr (N == 3) {
+    return {a.x - b, a.y - b, a.z - b};
+  } else if constexpr (N == 4) {
+    return {a.x - b, a.y - b, a.z - b, a.w - b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a - b.x};
+  } else if constexpr (N == 2) {
+    return {a - b.x, a - b.y};
+  } else if constexpr (N == 3) {
+    return {a - b.x, a - b.y, a - b.z};
+  } else if constexpr (N == 4) {
+    return {a - b.x, a - b.y, a - b.z, a - b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x * b.x};
+  } else if constexpr (N == 2) {
+    return {a.x * b.x, a.y * b.y};
+  } else if constexpr (N == 3) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+  } else if constexpr (N == 4) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x * b};
+  } else if constexpr (N == 2) {
+    return {a.x * b, a.y * b};
+  } else if constexpr (N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr (N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a * b.x};
+  } else if constexpr (N == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x / b.x};
+  } else if constexpr (N == 2) {
+    return {a.x / b.x, a.y / b.y};
+  } else if constexpr (N == 3) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z};
+  } else if constexpr (N == 4) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x / b};
+  } else if constexpr (N == 2) {
+    return {a.x / b, a.y / b};
+  } else if constexpr (N == 3) {
+    return {a.x / b, a.y / b, a.z / b};
+  } else if constexpr (N == 4) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {a / b.x};
+  } else if constexpr (N == 2) {
+    return {a / b.x, a / b.y};
+  } else if constexpr (N == 3) {
+    return {a / b.x, a / b.y, a / b.z};
+  } else if constexpr (N == 4) {
+    return {a / b.x, a / b.y, a / b.z, a / b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
 
 // Vector assignments
-inline vec2f& operator+=(vec2f& a, const vec2f& b) { return a = a + b; }
-inline vec2f& operator+=(vec2f& a, float b) { return a = a + b; }
-inline vec2f& operator-=(vec2f& a, const vec2f& b) { return a = a - b; }
-inline vec2f& operator-=(vec2f& a, float b) { return a = a - b; }
-inline vec2f& operator*=(vec2f& a, const vec2f& b) { return a = a * b; }
-inline vec2f& operator*=(vec2f& a, float b) { return a = a * b; }
-inline vec2f& operator/=(vec2f& a, const vec2f& b) { return a = a / b; }
-inline vec2f& operator/=(vec2f& a, float b) { return a = a / b; }
+template <typename T, size_t N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
+  return a = a + b;
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator+=(vec<T, N>& a, T1 b) {
+  return a = a + b;
+}
+template <typename T, size_t N>
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
+  return a = a - b;
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator-=(vec<T, N>& a, T1 b) {
+  return a = a - b;
+}
+template <typename T, size_t N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
+  return a = a * b;
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
+  return a = a * b;
+}
+template <typename T, size_t N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
+  return a = a / b;
+}
+template <typename T, size_t N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
+  return a = a / b;
+}
 
 // Vector products and lengths.
-inline float dot(const vec2f& a, const vec2f& b) {
-  return a.x * b.x + a.y * b.y;
+template <typename T, size_t N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x * b.x;
+  } else if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  } else if constexpr (N == 4) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline float cross(const vec2f& a, const vec2f& b) {
+template <typename T, size_t N>
+inline T length(const vec<T, N>& a) {
+  return sqrt(dot(a, a));
+}
+template <typename T, size_t N>
+inline vec<T, N> normalize(const vec<T, N>& a) {
+  auto l = length(a);
+  return (l != 0) ? a / l : a;
+}
+template <typename T, size_t N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b) {
+  return length(a - b);
+}
+template <typename T, size_t N>
+inline T distance_squared(const vec<T, N>& a, const vec<T, N>& b) {
+  return dot(a - b, a - b);
+}
+template <typename T>
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
   return a.x * b.y - a.y * b.x;
 }
-
-inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
-inline vec2f normalize(const vec2f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline float distance(const vec2f& a, const vec2f& b) { return length(a - b); }
-inline float distance_squared(const vec2f& a, const vec2f& b) {
-  return dot(a - b, a - b);
-}
-
-// Max element and clamp.
-inline vec2f max(const vec2f& a, float b) { return {max(a.x, b), max(a.y, b)}; }
-inline vec2f min(const vec2f& a, float b) { return {min(a.x, b), min(a.y, b)}; }
-inline vec2f max(const vec2f& a, const vec2f& b) {
-  return {max(a.x, b.x), max(a.y, b.y)};
-}
-inline vec2f min(const vec2f& a, const vec2f& b) {
-  return {min(a.x, b.x), min(a.y, b.y)};
-}
-inline vec2f clamp(const vec2f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max)};
-}
-inline vec2f lerp(const vec2f& a, const vec2f& b, float u) {
-  return a * (1 - u) + b * u;
-}
-inline vec2f lerp(const vec2f& a, const vec2f& b, const vec2f& u) {
-  return a * (1 - u) + b * u;
-}
-
-inline float max(const vec2f& a) { return max(a.x, a.y); }
-inline float min(const vec2f& a) { return min(a.x, a.y); }
-inline float sum(const vec2f& a) { return a.x + a.y; }
-inline float mean(const vec2f& a) { return sum(a) / 2; }
-
-// Functions applied to std::vector elements
-inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
-inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
-inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
-inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; };
-inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; };
-inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; };
-inline bool isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); };
-inline vec2f pow(const vec2f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b)};
-};
-inline vec2f pow(const vec2f& a, const vec2f& b) {
-  return {pow(a.x, b.x), pow(a.y, b.y)};
-};
-inline vec2f gain(const vec2f& a, float b) {
-  return {gain(a.x, b), gain(a.y, b)};
-};
-inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec3f& a, const vec3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3f& a, const vec3f& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
-
-// Vector operations.
-inline vec3f operator+(const vec3f& a) { return a; }
-inline vec3f operator-(const vec3f& a) { return {-a.x, -a.y, -a.z}; }
-inline vec3f operator+(const vec3f& a, const vec3f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline vec3f operator+(const vec3f& a, float b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline vec3f operator+(float a, const vec3f& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline vec3f operator-(const vec3f& a, const vec3f& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline vec3f operator-(const vec3f& a, float b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline vec3f operator-(float a, const vec3f& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline vec3f operator*(const vec3f& a, const vec3f& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline vec3f operator*(const vec3f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline vec3f operator*(float a, const vec3f& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline vec3f operator/(const vec3f& a, const vec3f& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline vec3f operator/(const vec3f& a, float b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline vec3f operator/(float a, const vec3f& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline vec3f& operator+=(vec3f& a, const vec3f& b) { return a = a + b; }
-inline vec3f& operator+=(vec3f& a, float b) { return a = a + b; }
-inline vec3f& operator-=(vec3f& a, const vec3f& b) { return a = a - b; }
-inline vec3f& operator-=(vec3f& a, float b) { return a = a - b; }
-inline vec3f& operator*=(vec3f& a, const vec3f& b) { return a = a * b; }
-inline vec3f& operator*=(vec3f& a, float b) { return a = a * b; }
-inline vec3f& operator/=(vec3f& a, const vec3f& b) { return a = a / b; }
-inline vec3f& operator/=(vec3f& a, float b) { return a = a / b; }
-
-// Vector products and lengths.
-inline float dot(const vec3f& a, const vec3f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-inline vec3f cross(const vec3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
   return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-
-inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
-inline vec3f normalize(const vec3f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline float distance(const vec3f& a, const vec3f& b) { return length(a - b); }
-inline float distance_squared(const vec3f& a, const vec3f& b) {
-  return dot(a - b, a - b);
-}
-
-inline float angle(const vec3f& a, const vec3f& b) {
+template <typename T>
+inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
 }
 
 // Orthogonal vectors.
-inline vec3f orthogonal(const vec3f& v) {
+template <typename T>
+inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
-  return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
+  return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
+                             : vec<T, 3>{0, -v.z, v.y};
 }
-inline vec3f orthonormalize(const vec3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
   return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
-inline vec3f reflect(const vec3f& w, const vec3f& n) {
+template <typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
   return -w + 2 * dot(n, w) * n;
 }
-inline vec3f refract(const vec3f& w, const vec3f& n, float inv_eta) {
+template <typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T inv_eta) {
   auto cosine = dot(n, w);
   auto k      = 1 + inv_eta * inv_eta * (cosine * cosine - 1);
   if (k < 0) return {0, 0, 0};  // tir
   return -w * inv_eta + (inv_eta * cosine - sqrt(k)) * n;
 }
 
-// Max element and clamp.
-inline vec3f max(const vec3f& a, float b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b)};
-}
-inline vec3f min(const vec3f& a, float b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b)};
-}
-inline vec3f max(const vec3f& a, const vec3f& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-}
-inline vec3f min(const vec3f& a, const vec3f& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-}
-inline vec3f clamp(const vec3f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-}
-inline vec3f lerp(const vec3f& a, const vec3f& b, float u) {
-  return a * (1 - u) + b * u;
-}
-inline vec3f lerp(const vec3f& a, const vec3f& b, const vec3f& u) {
-  return a * (1 - u) + b * u;
-}
-
-inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
-inline float min(const vec3f& a) { return min(min(a.x, a.y), a.z); }
-inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
-inline float mean(const vec3f& a) { return sum(a) / 3; }
-
-// Functions applied to std::vector elements
-inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
-inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
-inline vec3f log(const vec3f& a) { return {log(a.x), log(a.y), log(a.z)}; };
-inline vec3f exp2(const vec3f& a) { return {exp2(a.x), exp2(a.y), exp2(a.z)}; };
-inline vec3f log2(const vec3f& a) { return {log2(a.x), log2(a.y), log2(a.z)}; };
-inline vec3f pow(const vec3f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
-};
-inline vec3f pow(const vec3f& a, const vec3f& b) {
-  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
-};
-inline vec3f gain(const vec3f& a, float b) {
-  return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
-};
-inline bool isfinite(const vec3f& a) {
-  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
-};
-inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec4f& a, const vec4f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4f& a, const vec4f& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
-
-// Vector operations.
-inline vec4f operator+(const vec4f& a) { return a; }
-inline vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-inline vec4f operator+(const vec4f& a, const vec4f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline vec4f operator+(const vec4f& a, float b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline vec4f operator+(float a, const vec4f& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline vec4f operator-(const vec4f& a, const vec4f& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline vec4f operator-(const vec4f& a, float b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline vec4f operator-(float a, const vec4f& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline vec4f operator*(const vec4f& a, const vec4f& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline vec4f operator*(const vec4f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4f operator*(float a, const vec4f& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline vec4f operator/(const vec4f& a, const vec4f& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline vec4f operator/(const vec4f& a, float b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4f operator/(float a, const vec4f& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline vec4f& operator+=(vec4f& a, const vec4f& b) { return a = a + b; }
-inline vec4f& operator+=(vec4f& a, float b) { return a = a + b; }
-inline vec4f& operator-=(vec4f& a, const vec4f& b) { return a = a - b; }
-inline vec4f& operator-=(vec4f& a, float b) { return a = a - b; }
-inline vec4f& operator*=(vec4f& a, const vec4f& b) { return a = a * b; }
-inline vec4f& operator*=(vec4f& a, float b) { return a = a * b; }
-inline vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
-inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
-
-// Vector products and lengths.
-inline float dot(const vec4f& a, const vec4f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
-inline vec4f normalize(const vec4f& a) {
-  auto l = length(a);
-  return (l != 0) ? a / l : a;
-}
-inline float distance(const vec4f& a, const vec4f& b) { return length(a - b); }
-inline float distance_squared(const vec4f& a, const vec4f& b) {
-  return dot(a - b, a - b);
-}
-
-inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
+// Slerp
+template <typename T, size_t N>
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   // https://en.wikipedia.org/wiki/Slerp
   auto an = normalize(a), bn = normalize(b);
   auto d = dot(an, bn);
@@ -2161,381 +2272,302 @@ inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
 }
 
 // Max element and clamp.
-inline vec4f max(const vec4f& a, float b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
+template <typename T, size_t N, typename T1>
+inline vec<T, N> max(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {max(a.x, (T)b)};
+  } else if constexpr (N == 2) {
+    return {max(a.x, (T)b), max(a.y, (T)b)};
+  } else if constexpr (N == 3) {
+    return {max(a.x, (T)b), max(a.y, (T)b), max(a.z, (T)b)};
+  } else if constexpr (N == 4) {
+    return {max(a.x, (T)b), max(a.y, (T)b), max(a.z, (T)b), max(a.w, (T)b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f min(const vec4f& a, float b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
+template <typename T, size_t N, typename T1>
+inline vec<T, N> min(const vec<T, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {min(a.x, (T)b)};
+  } else if constexpr (N == 2) {
+    return {min(a.x, (T)b), min(a.y, (T)b)};
+  } else if constexpr (N == 3) {
+    return {min(a.x, (T)b), min(a.y, (T)b), min(a.z, (T)b)};
+  } else if constexpr (N == 4) {
+    return {min(a.x, (T)b), min(a.y, (T)b), min(a.z, (T)b), min(a.w, (T)b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f max(const vec4f& a, const vec4f& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+template <typename T, size_t N>
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {max(a.x, b.x)};
+  } else if constexpr (N == 2) {
+    return {max(a.x, b.x), max(a.y, b.y)};
+  } else if constexpr (N == 3) {
+    return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+  } else if constexpr (N == 4) {
+    return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f min(const vec4f& a, const vec4f& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+template <typename T, size_t N>
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {min(a.x, b.x)};
+  } else if constexpr (N == 2) {
+    return {min(a.x, b.x), min(a.y, b.y)};
+  } else if constexpr (N == 3) {
+    return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+  } else if constexpr (N == 4) {
+    return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f clamp(const vec4f& x, float min, float max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-      clamp(x.w, min, max)};
+template <typename T, size_t N, typename T1, typename T2>
+inline vec<T, N> clamp(const vec<T, N>& a, T1 min, T2 max) {
+  if constexpr (N == 1) {
+    return {clamp(a.x, (T)min, (T)max)};
+  } else if constexpr (N == 2) {
+    return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max)};
+  } else if constexpr (N == 3) {
+    return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max),
+        clamp(a.z, (T)min, (T)max)};
+  } else if constexpr (N == 4) {
+    return {clamp(a.x, (T)min, (T)max), clamp(a.y, (T)min, (T)max),
+        clamp(a.z, (T)min, (T)max), clamp(a.w, (T)min, (T)max)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
 }
-inline vec4f lerp(const vec4f& a, const vec4f& b, float u) {
+template <typename T, size_t N>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T u) {
   return a * (1 - u) + b * u;
 }
-inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
+template <typename T, size_t N>
+inline vec<T, N> lerp(
+    const vec<T, N>& a, const vec<T, N>& b, const vec<T, N>& u) {
   return a * (1 - u) + b * u;
 }
 
-inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-inline float min(const vec4f& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-inline float sum(const vec4f& a) { return a.x + a.y + a.z + a.w; }
-inline float mean(const vec4f& a) { return sum(a) / 4; }
+template <typename T, size_t N>
+inline T max(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return max(a.x, a.y);
+  } else if constexpr (N == 3) {
+    return max(max(a.x, a.y), a.z);
+  } else if constexpr (N == 4) {
+    return max(max(max(a.x, a.y), a.z), a.w);
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline T min(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return min(a.x, a.y);
+  } else if constexpr (N == 3) {
+    return min(min(a.x, a.y), a.z);
+  } else if constexpr (N == 4) {
+    return min(min(min(a.x, a.y), a.z), a.w);
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline T sum(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return a.x;
+  } else if constexpr (N == 2) {
+    return a.x + a.y;
+  } else if constexpr (N == 3) {
+    return a.x + a.y + a.z;
+  } else if constexpr (N == 4) {
+    return a.x + a.y + a.z + a.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline T mean(const vec<T, N>& a) {
+  return sum(a) / (T)N;
+}
 
 // Functions applied to std::vector elements
-inline vec4f abs(const vec4f& a) {
-  return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
-inline vec4f sqrt(const vec4f& a) {
-  return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
-};
-inline vec4f exp(const vec4f& a) {
-  return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
-};
-inline vec4f log(const vec4f& a) {
-  return {log(a.x), log(a.y), log(a.z), log(a.w)};
-};
-inline vec4f exp2(const vec4f& a) {
-  return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
-};
-inline vec4f log2(const vec4f& a) {
-  return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
-};
-inline vec4f pow(const vec4f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
-};
-inline vec4f pow(const vec4f& a, const vec4f& b) {
-  return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
-};
-inline vec4f gain(const vec4f& a, float b) {
-  return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
-};
-inline bool isfinite(const vec4f& a) {
-  return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
-};
-inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
+template <typename T, size_t N>
+inline vec<T, N> abs(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {abs(a.x)};
+  } else if constexpr (N == 2) {
+    return {abs(a.x), abs(a.y)};
+  } else if constexpr (N == 3) {
+    return {abs(a.x), abs(a.y), abs(a.z)};
+  } else if constexpr (N == 4) {
+    return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> sqrt(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {sqrt(a.x)};
+  } else if constexpr (N == 2) {
+    return {sqrt(a.x), sqrt(a.y)};
+  } else if constexpr (N == 3) {
+    return {sqrt(a.x), sqrt(a.y), sqrt(a.z)};
+  } else if constexpr (N == 4) {
+    return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> exp(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {exp(a.x)};
+  } else if constexpr (N == 2) {
+    return {exp(a.x), exp(a.y)};
+  } else if constexpr (N == 3) {
+    return {exp(a.x), exp(a.y), exp(a.z)};
+  } else if constexpr (N == 4) {
+    return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> log(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {log(a.x)};
+  } else if constexpr (N == 2) {
+    return {log(a.x), log(a.y)};
+  } else if constexpr (N == 3) {
+    return {log(a.x), log(a.y), log(a.z)};
+  } else if constexpr (N == 4) {
+    return {log(a.x), log(a.y), log(a.z), log(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> exp2(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {exp2(a.x)};
+  } else if constexpr (N == 2) {
+    return {exp2(a.x), exp2(a.y)};
+  } else if constexpr (N == 3) {
+    return {exp2(a.x), exp2(a.y), exp2(a.z)};
+  } else if constexpr (N == 4) {
+    return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> log2(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {log2(a.x)};
+  } else if constexpr (N == 2) {
+    return {log2(a.x), log2(a.y)};
+  } else if constexpr (N == 3) {
+    return {log2(a.x), log2(a.y), log2(a.z)};
+  } else if constexpr (N == 4) {
+    return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> pow(const vec<T, N>& a, T b) {
+  if constexpr (N == 1) {
+    return {pow(a.x, b)};
+  } else if constexpr (N == 2) {
+    return {pow(a.x, b), pow(a.y, b)};
+  } else if constexpr (N == 3) {
+    return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
+  } else if constexpr (N == 4) {
+    return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return {pow(a.x, b.x)};
+  } else if constexpr (N == 2) {
+    return {pow(a.x, b.x), pow(a.y, b.y)};
+  } else if constexpr (N == 3) {
+    return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
+  } else if constexpr (N == 4) {
+    return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline vec<T, N> gain(const vec<T, N>& a, T b) {
+  if constexpr (N == 1) {
+    return {gain(a.x, b)};
+  } else if constexpr (N == 2) {
+    return {gain(a.x, b), gain(a.y, b)};
+  } else if constexpr (N == 3) {
+    return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
+  } else if constexpr (N == 4) {
+    return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline bool isfinite(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return isfinite(a.x);
+  } else if constexpr (N == 2) {
+    return isfinite(a.x) && isfinite(a.y);
+  } else if constexpr (N == 3) {
+    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+  } else if constexpr (N == 4) {
+    return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline void swap(vec<T, N>& a, vec<T, N>& b) {
+  std::swap(a, b);
+}
 
 // Quaternion operatons represented as xi + yj + zk + w
 // const auto identity_quat4f = vec4f{0, 0, 0, 1};
-inline vec4f quat_mul(const vec4f& a, float b) {
+template <typename T, size_t N, typename T1>
+inline vec<T, N> quat_mul(const vec<T, N>& a, T1 b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
+template <typename T, size_t N>
+inline vec<T, N> quat_mul(const vec<T, N>& a, const vec<T, N>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
       a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
-inline vec4f quat_conjugate(const vec4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
-inline vec4f quat_inverse(const vec4f& a) {
+template <typename T, size_t N>
+inline vec<T, N> quat_conjugate(const vec<T, N>& a) {
+  return {-a.x, -a.y, -a.z, a.w};
+}
+template <typename T, size_t N>
+inline vec<T, N> quat_inverse(const vec<T, N>& a) {
   return quat_conjugate(a) / dot(a, a);
 }
-
-}  // namespace yocto::math
-
-// -----------------------------------------------------------------------------
-// INTEGER VECTORS
-// -----------------------------------------------------------------------------
-namespace yocto::math {
-
-// Vector data types
-inline vec2i::vec2i() {}
-inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
-inline vec2i::vec2i(int v) : x{v}, y{v} {}
-inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
-inline vec2i::operator bool() const { return x && y; }
-
-inline int& vec2i::operator[](int i) { return (&x)[i]; }
-inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec3i::vec3i() {}
-inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
-inline vec3i::operator vec3f() const { return {(float)x, (float)y, (float)z}; }
-inline vec3i::operator bool() const { return x && y && z; }
-
-inline int& vec3i::operator[](int i) { return (&x)[i]; }
-inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec4i::vec4i() {}
-inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4i::operator vec4f() const {
-  return {(float)x, (float)y, (float)z, (float)w};
-}
-inline vec4i::operator bool() const { return x && y && z && w; }
-
-inline int& vec4i::operator[](int i) { return (&x)[i]; }
-inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec3b::vec3b() {}
-inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
-inline vec3b::vec3b(byte v) : x{v}, y{v}, z{v} {}
-inline vec3b::operator bool() const { return x && y && z; }
-
-inline byte& vec3b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
-
-// Vector data types
-inline vec4b::vec4b() {}
-inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4b::vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4b::operator bool() const { return x && y && z && w; }
-
-inline byte& vec4b::operator[](int i) { return (&x)[i]; }
-inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
-
-// Element access
-inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
-inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
-
-// Element access
-inline vec3b&       xyz(vec4b& a) { return (vec3b&)a; }
-inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
-
-// Vector comparison operations.
-inline bool operator==(const vec2i& a, const vec2i& b) {
-  return a.x == b.x && a.y == b.y;
-}
-inline bool operator!=(const vec2i& a, const vec2i& b) {
-  return a.x != b.x || a.y != b.y;
-}
-
-// Vector operations.
-inline vec2i operator+(const vec2i& a) { return a; }
-inline vec2i operator-(const vec2i& a) { return {-a.x, -a.y}; }
-inline vec2i operator+(const vec2i& a, const vec2i& b) {
-  return {a.x + b.x, a.y + b.y};
-}
-inline vec2i operator+(const vec2i& a, int b) { return {a.x + b, a.y + b}; }
-inline vec2i operator+(int a, const vec2i& b) { return {a + b.x, a + b.y}; }
-inline vec2i operator-(const vec2i& a, const vec2i& b) {
-  return {a.x - b.x, a.y - b.y};
-}
-inline vec2i operator-(const vec2i& a, int b) { return {a.x - b, a.y - b}; }
-inline vec2i operator-(int a, const vec2i& b) { return {a - b.x, a - b.y}; }
-inline vec2i operator*(const vec2i& a, const vec2i& b) {
-  return {a.x * b.x, a.y * b.y};
-}
-inline vec2i operator*(const vec2i& a, int b) { return {a.x * b, a.y * b}; }
-inline vec2i operator*(int a, const vec2i& b) { return {a * b.x, a * b.y}; }
-inline vec2i operator/(const vec2i& a, const vec2i& b) {
-  return {a.x / b.x, a.y / b.y};
-}
-inline vec2i operator/(const vec2i& a, int b) { return {a.x / b, a.y / b}; }
-inline vec2i operator/(int a, const vec2i& b) { return {a / b.x, a / b.y}; }
-
-// Vector assignments
-inline vec2i& operator+=(vec2i& a, const vec2i& b) { return a = a + b; }
-inline vec2i& operator+=(vec2i& a, int b) { return a = a + b; }
-inline vec2i& operator-=(vec2i& a, const vec2i& b) { return a = a - b; }
-inline vec2i& operator-=(vec2i& a, int b) { return a = a - b; }
-inline vec2i& operator*=(vec2i& a, const vec2i& b) { return a = a * b; }
-inline vec2i& operator*=(vec2i& a, int b) { return a = a * b; }
-inline vec2i& operator/=(vec2i& a, const vec2i& b) { return a = a / b; }
-inline vec2i& operator/=(vec2i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec2i max(const vec2i& a, int b) { return {max(a.x, b), max(a.y, b)}; }
-inline vec2i min(const vec2i& a, int b) { return {min(a.x, b), min(a.y, b)}; }
-inline vec2i max(const vec2i& a, const vec2i& b) {
-  return {max(a.x, b.x), max(a.y, b.y)};
-}
-inline vec2i min(const vec2i& a, const vec2i& b) {
-  return {min(a.x, b.x), min(a.y, b.y)};
-}
-inline vec2i clamp(const vec2i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max)};
-}
-
-inline int max(const vec2i& a) { return max(a.x, a.y); }
-inline int min(const vec2i& a) { return min(a.x, a.y); }
-inline int sum(const vec2i& a) { return a.x + a.y; }
-
-// Functions applied to std::vector elements
-inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
-inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec3i& a, const vec3i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-inline bool operator!=(const vec3i& a, const vec3i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z;
-}
-
-// Vector operations.
-inline vec3i operator+(const vec3i& a) { return a; }
-inline vec3i operator-(const vec3i& a) { return {-a.x, -a.y, -a.z}; }
-inline vec3i operator+(const vec3i& a, const vec3i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-inline vec3i operator+(const vec3i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b};
-}
-inline vec3i operator+(int a, const vec3i& b) {
-  return {a + b.x, a + b.y, a + b.z};
-}
-inline vec3i operator-(const vec3i& a, const vec3i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z};
-}
-inline vec3i operator-(const vec3i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b};
-}
-inline vec3i operator-(int a, const vec3i& b) {
-  return {a - b.x, a - b.y, a - b.z};
-}
-inline vec3i operator*(const vec3i& a, const vec3i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z};
-}
-inline vec3i operator*(const vec3i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b};
-}
-inline vec3i operator*(int a, const vec3i& b) {
-  return {a * b.x, a * b.y, a * b.z};
-}
-inline vec3i operator/(const vec3i& a, const vec3i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z};
-}
-inline vec3i operator/(const vec3i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b};
-}
-inline vec3i operator/(int a, const vec3i& b) {
-  return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector assignments
-inline vec3i& operator+=(vec3i& a, const vec3i& b) { return a = a + b; }
-inline vec3i& operator+=(vec3i& a, int b) { return a = a + b; }
-inline vec3i& operator-=(vec3i& a, const vec3i& b) { return a = a - b; }
-inline vec3i& operator-=(vec3i& a, int b) { return a = a - b; }
-inline vec3i& operator*=(vec3i& a, const vec3i& b) { return a = a * b; }
-inline vec3i& operator*=(vec3i& a, int b) { return a = a * b; }
-inline vec3i& operator/=(vec3i& a, const vec3i& b) { return a = a / b; }
-inline vec3i& operator/=(vec3i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec3i max(const vec3i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b)};
-}
-inline vec3i min(const vec3i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b)};
-}
-inline vec3i max(const vec3i& a, const vec3i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
-}
-inline vec3i min(const vec3i& a, const vec3i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
-}
-inline vec3i clamp(const vec3i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
-}
-
-inline int max(const vec3i& a) { return max(max(a.x, a.y), a.z); }
-inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
-inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
-
-// Functions applied to std::vector elements
-inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
-
-// Vector comparison operations.
-inline bool operator==(const vec4i& a, const vec4i& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const vec4i& a, const vec4i& b) {
-  return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
-
-// Vector operations.
-inline vec4i operator+(const vec4i& a) { return a; }
-inline vec4i operator-(const vec4i& a) { return {-a.x, -a.y, -a.z, -a.w}; }
-inline vec4i operator+(const vec4i& a, const vec4i& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline vec4i operator+(const vec4i& a, int b) {
-  return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-inline vec4i operator+(int a, const vec4i& b) {
-  return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-inline vec4i operator-(const vec4i& a, const vec4i& b) {
-  return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-inline vec4i operator-(const vec4i& a, int b) {
-  return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-inline vec4i operator-(int a, const vec4i& b) {
-  return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-inline vec4i operator*(const vec4i& a, const vec4i& b) {
-  return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-inline vec4i operator*(const vec4i& a, int b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4i operator*(int a, const vec4i& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-inline vec4i operator/(const vec4i& a, const vec4i& b) {
-  return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-inline vec4i operator/(const vec4i& a, int b) {
-  return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4i operator/(int a, const vec4i& b) {
-  return {a / b.x, a / b.y, a / b.z, a / b.w};
-}
-
-// Vector assignments
-inline vec4i& operator+=(vec4i& a, const vec4i& b) { return a = a + b; }
-inline vec4i& operator+=(vec4i& a, int b) { return a = a + b; }
-inline vec4i& operator-=(vec4i& a, const vec4i& b) { return a = a - b; }
-inline vec4i& operator-=(vec4i& a, int b) { return a = a - b; }
-inline vec4i& operator*=(vec4i& a, const vec4i& b) { return a = a * b; }
-inline vec4i& operator*=(vec4i& a, int b) { return a = a * b; }
-inline vec4i& operator/=(vec4i& a, const vec4i& b) { return a = a / b; }
-inline vec4i& operator/=(vec4i& a, int b) { return a = a / b; }
-
-// Max element and clamp.
-inline vec4i max(const vec4i& a, int b) {
-  return {max(a.x, b), max(a.y, b), max(a.z, b), max(a.w, b)};
-}
-inline vec4i min(const vec4i& a, int b) {
-  return {min(a.x, b), min(a.y, b), min(a.z, b), min(a.w, b)};
-}
-inline vec4i max(const vec4i& a, const vec4i& b) {
-  return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
-}
-inline vec4i min(const vec4i& a, const vec4i& b) {
-  return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
-}
-inline vec4i clamp(const vec4i& x, int min, int max) {
-  return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-      clamp(x.w, min, max)};
-}
-
-inline int max(const vec4i& a) { return max(max(max(a.x, a.y), a.z), a.w); }
-inline int min(const vec4i& a) { return min(min(min(a.x, a.y), a.z), a.w); }
-inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
-
-// Functions applied to std::vector elements
-inline vec4i abs(const vec4i& a) {
-  return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
-inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 }  // namespace yocto::math
 
@@ -2545,36 +2577,28 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 namespace std {
 
 // Hash functor for std::vector for use with hash_map
-template <>
-struct hash<yocto::math::vec2i> {
-  size_t operator()(const yocto::math::vec2i& v) const {
+template <typename T, size_t N>
+struct hash<yocto::math::vec<T, N>> {
+  size_t operator()(const yocto::math::vec<T, N>& v) const {
     static const auto hasher = std::hash<int>();
     auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::math::vec3i> {
-  size_t operator()(const yocto::math::vec3i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-  }
-};
-template <>
-struct hash<yocto::math::vec4i> {
-  size_t operator()(const yocto::math::vec4i& v) const {
-    static const auto hasher = std::hash<int>();
-    auto              h      = (size_t)0;
-    h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    if constexpr (N == 1) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr (N == 2) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr (N == 3) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else if constexpr (N == 4) {
+      h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher(v.w) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    } else {
+      static_assert(N >= 1 && N <= 4, "vector size unsupported");
+    }
     return h;
   }
 };
@@ -2587,166 +2611,265 @@ struct hash<yocto::math::vec4i> {
 namespace yocto::math {
 
 // Small Fixed-size matrices stored in column major format.
-inline mat2f::mat2f() {}
-inline mat2f::mat2f(const vec2f& x, const vec2f& y) : x{x}, y{y} {}
+template <typename T, size_t M>
+inline mat<T, M, 1>::mat() {}
+template <typename T, size_t M>
+inline mat<T, M, 1>::mat(const vec<T, M>& x) : x{x} {}
 
-inline vec2f& mat2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& mat2f::operator[](int i) const { return (&x)[i]; }
+template <typename T, size_t M>
+inline vec<T, M>& mat<T, M, 1>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 1>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Small Fixed-size matrices stored in column major format.
-inline mat3f::mat3f() {}
-inline mat3f::mat3f(const vec3f& x, const vec3f& y, const vec3f& z)
+template <typename T, size_t M>
+inline mat<T, M, 2>::mat() {}
+template <typename T, size_t M>
+inline mat<T, M, 2>::mat(const vec<T, M>& x, const vec<T, M>& y) : x{x}, y{y} {}
+
+template <typename T, size_t M>
+inline vec<T, M>& mat<T, M, 2>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 2>::operator[](int i) const {
+  return (&x)[i];
+}
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, size_t M>
+inline mat<T, M, 3>::mat() {}
+template <typename T, size_t M>
+inline mat<T, M, 3>::mat(
+    const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z)
     : x{x}, y{y}, z{z} {}
 
-inline vec3f& mat3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& mat3f::operator[](int i) const { return (&x)[i]; }
+template <typename T, size_t M>
+inline vec<T, M>& mat<T, M, 3>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 3>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Small Fixed-size matrices stored in column major format.
-inline mat4f::mat4f() {}
-inline mat4f::mat4f(
-    const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+template <typename T, size_t M>
+inline mat<T, M, 4>::mat() {}
+template <typename T, size_t M>
+inline mat<T, M, 4>::mat(const vec<T, M>& x, const vec<T, M>& y,
+    const vec<T, M>& z, const vec<T, M>& w)
     : x{x}, y{y}, z{z}, w{w} {}
 
-inline vec4f& mat4f::operator[](int i) { return (&x)[i]; }
-inline const vec4f& mat4f::operator[](int i) const { return (&x)[i]; }
-
-// Matrix comparisons.
-inline bool operator==(const mat2f& a, const mat2f& b) {
-  return a.x == b.x && a.y == b.y;
+template <typename T, size_t M>
+inline vec<T, M>& mat<T, M, 4>::operator[](int i) {
+  return (&x)[i];
 }
-inline bool operator!=(const mat2f& a, const mat2f& b) { return !(a == b); }
-
-// Matrix operations.
-inline mat2f operator+(const mat2f& a, const mat2f& b) {
-  return {a.x + b.x, a.y + b.y};
-}
-inline mat2f operator*(const mat2f& a, float b) { return {a.x * b, a.y * b}; }
-inline vec2f operator*(const mat2f& a, const vec2f& b) {
-  return a.x * b.x + a.y * b.y;
-}
-inline vec2f operator*(const vec2f& a, const mat2f& b) {
-  return {dot(a, b.x), dot(a, b.y)};
-}
-inline mat2f operator*(const mat2f& a, const mat2f& b) {
-  return {a * b.x, a * b.y};
-}
-
-// Matrix assignments.
-inline mat2f& operator+=(mat2f& a, const mat2f& b) { return a = a + b; }
-inline mat2f& operator*=(mat2f& a, const mat2f& b) { return a = a * b; }
-inline mat2f& operator*=(mat2f& a, float b) { return a = a * b; }
-
-// Matrix diagonals and transposes.
-inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
-inline mat2f transpose(const mat2f& a) {
-  return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-}
-
-// Matrix adjoints, determinants and inverses.
-inline float determinant(const mat2f& a) { return cross(a.x, a.y); }
-inline mat2f adjoint(const mat2f& a) {
-  return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
-}
-inline mat2f inverse(const mat2f& a) {
-  return adjoint(a) * (1 / determinant(a));
+template <typename T, size_t M>
+inline const vec<T, M>& mat<T, M, 4>::operator[](int i) const {
+  return (&x)[i];
 }
 
 // Matrix comparisons.
-inline bool operator==(const mat3f& a, const mat3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z;
+template <typename T, size_t M, size_t N>
+inline bool operator==(const mat<T, M, N>& a, const mat<T, M, N>& b) {
+  if constexpr (N == 1) {
+    return a.x == b.x;
+  } else if constexpr (N == 2) {
+    return a.x == b.x || a.y == b.y;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  } else if constexpr (N == 4) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
-inline bool operator!=(const mat3f& a, const mat3f& b) { return !(a == b); }
+template <typename T, size_t M, size_t N>
+inline bool operator!=(const mat<T, M, N>& a, const mat<T, M, N>& b) {
+  if constexpr (N == 1) {
+    return a.x != b.x;
+  } else if constexpr (N == 2) {
+    return a.x != b.x || a.y != b.y;
+  } else if constexpr (N == 3) {
+    return a.x != b.x || a.y != b.y || a.z != b.z;
+  } else if constexpr (N == 4) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
+}
 
 // Matrix operations.
-inline mat3f operator+(const mat3f& a, const mat3f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z};
+template <typename T, size_t M, size_t N>
+inline mat<T, M, N> operator+(const mat<T, M, N>& a, const mat<T, M, N>& b) {
+  if constexpr (N == 1) {
+    return {a.x + b.x};
+  } else if constexpr (N == 2) {
+    return {a.x + b.x, a.y + b.y};
+  } else if constexpr (N == 3) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+  } else if constexpr (N == 4) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
-inline mat3f operator*(const mat3f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b};
+template <typename T, size_t M, size_t N, typename T1>
+inline mat<T, M, N> operator*(const mat<T, M, N>& a, T1 b) {
+  if constexpr (N == 1) {
+    return {a.x * b};
+  } else if constexpr (N == 2) {
+    return {a.x * b, a.y * b};
+  } else if constexpr (N == 3) {
+    return {a.x * b, a.y * b, a.z * b};
+  } else if constexpr (N == 4) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
-inline vec3f operator*(const mat3f& a, const vec3f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
+template <typename T, size_t M, size_t N>
+inline vec<T, M> operator*(const mat<T, M, N>& a, const vec<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x * b.x;
+  } else if constexpr (N == 2) {
+    return a.x * b.x + a.y * b.y;
+  } else if constexpr (N == 3) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+  } else if constexpr (N == 4) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
-inline vec3f operator*(const vec3f& a, const mat3f& b) {
-  return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+template <typename T, size_t M, size_t N>
+inline vec<T, N> operator*(const vec<T, M>& a, const mat<T, M, N>& b) {
+  if constexpr (N == 1) {
+    return {dot(a, b.x)};
+  } else if constexpr (N == 2) {
+    return {dot(a, b.x), dot(a, b.y)};
+  } else if constexpr (N == 3) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+  } else if constexpr (N == 4) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
-inline mat3f operator*(const mat3f& a, const mat3f& b) {
-  return {a * b.x, a * b.y, a * b.z};
+template <typename T, size_t M, size_t N, size_t K>
+inline mat<T, M, K> operator*(const mat<T, M, N>& a, const mat<T, N, K>& b) {
+  if constexpr (N == 1) {
+    return {a * b.x};
+  } else if constexpr (N == 2) {
+    return {a * b.x, a * b.y};
+  } else if constexpr (N == 3) {
+    return {a * b.x, a * b.y, a * b.z};
+  } else if constexpr (N == 4) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
 
 // Matrix assignments.
-inline mat3f& operator+=(mat3f& a, const mat3f& b) { return a = a + b; }
-inline mat3f& operator*=(mat3f& a, const mat3f& b) { return a = a * b; }
-inline mat3f& operator*=(mat3f& a, float b) { return a = a * b; }
+template <typename T, size_t M, size_t N>
+inline mat<T, M, N>& operator+=(mat<T, M, N>& a, const mat<T, M, N>& b) {
+  return a = a + b;
+}
+template <typename T, size_t M, size_t N>
+inline mat<T, M, N>& operator*=(mat<T, M, N>& a, const mat<T, N, N>& b) {
+  return a = a * b;
+}
+template <typename T, size_t M, size_t N, typename T1>
+inline mat<T, M, N>& operator*=(mat<T, M, N>& a, T1 b) {
+  return a = a * b;
+}
 
 // Matrix diagonals and transposes.
-inline vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
-inline mat3f transpose(const mat3f& a) {
-  return {
-      {a.x.x, a.y.x, a.z.x},
-      {a.x.y, a.y.y, a.z.y},
-      {a.x.z, a.y.z, a.z.z},
-  };
+template <typename T, size_t N>
+inline vec<T, N> diagonal(const mat<T, N, N>& a) {
+  if constexpr (N == 1) {
+    return {a.x.x};
+  } else if constexpr (N == 2) {
+    return {a.x.x, a.y.y};
+  } else if constexpr (N == 3) {
+    return {a.x.x, a.y.y, a.z.z};
+  } else if constexpr (N == 4) {
+    return {a.x.x, a.y.y, a.z.z, a.w.w};
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline mat<T, N, N> transpose(const mat<T, N, N>& a) {
+  if constexpr (N == 1) {
+    return {{a.x.x, a.y.x}};
+  } else if constexpr (N == 2) {
+    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+  } else if constexpr (N == 3) {
+    return {
+        {a.x.x, a.y.x, a.z.x},
+        {a.x.y, a.y.y, a.z.y},
+        {a.x.z, a.y.z, a.z.z},
+    };
+  } else if constexpr (N == 4) {
+    return {
+        {a.x.x, a.y.x, a.z.x, a.w.x},
+        {a.x.y, a.y.y, a.z.y, a.w.y},
+        {a.x.z, a.y.z, a.z.z, a.w.z},
+        {a.x.w, a.y.w, a.z.w, a.w.w},
+    };
+  } else {
+    static_assert(N >= 0 || N <= 4, "matrix size unsupported");
+  }
 }
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a) { return dot(a.x, cross(a.y, a.z)); }
-inline mat3f adjoint(const mat3f& a) {
-  return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+template <typename T, size_t N>
+inline T determinant(const mat<T, N, N>& a) {
+  if constexpr (N == 1) {
+    return a.x.x;
+  } else if constexpr (N == 2) {
+    return cross(a.x, a.y);
+  } else if constexpr (N == 3) {
+    return dot(a.x, cross(a.y, a.z));
+  } else {
+    static_assert(N >= 0 || N <= 3, "matrix size unsupported");
+  }
 }
-inline mat3f inverse(const mat3f& a) {
+template <typename T, size_t N>
+inline mat<T, N, N> adjoint(const mat<T, N, N>& a) {
+  if constexpr (N == 1) {
+    return {a.x.x};
+  } else if constexpr (N == 2) {
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+  } else if constexpr (N == 3) {
+    return transpose(mat3f{cross(a.y, a.z), cross(a.z, a.x), cross(a.x, a.y)});
+  } else {
+    static_assert(N >= 0 || N <= 3, "matrix size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
   return adjoint(a) * (1 / determinant(a));
 }
 
 // Constructs a basis from a direction
-inline mat3f basis_fromz(const vec3f& v) {
+template <typename T>
+inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
-  auto sign = copysignf(1.0f, z.z);
-  auto a    = -1.0f / (sign + z.z);
+  auto sign = copysignf((T)1, z.z);
+  auto a    = -1 / (sign + z.z);
   auto b    = z.x * z.y * a;
-  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+  auto x    = vec<T, 3>{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
+  auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
   return {x, y, z};
-}
-
-// Matrix comparisons.
-inline bool operator==(const mat4f& a, const mat4f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-inline bool operator!=(const mat4f& a, const mat4f& b) { return !(a == b); }
-
-// Matrix operations.
-inline mat4f operator+(const mat4f& a, const mat4f& b) {
-  return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-inline mat4f operator*(const mat4f& a, float b) {
-  return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-inline vec4f operator*(const mat4f& a, const vec4f& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-inline vec4f operator*(const vec4f& a, const mat4f& b) {
-  return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-}
-inline mat4f operator*(const mat4f& a, const mat4f& b) {
-  return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-
-// Matrix assignments.
-inline mat4f& operator+=(mat4f& a, const mat4f& b) { return a = a + b; }
-inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
-inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
-
-// Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a) { return {a.x.x, a.y.y, a.z.z, a.w.w}; }
-inline mat4f transpose(const mat4f& a) {
-  return {
-      {a.x.x, a.y.x, a.z.x, a.w.x},
-      {a.x.y, a.y.y, a.z.y, a.w.y},
-      {a.x.z, a.y.z, a.z.z, a.w.z},
-      {a.x.w, a.y.w, a.z.w, a.w.w},
-  };
 }
 
 }  // namespace yocto::math
@@ -2757,83 +2880,140 @@ inline mat4f transpose(const mat4f& a) {
 namespace yocto::math {
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame2f::frame2f() {}
-inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
-    : x{x}, y{y}, o{o} {}
-inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-inline frame2f::frame2f(const mat2f& m, const vec2f& t)
-    : x{m.x}, y{m.y}, o{t} {}
-inline frame2f::frame2f(const mat3f& m)
-    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+template <typename T>
+inline frame<T, 1>::frame() {}
+template <typename T>
+inline frame<T, 1>::frame(const vec<T, 1>& x, const vec<T, 1>& o)
+    : x{x}, o{o} {}
+template <typename T>
+inline frame<T, 1>::frame(const vec<T, 1>& o) : x{1, 0}, o{o} {}
+template <typename T>
+inline frame<T, 1>::frame(const mat<T, 1, 1>& m, const vec<T, 1>& t)
+    : x{m.x}, o{t} {}
+template <typename T>
+inline frame<T, 1>::frame(const mat<T, 2, 2>& m)
+    : x{m.x.x, m.x.y}, o{m.z.x, m.z.y} {}
+template <typename T>
+inline frame<T, 1>::operator mat<T, 2, 2>() const {
+  return {{x, 0}, {o, 1}};
+}
 
-inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 1>& frame<T, 1>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 1>& frame<T, 1>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame3f::frame3f() {}
-inline frame3f::frame3f(
-    const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+template <typename T>
+inline frame<T, 2>::frame() {}
+template <typename T>
+inline frame<T, 2>::frame(
+    const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+    : x{x}, y{y}, o{o} {}
+template <typename T>
+inline frame<T, 2>::frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
+template <typename T>
+inline frame<T, 2>::frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+    : x{m.x}, y{m.y}, o{t} {}
+template <typename T>
+inline frame<T, 2>::frame(const mat<T, 3, 3>& m)
+    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+template <typename T>
+inline frame<T, 2>::operator mat<T, 3, 3>() const {
+  return {{x, 0}, {y, 0}, {o, 1}};
+}
+
+template <typename T>
+inline vec<T, 2>& frame<T, 2>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 2>& frame<T, 2>::operator[](int i) const {
+  return (&x)[i];
+}
+
+// Rigid frames stored as a column-major affine transform matrix.
+template <typename T>
+inline frame<T, 3>::frame() {}
+template <typename T>
+inline frame<T, 3>::frame(const vec<T, 3>& x, const vec<T, 3>& y,
+    const vec<T, 3>& z, const vec<T, 3>& o)
     : x{x}, y{y}, z{z}, o{o} {}
-inline frame3f::frame3f(const vec3f& o)
+template <typename T>
+inline frame<T, 3>::frame(const vec<T, 3>& o)
     : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-inline frame3f::frame3f(const mat3f& m, const vec3f& t)
+template <typename T>
+inline frame<T, 3>::frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
     : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-inline frame3f::frame3f(const mat4f& m)
+template <typename T>
+inline frame<T, 3>::frame(const mat<T, 4, 4>& m)
     : x{m.x.x, m.x.y, m.x.z}
     , y{m.y.x, m.y.y, m.y.z}
     , z{m.z.x, m.z.y, m.z.z}
     , o{m.w.x, m.w.y, m.w.z} {}
-inline frame3f::operator mat4f() const {
+template <typename T>
+inline frame<T, 3>::operator mat<T, 4, 4>() const {
   return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
 }
 
-inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
+template <typename T>
+inline vec<T, 3>& frame<T, 3>::operator[](int i) {
+  return (&x)[i];
+}
+template <typename T>
+inline const vec<T, 3>& frame<T, 3>::operator[](int i) const {
+  return (&x)[i];
+}
 
 // Frame properties
-inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
+template <typename T, size_t N>
+inline const mat<T, N, N>& rotation(const frame<T, N>& a) {
+  return (const mat<T, N, N>&)a;
+}
 
 // Frame comparisons.
-inline bool operator==(const frame2f& a, const frame2f& b) {
-  return a.x == b.x && a.y == b.y && a.o == b.o;
-}
-inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
-
-// Frame composition, equivalent to affine matrix product.
-inline frame2f operator*(const frame2f& a, const frame2f& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
-}
-inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
-
-// Frame inverse, equivalent to rigid affine inverse.
-inline frame2f inverse(const frame2f& a, bool non_rigid) {
-  if (non_rigid) {
-    auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+template <typename T, size_t N>
+inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x == b.x && a.o == b.o;
+  } else if constexpr (N == 2) {
+    return a.x == b.x && a.y == b.y && a.o == b.o;
+  } else if constexpr (N == 3) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
   } else {
-    auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    static_assert(N >= 0 || N <= 3, "frame size unsupported");
+  }
+}
+template <typename T, size_t N>
+inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
+  if constexpr (N == 1) {
+    return a.x != b.x || a.o != b.o;
+  } else if constexpr (N == 2) {
+    return a.x != b.x || a.y != b.y || a.o != b.o;
+  } else if constexpr (N == 3) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.o != b.o;
+  } else {
+    static_assert(N >= 0 || N <= 3, "frame size unsupported");
   }
 }
 
-// Frame properties
-inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
-
-// Frame comparisons.
-inline bool operator==(const frame3f& a, const frame3f& b) {
-  return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
-}
-inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
-
 // Frame composition, equivalent to affine matrix product.
-inline frame3f operator*(const frame3f& a, const frame3f& b) {
+template <typename T, size_t N>
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
   return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
 }
-inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
+template <typename T, size_t N>
+inline frame<T, N>& operator*=(frame<T, N>& a, const frame<T, N>& b) {
+  return a = a * b;
+}
 
 // Frame inverse, equivalent to rigid affine inverse.
-inline frame3f inverse(const frame3f& a, bool non_rigid) {
+template <typename T, size_t N>
+inline frame<T, N> inverse(const frame<T, N>& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
     return {minv, -(minv * a.o)};
@@ -2844,17 +3024,20 @@ inline frame3f inverse(const frame3f& a, bool non_rigid) {
 }
 
 // Frame construction from axis.
-inline frame3f frame_fromz(const vec3f& o, const vec3f& v) {
+template <typename T>
+inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
   // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
   auto z    = normalize(v);
-  auto sign = copysignf(1.0f, z.z);
-  auto a    = -1.0f / (sign + z.z);
+  auto sign = copysignf((T)1, z.z);
+  auto a    = -1 / (sign + z.z);
   auto b    = z.x * z.y * a;
-  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+  auto x    = vec<T, 3>{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
+  auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
   return {x, y, z, o};
 }
-inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
+template <typename T>
+inline frame<T, 3> frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
   auto z = normalize(z_);
   auto x = orthonormalize(x_, z);
   auto y = normalize(cross(z, x));
@@ -2869,21 +3052,26 @@ inline frame3f frame_fromzx(const vec3f& o, const vec3f& z_, const vec3f& x_) {
 namespace yocto::math {
 
 // Quaternions to represent rotations
-inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
-inline quat4f::quat4f(float x, float y, float z, float w)
-    : x{x}, y{y}, z{z}, w{w} {}
+template <typename T>
+inline quat<T, 4>::quat() : x{0}, y{0}, z{0}, w{1} {}
+template <typename T>
+inline quat<T, 4>::quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
 
 // Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b) {
+template <typename T>
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-inline quat4f operator*(const quat4f& a, float b) {
+template <typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-inline quat4f operator/(const quat4f& a, float b) {
+template <typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b) {
   return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
-inline quat4f operator*(const quat4f& a, const quat4f& b) {
+template <typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
@@ -2891,27 +3079,42 @@ inline quat4f operator*(const quat4f& a, const quat4f& b) {
 }
 
 // Quaterion operations
-inline float dot(const quat4f& a, const quat4f& b) {
+template <typename T>
+inline T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-inline float  length(const quat4f& a) { return sqrt(dot(a, a)); }
-inline quat4f normalize(const quat4f& a) {
+template <typename T>
+inline T length(const quat<T, 4>& a) {
+  return sqrt(dot(a, a));
+}
+template <typename T>
+inline quat<T, 4> normalize(const quat<T, 4>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
-inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
-inline float  uangle(const quat4f& a, const quat4f& b) {
+template <typename T>
+inline quat<T, 4> conjugate(const quat<T, 4>& a) {
+  return {-a.x, -a.y, -a.z, a.w};
+}
+template <typename T>
+inline quat<T, 4> inverse(const quat<T, 4>& a) {
+  return conjugate(a) / dot(a, a);
+}
+template <typename T>
+inline float uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
   auto d = dot(a, b);
   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
+template <typename T, typename T1>
+inline quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   return a * (1 - t) + b * t;
 }
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
+template <typename T, typename T1>
+inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   return normalize(lerp(a, b, t));
 }
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
+template <typename T, typename T1>
+inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   auto th = uangle(a, b);
   return th == 0
              ? a
@@ -2926,83 +3129,85 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
 namespace yocto::math {
 
 // Axis aligned bounding box represented as a min/max std::vector pairs.
-inline bbox2f::bbox2f() {}
-inline bbox2f::bbox2f(const vec2f& min, const vec2f& max)
+template <typename T, size_t N>
+inline bbox<T, N>::bbox() {}
+template <typename T, size_t N>
+inline bbox<T, N>::bbox(const vec<T, N>& min, const vec<T, N>& max)
     : min{min}, max{max} {}
 
-inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
-inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
-
-// Axis aligned bounding box represented as a min/max std::vector pairs.
-inline bbox3f::bbox3f() {}
-inline bbox3f::bbox3f(const vec3f& min, const vec3f& max)
-    : min{min}, max{max} {}
-
-inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
-inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
+template <typename T, size_t N>
+inline vec<T, N>& bbox<T, N>::operator[](int i) {
+  return (&min)[i];
+}
+template <typename T, size_t N>
+inline const vec<T, N>& bbox<T, N>::operator[](int i) const {
+  return (&min)[i];
+}
 
 // Bounding box properties
-inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
-inline vec2f size(const bbox2f& a) { return a.max - a.min; }
+template <typename T, size_t N>
+inline vec<T, N> center(const bbox<T, N>& a) {
+  return (a.min + a.max) / 2;
+}
+template <typename T, size_t N>
+inline vec<T, N> size(const bbox<T, N>& a) {
+  return a.max - a.min;
+}
 
 // Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b) {
+template <typename T, size_t N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min == b.min && a.max == b.max;
 }
-inline bool operator!=(const bbox2f& a, const bbox2f& b) {
+template <typename T, size_t N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b) {
+template <typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
+template <typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
-inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
-inline vec3f size(const bbox3f& a) { return a.max - a.min; }
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b) {
-  return a.min == b.min && a.max == b.max;
+template <typename T, size_t N>
+inline void expand(bbox<T, N>& a, const vec<T, N>& b) {
+  a = merge(a, b);
 }
-inline bool operator!=(const bbox3f& a, const bbox3f& b) {
-  return a.min != b.min || a.max != b.max;
+template <typename T, size_t N>
+inline void expand(bbox<T, N>& a, const bbox<T, N>& b) {
+  a = merge(a, b);
 }
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b) {
-  return {min(a.min, b), max(a.max, b)};
-}
-inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
-  return {min(a.min, b.min), max(a.max, b.max)};
-}
-inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
-inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
-inline bbox3f point_bounds(const vec3f& p, float r) {
+template <typename T, size_t N>
+inline bbox<T, N> point_bounds(const vec<T, N>& p) {
+  return {p, p};
+}
+template <typename T, size_t N, typename T1>
+inline bbox<T, N> point_bounds(const vec<T, N>& p, T1 r) {
   return {min(p - r, p + r), max(p - r, p + r)};
 }
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
+template <typename T, size_t N>
+inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1) {
   return {min(p0, p1), max(p0, p1)};
 }
-inline bbox3f line_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+template <typename T, size_t N, typename T1, typename T2>
+inline bbox<T, N> line_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T2 r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
-inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T, size_t N>
+inline bbox<T, N> triangle_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2) {
   return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
 }
-inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+template <typename T, size_t N>
+inline bbox<T, N> quad_bounds(const vec<T, N>& p0, const vec<T, N>& p1,
+    const vec<T, N>& p2, const vec<T, N>& p3) {
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
 
@@ -3014,13 +3219,17 @@ inline bbox3f quad_bounds(
 namespace yocto::math {
 
 // Rays with origin, direction and min/max t value.
-inline ray2f::ray2f() {}
-inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin, float tmax)
+template <typename T>
+inline ray<T, 2>::ray() {}
+template <typename T>
+inline ray<T, 2>::ray(const vec<T, 2>& o, const vec<T, 2>& d, T tmin, T tmax)
     : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 // Rays with origin, direction and min/max t value.
-inline ray3f::ray3f() {}
-inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
+template <typename T>
+inline ray<T, 3>::ray() {}
+template <typename T>
+inline ray<T, 3>::ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin, T tmax)
     : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
 
 }  // namespace yocto::math
@@ -3031,59 +3240,84 @@ inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
 namespace yocto::math {
 
 // Transforms points, vectors and directions by matrices.
-inline vec2f transform_point(const mat3f& a, const vec2f& b) {
-  auto tvb = a * vec3f{b.x, b.y, 1};
-  return vec2f{tvb.x, tvb.y} / tvb.z;
+template <typename T>
+inline vec<T, 2> transform_point(const mat<T, 3, 3>& a, const vec<T, 2>& b) {
+  auto tvb = a * vec<T, 3>{b.x, b.y, 1};
+  return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
-inline vec2f transform_vector(const mat3f& a, const vec2f& b) {
-  auto tvb = a * vec3f{b.x, b.y, 0};
-  return vec2f{tvb.x, tvb.y} / tvb.z;
+template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 3, 3>& a, const vec<T, 2>& b) {
+  auto tvb = a * vec<T, 3>{b.x, b.y, 0};
+  return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
-inline vec2f transform_direction(const mat3f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_direction(
+    const mat<T, 3, 3>& a, const vec<T, 2>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec2f transform_normal(const mat3f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_normal(const mat<T, 3, 3>& a, const vec<T, 2>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
-inline vec2f transform_vector(const mat2f& a, const vec2f& b) { return a * b; }
-inline vec2f transform_direction(const mat2f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 2, 2>& a, const vec<T, 2>& b) {
+  return a * b;
+}
+template <typename T>
+inline vec<T, 2> transform_direction(
+    const mat<T, 2, 2>& a, const vec<T, 2>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec2f transform_normal(const mat2f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_normal(const mat<T, 2, 2>& a, const vec<T, 2>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
-inline vec3f transform_point(const mat4f& a, const vec3f& b) {
-  auto tvb = a * vec4f{b.x, b.y, b.z, 1};
-  return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+template <typename T>
+inline vec<T, 3> transform_point(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
+  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
+  return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
 }
-inline vec3f transform_vector(const mat4f& a, const vec3f& b) {
-  auto tvb = a * vec4f{b.x, b.y, b.z, 0};
-  return vec3f{tvb.x, tvb.y, tvb.z};
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
+  auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
+  return vec<T, 3>{tvb.x, tvb.y, tvb.z};
 }
-inline vec3f transform_direction(const mat4f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_direction(
+    const mat<T, 4, 4>& a, const vec<T, 3>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec3f transform_vector(const mat3f& a, const vec3f& b) { return a * b; }
-inline vec3f transform_direction(const mat3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 3, 3>& a, const vec<T, 3>& b) {
+  return a * b;
+}
+template <typename T>
+inline vec<T, 3> transform_direction(
+    const mat<T, 3, 3>& a, const vec<T, 3>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec3f transform_normal(const mat3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_normal(const mat<T, 3, 3>& a, const vec<T, 3>& b) {
   return normalize(transform_vector(transpose(inverse(a)), b));
 }
 
 // Transforms points, vectors and directions by frames.
-inline vec2f transform_point(const frame2f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
   return a.x * b.x + a.y * b.y + a.o;
 }
-inline vec2f transform_vector(const frame2f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
   return a.x * b.x + a.y * b.y;
 }
-inline vec2f transform_direction(const frame2f& a, const vec2f& b) {
+template <typename T>
+inline vec<T, 2> transform_direction(const frame<T, 2>& a, const vec<T, 2>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec2f transform_normal(
-    const frame2f& a, const vec2f& b, bool non_rigid) {
+template <typename T>
+inline vec<T, 2> transform_normal(
+    const frame<T, 2>& a, const vec<T, 2>& b, bool non_rigid) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -3092,17 +3326,21 @@ inline vec2f transform_normal(
 }
 
 // Transforms points, vectors and directions by frames.
-inline vec3f transform_point(const frame3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
-inline vec3f transform_vector(const frame3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
+template <typename T>
+inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b) {
   return normalize(transform_vector(a, b));
 }
-inline vec3f transform_normal(
-    const frame3f& a, const vec3f& b, bool non_rigid) {
+template <typename T>
+inline vec<T, 3> transform_normal(
+    const frame<T, 3>& a, const vec<T, 3>& b, bool non_rigid) {
   if (non_rigid) {
     return transform_normal(rotation(a), b);
   } else {
@@ -3111,43 +3349,56 @@ inline vec3f transform_normal(
 }
 
 // Transforms rays and bounding boxes by matrices.
-inline ray3f transform_ray(const mat4f& a, const ray3f& b) {
+template <typename T>
+inline ray<T, 3> transform_ray(const mat<T, 4, 4>& a, const ray<T, 3>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-inline ray3f transform_ray(const frame3f& a, const ray3f& b) {
+template <typename T>
+inline ray<T, 3> transform_ray(const frame<T, 3>& a, const ray<T, 3>& b) {
   return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
+template <typename T>
+inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
+  auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
+      vec<T, 3>{b.min.x, b.min.y, b.max.z},
+      vec<T, 3>{b.min.x, b.max.y, b.min.z},
+      vec<T, 3>{b.min.x, b.max.y, b.max.z},
+      vec<T, 3>{b.max.x, b.min.y, b.min.z},
+      vec<T, 3>{b.max.x, b.min.y, b.max.z},
+      vec<T, 3>{b.max.x, b.max.y, b.min.z},
+      vec<T, 3>{b.max.x, b.max.y, b.max.z}};
+  auto xformed = bbox<T, 3>();
   for (auto& corner : corners)
     xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b) {
-  auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-      vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-      vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-      vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-      vec3f{b.max.x, b.max.y, b.max.z}};
-  auto xformed = bbox3f();
+template <typename T>
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
+  auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
+      vec<T, 3>{b.min.x, b.min.y, b.max.z},
+      vec<T, 3>{b.min.x, b.max.y, b.min.z},
+      vec<T, 3>{b.min.x, b.max.y, b.max.z},
+      vec<T, 3>{b.max.x, b.min.y, b.min.z},
+      vec<T, 3>{b.max.x, b.min.y, b.max.z},
+      vec<T, 3>{b.max.x, b.max.y, b.min.z},
+      vec<T, 3>{b.max.x, b.max.y, b.max.z}};
+  auto xformed = bbox<T, 3>();
   for (auto& corner : corners)
     xformed = merge(xformed, transform_point(a, corner));
   return xformed;
 }
 
 // Translation, scaling and rotations transforms.
-inline frame3f translation_frame(const vec3f& a) {
+template <typename T>
+inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
   return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
-inline frame3f scaling_frame(const vec3f& a) {
+template <typename T>
+inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
-inline frame3f rotation_frame(const vec3f& axis, float angle) {
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -3158,7 +3409,8 @@ inline frame3f rotation_frame(const vec3f& axis, float angle) {
           c + (1 - c) * vv.z * vv.z},
       {0, 0, 0}};
 }
-inline frame3f rotation_frame(const vec4f& quat) {
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -3169,7 +3421,8 @@ inline frame3f rotation_frame(const vec4f& quat) {
           v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
       {0, 0, 0}};
 }
-inline frame3f rotation_frame(const quat4f& quat) {
+template <typename T>
+inline frame<T, 3> rotation_frame(const quat<T, 4>& quat) {
   auto v = quat;
   return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
               (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -3180,13 +3433,15 @@ inline frame3f rotation_frame(const quat4f& quat) {
           v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
       {0, 0, 0}};
 }
-inline frame3f rotation_frame(const mat3f& rot) {
+template <typename T>
+inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
   return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
-inline frame3f lookat_frame(
-    const vec3f& eye, const vec3f& center, const vec3f& up, bool inv_xz) {
+template <typename T>
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
+    const vec<T, 3>& up, bool inv_xz) {
   auto w = normalize(eye - center);
   auto u = normalize(cross(up, w));
   auto v = normalize(cross(w, u));
@@ -3198,48 +3453,57 @@ inline frame3f lookat_frame(
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
-inline mat4f frustum_mat(float l, float r, float b, float t, float n, float f) {
+template <typename T>
+inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
       {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
       {0, 0, -2 * f * n / (f - n), 0}};
 }
-inline mat4f ortho_mat(float l, float r, float b, float t, float n, float f) {
+template <typename T>
+inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
   return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
       {0, 0, -2 / (f - n), 0},
       {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f ortho2d_mat(float left, float right, float bottom, float top) {
+template <typename T>
+inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
   return ortho_mat(left, right, bottom, top, -1, 1);
 }
-inline mat4f ortho_mat(float xmag, float ymag, float near, float far) {
+template <typename T>
+inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
   return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
       {0, 0, (far + near) / (near - far), 1}};
 }
-inline mat4f perspective_mat(float fovy, float aspect, float near, float far) {
+template <typename T>
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
       {0, 0, (far + near) / (near - far), -1},
       {0, 0, 2 * far * near / (near - far), 0}};
 }
-inline mat4f perspective_mat(float fovy, float aspect, float near) {
+template <typename T>
+inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
   auto tg = tan(fovy / 2);
   return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
       {0, 0, 2 * near, 0}};
 }
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
-  return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
+template <typename T>
+inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
+  return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
-inline vec4f rotation_quat(const vec3f& axis, float angle) {
+template <typename T, typename T1>
+inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle) {
   auto len = length(axis);
   if (!len) return {0, 0, 0, 1};
-  return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+  return vec<T, 4>{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
-inline vec4f rotation_quat(const vec4f& axisangle) {
+template <typename T>
+inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
   return rotation_quat(
-      vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
+      vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
 }  // namespace yocto::math
@@ -3250,49 +3514,56 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
 namespace yocto::math {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+template <typename T>
+inline vec<T, 3> line_tangent(const vec<T, 3>& p0, const vec<T, 3>& p1) {
   return normalize(p1 - p0);
 }
-inline float line_length(const vec3f& p0, const vec3f& p1) {
+template <typename T>
+inline T line_length(const vec<T, 3>& p0, const vec<T, 3>& p1) {
   return length(p1 - p0);
 }
 
 // Triangle properties.
-inline vec3f triangle_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T>
+inline vec<T, 3> triangle_normal(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   return normalize(cross(p1 - p0, p2 - p0));
 }
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T>
+inline T triangle_area(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
-inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+template <typename T>
+inline vec<T, 3> quad_normal(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3) {
   return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
-inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+template <typename T>
+inline T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 3>& p3) {
   return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u) {
+template <typename T, typename T1>
+inline T interpolate_line(const T& p0, const T& p1, T1 u) {
   return p0 * (1 - u) + p1 * u;
 }
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    const T& p0, const T& p1, const T& p2, const vec<T1, 2>& uv) {
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec<T1, 2>& uv) {
   if (uv.x + uv.y <= 1) {
     return interpolate_triangle(p0, p1, p3, uv);
   } else {
@@ -3301,38 +3572,39 @@ inline T interpolate_quad(
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
   return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
          p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
-template <typename T>
+template <typename T, typename T1>
 inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    const T& p0, const T& p1, const T& p2, const T& p3, T1 u) {
   return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
          (p3 - p2) * 3 * u * u;
 }
 
 // Triangle tangent and bitangent from uv
-inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
   auto p   = p1 - p0;
   auto q   = p2 - p0;
-  auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
-  auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
+  auto s   = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
+  auto t   = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
   auto div = s.x * t.y - s.y * t.x;
 
   if (div != 0) {
-    auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+    auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
                   t.y * p.z - t.x * q.z} /
               div;
-    auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+    auto tv = vec<T, 3>{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
                   s.x * q.z - s.y * p.z} /
               div;
     return {tu, tv};
@@ -3342,10 +3614,11 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
-    const vec2f& current_uv) {
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
+    const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
@@ -3361,8 +3634,9 @@ inline std::pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
 namespace yocto::math {
 
 // Intersect a ray with a point (approximate)
+template <typename T>
 inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+    const ray<T, 3>& ray, const vec<T, 3>& p, T r, vec<T, 2>& uv, T& dist) {
   // find parameter for line-point minimum distance
   auto w = p - ray.o;
   auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -3382,8 +3656,9 @@ inline bool intersect_point(
 }
 
 // Intersect a ray with a line
-inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, vec2f& uv, float& dist) {
+template <typename T>
+inline bool intersect_line(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, T r0, T r1, vec<T, 2>& uv, T& dist) {
   // setup intersection params
   auto u = ray.d;
   auto v = p1 - p0;
@@ -3409,7 +3684,7 @@ inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
   if (t < ray.tmin || t > ray.tmax) return false;
 
   // clamp segment param to segment corners
-  s = clamp(s, (float)0, (float)1);
+  s = clamp(s, (T)0, (T)1);
 
   // compute segment-segment distance on the closest points
   auto pr  = ray.o + ray.d * t;
@@ -3428,8 +3703,9 @@ inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 }
 
 // Intersect a ray with a triangle
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
+template <typename T>
+inline bool intersect_triangle(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, vec<T, 2>& uv, T& dist) {
   // compute triangle edges
   auto edge1 = p1 - p0;
   auto edge2 = p2 - p0;
@@ -3441,7 +3717,7 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
   // check determinant and exit if triangle and ray are parallel
   // (could use EPSILONS if desired)
   if (det == 0) return false;
-  auto inv_det = 1.0f / det;
+  auto inv_det = 1 / det;
 
   // compute and check first bricentric coordinated
   auto tvec = ray.o - p0;
@@ -3464,8 +3740,10 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
 }
 
 // Intersect a ray with a quad.
-inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+template <typename T>
+inline bool intersect_quad(const ray<T, 3>& ray, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
+    vec<T, 2>& uv, T& dist) {
   if (p2 == p3) {
     return intersect_triangle(ray, p0, p1, p3, uv, dist);
   }
@@ -3484,9 +3762,10 @@ inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 }
 
 // Intersect a ray with a axis-aligned bounding box
-inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
+template <typename T>
+inline bool intersect_bbox(const ray<T, 3>& ray, const bbox<T, 3>& bbox) {
   // determine intersection ranges
-  auto invd = 1.0f / ray.d;
+  auto invd = 1 / ray.d;
   auto t0   = (bbox.min - ray.o) * invd;
   auto t1   = (bbox.max - ray.o) * invd;
   // flip based on range directions
@@ -3495,20 +3774,31 @@ inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
   if (invd.z < 0.0f) swap(t0.z, t1.z);
   auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
   auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
-  tmax *= 1.00000024f;  // for double: 1.0000000000000004
+  if constexpr (std::is_same_v<T, float>) {
+    tmax *= 1.00000024f;  // for double: 1.0000000000000004
+  }
+  if constexpr (std::is_same_v<T, double>) {
+    tmax *= 1.0000000000000004;
+  }
   return tmin <= tmax;
 }
 
 // Intersect a ray with a axis-aligned bounding box
+template <typename T>
 inline bool intersect_bbox(
-    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
+    const ray<T, 3>& ray, const vec<T, 3>& ray_dinv, const bbox<T, 3>& bbox) {
   auto it_min = (bbox.min - ray.o) * ray_dinv;
   auto it_max = (bbox.max - ray.o) * ray_dinv;
   auto tmin   = min(it_min, it_max);
   auto tmax   = max(it_min, it_max);
   auto t0     = max(max(tmin), ray.tmin);
   auto t1     = min(min(tmax), ray.tmax);
-  t1 *= 1.00000024f;  // for double: 1.0000000000000004
+  if constexpr (std::is_same_v<T, float>) {
+    t1 *= 1.00000024f;  // for double: 1.0000000000000004
+  }
+  if constexpr (std::is_same_v<T, double>) {
+    t1 *= 1.0000000000000004;
+  }
   return t0 <= t1;
 }
 
@@ -3520,8 +3810,9 @@ inline bool intersect_bbox(
 namespace yocto::math {
 
 // Check if a point overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
-    float r, vec2f& uv, float& dist) {
+template <typename T>
+inline bool overlap_point(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p,
+    T r, vec<T, 2>& uv, T& dist) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return false;
   uv   = {0, 0};
@@ -3530,8 +3821,9 @@ inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
 }
 
 // Compute the closest line uv to a give position pos.
-inline float closestuv_line(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1) {
+template <typename T>
+inline T closestuv_line(
+    const vec<T, 3>& pos, const vec<T, 3>& p0, const vec<T, 3>& p1) {
   auto ab = p1 - p0;
   auto d  = dot(ab, ab);
   // Project c onto ab, computing parameterized position d(t) = a + t*(b –
@@ -3542,8 +3834,9 @@ inline float closestuv_line(
 }
 
 // Check if a line overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
+template <typename T>
+inline bool overlap_line(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, T r0, T r1, vec<T, 2>& uv, T& dist) {
   auto u = closestuv_line(pos, p0, p1);
   // Compute projected position from the clamped t d = a + t * ab;
   auto p  = p0 + (p1 - p0) * u;
@@ -3558,8 +3851,9 @@ inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
 }
 
 // Compute the closest triangle uv to a give position pos.
-inline vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T>
+inline vec<T, 2> closestuv_triangle(const vec<T, 3>& pos, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2) {
   // this is a complicated test -> I probably "--"+prefix to use a sequence of
   // test (triangle body, and 3 edges)
   auto ab = p1 - p0;
@@ -3603,9 +3897,10 @@ inline vec2f closestuv_triangle(
 
 // Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
-    float& dist) {
+template <typename T>
+inline bool overlap_triangle(const vec<T, 3>& pos, T dist_max,
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, T r0, T r1,
+    T r2, vec<T, 2>& uv, T& dist) {
   auto cuv = closestuv_triangle(pos, p0, p1, p2);
   auto p   = p0 * (1 - cuv.x - cuv.y) + p1 * cuv.x + p2 * cuv.y;
   auto r   = r0 * (1 - cuv.x - cuv.y) + r1 * cuv.x + r2 * cuv.y;
@@ -3617,9 +3912,10 @@ inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
 }
 
 // Check if a quad overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, vec2f& uv, float& dist) {
+template <typename T>
+inline bool overlap_quad(const vec<T, 3>& pos, T dist_max, const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3, T r0, T r1,
+    T r2, T r3, vec<T, 2>& uv, T& dist) {
   if (p2 == p3) {
     return overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2, uv, dist);
   }
@@ -3637,8 +3933,9 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
+template <typename T>
 inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox) {
+    const vec<T, 3>& pos, T dist_max, const bbox<T, 3>& bbox) {
   // computing distance
   auto dd = 0.0f;
 
@@ -3655,7 +3952,8 @@ inline bool distance_check_bbox(
 }
 
 // Check if two bboxe overlap.
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
+template <typename T>
+inline bool overlap_bbox(const bbox<T, 3>& bbox1, const bbox<T, 3>& bbox2) {
   if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
   if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
   if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
@@ -3692,65 +3990,122 @@ inline ushort float_to_ushort(float a) {
 }
 inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
+// Conversion between reals in [0,1] and normalized ints [0, max_int]
+template <typename I, typename T>
+inline I real_to_nint(T a) {
+  return clamp(I(a * ((T)type_max<I> + (T)1)), (I)0, type_max<I>);
+}
+template <typename T, typename I>
+inline T nint_to_real(I a) {
+  return a / (T)type_max<I>;
+}
+template <typename I, typename T, size_t N>
+inline vec<I, N> real_to_nint(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {real_to_nint<I, T>(a.x)};
+  } else if constexpr (N == 2) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y)};
+  } else if constexpr (N == 3) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y),
+        real_to_nint<I, T>(a.z)};
+  } else if constexpr (N == 4) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y),
+        real_to_nint<I, T>(a.z), real_to_nint<I, T>(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template <typename T, typename I, size_t N>
+inline vec<T, N> nint_to_real(const vec<I, N>& a) {
+  if constexpr (N == 1) {
+    return {nint_to_real<T, I>(a.x)};
+  } else if constexpr (N == 2) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y)};
+  } else if constexpr (N == 3) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y),
+        nint_to_real<T, I>(a.z)};
+  } else if constexpr (N == 4) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y),
+        nint_to_real<T, I>(a.z), nint_to_real<T, I>(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+
 // Luminance
-inline float luminance(const vec3f& a) {
+template <typename T>
+inline T luminance(const vec<T, 3>& a) {
   return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
 // sRGB non-linear curve
-inline float srgb_to_rgb(float srgb) {
-  return (srgb <= 0.04045) ? srgb / 12.92f
-                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+template <typename T>
+inline T srgb_to_rgb(T srgb) {
+  return (srgb <= (T)0.04045)
+             ? srgb / (T)12.92
+             : pow((srgb + (T)0.055) / ((T)1.0 + (T)0.055), (T)2.4);
 }
-inline float rgb_to_srgb(float rgb) {
-  return (rgb <= 0.0031308f) ? 12.92f * rgb
-                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+template <typename T>
+inline T rgb_to_srgb(T rgb) {
+  return (rgb <= (T)0.0031308)
+             ? (T)12.92 * rgb
+             : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
 }
-inline vec3f srgb_to_rgb(const vec3f& srgb) {
+template <typename T>
+inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
-inline vec4f srgb_to_rgb(const vec4f& srgb) {
+template <typename T>
+inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb) {
   return {
       srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
-inline vec3f rgb_to_srgb(const vec3f& rgb) {
+template <typename T>
+inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(const vec4f& rgb) {
+template <typename T>
+inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
-  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+template <typename T>
+inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
+  return max(grey + (rgb - grey) * (contrast * 2), 0);
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
-  auto epsilon  = (float)0.0001;
+template <typename T>
+inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
+  auto epsilon  = (T)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(zero3f, exp2(adjusted) - epsilon);
+  return max(exp2(adjusted) - epsilon, 0);
 }
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast) {
+template <typename T>
+inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
   return gain(rgb, 1 - contrast);
 }
 // Apply saturation.
-inline vec3f saturate(
-    const vec3f& rgb, float saturation, const vec3f& weights) {
+template <typename T>
+inline vec<T, 3> saturate(
+    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
   auto grey = dot(weights, rgb);
-  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+  return max(grey + (rgb - grey) * (saturation * 2), 0);
 }
 
 // Filmic tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+template <typename T>
+inline vec<T, 3> tonemap_filmic(
+    const vec<T, 3>& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-    return max(zero3f, ldr);
+    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
+    return max(ldr, 0);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -3766,65 +4121,74 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
         {-0.00327, -0.07276, 1.07602},
     });
     // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
-      return (v * v + v * 0.0245786f - 0.000090537f) /
-             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+    auto RRTAndODTFit = [](const vec<T, 3>& v) -> vec<T, 3> {
+      return (v * v + v * (T)0.0245786 - (T)0.000090537) /
+             (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
-    return max(zero3f, ldr);
+    return max(ldr, 0);
   }
 }
 
-inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+template <typename T>
+inline vec<T, 3> tonemap(
+    const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
   if (filmic) rgb = tonemap_filmic(rgb);
   if (srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+template <typename T>
+inline vec<T, 4> tonemap(
+    const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb) {
   return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
+template <typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
+  static const auto mat_ = mat<T, 3, 3>{
       {0.4124, 0.2126, 0.0193},
       {0.3576, 0.7152, 0.1192},
       {0.1805, 0.0722, 0.9504},
   };
-  return mat * rgb;
+  return mat_ * rgb;
 }
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
+template <typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
+  static const auto mat_ = mat<T, 3, 3>{
       {+3.2406, -0.9689, +0.0557},
       {-1.5372, +1.8758, -0.2040},
       {-0.4986, +0.0415, +1.0570},
   };
-  return mat * xyz;
+  return mat_ * xyz;
 }
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
-  if (xyz == zero3f) return zero3f;
+template <typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
+  if (xyz == vec<T, 3>{0}) return {0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
-  if (xyY.y == 0) return zero3f;
+template <typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
+  if (xyY.y == 0) return vec<T, 3>{0};
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Convert HSV to RGB
-inline vec3f hsv_to_rgb(const vec3f& hsv) {
+template <typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   // from Imgui.cpp
   auto h = hsv.x, s = hsv.y, v = hsv.z;
   if (hsv.y == 0) return {v, v, v};
 
-  h       = fmod(h, 1.0f) / (60.0f / 360.0f);
+  h       = fmod(h, (T)1.0) / ((T)60.0 / (T)360.0);
   int   i = (int)h;
   float f = h - (float)i;
   float p = v * (1 - s);
@@ -3842,7 +4206,8 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
   }
 }
 
-inline vec3f rgb_to_hsv(const vec3f& rgb) {
+template <typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
   auto r = rgb.x, g = rgb.y, b = rgb.z;
   auto K = 0.f;
@@ -3856,13 +4221,15 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
   }
 
   auto chroma = r - (g < b ? g : b);
-  return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+  return {
+      abs(K + (g - b) / (6 * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature) {
+template <typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature) {
   // https://github.com/neilbartlett/color-temperature
-  auto rgb = zero3f;
+  auto rgb = vec<T, 3>{0};
   if ((temperature / 100) < 66) {
     rgb.x = 255;
   } else {
@@ -3872,8 +4239,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> -40.25366309332127
     // x -> (kelvin/100) - 55}
     rgb.x = (temperature / 100) - 55;
-    rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
-            40.25366309332127f * log(rgb.x);
+    rgb.x = (T)351.97690566805693 + (T)0.114206453784165 * rgb.x -
+            (T)40.25366309332127 * log(rgb.x);
     if (rgb.x < 0) rgb.x = 0;
     if (rgb.x > 255) rgb.x = 255;
   }
@@ -3885,8 +4252,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> 104.49216199393888`,
     // x -> (kelvin/100) - 2}
     rgb.y = (temperature / 100) - 2;
-    rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
-            104.49216199393888f * log(rgb.y);
+    rgb.y = (T)-155.25485562709179 - (T)0.44596950469579133 * rgb.y +
+            (T)104.49216199393888 * log(rgb.y);
     if (rgb.y < 0) rgb.y = 0;
     if (rgb.y > 255) rgb.y = 255;
   } else {
@@ -3896,8 +4263,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> -28.0852963507957`,
     // x -> (kelvin/100) - 50}
     rgb.y = (temperature / 100) - 50;
-    rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
-            28.0852963507957f * log(rgb.y);
+    rgb.y = (T)325.4494125711974 + (T)0.07943456536662342 * rgb.y -
+            (T)28.0852963507957 * log(rgb.y);
     if (rgb.y < 0) rgb.y = 0;
     if (rgb.y > 255) rgb.y = 255;
   }
@@ -3914,14 +4281,113 @@ inline vec3f blackbody_to_rgb(float temperature) {
       // c -> 115.67994401066147`,
       // x -> kelvin/100 - 10}
       rgb.z = (temperature / 100) - 10;
-      rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
-              115.67994401066147f * log(rgb.z);
+      rgb.z = (T)-254.76935184120902 + (T)0.8274096064007395 * rgb.z +
+              (T)115.67994401066147 * log(rgb.z);
       if (rgb.z < 0) rgb.z = 0;
       if (rgb.z > 255) rgb.z = 255;
     }
   }
 
   return srgb_to_rgb(rgb / 255);
+}
+
+}  // namespace yocto::math
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+namespace yocto::math {
+
+// PCG random numbers from http://www.pcg-random.org/
+inline rng_state::rng_state()
+    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
+
+// Next random number, used internally only.
+inline uint32_t _advance_rng(rng_state& rng) {
+  uint64_t oldstate   = rng.state;
+  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
+  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  uint32_t rot        = (uint32_t)(oldstate >> 59u);
+  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+// Init a random number generator with a state state from the sequence seq.
+inline rng_state make_rng(uint64_t seed, uint64_t seq) {
+  auto rng  = rng_state();
+  rng.state = 0U;
+  rng.inc   = (seq << 1u) | 1u;
+  _advance_rng(rng);
+  rng.state += seed;
+  _advance_rng(rng);
+  return rng;
+}
+
+// Next random numbers: floats in [0,1), ints in [0,n).
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
+inline vec2i rand2i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  return {x, y};
+}
+inline vec3i rand3i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  auto z = rand1i(rng, n);
+  return {x, y, z};
+}
+inline vec4i rand4i(rng_state& rng, int n) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1i(rng, n);
+  auto y = rand1i(rng, n);
+  auto z = rand1i(rng, n);
+  auto w = rand1i(rng, n);
+  return {x, y, z, w};
+}
+inline float rand1f(rng_state& rng) {
+  union {
+    uint32_t u;
+    float    f;
+  } x;
+  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
+  return x.f - 1.0f;
+  // alternate implementation
+  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
+  // return advance_rng(rng) * scale;
+}
+inline vec2f rand2f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  return {x, y};
+}
+inline vec3f rand3f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  return {x, y, z};
+}
+inline vec4f rand4f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  auto w = rand1f(rng);
+  return {x, y, z, w};
+}
+
+// Shuffles a sequence of elements
+template <typename T>
+inline void shuffle(std::vector<T>& vals, rng_state& rng) {
+  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
+  for (auto i = (int)vals.size() - 1; i > 0; i--) {
+    auto j = rand1i(rng, i + 1);
+    std::swap(vals[j], vals[i]);
+  }
 }
 
 }  // namespace yocto::math
@@ -4129,29 +4595,34 @@ inline float _stb_perlin_turbulence_noise3(float x, float y, float z, float lacu
 // clang-format on
 
 // adapeted  stb_perlin.h
-inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
-  return _stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
+template <typename T>
+inline T perlin_noise(const vec<T, 3>& p, const vec<int, 3>& wrap) {
+  return _stb_perlin_noise3(
+      (float)p.x, (float)p.y, (float)p.z, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
-    int octaves, float offset, const vec3i& wrap) {
-  return _stb_perlin_ridge_noise3(
-      p.x, p.y, p.z, lacunarity, gain, offset, octaves, wrap.x, wrap.y, wrap.z);
+template <typename T>
+inline T perlin_ridge(const vec<T, 3>& p, T lacunarity, T gain, int octaves,
+    T offset, const vec<int, 3>& wrap) {
+  return _stb_perlin_ridge_noise3((float)p.x, (float)p.y, (float)p.z,
+      (float)lacunarity, (float)gain, offset, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
-  return _stb_perlin_fbm_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+template <typename T>
+inline T perlin_fbm(const vec<T, 3>& p, T lacunarity, T gain, int octaves,
+    const vec<int, 3>& wrap) {
+  return _stb_perlin_fbm_noise3((float)p.x, (float)p.y, (float)p.z,
+      (float)lacunarity, (float)gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
-  return _stb_perlin_turbulence_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+template <typename T>
+inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity, T gain,
+    int octaves, const vec<int, 3>& wrap) {
+  return _stb_perlin_turbulence_noise3((float)p.x, (float)p.y, (float)p.z,
+      (float)lacunarity, (float)gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 }  // namespace yocto::math
@@ -4162,17 +4633,18 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
-inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
-  if (specular == zero3f) return zero3f;
+template <typename T>
+inline vec<T, 3> fresnel_schlick(const vec<T, 3>& specular,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (specular == vec<T, 3>{0}) return vec<T, 3>{0};
   auto cosine = dot(normal, outgoing);
-  return specular +
-         (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
+  return specular + (1 - specular) * pow(clamp(1 - abs(cosine), (T)0, (T)1), 5);
 }
 
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& outgoing) {
+template <typename T>
+inline T fresnel_dielectric(
+    T eta, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = abs(dot(normal, outgoing));
@@ -4194,16 +4666,17 @@ inline float fresnel_dielectric(
 }
 
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing) {
+template <typename T>
+inline vec<T, 3> fresnel_conductor(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = dot(normal, outgoing);
-  if (cosw <= 0) return zero3f;
+  if (cosw <= 0) return vec<T, 3>{0};
 
-  cosw       = clamp(cosw, (float)-1, (float)1);
+  cosw       = clamp(cosw, (T)-1, (T)1);
   auto cos2  = cosw * cosw;
-  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+  auto sin2  = clamp(1 - cos2, (T)0, (T)1);
   auto eta2  = eta * eta;
   auto etak2 = etak * etak;
 
@@ -4222,22 +4695,27 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
 }
 
 // Convert eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta) {
+template <typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta) {
   return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
 }
 // Convert reflectivity to  eta.
-inline vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+template <typename T>
+inline vec<T, 3> reflectivity_to_eta(const vec<T, 3>& reflectivity_) {
   auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
   return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 // Convert conductor eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
+template <typename T>
+inline vec<T, 3> eta_to_reflectivity(
+    const vec<T, 3>& eta, const vec<T, 3>& etak) {
   return ((eta - 1) * (eta - 1) + etak * etak) /
          ((eta + 1) * (eta + 1) + etak * etak);
 }
 // Convert eta to edge tint parametrization
-inline std::pair<vec3f, vec3f> eta_to_edgetint(
-    const vec3f& eta, const vec3f& etak) {
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+    const vec<T, 3>& eta, const vec<T, 3>& etak) {
   auto reflectivity = eta_to_reflectivity(eta, etak);
   auto numer        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
   auto denom        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) -
@@ -4246,8 +4724,9 @@ inline std::pair<vec3f, vec3f> eta_to_edgetint(
   return {reflectivity, edgetint};
 }
 // Convert reflectivity and edge tint to eta.
-inline std::pair<vec3f, vec3f> edgetint_to_eta(
-    const vec3f& reflectivity, const vec3f& edgetint) {
+template <typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+    const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint) {
   auto r = clamp(reflectivity, 0.0f, 0.99f);
   auto g = edgetint;
 
@@ -4263,8 +4742,9 @@ inline std::pair<vec3f, vec3f> edgetint_to_eta(
 }
 
 // Evaluate microfacet distribution
-inline float microfacet_distribution(
-    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
+template <typename T>
+inline T microfacet_distribution(
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& halfway, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine = dot(normal, halfway);
@@ -4272,17 +4752,18 @@ inline float microfacet_distribution(
   auto roughness2 = roughness * roughness;
   auto cosine2    = cosine * cosine;
   if (ggx) {
-    return roughness2 / (pif * (cosine2 * roughness2 + 1 - cosine2) *
+    return roughness2 / ((T)pi * (cosine2 * roughness2 + 1 - cosine2) *
                             (cosine2 * roughness2 + 1 - cosine2));
   } else {
     return exp((cosine2 - 1) / (roughness2 * cosine2)) /
-           (pif * roughness2 * cosine2 * cosine2);
+           ((T)pi * roughness2 * cosine2 * cosine2);
   }
 }
 
 // Evaluate the microfacet shadowing1
-inline float microfacet_shadowing1(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& direction, bool ggx) {
+template <typename T>
+inline T microfacet_shadowing1(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& direction, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine  = dot(normal, direction);
@@ -4295,47 +4776,51 @@ inline float microfacet_shadowing1(float roughness, const vec3f& normal,
            (abs(cosine) + sqrt(cosine2 - roughness2 * cosine2 + roughness2));
   } else {
     auto ci = abs(cosine) / (roughness * sqrt(1 - cosine2));
-    return ci < 1.6f ? (3.535f * ci + 2.181f * ci * ci) /
-                           (1.0f + 2.276f * ci + 2.577f * ci * ci)
-                     : 1.0f;
+    return ci < (T)1.6 ? ((T)3.535 * ci + (T)2.181 * ci * ci) /
+                             ((T)1.0 + (T)2.276 * ci + (T)2.577 * ci * ci)
+                       : (T)1.0;
   }
 }
 
 // Evaluate microfacet shadowing
-inline float microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx) {
+template <typename T>
+inline T microfacet_shadowing(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming, bool ggx) {
   return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
          microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet ditribution.
-inline vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
-  auto phi   = 2 * pif * rn.x;
-  auto theta = 0.0f;
+template <typename T>
+inline vec<T, 3> sample_microfacet(
+    T roughness, const vec<T, 3>& normal, const vec<T, 2>& rn, bool ggx) {
+  auto phi   = 2 * (T)pi * rn.x;
+  auto theta = (T)0.0;
   if (ggx) {
     theta = atan(roughness * sqrt(rn.y / (1 - rn.y)));
   } else {
     auto roughness2 = roughness * roughness;
     theta           = atan(sqrt(-roughness2 * log(1 - rn.y)));
   }
-  auto local_half_vector = vec3f{
+  auto local_half_vector = vec<T, 3>{
       cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
 
 // Pdf for microfacet distribution sampling.
-inline float sample_microfacet_pdf(
-    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
+template <typename T>
+inline T sample_microfacet_pdf(
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& halfway, bool ggx) {
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
 // Sample a microfacet ditribution with the distribution of visible normals.
-inline vec3f sample_microfacet(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec2f& rn, bool ggx) {
+template <typename T>
+inline vec<T, 3> sample_microfacet(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
   if (ggx) {
     // move to local coordinate system
@@ -4344,24 +4829,25 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto alpha_x = roughness, alpha_y = roughness;
     // Section 3.2: transforming the view direction to the hemisphere
     // configuration
-    auto Vh = normalize(vec3f{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
+    auto Vh = normalize(vec<T, 3>{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
     // Section 4.1: orthonormal basis (with special case if cross product is
     // zero)
     auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-    auto T1    = lensq > 0 ? vec3f{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
-                        : vec3f{1, 0, 0};
+    auto T1    = lensq > 0 ? vec<T, 3>{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
+                        : vec<T, 3>{1, 0, 0};
     auto T2 = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
     auto r   = sqrt(rn.y);
-    auto phi = 2 * pif * rn.x;
+    auto phi = 2 * (T)pi * rn.x;
     auto t1  = r * cos(phi);
     auto t2  = r * sin(phi);
     auto s   = 0.5f * (1 + Vh.z);
     t2       = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Section 4.3: reprojection onto hemisphere
-    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1 - t1 * t1 - t2 * t2)) * Vh;
+    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(1 - t1 * t1 - t2 * t2, (T)0)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
-    auto Ne = normalize(vec3f{alpha_x * Nh.x, alpha_y * Nh.y, max(0.0f, Nh.z)});
+    auto Ne = normalize(
+        vec<T, 3>{alpha_x * Nh.x, alpha_y * Nh.y, max(Nh.z, (T)0)});
     // move to world coordinate
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
@@ -4372,8 +4858,9 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
 
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, bool ggx) {
+template <typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
   if (dot(normal, halfway) < 0) return 0;
   if (dot(halfway, outgoing) < 0) return 0;
@@ -4383,30 +4870,37 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
 }
 
 // Evaluate a diffuse BRDF lobe.
-inline vec3f eval_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1} / pif * dot(normal, incoming);
+template <typename T>
+inline vec<T, 3> eval_diffuse_reflection(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
+  return vec<T, 3>{1} / (T)pi * dot(normal, incoming);
 }
 
 // Evaluate a specular BRDF lobe.
-inline vec3f eval_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
-  return vec3f{1} * F * D * G /
+  return vec<T, 3>{1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
 
 // Evaluate a metal BRDF lobe.
-inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> eval_microfacet_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
@@ -4416,9 +4910,12 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 }
 
 // Evaluate a transmission BRDF lobe.
-inline vec3f eval_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> eval_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
   // auto F       = fresnel_schlick(
@@ -4426,14 +4923,16 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
   auto D = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(
       roughness, normal, halfway, outgoing, reflected);
-  return vec3f{1} * D * G /
+  return vec<T, 3>{1} * D * G /
          (4 * dot(normal, outgoing) * dot(normal, reflected)) *
          (dot(normal, reflected));
 }
 
 // Evaluate a refraction BRDF lobe.
-inline vec3f eval_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline vec<T, 3> eval_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4443,7 +4942,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
-    return vec3f{1} * F * D * G /
+    return vec<T, 3>{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
@@ -4454,7 +4953,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto G = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
     // [Walter 2007] equation 21
-    return vec3f{1} *
+    return vec<T, 3>{1} *
            abs((dot(outgoing, halfway) * dot(incoming, halfway)) /
                (dot(outgoing, normal) * dot(incoming, normal))) *
            (1 - F) * D * G /
@@ -4464,35 +4963,39 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
 }
 
 // Sample a diffuse BRDF lobe.
-inline vec3f sample_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return sample_hemisphere_cos(normal, rn);
 }
 
 // Sample a specular BRDF lobe.
-inline vec3f sample_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
 }
 
 // Sample a metal BRDF lobe.
-inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_microfacet_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
 }
 
 // Sample a transmission BRDF lobe.
-inline vec3f sample_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   auto halfway = sample_microfacet(roughness, normal, rn);
   // auto halfway   = sample_microfacet(roughness, normal, outgoing, rn);
   auto reflected = reflect(outgoing, halfway);
@@ -4500,8 +5003,10 @@ inline vec3f sample_microfacet_transmission(float ior, float roughness,
 }
 
 // Sample a refraction BRDF lobe.
-inline vec3f sample_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+template <typename T>
+inline vec<T, 3> sample_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl,
+    const vec<T, 2>& rn) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   // auto halfway   = sample_microfacet(roughness, up_normal, outgoing, rn);
@@ -4514,15 +5019,18 @@ inline vec3f sample_microfacet_refraction(float ior, float roughness,
 }
 
 // Pdf for diffuse BRDF lobe sampling.
-inline float sample_diffuse_reflection_pdf(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_diffuse_reflection_pdf(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return sample_hemisphere_cos_pdf(normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_microfacet_reflection_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
   // return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
@@ -4531,9 +5039,10 @@ inline float sample_microfacet_reflection_pdf(float ior, float roughness,
 }
 
 // Pdf for metal BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_microfacet_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
   // return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
@@ -4542,8 +5051,10 @@ inline float sample_microfacet_reflection_pdf(const vec3f& eta,
 }
 
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_microfacet_transmission_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_microfacet_transmission_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
@@ -4554,8 +5065,10 @@ inline float sample_microfacet_transmission_pdf(float ior, float roughness,
 }
 
 // Pdf for refraction BRDF lobe sampling.
-inline float sample_microfacet_refraction_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_microfacet_refraction_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4578,63 +5091,76 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
 }
 
 // Evaluate a delta specular BRDF lobe.
-inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
+template <typename T>
+inline vec<T, 3> eval_delta_reflection(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
+  return vec<T, 3>{1} * fresnel_dielectric(ior, normal, outgoing);
 }
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> eval_delta_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
   return fresnel_conductor(eta, etak, normal, outgoing);
 }
 
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1};
+template <typename T>
+inline vec<T, 3> eval_delta_transmission(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0)
+    return vec<T, 3>{0};
+  return vec<T, 3>{1};
 }
 
 // Evaluate a delta refraction BRDF lobe.
-inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline vec<T, 3> eval_delta_refraction(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
+    return vec<T, 3>{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
+    return vec<T, 3>{1} *
+           (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
 // Sample a delta specular BRDF lobe.
-inline vec3f sample_delta_reflection(
-    float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_delta_reflection(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_delta_reflection(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_delta_transmission(
-    float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return zero3f;
+template <typename T>
+inline vec<T, 3> sample_delta_transmission(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return -outgoing;
 }
 
 // Sample a delta refraction BRDF lobe.
-inline vec3f sample_delta_refraction(
-    float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
+template <typename T>
+inline vec<T, 3> sample_delta_refraction(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4646,29 +5172,34 @@ inline vec3f sample_delta_refraction(
 }
 
 // Pdf for delta specular BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_delta_reflection_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_delta_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta refraction BRDF lobe sampling.
-inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template <typename T>
+inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4687,135 +5218,170 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 namespace yocto::math {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
   auto z   = ruv.y;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi = 2 * pif * ruv.x;
+  auto r   = sqrt(clamp(1 - z * z, 0, 1));
+  auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& direction) {
-  return (direction.z <= 0) ? 0 : 1 / (2 * pif);
+template <typename T>
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction) {
+  return (direction.z <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = ruv.y;
-  auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto r               = sqrt(clamp(1 - z * z, (T)0, (T)1));
+  auto phi             = 2 * (T)pi * ruv.x;
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_pdf(
-    const vec3f& normal, const vec3f& direction) {
-  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+template <typename T>
+inline T sample_hemisphere_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
+  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto z   = 2 * ruv.y - 1;
-  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-  auto phi = 2 * pif * ruv.x;
+  auto r   = sqrt(clamp(1 - z * z, (T)0, (T)1));
+  auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+template <typename T>
+inline T sample_sphere_pdf(const vec<T, 3>& w) {
+  return 1 / (4 * (T)pi);
+}
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
   auto z   = sqrt(ruv.y);
   auto r   = sqrt(1 - z * z);
-  auto phi = 2 * pif * ruv.x;
+  auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
-  return (direction.z <= 0) ? 0 : direction.z / pif;
+template <typename T>
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
+  return (direction.z <= 0) ? 0 : direction.z / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cos(
+    const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = sqrt(ruv.y);
   auto r               = sqrt(1 - z * z);
-  auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto phi             = 2 * (T)pi * ruv.x;
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction) {
+template <typename T>
+inline T sample_hemisphere_cos_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
   auto cosw = dot(normal, direction);
-  return (cosw <= 0) ? 0 : cosw / pif;
+  return (cosw <= 0) ? 0 : cosw / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
   auto r   = sqrt(1 - z * z);
-  auto phi = 2 * pif * ruv.x;
+  auto phi = 2 * (T)pi * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction) {
+template <typename T>
+inline T sample_hemisphere_cospower_pdf(
+    T exponent, const vec<T, 3>& direction) {
   return (direction.z <= 0)
              ? 0
-             : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+             : pow(direction.z, exponent) * (exponent + 1) / (2 * (T)pi);
 }
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
   auto r   = sqrt(ruv.y);
-  auto phi = 2 * pif * ruv.x;
+  auto phi = 2 * (T)pi * ruv.x;
   return {cos(phi) * r, sin(phi) * r};
 }
-inline float sample_disk_pdf() { return 1 / pif; }
+template <typename T>
+inline T sample_disk_pdf(const vec<T, 2>& point) {
+  return 1 / (T)pi;
+}
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv) {
-  auto phi = 2 * pif * ruv.x;
+template <typename T>
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
+  auto phi = 2 * (T)pi * ruv.x;
   return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf() { return 1 / pif; }
+template <typename T>
+inline T sample_cylinder_pdf(const vec<T, 3>& point) {
+  return 1 / (T)pi;
+}
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv) {
+template <typename T>
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
   return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+template <typename T>
+inline vec<T, 3> sample_triangle(const vec<T, 3>& p0, const vec<T, 3>& p1,
+    const vec<T, 3>& p2, const vec<T, 2>& ruv) {
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template <typename T>
+inline T sample_triangle_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_uniform(int size, float r) {
+template <typename T>
+inline int sample_uniform(int size, T r) {
   return clamp((int)(r * size), 0, size - 1);
 }
-inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
+template <typename T>
+inline T sample_uniform_pdf(int size) {
+  return (T)1 / (T)size;
+}
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const std::vector<float>& elements, float r) {
+template <typename T>
+inline T sample_uniform(const std::vector<T>& elements, T r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
-inline float sample_uniform_pdf(const std::vector<float>& elements) {
+template <typename T>
+inline T sample_uniform_pdf(const std::vector<T>& elements) {
   if (elements.empty()) return 0;
-  return 1.0f / (int)elements.size();
+  return (T)1 / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
+template <typename T>
+inline int sample_discrete(const std::vector<T>& cdf, T r) {
+  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
+template <typename T>
+inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -4829,16 +5395,18 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size) {
+template <typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<int, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
-  return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
-      (int)round(xyf.y + txt_size.y / 2.0f)};
+  return vec2i{(int)round(xyf.x + (float)txt_size.x / 2),
+      (int)round(xyf.y + (float)txt_size.y / 2)};
 }
 
 // Center image and autofit.
-inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+template <typename T>
+inline void update_imview(vec<T, 2>& center, T& scale,
+    const vec<int, 2>& imsize, const vec<int, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
     center = {(float)winsize.x / 2, (float)winsize.y / 2};
@@ -4849,15 +5417,16 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
 }
 
 // Turntable for UI navigation.
-inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
+template <typename T>
+inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate.x || rotate.y) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
     auto theta = acos(z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
         sin(theta) * sin(phi) * lz};
     from       = to - nz;
@@ -4884,13 +5453,14 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
 }
 
 // Turntable for UI navigation.
-inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan) {
+template <typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
     auto theta = acos(frame.z.y) + rotate.y;
-    theta      = clamp(theta, 0.001f, pif - 0.001f);
+    theta      = clamp(theta, (T)0.001, (T)pi - (T)0.001);
     auto new_z = vec3f{
         sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
     auto new_center = frame.o - frame.z * focus;
@@ -4902,7 +5472,7 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
   // pan if necessary
   if (dolly) {
     auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
+    focus   = max(focus * (1 + dolly), (T)0.001);
     frame.o = c + frame.z * focus;
   }
 
@@ -4913,8 +5483,9 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
+template <typename T>
 inline void update_fpscam(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec3f{0, 1, 0};
   auto z = orthonormalize(frame.z, y);
@@ -4929,9 +5500,10 @@ inline void update_fpscam(
 }
 
 // Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
-    const vec2f& image_uv) {
-  auto e = zero3f;
+template <typename T>
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
+    const vec<T, 2>& film, const vec<T, 2>& image_uv) {
+  auto e = vec3f{0};
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
   auto q1  = -q;

@@ -77,9 +77,9 @@ and data are defined in sibling namespaces contained in the `yocto` namespace
 so libraries can call all others, but have to do so explicitly. 
 
 The use of templates in Yocto was the reason for many refactorings, going
-from no template to heavy template use. At this point, Yocto uses few templates 
-for readability. In the future, we will increase the use of templates in code
-implementation, while keeping most APIs explicitly typed and nor generic.
+from no template to heavy template use. At this point, Yocto uses some templates 
+for readability. In the future, we will increase the use of templates in math 
+code, while keeping many APIs explicitly typed.
 
 We do not use exception for error repoting, but only to report "programmers"
 errors. For example, IO operations use boolean flags and error strings for

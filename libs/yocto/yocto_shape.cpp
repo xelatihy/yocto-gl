@@ -4792,8 +4792,8 @@ void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     const vec2i& size, const std::vector<float>& height) {
-  make_yrect(
-      quads, positions, normals, texcoords, size - 1, (vec2f)size / max(size));
+  make_yrect(quads, positions, normals, texcoords, size - 1,
+      vec2f{(float)size.x, (float)size.y} / max(size));
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];
