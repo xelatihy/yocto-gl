@@ -1230,46 +1230,66 @@ inline ushort float_to_ushort(float a);
 inline float  ushort_to_float(ushort a);
 
 // Luminance
-inline float luminance(const vec3f& a);
+template<typename T>
+inline T luminance(const vec<T, 3>& a);
 
 // sRGB non-linear curve
-inline float srgb_to_rgb(float srgb);
-inline float rgb_to_srgb(float rgb);
-inline vec3f srgb_to_rgb(const vec3f& srgb);
-inline vec4f srgb_to_rgb(const vec4f& srgb);
-inline vec3f rgb_to_srgb(const vec3f& rgb);
-inline vec4f rgb_to_srgb(const vec4f& rgb);
+template<typename T>
+inline T srgb_to_rgb(T srgb);
+template<typename T>
+inline T rgb_to_srgb(T rgb);
+template<typename T>
+inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb);
+template<typename T>
+inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb);
+template<typename T>
+inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb);
+template<typename T>
+inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
+template<typename T>
+inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+template<typename T>
+inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast);
+template<typename T>
+inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast);
 // Apply saturation.
-inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f});
+template<typename T>
+inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
+    const vec<T, 3>& weights = vec<T, 3>{0.333333});
 
 // Apply tone mapping
-inline vec3f tonemap(
-    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
-inline vec4f tonemap(
-    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+template<typename T>
+inline vec<T, 3> tonemap(
+    const vec<T, 3>& hdr, T exposure, bool filmic = false, bool srgb = true);
+template<typename T>
+inline vec<T, 4> tonemap(
+    const vec<T, 4>& hdr, T exposure, bool filmic = false, bool srgb = true);
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb);
-inline vec3f xyz_to_rgb(const vec3f& xyz);
+template<typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb);
+template<typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz);
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz);
-inline vec3f xyY_to_xyz(const vec3f& xyY);
+template<typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
+template<typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
 
 // Converts between HSV and RGB color spaces.
-inline vec3f hsv_to_rgb(const vec3f& hsv);
-inline vec3f rgb_to_hsv(const vec3f& rgb);
+template<typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
+template<typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature);
+template<typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature);
 
 }  // namespace yocto::math
 
@@ -3909,63 +3929,75 @@ inline ushort float_to_ushort(float a) {
 inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
 // Luminance
-inline float luminance(const vec3f& a) {
+template<typename T>
+inline T luminance(const vec<T, 3>& a) {
   return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
 // sRGB non-linear curve
-inline float srgb_to_rgb(float srgb) {
-  return (srgb <= 0.04045) ? srgb / 12.92f
-                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+template<typename T>
+inline T srgb_to_rgb(T srgb) {
+  return (srgb <= (T)0.04045) ? srgb / (T)12.92
+                           : pow((srgb + (T)0.055) / ((T)1.0 + (T)0.055), (T)2.4);
 }
-inline float rgb_to_srgb(float rgb) {
-  return (rgb <= 0.0031308f) ? 12.92f * rgb
-                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+template<typename T>
+inline T rgb_to_srgb(T rgb) {
+  return (rgb <= (T)0.0031308) ? (T)12.92 * rgb
+                             : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
 }
-inline vec3f srgb_to_rgb(const vec3f& srgb) {
+template<typename T>
+inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
-inline vec4f srgb_to_rgb(const vec4f& srgb) {
+template<typename T>
+inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb) {
   return {
       srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
-inline vec3f rgb_to_srgb(const vec3f& rgb) {
+template<typename T>
+inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-inline vec4f rgb_to_srgb(const vec4f& rgb) {
+template<typename T>
+inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
+template<typename T>
+inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
-  auto epsilon  = (float)0.0001;
+template<typename T>
+inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
+  auto epsilon  = (T)0.0001;
   auto log_grey = log2(grey);
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply an s-shaped contrast.
-inline vec3f contrast(const vec3f& rgb, float contrast) {
+template<typename T>
+inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
   return gain(rgb, 1 - contrast);
 }
 // Apply saturation.
-inline vec3f saturate(
-    const vec3f& rgb, float saturation, const vec3f& weights) {
+template<typename T>
+inline vec<T, 3> saturate(
+    const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
 }
 
 // Filmic tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
+template<typename T>
+inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto hdr = hdr_ * 0.6f;  // brings it back to ACES range
-    auto ldr = (hdr * hdr * 2.51f + hdr * 0.03f) /
-               (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
+    auto ldr = (hdr * hdr * (T)2.51 + hdr * (T)0.03) /
+               (hdr * hdr * (T)2.43 + hdr * (T)0.59 + (T)0.14);
     return max(zero3f, ldr);
   } else {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
@@ -3983,8 +4015,8 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
     });
     // RRT => ODT
     auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
-      return (v * v + v * 0.0245786f - 0.000090537f) /
-             (v * v * 0.983729f + v * 0.4329510f + 0.238081f);
+      return (v * v + v * (T)0.0245786 - (T)0.000090537) /
+             (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
     };
 
     auto ldr = ACESOutputMat * RRTAndODTFit(ACESInputMat * hdr_);
@@ -3992,55 +4024,62 @@ inline vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+template<typename T>
+inline vec<T, 3> tonemap(const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
   if (filmic) rgb = tonemap_filmic(rgb);
   if (srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+template<typename T>
+inline vec<T, 4> tonemap(const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb) {
   return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
+template<typename T>
+inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
+  static const auto mat_ = mat<T, 3, 3>{
       {0.4124, 0.2126, 0.0193},
       {0.3576, 0.7152, 0.1192},
       {0.1805, 0.0722, 0.9504},
   };
-  return mat * rgb;
+  return mat_ * rgb;
 }
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
+template<typename T>
+inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
+  static const auto mat_ = mat<T, 3, 3>{
       {+3.2406, -0.9689, +0.0557},
       {-1.5372, +1.8758, -0.2040},
       {-0.4986, +0.0415, +1.0570},
   };
-  return mat * xyz;
+  return mat_ * xyz;
 }
 
 // Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
+template<typename T>
+inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
   if (xyz == zero3f) return zero3f;
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
+template<typename T>
+inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
   if (xyY.y == 0) return zero3f;
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Convert HSV to RGB
-inline vec3f hsv_to_rgb(const vec3f& hsv) {
+template<typename T>
+inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   // from Imgui.cpp
   auto h = hsv.x, s = hsv.y, v = hsv.z;
   if (hsv.y == 0) return {v, v, v};
 
-  h       = fmod(h, 1.0f) / (60.0f / 360.0f);
+  h       = fmod(h, (T)1.0) / ((T)60.0 / (T)360.0);
   int   i = (int)h;
   float f = h - (float)i;
   float p = v * (1 - s);
@@ -4058,7 +4097,8 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
   }
 }
 
-inline vec3f rgb_to_hsv(const vec3f& rgb) {
+template<typename T>
+inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
   auto r = rgb.x, g = rgb.y, b = rgb.z;
   auto K = 0.f;
@@ -4072,11 +4112,12 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
   }
 
   auto chroma = r - (g < b ? g : b);
-  return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+  return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + (T)1e-20), r};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-inline vec3f blackbody_to_rgb(float temperature) {
+template<typename T>
+inline vec<T, 3> blackbody_to_rgb(T temperature) {
   // https://github.com/neilbartlett/color-temperature
   auto rgb = zero3f;
   if ((temperature / 100) < 66) {
@@ -4088,8 +4129,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> -40.25366309332127
     // x -> (kelvin/100) - 55}
     rgb.x = (temperature / 100) - 55;
-    rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
-            40.25366309332127f * log(rgb.x);
+    rgb.x = (T)351.97690566805693 + (T)0.114206453784165 * rgb.x -
+            (T)40.25366309332127 * log(rgb.x);
     if (rgb.x < 0) rgb.x = 0;
     if (rgb.x > 255) rgb.x = 255;
   }
@@ -4101,8 +4142,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> 104.49216199393888`,
     // x -> (kelvin/100) - 2}
     rgb.y = (temperature / 100) - 2;
-    rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
-            104.49216199393888f * log(rgb.y);
+    rgb.y = (T)-155.25485562709179 - (T)0.44596950469579133 * rgb.y +
+            (T)104.49216199393888 * log(rgb.y);
     if (rgb.y < 0) rgb.y = 0;
     if (rgb.y > 255) rgb.y = 255;
   } else {
@@ -4112,8 +4153,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // c -> -28.0852963507957`,
     // x -> (kelvin/100) - 50}
     rgb.y = (temperature / 100) - 50;
-    rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
-            28.0852963507957f * log(rgb.y);
+    rgb.y = (T)325.4494125711974 + (T)0.07943456536662342 * rgb.y -
+            (T)28.0852963507957 * log(rgb.y);
     if (rgb.y < 0) rgb.y = 0;
     if (rgb.y > 255) rgb.y = 255;
   }
@@ -4130,8 +4171,8 @@ inline vec3f blackbody_to_rgb(float temperature) {
       // c -> 115.67994401066147`,
       // x -> kelvin/100 - 10}
       rgb.z = (temperature / 100) - 10;
-      rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
-              115.67994401066147f * log(rgb.z);
+      rgb.z = (T)-254.76935184120902 + (T)0.8274096064007395 * rgb.z +
+              (T)115.67994401066147 * log(rgb.z);
       if (rgb.z < 0) rgb.z = 0;
       if (rgb.z > 255) rgb.z = 255;
     }
