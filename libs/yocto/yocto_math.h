@@ -775,36 +775,57 @@ inline frame<T, 3> frame_fromzx(const vec<T, 3>& o, const vec<T, 3>& z_, const v
 namespace yocto::math {
 
 // Quaternions to represent rotations
-struct quat4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
+template<typename T, size_t N>
+struct quat;
+
+// Quaternions to represent rotations
+template<typename T>
+struct quat<T, 4> {
+  T x = 0;
+  T y = 0;
+  T z = 0;
+  T w = 0;
 
   // constructors
-  quat4f();
-  quat4f(float x, float y, float z, float w);
+  quat();
+  quat(T x, T y, T z, T w);
 };
+
+// Type alias
+using quat4f = quat<float, 4>;
 
 // Constants
 inline const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 // Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b);
-inline quat4f operator*(const quat4f& a, float b);
-inline quat4f operator/(const quat4f& a, float b);
-inline quat4f operator*(const quat4f& a, const quat4f& b);
+template<typename T>
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b);
+template<typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b);
+template<typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b);
+template<typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
 
 // Quaterion operations
-inline float  dot(const quat4f& a, const quat4f& b);
-inline float  length(const quat4f& a);
-inline quat4f normalize(const quat4f& a);
-inline quat4f conjugate(const quat4f& a);
-inline quat4f inverse(const quat4f& a);
-inline float  uangle(const quat4f& a, const quat4f& b);
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t);
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
+template<typename T>
+inline T  dot(const quat<T, 4>& a, const quat<T, 4>& b);
+template<typename T>
+inline T  length(const quat<T, 4>& a);
+template<typename T>
+inline quat<T, 4> normalize(const quat<T, 4>& a);
+template<typename T>
+inline quat<T, 4> conjugate(const quat<T, 4>& a);
+template<typename T>
+inline quat<T, 4> inverse(const quat<T, 4>& a);
+template<typename T>
+inline T  uangle(const quat<T, 4>& a, const quat<T, 4>& b);
+template<typename T, typename T1>
+inline quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
+template<typename T, typename T1>
+inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
+template<typename T, typename T1>
+inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 
 }  // namespace yocto::math
 
@@ -813,7 +834,7 @@ inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Axis aligned bounding box represented as a min/max std::vector pairs.
+// Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox2f {
   vec2f min = {flt_max, flt_max};
   vec2f max = {flt_min, flt_min};
@@ -2707,21 +2728,27 @@ inline frame<T, 3> frame_fromzx(const vec<T, 3>& o, const vec<T, 3>& z_, const v
 namespace yocto::math {
 
 // Quaternions to represent rotations
-inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
-inline quat4f::quat4f(float x, float y, float z, float w)
+template <typename T>
+inline quat<T, 4>::quat() : x{0}, y{0}, z{0}, w{1} {}
+template <typename T>
+inline quat<T, 4>::quat(T x, T y, T z, T w)
     : x{x}, y{y}, z{z}, w{w} {}
 
 // Quaternion operatons
-inline quat4f operator+(const quat4f& a, const quat4f& b) {
+template<typename T>
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-inline quat4f operator*(const quat4f& a, float b) {
+template<typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b) {
   return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-inline quat4f operator/(const quat4f& a, float b) {
+template<typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b) {
   return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
-inline quat4f operator*(const quat4f& a, const quat4f& b) {
+template<typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
   return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
       a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
       a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
@@ -2729,27 +2756,36 @@ inline quat4f operator*(const quat4f& a, const quat4f& b) {
 }
 
 // Quaterion operations
-inline float dot(const quat4f& a, const quat4f& b) {
+template<typename T>
+inline T dot(const quat<T, 4>& a, const quat<T, 4>& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-inline float  length(const quat4f& a) { return sqrt(dot(a, a)); }
-inline quat4f normalize(const quat4f& a) {
+template<typename T>
+inline T  length(const quat<T, 4>& a) { return sqrt(dot(a, a)); }
+template<typename T>
+inline quat<T, 4> normalize(const quat<T, 4>& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
 }
-inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
-inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
-inline float  uangle(const quat4f& a, const quat4f& b) {
+template<typename T>
+inline quat<T, 4> conjugate(const quat<T, 4>& a) { return {-a.x, -a.y, -a.z, a.w}; }
+template<typename T>
+inline quat<T, 4> inverse(const quat<T, 4>& a) { return conjugate(a) / dot(a, a); }
+template<typename T>
+inline float  uangle(const quat<T, 4>& a, const quat<T, 4>& b) {
   auto d = dot(a, b);
   return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
-inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
+template<typename T, typename T1>
+inline quat<T, 4> lerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   return a * (1 - t) + b * t;
 }
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t) {
+template<typename T, typename T1>
+inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   return normalize(lerp(a, b, t));
 }
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t) {
+template<typename T, typename T1>
+inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
   auto th = uangle(a, b);
   return th == 0
              ? a
