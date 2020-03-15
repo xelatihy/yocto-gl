@@ -1415,140 +1415,181 @@ inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity = 2,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term.
-inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline vec<T, 3> fresnel_schlick(
+    const vec<T, 3>& specular, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline T fresnel_dielectric(
+    T eta, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline vec<T, 3> fresnel_conductor(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 
 // Convert eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta);
+template<typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta);
 // Convert reflectivity to  eta.
-inline vec3f reflectivity_to_eta(const vec3f& reflectivity);
+template<typename T>
+inline vec<T, 3> reflectivity_to_eta(const vec<T, 3>& reflectivity);
 // Convert conductor eta to reflectivity.
-inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
+template<typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert eta to edge tint parametrization.
-inline std::pair<vec3f, vec3f> eta_to_edgetint(
-    const vec3f& eta, const vec3f& etak);
+template<typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+    const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert reflectivity and edge tint to eta.
-inline std::pair<vec3f, vec3f> edgetint_to_eta(
-    const vec3f& reflectivity, const vec3f& edgetint);
+template<typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+    const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint);
 
 // Evaluates the microfacet distribution.
-inline float microfacet_distribution(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx = true);
+template<typename T>
+inline T microfacet_distribution(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, bool ggx = true);
 // Evaluates the microfacet shadowing.
-inline float microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+template<typename T>
+inline T microfacet_shadowing(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, const vec<T, 3>& incoming,
     bool ggx = true);
 
 // Samples a microfacet distribution.
-inline vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
+template<typename T>
+inline vec<T, 3> sample_microfacet(
+    T roughness, const vec<T, 3>& normal, const vec<T, 2>& rn, bool ggx = true);
 // Pdf for microfacet distribution sampling.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, bool ggx = true);
+template<typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, bool ggx = true);
 
 // Samples a microfacet distribution with the distribution of visible normals.
-inline vec3f sample_microfacet(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec2f& rn, bool ggx = true);
+template<typename T>
+inline vec<T, 3> sample_microfacet(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn, bool ggx = true);
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, bool ggx = true);
+template<typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, bool ggx = true);
 
 // Evaluates a diffuse BRDF lobe.
-inline vec3f eval_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a specular BRDF lobe.
-inline vec3f eval_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a metal BRDF lobe.
-inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_microfacet_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming);
 // Evaluates a transmission BRDF lobe.
-inline vec3f eval_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a refraction BRDF lobe.
-inline vec3f eval_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 // Sample a diffuse BRDF lobe.
-inline vec3f sample_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template<typename T>
+inline vec<T, 3> sample_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a specular BRDF lobe.
-inline vec3f sample_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template<typename T>
+inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a metal BRDF lobe.
-inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn);
+template<typename T>
+inline vec<T, 3> sample_microfacet_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 2>& rn);
 // Sample a transmission BRDF lobe.
-inline vec3f sample_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+template<typename T>
+inline vec<T, 3> sample_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a refraction BRDF lobe.
-inline vec3f sample_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn);
+template<typename T>
+inline vec<T, 3> sample_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl, const vec<T, 2>& rn);
 
 // Pdf for diffuse BRDF lobe sampling.
-inline float sample_diffuse_reflection_pdf(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_diffuse_reflection_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for specular BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_microfacet_reflection_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for metal BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_microfacet_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_microfacet_transmission_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_microfacet_transmission_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for refraction BRDF lobe sampling.
-inline float sample_microfacet_refraction_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_microfacet_refraction_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 // Evaluate a delta specular BRDF lobe.
-inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_delta_reflection(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_delta_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_delta_transmission(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluate a delta refraction BRDF lobe.
-inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline vec<T, 3> eval_delta_refraction(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 // Sample a delta specular BRDF lobe.
-inline vec3f sample_delta_reflection(
-    float ior, const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline vec<T, 3> sample_delta_reflection(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline vec<T, 3> sample_delta_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_delta_transmission(
-    float ior, const vec3f& normal, const vec3f& outgoing);
+template<typename T>
+inline vec<T, 3> sample_delta_transmission(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing);
 // Sample a delta refraction BRDF lobe.
-inline vec3f sample_delta_refraction(
-    float ior, const vec3f& normal, const vec3f& outgoing, float rnl);
+template<typename T>
+inline vec<T, 3> sample_delta_refraction(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl);
 
 // Pdf for delta specular BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_delta_reflection_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_delta_reflection_pdf(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for delta refraction BRDF lobe sampling.
-inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
+template<typename T>
+inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
 }  // namespace yocto::math
 
@@ -1558,61 +1599,86 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 namespace yocto::math {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& direction);
+template<typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv);
-inline float sample_hemisphere_pdf(const vec3f& normal, const vec3f& direction);
+template<typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 3>& normal, const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_hemisphere_pdf(const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv);
-inline float sample_sphere_pdf(const vec3f& w);
+template<typename T>
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_sphere_pdf(const vec<T, 3>& w);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv);
-inline float sample_hemisphere_cos_pdf(const vec3f& direction);
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv);
-inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction);
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 3>& normal, const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_hemisphere_cos_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv);
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction);
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_hemisphere_cospower_pdf(
+    T exponent, const vec<T, 3>& direction);
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv);
-inline float sample_disk_pdf();
+template<typename T>
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_disk_pdf(const vec<T, 2>& point);
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv);
-inline float sample_cylinder_pdf();
+template<typename T>
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv);
+template<typename T>
+inline T sample_cylinder_pdf(const vec<T, 3>& point);
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv);
+template<typename T>
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv);
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv);
+template<typename T>
+inline vec<T, 3> sample_triangle(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
+template<typename T>
+inline T sample_triangle_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2);
 
 // Sample an index with uniform distribution.
-inline int   sample_uniform(int size, float r);
-inline float sample_uniform_pdf(int size);
+template<typename T>
+inline int   sample_uniform(int size, T r);
+template<typename T>
+inline T sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const std::vector<float>& elements, float r);
-inline float sample_uniform_pdf(const std::vector<float>& elements);
+template<typename T>
+inline T sample_uniform(const std::vector<T>& elements, T r);
+template<typename T>
+inline T sample_uniform_pdf(const std::vector<T>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r);
+template<typename T>
+inline int sample_discrete(const std::vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
+template<typename T>
+inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx);
 
 }  // namespace yocto::math
 
@@ -2194,7 +2260,7 @@ inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
-  return abs(v.x) > abs(v.z) ? vec3f{-v.y, v.x, 0} : vec3f{0, -v.z, v.y};
+  return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0} : vec<T, 3>{0, -v.z, v.y};
 }
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -2990,8 +3056,8 @@ inline frame<T, 3> frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
   auto sign = copysignf((T)1, z.z);
   auto a    = -1 / (sign + z.z);
   auto b    = z.x * z.y * a;
-  auto x    = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
-  auto y    = vec3f{b, sign + z.y * z.y * a, -z.y};
+  auto x    = vec<T, 3>{1 + sign * z.x * z.x * a, sign * b, -sign * z.x};
+  auto y    = vec<T, 3>{b, sign + z.y * z.y * a, -z.y};
   return {x, y, z, o};
 }
 template <typename T>
@@ -4080,7 +4146,7 @@ inline vec<T, 3> tonemap_filmic(
         {-0.00327, -0.07276, 1.07602},
     });
     // RRT => ODT
-    auto RRTAndODTFit = [](const vec3f& v) -> vec3f {
+    auto RRTAndODTFit = [](const vec<T, 3>& v) -> vec<T, 3> {
       return (v * v + v * (T)0.0245786 - (T)0.000090537) /
              (v * v * (T)0.983729 + v * (T)0.4329510 + (T)0.238081);
     };
@@ -4130,7 +4196,7 @@ inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 // Convert between CIE XYZ and xyY
 template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
-  if (xyz == vec3f{0}) return {0};
+  if (xyz == vec<T, 3>{0}) return {0};
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
@@ -4492,17 +4558,19 @@ inline T perlin_turbulence(const vec<T, 3>& p, T lacunarity, T gain,
 namespace yocto::math {
 
 // Schlick approximation of the Fresnel term
-inline vec3f fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& outgoing) {
-  if (specular == vec3f{0}) return vec3f{0};
+template<typename T>
+inline vec<T, 3> fresnel_schlick(
+    const vec<T, 3>& specular, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (specular == vec<T, 3>{0}) return vec<T, 3>{0};
   auto cosine = dot(normal, outgoing);
   return specular +
          (1 - specular) * pow(clamp(1 - abs(cosine), 0.0f, 1.0f), 5.0f);
 }
 
 // Compute the fresnel term for dielectrics.
-inline float fresnel_dielectric(
-    float eta, const vec3f& normal, const vec3f& outgoing) {
+template<typename T>
+inline T fresnel_dielectric(
+    T eta, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = abs(dot(normal, outgoing));
@@ -4524,16 +4592,17 @@ inline float fresnel_dielectric(
 }
 
 // Compute the fresnel term for metals.
-inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing) {
+template<typename T>
+inline vec<T, 3> fresnel_conductor(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
   // Implementation from
   // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
   auto cosw = dot(normal, outgoing);
-  if (cosw <= 0) return vec3f{0};
+  if (cosw <= 0) return vec<T, 3>{0};
 
-  cosw       = clamp(cosw, (float)-1, (float)1);
+  cosw       = clamp(cosw, (T)-1, (T)1);
   auto cos2  = cosw * cosw;
-  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+  auto sin2  = clamp(1 - cos2, (T)0, (T)1);
   auto eta2  = eta * eta;
   auto etak2 = etak * etak;
 
@@ -4552,22 +4621,26 @@ inline vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak,
 }
 
 // Convert eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta) {
+template<typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta) {
   return ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
 }
 // Convert reflectivity to  eta.
-inline vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+template<typename T>
+inline vec<T, 3> reflectivity_to_eta(const vec<T, 3>& reflectivity_) {
   auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
   return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 // Convert conductor eta to reflectivity
-inline vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak) {
+template<typename T>
+inline vec<T, 3> eta_to_reflectivity(const vec<T, 3>& eta, const vec<T, 3>& etak) {
   return ((eta - 1) * (eta - 1) + etak * etak) /
          ((eta + 1) * (eta + 1) + etak * etak);
 }
 // Convert eta to edge tint parametrization
-inline std::pair<vec3f, vec3f> eta_to_edgetint(
-    const vec3f& eta, const vec3f& etak) {
+template<typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+    const vec<T, 3>& eta, const vec<T, 3>& etak) {
   auto reflectivity = eta_to_reflectivity(eta, etak);
   auto numer        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
   auto denom        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) -
@@ -4576,8 +4649,9 @@ inline std::pair<vec3f, vec3f> eta_to_edgetint(
   return {reflectivity, edgetint};
 }
 // Convert reflectivity and edge tint to eta.
-inline std::pair<vec3f, vec3f> edgetint_to_eta(
-    const vec3f& reflectivity, const vec3f& edgetint) {
+template<typename T>
+inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+    const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint) {
   auto r = clamp(reflectivity, 0.0f, 0.99f);
   auto g = edgetint;
 
@@ -4593,8 +4667,9 @@ inline std::pair<vec3f, vec3f> edgetint_to_eta(
 }
 
 // Evaluate microfacet distribution
-inline float microfacet_distribution(
-    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
+template<typename T>
+inline T microfacet_distribution(
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& halfway, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine = dot(normal, halfway);
@@ -4611,8 +4686,9 @@ inline float microfacet_distribution(
 }
 
 // Evaluate the microfacet shadowing1
-inline float microfacet_shadowing1(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& direction, bool ggx) {
+template<typename T>
+inline T microfacet_shadowing1(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& direction, bool ggx) {
   // https://google.github.io/filament/Filament.html#materialsystem/specularbrdf
   // http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
   auto cosine  = dot(normal, direction);
@@ -4632,16 +4708,18 @@ inline float microfacet_shadowing1(float roughness, const vec3f& normal,
 }
 
 // Evaluate microfacet shadowing
-inline float microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, const vec3f& incoming,
+template<typename T>
+inline T microfacet_shadowing(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, const vec<T, 3>& incoming,
     bool ggx) {
   return microfacet_shadowing1(roughness, normal, halfway, outgoing, ggx) *
          microfacet_shadowing1(roughness, normal, halfway, incoming, ggx);
 }
 
 // Sample a microfacet ditribution.
-inline vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
+template<typename T>
+inline vec<T, 3> sample_microfacet(
+    T roughness, const vec<T, 3>& normal, const vec<T, 2>& rn, bool ggx) {
   auto phi   = 2 * pif * rn.x;
   auto theta = 0.0f;
   if (ggx) {
@@ -4650,22 +4728,24 @@ inline vec3f sample_microfacet(
     auto roughness2 = roughness * roughness;
     theta           = atan(sqrt(-roughness2 * log(1 - rn.y)));
   }
-  auto local_half_vector = vec3f{
+  auto local_half_vector = vec<T, 3>{
       cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
 
 // Pdf for microfacet distribution sampling.
-inline float sample_microfacet_pdf(
-    float roughness, const vec3f& normal, const vec3f& halfway, bool ggx) {
+template<typename T>
+inline T sample_microfacet_pdf(
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& halfway, bool ggx) {
   auto cosine = dot(normal, halfway);
   if (cosine < 0) return 0;
   return microfacet_distribution(roughness, normal, halfway, ggx) * cosine;
 }
 
 // Sample a microfacet ditribution with the distribution of visible normals.
-inline vec3f sample_microfacet(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec2f& rn, bool ggx) {
+template<typename T>
+inline vec<T, 3> sample_microfacet(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 2>& rn, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
   if (ggx) {
     // move to local coordinate system
@@ -4674,12 +4754,12 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto alpha_x = roughness, alpha_y = roughness;
     // Section 3.2: transforming the view direction to the hemisphere
     // configuration
-    auto Vh = normalize(vec3f{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
+    auto Vh = normalize(vec<T, 3>{alpha_x * Ve.x, alpha_y * Ve.y, Ve.z});
     // Section 4.1: orthonormal basis (with special case if cross product is
     // zero)
     auto lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-    auto T1    = lensq > 0 ? vec3f{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
-                        : vec3f{1, 0, 0};
+    auto T1    = lensq > 0 ? vec<T, 3>{-Vh.y, Vh.x, 0} * (1 / sqrt(lensq))
+                        : vec<T, 3>{1, 0, 0};
     auto T2 = cross(Vh, T1);
     // Section 4.2: parameterization of the projected area
     auto r   = sqrt(rn.y);
@@ -4689,9 +4769,9 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     auto s   = 0.5f * (1 + Vh.z);
     t2       = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Section 4.3: reprojection onto hemisphere
-    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1 - t1 * t1 - t2 * t2)) * Vh;
+    auto Nh = t1 * T1 + t2 * T2 + sqrt(max(1 - t1 * t1 - t2 * t2, (T)0)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
-    auto Ne = normalize(vec3f{alpha_x * Nh.x, alpha_y * Nh.y, max(0.0f, Nh.z)});
+    auto Ne = normalize(vec<T, 3>{alpha_x * Nh.x, alpha_y * Nh.y, max(Nh.z, (T)0)});
     // move to world coordinate
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
@@ -4702,8 +4782,9 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
 
 // Pdf for microfacet distribution sampling with the distribution of visible
 // normals.
-inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& halfway, const vec3f& outgoing, bool ggx) {
+template<typename T>
+inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& halfway, const vec<T, 3>& outgoing, bool ggx) {
   // http://jcgt.org/published/0007/04/01/
   if (dot(normal, halfway) < 0) return 0;
   if (dot(halfway, outgoing) < 0) return 0;
@@ -4713,30 +4794,33 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
 }
 
 // Evaluate a diffuse BRDF lobe.
-inline vec3f eval_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
-  return vec3f{1} / pif * dot(normal, incoming);
+template<typename T>
+inline vec<T, 3> eval_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
+  return vec<T, 3>{1} / pif * dot(normal, incoming);
 }
 
 // Evaluate a specular BRDF lobe.
-inline vec3f eval_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_dielectric(ior, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
-  return vec3f{1} * F * D * G /
+  return vec<T, 3>{1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
 
 // Evaluate a metal BRDF lobe.
-inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> eval_microfacet_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   auto halfway = normalize(incoming + outgoing);
   auto F       = fresnel_conductor(eta, etak, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
@@ -4746,9 +4830,10 @@ inline vec3f eval_microfacet_reflection(const vec3f& eta, const vec3f& etak,
 }
 
 // Evaluate a transmission BRDF lobe.
-inline vec3f eval_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> eval_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
   // auto F       = fresnel_schlick(
@@ -4756,14 +4841,15 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
   auto D = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(
       roughness, normal, halfway, outgoing, reflected);
-  return vec3f{1} * D * G /
+  return vec<T, 3>{1} * D * G /
          (4 * dot(normal, outgoing) * dot(normal, reflected)) *
          (dot(normal, reflected));
 }
 
 // Evaluate a refraction BRDF lobe.
-inline vec3f eval_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline vec<T, 3> eval_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4773,7 +4859,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
-    return vec3f{1} * F * D * G /
+    return vec<T, 3>{1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
@@ -4784,7 +4870,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto G = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
     // [Walter 2007] equation 21
-    return vec3f{1} *
+    return vec<T, 3>{1} *
            abs((dot(outgoing, halfway) * dot(incoming, halfway)) /
                (dot(outgoing, normal) * dot(incoming, normal))) *
            (1 - F) * D * G /
@@ -4794,35 +4880,39 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
 }
 
 // Sample a diffuse BRDF lobe.
-inline vec3f sample_diffuse_reflection(
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_diffuse_reflection(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return sample_hemisphere_cos(normal, rn);
 }
 
 // Sample a specular BRDF lobe.
-inline vec3f sample_microfacet_reflection(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
 }
 
 // Sample a metal BRDF lobe.
-inline vec3f sample_microfacet_reflection(const vec3f& eta, const vec3f& etak,
-    float roughness, const vec3f& normal, const vec3f& outgoing,
-    const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_microfacet_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    T roughness, const vec<T, 3>& normal, const vec<T, 3>& outgoing,
+    const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   // auto halfway = sample_microfacet(roughness, normal, outgoing, rn);
   auto halfway = sample_microfacet(roughness, normal, rn);
   return reflect(outgoing, halfway);
 }
 
 // Sample a transmission BRDF lobe.
-inline vec3f sample_microfacet_transmission(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_microfacet_transmission(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   auto halfway = sample_microfacet(roughness, normal, rn);
   // auto halfway   = sample_microfacet(roughness, normal, outgoing, rn);
   auto reflected = reflect(outgoing, halfway);
@@ -4830,8 +4920,9 @@ inline vec3f sample_microfacet_transmission(float ior, float roughness,
 }
 
 // Sample a refraction BRDF lobe.
-inline vec3f sample_microfacet_refraction(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
+template<typename T>
+inline vec<T, 3> sample_microfacet_refraction(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl, const vec<T, 2>& rn) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   // auto halfway   = sample_microfacet(roughness, up_normal, outgoing, rn);
@@ -4844,15 +4935,17 @@ inline vec3f sample_microfacet_refraction(float ior, float roughness,
 }
 
 // Pdf for diffuse BRDF lobe sampling.
-inline float sample_diffuse_reflection_pdf(
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_diffuse_reflection_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return sample_hemisphere_cos_pdf(normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_microfacet_reflection_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
   // return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
@@ -4861,9 +4954,10 @@ inline float sample_microfacet_reflection_pdf(float ior, float roughness,
 }
 
 // Pdf for metal BRDF lobe sampling.
-inline float sample_microfacet_reflection_pdf(const vec3f& eta,
-    const vec3f& etak, float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_microfacet_reflection_pdf(const vec<T, 3>& eta,
+    const vec<T, 3>& etak, T roughness, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   auto halfway = normalize(outgoing + incoming);
   // return sample_microfacet_pdf(roughness, normal, halfway, outgoing) /
@@ -4872,8 +4966,9 @@ inline float sample_microfacet_reflection_pdf(const vec3f& eta,
 }
 
 // Pdf for transmission BRDF lobe sampling.
-inline float sample_microfacet_transmission_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_microfacet_transmission_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   auto reflected = reflect(-incoming, normal);
   auto halfway   = normalize(reflected + outgoing);
@@ -4884,8 +4979,9 @@ inline float sample_microfacet_transmission_pdf(float ior, float roughness,
 }
 
 // Pdf for refraction BRDF lobe sampling.
-inline float sample_microfacet_refraction_pdf(float ior, float roughness,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_microfacet_refraction_pdf(T ior, T roughness,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4908,63 +5004,71 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
 }
 
 // Evaluate a delta specular BRDF lobe.
-inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
-  return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
+template<typename T>
+inline vec<T, 3> eval_delta_reflection(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
+  return vec<T, 3>{1} * fresnel_dielectric(ior, normal, outgoing);
 }
 
 // Evaluate a delta metal BRDF lobe.
-inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> eval_delta_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return fresnel_conductor(eta, etak, normal, outgoing);
 }
 
 // Evaluate a delta transmission BRDF lobe.
-inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec3f{0};
-  return vec3f{1};
+template<typename T>
+inline vec<T, 3> eval_delta_transmission(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return vec<T, 3>{0};
+  return vec<T, 3>{1};
 }
 
 // Evaluate a delta refraction BRDF lobe.
-inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline vec<T, 3> eval_delta_refraction(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
+    return vec<T, 3>{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
+    return vec<T, 3>{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
 // Sample a delta specular BRDF lobe.
-inline vec3f sample_delta_reflection(
-    float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_delta_reflection(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta metal BRDF lobe.
-inline vec3f sample_delta_reflection(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_delta_reflection(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return reflect(outgoing, normal);
 }
 
 // Sample a delta transmission BRDF lobe.
-inline vec3f sample_delta_transmission(
-    float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (dot(normal, outgoing) <= 0) return vec3f{0};
+template<typename T>
+inline vec<T, 3> sample_delta_transmission(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing) {
+  if (dot(normal, outgoing) <= 0) return vec<T, 3>{0};
   return -outgoing;
 }
 
 // Sample a delta refraction BRDF lobe.
-inline vec3f sample_delta_refraction(
-    float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
+template<typename T>
+inline vec<T, 3> sample_delta_refraction(
+    T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4976,29 +5080,33 @@ inline vec3f sample_delta_refraction(
 }
 
 // Pdf for delta specular BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_delta_reflection_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta metal BRDF lobe sampling.
-inline float sample_delta_reflection_pdf(const vec3f& eta, const vec3f& etak,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_delta_reflection_pdf(const vec<T, 3>& eta, const vec<T, 3>& etak,
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta transmission BRDF lobe sampling.
-inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
 
 // Pdf for delta refraction BRDF lobe sampling.
-inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+template<typename T>
+inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -5017,135 +5125,160 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 namespace yocto::math {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
   auto z   = ruv.y;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& direction) {
+template<typename T>
+inline T sample_hemisphere_pdf(const vec<T, 3>& direction) {
   return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_hemisphere(const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = ruv.y;
   auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_pdf(
-    const vec3f& normal, const vec3f& direction) {
-  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+template<typename T>
+inline T sample_hemisphere_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
+  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * (T)pi);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
   auto z   = 2 * ruv.y - 1;
   auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+template<typename T>
+inline T sample_sphere_pdf(const vec<T, 3>& w) { return 1 / (4 * (T)pi); }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 2>& ruv) {
   auto z   = sqrt(ruv.y);
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
-  return (direction.z <= 0) ? 0 : direction.z / pif;
+template<typename T>
+inline T sample_hemisphere_cos_pdf(const vec<T, 3>& direction) {
+  return (direction.z <= 0) ? 0 : direction.z / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cos(const vec<T, 3>& normal, const vec<T, 2>& ruv) {
   auto z               = sqrt(ruv.y);
   auto r               = sqrt(1 - z * z);
   auto phi             = 2 * pif * ruv.x;
-  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  auto local_direction = vec<T, 3>{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_cos_pdf(
-    const vec3f& normal, const vec3f& direction) {
+template<typename T>
+inline T sample_hemisphere_cos_pdf(
+    const vec<T, 3>& normal, const vec<T, 3>& direction) {
   auto cosw = dot(normal, direction);
-  return (cosw <= 0) ? 0 : cosw / pif;
+  return (cosw <= 0) ? 0 : cosw / (T)pi;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_hemisphere_cospower(T exponent, const vec<T, 2>& ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
   auto r   = sqrt(1 - z * z);
   auto phi = 2 * pif * ruv.x;
   return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cospower_pdf(
-    float exponent, const vec3f& direction) {
+template<typename T>
+inline T sample_hemisphere_cospower_pdf(
+    T exponent, const vec<T, 3>& direction) {
   return (direction.z <= 0)
              ? 0
-             : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+             : pow(direction.z, exponent) * (exponent + 1) / (2 * (T)pi);
 }
 
 // Sample a point uniformly on a disk.
-inline vec2f sample_disk(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 2> sample_disk(const vec<T, 2>& ruv) {
   auto r   = sqrt(ruv.y);
   auto phi = 2 * pif * ruv.x;
   return {cos(phi) * r, sin(phi) * r};
 }
-inline float sample_disk_pdf() { return 1 / pif; }
+template<typename T>
+inline T sample_disk_pdf(const vec<T, 2>& point) { return 1 / (T)pi; }
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
   auto phi = 2 * pif * ruv.x;
   return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf() { return 1 / pif; }
+template<typename T>
+inline T sample_cylinder_pdf(const vec<T, 3>& point) { return 1 / (T)pi; }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
-inline vec2f sample_triangle(const vec2f& ruv) {
+template<typename T>
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
   return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+template<typename T>
+inline vec<T, 3> sample_triangle(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& ruv) {
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template<typename T>
+inline T sample_triangle_pdf(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_uniform(int size, float r) {
+template<typename T>
+inline int sample_uniform(int size, T r) {
   return clamp((int)(r * size), 0, size - 1);
 }
-inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
+template<typename T>
+inline T sample_uniform_pdf(int size) { return (T)1 / (T)size; }
 
 // Sample an index with uniform distribution.
-inline float sample_uniform(const std::vector<float>& elements, float r) {
+template<typename T>
+inline T sample_uniform(const std::vector<T>& elements, T r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
-inline float sample_uniform_pdf(const std::vector<float>& elements) {
+template<typename T>
+inline T sample_uniform_pdf(const std::vector<T>& elements) {
   if (elements.empty()) return 0;
   return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r) {
-  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
+template<typename T>
+inline int sample_discrete(const std::vector<T>& cdf, T r) {
+  r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
   return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
+template<typename T>
+inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }

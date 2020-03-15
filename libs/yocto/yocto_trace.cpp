@@ -133,7 +133,7 @@ static float eval_phasefunction(float cos_theta, float g) {
 namespace yocto::trace {
 
 // constant values
-static const auto coat_ior       = 1.5;
+static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Shape element normal.
@@ -1952,7 +1952,7 @@ static float sample_lights_pdf(
       }
     }
   }
-  pdf *= sample_uniform_pdf(scene->lights.size());
+  pdf *= sample_uniform_pdf<float>(scene->lights.size());
   return pdf;
 }
 
