@@ -9,28 +9,31 @@
 // ## Small vectors, matrices and frames
 //
 // We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 1-4 dimensional vectors
-// coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
-// `vec1i`, `vec2i`, `vec3i`, `vec4i`).
+// in graphics. In particular, we support 1-4 dimensional vectors `vec<T, N>`
+// with aliases for float and int coordinates (`vec1f`, `vec2f`, `vec3f`, 
+// `vec4f`, `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
-// We support 2-4 dimensional matrices (`mat2f`, `mat3f`, `mat4f`) with
-// matrix-matrix and matrix-std::vector products, transposes and inverses.
+// We support 1-4 dimensional matrices `mat<T, N>` with aliases for float 
+// coordinates (`mat2f`, `mat3f`, `mat4f`) with
+// matrix-matrix and matrix-vector products, transposes and inverses.
 // Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame2f` and
-// `frame3f`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame<T, N>` with 
+// aliases for float coordinates (`frame2f`, `frame3f`). 
+// The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are fater with this representation.
 //
 //
 // ## Rays and bounding boxes
 //
-// We represent rays in 2-3 dimensions with `ray2f`, `ray3f`.
-// Each ray support initialization and evaluation.
+// We represent 2-3 dimensinal rays as `ray<T, N>` with float alises 
+// (`ray2f`, `ray3f`). Each ray support initialization and evaluation.
 //
-// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`.
+// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float alises 
+// (`bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`).
 // Each bounding box support construction from points and other bounding box.
 // We provide operations to compute bounds for points, lines, triangles and
 // quads.
@@ -81,8 +84,8 @@
 // 1. initialize the random number generator with `make_rng()`
 // 2. if necessary, you can reseed the rng with `seed_rng()`
 // 3. generate random integers in an interval with `rand1i()`
-// 4. generate random floats and double in the [0,1) range with `rand1f()`,
-//    `rand2f()`, `rand3f()`, `rand1d()`
+// 4. generate random floats in the [0,1) range with `rand1f()`,
+//    `rand2f()`, `rand3f()`, `rand4f()`
 //
 //
 // ## Noise Functions
