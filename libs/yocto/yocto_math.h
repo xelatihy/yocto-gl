@@ -5369,7 +5369,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
   // pan if necessary
   if (dolly) {
     auto c  = frame.o - frame.z * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
+    focus   = max(focus * (1 + dolly), (T)0.001);
     frame.o = c + frame.z * focus;
   }
 
