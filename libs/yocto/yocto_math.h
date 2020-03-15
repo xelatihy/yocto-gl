@@ -1236,6 +1236,16 @@ inline float  byte_to_float(byte a);
 inline ushort float_to_ushort(float a);
 inline float  ushort_to_float(ushort a);
 
+// Conversion between reals in [0,1] and normalized ints [0, max_int]
+template<typename I, typename T>
+inline I   real_to_nint(T a);
+template<typename T, typename I>
+inline T  nint_to_real(I a);
+template<typename I, typename T, size_t N>
+inline vec<I, N>  real_to_nint(const vec<T, N>& a);
+template<typename T, typename I, size_t N>
+inline vec<T, N>  nint_to_real(const vec<I, N>& a);
+
 // Luminance
 template<typename T>
 inline T luminance(const vec<T, 3>& a);
@@ -3934,6 +3944,44 @@ inline ushort float_to_ushort(float a) {
   return (ushort)clamp(int(a * 65536), 0, 65535);
 }
 inline float ushort_to_float(ushort a) { return a / 65535.0f; }
+
+// Conversion between reals in [0,1] and normalized ints [0, max_int]
+template<typename I, typename T>
+inline I   real_to_nint(T a) {
+  return clamp(I(a * ((T)type_max<I>+(T)1)), (I)0, type_max<I>);
+}
+template<typename T, typename I>
+inline T  nint_to_real(I a) {
+  return a / (T)type_max<I>;
+}
+template<typename I, typename T, size_t N>
+inline vec<I, N>  real_to_nint(const vec<T, N>& a) {
+  if constexpr (N == 1) {
+    return {real_to_nint<I, T>(a.x)};
+  } else if constexpr (N == 2) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y)};
+  } else if constexpr (N == 3) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y), real_to_nint<I, T>(a.z)};
+  } else if constexpr (N == 4) {
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y), real_to_nint<I, T>(a.z), real_to_nint<I, T>(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
+template<typename T, typename I, size_t N>
+inline vec<T, N>  nint_to_real(const vec<I, N>& a) {
+  if constexpr (N == 1) {
+    return {nint_to_real<T, I>(a.x)};
+  } else if constexpr (N == 2) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y)};
+  } else if constexpr (N == 3) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y), nint_to_real<T, I>(a.z)};
+  } else if constexpr (N == 4) {
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y), nint_to_real<T, I>(a.z), nint_to_real<T, I>(a.w)};
+  } else {
+    static_assert(N >= 0 || N <= 4, "vector size unsupported");
+  }
+}
 
 // Luminance
 template<typename T>
