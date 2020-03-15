@@ -674,40 +674,67 @@ inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v);
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Rigid frames stored as a column-major affine transform matrix.
-struct frame2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
-  vec2f o = {0, 0};
+// Fixed-size rigid frames stored as a column-major affine transform matrix.
+template<typename T, size_t N>
+struct frame;
 
-  frame2f();
-  frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
-  explicit frame2f(const vec2f& o);
-  frame2f(const mat2f& m, const vec2f& t);
-  explicit frame2f(const mat3f& m);
-  operator mat3f() const;
+// One-dimensional frame stored in column major format.
+template<typename T>
+struct frame<T, 1> {
+  vec<T, 1> x = {1};
+  vec<T, 1> o = {0};
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  frame();
+  frame(const vec<T, 1>& x, const vec<T, 1>& o);
+  explicit frame(const vec<T, 1>& o);
+  frame(const mat<T, 1, 1>& m, const vec<T, 1>& t);
+  explicit frame(const mat<T, 2, 2>& m);
+  operator mat<T, 2, 2>() const;
+
+  vec<T, 1>&       operator[](int i);
+  const vec<T, 1>& operator[](int i) const;
+};
+
+// Two-dimensional frame stored in column major format.
+template<typename T>
+struct frame<T, 2> {
+  vec<T, 2> x = {1, 0};
+  vec<T, 2> y = {0, 1};
+  vec<T, 2> o = {0, 0};
+
+  frame();
+  frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o);
+  explicit frame(const vec<T, 2>& o);
+  frame(const mat<T, 2, 2>& m, const vec<T, 2>& t);
+  explicit frame(const mat<T, 3, 3>& m);
+  operator mat<T, 3, 3>() const;
+
+  vec<T, 2>&       operator[](int i);
+  const vec<T, 2>& operator[](int i) const;
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
-struct frame3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
-  vec3f o = {0, 0, 0};
+template<typename T>
+struct frame<T, 3> {
+  vec<T, 3> x = {1, 0, 0};
+  vec<T, 3> y = {0, 1, 0};
+  vec<T, 3> z = {0, 0, 1};
+  vec<T, 3> o = {0, 0, 0};
 
-  frame3f();
-  frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
-  explicit frame3f(const vec3f& o);
-  frame3f(const mat3f& m, const vec3f& t);
-  explicit frame3f(const mat4f& m);
-  operator mat4f() const;
+  frame();
+  frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o);
+  explicit frame(const vec<T, 3>& o);
+  frame(const mat<T, 3, 3>& m, const vec<T, 3>& t);
+  explicit frame(const mat<T, 4, 4>& m);
+  operator mat<T, 4, 4>() const;
 
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
+  vec<T, 3>&       operator[](int i);
+  const vec<T, 3>& operator[](int i) const;
 };
+
+// Type aliases
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
 
 // Indentity frames.
 inline const auto identity2x3f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -2536,39 +2563,77 @@ inline mat<T, 3, 3> basis_fromz(const vec<T, 3>& v) {
 namespace yocto::math {
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame2f::frame2f() {}
-inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
-    : x{x}, y{y}, o{o} {}
-inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-inline frame2f::frame2f(const mat2f& m, const vec2f& t)
-    : x{m.x}, y{m.y}, o{t} {}
-inline frame2f::frame2f(const mat3f& m)
-    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+template<typename T>
+inline frame<T, 1>::frame() {}
+template<typename T>
+inline frame<T, 1>::frame(const vec<T, 1>& x, const vec<T, 1>& o)
+    : x{x}, o{o} {}
+template<typename T>
+inline frame<T, 1>::frame(const vec<T, 1>& o) : x{1, 0}, o{o} {}
+template<typename T>
+inline frame<T, 1>::frame(const mat<T, 1, 1>& m, const vec<T, 1>& t)
+    : x{m.x}, o{t} {}
+template<typename T>
+inline frame<T, 1>::frame(const mat<T, 2, 2>& m)
+    : x{m.x.x, m.x.y}, o{m.z.x, m.z.y} {}
+template<typename T>
+inline frame<T, 1>::operator mat<T, 2, 2>() const { return {{x, 0}, {o, 1}}; }
 
-inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
-inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
+template<typename T>
+inline vec<T, 1>& frame<T, 1>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const vec<T, 1>& frame<T, 1>::operator[](int i) const { return (&x)[i]; }
 
 // Rigid frames stored as a column-major affine transform matrix.
-inline frame3f::frame3f() {}
-inline frame3f::frame3f(
-    const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+template<typename T>
+inline frame<T, 2>::frame() {}
+template<typename T>
+inline frame<T, 2>::frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+    : x{x}, y{y}, o{o} {}
+template<typename T>
+inline frame<T, 2>::frame(const vec<T, 2>& o) : x{1, 0}, y{0, 1}, o{o} {}
+template<typename T>
+inline frame<T, 2>::frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+    : x{m.x}, y{m.y}, o{t} {}
+template<typename T>
+inline frame<T, 2>::frame(const mat<T, 3, 3>& m)
+    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
+template<typename T>
+inline frame<T, 2>::operator mat<T, 3, 3>() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+
+template<typename T>
+inline vec<T, 2>& frame<T, 2>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const vec<T, 2>& frame<T, 2>::operator[](int i) const { return (&x)[i]; }
+
+// Rigid frames stored as a column-major affine transform matrix.
+template<typename T>
+inline frame<T, 3>::frame() {}
+template<typename T>
+inline frame<T, 3>::frame(
+    const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o)
     : x{x}, y{y}, z{z}, o{o} {}
-inline frame3f::frame3f(const vec3f& o)
+template<typename T>
+inline frame<T, 3>::frame(const vec<T, 3>& o)
     : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-inline frame3f::frame3f(const mat3f& m, const vec3f& t)
+template<typename T>
+inline frame<T, 3>::frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
     : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-inline frame3f::frame3f(const mat4f& m)
+template<typename T>
+inline frame<T, 3>::frame(const mat<T, 4, 4>& m)
     : x{m.x.x, m.x.y, m.x.z}
     , y{m.y.x, m.y.y, m.y.z}
     , z{m.z.x, m.z.y, m.z.z}
     , o{m.w.x, m.w.y, m.w.z} {}
-inline frame3f::operator mat4f() const {
+template<typename T>
+inline frame<T, 3>::operator mat<T, 4, 4>() const {
   return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
 }
 
-inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
-inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
+template<typename T>
+inline vec<T, 3>& frame<T, 3>::operator[](int i) { return (&x)[i]; }
+template<typename T>
+inline const vec<T, 3>& frame<T, 3>::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
