@@ -220,11 +220,11 @@ inline const auto flt_max = std::numeric_limits<float>::max();
 inline const auto flt_min = std::numeric_limits<float>::lowest();
 inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
-template<typename T>
+template <typename T>
 inline const auto type_max = std::numeric_limits<T>::max();
-template<typename T>
+template <typename T>
 inline const auto type_min = std::numeric_limits<T>::lowest();
-template<typename T>
+template <typename T>
 inline const auto type_eps = std::numeric_limits<T>::epsilon();
 
 template <typename T>
@@ -1237,75 +1237,75 @@ inline ushort float_to_ushort(float a);
 inline float  ushort_to_float(ushort a);
 
 // Conversion between reals in [0,1] and normalized ints [0, max_int]
-template<typename I, typename T>
-inline I   real_to_nint(T a);
-template<typename T, typename I>
-inline T  nint_to_real(I a);
-template<typename I, typename T, size_t N>
-inline vec<I, N>  real_to_nint(const vec<T, N>& a);
-template<typename T, typename I, size_t N>
-inline vec<T, N>  nint_to_real(const vec<I, N>& a);
+template <typename I, typename T>
+inline I real_to_nint(T a);
+template <typename T, typename I>
+inline T nint_to_real(I a);
+template <typename I, typename T, size_t N>
+inline vec<I, N> real_to_nint(const vec<T, N>& a);
+template <typename T, typename I, size_t N>
+inline vec<T, N> nint_to_real(const vec<I, N>& a);
 
 // Luminance
-template<typename T>
+template <typename T>
 inline T luminance(const vec<T, 3>& a);
 
 // sRGB non-linear curve
-template<typename T>
+template <typename T>
 inline T srgb_to_rgb(T srgb);
-template<typename T>
+template <typename T>
 inline T rgb_to_srgb(T rgb);
-template<typename T>
+template <typename T>
 inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb);
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb);
-template<typename T>
+template <typename T>
 inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb);
-template<typename T>
+template <typename T>
 inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey);
 // Apply an s-shaped contrast.
-template<typename T>
+template <typename T>
 inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast);
 // Apply saturation.
-template<typename T>
+template <typename T>
 inline vec<T, 3> saturate(const vec<T, 3>& rgb, T saturation,
     const vec<T, 3>& weights = vec<T, 3>{0.333333});
 
 // Apply tone mapping
-template<typename T>
+template <typename T>
 inline vec<T, 3> tonemap(
     const vec<T, 3>& hdr, T exposure, bool filmic = false, bool srgb = true);
-template<typename T>
+template <typename T>
 inline vec<T, 4> tonemap(
     const vec<T, 4>& hdr, T exposure, bool filmic = false, bool srgb = true);
 
 // Convert between CIE XYZ and RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb);
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz);
 
 // Convert between CIE XYZ and xyY
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz);
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY);
 
 // Converts between HSV and RGB color spaces.
-template<typename T>
+template <typename T>
 inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv);
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb);
 
 // Approximate color of blackbody radiation from wavelength in nm.
-template<typename T>
+template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature);
 
 }  // namespace yocto::math
@@ -1619,34 +1619,34 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template<typename T>
-inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
-    T scale, const vec<int, 2>& txt_size);
+template <typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<int, 2>& txt_size);
 
 // Center image and autofit.
-template<typename T>
-inline void update_imview(vec<T, 2>& center, T& scale, const vec<int, 2>& imsize,
-    const vec<int, 2>& winsize, bool zoom_to_fit);
+template <typename T>
+inline void update_imview(vec<T, 2>& center, T& scale,
+    const vec<int, 2>& imsize, const vec<int, 2>& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation.
-template<typename T>
+template <typename T>
 inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 
 // Turntable for UI navigation.
-template<typename T>
-inline void update_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
-    T dolly, const vec<T, 2>& pan);
+template <typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 
 // FPS camera for UI navigation for a frame parametrization.
-template<typename T>
+template <typename T>
 inline void update_fpscam(
     frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 // Generate a ray from a camera
-template<typename T>
-inline ray<T, 3> camera_ray(
-    const frame<T, 3>& frame, T lens, const vec<T, 2>& film, const vec<T, 2>& image_uv);
+template <typename T>
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
+    const vec<T, 2>& film, const vec<T, 2>& image_uv);
 
 }  // namespace yocto::math
 
@@ -3946,85 +3946,91 @@ inline ushort float_to_ushort(float a) {
 inline float ushort_to_float(ushort a) { return a / 65535.0f; }
 
 // Conversion between reals in [0,1] and normalized ints [0, max_int]
-template<typename I, typename T>
-inline I   real_to_nint(T a) {
-  return clamp(I(a * ((T)type_max<I>+(T)1)), (I)0, type_max<I>);
+template <typename I, typename T>
+inline I real_to_nint(T a) {
+  return clamp(I(a * ((T)type_max<I> + (T)1)), (I)0, type_max<I>);
 }
-template<typename T, typename I>
-inline T  nint_to_real(I a) {
+template <typename T, typename I>
+inline T nint_to_real(I a) {
   return a / (T)type_max<I>;
 }
-template<typename I, typename T, size_t N>
-inline vec<I, N>  real_to_nint(const vec<T, N>& a) {
+template <typename I, typename T, size_t N>
+inline vec<I, N> real_to_nint(const vec<T, N>& a) {
   if constexpr (N == 1) {
     return {real_to_nint<I, T>(a.x)};
   } else if constexpr (N == 2) {
     return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y)};
   } else if constexpr (N == 3) {
-    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y), real_to_nint<I, T>(a.z)};
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y),
+        real_to_nint<I, T>(a.z)};
   } else if constexpr (N == 4) {
-    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y), real_to_nint<I, T>(a.z), real_to_nint<I, T>(a.w)};
+    return {real_to_nint<I, T>(a.x), real_to_nint<I, T>(a.y),
+        real_to_nint<I, T>(a.z), real_to_nint<I, T>(a.w)};
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
 }
-template<typename T, typename I, size_t N>
-inline vec<T, N>  nint_to_real(const vec<I, N>& a) {
+template <typename T, typename I, size_t N>
+inline vec<T, N> nint_to_real(const vec<I, N>& a) {
   if constexpr (N == 1) {
     return {nint_to_real<T, I>(a.x)};
   } else if constexpr (N == 2) {
     return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y)};
   } else if constexpr (N == 3) {
-    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y), nint_to_real<T, I>(a.z)};
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y),
+        nint_to_real<T, I>(a.z)};
   } else if constexpr (N == 4) {
-    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y), nint_to_real<T, I>(a.z), nint_to_real<T, I>(a.w)};
+    return {nint_to_real<T, I>(a.x), nint_to_real<T, I>(a.y),
+        nint_to_real<T, I>(a.z), nint_to_real<T, I>(a.w)};
   } else {
     static_assert(N >= 0 || N <= 4, "vector size unsupported");
   }
 }
 
 // Luminance
-template<typename T>
+template <typename T>
 inline T luminance(const vec<T, 3>& a) {
   return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
 }
 
 // sRGB non-linear curve
-template<typename T>
+template <typename T>
 inline T srgb_to_rgb(T srgb) {
-  return (srgb <= (T)0.04045) ? srgb / (T)12.92
-                           : pow((srgb + (T)0.055) / ((T)1.0 + (T)0.055), (T)2.4);
+  return (srgb <= (T)0.04045)
+             ? srgb / (T)12.92
+             : pow((srgb + (T)0.055) / ((T)1.0 + (T)0.055), (T)2.4);
 }
-template<typename T>
+template <typename T>
 inline T rgb_to_srgb(T rgb) {
-  return (rgb <= (T)0.0031308) ? (T)12.92 * rgb
-                             : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
+  return (rgb <= (T)0.0031308)
+             ? (T)12.92 * rgb
+             : (1 + (T)0.055) * pow(rgb, 1 / (T)2.4) - (T)0.055;
 }
-template<typename T>
+template <typename T>
 inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb) {
   return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
 }
-template<typename T>
+template <typename T>
 inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb) {
   return {
       srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
 }
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
 }
-template<typename T>
+template <typename T>
 inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb) {
   return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> lincontrast(const vec<T, 3>& rgb, T contrast, T grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-template<typename T>
+template <typename T>
 inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
   auto epsilon  = (T)0.0001;
   auto log_grey = log2(grey);
@@ -4033,12 +4039,12 @@ inline vec<T, 3> logcontrast(const vec<T, 3>& rgb, T logcontrast, T grey) {
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply an s-shaped contrast.
-template<typename T>
+template <typename T>
 inline vec<T, 3> contrast(const vec<T, 3>& rgb, T contrast) {
   return gain(rgb, 1 - contrast);
 }
 // Apply saturation.
-template<typename T>
+template <typename T>
 inline vec<T, 3> saturate(
     const vec<T, 3>& rgb, T saturation, const vec<T, 3>& weights) {
   auto grey = dot(weights, rgb);
@@ -4046,8 +4052,9 @@ inline vec<T, 3> saturate(
 }
 
 // Filmic tonemapping
-template<typename T>
-inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit = false) {
+template <typename T>
+inline vec<T, 3> tonemap_filmic(
+    const vec<T, 3>& hdr_, bool accurate_fit = false) {
   if (!accurate_fit) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto hdr = hdr_ * (T)0.6;  // brings it back to ACES range
@@ -4079,21 +4086,23 @@ inline vec<T, 3> tonemap_filmic(const vec<T, 3>& hdr_, bool accurate_fit = false
   }
 }
 
-template<typename T>
-inline vec<T, 3> tonemap(const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb) {
+template <typename T>
+inline vec<T, 3> tonemap(
+    const vec<T, 3>& hdr, T exposure, bool filmic, bool srgb) {
   auto rgb = hdr;
   if (exposure != 0) rgb *= exp2(exposure);
   if (filmic) rgb = tonemap_filmic(rgb);
   if (srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-template<typename T>
-inline vec<T, 4> tonemap(const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb) {
+template <typename T>
+inline vec<T, 4> tonemap(
+    const vec<T, 4>& hdr, T exposure, bool filmic, bool srgb) {
   return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat_ = mat<T, 3, 3>{
@@ -4103,7 +4112,7 @@ inline vec<T, 3> rgb_to_xyz(const vec<T, 3>& rgb) {
   };
   return mat_ * rgb;
 }
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
   // https://en.wikipedia.org/wiki/SRGB
   static const auto mat_ = mat<T, 3, 3>{
@@ -4115,20 +4124,20 @@ inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 }
 
 // Convert between CIE XYZ and xyY
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
   if (xyz == zero3f) return zero3f;
   return {
       xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
-template<typename T>
+template <typename T>
 inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
   if (xyY.y == 0) return zero3f;
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 // Convert HSV to RGB
-template<typename T>
+template <typename T>
 inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   // from Imgui.cpp
   auto h = hsv.x, s = hsv.y, v = hsv.z;
@@ -4152,7 +4161,7 @@ inline vec<T, 3> hsv_to_rgb(const vec<T, 3>& hsv) {
   }
 }
 
-template<typename T>
+template <typename T>
 inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   // from Imgui.cpp
   auto r = rgb.x, g = rgb.y, b = rgb.z;
@@ -4167,11 +4176,12 @@ inline vec<T, 3> rgb_to_hsv(const vec<T, 3>& rgb) {
   }
 
   auto chroma = r - (g < b ? g : b);
-  return {abs(K + (g - b) / (6 * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
+  return {
+      abs(K + (g - b) / (6 * chroma + (T)1e-20)), chroma / (r + (T)1e-20), r};
 }
 
 // Approximate color of blackbody radiation from wavelength in nm.
-template<typename T>
+template <typename T>
 inline vec<T, 3> blackbody_to_rgb(T temperature) {
   // https://github.com/neilbartlett/color-temperature
   auto rgb = zero3f;
@@ -5141,18 +5151,18 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template<typename T>
-inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
-    T scale, const vec<int, 2>& txt_size) {
+template <typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const vec<T, 2>& center, T scale, const vec<int, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec2i{(int)round(xyf.x + (float)txt_size.x / 2),
       (int)round(xyf.y + (float)txt_size.y / 2)};
 }
 
 // Center image and autofit.
-template<typename T>
-inline void update_imview(vec<T, 2>& center, T& scale, const vec<int, 2>& imsize,
-    const vec<int, 2>& winsize, bool zoom_to_fit) {
+template <typename T>
+inline void update_imview(vec<T, 2>& center, T& scale,
+    const vec<int, 2>& imsize, const vec<int, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
     center = {(float)winsize.x / 2, (float)winsize.y / 2};
@@ -5163,7 +5173,7 @@ inline void update_imview(vec<T, 2>& center, T& scale, const vec<int, 2>& imsize
 }
 
 // Turntable for UI navigation.
-template<typename T>
+template <typename T>
 inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
@@ -5199,9 +5209,9 @@ inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 }
 
 // Turntable for UI navigation.
-template<typename T>
-inline void update_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
-    T dolly, const vec<T, 2>& pan) {
+template <typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
@@ -5229,7 +5239,7 @@ inline void update_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rota
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-template<typename T>
+template <typename T>
 inline void update_fpscam(
     frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
@@ -5246,9 +5256,9 @@ inline void update_fpscam(
 }
 
 // Generate a ray from a camera
-template<typename T>
-inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, const vec<T, 2>& film,
-    const vec<T, 2>& image_uv) {
+template <typename T>
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens,
+    const vec<T, 2>& film, const vec<T, 2>& image_uv) {
   auto e = zero3f;
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
