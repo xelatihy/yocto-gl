@@ -368,9 +368,9 @@ int main(int argc, const char* argv[]) {
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     cli::print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
-                 rotation_frame(vec3f{1, 0, 0}, radians(rotate.x)) *
-                 rotation_frame(vec3f{0, 0, 1}, radians(rotate.z)) *
-                 rotation_frame(vec3f{0, 1, 0}, radians(rotate.y));
+                 rotation_frame({1, 0, 0}, radians(rotate.x)) *
+                 rotation_frame({0, 0, 1}, radians(rotate.z)) *
+                 rotation_frame({0, 1, 0}, radians(rotate.y));
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));

@@ -1020,8 +1020,8 @@ template <typename T>
 inline frame<T, 3> translation_frame(const vec<T, 3>& a);
 template <typename T>
 inline frame<T, 3> scaling_frame(const vec<T, 3>& a);
-template <typename T, typename T1>
-inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle);
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle);
 template <typename T>
 inline frame<T, 3> rotation_frame(const vec<T, 4>& quat);
 template <typename T>
@@ -1582,28 +1582,34 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size);
+template<typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
+    T scale, const vec<int, 2>& txt_size);
 
 // Center image and autofit.
-inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit);
+template<typename T>
+inline void update_imview(vec<T, 2>& center, T& scale, const vec<int, 2>& imsize,
+    const vec<int, 2>& winsize, bool zoom_to_fit);
 
 // Turntable for UI navigation.
-inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan);
+template<typename T>
+inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 
 // Turntable for UI navigation.
-inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan);
+template<typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
+    T dolly, const vec<T, 2>& pan);
 
 // FPS camera for UI navigation for a frame parametrization.
+template<typename T>
 inline void update_fpscam(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate);
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 // Generate a ray from a camera
-inline ray3f camera_ray(
-    const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
+template<typename T>
+inline ray<T, 3> camera_ray(
+    const frame<T, 3>& frame, T lens, const vec<T, 2>& film, const vec<T, 2>& image_uv);
 
 }  // namespace yocto::math
 
@@ -3309,8 +3315,8 @@ template <typename T>
 inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
   return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
-template <typename T, typename T1>
-inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle) {
+template <typename T>
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
   auto s = sin(angle), c = cos(angle);
   auto vv = normalize(axis);
   return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -5039,16 +5045,18 @@ namespace yocto::math {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size) {
+template<typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
+    T scale, const vec<int, 2>& txt_size) {
   auto xyf = (mouse_pos - center) / scale;
   return vec2i{(int)round(xyf.x + (float)txt_size.x / 2),
       (int)round(xyf.y + (float)txt_size.y / 2)};
 }
 
 // Center image and autofit.
-inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+template<typename T>
+inline void update_imview(vec<T, 2>& center, T& scale, const vec<int, 2>& imsize,
+    const vec<int, 2>& winsize, bool zoom_to_fit) {
   if (zoom_to_fit) {
     scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
     center = {(float)winsize.x / 2, (float)winsize.y / 2};
@@ -5059,8 +5067,9 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
 }
 
 // Turntable for UI navigation.
-inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
+template<typename T>
+inline void update_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate.x || rotate.y) {
     auto z     = normalize(to - from);
@@ -5094,8 +5103,9 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
 }
 
 // Turntable for UI navigation.
-inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan) {
+template<typename T>
+inline void update_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
+    T dolly, const vec<T, 2>& pan) {
   // rotate if necessary
   if (rotate != zero2f) {
     auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
@@ -5123,8 +5133,9 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
+template<typename T>
 inline void update_fpscam(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
   // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
   auto y = vec3f{0, 1, 0};
   auto z = orthonormalize(frame.z, y);
@@ -5139,8 +5150,9 @@ inline void update_fpscam(
 }
 
 // Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
-    const vec2f& image_uv) {
+template<typename T>
+inline ray<T, 3> camera_ray(const frame<T, 3>& frame, T lens, const vec<T, 2>& film,
+    const vec<T, 2>& image_uv) {
   auto e = zero3f;
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
