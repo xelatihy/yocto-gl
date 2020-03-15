@@ -835,70 +835,67 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 namespace yocto::math {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
-struct bbox2f {
-  vec2f min = {flt_max, flt_max};
-  vec2f max = {flt_min, flt_min};
+template<typename T, size_t N>
+struct bbox {
+  vec<T, N> min = vec<T, N>{flt_max};
+  vec<T, N> max = vec<T, N>{flt_min};
 
-  bbox2f();
-  bbox2f(const vec2f& min, const vec2f& max);
+  bbox();
+  bbox(const vec<T, N>& min, const vec<T, N>& max);
 
-  vec2f&       operator[](int i);
-  const vec2f& operator[](int i) const;
+  vec<T, N>&       operator[](int i);
+  const vec<T, N>& operator[](int i) const;
 };
 
-// Axis aligned bounding box represented as a min/max std::vector pairs.
-struct bbox3f {
-  vec3f min = {flt_max, flt_max, flt_max};
-  vec3f max = {flt_min, flt_min, flt_min};
-
-  bbox3f();
-  bbox3f(const vec3f& min, const vec3f& max);
-
-  vec3f&       operator[](int i);
-  const vec3f& operator[](int i) const;
-};
+// Type alias
+using bbox1f = bbox<float, 1>;
+using bbox2f = bbox<float, 2>;
+using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
+inline const auto invalidb1f = bbox1f{};
 inline const auto invalidb2f = bbox2f{};
 inline const auto invalidb3f = bbox3f{};
+inline const auto invalidb4f = bbox4f{};
 
 // Bounding box properties
-inline vec2f center(const bbox2f& a);
-inline vec2f size(const bbox2f& a);
+template<typename T, size_t N>
+inline vec<T, N> center(const bbox<T, N>& a);
+template<typename T, size_t N>
+inline vec<T, N> size(const bbox<T, N>& a);
 
 // Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b);
-inline bool operator!=(const bbox2f& a, const bbox2f& b);
+template<typename T, size_t N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
+template<typename T, size_t N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b);
-inline bbox2f merge(const bbox2f& a, const bbox2f& b);
-inline void   expand(bbox2f& a, const vec2f& b);
-inline void   expand(bbox2f& a, const bbox2f& b);
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a);
-inline vec3f size(const bbox3f& a);
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b);
-inline bool operator!=(const bbox3f& a, const bbox3f& b);
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b);
-inline bbox3f merge(const bbox3f& a, const bbox3f& b);
-inline void   expand(bbox3f& a, const vec3f& b);
-inline void   expand(bbox3f& a, const bbox3f& b);
+template<typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b);
+template<typename T, size_t N>
+inline void   expand(bbox<T, N>& a, const vec<T, N>& b);
+template<typename T, size_t N>
+inline void   expand(bbox<T, N>& a, const bbox<T, N>& b);
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p);
-inline bbox3f point_bounds(const vec3f& p, float r);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1);
-inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+template<typename T, size_t N>
+inline bbox<T, N> point_bounds(const vec<T, N>& p);
+template<typename T, size_t N, typename T1>
+inline bbox<T, N> point_bounds(const vec<T, N>& p, T1 r);
+template<typename T, size_t N>
+inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1);
+template<typename T, size_t N, typename T1, typename T2>
+inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T2 r1);
+template<typename T, size_t N>
+inline bbox<T, N> triangle_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2);
+template<typename T, size_t N>
+inline bbox<T, N> quad_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2, const vec<T, N>& p3);
 
 }  // namespace yocto::math
 
@@ -2800,83 +2797,71 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
 namespace yocto::math {
 
 // Axis aligned bounding box represented as a min/max std::vector pairs.
-inline bbox2f::bbox2f() {}
-inline bbox2f::bbox2f(const vec2f& min, const vec2f& max)
+template<typename T, size_t N>
+inline bbox<T, N>::bbox() {}
+template<typename T, size_t N>
+inline bbox<T, N>::bbox(const vec<T, N>& min, const vec<T, N>& max)
     : min{min}, max{max} {}
 
-inline vec2f& bbox2f::operator[](int i) { return (&min)[i]; }
-inline const vec2f& bbox2f::operator[](int i) const { return (&min)[i]; }
-
-// Axis aligned bounding box represented as a min/max std::vector pairs.
-inline bbox3f::bbox3f() {}
-inline bbox3f::bbox3f(const vec3f& min, const vec3f& max)
-    : min{min}, max{max} {}
-
-inline vec3f& bbox3f::operator[](int i) { return (&min)[i]; }
-inline const vec3f& bbox3f::operator[](int i) const { return (&min)[i]; }
+template<typename T, size_t N>
+inline vec<T, N>& bbox<T, N>::operator[](int i) { return (&min)[i]; }
+template<typename T, size_t N>
+inline const vec<T, N>& bbox<T, N>::operator[](int i) const { return (&min)[i]; }
 
 // Bounding box properties
-inline vec2f center(const bbox2f& a) { return (a.min + a.max) / 2; }
-inline vec2f size(const bbox2f& a) { return a.max - a.min; }
+template<typename T, size_t N>
+inline vec<T, N> center(const bbox<T, N>& a) { return (a.min + a.max) / 2; }
+template<typename T, size_t N>
+inline vec<T, N> size(const bbox<T, N>& a) { return a.max - a.min; }
 
 // Bounding box comparisons.
-inline bool operator==(const bbox2f& a, const bbox2f& b) {
+template<typename T, size_t N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min == b.min && a.max == b.max;
 }
-inline bool operator!=(const bbox2f& a, const bbox2f& b) {
+template<typename T, size_t N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
   return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
-inline bbox2f merge(const bbox2f& a, const vec2f& b) {
+template<typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const vec<T, N>& b) {
   return {min(a.min, b), max(a.max, b)};
 }
-inline bbox2f merge(const bbox2f& a, const bbox2f& b) {
+template<typename T, size_t N>
+inline bbox<T, N> merge(const bbox<T, N>& a, const bbox<T, N>& b) {
   return {min(a.min, b.min), max(a.max, b.max)};
 }
-inline void expand(bbox2f& a, const vec2f& b) { a = merge(a, b); }
-inline void expand(bbox2f& a, const bbox2f& b) { a = merge(a, b); }
-
-// Bounding box properties
-inline vec3f center(const bbox3f& a) { return (a.min + a.max) / 2; }
-inline vec3f size(const bbox3f& a) { return a.max - a.min; }
-
-// Bounding box comparisons.
-inline bool operator==(const bbox3f& a, const bbox3f& b) {
-  return a.min == b.min && a.max == b.max;
-}
-inline bool operator!=(const bbox3f& a, const bbox3f& b) {
-  return a.min != b.min || a.max != b.max;
-}
-
-// Bounding box expansions with points and other boxes.
-inline bbox3f merge(const bbox3f& a, const vec3f& b) {
-  return {min(a.min, b), max(a.max, b)};
-}
-inline bbox3f merge(const bbox3f& a, const bbox3f& b) {
-  return {min(a.min, b.min), max(a.max, b.max)};
-}
-inline void expand(bbox3f& a, const vec3f& b) { a = merge(a, b); }
-inline void expand(bbox3f& a, const bbox3f& b) { a = merge(a, b); }
+template<typename T, size_t N>
+inline void expand(bbox<T, N>& a, const vec<T, N>& b) { a = merge(a, b); }
+template<typename T, size_t N>
+inline void expand(bbox<T, N>& a, const bbox<T, N>& b) { a = merge(a, b); }
 
 // Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p) { return {p, p}; }
-inline bbox3f point_bounds(const vec3f& p, float r) {
+template<typename T, size_t N>
+inline bbox<T, N> point_bounds(const vec<T, N>& p) { return {p, p}; }
+template<typename T, size_t N, typename T1>
+inline bbox<T, N> point_bounds(const vec<T, N>& p, T1 r) {
   return {min(p - r, p + r), max(p - r, p + r)};
 }
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1) {
+template<typename T, size_t N>
+inline bbox<T, N> line_bounds(const vec<T, N>& p0, const vec<T, N>& p1) {
   return {min(p0, p1), max(p0, p1)};
 }
-inline bbox3f line_bounds(
-    const vec3f& p0, const vec3f& p1, float r0, float r1) {
+template<typename T, size_t N, typename T1, typename T2>
+inline bbox<T, N> line_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, T1 r0, T2 r1) {
   return {min(p0 - r0, p1 - r1), max(p0 + r0, p1 + r1)};
 }
-inline bbox3f triangle_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+template<typename T, size_t N>
+inline bbox<T, N> triangle_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2) {
   return {min(p0, min(p1, p2)), max(p0, max(p1, p2))};
 }
-inline bbox3f quad_bounds(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+template<typename T, size_t N>
+inline bbox<T, N> quad_bounds(
+    const vec<T, N>& p0, const vec<T, N>& p1, const vec<T, N>& p2, const vec<T, N>& p3) {
   return {min(p0, min(p1, min(p2, p3))), max(p0, max(p1, max(p2, p3)))};
 }
 
