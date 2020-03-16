@@ -1952,7 +1952,7 @@ static float sample_lights_pdf(
       }
     }
   }
-  pdf *= sample_uniform_pdf<float>(scene->lights.size());
+  pdf *= sample_uniform_pdf(scene->lights.size());
   return pdf;
 }
 
