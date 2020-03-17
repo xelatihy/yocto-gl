@@ -1658,11 +1658,11 @@ inline float sample_hemisphere_cospower_pdf(
 
 // Sample a point uniformly on a disk.
 inline vec2f sample_disk(const vec2f& ruv);
-inline float sample_disk_pdf();
+inline float sample_disk_pdf(const vec2f& point);
 
 // Sample a point uniformly on a cylinder, without caps.
 inline vec3f sample_cylinder(const vec2f& ruv);
-inline float sample_cylinder_pdf();
+inline float sample_cylinder_pdf(const vec3f& point);
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 inline vec2f sample_triangle(const vec2f& ruv);
@@ -4771,7 +4771,7 @@ inline vec3f sample_cylinder(const vec2f& ruv) {
   auto phi = 2 * pif * ruv.x;
   return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf() { return 1 / pif; }
+inline float sample_cylinder_pdf(const vec3f& point) { return 1 / pif; }
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
 inline vec2f sample_triangle(const vec2f& ruv) {
