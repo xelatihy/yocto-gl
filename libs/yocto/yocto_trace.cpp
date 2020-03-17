@@ -1947,12 +1947,12 @@ static float sample_lights_pdf(
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
-      } else {
+      } else { 
         pdf += 1 / (4 * pif);
       }
     }
   }
-  pdf *= sample_uniform_pdf<float>(scene->lights.size());
+  pdf *= sample_uniform_pdf(scene->lights.size());
   return pdf;
 }
 
