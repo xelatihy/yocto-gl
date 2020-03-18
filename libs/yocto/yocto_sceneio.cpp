@@ -2144,7 +2144,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
             cgltf_accessor_read_float(gacc, i, &shape->texcoords[i].x, 2);
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape->colors.resize(gacc->count);
-          if(cgltf_num_components(gacc->type) == 3) {
+          if (cgltf_num_components(gacc->type) == 3) {
             for (auto i = 0; i < gacc->count; i++)
               cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
           } else {
@@ -2311,23 +2311,29 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       auto [ctexture, otexture] = textures;
       ctexture->colorf.resize(color_opacityf.size());
       otexture->scalarf.resize(color_opacityf.size());
+      auto oempty = true;
       for (auto j = 0; j < color_opacityf.size().y; j++) {
         for (auto i = 0; i < color_opacityf.size().x; i++) {
           ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
           otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
+          if (color_opacityb[{i, j}].w != 1) oempty = false;
         }
       }
+      if (oempty) otexture->scalarf.clear();
     }
     if (!color_opacityb.empty()) {
       auto [ctexture, otexture] = textures;
       ctexture->colorb.resize(color_opacityb.size());
       otexture->scalarb.resize(color_opacityb.size());
+      auto oempty = true;
       for (auto j = 0; j < color_opacityb.size().y; j++) {
         for (auto i = 0; i < color_opacityb.size().x; i++) {
           ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
           otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
+          if (color_opacityb[{i, j}].w != 255) oempty = false;
         }
       }
+      if (oempty) otexture->scalarb.clear();
     }
   }
 
@@ -2363,6 +2369,25 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       }
     }
   }
+
+  // remove empty textures
+  for (auto material : scene->materials) {
+    if (material->opacity_tex) {
+      if (material->opacity_tex->scalarb.empty() &&
+          material->opacity_tex->scalarf.empty())
+        material->opacity_tex = nullptr;
+    }
+  }
+  for (auto& texture : scene->textures) {
+    if (texture->scalarb.empty() && texture->scalarf.empty() &&
+        texture->colorb.empty() && texture->colorf.empty()) {
+      delete texture;
+      texture = nullptr;
+    }
+  }
+  scene->textures.erase(
+      std::remove(scene->textures.begin(), scene->textures.end(), nullptr),
+      scene->textures.end());
 
   // fix scene
   if (scene->name == "") scene->name = sfs::path(filename).stem();

@@ -146,6 +146,7 @@ struct image {
   vec2i  size() const;
   size_t count() const;
   bool   contains(const vec2i& ij) const;
+  void   clear();
   void   resize(const vec2i& size);
   void   assign(const vec2i& size, const T& value = {});
   void   shrink_to_fit();
@@ -428,6 +429,7 @@ struct volume {
   bool   empty() const;
   vec3i  size() const;
   size_t count() const;
+  void   clear();
   void   resize(const vec3i& size);
   void   assign(const vec3i& size, const T& value);
   void   shrink_to_fit();
@@ -573,6 +575,11 @@ inline bool image<T>::contains(const vec2i& ij) const {
   return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
 }
 template <typename T>
+inline void image<T>::clear() {
+  extent = {0, 0};
+  pixels.clear();
+}
+template <typename T>
 inline void image<T>::resize(const vec2i& size) {
   if (size == extent) return;
   extent = size;
@@ -698,6 +705,11 @@ inline vec3i volume<T>::size() const {
 template <typename T>
 inline size_t volume<T>::count() const {
   return voxels.size();
+}
+template <typename T>
+inline void volume<T>::clear() {
+  extent = {0, 0};
+  voxels.clear();
 }
 template <typename T>
 inline void volume<T>::resize(const vec3i& size) {
