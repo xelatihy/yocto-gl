@@ -1867,7 +1867,7 @@ template <typename T>
 inline vec<T, 2>::vec(T v) : x{v}, y{v} {}
 template <typename T>
 inline vec<T, 2>::operator bool() const {
-  return x && y;
+  return x || y;
 }
 
 template <typename T>
@@ -1890,7 +1890,7 @@ template <typename T>
 inline vec<T, 3>::vec(T v) : x{v}, y{v}, z{v} {}
 template <typename T>
 inline vec<T, 3>::operator bool() const {
-  return x && y && z;
+  return x || y || z;
 }
 
 template <typename T>
@@ -1913,7 +1913,7 @@ template <typename T>
 inline vec<T, 4>::vec(T v) : x{v}, y{v}, z{v}, w{v} {}
 template <typename T>
 inline vec<T, 4>::operator bool() const {
-  return x && y && z && w;
+  return x || y || z || w;
 }
 
 template <typename T>

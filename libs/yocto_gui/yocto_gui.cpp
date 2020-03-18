@@ -1127,7 +1127,7 @@ void draw_object(
   }
   if (material->metallic_tex) {
     glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, material->specular_tex->texture_id);
+    glBindTexture(GL_TEXTURE_2D, material->metallic_tex->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_tex"), 2);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_tex_on"), 1);
   } else {
