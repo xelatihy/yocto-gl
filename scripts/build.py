@@ -27,7 +27,7 @@ def xcode():
     os.makedirs('build/xcode', exist_ok=True)
     os.chdir('build/xcode')
     os.system('cmake ../.. -GXcode -DYOCTO_EMBREE=ON')
-    os.system('open yocto-gl.xcodeproj')
+    os.system('open yocto_gl.xcodeproj')
 
 @cli.command()
 def clean():

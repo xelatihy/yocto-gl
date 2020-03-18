@@ -415,7 +415,7 @@ void add_sky(scn::model* scene, float sun_angle) {
   make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
-    for (auto i = 0; j < sunsky.size().x; i++)
+    for (auto i = 0; i < sunsky.size().x; i++)
       texture->colorf[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
@@ -2144,8 +2144,16 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
             cgltf_accessor_read_float(gacc, i, &shape->texcoords[i].x, 2);
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape->colors.resize(gacc->count);
-          for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
+          if(cgltf_num_components(gacc->type) == 3) {
+            for (auto i = 0; i < gacc->count; i++)
+              cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
+          } else {
+            for (auto i = 0; i < gacc->count; i++) {
+              auto color4 = vec4f{0};
+              cgltf_accessor_read_float(gacc, i, &color4.x, 4);
+              shape->colors[i] = xyz(color4);
+            }
+          }
         } else if (semantic == "TANGENT") {
           shape->tangents.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
