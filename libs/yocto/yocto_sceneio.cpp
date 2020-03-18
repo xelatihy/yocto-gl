@@ -2034,9 +2034,12 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       auto persp     = &gcam->data.perspective;
       camera->aspect = persp->aspect_ratio;
       camera->film   = 0.036;
-      camera->lens   = camera->aspect >= 1
-                         ? (2 * camera->aspect * tan(persp->yfov / 2))
-                         : (2 * tan(persp->yfov / 2));
+      if (camera->aspect >= 1) {
+        camera->lens = (camera->film / camera->aspect) /
+                        (2 * math::tan(persp->yfov / 2));
+      } else {
+        camera->lens = camera->film / (2 * math::tan(persp->yfov / 2));
+      }
     }
   }
 
