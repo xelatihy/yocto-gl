@@ -204,6 +204,9 @@ int main(int argc, const char* argv[]) {
   if (!load_scene(filename, ioscene, ioerror, cli::print_progress))
     cli::print_fatal(ioerror);
 
+  // add sky
+  if(add_skyenv) add_sky(ioscene);
+  
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 

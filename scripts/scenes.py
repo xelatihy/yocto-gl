@@ -14,6 +14,7 @@ def cli():
 def itrace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'path': '',
+        'path-skyenv': '--skyenv',
         'embree': '--bvh embree-highquality',
         'embree-compact': '--bvh embree-compact',
         'eyelight': '-t eyelight --bvh highquality',
@@ -62,6 +63,7 @@ def view(directory='mcguire',scene='*',format='json',mode='path'):
 def trace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'path': '-s 64 -r 640',
+        'path-skyenv': '-s 64 -r 640 --skyenv',
         'embree': '-s 256 -r 1280 --bvh embree-highquality',
         'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
         'eyelight': '-s 16 -r 1280 -t eyelight',

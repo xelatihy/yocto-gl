@@ -286,7 +286,7 @@ void reset_display(app_state* app) {
 }
 
 void load_scene_async(app_states* apps, const std::string& filename,
-    const std::string& camera_name = "") {
+    const std::string& camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = sfs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -294,24 +294,26 @@ void load_scene_async(app_states* apps, const std::string& filename,
   app->outname   = sfs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
   app->status    = "load";
-  app->loader    = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](
-                           const std::string& message, int current, int total) {
-      app->progress = (float)current / (float)total;
-    };
-    if (!load_scene(
-            app->filename, app->ioscene, app->loader_error, progress_cb))
-      return;
-    app->progress = 1;
-    app->iocamera = get_camera(app->ioscene, camera_name);
-    init_scene(
-        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
-    init_bvh(app->scene, app->params);
-    init_lights(app->scene);
-    if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-      app->params.sampler = trc::sampler_type::eyelight;
-    }
-  });
+  app->loader    = std::async(
+      std::launch::async, [app, camera_name, add_skyenv]() {
+        auto progress_cb = [app](const std::string& message, int current,
+                               int total) {
+          app->progress = (float)current / (float)total;
+        };
+        if (!load_scene(
+                app->filename, app->ioscene, app->loader_error, progress_cb))
+          return;
+        app->progress = 1;
+        if (add_skyenv) add_sky(app->ioscene);
+        app->iocamera = get_camera(app->ioscene, camera_name);
+        init_scene(
+            app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+        init_bvh(app->scene, app->params);
+        init_lights(app->scene);
+        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+          app->params.sampler = trc::sampler_type::eyelight;
+        }
+      });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
@@ -797,6 +799,7 @@ int main(int argc, const char* argv[]) {
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
   auto filenames   = std::vector<std::string>{};
+  auto add_skyenv  = false;
   auto camera_name = ""s;
 
   // parse command line
@@ -817,11 +820,13 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 
   // loading images
-  for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
+  for (auto filename : filenames)
+    load_scene_async(apps, filename, camera_name, add_skyenv);
 
   // callbacks
   auto callbacks    = gui::ui_callbacks{};
