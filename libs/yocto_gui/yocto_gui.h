@@ -104,6 +104,9 @@ struct image {
 void init_image(gui::image* image);
 bool is_initialized(const gui::image* image);
 
+// clear image
+void clear_image(gui::image* image);
+
 // update image data
 void set_image(gui::image* image, const img::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
@@ -267,8 +270,11 @@ struct scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_glscene(gui::scene* glscene);
-bool is_initialized(const gui::scene* glscene);
+void init_scene(gui::scene* scene);
+bool is_initialized(const gui::scene* scene);
+
+// Clear an OpenGL scene
+void clear_scene(gui::scene* scene);
 
 // add scene elements
 gui::camera*   add_camera(gui::scene* scene);
@@ -377,6 +383,10 @@ struct input {
   vec4i    framebuffer_viewport = {0, 0, 0, 0};  // framebuffer viewport
 };
 
+// Init callback called after the window has opened
+using init_callback = std::function<void(gui::window*, const input& input)>;
+// Clear callback called after the window is cloased
+using clear_callback = std::function<void(gui::window*, const input& input)>;
 // Draw callback called every frame and when resizing
 using draw_callback = std::function<void(gui::window*, const input& input)>;
 // Draw callback for drawing widgets
@@ -404,6 +414,8 @@ using update_callback = std::function<void(gui::window*, const input& input)>;
 
 // User interface callcaks
 struct ui_callbacks {
+  init_callback     init_cb     = {};
+  clear_callback    clear_cb    = {};
   draw_callback     draw_cb     = {};
   widgets_callback  widgets_cb  = {};
   drop_callback     drop_cb     = {};
@@ -431,6 +443,8 @@ namespace yocto::gui {
 struct window {
   GLFWwindow*       win           = nullptr;
   std::string       title         = "";
+  init_callback     init_cb       = {};
+  clear_callback    clear_cb      = {};
   draw_callback     draw_cb       = {};
   widgets_callback  widgets_cb    = {};
   drop_callback     drop_cb       = {};
@@ -454,6 +468,8 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
 void clear_window(gui::window* win);
 
 // Set callbacks
+void set_init_callback(gui::window* win, init_callback init_cb);
+void set_clear_callback(gui::window* win, clear_callback clear_cb);
 void set_draw_callback(gui::window* win, draw_callback draw_cb);
 void set_widgets_callback(gui::window* win, widgets_callback widgets_cb);
 void set_drop_callback(gui::window* win, drop_callback drop_cb);

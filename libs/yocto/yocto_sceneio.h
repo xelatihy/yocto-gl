@@ -296,7 +296,7 @@ bool save_scene(const std::string& filename, const scn::model* scene,
 scn::camera* get_camera(const scn::model* scene, const std::string& name = "");
 
 // add a sky environment
-void add_sky(scn::model* scene, float sun_angle = math::pif/4);
+void add_sky(scn::model* scene, float sun_angle = math::pif / 4);
 
 }  // namespace yocto::sceneio
 

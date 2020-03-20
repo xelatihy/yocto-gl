@@ -176,7 +176,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
              (int)ioscene->objects.size()};
 
   // create scene
-  init_glscene(glscene);
+  init_scene(glscene);
 
   // camera
   auto camera_map     = std::unordered_map<sio::camera*, gui::camera*>{};
@@ -720,7 +720,10 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // callbacks
-  auto callbacks    = gui::ui_callbacks{};
+  auto callbacks     = gui::ui_callbacks{};
+  callbacks.clear_cb = [apps](gui::window* win, const gui::input& input) {
+    for (auto app : apps->states) clear_scene(app->glscene);
+  };
   callbacks.draw_cb = [apps](gui::window* win, const gui::input& input) {
     draw(win, apps, input);
   };

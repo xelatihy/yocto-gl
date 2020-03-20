@@ -93,7 +93,10 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // callbacks
-  auto callbacks    = gui::ui_callbacks{};
+  auto callbacks     = gui::ui_callbacks{};
+  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+    clear_image(app->glimage);
+  };
   callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;

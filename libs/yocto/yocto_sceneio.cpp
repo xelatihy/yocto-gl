@@ -2017,8 +2017,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
 
   // prepare list of effective nodes
   auto visible_nodes = std::vector<bool>(gltf->nodes_count, false);
-  auto gscene = gltf->scene ? gltf->scene : gltf->scenes;
-  if(gscene) {
+  auto gscene        = gltf->scene ? gltf->scene : gltf->scenes;
+  if (gscene) {
     auto node_index = std::unordered_map<cgltf_node*, int>{};
     node_index.reserve(gltf->nodes_count);
     for (auto nid = 0; nid < gltf->nodes_count; nid++)
@@ -2026,11 +2026,11 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     auto stack = std::vector<cgltf_node*>{};
     for (auto nid = 0; nid < gscene->nodes_count; nid++)
       stack.push_back(gscene->nodes[nid]);
-    while(!stack.empty()) {
+    while (!stack.empty()) {
       auto gnde = stack.back();
       stack.pop_back();
       visible_nodes[node_index[gnde]] = true;
-      for(auto nid = 0; nid < gnde->children_count; nid++) 
+      for (auto nid = 0; nid < gnde->children_count; nid++)
         stack.push_back(gnde->children[nid]);
     }
   } else {
@@ -2040,7 +2040,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
 
   // convert cameras
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    if(!visible_nodes[nid]) continue;
+    if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
     if (!gnde->camera) continue;
     auto mat = mat4f{};
@@ -2057,11 +2057,11 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     } else {
       auto persp     = &gcam->data.perspective;
       camera->aspect = persp->aspect_ratio;
-      if(!camera->aspect) camera->aspect = 16.0f / 9.0f;
-      camera->film   = 0.036;
+      if (!camera->aspect) camera->aspect = 16.0f / 9.0f;
+      camera->film = 0.036;
       if (camera->aspect >= 1) {
         camera->lens = (camera->film / camera->aspect) /
-                        (2 * math::tan(persp->yfov / 2));
+                       (2 * math::tan(persp->yfov / 2));
       } else {
         camera->lens = camera->film / (2 * math::tan(persp->yfov / 2));
       }
@@ -2297,7 +2297,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   // convert nodes
   auto instance_map = std::unordered_map<cgltf_mesh*, std::vector<frame3f>>{};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    if(!visible_nodes[nid]) continue;
+    if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
     if (!gnde->mesh) continue;
     auto mat = mat4f{};
