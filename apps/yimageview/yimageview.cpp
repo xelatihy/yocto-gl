@@ -316,7 +316,10 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // callbacks
-  auto callbacks      = gui::ui_callbacks{};
+  auto callbacks     = gui::ui_callbacks{};
+  callbacks.clear_cb = [apps](gui::window* win, const gui::input& input) {
+    for (auto app : apps->states) clear_image(app->glimage);
+  };
   callbacks.update_cb = [apps](gui::window* win, const gui::input& input) {
     update(win, apps);
   };

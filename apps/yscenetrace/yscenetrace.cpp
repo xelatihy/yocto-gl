@@ -205,8 +205,8 @@ int main(int argc, const char* argv[]) {
     cli::print_fatal(ioerror);
 
   // add sky
-  if(add_skyenv) add_sky(ioscene);
-  
+  if (add_skyenv) add_sky(ioscene);
+
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 

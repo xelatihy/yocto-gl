@@ -285,7 +285,7 @@ int main(int argc, const char* argv[]) {
     cli::print_fatal(ioerror);
 
   // add sky
-  if(add_skyenv) add_sky(ioscene);
+  if (add_skyenv) add_sky(ioscene);
 
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
@@ -315,7 +315,10 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // callbacks
-  auto callbacks    = gui::ui_callbacks{};
+  auto callbacks     = gui::ui_callbacks{};
+  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+    clear_image(app->glimage);
+  };
   callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
     if (!is_initialized(app->glimage)) init_image(app->glimage);
     if (!app->render_counter)

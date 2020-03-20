@@ -5,25 +5,25 @@
 //
 // Yocto/Math provides the basic math primitives used in grahics, including
 // small-sized vectors and matrixes, frames, bounding boxes, transforms,
-// color and geometry functions, random number generation, noise. 
+// color and geometry functions, random number generation, noise.
 //
 //
 // ## Small vectors, matrices and frames
 //
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 1-4 dimensional vectors `vec<T, N>`
-// with aliases for float and int coordinates (`vec1f`, `vec2f`, `vec3f`, 
+// with aliases for float and int coordinates (`vec1f`, `vec2f`, `vec3f`,
 // `vec4f`, `vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
-// We support 1-4 dimensional matrices `mat<T, N>` with aliases for float 
+// We support 1-4 dimensional matrices `mat<T, N>` with aliases for float
 // coordinates (`mat2f`, `mat3f`, `mat4f`) with
 // matrix-matrix and matrix-vector products, transposes and inverses.
 // Matrices are stored in column-major order and are accessed and
 // constructed by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame<T, N>` with 
-// aliases for float coordinates (`frame2f`, `frame3f`). 
+// coordinate frames, aka rigid transforms, represented as `frame<T, N>` with
+// aliases for float coordinates (`frame2f`, `frame3f`).
 // The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are fater with this representation.
@@ -31,10 +31,10 @@
 //
 // ## Rays and bounding boxes
 //
-// We represent 2-3 dimensinal rays as `ray<T, N>` with float alises 
+// We represent 2-3 dimensinal rays as `ray<T, N>` with float alises
 // (`ray2f`, `ray3f`). Each ray support initialization and evaluation.
 //
-// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float alises 
+// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float alises
 // (`bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`).
 // Each bounding box support construction from points and other bounding box.
 // We provide operations to compute bounds for points, lines, triangles and

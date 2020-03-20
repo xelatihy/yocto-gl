@@ -361,13 +361,13 @@ void clear_image(gui::image* image) {
   if (image->texcoords_id) glDeleteBuffers(1, &image->texcoords_id);
   if (image->triangles_id) glDeleteBuffers(1, &image->triangles_id);
   if (image->texture_id) glDeleteTextures(1, &image->texture_id);
-  image->program_id = 0;
-  image->vertex_id = 0;
-  image->fragment_id = 0;
-  image->array_id = 0;
+  image->program_id   = 0;
+  image->vertex_id    = 0;
+  image->fragment_id  = 0;
+  image->array_id     = 0;
   image->texcoords_id = 0;
   image->triangles_id = 0;
-  image->texture_id = 0;
+  image->texture_id   = 0;
 }
 
 // update image data
@@ -736,13 +736,9 @@ void main() {
 void clear_texture(gui::texture* texture);
 void clear_shape(gui::shape* shape);
 
-texture::~texture() {
-  clear_texture(this);
-}
+texture::~texture() { clear_texture(this); }
 
-shape::~shape() {
-  clear_shape(this);
-}
+shape::~shape() { clear_shape(this); }
 
 scene::~scene() {
   clear_scene(this);
@@ -781,29 +777,29 @@ void clear_shape(gui::shape* shape) {
   if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
   if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
   shape->positions_id = 0;
-  shape->normals_id = 0;
+  shape->normals_id   = 0;
   shape->texcoords_id = 0;
-  shape->colors_id = 0;
-  shape->tangents_id = 0;
-  shape->points_id = 0;
-  shape->lines_id = 0;
+  shape->colors_id    = 0;
+  shape->tangents_id  = 0;
+  shape->points_id    = 0;
+  shape->lines_id     = 0;
   shape->triangles_id = 0;
-  shape->quads_id = 0;
-  shape->edges_id = 0;
+  shape->quads_id     = 0;
+  shape->edges_id     = 0;
 }
 
 // Clear an OpenGL scene
 void clear_scene(gui::scene* scene) {
-  for(auto texture : scene->textures) clear_texture(texture);
-  for(auto shape : scene->shapes) clear_shape(shape);
+  for (auto texture : scene->textures) clear_texture(texture);
+  for (auto shape : scene->shapes) clear_shape(shape);
   if (scene->program_id) glDeleteProgram(scene->program_id);
   if (scene->vertex_id) glDeleteShader(scene->vertex_id);
   if (scene->fragment_id) glDeleteShader(scene->fragment_id);
   if (scene->array_id) glDeleteVertexArrays(1, &scene->array_id);
-  scene->program_id = 0;
-  scene->vertex_id = 0;
+  scene->program_id  = 0;
+  scene->vertex_id   = 0;
   scene->fragment_id = 0;
-  scene->array_id = 0;
+  scene->array_id    = 0;
 }
 
 // add camera
@@ -1133,8 +1129,8 @@ void draw_object(
   auto instance_xform     = mat4f(object->frame);
   auto instance_inv_xform = transpose(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
-      1, false, &instance_xform.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"), 1,
+      false, &instance_xform.x.x);
   glUniformMatrix4fv(
       glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
       false, &instance_inv_xform.x.x);
@@ -1207,11 +1203,9 @@ void draw_object(
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, material->normal_tex->texture_id);
     glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex"), 4);
-    glUniform1i(
-        glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 1);
+    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 1);
   } else {
-    glUniform1i(
-        glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 0);
+    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 0);
   }
 
   auto shape = object->shape;
@@ -1221,8 +1215,8 @@ void draw_object(
     glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program_id, "vert_pos"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_pos"),
-        3, GL_FLOAT, false, 0, nullptr);
+    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_pos"), 3,
+        GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib3f(
         glGetAttribLocation(scene->program_id, "vert_pos"), 0, 0, 0);
@@ -1252,9 +1246,8 @@ void draw_object(
     glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program_id, "vert_color"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program_id, "vert_color"), 4, GL_FLOAT,
-        false, 0, nullptr);
+    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_color"),
+        4, GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib4f(
         glGetAttribLocation(scene->program_id, "vert_color"), 1, 1, 1, 1);
@@ -1263,9 +1256,8 @@ void draw_object(
     glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program_id, "vert_tangsp"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program_id, "vert_tangsp"), 4, GL_FLOAT,
-        false, 0, nullptr);
+    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_tangsp"),
+        4, GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib4f(
         glGetAttribLocation(scene->program_id, "vert_tangsp"), 0, 0, 1, 1);
@@ -1314,8 +1306,8 @@ void draw_object(
 }
 
 // Display a scene
-void draw_scene(gui::scene* scene, gui::camera* glcamera,
-    const vec4i& viewport, const scene_params& params) {
+void draw_scene(gui::scene* scene, gui::camera* glcamera, const vec4i& viewport,
+    const scene_params& params) {
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
@@ -1350,12 +1342,12 @@ void draw_scene(gui::scene* scene, gui::camera* glcamera,
         (int)scene->lights.size());
     for (auto i = 0; i < scene->lights.size(); i++) {
       auto is = std::to_string(i);
-      glUniform3f(glGetUniformLocation(
-                      scene->program_id, ("lpos[" + is + "]").c_str()),
+      glUniform3f(
+          glGetUniformLocation(scene->program_id, ("lpos[" + is + "]").c_str()),
           scene->lights[i]->position.x, scene->lights[i]->position.y,
           scene->lights[i]->position.z);
-      glUniform3f(glGetUniformLocation(
-                      scene->program_id, ("lke[" + is + "]").c_str()),
+      glUniform3f(
+          glGetUniformLocation(scene->program_id, ("lke[" + is + "]").c_str()),
           scene->lights[i]->emission.x, scene->lights[i]->emission.y,
           scene->lights[i]->emission.z);
       glUniform1i(glGetUniformLocation(
@@ -1556,7 +1548,7 @@ void clear_window(gui::window* win) {
 // Run loop
 void run_ui(gui::window* win) {
   // init
-  if(win->init_cb) win->init_cb(win, win->input);
+  if (win->init_cb) win->init_cb(win, win->input);
 
   // loop
   while (!glfwWindowShouldClose(win->win)) {
@@ -1625,7 +1617,7 @@ void run_ui(gui::window* win) {
   }
 
   // clear
-  if(win->clear_cb) win->clear_cb(win, win->input);
+  if (win->clear_cb) win->clear_cb(win, win->input);
 }
 
 void set_init_callback(gui::window* win, init_callback cb) {

@@ -1947,7 +1947,7 @@ static float sample_lights_pdf(
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
-      } else { 
+      } else {
         pdf += 1 / (4 * pif);
       }
     }

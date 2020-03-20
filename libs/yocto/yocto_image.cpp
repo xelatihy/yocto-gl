@@ -705,8 +705,9 @@ image<vec4b> tonemap_imageb(
 
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.size(),
-      [&](const vec2i& ij) { ldr[ij] = tonemap(hdr[ij], exposure, filmic, srgb); });
+  parallel_for(hdr.size(), [&](const vec2i& ij) {
+    ldr[ij] = tonemap(hdr[ij], exposure, filmic, srgb);
+  });
 }
 vec3f colorgrade(
     const vec3f& rgb_, bool linear, const colorgrade_params& params) {
