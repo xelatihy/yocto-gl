@@ -176,7 +176,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
              (int)ioscene->objects.size()};
 
   // create scene
-  init_glscene(glscene);
+  init_scene(glscene);
 
   // camera
   auto camera_map     = std::unordered_map<sio::camera*, gui::camera*>{};
