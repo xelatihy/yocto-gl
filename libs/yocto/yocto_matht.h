@@ -5428,37 +5428,39 @@ inline T sample_discrete_cdf_pdf(const std::vector<T>& cdf, int idx) {
 template <typename T>
 inline int sample_discrete_weights(const std::vector<T>& weights, T r) {
   auto sum = T{0};
-  for(auto weight : weights) sum += weight;
-  r        = clamp(r * sum, T{0}, sum - T{0.00001});
+  for (auto weight : weights) sum += weight;
+  r            = clamp(r * sum, T{0}, sum - T{0.00001});
   auto cur_sum = T{0};
-  for(auto idx = 0; idx < weights.size(); idx++) {
+  for (auto idx = 0; idx < weights.size(); idx++) {
     cur_sum += weights[idx];
-    if(r < cur_sum) return idx;
+    if (r < cur_sum) return idx;
   }
-  return (int)weights.size()-1;
+  return (int)weights.size() - 1;
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline float sample_discrete_weights_pdf(const std::vector<T>& weights, int idx) {
+inline float sample_discrete_weights_pdf(
+    const std::vector<T>& weights, int idx) {
   return weights[idx];
 }
 
 // Sample a discrete distribution represented by its cdf.
-template<typename T, size_t N>
+template <typename T, size_t N>
 inline int sample_discrete_weights(const std::array<T, N>& weights, T r) {
   auto sum = T{0};
-  for(auto weight : weights) sum += weight;
-  r        = clamp(r * sum, T{0}, sum - T{0.00001});
+  for (auto weight : weights) sum += weight;
+  r            = clamp(r * sum, T{0}, sum - T{0.00001});
   auto cur_sum = T{0};
-  for(auto idx = 0; idx < weights.size(); idx++) {
+  for (auto idx = 0; idx < weights.size(); idx++) {
     cur_sum += weights[idx];
-    if(r < cur_sum) return idx;
+    if (r < cur_sum) return idx;
   }
-  return (int)weights.size()-1;
+  return (int)weights.size() - 1;
 }
 // Pdf for uniform discrete distribution sampling.
-template<typename T, size_t N>
-inline float sample_discrete_weights_pdf(const std::array<T, N>& weights, int idx) {
+template <typename T, size_t N>
+inline float sample_discrete_weights_pdf(
+    const std::array<T, N>& weights, int idx) {
   return weights[idx];
 }
 

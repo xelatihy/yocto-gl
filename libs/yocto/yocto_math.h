@@ -1683,9 +1683,11 @@ inline float sample_uniform(const std::vector<float>& elements, float r);
 inline float sample_uniform_pdf(const std::vector<float>& elements);
 
 // Sample a discrete distribution represented by its cdf.
-[[deprecated]] inline int sample_discrete(const std::vector<float>& cdf, float r);
+[[deprecated]] inline int sample_discrete(
+    const std::vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-[[deprecated]] inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
+[[deprecated]] inline float sample_discrete_pdf(
+    const std::vector<float>& cdf, int idx);
 
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete_cdf(const std::vector<float>& cdf, float r);
@@ -1695,14 +1697,17 @@ inline float sample_discrete_cdf_pdf(const std::vector<float>& cdf, int idx);
 // Sample a discrete distribution represented by its weights.
 inline int sample_discrete_weights(const std::vector<float>& weights, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(const std::vector<float>& weights, int idx);
+inline float sample_discrete_weights_pdf(
+    const std::vector<float>& weights, int idx);
 
 // Sample a discrete distribution represented by its weights.
-template<size_t N>
-inline int sample_discrete_weights(const std::array<float, N>& weights, float r);
+template <size_t N>
+inline int sample_discrete_weights(
+    const std::array<float, N>& weights, float r);
 // Pdf for uniform discrete distribution sampling.
-template<size_t N>
-inline float sample_discrete_weights_pdf(const std::array<float, N>& weights, int idx);
+template <size_t N>
+inline float sample_discrete_weights_pdf(
+    const std::array<float, N>& weights, int idx);
 
 }  // namespace yocto::math
 
@@ -4853,36 +4858,39 @@ inline float sample_discrete_cdf_pdf(const std::vector<float>& cdf, int idx) {
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete_weights(const std::vector<float>& weights, float r) {
   auto sum = 0.0f;
-  for(auto weight : weights) sum += weight;
-  r        = clamp(r * sum, (float)0, sum - (float)0.00001);
+  for (auto weight : weights) sum += weight;
+  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
   auto cur_sum = 0.0f;
-  for(auto idx = 0; idx < weights.size(); idx++) {
+  for (auto idx = 0; idx < weights.size(); idx++) {
     cur_sum += weights[idx];
-    if(r < cur_sum) return idx;
+    if (r < cur_sum) return idx;
   }
-  return (int)weights.size()-1;
+  return (int)weights.size() - 1;
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_weights_pdf(const std::vector<float>& weights, int idx) {
+inline float sample_discrete_weights_pdf(
+    const std::vector<float>& weights, int idx) {
   return weights[idx];
 }
 
 // Sample a discrete distribution represented by its cdf.
-template<size_t N>
-inline int sample_discrete_weights(const std::array<float, N>& weights, float r) {
+template <size_t N>
+inline int sample_discrete_weights(
+    const std::array<float, N>& weights, float r) {
   auto sum = 0.0f;
-  for(auto weight : weights) sum += weight;
-  r        = clamp(r * sum, (float)0, sum - (float)0.00001);
+  for (auto weight : weights) sum += weight;
+  r            = clamp(r * sum, (float)0, sum - (float)0.00001);
   auto cur_sum = 0.0f;
-  for(auto idx = 0; idx < weights.size(); idx++) {
+  for (auto idx = 0; idx < weights.size(); idx++) {
     cur_sum += weights[idx];
-    if(r < cur_sum) return idx;
+    if (r < cur_sum) return idx;
   }
-  return (int)weights.size()-1;
+  return (int)weights.size() - 1;
 }
 // Pdf for uniform discrete distribution sampling.
-template<size_t N>
-inline float sample_discrete_weights_pdf(const std::array<float, N>& weights, int idx) {
+template <size_t N>
+inline float sample_discrete_weights_pdf(
+    const std::array<float, N>& weights, int idx) {
   return weights[idx];
 }
 
