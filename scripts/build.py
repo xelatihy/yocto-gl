@@ -37,7 +37,6 @@ def clean():
 def format():
     os.system('clang-format -i -style=file libs/*/y*.h')
     os.system('clang-format -i -style=file libs/*/y*.cpp')
-    os.system('clang-format -i -style=file apps/*/y*.h')
     os.system('clang-format -i -style=file apps/*/y*.cpp')
 
 cli()
