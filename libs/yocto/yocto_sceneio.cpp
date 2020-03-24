@@ -939,16 +939,14 @@ inline bool load_text(
   };
 
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen(filename.c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  auto real_length = fread(str.data(), 1, length, fs);
-  if (ferror(fs)) return read_error();
-  str.resize(real_length);
+  if (fread(str.data(), 1, length, fs) != length) return read_error();
   return true;
 }
 

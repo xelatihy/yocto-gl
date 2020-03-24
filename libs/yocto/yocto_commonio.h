@@ -419,7 +419,7 @@ namespace yocto::commonio {
 inline bool load_text(
     const std::string& filename, std::string& str, std::string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen(filename.c_str(), "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -429,12 +429,10 @@ inline bool load_text(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  auto real_length = fread(str.data(), 1, length, fs);
-  if (ferror(fs)) {
+  if (fread(str.data(), 1, length, fs) != length) {
     error = filename + ": read error";
     return false;
   }
-  str.resize(real_length);
   return true;
 }
 
