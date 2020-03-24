@@ -44,8 +44,8 @@ using math::min;
 using math::pif;
 using math::pow;
 using math::rng_state;
-using math::sample_discrete;
-using math::sample_discrete_pdf;
+using math::sample_discrete_cdf;
+using math::sample_discrete_cdf_pdf;
 using math::sample_uniform;
 using math::sample_uniform_pdf;
 using math::sin;
@@ -2851,7 +2851,7 @@ namespace yocto::shape {
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
 int sample_points(const std::vector<float>& cdf, float re) {
-  return sample_discrete(cdf, re);
+  return sample_discrete_cdf(cdf, re);
 }
 std::vector<float> sample_points_cdf(int npoints) {
   auto cdf = std::vector<float>(npoints);
@@ -2862,7 +2862,7 @@ std::vector<float> sample_points_cdf(int npoints) {
 // Pick a point on lines uniformly.
 std::pair<int, float> sample_lines(
     const std::vector<float>& cdf, float re, float ru) {
-  return {sample_discrete(cdf, re), ru};
+  return {sample_discrete_cdf(cdf, re), ru};
 }
 std::vector<float> sample_lines_cdf(
     const std::vector<vec2i>& lines, const std::vector<vec3f>& positions) {
@@ -2878,7 +2878,7 @@ std::vector<float> sample_lines_cdf(
 // Pick a point on a triangle mesh uniformly.
 std::pair<int, vec2f> sample_triangles(
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), sample_triangle(ruv)};
+  return {sample_discrete_cdf(cdf, re), sample_triangle(ruv)};
 }
 std::vector<float> sample_triangles_cdf(
     const std::vector<vec3i>& triangles, const std::vector<vec3f>& positions) {
@@ -2894,11 +2894,11 @@ std::vector<float> sample_triangles_cdf(
 // Pick a point on a quad mesh uniformly.
 std::pair<int, vec2f> sample_quads(
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  return {sample_discrete(cdf, re), ruv};
+  return {sample_discrete_cdf(cdf, re), ruv};
 }
 std::pair<int, vec2f> sample_quads(const std::vector<vec4i>& quads,
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-  auto element = sample_discrete(cdf, re);
+  auto element = sample_discrete_cdf(cdf, re);
   if (quads[element].z == quads[element].w) {
     return {element, sample_triangle(ruv)};
   } else {

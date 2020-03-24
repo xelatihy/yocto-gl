@@ -65,8 +65,8 @@ using math::min;
 using math::pif;
 using math::pow;
 using math::rng_state;
-using math::sample_discrete;
-using math::sample_discrete_pdf;
+using math::sample_discrete_cdf;
+using math::sample_discrete_cdf_pdf;
 using math::sample_uniform;
 using math::sample_uniform_pdf;
 using math::sign;
@@ -1878,7 +1878,7 @@ static vec3f sample_lights(const trc::scene* scene, const vec3f& position,
     auto& object    = light->object;
     auto  shape     = object->shape;
     auto  frame     = object->instance->frames[light->instance] * object->frame;
-    auto  element   = sample_discrete(shape->elements_cdf, rel);
+    auto  element   = sample_discrete_cdf(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(
         frame, eval_shape(shape, shape->positions, element, uv, zero3f));
@@ -1887,7 +1887,7 @@ static vec3f sample_lights(const trc::scene* scene, const vec3f& position,
     auto& environment = light->environment;
     if (environment->emission_tex) {
       auto emission_tex = environment->emission_tex;
-      auto idx          = sample_discrete(environment->texels_cdf, rel);
+      auto idx          = sample_discrete_cdf(environment->texels_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
           (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
@@ -1943,7 +1943,7 @@ static float sample_lights_pdf(
         if (texcoord.x < 0) texcoord.x += 1;
         auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-        auto prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
+        auto prob  = sample_discrete_cdf_pdf(cdf, j * size.x + i) / cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
