@@ -295,8 +295,8 @@ static ray3f eval_perspective_camera(
   // ray direction through the lens center
   auto dc = -normalize(q);
   // point on the lens
-  auto e = vec3f{(lens_uv.x - 0.5f) * camera->aperture,
-      (lens_uv.y - 0.5f) * camera->aperture, 0};
+  auto e = vec3f{lens_uv.x * camera->aperture / 2,
+      lens_uv.y * camera->aperture / 2, 0};
   // point on the focus plane
   auto p = dc * camera->focus / abs(dc.z);
   // correct ray direction to account for camera focusing
@@ -328,8 +328,8 @@ static ray3f eval_orthographic_camera(
   auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
       camera->film.y * (image_uv.y - 0.5f) * scale, camera->lens};
   // point on the lens
-  auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera->aperture,
-                                      (lens_uv.y - 0.5f) * camera->aperture, 0};
+  auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera->aperture / 2,
+                                      lens_uv.y * camera->aperture / 2, 0};
   // point on the focus plane
   auto p = vec3f{-q.x, -q.y, -camera->focus};
   // correct ray direction to account for camera focusing
