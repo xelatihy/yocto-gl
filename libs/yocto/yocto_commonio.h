@@ -418,7 +418,7 @@ namespace yocto::commonio {
 // Load a text file
 inline bool load_text(
     const std::string& filename, std::string& str, std::string& error) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) {
     error = filename + ": file not found";

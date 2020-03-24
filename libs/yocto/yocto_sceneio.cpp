@@ -938,7 +938,7 @@ inline bool load_text(
     return false;
   };
 
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-std::string-in-c
+  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
