@@ -946,7 +946,9 @@ inline bool load_text(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) return read_error();
+  auto real_length = fread(str.data(), 1, length, fs);
+  if (ferror(fs)) return read_error();
+  str.resize(real_length);
   return true;
 }
 
@@ -998,7 +1000,7 @@ inline bool load_binary(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) return read_error();
+  if(fread(data.data(), 1, length, fs) != length) return read_error();
   return true;
 }
 

@@ -429,10 +429,12 @@ inline bool load_text(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
+  auto real_length = fread(str.data(), 1, length, fs);
+  if (ferror(fs)) {
     error = filename + ": read error";
     return false;
   }
+  str.resize(real_length);
   return true;
 }
 
@@ -449,7 +451,6 @@ inline bool save_text(
     error = filename + ": write error";
     return false;
   }
-  fclose(fs);
   return true;
 }
 
@@ -471,7 +472,6 @@ inline bool load_binary(
     error = filename + ": read error";
     return false;
   }
-  fclose(fs);
   return true;
 }
 
@@ -485,10 +485,9 @@ inline bool save_binary(const std::string& filename,
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    error = filename + ": rewritead error";
+    error = filename + ": write error";
     return false;
   }
-  fclose(fs);
   return true;
 }
 
