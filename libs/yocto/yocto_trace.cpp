@@ -86,23 +86,24 @@ using math::zero4i;
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
-static std::pair<float, int> sample_distance(
-    const vec3f& density, float rl, float rd) {
+static float sample_transmittance(
+    const vec3f& density, float max_distance, float rl, float rd) {
   auto channel         = clamp((int)(rl * 3), 0, 2);
-  auto density_channel = density[channel];
-  if (density_channel == 0 || rd == 0)
-    return {flt_max, channel};
-  else
-    return {-log(rd) / density_channel, channel};
+  auto distance = (density[channel] == 0) ?
+        flt_max : -log(1 - rd) / density[channel];
+  return min(distance, max_distance);
 }
 
-static float sample_distance_pdf(
-    const vec3f& density, float distance, int channel) {
-  auto density_channel = density[channel];
-  return exp(-density_channel * distance);
+static float sample_transmittance_pdf(
+    const vec3f& density, float distance, float max_distance) {
+  if(distance < max_distance) {
+    return sum(density * exp(-density*distance)) / 3;
+  } else {
+    return sum(exp(-density*max_distance)) / 3;
+  }
 }
 
-static vec3f eval_transmission(const vec3f& density, float distance) {
+static vec3f eval_transmittance(const vec3f& density, float distance) {
   return exp(-density * distance);
 }
 
@@ -1851,7 +1852,7 @@ static float sample_delta_pdf(const trace_point& point) {
 
 static vec3f eval_scattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
-  return point.volscatter *
+  return point.volscatter * point.voldensity *
          eval_phasefunction(
              dot(point.outgoing, point.incoming), point.volanisotropy);
 }
@@ -1980,11 +1981,11 @@ static std::pair<vec3f, bool> trace_path(const trc::scene* scene,
     auto in_volume = false;
     if (!volume_stack.empty()) {
       auto& point              = volume_stack.back();
-      auto [distance, channel] = sample_distance(
-          point.voldensity, rand1f(rng), rand1f(rng));
-      distance = min(distance, intersection.distance);
-      weight *= eval_transmission(point.voldensity, distance) /
-                sample_distance_pdf(point.voldensity, distance, channel);
+      auto distance = sample_transmittance(
+          point.voldensity, intersection.distance, rand1f(rng), rand1f(rng));
+      weight *= eval_transmittance(point.voldensity, distance) /
+                sample_transmittance_pdf(point.voldensity, distance, 
+                intersection.distance);
       in_volume             = distance < intersection.distance;
       intersection.distance = distance;
     }
