@@ -213,6 +213,27 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
                 os.system(cmd)
 
 @cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='obj')
+@click.option('--outformat','-F', default='json')
+@click.option('--mode','-m', default='default')
+def copyright(directory='mcguire',scene='*',format='obj',outformat="json",mode='default'):
+    modes = {
+        'default': '',
+    }
+    options = modes[mode]
+    for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        outdirname = dirname.replace(f'/source/',f'/{outformat}/')
+        os.system(f'mkdir -p {outdirname}')
+        if os.path.exists(f'{dirname}/AUTHOR.txt'):
+            os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
+        if os.path.exists(f'{dirname}/LICENSE.txt'):
+            os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
+
+@cli.command()
 @click.option('--directory', '-d', default='yuksel')
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='hair')
