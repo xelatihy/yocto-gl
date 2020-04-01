@@ -86,45 +86,6 @@ using math::zero4i;
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
-static float sample_transmittance(
-    const vec3f& density, float max_distance, float rl, float rd) {
-  auto channel         = clamp((int)(rl * 3), 0, 2);
-  auto distance = (density[channel] == 0) ?
-        flt_max : -log(1 - rd) / density[channel];
-  return min(distance, max_distance);
-}
-
-static float sample_transmittance_pdf(
-    const vec3f& density, float distance, float max_distance) {
-  if(distance < max_distance) {
-    return sum(density * exp(-density*distance)) / 3;
-  } else {
-    return sum(exp(-density*max_distance)) / 3;
-  }
-}
-
-static vec3f eval_transmittance(const vec3f& density, float distance) {
-  return exp(-density * distance);
-}
-
-static vec3f sample_phasefunction(float g, const vec2f& u) {
-  auto cos_theta = 0.0f;
-  if (abs(g) < 1e-3f) {
-    cos_theta = 1 - 2 * u.x;
-  } else {
-    float square = (1 - g * g) / (1 - g + 2 * g * u.x);
-    cos_theta    = (1 + g * g - square * square) / (2 * g);
-  }
-
-  auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-  auto phi       = 2 * pif * u.y;
-  return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
-}
-
-static float eval_phasefunction(float cos_theta, float g) {
-  auto denom = 1 + g * g + 2 * g * cos_theta;
-  return (1 - g * g) / (4 * pif * denom * sqrt(denom));
-}
 
 }  // namespace yocto::trace
 
@@ -1853,21 +1814,20 @@ static float sample_delta_pdf(const trace_point& point) {
 static vec3f eval_scattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter * point.voldensity *
-         eval_phasefunction(
-             dot(point.outgoing, point.incoming), point.volanisotropy);
+         eval_phasefunction(point.volanisotropy,
+             point.outgoing, point.incoming);
 }
 
 static vec3f sample_scattering(
     const volume_point& point, float rnl, const vec2f& rn) {
   if (point.voldensity == zero3f) return zero3f;
-  auto direction = sample_phasefunction(point.volanisotropy, rn);
-  return basis_fromz(-point.outgoing) * direction;
+  return sample_phasefunction(point.volanisotropy, point.outgoing, rn);
 }
 
 static float sample_scattering_pdf(const volume_point& point) {
   if (point.voldensity == zero3f) return 0;
-  return eval_phasefunction(
-      dot(point.outgoing, point.incoming), point.volanisotropy);
+  return sample_phasefunction_pdf(point.volanisotropy,
+      point.outgoing, point.incoming);
 }
 
 // Sample lights wrt solid angle
