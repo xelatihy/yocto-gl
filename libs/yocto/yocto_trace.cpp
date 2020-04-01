@@ -2036,9 +2036,9 @@ static std::pair<vec3f, bool> trace_path(const trc::scene* scene,
     if (weight == zero3f || !isfinite(weight)) break;
 
     // russian roulette
-    if (max(weight) < 1 && bounce > 6) {
-      auto rr_prob = max((float)0.05, 1 - max(weight));
-      if (rand1f(rng) > rr_prob) break;
+    if (bounce > 3) {
+      auto rr_prob = min((float)0.99, max(weight));
+      if (rand1f(rng) >= rr_prob) break;
       weight *= 1 / rr_prob;
     }
   }
@@ -2091,9 +2091,9 @@ static std::pair<vec3f, bool> trace_naive(const trc::scene* scene,
     if (weight == zero3f || !isfinite(weight)) break;
 
     // russian roulette
-    if (max(weight) < 1 && bounce > 3) {
-      auto rr_prob = max((float)0.05, 1 - max(weight));
-      if (rand1f(rng) > rr_prob) break;
+    if (bounce > 3) {
+      auto rr_prob = min((float)0.99, max(weight));
+      if (rand1f(rng) >= rr_prob) break;
       weight *= 1 / rr_prob;
     }
 
