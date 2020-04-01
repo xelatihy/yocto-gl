@@ -1623,6 +1623,25 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
 
+// Evalaute transmittance
+static vec3f eval_transmittance(const vec3f& density, float distance);
+// Sample a distance proportionally to transmittance
+inline float sample_transmittance(
+    const vec3f& density, float max_distance, float rl, float rd);
+// Pdf for distance sampling
+inline float sample_transmittance_pdf(
+    const vec3f& density, float distance, float max_distance);
+
+// Eval phase function
+inline float eval_phasefunction(
+    float anisotropy, const vec3f& outgoing, const vec3f& incoming);
+// Sample phase function
+inline vec3f sample_phasefunction(
+    float anisotropy, const vec3f& outgoing, const vec2f& rn);
+// Pdf for phase function sampling
+inline float sample_phasefunction_pdf(
+    float anisotropy, const vec3f& outgoing, const vec3f& incoming);
+
 }  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
@@ -4702,7 +4721,7 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 }
 
 // Evalaute transmittance
-static vec3f eval_transmittance(const vec3f& density, float distance) {
+inline vec3f eval_transmittance(const vec3f& density, float distance) {
   return exp(-density * distance);
 }
 
@@ -4735,19 +4754,19 @@ inline float eval_phasefunction(
 
 // Sample phase function
 inline vec3f sample_phasefunction(
-    float anisotropy, const vec3f& outgoing, const vec2f& u) {
+    float anisotropy, const vec3f& outgoing, const vec2f& rn) {
   auto cos_theta = 0.0f;
   if (abs(anisotropy) < 1e-3f) {
-    cos_theta = 1 - 2 * u.x;
+    cos_theta = 1 - 2 * rn.y;
   } else {
     float square = (1 - anisotropy * anisotropy) /
-                   (1 - anisotropy + anisotropy * anisotropy * u.x);
+                   (1 - anisotropy + anisotropy * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }
 
   auto sin_theta      = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-  auto phi            = 2 * pif * u.y;
+  auto phi            = 2 * pif * rn.x;
   auto local_incoming = vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;
 }
