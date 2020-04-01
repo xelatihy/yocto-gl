@@ -5310,7 +5310,8 @@ inline vec3f sample_phasefunction(
 
   auto sin_theta      = sqrt(max((T)0, 1 - cos_theta * cos_theta));
   auto phi            = 2 * (T)pi * rn.x;
-  auto local_incoming = vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+  auto local_incoming = vec3f{
+      sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;
 }
 
