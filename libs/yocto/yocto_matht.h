@@ -1565,6 +1565,31 @@ template <typename T>
 inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 
+// Evaluate transmittance
+template <typename T>
+inline vec<T, 3> eval_transmittance(const vec<T, 3>& density, T distance);
+// Sample a distance proportionally to transmittance
+template <typename T>
+inline T sample_transmittance(
+    const vec<T, 3>& density, T max_distance, T rl, T rd);
+// Pdf for distance sampling
+template <typename T>
+inline T sample_transmittance_pdf(
+    const vec<T, 3>& density, T distance, T max_distance);
+
+// Evaluate phase function
+template <typename T>
+inline T eval_phasefunction(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
+// Sample phase function
+template <typename T>
+inline vec3f sample_phasefunction(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
+// Pdf for phase function sampling
+template <typename T>
+inline T sample_phasefunction_pdf(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
+
 }  // namespace yocto::math
 
 // -----------------------------------------------------------------------------
@@ -5231,6 +5256,70 @@ inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
   } else {
     return (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
+}
+
+// Evaluate transmittance
+template <typename T>
+inline vec<T, 3> eval_transmittance(const vec<T, 3>& density, T distance) {
+  return exp(-density * distance);
+}
+
+// Sample a distance proportionally to transmittance
+template <typename T>
+inline T sample_transmittance(
+    const vec<T, 3>& density, T max_distance, T rl, T rd) {
+  auto channel  = clamp((int)(rl * 3), 0, 2);
+  auto distance = (density[channel] == 0) ? flt_max
+                                          : -log(1 - rd) / density[channel];
+  return min(distance, max_distance);
+}
+
+// Pdf for distance sampling
+template <typename T>
+inline T sample_transmittance_pdf(
+    const vec<T, 3>& density, T distance, T max_distance) {
+  if (distance < max_distance) {
+    return sum(density * exp(-density * distance)) / 3;
+  } else {
+    return sum(exp(-density * max_distance)) / 3;
+  }
+}
+
+// Evaluate phase function
+template <typename T>
+inline T eval_phasefunction(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  auto cosine = dot(outgoing, incoming);
+  auto denom  = 1 + anisotropy * anisotropy + 2 * anisotropy * cosine;
+  return (1 - anisotropy * anisotropy) / (4 * (T)pi * denom * sqrt(denom));
+}
+
+// Sample phase function
+template <typename T>
+inline vec3f sample_phasefunction(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  auto cos_theta = (T)0;
+  if (abs(anisotropy) < (T)1e-3) {
+    cos_theta = 1 - 2 * rn.y;
+  } else {
+    float square = (1 - anisotropy * anisotropy) /
+                   (1 - anisotropy + anisotropy * anisotropy * rn.y);
+    cos_theta = (1 + anisotropy * anisotropy - square * square) /
+                (2 * anisotropy);
+  }
+
+  auto sin_theta      = sqrt(max((T)0, 1 - cos_theta * cos_theta));
+  auto phi            = 2 * (T)pi * rn.x;
+  auto local_incoming = vec3f{
+      sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+  return basis_fromz(-outgoing) * local_incoming;
+}
+
+// Pdf for phase function sampling
+template <typename T>
+inline T sample_phasefunction_pdf(
+    T anisotropy, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  return eval_phasefunction(anisotropy, outgoing, incoming);
 }
 
 }  // namespace yocto::math
