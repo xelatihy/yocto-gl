@@ -1623,8 +1623,8 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
 
-// Evalaute transmittance
-static vec3f eval_transmittance(const vec3f& density, float distance);
+// Evaluate transmittance
+inline vec3f eval_transmittance(const vec3f& density, float distance);
 // Sample a distance proportionally to transmittance
 inline float sample_transmittance(
     const vec3f& density, float max_distance, float rl, float rd);
@@ -1632,7 +1632,7 @@ inline float sample_transmittance(
 inline float sample_transmittance_pdf(
     const vec3f& density, float distance, float max_distance);
 
-// Eval phase function
+// Evaluate phase function
 inline float eval_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming);
 // Sample phase function
@@ -4720,7 +4720,7 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
   }
 }
 
-// Evalaute transmittance
+// Evaluate transmittance
 inline vec3f eval_transmittance(const vec3f& density, float distance) {
   return exp(-density * distance);
 }
@@ -4744,7 +4744,7 @@ inline float sample_transmittance_pdf(
   }
 }
 
-// Eval phase function
+// Evaluate phase function
 inline float eval_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming) {
   auto cosine = dot(outgoing, incoming);
