@@ -1276,6 +1276,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (!get_value(ejs, "roughness", material->roughness)) return false;
       if (!get_value(ejs, "coat", material->coat)) return false;
       if (!get_value(ejs, "transmission", material->transmission)) return false;
+      if (!get_value(ejs, "translucency", material->translucency)) return false;
       if (!get_value(ejs, "thin", material->thin)) return false;
       if (!get_value(ejs, "ior", material->ior)) return false;
       if (!get_value(ejs, "trdepth", material->trdepth)) return false;
@@ -1292,6 +1293,8 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (!get_stexture(ejs, "specular_tex", material->specular_tex))
         return false;
       if (!get_stexture(ejs, "transmission_tex", material->transmission_tex))
+        return false;
+      if (!get_stexture(ejs, "translucency_tex", material->translucency_tex))
         return false;
       if (!get_stexture(ejs, "roughness_tex", material->roughness_tex))
         return false;
@@ -1479,6 +1482,7 @@ static bool save_json_scene(const std::string& filename,
     add_opt(ejs, "ior", material->ior, def_material.ior);
     add_opt(
         ejs, "transmission", material->transmission, def_material.transmission);
+    add_opt(ejs, "translucency", material->translucency, def_material.translucency);
     add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
     add_opt(ejs, "scattering", material->scattering, def_material.scattering);
     add_opt(
@@ -1492,6 +1496,7 @@ static bool save_json_scene(const std::string& filename,
     add_tex(ejs, "specular_tex", material->specular_tex);
     add_tex(ejs, "roughness_tex", material->roughness_tex);
     add_tex(ejs, "transmission_tex", material->transmission_tex);
+    add_tex(ejs, "translucency_tex", material->translucency_tex);
     add_tex(ejs, "scattering_tex", material->scattering_tex);
     add_tex(ejs, "coat_tex", material->coat_tex);
     add_tex(ejs, "opacity_tex", material->opacity_tex);
@@ -1660,20 +1665,23 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
     material->metallic         = omat->pbr_metallic;
     material->coat             = omat->pbr_coat;
     material->transmission     = omat->pbr_transmission;
+    material->translucency     = omat->pbr_translucency;
     material->scattering       = omat->pbr_volscattering;
     material->scanisotropy     = omat->pbr_volanisotropy;
     material->trdepth          = omat->pbr_volscale;
     material->opacity          = omat->pbr_opacity;
-    material->thin             = true;
+    material->thin             = omat->pbr_thin;
     material->emission_tex     = get_ctexture(omat->pbr_emission_tex);
     material->color_tex        = get_ctexture(omat->pbr_base_tex);
     material->specular_tex     = get_stexture(omat->pbr_specular_tex);
     material->metallic_tex     = get_stexture(omat->pbr_metallic_tex);
     material->roughness_tex    = get_stexture(omat->pbr_roughness_tex);
     material->transmission_tex = get_stexture(omat->pbr_transmission_tex);
+    material->translucency_tex = get_stexture(omat->pbr_translucency_tex);
     material->coat_tex         = get_stexture(omat->pbr_coat_tex);
     material->opacity_tex      = get_stexture(omat->pbr_opacity_tex);
     material->normal_tex       = get_ctexture(omat->normal_tex);
+    material->scattering_tex   = get_ctexture(omat->pbr_volscattering_tex);
     material_map[omat]         = material;
   }
 
@@ -1813,6 +1821,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
     omaterial->pbr_metallic         = material->metallic;
     omaterial->pbr_coat             = material->coat;
     omaterial->pbr_transmission     = material->transmission;
+    omaterial->pbr_translucency       = material->translucency;
     omaterial->pbr_opacity          = material->opacity;
     omaterial->pbr_emission_tex     = get_texture(material->emission_tex);
     omaterial->pbr_base_tex         = get_texture(material->color_tex);
@@ -1820,9 +1829,10 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
     omaterial->pbr_metallic_tex     = get_texture(material->metallic_tex);
     omaterial->pbr_roughness_tex    = get_texture(material->roughness_tex);
     omaterial->pbr_transmission_tex = get_texture(material->transmission_tex);
+    omaterial->pbr_translucency_tex  = get_texture(material->translucency_tex);
     omaterial->pbr_coat_tex         = get_texture(material->coat_tex);
     omaterial->pbr_opacity_tex      = get_texture(material->opacity_tex);
-    omaterial->normal_tex           = get_texture(material->normal_tex);
+    omaterial->pbr_normal_tex       = get_texture(material->normal_tex);
     material_map[material]          = omaterial;
   }
 

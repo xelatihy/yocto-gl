@@ -4720,6 +4720,11 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
   }
 }
 
+// Convert mean-free-path to transmission
+inline vec3f mfp_to_transmission(const vec3f& mfp, float depth) {
+  return exp(-depth/mfp);
+}
+
 // Evaluate transmittance
 inline vec3f eval_transmittance(const vec3f& density, float distance) {
   return exp(-density * distance);
