@@ -4430,6 +4430,13 @@ inline vec3f eval_diffuse_reflection(
   return vec3f{1} / pif * dot(normal, incoming);
 }
 
+// Evaluate a translucent BRDF lobe.
+inline vec3f eval_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  return vec3f{1} / pif * abs(dot(normal, incoming));
+}
+
 // Evaluate a specular BRDF lobe.
 inline vec3f eval_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
@@ -4511,6 +4518,13 @@ inline vec3f sample_diffuse_reflection(
   return sample_hemisphere_cos(normal, rn);
 }
 
+// Sample a translucency BRDF lobe.
+inline vec3f sample_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos(-up_normal, rn);
+}
+
 // Sample a specular BRDF lobe.
 inline vec3f sample_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
@@ -4559,6 +4573,14 @@ inline float sample_diffuse_reflection_pdf(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return sample_hemisphere_cos_pdf(normal, incoming);
+}
+
+// Pdf for translucency BRDF lobe sampling.
+inline float sample_diffuse_transmission_pdf(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos_pdf(up_normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.

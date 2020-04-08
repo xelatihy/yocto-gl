@@ -569,6 +569,9 @@ static volume_point eval_volume(const trc::scene* scene,
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
+  auto translucency =
+      material->translucency *
+      eval_texture(material->translucency_tex, texcoord, true).x;
   auto thin       = material->thin || !material->transmission;
   auto scattering = material->scattering *
                     eval_texture(material->scattering_tex, texcoord, false).x;
@@ -577,7 +580,7 @@ static volume_point eval_volume(const trc::scene* scene,
 
   // factors
   point.volemission = zero3f;
-  point.voldensity  = (transmission && !thin)
+  point.voldensity  = ((transmission || translucency) && !thin)
                          ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
                          : zero3f;
   point.volscatter    = scattering;
@@ -1610,6 +1613,10 @@ static vec3f eval_brdfcos(const trace_point& point) {
                                         point.roughness, point.normal,
                                         point.outgoing, point.incoming);
   }
+  if (point.translucency) {
+    brdfcos += point.translucency * eval_diffuse_transmission(point.normal,
+                                        point.outgoing, point.incoming);
+  }
   if (point.refraction) {
     brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
                                       point.roughness, point.normal,
@@ -1686,6 +1693,12 @@ static vec3f sample_brdf(const trace_point& point, float rnl, const vec2f& rn) {
     if (rnl < cdf)
       return sample_microfacet_transmission(
           point.ior, point.roughness, point.normal, point.outgoing, rn);
+  }
+
+  if (point.translucency_pdf) {
+    cdf += point.translucency_pdf;
+    if (rnl < cdf)
+      return sample_diffuse_transmission(point.normal, point.outgoing, rn);
   }
 
   if (point.refraction_pdf) {
@@ -1777,6 +1790,12 @@ static float sample_brdf_pdf(const trace_point& point) {
   if (point.transmission_pdf) {
     pdf += point.transmission_pdf *
            sample_microfacet_transmission_pdf(point.ior, point.roughness,
+               point.normal, point.outgoing, point.incoming);
+  }
+
+  if (point.translucency_pdf) {
+    pdf += point.translucency_pdf *
+           sample_diffuse_transmission_pdf(
                point.normal, point.outgoing, point.incoming);
   }
 
