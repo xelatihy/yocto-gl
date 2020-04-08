@@ -569,8 +569,7 @@ static volume_point eval_volume(const trc::scene* scene,
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
-  auto translucency =
-      material->translucency *
+  auto translucency = material->translucency *
       eval_texture(material->translucency_tex, texcoord, true).x;
   auto thin       = material->thin || !material->transmission;
   auto scattering = material->scattering *
@@ -593,7 +592,8 @@ static volume_point eval_volume(const trc::scene* scene,
 static bool has_volume(
     const trc::scene* scene, const intersection3f& intersection) {
   auto object = scene->objects[intersection.object];
-  return !object->material->thin && (object->material->transmission || object->material->translucency);
+  return !object->material->thin &&
+         (object->material->transmission || object->material->translucency);
 }
 
 // Evaluate all environment color.

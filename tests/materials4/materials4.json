@@ -412,16 +412,17 @@
     "sphere-volume-jade2": {
       "translucency": 1,
       "color": [
-        0.95,
-        0.95,
-        0.95
+        0.5,
+        0.5,
+        0.5
       ],
       "scattering": [
-        0.01,
-        0.01,
-        0.01
+        0.3,
+        0.6,
+        0.3
       ],
-      "ior": 1
+      "ior": 1,
+      "thin": false
     },
     "sphere-volume-smoke": {
       "transmission": 1,
@@ -481,18 +482,21 @@
       "thin": false
     },
     "bunny-volume-jade2": {
+      "specular": 1,
+      "roughness": 0,
       "translucency": 1,
       "color": [
-        0.95,
-        0.95,
-        0.95
+        0.5,
+        0.5,
+        0.5
       ],
       "scattering": [
-        0.01,
-        0.01,
-        0.01
+        0.3,
+        0.6,
+        0.3
       ],
-      "ior": 1
+      "ior": 1,
+      "thin": false
     },
     "bunny-volume-smoke": {
       "transmission": 1,

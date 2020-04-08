@@ -4580,7 +4580,7 @@ inline float sample_diffuse_transmission_pdf(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  return sample_hemisphere_cos_pdf(up_normal, incoming);
+  return sample_hemisphere_cos_pdf(-up_normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.
