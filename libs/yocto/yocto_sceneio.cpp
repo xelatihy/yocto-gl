@@ -1298,7 +1298,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
         return false;
       if (!get_stexture(ejs, "roughness_tex", material->roughness_tex))
         return false;
-      if (!get_stexture(ejs, "scattering_tex", material->scattering_tex))
+      if (!get_ctexture(ejs, "scattering_tex", material->scattering_tex))
         return false;
       if (!get_stexture(ejs, "opacity_tex", material->opacity_tex))
         return false;

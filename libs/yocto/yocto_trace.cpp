@@ -573,7 +573,7 @@ static volume_point eval_volume(const trc::scene* scene,
       eval_texture(material->translucency_tex, texcoord, true).x;
   auto thin       = material->thin || (!material->transmission && !material->translucency);
   auto scattering = material->scattering *
-                    eval_texture(material->scattering_tex, texcoord, false).x;
+                    eval_texture(material->scattering_tex, texcoord, false);
   auto scanisotropy = material->scanisotropy;
   auto trdepth      = material->trdepth;
 
