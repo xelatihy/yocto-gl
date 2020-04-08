@@ -411,6 +411,8 @@
     },
     "sphere-volume-jade2": {
       "translucency": 1,
+      "specular": 1,
+      "roughness": 0,
       "color": [
         0.5,
         0.5,
@@ -421,7 +423,6 @@
         0.6,
         0.3
       ],
-      "ior": 1,
       "thin": false
     },
     "sphere-volume-smoke": {
@@ -483,7 +484,7 @@
     },
     "bunny-volume-jade2": {
       "specular": 1,
-      "roughness": 0,
+      "roughness": 0.1,
       "translucency": 1,
       "color": [
         0.5,
@@ -495,7 +496,6 @@
         0.6,
         0.3
       ],
-      "ior": 1,
       "thin": false
     },
     "bunny-volume-smoke": {
