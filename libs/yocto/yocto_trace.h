@@ -198,8 +198,8 @@ enum struct sampler_type {
 enum struct falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, coat, metal, transmission, refraction, roughness, opacity, 
-  object, element, highlight
+  diffuse, specular, coat, metal, transmission, translucency, refraction, 
+  roughness, opacity, object, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -241,8 +241,8 @@ const auto sampler_names = std::vector<std::string>{
 
 const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "opacity", "object", "element", "highlight"};
+    "specular", "coat", "metal", "transmission", "translucency", 
+    "refraction", "roughness", "opacity", "object", "element", "highlight"};
 const auto bvh_names        = std::vector<std::string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE

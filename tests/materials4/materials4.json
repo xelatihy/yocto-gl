@@ -217,7 +217,7 @@
       ],
       "material": "sphere-volume-jade"
     },
-    "sphere-volume-emissive": {
+    "sphere-volume-jade2": {
       "shape": "sphere",
       "frame": [
         1,
@@ -233,7 +233,7 @@
         0,
         0
       ],
-      "material": "sphere-volume-emissive"
+      "material": "sphere-volume-jade2"
     },
     "sphere-volume-smoke": {
       "shape": "sphere",
@@ -307,7 +307,7 @@
       ],
       "material": "bunny-volume-jade"
     },
-    "bunny-volume-emissive": {
+    "bunny-volume-jade2": {
       "shape": "bunny",
       "frame": [
         1,
@@ -323,7 +323,7 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-emissive"
+      "material": "bunny-volume-jade2"
     },
     "bunny-volume-smoke": {
       "shape": "bunny",
@@ -409,8 +409,8 @@
       ],
       "thin": false
     },
-    "sphere-volume-emissive": {
-      "transmission": 1,
+    "sphere-volume-jade2": {
+      "translucency": 1,
       "color": [
         0.95,
         0.95,
@@ -480,8 +480,8 @@
       ],
       "thin": false
     },
-    "bunny-volume-emissive": {
-      "transmission": 1,
+    "bunny-volume-jade2": {
+      "translucency": 1,
       "color": [
         0.95,
         0.95,

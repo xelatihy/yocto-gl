@@ -593,7 +593,7 @@ static volume_point eval_volume(const trc::scene* scene,
 static bool has_volume(
     const trc::scene* scene, const intersection3f& intersection) {
   auto object = scene->objects[intersection.object];
-  return !object->material->thin && object->material->transmission;
+  return !object->material->thin && (object->material->transmission || object->material->translucency);
 }
 
 // Evaluate all environment color.
@@ -2219,6 +2219,7 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
     case falsecolor_type::coat: return {point.coat, 1};
     case falsecolor_type::metal: return {point.metal, 1};
     case falsecolor_type::transmission: return {point.transmission, 1};
+    case falsecolor_type::translucency: return {point.translucency, 1};
     case falsecolor_type::refraction: return {point.refraction, 1};
     case falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
     case falsecolor_type::opacity: return {vec3f{point.opacity}, 1};
@@ -2662,6 +2663,13 @@ void set_transmission(trc::material* material, float transmission, bool thin,
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_tex;
+}
+void set_translucency(trc::material* material, float translucency, bool thin,
+    float trdepth, trc::texture* translucency_tex) {
+  material->translucency     = translucency;
+  material->thin             = thin;
+  material->trdepth          = trdepth;
+  material->translucency_tex = translucency_tex;
 }
 void set_thin(trc::material* material, bool thin) { material->thin = thin; }
 void set_roughness(
