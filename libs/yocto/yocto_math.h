@@ -4670,7 +4670,7 @@ inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
+    return vec3f{1} * (1/(rel_ior * rel_ior)) * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
@@ -4774,8 +4774,8 @@ inline float sample_transmittance_pdf(
 // Evaluate phase function
 inline float eval_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming) {
-  auto cosine = dot(outgoing, incoming);
-  auto denom  = 1 + anisotropy * anisotropy + 2 * anisotropy * cosine;
+  auto cosine = -dot(outgoing, incoming);
+  auto denom  = 1 + anisotropy * anisotropy - 2 * anisotropy * cosine;
   return (1 - anisotropy * anisotropy) / (4 * pif * denom * sqrt(denom));
 }
 
@@ -4787,7 +4787,7 @@ inline vec3f sample_phasefunction(
     cos_theta = 1 - 2 * rn.y;
   } else {
     float square = (1 - anisotropy * anisotropy) /
-                   (1 - anisotropy + anisotropy * anisotropy * rn.y);
+                   (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }

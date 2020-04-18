@@ -199,7 +199,7 @@
       ],
       "material": "skin2a"
     },
-    "sphere-jade": {
+    "sphere-skins": {
       "shape": "sphere",
       "frame": [
         1,
@@ -215,7 +215,7 @@
         0,
         0
       ],
-      "material": "jade"
+      "material": "skins"
     },
     "sphere-skin1b": {
       "shape": "sphere",
@@ -289,7 +289,7 @@
       ],
       "material": "skin2a"
     },
-    "bunny-jade": {
+    "bunny-skins": {
       "shape": "bunny",
       "frame": [
         1,
@@ -305,7 +305,7 @@
         0,
         -0.4
       ],
-      "material": "jade"
+      "material": "skins"
     },
     "bunny-skin1b": {
       "shape": "bunny",
@@ -369,11 +369,11 @@
     },
     "skin1a": {
       "transmission": 1,
-      "roughness": 0.5,
+      "roughness": 0.25,
       "color": [
-        0.65,
-        0.65,
-        0.65
+        0.76,
+        0.48,
+        0.23
       ],
       "scattering": [
         0.436, 
@@ -381,16 +381,17 @@
         0.131
       ],
       "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
     "skin2a": {
       "specular": 1,
-      "roughness": 0.5,
+      "roughness": 0.25,
       "transmission": 1,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.82,
+        0.55,
+        0.40
       ],
       "scattering": [
         0.623, 
@@ -398,33 +399,35 @@
         0.343
       ],
       "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
-    "jade": {
+    "skins": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.76,
+        0.48,
+        0.23
       ],
       "scattering": [
-        0.3,
-        0.6,
-        0.3
+        0.436, 
+        0.227, 
+        0.131
       ],
-      "scanisotropy": 0,
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
     "skin1b": {
       "translucency": 1,
       "specular": 1,
-      "roughness": 0.5,
+      "roughness": 0.25,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.76,
+        0.48,
+        0.23
       ],
       "scattering": [
         0.436, 
@@ -432,16 +435,17 @@
         0.131
       ],
       "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
     "skin2b": {
       "translucency": 1,
       "specular": 1,
-      "roughness": 0.5,
+      "roughness": 0.25,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.82,
+        0.55,
+        0.40
       ],
       "scattering": [
         0.623, 
@@ -449,6 +453,7 @@
         0.343
       ],
       "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     }
   }
