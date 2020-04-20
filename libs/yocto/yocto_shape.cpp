@@ -3683,6 +3683,17 @@ void make_bulged_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   }
 }
 
+void make_recty(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
+  for (auto& p : positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : normals) std::swap(n.y, n.z);
+}
+
 // Make a cube.
 void make_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
