@@ -113,7 +113,7 @@ This library requires a C++17 compiler and is know to compiled on
 OsX (Xcode >= 10), Windows (MSVC 2019) and Linux (gcc >= 7, clang >= 4).
 
 You can build the example applications using CMake with
-    `mkdir build; cd build; cmake ..; cmake --build`
+    `mkdir build; cd build; cmake ..; cmake --build .`
 
 Yocto/GL depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
 `tinyexr.h` for image loading, saving and resizing,  `cgltf.h` and `json.hpp`
