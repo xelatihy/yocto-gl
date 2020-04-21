@@ -241,8 +241,8 @@ const auto sampler_names = std::vector<std::string>{
 
 const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "translucency", 
-    "refraction", "roughness", "opacity", "ior", "object", "element", "highlight"};
+    "specular", "coat", "metal", "transmission", "translucency", "refraction",
+    "roughness", "opacity", "ior", "object", "element", "highlight"};
 const auto bvh_names        = std::vector<std::string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE

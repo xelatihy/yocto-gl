@@ -130,23 +130,23 @@ struct material {
   texture displacement_tex = {};
 
   // pbrt extension values
-  bool  as_pbr              = false;
-  vec3f pbr_emission        = {0, 0, 0};
-  vec3f pbr_base            = {0, 0, 0};
-  float pbr_specular        = 0;
-  float pbr_roughness       = 0;
-  float pbr_metallic        = 0;
-  float pbr_sheen           = 0;
-  float pbr_coat            = 0;
-  float pbr_coatroughness   = 0;
-  float pbr_transmission    = 0;
-  float pbr_translucency    = 0;
-  float pbr_ior             = 1.5;
-  float pbr_opacity         = 1;
-  vec3f pbr_volscattering   = {0, 0, 0};
-  float pbr_volanisotropy   = 0;
-  float pbr_volscale        = 0.01;
-  bool  pbr_thin             = true;
+  bool  as_pbr            = false;
+  vec3f pbr_emission      = {0, 0, 0};
+  vec3f pbr_base          = {0, 0, 0};
+  float pbr_specular      = 0;
+  float pbr_roughness     = 0;
+  float pbr_metallic      = 0;
+  float pbr_sheen         = 0;
+  float pbr_coat          = 0;
+  float pbr_coatroughness = 0;
+  float pbr_transmission  = 0;
+  float pbr_translucency  = 0;
+  float pbr_ior           = 1.5;
+  float pbr_opacity       = 1;
+  vec3f pbr_volscattering = {0, 0, 0};
+  float pbr_volanisotropy = 0;
+  float pbr_volscale      = 0.01;
+  bool  pbr_thin          = true;
 
   // pbr extension textures
   texture pbr_emission_tex      = {};
@@ -722,7 +722,8 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pdisp") {
-      if (!parse_value(str, material->pbr_displacement_tex)) return parse_error();
+      if (!parse_value(str, material->pbr_displacement_tex))
+        return parse_error();
     } else if (cmd == "map_Pnorm") {
       if (!parse_value(str, material->pbr_normal_tex)) return parse_error();
     } else {
@@ -764,8 +765,8 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       material->pbr_base_tex = material->diffuse_tex;
       material->pbr_specular = max(material->specular) ? 1 : 0;
     }
-    material->pbr_bump_tex = material->bump_tex;
-    material->pbr_normal_tex = material->normal_tex;
+    material->pbr_bump_tex         = material->bump_tex;
+    material->pbr_normal_tex       = material->normal_tex;
     material->pbr_displacement_tex = material->displacement_tex;
   }
 
@@ -1277,7 +1278,8 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_values(fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
+        if (!format_values(
+                fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
         if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))

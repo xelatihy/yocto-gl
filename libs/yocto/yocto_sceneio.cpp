@@ -998,7 +998,7 @@ inline bool load_binary(
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if(fread(data.data(), 1, length, fs) != length) return read_error();
+  if (fread(data.data(), 1, length, fs) != length) return read_error();
   return true;
 }
 
@@ -1482,7 +1482,8 @@ static bool save_json_scene(const std::string& filename,
     add_opt(ejs, "ior", material->ior, def_material.ior);
     add_opt(
         ejs, "transmission", material->transmission, def_material.transmission);
-    add_opt(ejs, "translucency", material->translucency, def_material.translucency);
+    add_opt(
+        ejs, "translucency", material->translucency, def_material.translucency);
     add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
     add_opt(ejs, "scattering", material->scattering, def_material.scattering);
     add_opt(
@@ -1821,7 +1822,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
     omaterial->pbr_metallic         = material->metallic;
     omaterial->pbr_coat             = material->coat;
     omaterial->pbr_transmission     = material->transmission;
-    omaterial->pbr_translucency       = material->translucency;
+    omaterial->pbr_translucency     = material->translucency;
     omaterial->pbr_opacity          = material->opacity;
     omaterial->pbr_emission_tex     = get_texture(material->emission_tex);
     omaterial->pbr_base_tex         = get_texture(material->color_tex);
@@ -1829,7 +1830,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
     omaterial->pbr_metallic_tex     = get_texture(material->metallic_tex);
     omaterial->pbr_roughness_tex    = get_texture(material->roughness_tex);
     omaterial->pbr_transmission_tex = get_texture(material->transmission_tex);
-    omaterial->pbr_translucency_tex  = get_texture(material->translucency_tex);
+    omaterial->pbr_translucency_tex = get_texture(material->translucency_tex);
     omaterial->pbr_coat_tex         = get_texture(material->coat_tex);
     omaterial->pbr_opacity_tex      = get_texture(material->opacity_tex);
     omaterial->pbr_normal_tex       = get_texture(material->normal_tex);
