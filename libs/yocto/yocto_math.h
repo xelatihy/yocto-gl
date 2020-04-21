@@ -4665,7 +4665,8 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (abs(ior - 1) < 1e-3)
-    return eval_delta_transmission(ior, normal, outgoing, incoming);
+    return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec3f{1}
+                                                              : vec3f{0};
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4680,8 +4681,6 @@ inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
 // Sample a delta specular BRDF lobe.
 inline vec3f sample_delta_reflection(
     float ior, const vec3f& normal, const vec3f& outgoing) {
-  if (abs(ior - 1) < 1e-3)
-    return sample_delta_transmission(ior, normal, outgoing);
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
@@ -4703,6 +4702,7 @@ inline vec3f sample_delta_transmission(
 // Sample a delta refraction BRDF lobe.
 inline vec3f sample_delta_refraction(
     float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
+  if (abs(ior - 1) < 1e-3) return -outgoing;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4716,8 +4716,6 @@ inline vec3f sample_delta_refraction(
 // Pdf for delta specular BRDF lobe sampling.
 inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (abs(ior - 1) < 1e-3)
-    return sample_delta_transmission_pdf(ior, normal, outgoing, incoming);
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
@@ -4739,6 +4737,8 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 // Pdf for delta refraction BRDF lobe sampling.
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  if (abs(ior - 1) < 1e-3)
+    return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1 : 0;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
