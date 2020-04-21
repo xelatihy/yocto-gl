@@ -309,6 +309,9 @@ inline void print_progress(const std::string& message, int current, int total) {
   static auto pade = [](const std::string& str, int n) -> std::string {
     return str + std::string(std::max(0, n - (int)str.size()), ' ');
   };
+  static auto pads = [](const std::string& str, int n) -> std::string {
+    return std::string(std::max(0, n - (int)str.size()), ' ') + str;
+  };
   using clock               = std::chrono::high_resolution_clock;
   static int64_t start_time = 0;
   if (current == 0) start_time = clock::now().time_since_epoch().count();
@@ -317,10 +320,12 @@ inline void print_progress(const std::string& message, int current, int total) {
   auto mins  = pad(std::to_string(elapsed / 60000), 2);
   auto secs  = pad(std::to_string((elapsed % 60000) / 1000), 2);
   auto msecs = pad(std::to_string((elapsed % 60000) % 1000), 3);
-  auto n     = (int)(30 * (float)current / (float)total);
-  auto bar   = "[" + pade(std::string(n, '='), 30) + "]";
-  auto line  = bar + " " + mins + ":" + secs + "." + msecs + " " +
-              pade(message, 30);
+  auto cur   = pads(std::to_string(current), 4);
+  auto tot   = pads(std::to_string(total), 4);
+  auto n     = (int)(20 * (float)current / (float)total);
+  auto bar   = "[" + pade(std::string(n, '='), 20) + "]";
+  auto line  = bar + " " + cur + "/" + tot + " " + mins + ":" + secs + "." +
+              msecs + " " + pade(message, 30);
   printf("\r%s\r", line.c_str());
   if (current == total) printf("\n");
   fflush(stdout);
