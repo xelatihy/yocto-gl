@@ -797,6 +797,10 @@ void make_bulged_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1}, float radius = 0.3);
+void make_recty(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
+    std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
 // Make a box.
 void make_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
