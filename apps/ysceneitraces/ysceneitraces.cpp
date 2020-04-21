@@ -72,7 +72,8 @@ struct app_state {
   trc::state* render_state   = new trc::state{};
 
   // status
-  std::atomic<float> progress = 0;
+  std::atomic<int> current = 0;
+  std::atomic<int> total   = 0;
 
   ~app_state() {
     if (render_state) {
@@ -233,7 +234,8 @@ void reset_display(app_state* app) {
   trc::trace_start(
       app->render_state, app->scene, app->camera, app->params,
       [app](const std::string& message, int sample, int nsamples) {
-        app->progress = (float)sample / (float)nsamples;
+        app->current = sample;
+        app->total = nsamples;
       },
       [app](const img::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
@@ -336,7 +338,7 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
     auto  edited  = 0;
     auto& tparams = app->params;
-    draw_progressbar(win, "render", app->progress);
+    draw_progressbar(win, "render", app->current, app->total);
     edited += draw_combobox(
         win, "camera", app->camera, app->scene->cameras, app->camera_names);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);

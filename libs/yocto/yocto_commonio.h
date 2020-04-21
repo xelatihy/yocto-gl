@@ -310,7 +310,7 @@ inline void print_progress(const std::string& message, int current, int total) {
     return str + std::string(std::max(0, n - (int)str.size()), ' ');
   };
   static auto pads = [](const std::string& str, int n) -> std::string {
-    return std::string(std::max(0, n - (int)str.size()), '_') + str;
+    return std::string(std::max(0, n - (int)str.size()), ' ') + str;
   };
   using clock               = std::chrono::high_resolution_clock;
   static int64_t start_time = 0;

@@ -586,6 +586,7 @@ inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
 }
 
 void draw_progressbar(gui::window* win, const char* lbl, float fraction);
+void draw_progressbar(gui::window* win, const char* lbl, int current, int total);
 
 void draw_histogram(
     gui::window* win, const char* lbl, const std::vector<float>& values);

@@ -2145,6 +2145,15 @@ void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
   ImGui::PopStyleColor(1);
 }
 
+void draw_progressbar(gui::window* win, const char* lbl, int current, int total) {
+  auto overlay = std::to_string(current) + "/" + std::to_string(total);
+  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
+  ImGui::ProgressBar((float)current/(float)total, ImVec2(0.0f, 0.0f), overlay.c_str());
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+  ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
+  ImGui::PopStyleColor(1);
+}
+
 void draw_histogram(
     gui::window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);

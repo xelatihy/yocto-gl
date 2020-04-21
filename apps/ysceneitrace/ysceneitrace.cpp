@@ -92,12 +92,13 @@ struct app_state {
   trc::state* render_state   = new trc::state{};
 
   // loading status
-  std::atomic<bool>  ok           = false;
-  std::future<void>  loader       = {};
-  std::string        status       = "";
-  std::string        error        = "";
-  std::atomic<float> progress     = 0;
-  std::string        loader_error = "";
+  std::atomic<bool> ok           = false;
+  std::future<void> loader       = {};
+  std::string       status       = "";
+  std::string       error        = "";
+  std::atomic<int>  current      = 0;
+  std::atomic<int>  total        = 0;
+  std::string       loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -273,7 +274,8 @@ void reset_display(app_state* app) {
   trc::trace_start(
       app->render_state, app->scene, app->camera, app->params,
       [app](const std::string& message, int sample, int nsamples) {
-        app->progress = (float)sample / (float)nsamples;
+        app->current = sample;
+        app->total   = nsamples;
       },
       [app](const img::image<vec4f>& render, int current, int total) {
         if (current > 0) return;
@@ -300,12 +302,14 @@ void load_scene_async(app_states* apps, const std::string& filename,
       std::launch::async, [app, camera_name, add_skyenv]() {
         auto progress_cb = [app](const std::string& message, int current,
                                int total) {
-          app->progress = (float)current / (float)total;
+          app->current = current;
+          app->total   = total;
         };
         if (!load_scene(
                 app->filename, app->ioscene, app->loader_error, progress_cb))
           return;
-        app->progress = 1;
+        app->current = 1;
+        app->total   = 1;
         if (add_skyenv) add_sky(app->ioscene);
         app->iocamera = get_camera(app->ioscene, camera_name);
         init_scene(
@@ -538,8 +542,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
   }
   draw_combobox(win, "scene", apps->selected, apps->states, false);
   if (!apps->selected) return;
-  draw_progressbar(
-      win, apps->selected->status.c_str(), apps->selected->progress);
+  draw_progressbar(win, apps->selected->status.c_str(), apps->selected->current,
+      apps->selected->total);
   if (apps->selected->error != "") {
     draw_label(win, "error", apps->selected->error);
     return;
