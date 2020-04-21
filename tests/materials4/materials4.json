@@ -438,7 +438,7 @@
         0.2,
         0.2
       ],
-      "phaseg": -0.8,
+      "phaseg": 0,
       "ior": 1,
       "thin": false
     },
@@ -513,7 +513,7 @@
         0.2,
         0.2
       ],
-      "scanisotropy": -0.8,
+      "scanisotropy": 0,
       "ior": 1,
       "thin": false
     }
