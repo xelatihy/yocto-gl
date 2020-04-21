@@ -139,6 +139,7 @@ struct material {
   vec3f spectint     = {1, 1, 1};
   float coat         = 0;
   float transmission = 0;
+  float translucency = 0;
   vec3f scattering   = {0, 0, 0};
   float scanisotropy = 0;
   float trdepth      = 0.01;
@@ -153,6 +154,7 @@ struct material {
   scn::texture* metallic_tex     = nullptr;
   scn::texture* roughness_tex    = nullptr;
   scn::texture* transmission_tex = nullptr;
+  scn::texture* translucency_tex = nullptr;
   scn::texture* spectint_tex     = nullptr;
   scn::texture* scattering_tex   = nullptr;
   scn::texture* coat_tex         = nullptr;

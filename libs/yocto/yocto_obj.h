@@ -140,11 +140,13 @@ struct material {
   float pbr_coat          = 0;
   float pbr_coatroughness = 0;
   float pbr_transmission  = 0;
+  float pbr_translucency  = 0;
   float pbr_ior           = 1.5;
   float pbr_opacity       = 1;
   vec3f pbr_volscattering = {0, 0, 0};
   float pbr_volanisotropy = 0;
   float pbr_volscale      = 0.01;
+  bool  pbr_thin          = true;
 
   // pbr extension textures
   texture pbr_emission_tex      = {};
@@ -156,8 +158,12 @@ struct material {
   texture pbr_coat_tex          = {};
   texture pbr_coatroughness_tex = {};
   texture pbr_transmission_tex  = {};
+  texture pbr_translucency_tex  = {};
   texture pbr_opacity_tex       = {};
   texture pbr_volscattering_tex = {};
+  texture pbr_bump_tex          = {};
+  texture pbr_normal_tex        = {};
+  texture pbr_displacement_tex  = {};
 };
 
 // Obj shape
@@ -642,7 +648,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
     } else if (cmd == "Pr") {
       if (!parse_value(str, material->pbr_roughness)) return parse_error();
       material->as_pbr = true;
-    } else if (cmd == "Ps") {
+    } else if (cmd == "Psh") {
       if (!parse_value(str, material->pbr_sheen)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pc") {
@@ -653,6 +659,9 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       material->as_pbr = true;
     } else if (cmd == "Pt") {
       if (!parse_value(str, material->pbr_transmission)) return parse_error();
+      material->as_pbr = true;
+    } else if (cmd == "Pss") {
+      if (!parse_value(str, material->pbr_translucency)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pn") {
       if (!parse_value(str, material->pbr_ior)) return parse_error();
@@ -669,6 +678,9 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
     } else if (cmd == "Pvr") {
       if (!parse_value(str, material->pbr_volscale)) return parse_error();
       material->as_pbr = true;
+    } else if (cmd == "Pthin") {
+      if (!parse_value(str, material->pbr_thin)) return parse_error();
+      material->as_pbr = true;
     } else if (cmd == "map_Pe") {
       if (!parse_value(str, material->pbr_emission_tex)) return parse_error();
       material->as_pbr = true;
@@ -684,7 +696,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
     } else if (cmd == "map_Pr") {
       if (!parse_value(str, material->pbr_roughness_tex)) return parse_error();
       material->as_pbr = true;
-    } else if (cmd == "map_Ps") {
+    } else if (cmd == "map_Psh") {
       if (!parse_value(str, material->pbr_sheen_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pc") {
@@ -701,10 +713,19 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       if (!parse_value(str, material->pbr_transmission_tex))
         return parse_error();
       material->as_pbr = true;
-    } else if (cmd == "map_Vs") {
+    } else if (cmd == "map_Pss") {
+      if (!parse_value(str, material->pbr_translucency_tex))
+        return parse_error();
+      material->as_pbr = true;
+    } else if (cmd == "map_Pvs") {
       if (!parse_value(str, material->pbr_volscattering_tex))
         return parse_error();
       material->as_pbr = true;
+    } else if (cmd == "map_Pdisp") {
+      if (!parse_value(str, material->pbr_displacement_tex))
+        return parse_error();
+    } else if (cmd == "map_Pnorm") {
+      if (!parse_value(str, material->pbr_normal_tex)) return parse_error();
     } else {
       continue;
     }
@@ -744,6 +765,9 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
       material->pbr_base_tex = material->diffuse_tex;
       material->pbr_specular = max(material->specular) ? 1 : 0;
     }
+    material->pbr_bump_tex         = material->bump_tex;
+    material->pbr_normal_tex       = material->normal_tex;
+    material->pbr_displacement_tex = material->displacement_tex;
   }
 
   return true;
@@ -1185,7 +1209,7 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
       if (material->pbr_specular)
-        if (!format_values(fs, "Psp {}\n", material->pbr_specular))
+        if (!format_values(fs, "Ps {}\n", material->pbr_specular))
           return write_error();
       if (material->pbr_roughness)
         if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
@@ -1194,7 +1218,13 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
           return write_error();
       if (material->pbr_sheen)
-        if (!format_values(fs, "Ps {}\n", material->pbr_sheen))
+        if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
+          return write_error();
+      if (material->pbr_transmission)
+        if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
+          return write_error();
+      if (material->pbr_translucency)
+        if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
           return write_error();
       if (material->pbr_coat)
         if (!format_values(fs, "Pc {}\n", material->pbr_coat))
@@ -1218,7 +1248,7 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "map_Pb {}\n", material->pbr_base_tex))
           return write_error();
       if (!material->pbr_specular_tex.path.empty())
-        if (!format_values(fs, "map_Psp {}\n", material->pbr_specular_tex))
+        if (!format_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
           return write_error();
       if (!material->pbr_roughness_tex.path.empty())
         if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
@@ -1227,7 +1257,13 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
           return write_error();
       if (!material->pbr_sheen_tex.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material->pbr_sheen_tex))
+        if (!format_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
+          return write_error();
+      if (!material->pbr_transmission_tex.path.empty())
+        if (!format_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
+          return write_error();
+      if (!material->pbr_translucency_tex.path.empty())
+        if (!format_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
           return write_error();
       if (!material->pbr_coat_tex.path.empty())
         if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
@@ -1239,13 +1275,14 @@ inline void format_value(std::string& str, const vertex& value) {
         if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material->bump_tex))
+        if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material->displacement_tex))
+        if (!format_values(
+                fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material->normal_tex))
+        if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
           return write_error();
     }
     if (!format_values(fs, "\n")) return write_error();

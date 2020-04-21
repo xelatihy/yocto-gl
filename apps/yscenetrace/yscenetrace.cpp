@@ -99,6 +99,8 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
         texture_map.at(iomaterial->metallic_tex));
     set_transmission(material, iomaterial->transmission, iomaterial->thin,
         iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_translucency(material, iomaterial->translucency, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
     set_roughness(material, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
     set_opacity(

@@ -4430,6 +4430,13 @@ inline vec3f eval_diffuse_reflection(
   return vec3f{1} / pif * dot(normal, incoming);
 }
 
+// Evaluate a translucent BRDF lobe.
+inline vec3f eval_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
+  return vec3f{1} / pif * abs(dot(normal, incoming));
+}
+
 // Evaluate a specular BRDF lobe.
 inline vec3f eval_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
@@ -4511,6 +4518,13 @@ inline vec3f sample_diffuse_reflection(
   return sample_hemisphere_cos(normal, rn);
 }
 
+// Sample a translucency BRDF lobe.
+inline vec3f sample_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos(-up_normal, rn);
+}
+
 // Sample a specular BRDF lobe.
 inline vec3f sample_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn) {
@@ -4559,6 +4573,14 @@ inline float sample_diffuse_reflection_pdf(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return sample_hemisphere_cos_pdf(normal, incoming);
+}
+
+// Pdf for translucency BRDF lobe sampling.
+inline float sample_diffuse_transmission_pdf(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos_pdf(-up_normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.
@@ -4642,13 +4664,17 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 // Evaluate a delta refraction BRDF lobe.
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  if (abs(ior - 1) < 1e-3)
+    return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec3f{1}
+                                                              : vec3f{0};
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
+    return vec3f{1} * (1 / (rel_ior * rel_ior)) *
+           (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
@@ -4676,6 +4702,7 @@ inline vec3f sample_delta_transmission(
 // Sample a delta refraction BRDF lobe.
 inline vec3f sample_delta_refraction(
     float ior, const vec3f& normal, const vec3f& outgoing, float rnl) {
+  if (abs(ior - 1) < 1e-3) return -outgoing;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4710,6 +4737,8 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 // Pdf for delta refraction BRDF lobe sampling.
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  if (abs(ior - 1) < 1e-3)
+    return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1 : 0;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -4718,6 +4747,11 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
   } else {
     return (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
+}
+
+// Convert mean-free-path to transmission
+inline vec3f mfp_to_transmission(const vec3f& mfp, float depth) {
+  return exp(-depth / mfp);
 }
 
 // Evaluate transmittance
@@ -4747,8 +4781,8 @@ inline float sample_transmittance_pdf(
 // Evaluate phase function
 inline float eval_phasefunction(
     float anisotropy, const vec3f& outgoing, const vec3f& incoming) {
-  auto cosine = dot(outgoing, incoming);
-  auto denom  = 1 + anisotropy * anisotropy + 2 * anisotropy * cosine;
+  auto cosine = -dot(outgoing, incoming);
+  auto denom  = 1 + anisotropy * anisotropy - 2 * anisotropy * cosine;
   return (1 - anisotropy * anisotropy) / (4 * pif * denom * sqrt(denom));
 }
 
@@ -4760,14 +4794,15 @@ inline vec3f sample_phasefunction(
     cos_theta = 1 - 2 * rn.y;
   } else {
     float square = (1 - anisotropy * anisotropy) /
-                   (1 - anisotropy + anisotropy * anisotropy * rn.y);
+                   (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }
 
   auto sin_theta      = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
   auto phi            = 2 * pif * rn.x;
-  auto local_incoming = vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+  auto local_incoming = vec3f{
+      sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;
 }
 

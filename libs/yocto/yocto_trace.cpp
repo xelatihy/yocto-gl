@@ -84,10 +84,7 @@ using math::zero4i;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
-
-
-}  // namespace yocto::trace
+namespace yocto::trace {}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
@@ -257,8 +254,8 @@ static ray3f eval_perspective_camera(
   // ray direction through the lens center
   auto dc = -normalize(q);
   // point on the lens
-  auto e = vec3f{lens_uv.x * camera->aperture / 2,
-      lens_uv.y * camera->aperture / 2, 0};
+  auto e = vec3f{
+      lens_uv.x * camera->aperture / 2, lens_uv.y * camera->aperture / 2, 0};
   // point on the focus plane
   auto p = dc * camera->focus / abs(dc.z);
   // correct ray direction to account for camera focusing
@@ -353,6 +350,7 @@ struct trace_point {
   vec3f metal        = {0, 0, 0};
   vec3f coat         = {0, 0, 0};
   vec3f transmission = {0, 0, 0};
+  vec3f translucency = {0, 0, 0};
   vec3f refraction   = {0, 0, 0};
   float roughness    = 0;
   float opacity      = 1;
@@ -365,6 +363,7 @@ struct trace_point {
   float metal_pdf        = 0;
   float coat_pdf         = 0;
   float transmission_pdf = 0;
+  float translucency_pdf = 0;
   float refraction_pdf   = 0;
 };
 
@@ -457,6 +456,9 @@ static trace_point eval_point(const trc::scene* scene,
               eval_texture(material->coat_tex, texcoord, true).x;
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
+  auto translucency =
+      material->translucency *
+      eval_texture(material->translucency_tex, texcoord, true).x;
   auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
@@ -469,13 +471,16 @@ static trace_point eval_point(const trc::scene* scene,
                     fresnel_dielectric(coat_ior, point.outgoing, point.normal);
   point.metal = weight * metallic;
   weight *= 1 - metallic;
-  point.refraction = thin ? zero3f : weight * transmission;
+  point.refraction = thin ? zero3f : (weight * transmission);
   weight *= 1 - (thin ? 0 : transmission);
   point.specular = weight * specular;
   weight *= 1 -
             specular * fresnel_dielectric(ior, point.outgoing, point.normal);
-  point.transmission = weight * transmission * base;
-  weight *= 1 - transmission;
+  point.transmission = thin ? (weight * transmission * base) : zero3f;
+  weight *= 1 - (thin ? transmission : 0);
+  point.translucency = thin ? (weight * translucency * base)
+                            : (weight * translucency);
+  weight *= 1 - translucency;
   point.diffuse   = weight * base;
   point.meta      = reflectivity_to_eta(base);
   point.metak     = zero3f;
@@ -484,7 +489,8 @@ static trace_point eval_point(const trc::scene* scene,
   point.opacity   = opacity;
 
   // textures
-  if (point.diffuse != zero3f || point.roughness) {
+  if (point.diffuse != zero3f || point.translucency != zero3f ||
+      point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
   if (point.specular == zero3f && point.metal == zero3f &&
@@ -502,15 +508,18 @@ static trace_point eval_point(const trc::scene* scene,
   point.coat_pdf  = max(
       point.coat * fresnel_dielectric(coat_ior, point.normal, point.outgoing));
   point.transmission_pdf = max(point.transmission);
+  point.translucency_pdf = max(point.translucency);
   point.refraction_pdf   = max(point.refraction);
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
-                 point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
+                 point.coat_pdf + point.transmission_pdf +
+                 point.translucency_pdf + point.refraction_pdf;
   if (pdf_sum) {
     point.diffuse_pdf /= pdf_sum;
     point.specular_pdf /= pdf_sum;
     point.metal_pdf /= pdf_sum;
     point.coat_pdf /= pdf_sum;
     point.transmission_pdf /= pdf_sum;
+    point.translucency_pdf /= pdf_sum;
     point.refraction_pdf /= pdf_sum;
   }
   return point;
@@ -560,15 +569,19 @@ static volume_point eval_volume(const trc::scene* scene,
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
-  auto thin       = material->thin || !material->transmission;
+  auto translucency =
+      material->translucency *
+      eval_texture(material->translucency_tex, texcoord, true).x;
+  auto thin = material->thin ||
+              (!material->transmission && !material->translucency);
   auto scattering = material->scattering *
-                    eval_texture(material->scattering_tex, texcoord, false).x;
+                    eval_texture(material->scattering_tex, texcoord, false);
   auto scanisotropy = material->scanisotropy;
   auto trdepth      = material->trdepth;
 
   // factors
   point.volemission = zero3f;
-  point.voldensity  = (transmission && !thin)
+  point.voldensity  = ((transmission || translucency) && !thin)
                          ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
                          : zero3f;
   point.volscatter    = scattering;
@@ -581,7 +594,8 @@ static volume_point eval_volume(const trc::scene* scene,
 static bool has_volume(
     const trc::scene* scene, const intersection3f& intersection) {
   auto object = scene->objects[intersection.object];
-  return !object->material->thin && object->material->transmission;
+  return !object->material->thin &&
+         (object->material->transmission || object->material->translucency);
 }
 
 // Evaluate all environment color.
@@ -1601,6 +1615,10 @@ static vec3f eval_brdfcos(const trace_point& point) {
                                         point.roughness, point.normal,
                                         point.outgoing, point.incoming);
   }
+  if (point.translucency) {
+    brdfcos += point.translucency * eval_diffuse_transmission(point.normal,
+                                        point.outgoing, point.incoming);
+  }
   if (point.refraction) {
     brdfcos += point.refraction * eval_microfacet_refraction(point.ior,
                                       point.roughness, point.normal,
@@ -1677,6 +1695,12 @@ static vec3f sample_brdf(const trace_point& point, float rnl, const vec2f& rn) {
     if (rnl < cdf)
       return sample_microfacet_transmission(
           point.ior, point.roughness, point.normal, point.outgoing, rn);
+  }
+
+  if (point.translucency_pdf) {
+    cdf += point.translucency_pdf;
+    if (rnl < cdf)
+      return sample_diffuse_transmission(point.normal, point.outgoing, rn);
   }
 
   if (point.refraction_pdf) {
@@ -1771,6 +1795,12 @@ static float sample_brdf_pdf(const trace_point& point) {
                point.normal, point.outgoing, point.incoming);
   }
 
+  if (point.translucency_pdf) {
+    pdf += point.translucency_pdf *
+           sample_diffuse_transmission_pdf(
+               point.normal, point.outgoing, point.incoming);
+  }
+
   if (point.refraction_pdf) {
     pdf += point.refraction_pdf * sample_microfacet_refraction_pdf(point.ior,
                                       point.roughness, point.normal,
@@ -1814,8 +1844,8 @@ static float sample_delta_pdf(const trace_point& point) {
 static vec3f eval_scattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter * point.voldensity *
-         eval_phasefunction(point.volanisotropy,
-             point.outgoing, point.incoming);
+         eval_phasefunction(
+             point.volanisotropy, point.outgoing, point.incoming);
 }
 
 static vec3f sample_scattering(
@@ -1826,8 +1856,8 @@ static vec3f sample_scattering(
 
 static float sample_scattering_pdf(const volume_point& point) {
   if (point.voldensity == zero3f) return 0;
-  return sample_phasefunction_pdf(point.volanisotropy,
-      point.outgoing, point.incoming);
+  return sample_phasefunction_pdf(
+      point.volanisotropy, point.outgoing, point.incoming);
 }
 
 // Sample lights wrt solid angle
@@ -1940,12 +1970,12 @@ static std::pair<vec3f, bool> trace_path(const trc::scene* scene,
     // handle transmission if inside a volume
     auto in_volume = false;
     if (!volume_stack.empty()) {
-      auto& point              = volume_stack.back();
-      auto distance = sample_transmittance(
+      auto& point    = volume_stack.back();
+      auto  distance = sample_transmittance(
           point.voldensity, intersection.distance, rand1f(rng), rand1f(rng));
       weight *= eval_transmittance(point.voldensity, distance) /
-                sample_transmittance_pdf(point.voldensity, distance, 
-                intersection.distance);
+                sample_transmittance_pdf(
+                    point.voldensity, distance, intersection.distance);
       in_volume             = distance < intersection.distance;
       intersection.distance = distance;
     }
@@ -2191,9 +2221,11 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
     case falsecolor_type::coat: return {point.coat, 1};
     case falsecolor_type::metal: return {point.metal, 1};
     case falsecolor_type::transmission: return {point.transmission, 1};
+    case falsecolor_type::translucency: return {point.translucency, 1};
     case falsecolor_type::refraction: return {point.refraction, 1};
     case falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
     case falsecolor_type::opacity: return {vec3f{point.opacity}, 1};
+    case falsecolor_type::ior: return {vec3f{point.ior}, 1};
     case falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case falsecolor_type::object: return {hashed_color(intersection.object), 1};
@@ -2634,6 +2666,13 @@ void set_transmission(trc::material* material, float transmission, bool thin,
   material->thin             = thin;
   material->trdepth          = trdepth;
   material->transmission_tex = transmission_tex;
+}
+void set_translucency(trc::material* material, float translucency, bool thin,
+    float trdepth, trc::texture* translucency_tex) {
+  material->translucency     = translucency;
+  material->thin             = thin;
+  material->trdepth          = trdepth;
+  material->translucency_tex = translucency_tex;
 }
 void set_thin(trc::material* material, bool thin) { material->thin = thin; }
 void set_roughness(

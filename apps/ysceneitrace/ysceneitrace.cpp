@@ -185,6 +185,8 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
         texture_map.at(iomaterial->metallic_tex));
     set_transmission(material, iomaterial->transmission, iomaterial->thin,
         iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
+    set_translucency(material, iomaterial->translucency, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
     set_roughness(material, iomaterial->roughness,
         texture_map.at(iomaterial->roughness_tex));
     set_opacity(
@@ -378,6 +380,7 @@ bool draw_widgets(
   edited += draw_slider(win, "specular", iomaterial->specular, 0, 1);
   edited += draw_slider(win, "coat", iomaterial->coat, 0, 1);
   edited += draw_slider(win, "transmission", iomaterial->transmission, 0, 1);
+  edited += draw_slider(win, "translucency", iomaterial->translucency, 0, 1);
   edited += draw_coloredit(win, "spectint", iomaterial->spectint);
   edited += draw_checkbox(win, "thin", iomaterial->thin);
   edited += draw_coloredit(win, "scattering", iomaterial->scattering);
@@ -396,6 +399,8 @@ bool draw_widgets(
   edited += draw_combobox(
       win, "specular_tex", iomaterial->specular_tex, ioscene->textures, true);
   edited += draw_combobox(win, "transmission_tex", iomaterial->transmission_tex,
+      ioscene->textures, true);
+  edited += draw_combobox(win, "translucency_tex", iomaterial->translucency_tex,
       ioscene->textures, true);
   edited += draw_combobox(win, "scattering_tex", iomaterial->scattering_tex,
       ioscene->textures, true);
@@ -698,6 +703,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
           get_texture(iomaterial->metallic_tex));
       set_transmission(material, iomaterial->transmission, iomaterial->thin,
           iomaterial->trdepth, get_texture(iomaterial->transmission_tex));
+      set_translucency(material, iomaterial->translucency, iomaterial->thin,
+          iomaterial->trdepth, get_texture(iomaterial->translucency_tex));
       set_roughness(material, iomaterial->roughness,
           get_texture(iomaterial->roughness_tex));
       set_opacity(

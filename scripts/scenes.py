@@ -64,14 +64,15 @@ def trace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'path': '-s 64 -r 640',
         'path-skyenv': '-s 64 -r 640 --skyenv',
+        'path-face': '-s 256 -r 640',
         'embree': '-s 256 -r 1280 --bvh embree-highquality',
         'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
         'eyelight': '-s 16 -r 1280 -t eyelight',
-        'embree-face': '-s 256 -r 640 --bvh embree-highquality',
+        'embree-face': '-s 1024 -r 640 --bvh embree-highquality',
         'final': '-s 4096 -r 1280 --bvh embree-highquality',
         'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
         'final-filter': '-s 4096 -r 1280 --filter --bvh embree-highquality',
-        'final-face': '-s 4096 -r 640 --bvh embree-highquality',
+        'final-face': '-s 4096 -r 1280 --bvh embree-highquality',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'

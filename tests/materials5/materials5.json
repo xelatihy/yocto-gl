@@ -163,7 +163,7 @@
       ],
       "material": "largearealight2"
     },
-    "sphere-volume-cloud": {
+    "sphere-skin1a": {
       "shape": "sphere",
       "frame": [
         1,
@@ -179,9 +179,9 @@
         0,
         0
       ],
-      "material": "sphere-volume-cloud"
+      "material": "skin1a"
     },
-    "sphere-volume-glass": {
+    "sphere-skin2a": {
       "shape": "sphere",
       "frame": [
         1,
@@ -197,9 +197,9 @@
         0,
         0
       ],
-      "material": "sphere-volume-glass"
+      "material": "skin2a"
     },
-    "sphere-volume-jade": {
+    "sphere-skins": {
       "shape": "sphere",
       "frame": [
         1,
@@ -215,9 +215,9 @@
         0,
         0
       ],
-      "material": "sphere-volume-jade"
+      "material": "skins"
     },
-    "sphere-volume-jade2": {
+    "sphere-skin1b": {
       "shape": "sphere",
       "frame": [
         1,
@@ -233,9 +233,9 @@
         0,
         0
       ],
-      "material": "sphere-volume-jade2"
+      "material": "skin1b"
     },
-    "sphere-volume-smoke": {
+    "sphere-skin2b": {
       "shape": "sphere",
       "frame": [
         1,
@@ -251,9 +251,9 @@
         0,
         0
       ],
-      "material": "sphere-volume-smoke"
+      "material": "skin2b"
     },
-    "bunny-volume-cloud": {
+    "bunny-skin1a": {
       "shape": "bunny",
       "frame": [
         1,
@@ -269,9 +269,9 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-cloud"
+      "material": "skin1a"
     },
-    "bunny-volume-glass": {
+    "bunny-skin2a": {
       "shape": "bunny",
       "frame": [
         1,
@@ -287,9 +287,9 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-glass"
+      "material": "skin2a"
     },
-    "bunny-volume-jade": {
+    "bunny-skins": {
       "shape": "bunny",
       "frame": [
         1,
@@ -305,9 +305,9 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-jade"
+      "material": "skins"
     },
-    "bunny-volume-jade2": {
+    "bunny-skin1b": {
       "shape": "bunny",
       "frame": [
         1,
@@ -323,9 +323,9 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-jade2"
+      "material": "skin1b"
     },
-    "bunny-volume-smoke": {
+    "bunny-skin2b": {
       "shape": "bunny",
       "frame": [
         1,
@@ -341,7 +341,7 @@
         0,
         -0.4
       ],
-      "material": "bunny-volume-smoke"
+      "material": "skin2b"
     }
   },
   "materials": {
@@ -367,154 +367,93 @@
         10
       ]
     },
-    "sphere-volume-cloud": {
-      "color": [
-        0.65,
-        0.65,
-        0.65
-      ],
+    "skin1a": {
       "transmission": 1,
-      "scattering": [
-        0.9,
-        0.9,
-        0.9
+      "roughness": 0.25,
+      "color": [
+        0.76,
+        0.48,
+        0.23
       ],
-      "ior": 1,
+      "scattering": [
+        0.436, 
+        0.227, 
+        0.131
+      ],
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
-    "sphere-volume-glass": {
+    "skin2a": {
+      "specular": 1,
+      "roughness": 0.25,
+      "transmission": 1,
+      "color": [
+        0.82,
+        0.55,
+        0.40
+      ],
+      "scattering": [
+        0.623, 
+        0.433, 
+        0.343
+      ],
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
+      "thin": false
+    },
+    "skins": {
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
       "color": [
-        1,
-        0.5,
-        0.5
-      ],
-      "trdepth": 0.02,
-      "thin": false
-    },
-    "sphere-volume-jade": {
-      "specular": 1,
-      "roughness": 0,
-      "transmission": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.5
+        0.76,
+        0.48,
+        0.23
       ],
       "scattering": [
-        0.3,
-        0.6,
-        0.3
+        0.436, 
+        0.227, 
+        0.131
       ],
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
-    "sphere-volume-jade2": {
+    "skin1b": {
       "translucency": 1,
       "specular": 1,
-      "roughness": 0,
+      "roughness": 0.25,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.76,
+        0.48,
+        0.23
       ],
       "scattering": [
-        0.3,
-        0.6,
-        0.3
+        0.436, 
+        0.227, 
+        0.131
       ],
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     },
-    "sphere-volume-smoke": {
-      "transmission": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "scattering": [
-        0.2,
-        0.2,
-        0.2
-      ],
-      "phaseg": 0,
-      "ior": 1,
-      "thin": false
-    },
-    "bunny-volume-cloud": {
-      "color": [
-        0.65,
-        0.65,
-        0.65
-      ],
-      "transmission": 1,
-      "scattering": [
-        0.9,
-        0.9,
-        0.9
-      ],
-      "ior": 1,
-      "thin": false
-    },
-    "bunny-volume-glass": {
-      "specular": 1,
-      "roughness": 0,
-      "transmission": 1,
-      "color": [
-        1,
-        0.5,
-        0.5
-      ],
-      "trdepth": 0.02,
-      "thin": false
-    },
-    "bunny-volume-jade": {
-      "specular": 1,
-      "roughness": 0,
-      "transmission": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "scattering": [
-        0.3,
-        0.6,
-        0.3
-      ],
-      "thin": false
-    },
-    "bunny-volume-jade2": {
-      "specular": 1,
-      "roughness": 0.1,
+    "skin2b": {
       "translucency": 1,
+      "specular": 1,
+      "roughness": 0.25,
       "color": [
-        0.5,
-        0.5,
-        0.5
+        0.82,
+        0.55,
+        0.40
       ],
       "scattering": [
-        0.3,
-        0.6,
-        0.3
+        0.623, 
+        0.433, 
+        0.343
       ],
-      "thin": false
-    },
-    "bunny-volume-smoke": {
-      "transmission": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "scattering": [
-        0.2,
-        0.2,
-        0.2
-      ],
-      "scanisotropy": 0,
-      "ior": 1,
+      "scanisotropy": -0.8,
+      "trdepth": 0.001,
       "thin": false
     }
   }

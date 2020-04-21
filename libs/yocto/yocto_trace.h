@@ -156,6 +156,8 @@ void set_metallic(trc::material* material, float metallic,
     trc::texture* metallic_tex = nullptr);
 void set_transmission(trc::material* material, float transmission, bool thin,
     float trdepth, trc::texture* transmission_tex = nullptr);
+void set_translucency(trc::material* material, float translucency, bool thin,
+    float trdepth, trc::texture* translucency_tex = nullptr);
 void set_roughness(trc::material* material, float roughness,
     trc::texture* roughness_tex = nullptr);
 void set_opacity(trc::material* material, float opacity,
@@ -196,8 +198,8 @@ enum struct sampler_type {
 enum struct falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, coat, metal, transmission, refraction, roughness, opacity, 
-  object, element, highlight
+  diffuse, specular, coat, metal, transmission, translucency, refraction, 
+  roughness, opacity, ior, object, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -239,8 +241,8 @@ const auto sampler_names = std::vector<std::string>{
 
 const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "opacity", "object", "element", "highlight"};
+    "specular", "coat", "metal", "transmission", "translucency", "refraction",
+    "roughness", "opacity", "ior", "object", "element", "highlight"};
 const auto bvh_names        = std::vector<std::string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -362,6 +364,7 @@ struct material {
   vec3f spectint     = {1, 1, 1};
   float coat         = 0;
   float transmission = 0;
+  float translucency = 0;
   vec3f scattering   = {0, 0, 0};
   float scanisotropy = 0;
   float trdepth      = 0.01;
@@ -375,6 +378,7 @@ struct material {
   trc::texture* metallic_tex     = nullptr;
   trc::texture* roughness_tex    = nullptr;
   trc::texture* transmission_tex = nullptr;
+  trc::texture* translucency_tex = nullptr;
   trc::texture* spectint_tex     = nullptr;
   trc::texture* scattering_tex   = nullptr;
   trc::texture* coat_tex         = nullptr;
