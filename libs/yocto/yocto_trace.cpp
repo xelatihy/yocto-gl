@@ -2223,6 +2223,7 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
     case falsecolor_type::refraction: return {point.refraction, 1};
     case falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
     case falsecolor_type::opacity: return {vec3f{point.opacity}, 1};
+    case falsecolor_type::ior: return {vec3f{point.ior}, 1};
     case falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case falsecolor_type::object: return {hashed_color(intersection.object), 1};

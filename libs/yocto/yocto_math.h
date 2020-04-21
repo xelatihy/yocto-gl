@@ -4664,19 +4664,23 @@ inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
 // Evaluate a delta refraction BRDF lobe.
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  if (abs(ior-1) < 1e-3)
+    return eval_delta_transmission(ior, normal, outgoing, incoming);
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
     return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1/(rel_ior * rel_ior)) * (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
+    return vec3f{1} * (1 / (rel_ior * rel_ior)) *
+           (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }
 
 // Sample a delta specular BRDF lobe.
 inline vec3f sample_delta_reflection(
     float ior, const vec3f& normal, const vec3f& outgoing) {
+  if (abs(ior-1) < 1e-3) return sample_delta_transmission(ior, normal, outgoing);
   if (dot(normal, outgoing) <= 0) return zero3f;
   return reflect(outgoing, normal);
 }
@@ -4711,6 +4715,8 @@ inline vec3f sample_delta_refraction(
 // Pdf for delta specular BRDF lobe sampling.
 inline float sample_delta_reflection_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
+  if (abs(ior-1) < 1e-3)
+    return sample_delta_transmission_pdf(ior, normal, outgoing, incoming);
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return 1;
 }
@@ -4744,7 +4750,7 @@ inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
 
 // Convert mean-free-path to transmission
 inline vec3f mfp_to_transmission(const vec3f& mfp, float depth) {
-  return exp(-depth/mfp);
+  return exp(-depth / mfp);
 }
 
 // Evaluate transmittance
@@ -4794,7 +4800,8 @@ inline vec3f sample_phasefunction(
 
   auto sin_theta      = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
   auto phi            = 2 * pif * rn.x;
-  auto local_incoming = vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+  auto local_incoming = vec3f{
+      sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;
 }
 
