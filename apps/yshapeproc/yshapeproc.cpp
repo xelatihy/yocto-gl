@@ -263,6 +263,7 @@ int main(int argc, const char* argv[]) {
   auto positiononly         = false;
   auto trianglesonly        = false;
   auto smooth               = false;
+  auto faceted              = false;
   auto rotate               = zero3f;
   auto scale                = vec3f{1};
   auto uscale               = 1.0f;
@@ -284,6 +285,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--positiononly", positiononly, "Remove all but positions");
   add_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
+  add_option(cli, "--faceted", faceted, "Remove normals");
   add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
   add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
   add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
@@ -411,6 +413,14 @@ int main(int argc, const char* argv[]) {
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
     cli::print_progress("smooth shape", 1, 1);
+  }
+
+  // remove normals
+  if (faceted) {
+    cli::print_progress("facet shape", 0, 1);
+    normals   = {};
+    quadsnorm = {};
+    cli::print_progress("facet shape", 1, 1);
   }
 
   // compute geodesics and store them as colors

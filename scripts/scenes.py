@@ -184,7 +184,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         copyright_options = ''
         if os.path.exists(f'{dirname}/AUTHOR.txt'):
             with open(f'{dirname}/AUTHOR.txt') as f: 
-                copyright = f.read().strip()
+                copyright = f.read().strip().replace('"','')
             copyright_options += f'--copyright "{copyright}"'
         obj_options = ''
         if 'bunny2' in dirname and outformat == 'obj': obj_options = '--obj-instances'
@@ -197,6 +197,12 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
         os.system(f'mkdir -p {outdirname}/textures')
+        if os.path.exists(f'{dirname}/AUTHOR.txt'):
+            os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
+        if os.path.exists(f'{dirname}/LICENSE.txt'):
+            os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
+        if os.path.exists(f'{dirname}/LINKS.txt'):
+            os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
         if outformat == 'yaml' or outformat == 'json':        
             os.system(f'mkdir -p {outdirname}/shapes')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
@@ -233,6 +239,8 @@ def copyright(directory='mcguire',scene='*',format='obj',outformat="json",mode='
             os.system(f'cp {dirname}/AUTHOR.txt {outdirname}/')
         if os.path.exists(f'{dirname}/LICENSE.txt'):
             os.system(f'cp {dirname}/LICENSE.txt {outdirname}/')
+        if os.path.exists(f'{dirname}/LINKS.txt'):
+            os.system(f'cp {dirname}/LINKS.txt {outdirname}/')
 
 @cli.command()
 @click.option('--directory', '-d', default='yuksel')
