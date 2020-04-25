@@ -35,6 +35,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 using namespace std::string_literals;
 
 #include "ext/glad/glad.h"
@@ -1018,6 +1019,24 @@ void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
       3, (const int*)triangles.data());
 }
+void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
+    const std::vector<vec4i>& quads) {
+  auto edgemap = std::unordered_set<vec2i>{};
+  for (auto t : triangles) {
+    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
+    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
+    edgemap.insert({min(t.z, t.x), max(t.z, t.x)});
+  }
+  for (auto t : quads) {
+    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
+    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
+    edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
+    edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
+  }
+  auto edges = std::vector(edgemap.begin(), edgemap.end());
+  set_glshape_buffer(shape->edges_id, shape->edges_num, true, edges.size(), 2,
+      (const int*)edges.data());
+}
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
@@ -1286,6 +1305,17 @@ void draw_object(
         GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
   }
 
+  if (shape->edges_id && params.edges && !params.wireframe) {
+    glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
+    glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"), 0, 0, 0);
+    glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"), 0, 0, 0);
+    glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"), 0, 0, 0);
+    glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
+    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
+    glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+  }
+
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
@@ -1301,8 +1331,6 @@ void draw_object(
         check_glerror();
     }
 #endif
-  if (params.edges) throw std::runtime_error("edges are momentarily disabled");
-  // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
 }
 
 // Display a scene
@@ -2145,10 +2173,12 @@ void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
   ImGui::PopStyleColor(1);
 }
 
-void draw_progressbar(gui::window* win, const char* lbl, int current, int total) {
+void draw_progressbar(
+    gui::window* win, const char* lbl, int current, int total) {
   auto overlay = std::to_string(current) + "/" + std::to_string(total);
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
-  ImGui::ProgressBar((float)current/(float)total, ImVec2(0.0f, 0.0f), overlay.c_str());
+  ImGui::ProgressBar(
+      (float)current / (float)total, ImVec2(0.0f, 0.0f), overlay.c_str());
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
   ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
   ImGui::PopStyleColor(1);

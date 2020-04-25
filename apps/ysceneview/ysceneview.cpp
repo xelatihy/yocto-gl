@@ -253,6 +253,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
     set_lines(glshape, ioshape->lines);
     set_triangles(glshape, ioshape->triangles);
     set_quads(glshape, ioshape->quads);
+    set_edges(glshape, ioshape->triangles, ioshape->quads);
     shape_map[ioshape] = glshape;
   }
 
@@ -686,7 +687,7 @@ void update(gui::window* win, app_states* apps) {
     auto progress_cb = [app](
                            const std::string& message, int current, int total) {
       app->current = current;
-      app->total = total;
+      app->total   = total;
     };
     app->loader.get();
     if (app->loader_error.empty()) {
@@ -710,7 +711,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("yscnview", "views scenes inteactively");
+  auto cli = cli::make_cli("ysceneview", "views scenes inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
@@ -764,7 +765,7 @@ int main(int argc, const char* argv[]) {
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "yscnview", callbacks);
+  run_ui({1280 + 320, 720}, "ysceneview", callbacks);
 
   // done
   return 0;
