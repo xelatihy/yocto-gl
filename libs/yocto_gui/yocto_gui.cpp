@@ -1144,7 +1144,13 @@ bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
 void add_default_lights(gui::scene* scene) {
   clear_lights(scene);
   auto light0 = add_light(scene);
-  set_light(light0, {0, 0, 1}, {pif, pif, pif}, true, true);
+  set_light(light0, normalize(vec3f{1, 1, 1}), vec3f{pif/2}, true, true);
+  auto light1 = add_light(scene);
+  set_light(light1, normalize(vec3f{-1, 1, 1}), vec3f{pif/2}, true, true);
+  auto light2 = add_light(scene);
+  set_light(light2, normalize(vec3f{-1, -1, 1}), vec3f{pif/4}, true, true);
+  auto light3 = add_light(scene);
+  set_light(light3, normalize(vec3f{0.1, 0.5, -1}), vec3f{pif/4}, true, true);
 }
 
 // Draw a shape
