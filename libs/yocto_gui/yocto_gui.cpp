@@ -79,6 +79,7 @@ using math::log2;
 using math::max;
 using math::min;
 using math::perspective_mat;
+using math::pif;
 using math::pow;
 using math::sin;
 using math::sqrt;
@@ -1129,16 +1130,28 @@ light* add_light(gui::scene* scene) {
   return scene->lights.emplace_back(new light{});
 }
 void set_light(light* light, const vec3f& position, const vec3f& emission,
-    bool directional) {
+    light_type type, bool camera) {
   light->position = position;
   light->emission = emission;
-  light->type     = directional ? 1 : 0;
+  light->type     = type;
+  light->camera   = camera;
 }
 void clear_lights(gui::scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
 bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
+void add_default_lights(gui::scene* scene) {
+  clear_lights(scene);
+  set_light(add_light(scene), normalize(vec3f{1, 1, 1}), vec3f{pif / 2},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, 1, 1}), vec3f{pif / 2},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, -1, 1}), vec3f{pif / 4},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4},
+      gui::light_type::directional, true);
+}
 
 // Draw a shape
 void draw_object(
@@ -1334,14 +1347,24 @@ void draw_object(
 }
 
 // Display a scene
-void draw_scene(gui::scene* scene, gui::camera* glcamera, const vec4i& viewport,
+void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
     const scene_params& params) {
+  static auto camera_light0 = gui::light{
+      normalize(vec3f{1, 1, 1}), vec3f{pif / 2}, light_type::directional, true};
+  static auto camera_light1 = gui::light{normalize(vec3f{-1, 1, 1}),
+      vec3f{pif / 2}, light_type::directional, true};
+  static auto camera_light2 = gui::light{normalize(vec3f{-1, -1, 1}),
+      vec3f{pif / 4}, light_type::directional, true};
+  static auto camera_light3 = gui::light{normalize(vec3f{0.1, 0.5, -1}),
+      vec3f{pif / 4}, light_type::directional, true};
+  static auto camera_lights = std::vector<gui::light*>{
+      &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
-          ? (2 * atan(glcamera->film / (camera_aspect * 2 * glcamera->lens)))
-          : (2 * atan(glcamera->film / (2 * glcamera->lens)));
-  auto camera_view = mat4f(inverse(glcamera->frame));
+          ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
+          : (2 * atan(camera->film / (2 * camera->lens)));
+  auto camera_view = mat4f(inverse(camera->frame));
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
@@ -1353,34 +1376,47 @@ void draw_scene(gui::scene* scene, gui::camera* glcamera, const vec4i& viewport,
 
   glUseProgram(scene->program_id);
   glUniform3f(glGetUniformLocation(scene->program_id, "cam_pos"),
-      glcamera->frame.o.x, glcamera->frame.o.y, glcamera->frame.o.z);
+      camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
   glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_xform_inv"),
       1, false, &camera_view.x.x);
   glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_proj"), 1,
       false, &camera_proj.x.x);
   glUniform1i(glGetUniformLocation(scene->program_id, "eyelight"),
-      (int)params.eyelight);
+      params.shading == shading_type::eyelight ? 1 : 0);
   glUniform1f(
       glGetUniformLocation(scene->program_id, "exposure"), params.exposure);
   glUniform1f(glGetUniformLocation(scene->program_id, "gamma"), params.gamma);
 
-  if (!params.eyelight) {
+  if (params.shading == shading_type::lights ||
+      params.shading == shading_type::camlights) {
+    auto& lights = params.shading == shading_type::lights ? scene->lights
+                                                          : camera_lights;
     glUniform3f(glGetUniformLocation(scene->program_id, "lamb"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(scene->program_id, "lnum"),
-        (int)scene->lights.size());
-    for (auto i = 0; i < scene->lights.size(); i++) {
-      auto is = std::to_string(i);
-      glUniform3f(
-          glGetUniformLocation(scene->program_id, ("lpos[" + is + "]").c_str()),
-          scene->lights[i]->position.x, scene->lights[i]->position.y,
-          scene->lights[i]->position.z);
+    glUniform1i(
+        glGetUniformLocation(scene->program_id, "lnum"), (int)lights.size());
+    auto lid = 0;
+    for (auto light : lights) {
+      auto is = std::to_string(lid);
+      if (light->camera) {
+        auto position = light->type == light_type::directional
+                            ? transform_direction(
+                                  camera->frame, light->position)
+                            : transform_point(camera->frame, light->position);
+        glUniform3f(glGetUniformLocation(
+                        scene->program_id, ("lpos[" + is + "]").c_str()),
+            position.x, position.y, position.z);
+      } else {
+        glUniform3f(glGetUniformLocation(
+                        scene->program_id, ("lpos[" + is + "]").c_str()),
+            light->position.x, light->position.y, light->position.z);
+      }
       glUniform3f(
           glGetUniformLocation(scene->program_id, ("lke[" + is + "]").c_str()),
-          scene->lights[i]->emission.x, scene->lights[i]->emission.y,
-          scene->lights[i]->emission.z);
+          light->emission.x, light->emission.y, light->emission.z);
       glUniform1i(glGetUniformLocation(
                       scene->program_id, ("ltype[" + is + "]").c_str()),
-          (int)scene->lights[i]->type);
+          (int)light->type);
+      lid++;
     }
   }
 

@@ -122,8 +122,8 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
       area += ioshape->positions.size();
     }
     auto ke = ioobject->material->emission * area;
-    set_light(
-        add_light(glscene), transform_point(ioobject->frame, pos), ke, false);
+    set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke,
+        gui::light_type::point, false);
   }
 }
 
@@ -255,8 +255,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
-  add_option(cli, "--eyelight/--no-eyelight", app->drawgl_prms.eyelight,
-      "Eyelight rendering.");
+  add_option(cli, "--shading", app->drawgl_prms.shading, "Eyelight rendering.",
+      gui::shading_names);
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
@@ -277,19 +277,17 @@ int main(int argc, const char* argv[]) {
           app->current = current;
           app->total   = total;
         });
-    update_lights(app->glscene, app->ioscene);
   };
   callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+    if (app->drawgl_prms.shading == gui::shading_type::lights)
+      update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
   };
   callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
-    if (draw_button(win, "quit")) {
-      set_close(win, true);
-    }
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
     if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
@@ -299,14 +297,14 @@ int main(int argc, const char* argv[]) {
     }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_checkbox(win, "eyelight", params.eyelight);
-    continue_line(win);
     draw_checkbox(win, "wireframe", params.wireframe);
+    draw_combobox(win, "shading", (int&)params.shading, gui::shading_names);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
+    continue_line(win);
+    draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
   };

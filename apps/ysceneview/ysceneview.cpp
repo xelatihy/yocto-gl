@@ -162,8 +162,8 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
       area += ioshape->positions.size();
     }
     auto ke = ioobject->material->emission * area;
-    set_light(
-        add_light(glscene), transform_point(ioobject->frame, pos), ke, false);
+    set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke,
+        gui::light_type::point, false);
   }
 }
 
@@ -510,14 +510,14 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
     }
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
-    draw_checkbox(win, "eyelight", params.eyelight);
-    continue_line(win);
+    draw_combobox(win, "shading", (int&)params.shading, gui::shading_names);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
+    continue_line(win);
+    draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "exposure", params.exposure, -10, 10);
     draw_slider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
     end_header(win);
@@ -669,6 +669,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
 void draw(gui::window* win, app_states* apps, const gui::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
+  if (app->drawgl_prms.shading == gui::shading_type::lights)
+    update_lights(app->glscene, app->ioscene);
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
       app->drawgl_prms);
 }
@@ -715,8 +717,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
-  add_option(cli, "--eyelight/--no-eyelight", apps->drawgl_prms.eyelight,
-      "Eyelight rendering.");
+  add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
+      gui::shading_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 

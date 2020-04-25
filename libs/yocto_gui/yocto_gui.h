@@ -223,11 +223,15 @@ struct object {
   bool           highlighted = false;
 };
 
+// Light type
+enum struct light_type { point = 0, directional };
+
 // Opengl light
 struct light {
-  vec3f position = {0, 0, 0};
-  vec3f emission = {0, 0, 0};
-  int   type     = 0;
+  vec3f      position = {0, 0, 0};
+  vec3f      emission = {0, 0, 0};
+  light_type type     = light_type::point;
+  bool       camera   = false;
 };
 
 // Opengl scene
@@ -252,21 +256,28 @@ struct scene {
   uint array_id    = 0;
 };
 
+// Shading type
+enum struct shading_type { lights, eyelight, camlights };
+
+// Shading name
+const auto shading_names = std::vector<std::string>{
+    "lights", "eyelight", "camlights"};
+
 // Draw options
 struct scene_params {
-  int   resolution       = 1280;
-  bool  wireframe        = false;
-  bool  edges            = false;
-  float edge_offset      = 0.01f;
-  bool  eyelight         = false;
-  float exposure         = 0;
-  float gamma            = 2.2f;
-  vec3f ambient          = {0, 0, 0};
-  bool  double_sided     = true;
-  bool  non_rigid_frames = true;
-  float near             = 0.01f;
-  float far              = 10000.0f;
-  vec4f background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+  int          resolution       = 1280;
+  bool         wireframe        = false;
+  bool         edges            = false;
+  float        edge_offset      = 0.01f;
+  shading_type shading          = shading_type::camlights;
+  float        exposure         = 0;
+  float        gamma            = 2.2f;
+  vec3f        ambient          = {0, 0, 0};
+  bool         double_sided     = true;
+  bool         non_rigid_frames = true;
+  float        near             = 0.01f;
+  float        far              = 10000.0f;
+  vec4f        background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Initialize an OpenGL scene
@@ -344,8 +355,9 @@ void set_hidden(gui::object* object, bool hidden);
 void set_highlighted(gui::object* object, bool highlighted);
 
 // light properties
+void add_default_lights(gui::scene* scene);
 void set_light(gui::light* light, const vec3f& position, const vec3f& emission,
-    bool directional);
+    light_type type, bool camera);
 
 // light size
 void clear_lights(gui::scene* scene);
