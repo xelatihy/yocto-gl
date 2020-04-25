@@ -308,7 +308,6 @@ int main(int argc, const char* argv[]) {
     draw_checkbox(win, "double sided", params.double_sided);
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
-    end_header(win);
   };
   callbacks.update_cb = [app](gui::window* win, const gui::input& input) {
     // update(win, apps);
