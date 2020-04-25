@@ -324,6 +324,8 @@ void set_points(gui::shape* shape, const std::vector<int>& points);
 void set_lines(gui::shape* shape, const std::vector<vec2i>& lines);
 void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles);
 void set_quads(gui::shape* shape, const std::vector<vec4i>& quads);
+void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
+    const std::vector<vec4i>& quads);
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions);
 void set_normals(gui::shape* shape, const std::vector<vec3f>& normals);
 void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords);
@@ -586,7 +588,8 @@ inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
 }
 
 void draw_progressbar(gui::window* win, const char* lbl, float fraction);
-void draw_progressbar(gui::window* win, const char* lbl, int current, int total);
+void draw_progressbar(
+    gui::window* win, const char* lbl, int current, int total);
 
 void draw_histogram(
     gui::window* win, const char* lbl, const std::vector<float>& values);

@@ -213,6 +213,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
     set_lines(glshape, ioshape->lines);
     set_triangles(glshape, ioshape->triangles);
     set_quads(glshape, ioshape->quads);
+    set_edges(glshape, ioshape->triangles, ioshape->quads);
     shape_map[ioshape] = glshape;
   }
 
