@@ -669,7 +669,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
 void draw(gui::window* win, app_states* apps, const gui::input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
-  if(app->drawgl_prms.shading == gui::shading_type::lights)
+  if (app->drawgl_prms.shading == gui::shading_type::lights)
     update_lights(app->glscene, app->ioscene);
   draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
       app->drawgl_prms);
@@ -717,8 +717,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
-  add_option(cli, "--shading", apps->drawgl_prms.shading,
-      "Shading type.", gui::shading_names);
+  add_option(cli, "--shading", apps->drawgl_prms.shading, "Shading type.",
+      gui::shading_names);
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 

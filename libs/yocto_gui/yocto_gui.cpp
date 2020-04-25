@@ -1387,7 +1387,8 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
       glGetUniformLocation(scene->program_id, "exposure"), params.exposure);
   glUniform1f(glGetUniformLocation(scene->program_id, "gamma"), params.gamma);
 
-  if (params.shading == shading_type::lights || params.shading == shading_type::camlights) {
+  if (params.shading == shading_type::lights ||
+      params.shading == shading_type::camlights) {
     auto& lights = params.shading == shading_type::lights ? scene->lights
                                                           : camera_lights;
     glUniform3f(glGetUniformLocation(scene->program_id, "lamb"), 0, 0, 0);
