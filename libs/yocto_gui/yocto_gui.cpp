@@ -83,6 +83,7 @@ using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
+using math::pif;
 
 }  // namespace yocto::gui
 
@@ -1143,7 +1144,7 @@ bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
 void add_default_lights(gui::scene* scene) {
   clear_lights(scene);
   auto light0 = add_light(scene);
-  set_light(light0, {0, 0, 1}, {1, 1, 1}, true, true);
+  set_light(light0, {0, 0, 1}, {pif, pif, pif}, true, true);
 }
 
 // Draw a shape

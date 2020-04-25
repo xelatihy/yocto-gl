@@ -277,7 +277,8 @@ int main(int argc, const char* argv[]) {
           app->current = current;
           app->total   = total;
         });
-    update_lights(app->glscene, app->ioscene);
+    // update_lights(app->glscene, app->ioscene);
+    add_default_lights(app->glscene);
   };
   callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
     clear_scene(app->glscene);
