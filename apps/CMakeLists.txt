@@ -6,6 +6,7 @@ add_subdirectory(yheightfieldproc)
 
 if(YOCTO_OPENGL)
 add_subdirectory(ysceneview)
+add_subdirectory(ysceneviews)
 add_subdirectory(ysceneitrace)
 add_subdirectory(ysceneitraces)
 add_subdirectory(yimageview)

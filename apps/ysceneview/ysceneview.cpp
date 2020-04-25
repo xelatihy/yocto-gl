@@ -710,7 +710,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("yscnview", "views scenes inteactively");
+  auto cli = cli::make_cli("ysceneview", "views scenes inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
@@ -764,7 +764,7 @@ int main(int argc, const char* argv[]) {
   };
 
   // run ui
-  run_ui({1280 + 320, 720}, "yscnview", callbacks);
+  run_ui({1280 + 320, 720}, "ysceneview", callbacks);
 
   // done
   return 0;
