@@ -79,11 +79,11 @@ using math::log2;
 using math::max;
 using math::min;
 using math::perspective_mat;
+using math::pif;
 using math::pow;
 using math::sin;
 using math::sqrt;
 using math::tan;
-using math::pif;
 
 }  // namespace yocto::gui
 
@@ -1130,10 +1130,10 @@ light* add_light(gui::scene* scene) {
   return scene->lights.emplace_back(new light{});
 }
 void set_light(light* light, const vec3f& position, const vec3f& emission,
-    bool directional, bool camera) {
+    light_type type, bool camera) {
   light->position = position;
   light->emission = emission;
-  light->type     = directional ? 1 : 0;
+  light->type     = type;
   light->camera   = camera;
 }
 void clear_lights(gui::scene* scene) {
@@ -1143,14 +1143,14 @@ void clear_lights(gui::scene* scene) {
 bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
 void add_default_lights(gui::scene* scene) {
   clear_lights(scene);
-  auto light0 = add_light(scene);
-  set_light(light0, normalize(vec3f{1, 1, 1}), vec3f{pif/2}, true, true);
-  auto light1 = add_light(scene);
-  set_light(light1, normalize(vec3f{-1, 1, 1}), vec3f{pif/2}, true, true);
-  auto light2 = add_light(scene);
-  set_light(light2, normalize(vec3f{-1, -1, 1}), vec3f{pif/4}, true, true);
-  auto light3 = add_light(scene);
-  set_light(light3, normalize(vec3f{0.1, 0.5, -1}), vec3f{pif/4}, true, true);
+  set_light(add_light(scene), normalize(vec3f{1, 1, 1}), vec3f{pif / 2},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, 1, 1}), vec3f{pif / 2},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, -1, 1}), vec3f{pif / 4},
+      gui::light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4},
+      gui::light_type::directional, true);
 }
 
 // Draw a shape
@@ -1349,6 +1349,16 @@ void draw_object(
 // Display a scene
 void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
     const scene_params& params) {
+  static auto camera_light0 = gui::light{
+      normalize(vec3f{1, 1, 1}), vec3f{pif / 2}, light_type::directional, true};
+  static auto camera_light1 = gui::light{normalize(vec3f{-1, 1, 1}),
+      vec3f{pif / 2}, light_type::directional, true};
+  static auto camera_light2 = gui::light{normalize(vec3f{-1, -1, 1}),
+      vec3f{pif / 4}, light_type::directional, true};
+  static auto camera_light3 = gui::light{normalize(vec3f{0.1, 0.5, -1}),
+      vec3f{pif / 4}, light_type::directional, true};
+  static auto camera_lights = std::vector<gui::light*>{
+      &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
       camera_aspect >= 0
@@ -1372,20 +1382,22 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_proj"), 1,
       false, &camera_proj.x.x);
   glUniform1i(glGetUniformLocation(scene->program_id, "eyelight"),
-      (int)params.eyelight);
+      params.shading == shading_type::eyelight ? 1 : 0);
   glUniform1f(
       glGetUniformLocation(scene->program_id, "exposure"), params.exposure);
   glUniform1f(glGetUniformLocation(scene->program_id, "gamma"), params.gamma);
 
-  if (!params.eyelight) {
+  if (params.shading == shading_type::lights || params.shading == shading_type::camlights) {
+    auto& lights = params.shading == shading_type::lights ? scene->lights
+                                                          : camera_lights;
     glUniform3f(glGetUniformLocation(scene->program_id, "lamb"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(scene->program_id, "lnum"),
-        (int)scene->lights.size());
+    glUniform1i(
+        glGetUniformLocation(scene->program_id, "lnum"), (int)lights.size());
     auto lid = 0;
-    for (auto light : scene->lights) {
+    for (auto light : lights) {
       auto is = std::to_string(lid);
       if (light->camera) {
-        auto position = light->type == 1
+        auto position = light->type == light_type::directional
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
