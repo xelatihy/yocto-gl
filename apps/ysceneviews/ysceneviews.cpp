@@ -123,7 +123,7 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
     }
     auto ke = ioobject->material->emission * area;
     set_light(
-        add_light(glscene), transform_point(ioobject->frame, pos), ke, false);
+        add_light(glscene), transform_point(ioobject->frame, pos), ke, false, false);
   }
 }
 

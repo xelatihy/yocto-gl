@@ -228,6 +228,7 @@ struct light {
   vec3f position = {0, 0, 0};
   vec3f emission = {0, 0, 0};
   int   type     = 0;
+  bool  camera   = false;
 };
 
 // Opengl scene
@@ -344,8 +345,9 @@ void set_hidden(gui::object* object, bool hidden);
 void set_highlighted(gui::object* object, bool highlighted);
 
 // light properties
+void add_default_lights(gui::scene* scene);
 void set_light(gui::light* light, const vec3f& position, const vec3f& emission,
-    bool directional);
+    bool directional, bool camera);
 
 // light size
 void clear_lights(gui::scene* scene);
