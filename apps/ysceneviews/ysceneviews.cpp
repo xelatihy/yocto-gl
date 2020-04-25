@@ -271,9 +271,10 @@ int main(int argc, const char* argv[]) {
   auto callbacks    = gui::ui_callbacks{};
   callbacks.init_cb = [app](gui::window* win, const gui::input& input) {
     init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
-        [app](const std::string& message, int sample, int nsamples) {
-          app->current = sample;
-          app->total   = nsamples;
+        [app](const std::string& message, int current, int total) {
+          app->status = "init scene";
+          app->current = current;
+          app->total   = total;
         });
     update_lights(app->glscene, app->ioscene);
   };
