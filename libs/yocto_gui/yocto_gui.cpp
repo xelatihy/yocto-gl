@@ -1313,8 +1313,7 @@ void draw_object(
     glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
     glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
-    glDrawElements(
-        GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
   }
 
 #if 0

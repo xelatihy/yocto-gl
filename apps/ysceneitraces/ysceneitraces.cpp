@@ -235,7 +235,7 @@ void reset_display(app_state* app) {
       app->render_state, app->scene, app->camera, app->params,
       [app](const std::string& message, int sample, int nsamples) {
         app->current = sample;
-        app->total = nsamples;
+        app->total   = nsamples;
       },
       [app](const img::image<vec4f>& render, int current, int total) {
         if (current > 0) return;

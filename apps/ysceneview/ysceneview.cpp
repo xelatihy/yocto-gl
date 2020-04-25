@@ -687,7 +687,7 @@ void update(gui::window* win, app_states* apps) {
     auto progress_cb = [app](
                            const std::string& message, int current, int total) {
       app->current = current;
-      app->total = total;
+      app->total   = total;
     };
     app->loader.get();
     if (app->loader_error.empty()) {
