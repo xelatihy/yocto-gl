@@ -1085,7 +1085,7 @@ gui::instance* add_instance(gui::scene* scene) {
   return scene->instances.emplace_back(new instance{});
 }
 void set_frames(gui::instance* instance, const std::vector<frame3f>& frames) {
-  // TODO: instances
+  instance->frames = frames;
 }
 
 // add material
@@ -1156,16 +1156,18 @@ void add_default_lights(gui::scene* scene) {
 // Draw a shape
 void draw_object(
     gui::scene* scene, gui::object* object, const scene_params& params) {
+  static auto empty_instances = std::vector<frame3f>{identity3x4f};
+
   if (object->hidden) return;
 
-  auto instance_xform     = mat4f(object->frame);
-  auto instance_inv_xform = transpose(
+  auto shape_xform     = mat4f(object->frame);
+  auto shape_inv_xform = transpose(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
   glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"), 1,
-      false, &instance_xform.x.x);
+      false, &shape_xform.x.x);
   glUniformMatrix4fv(
       glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-      false, &instance_inv_xform.x.x);
+      false, &shape_inv_xform.x.x);
   glUniform1f(
       glGetUniformLocation(scene->program_id, "shape_normal_offset"), 0.0f);
   if (object->highlighted) {
@@ -1295,38 +1297,63 @@ void draw_object(
         glGetAttribLocation(scene->program_id, "vert_tangsp"), 0, 0, 1, 1);
   }
 
-  if (shape->points_id) {
-    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
-    glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
-  }
-  if (shape->lines_id) {
-    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
-    glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
-  }
-  if (shape->triangles_id) {
-    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
-    glDrawElements(
-        GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
-  }
-  if (shape->quads_id) {
-    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
-    glDrawElements(
-        GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+  auto& instances = object->instance ? object->instance->frames
+                                     : empty_instances;
+
+  for (auto& frame : instances) {
+    auto shape_xform     = mat4f(object->frame * frame);
+    auto shape_inv_xform = transpose(
+        mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
+    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
+        1, false, &shape_xform.x.x);
+    glUniformMatrix4fv(
+        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
+        false, &shape_inv_xform.x.x);
+
+    if (shape->points_id) {
+      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 1);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
+      glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
+    }
+    if (shape->lines_id) {
+      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
+      glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
+    }
+    if (shape->triangles_id) {
+      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
+      glDrawElements(
+          GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
+    }
+    if (shape->quads_id) {
+      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
+      glDrawElements(
+          GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+    }
   }
 
-  if (shape->edges_id && params.edges && !params.wireframe) {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
-    glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"), 0, 0, 0);
-    glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"), 0, 0, 0);
-    glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"), 0, 0, 0);
-    glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
-    glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
-    glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+  for (auto& frame : instances) {
+    auto shape_xform     = mat4f(object->frame * frame);
+    auto shape_inv_xform = transpose(
+        mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
+    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
+        1, false, &shape_xform.x.x);
+    glUniformMatrix4fv(
+        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
+        false, &shape_inv_xform.x.x);
+
+    if (shape->edges_id && params.edges && !params.wireframe) {
+      glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
+      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"), 0, 0, 0);
+      glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"), 0, 0, 0);
+      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"), 0, 0, 0);
+      glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
+      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
+      glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+    }
   }
 
 #if 0
