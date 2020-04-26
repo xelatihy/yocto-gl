@@ -209,7 +209,7 @@ struct shape {
 
 // Opengl instance
 struct instance {
-  // instancing not supported yet
+  std::vector<frame3f> frames = {};
 };
 
 // Opengl object
