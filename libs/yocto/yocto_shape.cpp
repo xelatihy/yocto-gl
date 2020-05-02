@@ -2507,7 +2507,7 @@ void subdivide_quads_impl(std::vector<vec4i>& quads, std::vector<T>& vert,
         tvert[nverts + nedges + i] =
             (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
       } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
       }
     }
     // create quads
@@ -2632,7 +2632,7 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
         tvert[nverts + nedges + i] =
             (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
       } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
       }
     }
     // create quads

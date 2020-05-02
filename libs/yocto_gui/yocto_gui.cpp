@@ -1311,6 +1311,7 @@ void draw_object(
         false, &shape_inv_xform.x.x);
 
     if (shape->points_id) {
+      glPointSize(shape->points_size);
       glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 1);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
       glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
@@ -1355,22 +1356,6 @@ void draw_object(
       glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
     }
   }
-
-#if 0
-    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
-        enable_glculling(false);
-        check_glerror();
-        set_gluniform(scene->program, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(scene->program, "ke"), 0, 0, 0);
-        set_gluniform(scene->program, "op"), shape->op);
-        set_gluniform(scene->program, "shp_normal_offset"), 0.01f);
-        check_glerror();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
-        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        check_glerror();
-    }
-#endif
 }
 
 // Display a scene

@@ -902,11 +902,12 @@ void make_point(std::vector<int>& points, std::vector<vec3f>& positions,
     std::vector<float>& radius, float point_radius);
 void make_points(std::vector<int>& points, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<float>& radius, int num, float uvscale, float point_radius);
+    std::vector<float>& radius, int num = 65536, float uvscale = 1,
+    float point_radius = 0.001);
 void make_random_points(std::vector<int>& points, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::vector<float>& radius, int num, const vec3f& size, float uvscale,
-    float point_radius, uint64_t seed);
+    std::vector<float>& radius, int num = 65536, const vec3f& size = {1, 1, 1},
+    float uvscale = 1, float point_radius = 0.001, uint64_t seed = 17);
 
 // Predefined meshes
 void make_monkey(

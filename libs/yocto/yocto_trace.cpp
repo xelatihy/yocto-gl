@@ -109,8 +109,10 @@ static vec3f eval_normal(const trc::shape* shape, int element) {
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
+  } else if (!shape->points.empty()) {
+    norm = {0, 0, 1};
   } else {
-    throw std::runtime_error("empty shape");
+    // empty shape
     norm = {0, 0, 1};
   }
   return norm;

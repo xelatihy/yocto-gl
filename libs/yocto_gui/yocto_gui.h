@@ -180,26 +180,28 @@ struct material {
 // Opengl shape
 struct shape {
   // vertex buffers
-  int  positions_num = 0;
-  uint positions_id  = 0;
-  int  normals_num   = 0;
-  uint normals_id    = 0;
-  int  texcoords_num = 0;
-  uint texcoords_id  = 0;
-  int  colors_num    = 0;
-  uint colors_id     = 0;
-  int  tangents_num  = 0;
-  uint tangents_id   = 0;
-  int  points_num    = 0;
-  uint points_id     = 0;
-  int  lines_num     = 0;
-  uint lines_id      = 0;
-  int  triangles_num = 0;
-  uint triangles_id  = 0;
-  int  quads_num     = 0;
-  uint quads_id      = 0;
-  int  edges_num     = 0;
-  uint edges_id      = 0;
+  int   positions_num  = 0;
+  uint  positions_id   = 0;
+  int   normals_num    = 0;
+  uint  normals_id     = 0;
+  int   texcoords_num  = 0;
+  uint  texcoords_id   = 0;
+  int   colors_num     = 0;
+  uint  colors_id      = 0;
+  int   tangents_num   = 0;
+  uint  tangents_id    = 0;
+  int   points_num     = 0;
+  uint  points_id      = 0;
+  int   lines_num      = 0;
+  uint  lines_id       = 0;
+  int   triangles_num  = 0;
+  uint  triangles_id   = 0;
+  int   quads_num      = 0;
+  uint  quads_id       = 0;
+  int   edges_num      = 0;
+  uint  edges_id       = 0;
+  float points_size    = 10;
+  float line_thickness = 4;
 
   shape() {}
   shape(const shape&) = delete;
