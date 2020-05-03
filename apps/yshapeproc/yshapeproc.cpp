@@ -214,6 +214,8 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     shp::make_point(points, positions, normals, texcoords, radius, 0);
   } else if (type == "test-pointlight2") {
     shp::make_point(points, positions, normals, texcoords, radius, 0);
+  } else if (type == "test-point") {
+    shp::make_points(points, positions, normals, texcoords, radius, 1);
   } else if (type == "test-points") {
     shp::make_points(points, positions, normals, texcoords, radius, 4096);
   } else if (type == "test-points-random") {
@@ -222,9 +224,9 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
   } else if (type == "test-particles") {
     shp::make_points(points, positions, normals, texcoords, radius, 4096);
   } else if (type == "test-cloth") {
-    shp::make_rect(quads, positions, normals, texcoords, {32, 32}, {0.2, 0.2});
+    shp::make_rect(quads, positions, normals, texcoords, {64, 64}, {0.2, 0.2});
   } else if (type == "test-clothy") {
-    shp::make_recty(quads, positions, normals, texcoords, {32, 32}, {0.2, 0.2});
+    shp::make_recty(quads, positions, normals, texcoords, {64, 64}, {0.2, 0.2});
   } else {
     error = "unknown preset";
     return false;
