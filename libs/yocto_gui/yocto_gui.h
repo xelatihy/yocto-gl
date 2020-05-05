@@ -192,6 +192,16 @@ inline void set_uniform(
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
+// set uniform texture
+void set_uniform(
+    gui::program* program, int location, const gui::texture* texture, int unit);
+void set_uniform(gui::program* program, const char* name,
+    const gui::texture* texture, int unit);
+void set_uniform(gui::program* program, int location, int location_on,
+    const gui::texture* texture, int unit);
+void set_uniform(gui::program* program, const char* name, const char* name_on,
+    const gui::texture* texture, int unit);
+
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------

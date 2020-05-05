@@ -700,9 +700,7 @@ void draw_image(gui::image* image, const image_params& params) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   bind_program(image->program);
-  glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, image->texture->texture_id);
-  set_uniform(image->program, "txt", 0);
+  set_uniform(image->program, "txt", image->texture, 0);
   set_uniform(image->program, "window_size", (vec2f)params.window);
   set_uniform(image->program, "image_size", (vec2f)image->texture->size);
   set_uniform(image->program, "image_center", params.center);
@@ -801,6 +799,39 @@ void set_uniform(gui::program* program, int location, const frame3f& value) {
 // get uniform location
 int get_uniform_location(gui::program* program, const char* name) {
   return glGetUniformLocation(program->program_id, name);
+}
+
+// set uniform texture
+void set_uniform(gui::program* program, int location,
+    const gui::texture* texture, int unit) {
+  assert_error();
+  glActiveTexture(GL_TEXTURE0 + unit);
+  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glUniform1i(location, unit);
+  assert_error();
+}
+void set_uniform(gui::program* program, const char* name,
+    const gui::texture* texture, int unit) {
+  return set_uniform(
+      program, get_uniform_location(program, name), texture, unit);
+}
+void set_uniform(gui::program* program, int location, int location_on,
+    const gui::texture* texture, int unit) {
+  assert_error();
+  if (texture && texture->texture_id) {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glUniform1i(location, unit);
+    glUniform1i(location_on, 1);
+  } else {
+    glUniform1i(location_on, 0);
+  }
+  assert_error();
+}
+void set_uniform(gui::program* program, const char* name, const char* name_on,
+    const gui::texture* texture, int unit) {
+  return set_uniform(program, get_uniform_location(program, name),
+      get_uniform_location(program, name_on), texture, unit);
 }
 
 }  // namespace yocto::gui
