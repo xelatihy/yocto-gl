@@ -300,6 +300,66 @@ void set_texture(gui::texture* texture, const img::image<float>& img,
       linear, mipmap);
 }
 
+// set buffer
+void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
+    const float* data, bool dynamic) {
+  assert_error();
+  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
+  auto target = GL_ARRAY_BUFFER;
+  glBindBuffer(target, buffer->buffer_id);
+  if (buffer->size != size || buffer->dynamic != dynamic) {
+    glBufferData(target, size * sizeof(float), data,
+        dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+  } else {
+    glBufferSubData(target, 0, size * sizeof(float), data);
+  }
+  buffer->size    = size;
+  buffer->esize   = esize;
+  buffer->dynamic = dynamic;
+  assert_error();
+}
+
+// clear buffer
+void clear_arraybuffer(gui::arraybuffer* buffer) {
+  assert_error();
+  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
+  assert_error();
+  buffer->buffer_id = 0;
+  buffer->size      = 0;
+  buffer->esize     = 0;
+  buffer->dynamic   = false;
+}
+
+// set buffer
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const int* data, bool dynamic) {
+  assert_error();
+  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
+  auto target = GL_ELEMENT_ARRAY_BUFFER;
+  glBindBuffer(target, buffer->buffer_id);
+  if (buffer->size != size || buffer->dynamic != dynamic) {
+    glBufferData(target, size * sizeof(int), data,
+        dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+  } else {
+    glBufferSubData(target, 0, size * sizeof(int), data);
+  }
+  buffer->size    = size;
+  buffer->element = element;
+  buffer->dynamic = dynamic;
+  assert_error();
+}
+
+// clear buffer
+void clear_elementbuffer(gui::elementbuffer* buffer) {
+  assert_error();
+  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
+  assert_error();
+  buffer->buffer_id = 0;
+  buffer->size      = 0;
+  buffer->element   = element_type::points;
+  buffer->dynamic   = false;
+}
+
 // initialize program
 bool init_program(gui::program* program, const std::string& vertex,
     const std::string& fragment, std::string& error, std::string& errorlog) {
@@ -503,80 +563,6 @@ void update_glbuffer(
   assert_error();
 }
 
-static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const float* img, bool mipmap) {
-  assert_error();
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-      nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert_error();
-}
-
-static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const byte* img, bool mipmap) {
-  assert_error();
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-      nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert_error();
-}
-
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const float* img, bool as_float, bool linear, bool mipmap) {
-  assert_error();
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA32F : GL_RGB32F, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert_error();
-}
-
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  assert_error();
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_SRGB_ALPHA : GL_SRGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert_error();
-}
-
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
@@ -654,19 +640,13 @@ bool init_image(gui::image* image) {
   auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
   auto error = ""s, errorlog = ""s;
-
   if (!init_program(
           image->program, glimage_vertex, glimage_fragment, error, errorlog))
     return false;
-  glGenBuffers(1, &image->texcoords_id);
-  glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
-      texcoords.data(), GL_STATIC_DRAW);
-  glGenBuffers(1, &image->triangles_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
-      triangles.data(), GL_STATIC_DRAW);
-
+  set_arraybuffer(
+      image->texcoords, texcoords.size() * 2, 2, (float*)texcoords.data());
+   set_elementbuffer(image->triangles, triangles.size() * 3,
+       element_type::triangles, (int*)triangles.data());
   return true;
 }
 
@@ -674,10 +654,8 @@ bool init_image(gui::image* image) {
 void clear_image(gui::image* image) {
   clear_program(image->program);
   clear_texture(image->texture);
-  if (image->texcoords_id) glDeleteBuffers(1, &image->texcoords_id);
-  if (image->triangles_id) glDeleteBuffers(1, &image->triangles_id);
-  image->texcoords_id = 0;
-  image->triangles_id = 0;
+  clear_arraybuffer(image->texcoords);
+  clear_elementbuffer(image->triangles);
 }
 
 // update image data
@@ -705,14 +683,8 @@ void draw_image(gui::image* image, const image_params& params) {
   set_uniform(image->program, "image_size", (vec2f)image->texture->size);
   set_uniform(image->program, "image_center", params.center);
   set_uniform(image->program, "image_scale", params.scale);
-  glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glEnableVertexAttribArray(
-      glGetAttribLocation(image->program->program_id, "texcoord"));
-  glVertexAttribPointer(
-      glGetAttribLocation(image->program->program_id, "texcoord"), 2, GL_FLOAT,
-      false, 0, nullptr);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
-  glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
+  set_attribute(image->program, "texcoord", image->texcoords);
+  draw_elements(image->triangles);
   unbind_program(image->program);
   assert_error();
 }
@@ -832,6 +804,37 @@ void set_uniform(gui::program* program, const char* name, const char* name_on,
     const gui::texture* texture, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), texture, unit);
+}
+
+// get attribute location
+int get_attribute_location(gui::program* program, const char* name) {
+  return glGetAttribLocation(program->program_id, name);
+}
+
+// set vertex attributes
+void set_attribute(
+    gui::program* program, int location, gui::arraybuffer* buffer) {
+  assert_error();
+  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glEnableVertexAttribArray(location);
+  glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
+  assert_error();
+}
+void set_attribute(
+    gui::program* program, const char* name, gui::arraybuffer* buffer) {
+  return set_attribute(program, get_attribute_location(program, name), buffer);
+}
+
+// draw elements
+void draw_elements(gui::elementbuffer* buffer) {
+  static auto elements = std::unordered_map<element_type, uint>{
+      {element_type::points, GL_POINTS},
+      {element_type::lines, GL_LINES},
+      {element_type::triangles, GL_TRIANGLES},
+  };
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
+  glDrawElements(
+      elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
 }
 
 }  // namespace yocto::gui

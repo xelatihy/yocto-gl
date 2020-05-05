@@ -140,6 +140,43 @@ void set_texture(gui::texture* texture, const img::image<byte>& img,
 void set_texture(gui::texture* texture, const img::image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
+// Opengl array/element buffer
+struct arraybuffer {
+  // buffer data
+  size_t  size    = 0;
+  int  esize   = 0;
+  bool dynamic = false;
+  // OpenGL state
+  uint buffer_id = 0;
+};
+
+// set buffer
+void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
+    const float* data, bool dynamic = false);
+
+// clear buffer
+void clear_arraybuffer(gui::arraybuffer* buffer);
+
+// Opengl draw elements
+enum struct element_type { points, lines, triangles };
+
+// Opengl array/element buffer
+struct elementbuffer {
+  // buffer data
+  size_t  size    = 0;
+  element_type element = element_type::points;
+  bool dynamic = false;
+  // OpenGL state
+  uint buffer_id = 0;
+};
+
+// set buffer
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size, element_type element,
+    const int* data, bool dynamic = false);
+
+// clear buffer
+void clear_elementbuffer(gui::elementbuffer* buffer);
+
 // Opengl program
 struct program {
   // program code
@@ -202,6 +239,18 @@ void set_uniform(gui::program* program, int location, int location_on,
 void set_uniform(gui::program* program, const char* name, const char* name_on,
     const gui::texture* texture, int unit);
 
+// get attribute location
+int get_attribute_location(gui::program* program, const char* name);
+
+// set vertex attributes
+void set_attribute(
+    gui::program* program, int location, gui::arraybuffer* buffer);
+void set_attribute(
+    gui::program* program, const char* name, gui::arraybuffer* buffer);
+
+// draw elements
+void draw_elements(gui::elementbuffer* buffer);
+
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
@@ -215,11 +264,10 @@ struct image {
   image(const image&) = delete;
   image& operator=(const image&) = delete;
 
-  gui::program* program = new gui::program{};
-  gui::texture* texture = new gui::texture{};
-
-  uint texcoords_id = 0;
-  uint triangles_id = 0;
+  gui::program*       program   = new gui::program{};
+  gui::texture*       texture   = new gui::texture{};
+  gui::arraybuffer*  texcoords = new gui::arraybuffer{};
+  gui::elementbuffer* triangles = new gui::elementbuffer{};
 };
 
 // create image drawing program
