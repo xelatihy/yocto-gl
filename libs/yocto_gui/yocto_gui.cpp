@@ -100,12 +100,10 @@ bool init_opengl(std::string& error) {
   return true;
 }
 
-void assert_error() {
-  assert(glGetError() == GL_NO_ERROR);
-}
+void assert_error() { assert(glGetError() == GL_NO_ERROR); }
 
 bool check_error(std::string& error) {
-  if(glGetError() != GL_NO_ERROR) {
+  if (glGetError() != GL_NO_ERROR) {
     error = "";
     return false;
   }
@@ -146,21 +144,22 @@ void set_blending(bool enabled) {
 void set_point_size(int size) { glPointSize(size); }
 
 // initialize program
-bool init_program(gui::program* program, std::string& vertex,
-    std::string& fragment, std::string& error, std::string& errorlog) {
+bool init_program(gui::program* program, const std::string& vertex,
+    const std::string& fragment, std::string& error, std::string& errorlog) {
   // error
-  auto program_error = [&error, &errorlog, program](const char* message, const char* log) {
+  auto program_error = [&error, &errorlog, program](
+                           const char* message, const char* log) {
     clear_program(program);
-    error = message;
+    error    = message;
     errorlog = log;
     return false;
   };
 
   // clear
-  if(program->program_id) clear_program(program);
+  if (program->program_id) clear_program(program);
 
   // setup code
-  program->vertex_code = vertex;
+  program->vertex_code   = vertex;
   program->fragment_code = fragment;
 
   // create arrays
@@ -223,14 +222,18 @@ bool init_program(gui::program* program, std::string& vertex,
 
 // clear program
 void clear_program(gui::program* program) {
-  if(program->program_id) glDeleteProgram(program->program_id);
-  if(program->vertex_id) glDeleteShader(program->vertex_id);
-  if(program->fragment_id) glDeleteProgram(program->fragment_id);
-  if(program->array_id) glDeleteVertexArrays(1, &program->array_id);
-  program->program_id = 0;
-  program->vertex_id = 0;
+  if (program->program_id) glDeleteProgram(program->program_id);
+  if (program->vertex_id) glDeleteShader(program->vertex_id);
+  if (program->fragment_id) glDeleteProgram(program->fragment_id);
+  if (program->array_id) glDeleteVertexArrays(1, &program->array_id);
+  program->program_id  = 0;
+  program->vertex_id   = 0;
   program->fragment_id = 0;
-  program->array_id = 0;
+  program->array_id    = 0;
+}
+
+bool is_initialized(const gui::program* program) {
+  return program->program_id != 0;
 }
 
 // bind program
@@ -240,13 +243,9 @@ void bind_program(gui::program* program) {
   assert_error();
 }
 // unbind program
-void unbind_program(gui::program* program) {
-  glUseProgram(0);
-}
+void unbind_program(gui::program* program) { glUseProgram(0); }
 // unbind program
-void unbind_program() {
-  glUseProgram(0);
-}
+void unbind_program() { glUseProgram(0); }
 
 }  // namespace yocto::gui
 
@@ -428,6 +427,10 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
+image::~image() {
+  if (program) delete program;
+}
+
 auto glimage_vertex =
     R"(
 #version 330
@@ -486,17 +489,22 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const gui::image* image) { return (bool)image->program_id; }
+bool is_initialized(const gui::image* image) {
+  return is_initialized(image->program);
+}
 
 // init image program
-void init_image(gui::image* image) {
-  if (image->program_id) return;
+bool init_image(gui::image* image) {
+  if (is_initialized(image)) return true;
 
   auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-  init_glprogram(image->program_id, image->vertex_id, image->fragment_id,
-      image->array_id, glimage_vertex, glimage_fragment);
+  auto error = ""s, errorlog = ""s;
+
+  if (!init_program(
+          image->program, glimage_vertex, glimage_fragment, error, errorlog))
+    return false;
   glGenBuffers(1, &image->texcoords_id);
   glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
   glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
@@ -505,21 +513,16 @@ void init_image(gui::image* image) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
       triangles.data(), GL_STATIC_DRAW);
+  
+  return true;
 }
 
 // clear an opengl image
 void clear_image(gui::image* image) {
-  if (image->program_id) glDeleteProgram(image->program_id);
-  if (image->vertex_id) glDeleteShader(image->vertex_id);
-  if (image->fragment_id) glDeleteShader(image->fragment_id);
-  if (image->array_id) glDeleteVertexArrays(1, &image->array_id);
+  clear_program(image->program);
   if (image->texcoords_id) glDeleteBuffers(1, &image->texcoords_id);
   if (image->triangles_id) glDeleteBuffers(1, &image->triangles_id);
   if (image->texture_id) glDeleteTextures(1, &image->texture_id);
-  image->program_id   = 0;
-  image->vertex_id    = 0;
-  image->fragment_id  = 0;
-  image->array_id     = 0;
   image->texcoords_id = 0;
   image->triangles_id = 0;
   image->texture_id   = 0;
@@ -572,26 +575,106 @@ void draw_image(gui::image* image, const image_params& params) {
       params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-  glUseProgram(image->program_id);
+  bind_program(image->program);
   glActiveTexture(GL_TEXTURE0 + 0);
   glBindTexture(GL_TEXTURE_2D, image->texture_id);
-  glUniform1i(glGetUniformLocation(image->program_id, "txt"), 0);
-  glUniform2f(glGetUniformLocation(image->program_id, "window_size"),
-      (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(image->program_id, "image_size"),
-      (float)image->texture_size.x, (float)image->texture_size.y);
-  glUniform2f(glGetUniformLocation(image->program_id, "image_center"),
-      params.center.x, params.center.y);
-  glUniform1f(
-      glGetUniformLocation(image->program_id, "image_scale"), params.scale);
+  set_uniform(image->program, "txt", 0);
+  set_uniform(image->program, "window_size", (vec2f)params.window);
+  set_uniform(image->program, "image_size", (vec2f)image->texture_size);
+  set_uniform(image->program, "image_center", params.center);
+  set_uniform(image->program, "image_scale", params.scale);
   glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glEnableVertexAttribArray(glGetAttribLocation(image->program_id, "texcoord"));
-  glVertexAttribPointer(glGetAttribLocation(image->program_id, "texcoord"), 2,
+  glEnableVertexAttribArray(glGetAttribLocation(image->program->program_id, "texcoord"));
+  glVertexAttribPointer(glGetAttribLocation(image->program->program_id, "texcoord"), 2,
       GL_FLOAT, false, 0, nullptr);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
-  glUseProgram(0);
+  unbind_program(image->program);
   assert_error();
+}
+
+// set uniforms
+void set_uniform(gui::program* program, int location, int value) {
+  assert_error();
+  glUniform1i(location, value);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec2i& value) {
+  assert_error();
+  glUniform2i(location, value.x, value.y);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec3i& value) {
+  assert_error();
+  glUniform3i(location, value.x, value.y, value.z);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec4i& value) {
+  assert_error();
+  glUniform4i(location, value.x, value.y, value.z, value.w);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, float value) {
+  assert_error();
+  glUniform1f(location, value);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec2f& value) {
+  assert_error();
+  glUniform2f(location, value.x, value.y);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec3f& value) {
+  assert_error();
+  glUniform3f(location, value.x, value.y, value.z);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec4f& value) {
+  assert_error();
+  glUniform4f(location, value.x, value.y, value.z, value.w);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat2f& value) {
+  assert_error();
+  glUniformMatrix2fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat3f& value) {
+  assert_error();
+  glUniformMatrix3fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat4f& value) {
+  assert_error();
+  glUniformMatrix4fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const frame2f& value) {
+  assert_error();
+  glUniformMatrix3x2fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const frame3f& value) {
+  assert_error();
+  glUniformMatrix4x3fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+// get uniform location
+int get_uniform_location(gui::program* program, const char* name) {
+  return glGetUniformLocation(program->program_id, name);
 }
 
 }  // namespace yocto::gui

@@ -56,8 +56,11 @@ namespace img = yocto::image;
 // Math defitions
 using math::bbox3f;
 using math::byte;
+using math::frame2f;
 using math::frame3f;
 using math::identity3x4f;
+using math::mat2f;
+using math::mat3f;
 using math::mat4f;
 using math::uint;
 using math::vec2f;
@@ -103,8 +106,9 @@ struct program {
 };
 
 // initialize program
-bool init_program(gui::program* program, std::string& vertex,
-    std::string& fragment, std::string& error, std::string& errorlog);
+bool init_program(gui::program* program, const std::string& vertex,
+    const std::string& fragment, std::string& error, std::string& errorlog);
+bool is_initialized(const gui::program* program);
 
 // clear program
 void clear_program(gui::program* program);
@@ -115,6 +119,30 @@ void bind_program(gui::program* program);
 void unbind_program(gui::program* program);
 // unbind program
 void unbind_program();
+
+// set uniforms
+void set_uniform(gui::program* program, int location, int value);
+void set_uniform(gui::program* program, int location, const vec2i& value);
+void set_uniform(gui::program* program, int location, const vec3i& value);
+void set_uniform(gui::program* program, int location, const vec4i& value);
+void set_uniform(gui::program* program, int location, float value);
+void set_uniform(gui::program* program, int location, const vec2f& value);
+void set_uniform(gui::program* program, int location, const vec3f& value);
+void set_uniform(gui::program* program, int location, const vec4f& value);
+void set_uniform(gui::program* program, int location, const mat2f& value);
+void set_uniform(gui::program* program, int location, const mat3f& value);
+void set_uniform(gui::program* program, int location, const mat4f& value);
+void set_uniform(gui::program* program, int location, const frame2f& value);
+void set_uniform(gui::program* program, int location, const frame3f& value);
+
+// get uniform location
+int get_uniform_location(gui::program* program, const char* name);
+
+// set uniforms
+template<typename T>
+inline void set_uniform(gui::program* program, const char* name, const T& value) {
+  return set_uniform(program, get_uniform_location(program, name), value);
+}
 
 }  // namespace yocto::gui
 
@@ -128,11 +156,10 @@ struct image {
   image() {}
   image(const image&) = delete;
   image& operator=(const image&) = delete;
+  ~image();
 
-  uint  program_id     = 0;
-  uint  vertex_id      = 0;
-  uint  fragment_id    = 0;
-  uint  array_id       = 0;
+  gui::program* program = new gui::program{};
+
   uint  texcoords_id   = 0;
   uint  triangles_id   = 0;
   uint  texture_id     = 0;
@@ -142,7 +169,7 @@ struct image {
 };
 
 // create image drawing program
-void init_image(gui::image* image);
+bool init_image(gui::image* image);
 bool is_initialized(const gui::image* image);
 
 // clear image
