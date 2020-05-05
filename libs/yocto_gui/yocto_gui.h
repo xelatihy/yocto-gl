@@ -76,6 +76,49 @@ using math::zero3i;
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto::gui {
+
+// Commands to setup the opengl context and issue gpu operations.
+bool init_opengl(std::string& error);
+void assert_error();
+bool check_error(std::string& error);
+void clear_framebuffer(const vec4f& color, bool clear_depth = true);
+void set_viewport(const vec4i& viewport);
+void set_wireframe(bool enabled);
+void set_blending(bool enabled);
+void set_point_size(int size);
+
+// Opengl program
+struct program {
+  // program code
+  std::string vertex_code;
+  std::string fragment_code;
+  // OpenGL state
+  uint        program_id   = 0;
+  uint        vertex_id   = 0;
+  uint        fragment_id = 0;
+  uint        array_id    = 0;
+};
+
+// initialize program
+bool init_program(gui::program* program, std::string& vertex,
+    std::string& fragment, std::string& error, std::string& errorlog);
+
+// clear program
+void clear_program(gui::program* program);
+
+// bind program
+void bind_program(gui::program* program);
+// unbind program
+void unbind_program(gui::program* program);
+// unbind program
+void unbind_program();
+
+}  // namespace yocto::gui
+
+// -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
@@ -96,8 +139,6 @@ struct image {
   vec2i texture_size   = {0, 0};
   bool  texture_linear = false;
   bool  texture_mipmap = false;
-
-  ~image();
 };
 
 // create image drawing program

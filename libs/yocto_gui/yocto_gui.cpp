@@ -88,22 +88,185 @@ using math::tan;
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto::gui {
+
+bool init_opengl(std::string& error) {
+  if (!gladLoadGL()) {
+    error = "Cannot initialize OpenGL context.";
+    return false;
+  }
+  return true;
+}
+
+void assert_error() {
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+bool check_error(std::string& error) {
+  if(glGetError() != GL_NO_ERROR) {
+    error = "";
+    return false;
+  }
+  return true;
+}
+
+void clear_framebuffer(const vec4f& color, bool clear_depth) {
+  glClearColor(color.x, color.y, color.z, color.w);
+  if (clear_depth) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+  } else {
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
+}
+
+void set_viewport(const vec4i& viewport) {
+  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+}
+
+void set_wireframe(bool enabled) {
+  if (enabled)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  else
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void set_blending(bool enabled) {
+  if (enabled) {
+    glEnable(GL_BLEND);
+    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+  } else {
+    glDisable(GL_BLEND);
+  }
+}
+
+void set_point_size(int size) { glPointSize(size); }
+
+// initialize program
+bool init_program(gui::program* program, std::string& vertex,
+    std::string& fragment, std::string& error, std::string& errorlog) {
+  // error
+  auto program_error = [&error, &errorlog, program](const char* message, const char* log) {
+    clear_program(program);
+    error = message;
+    errorlog = log;
+    return false;
+  };
+
+  // clear
+  if(program->program_id) clear_program(program);
+
+  // setup code
+  program->vertex_code = vertex;
+  program->fragment_code = fragment;
+
+  // create arrays
+  assert_error();
+  glGenVertexArrays(1, &program->array_id);
+  glBindVertexArray(program->array_id);
+  assert_error();
+
+  const char* ccvertex   = vertex.data();
+  const char* ccfragment = fragment.data();
+  int         errflags;
+  char        errbuf[10000];
+
+  // create vertex
+  assert_error();
+  program->vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
+  glCompileShader(program->vertex_id);
+  glGetShaderiv(program->vertex_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf);
+    return program_error("vertex shader not compiled", errbuf);
+  }
+  assert_error();
+
+  // create fragment
+  assert_error();
+  program->fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
+  glCompileShader(program->fragment_id);
+  glGetShaderiv(program->fragment_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf);
+    return program_error("fragment shader not compiled", errbuf);
+  }
+  assert_error();
+
+  // create program
+  assert_error();
+  program->program_id = glCreateProgram();
+  glAttachShader(program->program_id, program->vertex_id);
+  glAttachShader(program->program_id, program->fragment_id);
+  glLinkProgram(program->program_id);
+  glValidateProgram(program->program_id);
+  glGetProgramiv(program->program_id, GL_LINK_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+    return program_error("program not linked", errbuf);
+  }
+  glGetProgramiv(program->program_id, GL_VALIDATE_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+    return program_error("program not validated", errbuf);
+  }
+  assert_error();
+
+  // done
+  return true;
+}
+
+// clear program
+void clear_program(gui::program* program) {
+  if(program->program_id) glDeleteProgram(program->program_id);
+  if(program->vertex_id) glDeleteShader(program->vertex_id);
+  if(program->fragment_id) glDeleteProgram(program->fragment_id);
+  if(program->array_id) glDeleteVertexArrays(1, &program->array_id);
+  program->program_id = 0;
+  program->vertex_id = 0;
+  program->fragment_id = 0;
+  program->array_id = 0;
+}
+
+// bind program
+void bind_program(gui::program* program) {
+  assert_error();
+  glUseProgram(program->program_id);
+  assert_error();
+}
+// unbind program
+void unbind_program(gui::program* program) {
+  glUseProgram(0);
+}
+// unbind program
+void unbind_program() {
+  glUseProgram(0);
+}
+
+}  // namespace yocto::gui
+
+// -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
 static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenVertexArrays(1, &array_id);
   glBindVertexArray(array_id);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 
   int  errflags;
   char errbuf[10000];
 
   // create vertex
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   vertex_id = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertex_id, 1, &vertex, NULL);
   glCompileShader(vertex_id);
@@ -112,10 +275,10 @@ static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(vertex_id, 10000, 0, errbuf);
     throw std::runtime_error("shader not compiled with error\n"s + errbuf);
   }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 
   // create fragment
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragment_id, 1, &fragment, NULL);
   glCompileShader(fragment_id);
@@ -124,10 +287,10 @@ static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetShaderInfoLog(fragment_id, 10000, 0, errbuf);
     throw std::runtime_error("shader not compiled with error\n"s + errbuf);
   }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 
   // create program
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   program_id = glCreateProgram();
   glAttachShader(program_id, vertex_id);
   glAttachShader(program_id, fragment_id);
@@ -143,70 +306,70 @@ static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     glGetProgramInfoLog(program_id, 10000, 0, errbuf);
     throw std::runtime_error("program not linked with error\n"s + errbuf);
   }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(float), array, GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(int), array, GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(int), array);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(float), array);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const float* img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
       nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const byte* img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
       nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const float* img, bool as_float, bool linear, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_float) {
@@ -228,12 +391,12 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
         (linear) ? GL_LINEAR : GL_NEAREST);
   }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_srgb) {
@@ -255,7 +418,7 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
         (linear) ? GL_LINEAR : GL_NEAREST);
   }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 }  // namespace yocto::gui
@@ -324,16 +487,6 @@ void main() {
 #endif
 
 bool is_initialized(const gui::image* image) { return (bool)image->program_id; }
-
-image::~image() {
-  if (program_id) glDeleteProgram(program_id);
-  if (vertex_id) glDeleteShader(vertex_id);
-  if (fragment_id) glDeleteShader(fragment_id);
-  if (array_id) glDeleteVertexArrays(1, &array_id);
-  if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
-  if (triangles_id) glDeleteBuffers(1, &triangles_id);
-  if (texture_id) glDeleteTextures(1, &texture_id);
-}
 
 // init image program
 void init_image(gui::image* image) {
@@ -412,7 +565,7 @@ void set_image(
 
 // draw image
 void draw_image(gui::image* image, const image_params& params) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
   glClearColor(params.background.x, params.background.y, params.background.z,
@@ -438,7 +591,7 @@ void draw_image(gui::image* image, const image_params& params) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 }  // namespace yocto::gui
@@ -846,7 +999,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchan,
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   if (!img) {
     glDeleteTextures(1, &texture->texture_id);
     texture->texture_id = 0;
@@ -873,7 +1026,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchan,
   texture->nchan    = nchan;
   texture->is_srgb  = as_srgb;
   texture->is_float = false;
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void set_texture(gui::texture* texture, const vec2i& size, int nchan,
@@ -896,7 +1049,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchan,
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   if (!img) {
     glDeleteTextures(1, &texture->texture_id);
     texture->texture_id = 0;
@@ -924,7 +1077,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchan,
   texture->nchan    = nchan;
   texture->is_srgb  = false;
   texture->is_float = as_float;
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void set_texture(
