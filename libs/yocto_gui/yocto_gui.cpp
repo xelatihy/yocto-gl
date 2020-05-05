@@ -319,6 +319,9 @@ void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
   assert_error();
 }
 
+// check if buffer is initialized
+bool is_initialized(gui::arraybuffer* buffer) { return buffer->buffer_id != 0; }
+
 // clear buffer
 void clear_arraybuffer(gui::arraybuffer* buffer) {
   assert_error();
@@ -348,6 +351,9 @@ void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
   buffer->dynamic = dynamic;
   assert_error();
 }
+
+// check if buffer is initialized
+bool is_initialized(gui::elementbuffer* buffer) { return buffer->buffer_id != 0; }
 
 // clear buffer
 void clear_elementbuffer(gui::elementbuffer* buffer) {

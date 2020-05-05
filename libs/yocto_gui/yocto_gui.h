@@ -143,9 +143,9 @@ void set_texture(gui::texture* texture, const img::image<float>& img,
 // Opengl array/element buffer
 struct arraybuffer {
   // buffer data
-  size_t  size    = 0;
-  int  esize   = 0;
-  bool dynamic = false;
+  size_t size    = 0;
+  int    esize   = 0;
+  bool   dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
@@ -153,6 +153,9 @@ struct arraybuffer {
 // set buffer
 void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic = false);
+
+// check if buffer is initialized
+bool is_initialized(gui::arraybuffer* buffer);
 
 // clear buffer
 void clear_arraybuffer(gui::arraybuffer* buffer);
@@ -163,16 +166,19 @@ enum struct element_type { points, lines, triangles };
 // Opengl array/element buffer
 struct elementbuffer {
   // buffer data
-  size_t  size    = 0;
+  size_t       size    = 0;
   element_type element = element_type::points;
-  bool dynamic = false;
+  bool         dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size, element_type element,
-    const int* data, bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const int* data, bool dynamic = false);
+
+// check if buffer is initialized
+bool is_initialized(gui::elementbuffer* buffer);
 
 // clear buffer
 void clear_elementbuffer(gui::elementbuffer* buffer);
@@ -266,7 +272,7 @@ struct image {
 
   gui::program*       program   = new gui::program{};
   gui::texture*       texture   = new gui::texture{};
-  gui::arraybuffer*  texcoords = new gui::arraybuffer{};
+  gui::arraybuffer*   texcoords = new gui::arraybuffer{};
   gui::elementbuffer* triangles = new gui::elementbuffer{};
 };
 
