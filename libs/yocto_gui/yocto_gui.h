@@ -93,16 +93,59 @@ void set_wireframe(bool enabled);
 void set_blending(bool enabled);
 void set_point_size(int size);
 
+// OpenGL texture
+struct texture {
+  // Texture properties
+  vec2i size      = {0, 0};
+  int   nchannels = 0;
+  bool  is_srgb   = false;
+  bool  is_float  = false;
+
+  // OpenGL state
+  uint texture_id = 0;
+
+  // ensuring no copies
+  texture() {}
+  texture(const texture&) = delete;
+  texture& operator=(texture&) = delete;
+};
+
+// set texture
+void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+    const byte* img, bool as_srgb);
+void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+    const float* img, bool as_float);
+
+// check if texture is initialized
+bool is_initialized(gui::texture* texture);
+
+// clear texture
+void clear_texture(gui::texture* texture);
+
+// set texture
+void set_texture(
+    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb = true);
+void set_texture(
+    gui::texture* texture, const img::image<vec4f>& img, bool as_float = false);
+void set_texture(
+    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb = true);
+void set_texture(
+    gui::texture* texture, const img::image<vec3f>& img, bool as_float = false);
+void set_texture(
+    gui::texture* texture, const img::image<byte>& img, bool as_srgb = true);
+void set_texture(
+    gui::texture* texture, const img::image<float>& img, bool as_float = false);
+
 // Opengl program
 struct program {
   // program code
   std::string vertex_code;
   std::string fragment_code;
   // OpenGL state
-  uint        program_id   = 0;
-  uint        vertex_id   = 0;
-  uint        fragment_id = 0;
-  uint        array_id    = 0;
+  uint program_id  = 0;
+  uint vertex_id   = 0;
+  uint fragment_id = 0;
+  uint array_id    = 0;
 };
 
 // initialize program
@@ -139,8 +182,9 @@ void set_uniform(gui::program* program, int location, const frame3f& value);
 int get_uniform_location(gui::program* program, const char* name);
 
 // set uniforms
-template<typename T>
-inline void set_uniform(gui::program* program, const char* name, const T& value) {
+template <typename T>
+inline void set_uniform(
+    gui::program* program, const char* name, const T& value) {
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
@@ -211,20 +255,6 @@ struct camera {
   float   film   = 0.036;
   float   near   = 0.001;
   float   far    = 10000;
-};
-
-// OpenGL texture
-struct texture {
-  uint  texture_id = 0;
-  vec2i size       = {0, 0};
-  int   nchan      = 0;
-  bool  is_srgb    = false;
-  bool  is_float   = false;
-
-  texture() {}
-  texture(const texture&) = delete;
-  texture& operator=(texture&) = delete;
-  ~texture();
 };
 
 // Opengl material
@@ -370,20 +400,6 @@ gui::light*    add_light(gui::scene* scene);
 void set_frame(gui::camera* camera, const frame3f& frame);
 void set_lens(gui::camera* camera, float lens, float aspect, float film);
 void set_nearfar(gui::camera* camera, float near, float far);
-
-// texture properties
-void set_texture(
-    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<vec4f>& img, bool as_float = false);
-void set_texture(
-    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<vec3f>& img, bool as_float = false);
-void set_texture(
-    gui::texture* texture, const img::image<byte>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<float>& img, bool as_float = false);
 
 // material properties
 void set_emission(gui::material* material, const vec3f& emission,
