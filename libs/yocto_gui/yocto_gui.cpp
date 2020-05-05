@@ -144,7 +144,7 @@ void set_blending(bool enabled) {
 void set_point_size(int size) { glPointSize(size); }
 
 void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
-    const byte* img, bool as_srgb) {
+    const byte* img, bool as_srgb, bool linear, bool mipmap) {
   static auto sformat = std::unordered_map<int, uint>{
       {1, GL_SRGB},
       {2, GL_SRGB},
@@ -170,30 +170,35 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->nchannels != nchannels ||
-      texture->is_srgb != as_srgb || texture->is_float == true) {
+      texture->is_srgb != as_srgb || texture->is_float == true ||
+      texture->linear != linear || texture->mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size.x, size.y,
         0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
-        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+        GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
   texture->size      = size;
   texture->nchannels = nchannels;
   texture->is_srgb   = as_srgb;
   texture->is_float  = false;
+  texture->linear    = linear;
+  texture->mipmap    = mipmap;
   assert_error();
 }
 
 void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
-    const float* img, bool as_float) {
+    const float* img, bool as_float, bool linear, bool mipmap) {
   static auto fformat = std::unordered_map<int, uint>{
       {1, GL_RGB16F},
       {2, GL_RGB16F},
@@ -219,26 +224,31 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
   }
   if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
   if (texture->size != size || texture->nchannels != nchannels ||
-      texture->is_float != as_float || texture->is_srgb == true) {
+      texture->is_float != as_float || texture->is_srgb == true ||
+      texture->linear != linear || texture->mipmap != mipmap) {
     glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
         as_float ? fformat.at(nchannels) : iformat.at(nchannels), size.x,
         size.y, 0, iformat.at(nchannels), GL_FLOAT, img);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
     glTexParameteri(
-        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+        GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
         iformat.at(nchannels), GL_FLOAT, img);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
   texture->size      = size;
   texture->nchannels = nchannels;
   texture->is_srgb   = false;
   texture->is_float  = as_float;
+  texture->linear    = linear;
+  texture->mipmap    = mipmap;
   assert_error();
 }
 
@@ -253,33 +263,41 @@ void clear_texture(gui::texture* texture) {
   texture->nchannels  = 0;
   texture->is_srgb    = false;
   texture->is_float   = false;
+  texture->linear     = false;
+  texture->mipmap     = false;
 }
 
-void set_texture(
-    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
+void set_texture(gui::texture* texture, const img::image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(
-    gui::texture* texture, const img::image<vec4f>& img, bool as_float) {
-  set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
-}
-
-void set_texture(
-    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
-}
-void set_texture(
-    gui::texture* texture, const img::image<vec3f>& img, bool as_float) {
-  set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
+void set_texture(gui::texture* texture, const img::image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
+      linear, mipmap);
 }
 
-void set_texture(
-    gui::texture* texture, const img::image<byte>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
+void set_texture(gui::texture* texture, const img::image<vec3b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(
-    gui::texture* texture, const img::image<float>& img, bool as_float) {
-  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
+void set_texture(gui::texture* texture, const img::image<vec3f>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
+      linear, mipmap);
+}
+
+void set_texture(gui::texture* texture, const img::image<byte>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
+}
+void set_texture(gui::texture* texture, const img::image<float>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
+      linear, mipmap);
 }
 
 // initialize program
@@ -566,10 +584,6 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
-image::~image() {
-  if (program) delete program;
-}
-
 auto glimage_vertex =
     R"(
 #version 330
@@ -659,50 +673,21 @@ bool init_image(gui::image* image) {
 // clear an opengl image
 void clear_image(gui::image* image) {
   clear_program(image->program);
+  clear_texture(image->texture);
   if (image->texcoords_id) glDeleteBuffers(1, &image->texcoords_id);
   if (image->triangles_id) glDeleteBuffers(1, &image->triangles_id);
-  if (image->texture_id) glDeleteTextures(1, &image->texture_id);
   image->texcoords_id = 0;
   image->triangles_id = 0;
-  image->texture_id   = 0;
 }
 
 // update image data
 void set_image(
     gui::image* image, const img::image<vec4f>& img, bool linear, bool mipmap) {
-  if (!image->texture_id) {
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else if (image->texture_size != img.size() ||
-             image->texture_linear != linear ||
-             image->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &image->texture_id);
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else {
-    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
-  }
-  image->texture_size   = img.size();
-  image->texture_linear = linear;
-  image->texture_mipmap = mipmap;
+  set_texture(image->texture, img, false, linear, mipmap);
 }
 void set_image(
     gui::image* image, const img::image<vec4b>& img, bool linear, bool mipmap) {
-  if (!image->texture_id) {
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else if (image->texture_size != img.size() ||
-             image->texture_linear != linear ||
-             image->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &image->texture_id);
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else {
-    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
-  }
-  image->texture_size   = img.size();
-  image->texture_linear = linear;
-  image->texture_mipmap = mipmap;
+  set_texture(image->texture, img, false, linear, mipmap);
 }
 
 // draw image
@@ -716,10 +701,10 @@ void draw_image(gui::image* image, const image_params& params) {
   glEnable(GL_DEPTH_TEST);
   bind_program(image->program);
   glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, image->texture_id);
+  glBindTexture(GL_TEXTURE_2D, image->texture->texture_id);
   set_uniform(image->program, "txt", 0);
   set_uniform(image->program, "window_size", (vec2f)params.window);
-  set_uniform(image->program, "image_size", (vec2f)image->texture_size);
+  set_uniform(image->program, "image_size", (vec2f)image->texture->size);
   set_uniform(image->program, "image_center", params.center);
   set_uniform(image->program, "image_scale", params.scale);
   glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);

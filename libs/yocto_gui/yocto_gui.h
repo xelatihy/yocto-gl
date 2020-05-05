@@ -100,6 +100,8 @@ struct texture {
   int   nchannels = 0;
   bool  is_srgb   = false;
   bool  is_float  = false;
+  bool  linear    = false;
+  bool  mipmap    = false;
 
   // OpenGL state
   uint texture_id = 0;
@@ -112,9 +114,11 @@ struct texture {
 
 // set texture
 void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
-    const byte* img, bool as_srgb);
+    const byte* img, bool as_srgb = false, bool linear = true,
+    bool mipmap = true);
 void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
-    const float* img, bool as_float);
+    const float* img, bool as_float = false, bool linear = true,
+    bool mipmap = true);
 
 // check if texture is initialized
 bool is_initialized(gui::texture* texture);
@@ -123,18 +127,18 @@ bool is_initialized(gui::texture* texture);
 void clear_texture(gui::texture* texture);
 
 // set texture
-void set_texture(
-    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<vec4f>& img, bool as_float = false);
-void set_texture(
-    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<vec3f>& img, bool as_float = false);
-void set_texture(
-    gui::texture* texture, const img::image<byte>& img, bool as_srgb = true);
-void set_texture(
-    gui::texture* texture, const img::image<float>& img, bool as_float = false);
+void set_texture(gui::texture* texture, const img::image<vec4b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui::texture* texture, const img::image<vec4f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui::texture* texture, const img::image<vec3b>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui::texture* texture, const img::image<vec3f>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
+void set_texture(gui::texture* texture, const img::image<byte>& img,
+    bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_texture(gui::texture* texture, const img::image<float>& img,
+    bool as_float = false, bool linear = true, bool mipmap = true);
 
 // Opengl program
 struct program {
@@ -200,16 +204,12 @@ struct image {
   image() {}
   image(const image&) = delete;
   image& operator=(const image&) = delete;
-  ~image();
 
   gui::program* program = new gui::program{};
+  gui::texture* texture = new gui::texture{};
 
-  uint  texcoords_id   = 0;
-  uint  triangles_id   = 0;
-  uint  texture_id     = 0;
-  vec2i texture_size   = {0, 0};
-  bool  texture_linear = false;
-  bool  texture_mipmap = false;
+  uint texcoords_id = 0;
+  uint triangles_id = 0;
 };
 
 // create image drawing program
