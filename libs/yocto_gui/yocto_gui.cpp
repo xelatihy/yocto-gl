@@ -921,8 +921,8 @@ float pif = 3.14159265;
 
 uniform bool eyelight;         // eyelight shading
 uniform vec3 lamb;             // ambient light
-uniform int lnum;              // number of lights
-uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
+uniform int  lnum;             // number of lights
+uniform int  ltype[16];        // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];         // light positions
 uniform vec3 lke[16];          // light intensities
 
@@ -979,30 +979,30 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
 
 uniform int etype;
 uniform bool faceted;
-uniform vec4 highlight;   // highlighted color
+uniform vec4 highlight;           // highlighted color
 
-uniform int mtype;          // material type
-uniform vec3 emission;           // material ke
-uniform vec3 diffuse;           // material kd
-uniform vec3 specular;           // material ks
+uniform int mtype;                // material type
+uniform vec3 emission;            // material ke
+uniform vec3 diffuse;             // material kd
+uniform vec3 specular;            // material ks
 uniform float roughness;          // material rs
-uniform float opacity;          // material op
+uniform float opacity;            // material op
 
-uniform bool emission_tex_on;    // material ke texture on
-uniform sampler2D emission_tex;  // material ke texture
-uniform bool diffuse_tex_on;    // material kd texture on
-uniform sampler2D diffuse_tex;  // material kd texture
-uniform bool specular_tex_on;    // material ks texture on
-uniform sampler2D specular_tex;  // material ks texture
+uniform bool emission_tex_on;     // material ke texture on
+uniform sampler2D emission_tex;   // material ke texture
+uniform bool diffuse_tex_on;      // material kd texture on
+uniform sampler2D diffuse_tex;    // material kd texture
+uniform bool specular_tex_on;     // material ks texture on
+uniform sampler2D specular_tex;   // material ks texture
 uniform bool roughness_tex_on;    // material rs texture on
 uniform sampler2D roughness_tex;  // material rs texture
-uniform bool opacity_tex_on;    // material op texture on
-uniform sampler2D opacity_tex;  // material op texture
+uniform bool opacity_tex_on;      // material op texture on
+uniform sampler2D opacity_tex;    // material op texture
 
-uniform bool mat_norm_tex_on;    // material normal texture on
-uniform sampler2D mat_norm_tex;  // material normal texture
+uniform bool mat_norm_tex_on;     // material normal texture on
+uniform sampler2D mat_norm_tex;   // material normal texture
 
-uniform bool double_sided;   // double sided rendering
+uniform bool double_sided;        // double sided rendering
 
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
