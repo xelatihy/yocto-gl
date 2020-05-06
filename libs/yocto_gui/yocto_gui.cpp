@@ -876,41 +876,40 @@ layout(location = 2) in vec2 texcoords;           // vertex texcoords
 layout(location = 3) in vec4 colors;              // vertex color
 layout(location = 4) in vec4 tangents;            // vertex tangent space
 
-uniform mat4 frame;                    // shape transform
-uniform mat4 frameit;                  // shape transform
-uniform float normal_offset;           // shape normal offset
+uniform mat4 frame;             // shape transform
+uniform mat4 frameit;           // shape transform
+uniform float offset;           // shape normal offset
 
-uniform mat4 cam_xform;          // camera xform
-uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
-uniform mat4 cam_proj;           // camera projection
+uniform mat4 view;              // inverse of the camera frame (as a matrix)
+uniform mat4 projection;        // camera projection
 
-out vec3 position;                   // [to fragment shader] vertex position (in world coordinate)
-out vec3 normal;                  // [to fragment shader] vertex normal (in world coordinate)
+out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
+out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
 out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
 out vec4 color;                 // [to fragment shader] vertex color
 out vec4 tangsp;                // [to fragment shader] vertex tangent space
 
 // main function
 void main() {
-    // copy values
-    position = positions;
-    normal = normals;
-    tangsp = tangents;
-    texcoord = texcoords;
-    color = colors;
+  // copy values
+  position = positions;
+  normal = normals;
+  tangsp = tangents;
+  texcoord = texcoords;
+  color = colors;
 
-    // normal offset
-    if(normal_offset != 0) {
-        position += normal_offset * normal;
-    }
+  // normal offset
+  if(offset != 0) {
+    position += offset * normal;
+  }
 
-    // world projection
-    position = (frame * vec4(position,1)).xyz;
-    normal = (frameit * vec4(normal,0)).xyz;
-    tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
+  // world projection
+  position = (frame * vec4(position,1)).xyz;
+  normal = (frameit * vec4(normal,0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
 
-    // clip
-    gl_Position = cam_proj * cam_xform_inv * vec4(position,1);
+  // clip
+  gl_Position = projection * view * vec4(position,1);
 }
 )";
 
@@ -928,54 +927,54 @@ uniform vec3 lpos[16];         // light positions
 uniform vec3 lke[16];          // light intensities
 
 void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
-    cl = vec3(0,0,0);
-    wi = vec3(0,0,0);
-    if(ltype[lid] == 0) {
-        // compute point light color at position
-        cl = lke[lid] / pow(length(lpos[lid]-position),2);
-        // compute light direction at position
-        wi = normalize(lpos[lid]-position);
-    }
-    else if(ltype[lid] == 1) {
-        // compute light color
-        cl = lke[lid];
-        // compute light direction
-        wi = normalize(lpos[lid]);
-    }
+  cl = vec3(0,0,0);
+  wi = vec3(0,0,0);
+  if(ltype[lid] == 0) {
+    // compute point light color at position
+    cl = lke[lid] / pow(length(lpos[lid]-position),2);
+    // compute light direction at position
+    wi = normalize(lpos[lid]-position);
+  }
+  else if(ltype[lid] == 1) {
+    // compute light color
+    cl = lke[lid];
+    // compute light direction
+    wi = normalize(lpos[lid]);
+  }
 }
 
 vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
     vec3 n, vec3 wi, vec3 wo) {
-    if(etype == 0) return vec3(0);
-    vec3 wh = normalize(wi+wo);
-    float ns = 2/(rs*rs)-2;
-    float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
-    if(etype == 1) {
-        return ((1+dot(wo,wi))/2) * kd/pif;
-    } else if(etype == 2) {
-        float si = sqrt(1-ndi*ndi);
-        float so = sqrt(1-ndo*ndo);
-        float sh = sqrt(1-ndh*ndh);
-        if(si <= 0) return vec3(0);
-        vec3 diff = si * kd / pif;
-        if(sh<=0) return diff;
-        float d = ((2+ns)/(2*pif)) * pow(si,ns);
-        vec3 spec = si * ks * d / (4*si*so);
-        return diff+spec;
-    } else if(etype == 3) {
-        if(ndi<=0 || ndo <=0) return vec3(0);
-        vec3 diff = ndi * kd / pif;
-        if(ndh<=0) return diff;
-        float cos2 = ndh * ndh;
-        float tan2 = (1 - cos2) / cos2;
-        float alpha2 = rs * rs;
-        float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-        float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-        float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-        float g = 1 / (1 + lambda_o + lambda_i);
-        vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-        return diff+spec;
-    }
+  if(etype == 0) return vec3(0);
+  vec3 wh = normalize(wi+wo);
+  float ns = 2/(rs*rs)-2;
+  float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
+  if(etype == 1) {
+      return ((1+dot(wo,wi))/2) * kd/pif;
+  } else if(etype == 2) {
+      float si = sqrt(1-ndi*ndi);
+      float so = sqrt(1-ndo*ndo);
+      float sh = sqrt(1-ndh*ndh);
+      if(si <= 0) return vec3(0);
+      vec3 diff = si * kd / pif;
+      if(sh<=0) return diff;
+      float d = ((2+ns)/(2*pif)) * pow(si,ns);
+      vec3 spec = si * ks * d / (4*si*so);
+      return diff+spec;
+  } else if(etype == 3) {
+      if(ndi<=0 || ndo <=0) return vec3(0);
+      vec3 diff = ndi * kd / pif;
+      if(ndh<=0) return diff;
+      float cos2 = ndh * ndh;
+      float tan2 = (1 - cos2) / cos2;
+      float alpha2 = rs * rs;
+      float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+      float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+      float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+      float g = 1 / (1 + lambda_o + lambda_i);
+      vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+      return diff+spec;
+  }
 }
 
 uniform int elem_type;
@@ -1003,65 +1002,65 @@ uniform sampler2D mat_op_tex;  // material op texture
 uniform bool mat_norm_tex_on;    // material normal texture on
 uniform sampler2D mat_norm_tex;  // material normal texture
 
-uniform bool mat_double_sided;   // double sided rendering
+uniform bool double_sided;   // double sided rendering
 
 uniform mat4 frame;              // shape transform
 uniform mat4 frameit;            // shape transform
 
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
-    if(mat_type == 0) {
-        ke = mat_ke;
-        kd = vec3(0,0,0);
-        ks = vec3(0,0,0);
-        op = 1;
-        return false;
-    }
+  if(mat_type == 0) {
+      ke = mat_ke;
+      kd = vec3(0,0,0);
+      ks = vec3(0,0,0);
+      op = 1;
+      return false;
+  }
 
-    ke = color.xyz * mat_ke;
-    kd = color.xyz * mat_kd;
-    ks = color.xyz * mat_ks;
-    rs = mat_rs;
-    op = color.w * mat_op;
+  ke = color.xyz * mat_ke;
+  kd = color.xyz * mat_kd;
+  ks = color.xyz * mat_ks;
+  rs = mat_rs;
+  op = color.w * mat_op;
 
-    vec4 ke_tex = (mat_ke_tex_on) ? texture(mat_ke_tex,texcoord) : vec4(1,1,1,1);
-    vec4 kd_tex = (mat_kd_tex_on) ? texture(mat_kd_tex,texcoord) : vec4(1,1,1,1);
-    vec4 ks_tex = (mat_ks_tex_on) ? texture(mat_ks_tex,texcoord) : vec4(1,1,1,1);
-    vec4 rs_tex = (mat_rs_tex_on) ? texture(mat_rs_tex,texcoord) : vec4(1,1,1,1);
-    vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ke_tex = (mat_ke_tex_on) ? texture(mat_ke_tex,texcoord) : vec4(1,1,1,1);
+  vec4 kd_tex = (mat_kd_tex_on) ? texture(mat_kd_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ks_tex = (mat_ks_tex_on) ? texture(mat_ks_tex,texcoord) : vec4(1,1,1,1);
+  vec4 rs_tex = (mat_rs_tex_on) ? texture(mat_rs_tex,texcoord) : vec4(1,1,1,1);
+  vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
 
-    // get material color from textures and adjust values
-    ke *= ke_tex.xyz;
-    vec3 kb = kd * kd_tex.xyz;
-    float km = ks.x * ks_tex.z;
-    kd = kb * (1 - km);
-    ks = kb * km + vec3(0.04) * (1 - km);
-    rs *= ks_tex.y;
-    rs = rs*rs;
-    op *= kd_tex.w;
+  // get material color from textures and adjust values
+  ke *= ke_tex.xyz;
+  vec3 kb = kd * kd_tex.xyz;
+  float km = ks.x * ks_tex.z;
+  kd = kb * (1 - km);
+  ks = kb * km + vec3(0.04) * (1 - km);
+  rs *= ks_tex.y;
+  rs = rs*rs;
+  op *= kd_tex.w;
 
-    return true;
+  return true;
 }
 
 vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
     if(!mat_norm_tex_on) return normal;
-    vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
-    vec3 tangv = normalize(cross(normal, tangu));
-    if(tangsp.w < 0) tangv = -tangv;
-    vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
-    // texture.y = -texture.y;
-    return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if(tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  // texture.y = -texture.y;
+  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
 }
 
-in vec3 position;                   // [from vertex shader] position in world space
-in vec3 normal;                  // [from vertex shader] normal in world space (need normalization)
+in vec3 position;              // [from vertex shader] position in world space
+in vec3 normal;                // [from vertex shader] normal in world space (need normalization)
 in vec2 texcoord;              // [from vertex shader] texcoord
 in vec4 color;                 // [from vertex shader] color
 in vec4 tangsp;                // [from vertex shader] tangent space
 
-uniform vec3 cam_pos;          // camera position
-uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
-uniform mat4 cam_proj;           // camera projection
+uniform vec3 eye;              // camera position
+uniform mat4 view;             // inverse of the camera frame (as a matrix)
+uniform mat4 projection;       // camera projection
 
 uniform float exposure; 
 uniform float gamma;
@@ -1069,75 +1068,75 @@ uniform float gamma;
 out vec4 frag_color;      
 
 vec3 triangle_normal(vec3 position) {
-    vec3 fdx = dFdx(position); 
-    vec3 fdy = dFdy(position); 
-    return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+  vec3 fdx = dFdx(position); 
+  vec3 fdy = dFdy(position); 
+  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
 // main
 void main() {
-    // view vector
-    vec3 wo = normalize(cam_pos - position);
+  // view vector
+  vec3 wo = normalize(eye - position);
 
-    // prepare normals
-    vec3 n;
-    if(faceted) {
-        n = triangle_normal(position);
+  // prepare normals
+  vec3 n;
+  if(faceted) {
+    n = triangle_normal(position);
+  } else {
+    n = normalize(normal);
+  }
+
+  // apply normal map
+  n = apply_normal_map(texcoord, n, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if(double_sided) n = faceforward(n,-wo,n);
+
+  // get material color from textures
+  vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
+  bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
+
+  // exit if needed
+  if(brdf_op < 0.005) discard;
+
+  // check const color
+  if(elem_type == 0) {
+    frag_color = vec4(brdf_ke,brdf_op);
+    return;
+  }
+
+  // emission
+  vec3 c = brdf_ke;
+
+  // check early exit
+  if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
+    // eyelight shading
+    if(eyelight) {
+      vec3 wi = wo;
+      c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
     } else {
-        n = normalize(normal);
+      // accumulate ambient
+      c += lamb * brdf_kd;
+      // foreach light
+      for(int lid = 0; lid < lnum; lid ++) {
+        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
+        evaluate_light(lid, position, cl, wi);
+        c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+      }
     }
+  }
 
-    // apply normal map
-    n = apply_normal_map(texcoord, n, tangsp);
+  // final color correction
+  c = pow(c * pow(2,exposure), vec3(1/gamma));
 
-    // use faceforward to ensure the normals points toward us
-    if(mat_double_sided) n = faceforward(n,-wo,n);
+  // highlighting
+  if(highlight.w > 0) {
+    if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+        c = highlight.xyz * highlight.w + c * (1-highlight.w);
+  }
 
-    // get material color from textures
-    vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-    bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
-
-    // exit if needed
-    if(brdf_op < 0.005) discard;
-
-    // check const color
-    if(elem_type == 0) {
-        frag_color = vec4(brdf_ke,brdf_op);
-        return;
-    }
-
-    // emission
-    vec3 c = brdf_ke;
-
-    // check early exit
-    if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
-        // eyelight shading
-        if(eyelight) {
-            vec3 wi = wo;
-            c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
-        } else {
-            // accumulate ambient
-            c += lamb * brdf_kd;
-            // foreach light
-            for(int lid = 0; lid < lnum; lid ++) {
-                vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-                evaluate_light(lid, position, cl, wi);
-                c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
-            }
-        }
-    }
-
-    // final color correction
-    c = pow(c * pow(2,exposure), vec3(1/gamma));
-
-    // highlighting
-    if(highlight.w > 0) {
-        if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
-            c = highlight.xyz * highlight.w + c * (1-highlight.w);
-    }
-
-    // output final color by setting gl_FragColor
-    frag_color = vec4(c,brdf_op);
+  // output final color by setting gl_FragColor
+  frag_color = vec4(c,brdf_op);
 }
 )";
 
@@ -1388,7 +1387,7 @@ void draw_object(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
   set_uniform(scene->program, "frame", shape_xform);
   set_uniform(scene->program, "frameit", shape_inv_xform);
-  set_uniform(scene->program, "normal_offset", 0.0f);
+  set_uniform(scene->program, "offset", 0.0f);
   if (object->highlighted) {
     set_uniform(scene->program, "highlight", vec4f{1, 1, 0, 1});
   } else {
@@ -1403,7 +1402,7 @@ void draw_object(
   set_uniform(scene->program, "mat_ks", vec3f{material->metallic});
   set_uniform(scene->program, "mat_rs", material->roughness);
   set_uniform(scene->program, "mat_op", material->opacity);
-  set_uniform(scene->program, "mat_double_sided", (int)params.double_sided);
+  set_uniform(scene->program, "double_sided", (int)params.double_sided);
   set_uniform(
       scene->program, "mat_ke_tex", "mat_ke_tex_on", material->emission_tex, 0);
   set_uniform(
@@ -1499,9 +1498,9 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   set_viewport(viewport);
 
   bind_program(scene->program);
-  set_uniform(scene->program, "cam_pos", camera->frame.o);
-  set_uniform(scene->program, "cam_xform_inv", camera_view);
-  set_uniform(scene->program, "cam_proj", camera_proj);
+  set_uniform(scene->program, "eye", camera->frame.o);
+  set_uniform(scene->program, "view", camera_view);
+  set_uniform(scene->program, "projection", camera_proj);
   set_uniform(scene->program, "eyelight",
       params.shading == shading_type::eyelight ? 1 : 0);
   set_uniform(scene->program, "exposure", params.exposure);
