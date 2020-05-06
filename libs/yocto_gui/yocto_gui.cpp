@@ -1425,25 +1425,19 @@ void draw_object(
     if (is_initialized(shape->points)) {
       glPointSize(shape->points_size);
       set_uniform(scene->program, "elem_type", 1);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points->buffer_id);
-      glDrawElements(GL_POINTS, shape->points->size, GL_UNSIGNED_INT, nullptr);
+      draw_elements(shape->points);
     }
     if (is_initialized(shape->lines)) {
       set_uniform(scene->program, "elem_type", 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines->buffer_id);
-      glDrawElements(GL_LINES, shape->lines->size, GL_UNSIGNED_INT, nullptr);
+      draw_elements(shape->lines);
     }
     if (is_initialized(shape->triangles)) {
       set_uniform(scene->program, "elem_type", 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles->buffer_id);
-      glDrawElements(
-          GL_TRIANGLES, shape->triangles->size, GL_UNSIGNED_INT, nullptr);
+      draw_elements(shape->triangles);
     }
     if (is_initialized(shape->quads)) {
       set_uniform(scene->program, "elem_type", 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads->buffer_id);
-      glDrawElements(
-          GL_TRIANGLES, shape->quads->size, GL_UNSIGNED_INT, nullptr);
+      draw_elements(shape->quads);
     }
   }
 
@@ -1461,8 +1455,7 @@ void draw_object(
       set_uniform(scene->program, "mat_ks", vec3f{0, 0, 0});
       set_uniform(scene->program, "mat_rs", 1);
       set_uniform(scene->program, "elem_type", 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges->buffer_id);
-      glDrawElements(GL_LINES, shape->edges->size, GL_UNSIGNED_INT, nullptr);
+      draw_elements(shape->edges);
     }
   }
 }
