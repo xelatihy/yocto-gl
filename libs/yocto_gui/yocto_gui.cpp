@@ -1489,11 +1489,8 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+  clear_framebuffer(params.background);
+  set_viewport(viewport);
 
   glUseProgram(scene->program->program_id);
   set_uniform(scene->program, "cam_pos", camera->frame.o);
@@ -1530,13 +1527,13 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
     }
   }
 
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  if (params.wireframe) set_wireframe(true);
   for (auto object : scene->objects) {
     draw_object(scene, object, params);
   }
 
-  glUseProgram(0);
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  unbind_program();
+  if (params.wireframe) set_wireframe(false);
 }
 
 }  // namespace yocto::gui
