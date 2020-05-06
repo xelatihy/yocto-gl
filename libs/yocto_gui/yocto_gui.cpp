@@ -1383,54 +1383,12 @@ void draw_object(
   set_uniform(scene->program, "mat_rs", material->roughness);
   set_uniform(scene->program, "mat_op", material->opacity);
   set_uniform(scene->program, "mat_double_sided", (int)params.double_sided);
-  if (material->emission_tex) {
-    glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, material->emission_tex->texture_id);
-    set_uniform(scene->program, "mat_ke_tex", 0);
-    set_uniform(scene->program, "mat_ke_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_ke_tex_on", 0);
-  }
-  if (material->color_tex) {
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, material->color_tex->texture_id);
-    set_uniform(scene->program, "mat_kd_tex", 1);
-    set_uniform(scene->program, "mat_kd_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_kd_tex_on", 0);
-  }
-  if (material->metallic_tex) {
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, material->metallic_tex->texture_id);
-    set_uniform(scene->program, "mat_ks_tex", 2);
-    set_uniform(scene->program, "mat_ks_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_ks_tex_on", 0);
-  }
-  if (material->roughness_tex) {
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, material->roughness_tex->texture_id);
-    set_uniform(scene->program, "mat_rs_tex", 3);
-    set_uniform(scene->program, "mat_rs_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_rs_tex_on", 0);
-  }
-  if (material->opacity_tex) {
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, material->opacity_tex->texture_id);
-    set_uniform(scene->program, "mat_op_tex", 3);
-    set_uniform(scene->program, "mat_op_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_op_tex_on", 0);
-  }
-  if (material->normal_tex) {
-    glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, material->normal_tex->texture_id);
-    set_uniform(scene->program, "mat_norm_tex", 4);
-    set_uniform(scene->program, "mat_norm_tex_on", 1);
-  } else {
-    set_uniform(scene->program, "mat_norm_tex_on", 0);
-  }
+  set_uniform(scene->program, "mat_ke_tex", "mat_ke_tex_on", material->emission_tex, 0);
+  set_uniform(scene->program, "mat_kd_tex", "mat_kd_tex_on", material->color_tex, 1);
+  set_uniform(scene->program, "mat_ks_tex", "mat_ks_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "mat_rs_tex", "mat_rs_tex_on", material->roughness_tex, 3);
+  set_uniform(scene->program, "mat_op_tex", "mat_op_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
 
   auto shape = object->shape;
   set_uniform(scene->program, "elem_faceted", !is_initialized(shape->normals));
