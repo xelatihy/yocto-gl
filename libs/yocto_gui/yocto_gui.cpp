@@ -1210,26 +1210,6 @@ gui::shape* add_shape(gui::scene* scene) {
   return scene->shapes.emplace_back(new shape{});
 }
 
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
-    int size, int count, const int* values) {
-  if (!size || !values) {
-    if (array_id) glDeleteBuffers(1, &array_id);
-    array_id  = 0;
-    array_num = 0;
-    return;
-  }
-  if (!array_id) {
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else if (array_num != size) {
-    glDeleteBuffers(1, &array_id);
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else {
-    update_glbuffer(array_id, element, size, 3, values);
-  }
-}
-
 void set_points(gui::shape* shape, const std::vector<int>& points) {
   set_elementbuffer(shape->points, points);
 }
