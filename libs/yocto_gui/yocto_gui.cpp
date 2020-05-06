@@ -1165,7 +1165,10 @@ void main() {
 // forward declaration
 void clear_shape(gui::shape* shape);
 
-shape::~shape() { clear_shape(this); }
+shape::~shape() { 
+  clear_shape(this); 
+  if(positions) delete positions;
+}
 
 scene::~scene() {
   clear_scene(this);
@@ -1190,7 +1193,7 @@ bool is_initialized(gui::scene* scene) {
 
 // Clear an OpenGL shape
 void clear_shape(gui::shape* shape) {
-  if (shape->positions_id) glDeleteBuffers(1, &shape->positions_id);
+  clear_arraybuffer(shape->positions);
   if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
   if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
   if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
@@ -1200,7 +1203,6 @@ void clear_shape(gui::shape* shape) {
   if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
   if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
   if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
-  shape->positions_id = 0;
   shape->normals_id   = 0;
   shape->texcoords_id = 0;
   shape->colors_id    = 0;
@@ -1326,8 +1328,7 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
       (const int*)edges.data());
 }
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
+  set_arraybuffer(shape->positions, positions);
 }
 void set_normals(gui::shape* shape, const std::vector<vec3f>& normals) {
   set_glshape_buffer(shape->normals_id, shape->normals_num, false,
@@ -1554,8 +1555,8 @@ void draw_object(
   auto shape = object->shape;
   glUniform1i(glGetUniformLocation(scene->program->program_id, "elem_faceted"),
       (int)!shape->normals_id);
-  if (shape->positions_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
+  if (is_initialized(shape->positions)) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape->positions->buffer_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program->program_id, "vert_pos"));
     glVertexAttribPointer(

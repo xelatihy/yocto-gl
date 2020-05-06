@@ -361,8 +361,7 @@ struct material {
 // Opengl shape
 struct shape {
   // vertex buffers
-  int   positions_num  = 0;
-  uint  positions_id   = 0;
+  gui::arraybuffer* positions = new gui::arraybuffer{};
   int   normals_num    = 0;
   uint  normals_id     = 0;
   int   texcoords_num  = 0;
