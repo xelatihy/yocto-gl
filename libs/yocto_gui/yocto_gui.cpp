@@ -981,23 +981,23 @@ uniform int elem_type;
 uniform bool faceted;
 uniform vec4 highlight;   // highlighted color
 
-uniform int mat_type;          // material type
-uniform vec3 mat_ke;           // material ke
-uniform vec3 mat_kd;           // material kd
-uniform vec3 mat_ks;           // material ks
-uniform float mat_rs;          // material rs
-uniform float mat_op;          // material op
+uniform int mtype;          // material type
+uniform vec3 emission;           // material ke
+uniform vec3 diffuse;           // material kd
+uniform vec3 specular;           // material ks
+uniform float roughness;          // material rs
+uniform float opacity;          // material op
 
-uniform bool mat_ke_tex_on;    // material ke texture on
-uniform sampler2D mat_ke_tex;  // material ke texture
-uniform bool mat_kd_tex_on;    // material kd texture on
-uniform sampler2D mat_kd_tex;  // material kd texture
-uniform bool mat_ks_tex_on;    // material ks texture on
-uniform sampler2D mat_ks_tex;  // material ks texture
-uniform bool mat_rs_tex_on;    // material rs texture on
-uniform sampler2D mat_rs_tex;  // material rs texture
-uniform bool mat_op_tex_on;    // material op texture on
-uniform sampler2D mat_op_tex;  // material op texture
+uniform bool emission_tex_on;    // material ke texture on
+uniform sampler2D emission_tex;  // material ke texture
+uniform bool diffuse_tex_on;    // material kd texture on
+uniform sampler2D diffuse_tex;  // material kd texture
+uniform bool specular_tex_on;    // material ks texture on
+uniform sampler2D specular_tex;  // material ks texture
+uniform bool roughness_tex_on;    // material rs texture on
+uniform sampler2D roughness_tex;  // material rs texture
+uniform bool opacity_tex_on;    // material op texture on
+uniform sampler2D opacity_tex;  // material op texture
 
 uniform bool mat_norm_tex_on;    // material normal texture on
 uniform sampler2D mat_norm_tex;  // material normal texture
@@ -1009,25 +1009,25 @@ uniform mat4 frameit;            // shape transform
 
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
-  if(mat_type == 0) {
-      ke = mat_ke;
-      kd = vec3(0,0,0);
-      ks = vec3(0,0,0);
-      op = 1;
-      return false;
+  if(mtype == 0) {
+    ke = emission;
+    kd = vec3(0,0,0);
+    ks = vec3(0,0,0);
+    op = 1;
+    return false;
   }
 
-  ke = color.xyz * mat_ke;
-  kd = color.xyz * mat_kd;
-  ks = color.xyz * mat_ks;
-  rs = mat_rs;
-  op = color.w * mat_op;
+  ke = color.xyz * emission;
+  kd = color.xyz * diffuse;
+  ks = color.xyz * specular;
+  rs = roughness;
+  op = color.w * opacity;
 
-  vec4 ke_tex = (mat_ke_tex_on) ? texture(mat_ke_tex,texcoord) : vec4(1,1,1,1);
-  vec4 kd_tex = (mat_kd_tex_on) ? texture(mat_kd_tex,texcoord) : vec4(1,1,1,1);
-  vec4 ks_tex = (mat_ks_tex_on) ? texture(mat_ks_tex,texcoord) : vec4(1,1,1,1);
-  vec4 rs_tex = (mat_rs_tex_on) ? texture(mat_rs_tex,texcoord) : vec4(1,1,1,1);
-  vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ke_tex = (emission_tex_on) ? texture(emission_tex,texcoord) : vec4(1,1,1,1);
+  vec4 kd_tex = (diffuse_tex_on) ? texture(diffuse_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ks_tex = (specular_tex_on) ? texture(specular_tex,texcoord) : vec4(1,1,1,1);
+  vec4 rs_tex = (roughness_tex_on) ? texture(roughness_tex,texcoord) : vec4(1,1,1,1);
+  vec4 op_tex = (opacity_tex_on) ? texture(opacity_tex,texcoord) : vec4(1,1,1,1);
 
   // get material color from textures and adjust values
   ke *= ke_tex.xyz;
@@ -1396,23 +1396,23 @@ void draw_object(
 
   auto material = object->material;
   auto mtype    = 2;
-  set_uniform(scene->program, "mat_type", mtype);
-  set_uniform(scene->program, "mat_ke", material->emission);
-  set_uniform(scene->program, "mat_kd", material->color);
-  set_uniform(scene->program, "mat_ks", vec3f{material->metallic});
-  set_uniform(scene->program, "mat_rs", material->roughness);
-  set_uniform(scene->program, "mat_op", material->opacity);
+  set_uniform(scene->program, "mtype", mtype);
+  set_uniform(scene->program, "emission", material->emission);
+  set_uniform(scene->program, "diffuse", material->color);
+  set_uniform(scene->program, "specular", vec3f{material->metallic});
+  set_uniform(scene->program, "roughness", material->roughness);
+  set_uniform(scene->program, "opacity", material->opacity);
   set_uniform(scene->program, "double_sided", (int)params.double_sided);
   set_uniform(
-      scene->program, "mat_ke_tex", "mat_ke_tex_on", material->emission_tex, 0);
+      scene->program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
   set_uniform(
-      scene->program, "mat_kd_tex", "mat_kd_tex_on", material->color_tex, 1);
+      scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
   set_uniform(
-      scene->program, "mat_ks_tex", "mat_ks_tex_on", material->metallic_tex, 2);
-  set_uniform(scene->program, "mat_rs_tex", "mat_rs_tex_on",
+      scene->program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
       material->roughness_tex, 3);
   set_uniform(
-      scene->program, "mat_op_tex", "mat_op_tex_on", material->opacity_tex, 4);
+      scene->program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
 
@@ -1461,11 +1461,11 @@ void draw_object(
     set_uniform(scene->program, "frameit", shape_inv_xform);
 
     if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
-      set_uniform(scene->program, "mat_type", mtype);
-      set_uniform(scene->program, "mat_ke", vec3f{0, 0, 0});
-      set_uniform(scene->program, "mat_kd", vec3f{0, 0, 0});
-      set_uniform(scene->program, "mat_ks", vec3f{0, 0, 0});
-      set_uniform(scene->program, "mat_rs", 1);
+      set_uniform(scene->program, "mtype", mtype);
+      set_uniform(scene->program, "emission", vec3f{0, 0, 0});
+      set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
+      set_uniform(scene->program, "specular", vec3f{0, 0, 0});
+      set_uniform(scene->program, "roughness", 1);
       set_uniform(scene->program, "elem_type", 2);
       draw_elements(shape->edges);
     }
