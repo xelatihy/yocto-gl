@@ -654,6 +654,12 @@ void main() {
 )";
 #endif
 
+image::~image() {
+  if(program) delete program;
+  if(texcoords) delete texcoords;
+  if(triangles) delete triangles;
+}
+
 bool is_initialized(const gui::image* image) {
   return is_initialized(image->program);
 }

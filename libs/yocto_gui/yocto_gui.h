@@ -287,6 +287,7 @@ struct image {
   image() {}
   image(const image&) = delete;
   image& operator=(const image&) = delete;
+  ~image();
 
   gui::program*       program   = new gui::program{};
   gui::texture*       texture   = new gui::texture{};
