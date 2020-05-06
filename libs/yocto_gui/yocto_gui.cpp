@@ -870,11 +870,11 @@ static const char* glscene_vertex =
     R"(
 #version 330
 
-layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
-layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
-layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
-layout(location = 3) in vec4 vert_color;          // vertex color
-layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
+layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
+layout(location = 1) in vec3 normals;             // vertex normal (in mesh coordinate frame)
+layout(location = 2) in vec2 texcoords;           // vertex texcoords
+layout(location = 3) in vec4 colors;              // vertex color
+layout(location = 4) in vec4 tangents;            // vertex tangent space
 
 uniform mat4 shape_xform;                    // shape transform
 uniform mat4 shape_xform_invtranspose;       // shape transform
@@ -893,9 +893,11 @@ out vec4 tangsp;                // [to fragment shader] vertex tangent space
 // main function
 void main() {
     // copy values
-    pos = vert_pos;
-    norm = vert_norm;
-    tangsp = vert_tangsp;
+    pos = positions;
+    norm = normals;
+    tangsp = tangents;
+    texcoord = texcoords;
+    color = colors;
 
     // normal offset
     if(shape_normal_offset != 0) {
@@ -906,10 +908,6 @@ void main() {
     pos = (shape_xform * vec4(pos,1)).xyz;
     norm = (shape_xform_invtranspose * vec4(norm,0)).xyz;
     tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
-
-    // copy other vertex properties
-    texcoord = vert_texcoord;
-    color = vert_color;
 
     // clip
     gl_Position = cam_proj * cam_xform_inv * vec4(pos,1);
@@ -1421,12 +1419,11 @@ void draw_object(
 
   auto shape = object->shape;
   set_uniform(scene->program, "elem_faceted", !is_initialized(shape->normals));
-  set_attribute(scene->program, "vert_pos", shape->positions, vec3f{0, 0, 0});
-  set_attribute(scene->program, "vert_norm", shape->normals, vec3f{0, 0, 1});
-  set_attribute(scene->program, "vert_texcoord", shape->texcoords, vec2f{0, 0});
-  set_attribute(scene->program, "vert_color", shape->colors, vec4f{1, 1, 1, 1});
-  set_attribute(
-      scene->program, "vert_tangsp", shape->tangents, vec4f{0, 0, 1, 1});
+  set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0, 0});
+  set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0, 1});
+  set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
+  set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
+  set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
 
   auto& instances = object->instance ? object->instance->frames
                                      : empty_instances;
