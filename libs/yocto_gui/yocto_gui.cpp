@@ -88,174 +88,476 @@ using math::tan;
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto::gui {
+
+bool init_opengl(std::string& error) {
+  if (!gladLoadGL()) {
+    error = "Cannot initialize OpenGL context.";
+    return false;
+  }
+  return true;
+}
+
+void assert_error() { assert(glGetError() == GL_NO_ERROR); }
+
+bool check_error(std::string& error) {
+  if (glGetError() != GL_NO_ERROR) {
+    error = "";
+    return false;
+  }
+  return true;
+}
+
+void clear_framebuffer(const vec4f& color, bool clear_depth) {
+  glClearColor(color.x, color.y, color.z, color.w);
+  if (clear_depth) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+  } else {
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
+}
+
+void set_viewport(const vec4i& viewport) {
+  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+}
+
+void set_wireframe(bool enabled) {
+  if (enabled)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  else
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void set_blending(bool enabled) {
+  if (enabled) {
+    glEnable(GL_BLEND);
+    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+  } else {
+    glDisable(GL_BLEND);
+  }
+}
+
+void set_point_size(int size) { glPointSize(size); }
+
+void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+    const byte* img, bool as_srgb, bool linear, bool mipmap) {
+  static auto sformat = std::unordered_map<int, uint>{
+      {1, GL_SRGB},
+      {2, GL_SRGB},
+      {3, GL_SRGB},
+      {4, GL_SRGB_ALPHA},
+  };
+  static auto iformat = std::unordered_map<int, uint>{
+      {1, GL_RGB},
+      {2, GL_RGB},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  static auto cformat = std::unordered_map<int, uint>{
+      {1, GL_RED},
+      {2, GL_RG},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  assert_error();
+  if (size == zero2i || img == nullptr) {
+    clear_texture(texture);
+    return;
+  }
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != size || texture->nchannels != nchannels ||
+      texture->is_srgb != as_srgb || texture->is_float == true ||
+      texture->linear != linear || texture->mipmap != mipmap) {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0,
+        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size.x, size.y,
+        0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+        cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  texture->size      = size;
+  texture->nchannels = nchannels;
+  texture->is_srgb   = as_srgb;
+  texture->is_float  = false;
+  texture->linear    = linear;
+  texture->mipmap    = mipmap;
+  assert_error();
+}
+
+void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+    const float* img, bool as_float, bool linear, bool mipmap) {
+  static auto fformat = std::unordered_map<int, uint>{
+      {1, GL_RGB16F},
+      {2, GL_RGB16F},
+      {3, GL_RGB16F},
+      {4, GL_RGBA32F},
+  };
+  static auto iformat = std::unordered_map<int, uint>{
+      {1, GL_RGB},
+      {2, GL_RGB},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  static auto cformat = std::unordered_map<int, uint>{
+      {1, GL_RED},
+      {2, GL_RG},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  assert_error();
+  if (!img) {
+    clear_texture(texture);
+    return;
+  }
+  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
+  if (texture->size != size || texture->nchannels != nchannels ||
+      texture->is_float != as_float || texture->is_srgb == true ||
+      texture->linear != linear || texture->mipmap != mipmap) {
+    glGenTextures(1, &texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0,
+        as_float ? fformat.at(nchannels) : iformat.at(nchannels), size.x,
+        size.y, 0, iformat.at(nchannels), GL_FLOAT, img);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+        iformat.at(nchannels), GL_FLOAT, img);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  texture->size      = size;
+  texture->nchannels = nchannels;
+  texture->is_srgb   = false;
+  texture->is_float  = as_float;
+  texture->linear    = linear;
+  texture->mipmap    = mipmap;
+  assert_error();
+}
+
+// check if texture is initialized
+bool is_initialized(gui::texture* texture) { return texture->texture_id != 0; }
+
+// clear texture
+void clear_texture(gui::texture* texture) {
+  if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
+  texture->texture_id = 0;
+  texture->size       = {0, 0};
+  texture->nchannels  = 0;
+  texture->is_srgb    = false;
+  texture->is_float   = false;
+  texture->linear     = false;
+  texture->mipmap     = false;
+}
+
+void set_texture(gui::texture* texture, const img::image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
+}
+void set_texture(gui::texture* texture, const img::image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
+      linear, mipmap);
+}
+
+void set_texture(gui::texture* texture, const img::image<vec3b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
+}
+void set_texture(gui::texture* texture, const img::image<vec3f>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
+      linear, mipmap);
+}
+
+void set_texture(gui::texture* texture, const img::image<byte>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  set_texture(
+      texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
+}
+void set_texture(gui::texture* texture, const img::image<float>& img,
+    bool as_float, bool linear, bool mipmap) {
+  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
+      linear, mipmap);
+}
+
+// set buffer
+void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
+    const float* data, bool dynamic) {
+  assert_error();
+  if (size == 0 || data == nullptr) {
+    clear_arraybuffer(buffer);
+    return;
+  }
+  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
+  auto target = GL_ARRAY_BUFFER;
+  glBindBuffer(target, buffer->buffer_id);
+  if (buffer->size != size || buffer->dynamic != dynamic) {
+    glBufferData(target, size * sizeof(float), data,
+        dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+  } else {
+    glBufferSubData(target, 0, size * sizeof(float), data);
+  }
+  buffer->size    = size;
+  buffer->esize   = esize;
+  buffer->dynamic = dynamic;
+  assert_error();
+}
+
+// check if buffer is initialized
+bool is_initialized(gui::arraybuffer* buffer) { return buffer->buffer_id != 0; }
+
+// clear buffer
+void clear_arraybuffer(gui::arraybuffer* buffer) {
+  assert_error();
+  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
+  assert_error();
+  buffer->buffer_id = 0;
+  buffer->size      = 0;
+  buffer->esize     = 0;
+  buffer->dynamic   = false;
+}
+
+// set buffer
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<float>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 1, 1, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec2f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 2, 2, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec3f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 3, 3, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec4f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
+}
+
+// set buffer
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const int* data, bool dynamic) {
+  assert_error();
+  if (size == 0 || data == nullptr) {
+    clear_elementbuffer(buffer);
+    return;
+  }
+  if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
+  auto target = GL_ELEMENT_ARRAY_BUFFER;
+  glBindBuffer(target, buffer->buffer_id);
+  if (buffer->size != size || buffer->dynamic != dynamic) {
+    glBufferData(target, size * sizeof(int), data,
+        dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+  } else {
+    glBufferSubData(target, 0, size * sizeof(int), data);
+  }
+  buffer->size    = size;
+  buffer->element = element;
+  buffer->dynamic = dynamic;
+  assert_error();
+}
+
+// check if buffer is initialized
+bool is_initialized(gui::elementbuffer* buffer) {
+  return buffer->buffer_id != 0;
+}
+
+// clear buffer
+void clear_elementbuffer(gui::elementbuffer* buffer) {
+  assert_error();
+  if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
+  assert_error();
+  buffer->buffer_id = 0;
+  buffer->size      = 0;
+  buffer->element   = element_type::points;
+  buffer->dynamic   = false;
+}
+
+// set buffer
+void set_elementbuffer(
+    gui::elementbuffer* buffer, const std::vector<int>& points, bool dynamic) {
+  set_elementbuffer(buffer, points.size() * 1, element_type::points,
+      (int*)points.data(), dynamic);
+}
+void set_elementbuffer(
+    gui::elementbuffer* buffer, const std::vector<vec2i>& lines, bool dynamic) {
+  set_elementbuffer(buffer, lines.size() * 2, element_type::lines,
+      (int*)lines.data(), dynamic);
+}
+void set_elementbuffer(gui::elementbuffer* buffer,
+    const std::vector<vec3i>& triangles, bool dynamic) {
+  set_elementbuffer(buffer, triangles.size() * 3, element_type::triangles,
+      (int*)triangles.data(), dynamic);
+}
+
+// initialize program
+bool init_program(gui::program* program, const std::string& vertex,
+    const std::string& fragment, std::string& error, std::string& errorlog) {
+  // error
+  auto program_error = [&error, &errorlog, program](
+                           const char* message, const char* log) {
+    clear_program(program);
+    error    = message;
+    errorlog = log;
+    return false;
+  };
+
+  // clear
+  if (program->program_id) clear_program(program);
+
+  // setup code
+  program->vertex_code   = vertex;
+  program->fragment_code = fragment;
+
+  // create arrays
+  assert_error();
+  glGenVertexArrays(1, &program->array_id);
+  glBindVertexArray(program->array_id);
+  assert_error();
+
+  const char* ccvertex   = vertex.data();
+  const char* ccfragment = fragment.data();
+  int         errflags;
+  char        errbuf[10000];
+
+  // create vertex
+  assert_error();
+  program->vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
+  glCompileShader(program->vertex_id);
+  glGetShaderiv(program->vertex_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf);
+    return program_error("vertex shader not compiled", errbuf);
+  }
+  assert_error();
+
+  // create fragment
+  assert_error();
+  program->fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
+  glCompileShader(program->fragment_id);
+  glGetShaderiv(program->fragment_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf);
+    return program_error("fragment shader not compiled", errbuf);
+  }
+  assert_error();
+
+  // create program
+  assert_error();
+  program->program_id = glCreateProgram();
+  glAttachShader(program->program_id, program->vertex_id);
+  glAttachShader(program->program_id, program->fragment_id);
+  glLinkProgram(program->program_id);
+  glValidateProgram(program->program_id);
+  glGetProgramiv(program->program_id, GL_LINK_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+    return program_error("program not linked", errbuf);
+  }
+  glGetProgramiv(program->program_id, GL_VALIDATE_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+    return program_error("program not validated", errbuf);
+  }
+  assert_error();
+
+  // done
+  return true;
+}
+
+// clear program
+void clear_program(gui::program* program) {
+  if (program->program_id) glDeleteProgram(program->program_id);
+  if (program->vertex_id) glDeleteShader(program->vertex_id);
+  if (program->fragment_id) glDeleteProgram(program->fragment_id);
+  if (program->array_id) glDeleteVertexArrays(1, &program->array_id);
+  program->program_id  = 0;
+  program->vertex_id   = 0;
+  program->fragment_id = 0;
+  program->array_id    = 0;
+}
+
+bool is_initialized(const gui::program* program) {
+  return program->program_id != 0;
+}
+
+// bind program
+void bind_program(gui::program* program) {
+  assert_error();
+  glUseProgram(program->program_id);
+  assert_error();
+}
+// unbind program
+void unbind_program(gui::program* program) { glUseProgram(0); }
+// unbind program
+void unbind_program() { glUseProgram(0); }
+
+}  // namespace yocto::gui
+
+// -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
-static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
-    uint& array_id, const char* vertex, const char* fragment) {
-  assert(glGetError() == GL_NO_ERROR);
-  glGenVertexArrays(1, &array_id);
-  glBindVertexArray(array_id);
-  assert(glGetError() == GL_NO_ERROR);
-
-  int  errflags;
-  char errbuf[10000];
-
-  // create vertex
-  assert(glGetError() == GL_NO_ERROR);
-  vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_id, 1, &vertex, NULL);
-  glCompileShader(vertex_id);
-  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf);
-    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-
-  // create fragment
-  assert(glGetError() == GL_NO_ERROR);
-  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_id, 1, &fragment, NULL);
-  glCompileShader(fragment_id);
-  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf);
-    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-
-  // create program
-  assert(glGetError() == GL_NO_ERROR);
-  program_id = glCreateProgram();
-  glAttachShader(program_id, vertex_id);
-  glAttachShader(program_id, fragment_id);
-  glLinkProgram(program_id);
-  glValidateProgram(program_id);
-  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
-    throw std::runtime_error("program not linked with error\n"s + errbuf);
-  }
-  glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
-    throw std::runtime_error("program not linked with error\n"s + errbuf);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-}
-
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(float), array, GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(int), array, GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(int), array);
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(float), array);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const float* img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-      nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const byte* img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
-      nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const float* img, bool as_float, bool linear, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA32F : GL_RGB32F, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
-    const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_SRGB_ALPHA : GL_SRGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
-        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
 }
 
 }  // namespace yocto::gui
@@ -323,122 +625,233 @@ void main() {
 )";
 #endif
 
-bool is_initialized(const gui::image* image) { return (bool)image->program_id; }
-
 image::~image() {
-  if (program_id) glDeleteProgram(program_id);
-  if (vertex_id) glDeleteShader(vertex_id);
-  if (fragment_id) glDeleteShader(fragment_id);
-  if (array_id) glDeleteVertexArrays(1, &array_id);
-  if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
-  if (triangles_id) glDeleteBuffers(1, &triangles_id);
-  if (texture_id) glDeleteTextures(1, &texture_id);
+  if (program) delete program;
+  if (texcoords) delete texcoords;
+  if (triangles) delete triangles;
+}
+
+bool is_initialized(const gui::image* image) {
+  return is_initialized(image->program);
 }
 
 // init image program
-void init_image(gui::image* image) {
-  if (image->program_id) return;
+bool init_image(gui::image* image) {
+  if (is_initialized(image)) return true;
 
   auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-  init_glprogram(image->program_id, image->vertex_id, image->fragment_id,
-      image->array_id, glimage_vertex, glimage_fragment);
-  glGenBuffers(1, &image->texcoords_id);
-  glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
-      texcoords.data(), GL_STATIC_DRAW);
-  glGenBuffers(1, &image->triangles_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
-      triangles.data(), GL_STATIC_DRAW);
+  auto error = ""s, errorlog = ""s;
+  if (!init_program(
+          image->program, glimage_vertex, glimage_fragment, error, errorlog))
+    return false;
+  set_arraybuffer(
+      image->texcoords, texcoords.size() * 2, 2, (float*)texcoords.data());
+  set_elementbuffer(image->triangles, triangles.size() * 3,
+      element_type::triangles, (int*)triangles.data());
+  return true;
 }
 
 // clear an opengl image
 void clear_image(gui::image* image) {
-  if (image->program_id) glDeleteProgram(image->program_id);
-  if (image->vertex_id) glDeleteShader(image->vertex_id);
-  if (image->fragment_id) glDeleteShader(image->fragment_id);
-  if (image->array_id) glDeleteVertexArrays(1, &image->array_id);
-  if (image->texcoords_id) glDeleteBuffers(1, &image->texcoords_id);
-  if (image->triangles_id) glDeleteBuffers(1, &image->triangles_id);
-  if (image->texture_id) glDeleteTextures(1, &image->texture_id);
-  image->program_id   = 0;
-  image->vertex_id    = 0;
-  image->fragment_id  = 0;
-  image->array_id     = 0;
-  image->texcoords_id = 0;
-  image->triangles_id = 0;
-  image->texture_id   = 0;
+  clear_program(image->program);
+  clear_texture(image->texture);
+  clear_arraybuffer(image->texcoords);
+  clear_elementbuffer(image->triangles);
 }
 
 // update image data
 void set_image(
     gui::image* image, const img::image<vec4f>& img, bool linear, bool mipmap) {
-  if (!image->texture_id) {
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else if (image->texture_size != img.size() ||
-             image->texture_linear != linear ||
-             image->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &image->texture_id);
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else {
-    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
-  }
-  image->texture_size   = img.size();
-  image->texture_linear = linear;
-  image->texture_mipmap = mipmap;
+  set_texture(image->texture, img, false, linear, mipmap);
 }
 void set_image(
     gui::image* image, const img::image<vec4b>& img, bool linear, bool mipmap) {
-  if (!image->texture_id) {
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else if (image->texture_size != img.size() ||
-             image->texture_linear != linear ||
-             image->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &image->texture_id);
-    init_gltexture(image->texture_id, img.size(), 4, &img.data()->x, false,
-        linear, mipmap);
-  } else {
-    update_gltexture(image->texture_id, img.size(), 4, &img.data()->x, mipmap);
-  }
-  image->texture_size   = img.size();
-  image->texture_linear = linear;
-  image->texture_mipmap = mipmap;
+  set_texture(image->texture, img, false, linear, mipmap);
 }
 
 // draw image
 void draw_image(gui::image* image, const image_params& params) {
-  assert(glGetError() == GL_NO_ERROR);
+  assert_error();
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
   glClearColor(params.background.x, params.background.y, params.background.z,
       params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-  glUseProgram(image->program_id);
-  glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, image->texture_id);
-  glUniform1i(glGetUniformLocation(image->program_id, "txt"), 0);
-  glUniform2f(glGetUniformLocation(image->program_id, "window_size"),
-      (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(image->program_id, "image_size"),
-      (float)image->texture_size.x, (float)image->texture_size.y);
-  glUniform2f(glGetUniformLocation(image->program_id, "image_center"),
-      params.center.x, params.center.y);
-  glUniform1f(
-      glGetUniformLocation(image->program_id, "image_scale"), params.scale);
-  glBindBuffer(GL_ARRAY_BUFFER, image->texcoords_id);
-  glEnableVertexAttribArray(glGetAttribLocation(image->program_id, "texcoord"));
-  glVertexAttribPointer(glGetAttribLocation(image->program_id, "texcoord"), 2,
-      GL_FLOAT, false, 0, nullptr);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, image->triangles_id);
-  glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
-  glUseProgram(0);
-  assert(glGetError() == GL_NO_ERROR);
+  bind_program(image->program);
+  set_uniform(image->program, "txt", image->texture, 0);
+  set_uniform(image->program, "window_size", (vec2f)params.window);
+  set_uniform(image->program, "image_size", (vec2f)image->texture->size);
+  set_uniform(image->program, "image_center", params.center);
+  set_uniform(image->program, "image_scale", params.scale);
+  set_attribute(image->program, "texcoord", image->texcoords);
+  draw_elements(image->triangles);
+  unbind_program(image->program);
+  assert_error();
+}
+
+// set uniforms
+void set_uniform(gui::program* program, int location, int value) {
+  assert_error();
+  glUniform1i(location, value);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec2i& value) {
+  assert_error();
+  glUniform2i(location, value.x, value.y);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec3i& value) {
+  assert_error();
+  glUniform3i(location, value.x, value.y, value.z);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec4i& value) {
+  assert_error();
+  glUniform4i(location, value.x, value.y, value.z, value.w);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, float value) {
+  assert_error();
+  glUniform1f(location, value);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec2f& value) {
+  assert_error();
+  glUniform2f(location, value.x, value.y);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec3f& value) {
+  assert_error();
+  glUniform3f(location, value.x, value.y, value.z);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const vec4f& value) {
+  assert_error();
+  glUniform4f(location, value.x, value.y, value.z, value.w);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat2f& value) {
+  assert_error();
+  glUniformMatrix2fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat3f& value) {
+  assert_error();
+  glUniformMatrix3fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const mat4f& value) {
+  assert_error();
+  glUniformMatrix4fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const frame2f& value) {
+  assert_error();
+  glUniformMatrix3x2fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+void set_uniform(gui::program* program, int location, const frame3f& value) {
+  assert_error();
+  glUniformMatrix4x3fv(location, 1, false, &value.x.x);
+  assert_error();
+}
+
+// get uniform location
+int get_uniform_location(gui::program* program, const char* name) {
+  return glGetUniformLocation(program->program_id, name);
+}
+
+// set uniform texture
+void set_uniform(gui::program* program, int location,
+    const gui::texture* texture, int unit) {
+  assert_error();
+  glActiveTexture(GL_TEXTURE0 + unit);
+  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glUniform1i(location, unit);
+  assert_error();
+}
+void set_uniform(gui::program* program, const char* name,
+    const gui::texture* texture, int unit) {
+  return set_uniform(
+      program, get_uniform_location(program, name), texture, unit);
+}
+void set_uniform(gui::program* program, int location, int location_on,
+    const gui::texture* texture, int unit) {
+  assert_error();
+  if (texture && texture->texture_id) {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glUniform1i(location, unit);
+    glUniform1i(location_on, 1);
+  } else {
+    glUniform1i(location_on, 0);
+  }
+  assert_error();
+}
+void set_uniform(gui::program* program, const char* name, const char* name_on,
+    const gui::texture* texture, int unit) {
+  return set_uniform(program, get_uniform_location(program, name),
+      get_uniform_location(program, name_on), texture, unit);
+}
+
+// get attribute location
+int get_attribute_location(gui::program* program, const char* name) {
+  return glGetAttribLocation(program->program_id, name);
+}
+
+// set vertex attributes
+void set_attribute(
+    gui::program* program, int location, gui::arraybuffer* buffer) {
+  assert_error();
+  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glEnableVertexAttribArray(location);
+  glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
+  assert_error();
+}
+void set_attribute(
+    gui::program* program, const char* name, gui::arraybuffer* buffer) {
+  return set_attribute(program, get_attribute_location(program, name), buffer);
+}
+
+// set vertex attributes
+void set_attribute(gui::program* program, int location, float value) {
+  glVertexAttrib1f(location, value);
+}
+void set_attribute(gui::program* program, int location, const vec2f& value) {
+  glVertexAttrib2f(location, value.x, value.y);
+}
+void set_attribute(gui::program* program, int location, const vec3f& value) {
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+}
+void set_attribute(gui::program* program, int location, const vec4f& value) {
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+}
+
+// draw elements
+void draw_elements(gui::elementbuffer* buffer) {
+  static auto elements = std::unordered_map<element_type, uint>{
+      {element_type::points, GL_POINTS},
+      {element_type::lines, GL_LINES},
+      {element_type::triangles, GL_TRIANGLES},
+  };
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
+  glDrawElements(
+      elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
 }
 
 }  // namespace yocto::gui
@@ -457,49 +870,46 @@ static const char* glscene_vertex =
     R"(
 #version 330
 
-layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
-layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
-layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
-layout(location = 3) in vec4 vert_color;          // vertex color
-layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
+layout(location = 0) in vec3 positions;           // vertex position (in mesh coordinate frame)
+layout(location = 1) in vec3 normals;             // vertex normal (in mesh coordinate frame)
+layout(location = 2) in vec2 texcoords;           // vertex texcoords
+layout(location = 3) in vec4 colors;              // vertex color
+layout(location = 4) in vec4 tangents;            // vertex tangent space
 
-uniform mat4 shape_xform;                    // shape transform
-uniform mat4 shape_xform_invtranspose;       // shape transform
-uniform float shape_normal_offset;           // shape normal offset
+uniform mat4 frame;             // shape transform
+uniform mat4 frameit;           // shape transform
+uniform float offset;           // shape normal offset
 
-uniform mat4 cam_xform;          // camera xform
-uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
-uniform mat4 cam_proj;           // camera projection
+uniform mat4 view;              // inverse of the camera frame (as a matrix)
+uniform mat4 projection;        // camera projection
 
-out vec3 pos;                   // [to fragment shader] vertex position (in world coordinate)
-out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
+out vec3 position;              // [to fragment shader] vertex position (in world coordinate)
+out vec3 normal;                // [to fragment shader] vertex normal (in world coordinate)
 out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
 out vec4 color;                 // [to fragment shader] vertex color
 out vec4 tangsp;                // [to fragment shader] vertex tangent space
 
 // main function
 void main() {
-    // copy values
-    pos = vert_pos;
-    norm = vert_norm;
-    tangsp = vert_tangsp;
+  // copy values
+  position = positions;
+  normal = normals;
+  tangsp = tangents;
+  texcoord = texcoords;
+  color = colors;
 
-    // normal offset
-    if(shape_normal_offset != 0) {
-        pos += shape_normal_offset * norm;
-    }
+  // normal offset
+  if(offset != 0) {
+    position += offset * normal;
+  }
 
-    // world projection
-    pos = (shape_xform * vec4(pos,1)).xyz;
-    norm = (shape_xform_invtranspose * vec4(norm,0)).xyz;
-    tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
+  // world projection
+  position = (frame * vec4(position,1)).xyz;
+  normal = (frameit * vec4(normal,0)).xyz;
+  tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
 
-    // copy other vertex properties
-    texcoord = vert_texcoord;
-    color = vert_color;
-
-    // clip
-    gl_Position = cam_proj * cam_xform_inv * vec4(pos,1);
+  // clip
+  gl_Position = projection * view * vec4(position,1);
 }
 )";
 
@@ -511,222 +921,222 @@ float pif = 3.14159265;
 
 uniform bool eyelight;         // eyelight shading
 uniform vec3 lamb;             // ambient light
-uniform int lnum;              // number of lights
-uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
+uniform int  lnum;             // number of lights
+uniform int  ltype[16];        // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];         // light positions
 uniform vec3 lke[16];          // light intensities
 
-void evaluate_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
-    cl = vec3(0,0,0);
-    wi = vec3(0,0,0);
-    if(ltype[lid] == 0) {
-        // compute point light color at pos
-        cl = lke[lid] / pow(length(lpos[lid]-pos),2);
-        // compute light direction at pos
-        wi = normalize(lpos[lid]-pos);
-    }
-    else if(ltype[lid] == 1) {
-        // compute light color
-        cl = lke[lid];
-        // compute light direction
-        wi = normalize(lpos[lid]);
-    }
+void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
+  cl = vec3(0,0,0);
+  wi = vec3(0,0,0);
+  if(ltype[lid] == 0) {
+    // compute point light color at position
+    cl = lke[lid] / pow(length(lpos[lid]-position),2);
+    // compute light direction at position
+    wi = normalize(lpos[lid]-position);
+  }
+  else if(ltype[lid] == 1) {
+    // compute light color
+    cl = lke[lid];
+    // compute light direction
+    wi = normalize(lpos[lid]);
+  }
 }
 
 vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
     vec3 n, vec3 wi, vec3 wo) {
-    if(etype == 0) return vec3(0);
-    vec3 wh = normalize(wi+wo);
-    float ns = 2/(rs*rs)-2;
-    float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
-    if(etype == 1) {
-        return ((1+dot(wo,wi))/2) * kd/pif;
-    } else if(etype == 2) {
-        float si = sqrt(1-ndi*ndi);
-        float so = sqrt(1-ndo*ndo);
-        float sh = sqrt(1-ndh*ndh);
-        if(si <= 0) return vec3(0);
-        vec3 diff = si * kd / pif;
-        if(sh<=0) return diff;
-        float d = ((2+ns)/(2*pif)) * pow(si,ns);
-        vec3 spec = si * ks * d / (4*si*so);
-        return diff+spec;
-    } else if(etype == 3) {
-        if(ndi<=0 || ndo <=0) return vec3(0);
-        vec3 diff = ndi * kd / pif;
-        if(ndh<=0) return diff;
-        float cos2 = ndh * ndh;
-        float tan2 = (1 - cos2) / cos2;
-        float alpha2 = rs * rs;
-        float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-        float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
-        float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
-        float g = 1 / (1 + lambda_o + lambda_i);
-        vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
-        return diff+spec;
-    }
+  if(etype == 0) return vec3(0);
+  vec3 wh = normalize(wi+wo);
+  float ns = 2/(rs*rs)-2;
+  float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
+  if(etype == 1) {
+      return ((1+dot(wo,wi))/2) * kd/pif;
+  } else if(etype == 2) {
+      float si = sqrt(1-ndi*ndi);
+      float so = sqrt(1-ndo*ndo);
+      float sh = sqrt(1-ndh*ndh);
+      if(si <= 0) return vec3(0);
+      vec3 diff = si * kd / pif;
+      if(sh<=0) return diff;
+      float d = ((2+ns)/(2*pif)) * pow(si,ns);
+      vec3 spec = si * ks * d / (4*si*so);
+      return diff+spec;
+  } else if(etype == 3) {
+      if(ndi<=0 || ndo <=0) return vec3(0);
+      vec3 diff = ndi * kd / pif;
+      if(ndh<=0) return diff;
+      float cos2 = ndh * ndh;
+      float tan2 = (1 - cos2) / cos2;
+      float alpha2 = rs * rs;
+      float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+      float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+      float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+      float g = 1 / (1 + lambda_o + lambda_i);
+      vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+      return diff+spec;
+  }
 }
 
-uniform int elem_type;
-uniform bool elem_faceted;
-uniform vec4 highlight;   // highlighted color
+uniform int etype;
+uniform bool faceted;
+uniform vec4 highlight;           // highlighted color
 
-uniform int mat_type;          // material type
-uniform vec3 mat_ke;           // material ke
-uniform vec3 mat_kd;           // material kd
-uniform vec3 mat_ks;           // material ks
-uniform float mat_rs;          // material rs
-uniform float mat_op;          // material op
+uniform int mtype;                // material type
+uniform vec3 emission;            // material ke
+uniform vec3 diffuse;             // material kd
+uniform vec3 specular;            // material ks
+uniform float roughness;          // material rs
+uniform float opacity;            // material op
 
-uniform bool mat_ke_tex_on;    // material ke texture on
-uniform sampler2D mat_ke_tex;  // material ke texture
-uniform bool mat_kd_tex_on;    // material kd texture on
-uniform sampler2D mat_kd_tex;  // material kd texture
-uniform bool mat_ks_tex_on;    // material ks texture on
-uniform sampler2D mat_ks_tex;  // material ks texture
-uniform bool mat_rs_tex_on;    // material rs texture on
-uniform sampler2D mat_rs_tex;  // material rs texture
-uniform bool mat_op_tex_on;    // material op texture on
-uniform sampler2D mat_op_tex;  // material op texture
+uniform bool emission_tex_on;     // material ke texture on
+uniform sampler2D emission_tex;   // material ke texture
+uniform bool diffuse_tex_on;      // material kd texture on
+uniform sampler2D diffuse_tex;    // material kd texture
+uniform bool specular_tex_on;     // material ks texture on
+uniform sampler2D specular_tex;   // material ks texture
+uniform bool roughness_tex_on;    // material rs texture on
+uniform sampler2D roughness_tex;  // material rs texture
+uniform bool opacity_tex_on;      // material op texture on
+uniform sampler2D opacity_tex;    // material op texture
 
-uniform bool mat_norm_tex_on;    // material norm texture on
-uniform sampler2D mat_norm_tex;  // material norm texture
+uniform bool mat_norm_tex_on;     // material normal texture on
+uniform sampler2D mat_norm_tex;   // material normal texture
 
-uniform bool mat_double_sided;   // double sided rendering
+uniform bool double_sided;        // double sided rendering
 
-uniform mat4 shape_xform;              // shape transform
-uniform mat4 shape_xform_invtranspose; // shape transform
+uniform mat4 frame;              // shape transform
+uniform mat4 frameit;            // shape transform
 
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
-    if(mat_type == 0) {
-        ke = mat_ke;
-        kd = vec3(0,0,0);
-        ks = vec3(0,0,0);
-        op = 1;
-        return false;
-    }
+  if(mtype == 0) {
+    ke = emission;
+    kd = vec3(0,0,0);
+    ks = vec3(0,0,0);
+    op = 1;
+    return false;
+  }
 
-    ke = color.xyz * mat_ke;
-    kd = color.xyz * mat_kd;
-    ks = color.xyz * mat_ks;
-    rs = mat_rs;
-    op = color.w * mat_op;
+  ke = color.xyz * emission;
+  kd = color.xyz * diffuse;
+  ks = color.xyz * specular;
+  rs = roughness;
+  op = color.w * opacity;
 
-    vec4 ke_tex = (mat_ke_tex_on) ? texture(mat_ke_tex,texcoord) : vec4(1,1,1,1);
-    vec4 kd_tex = (mat_kd_tex_on) ? texture(mat_kd_tex,texcoord) : vec4(1,1,1,1);
-    vec4 ks_tex = (mat_ks_tex_on) ? texture(mat_ks_tex,texcoord) : vec4(1,1,1,1);
-    vec4 rs_tex = (mat_rs_tex_on) ? texture(mat_rs_tex,texcoord) : vec4(1,1,1,1);
-    vec4 op_tex = (mat_op_tex_on) ? texture(mat_op_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ke_tex = (emission_tex_on) ? texture(emission_tex,texcoord) : vec4(1,1,1,1);
+  vec4 kd_tex = (diffuse_tex_on) ? texture(diffuse_tex,texcoord) : vec4(1,1,1,1);
+  vec4 ks_tex = (specular_tex_on) ? texture(specular_tex,texcoord) : vec4(1,1,1,1);
+  vec4 rs_tex = (roughness_tex_on) ? texture(roughness_tex,texcoord) : vec4(1,1,1,1);
+  vec4 op_tex = (opacity_tex_on) ? texture(opacity_tex,texcoord) : vec4(1,1,1,1);
 
-    // get material color from textures and adjust values
-    ke *= ke_tex.xyz;
-    vec3 kb = kd * kd_tex.xyz;
-    float km = ks.x * ks_tex.z;
-    kd = kb * (1 - km);
-    ks = kb * km + vec3(0.04) * (1 - km);
-    rs *= ks_tex.y;
-    rs = rs*rs;
-    op *= kd_tex.w;
+  // get material color from textures and adjust values
+  ke *= ke_tex.xyz;
+  vec3 kb = kd * kd_tex.xyz;
+  float km = ks.x * ks_tex.z;
+  kd = kb * (1 - km);
+  ks = kb * km + vec3(0.04) * (1 - km);
+  rs *= ks_tex.y;
+  rs = rs*rs;
+  op *= kd_tex.w;
 
-    return true;
+  return true;
 }
 
-vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
-    if(!mat_norm_tex_on) return norm;
-    vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
-    vec3 tangv = normalize(cross(norm, tangu));
-    if(tangsp.w < 0) tangv = -tangv;
-    vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
-    // texture.y = -texture.y;
-    return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+    if(!mat_norm_tex_on) return normal;
+  vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+  vec3 tangv = normalize(cross(normal, tangu));
+  if(tangsp.w < 0) tangv = -tangv;
+  vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
+  // texture.y = -texture.y;
+  return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
 }
 
-in vec3 pos;                   // [from vertex shader] position in world space
-in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
+in vec3 position;              // [from vertex shader] position in world space
+in vec3 normal;                // [from vertex shader] normal in world space (need normalization)
 in vec2 texcoord;              // [from vertex shader] texcoord
 in vec4 color;                 // [from vertex shader] color
 in vec4 tangsp;                // [from vertex shader] tangent space
 
-uniform vec3 cam_pos;          // camera position
-uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
-uniform mat4 cam_proj;           // camera projection
+uniform vec3 eye;              // camera position
+uniform mat4 view;             // inverse of the camera frame (as a matrix)
+uniform mat4 projection;       // camera projection
 
 uniform float exposure; 
 uniform float gamma;
 
 out vec4 frag_color;      
 
-vec3 triangle_normal(vec3 pos) {
-    vec3 fdx = dFdx(pos); 
-    vec3 fdy = dFdy(pos); 
-    return normalize((shape_xform * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+vec3 triangle_normal(vec3 position) {
+  vec3 fdx = dFdx(position); 
+  vec3 fdy = dFdy(position); 
+  return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
 // main
 void main() {
-    // view vector
-    vec3 wo = normalize(cam_pos - pos);
+  // view vector
+  vec3 wo = normalize(eye - position);
 
-    // prepare normals
-    vec3 n;
-    if(elem_faceted) {
-        n = triangle_normal(pos);
+  // prepare normals
+  vec3 n;
+  if(faceted) {
+    n = triangle_normal(position);
+  } else {
+    n = normalize(normal);
+  }
+
+  // apply normal map
+  n = apply_normal_map(texcoord, n, tangsp);
+
+  // use faceforward to ensure the normals points toward us
+  if(double_sided) n = faceforward(n,-wo,n);
+
+  // get material color from textures
+  vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
+  bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
+
+  // exit if needed
+  if(brdf_op < 0.005) discard;
+
+  // check const color
+  if(etype == 0) {
+    frag_color = vec4(brdf_ke,brdf_op);
+    return;
+  }
+
+  // emission
+  vec3 c = brdf_ke;
+
+  // check early exit
+  if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
+    // eyelight shading
+    if(eyelight) {
+      vec3 wi = wo;
+      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
     } else {
-        n = normalize(norm);
+      // accumulate ambient
+      c += lamb * brdf_kd;
+      // foreach light
+      for(int lid = 0; lid < lnum; lid ++) {
+        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
+        evaluate_light(lid, position, cl, wi);
+        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+      }
     }
+  }
 
-    // apply normal map
-    n = apply_normal_map(texcoord, n, tangsp);
+  // final color correction
+  c = pow(c * pow(2,exposure), vec3(1/gamma));
 
-    // use faceforward to ensure the normals points toward us
-    if(mat_double_sided) n = faceforward(n,-wo,n);
+  // highlighting
+  if(highlight.w > 0) {
+    if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+        c = highlight.xyz * highlight.w + c * (1-highlight.w);
+  }
 
-    // get material color from textures
-    vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-    bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
-
-    // exit if needed
-    if(brdf_op < 0.005) discard;
-
-    // check const color
-    if(elem_type == 0) {
-        frag_color = vec4(brdf_ke,brdf_op);
-        return;
-    }
-
-    // emission
-    vec3 c = brdf_ke;
-
-    // check early exit
-    if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
-        // eyelight shading
-        if(eyelight) {
-            vec3 wi = wo;
-            c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
-        } else {
-            // accumulate ambient
-            c += lamb * brdf_kd;
-            // foreach light
-            for(int lid = 0; lid < lnum; lid ++) {
-                vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-                evaluate_light(lid, pos, cl, wi);
-                c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
-            }
-        }
-    }
-
-    // final color correction
-    c = pow(c * pow(2,exposure), vec3(1/gamma));
-
-    // highlighting
-    if(highlight.w > 0) {
-        if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
-            c = highlight.xyz * highlight.w + c * (1-highlight.w);
-    }
-
-    // output final color by setting gl_FragColor
-    frag_color = vec4(c,brdf_op);
+  // output final color by setting gl_FragColor
+  frag_color = vec4(c,brdf_op);
 }
 )";
 
@@ -735,12 +1145,21 @@ void main() {
 #endif
 
 // forward declaration
-void clear_texture(gui::texture* texture);
 void clear_shape(gui::shape* shape);
 
-texture::~texture() { clear_texture(this); }
-
-shape::~shape() { clear_shape(this); }
+shape::~shape() {
+  clear_shape(this);
+  if (positions) delete positions;
+  if (normals) delete normals;
+  if (texcoords) delete texcoords;
+  if (colors) delete colors;
+  if (tangents) delete tangents;
+  if (points) delete points;
+  if (lines) delete lines;
+  if (triangles) delete triangles;
+  if (quads) delete quads;
+  if (edges) delete edges;
+}
 
 scene::~scene() {
   clear_scene(this);
@@ -754,54 +1173,34 @@ scene::~scene() {
 
 // Initialize an OpenGL scene
 void init_scene(gui::scene* scene) {
-  if (scene->program_id) return;
-  init_glprogram(scene->program_id, scene->vertex_id, scene->fragment_id,
-      scene->array_id, glscene_vertex, glscene_fragment);
+  if (is_initialized(scene->program)) return;
+  auto error = ""s, errorlog = ""s;
+  init_program(
+      scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(gui::scene* scene) { return (bool)scene->program_id; }
-
-// Clear an OpenGL texture
-void clear_texture(gui::texture* texture) {
-  if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-  texture->texture_id = 0;
+bool is_initialized(gui::scene* scene) {
+  return is_initialized(scene->program);
 }
 
 // Clear an OpenGL shape
 void clear_shape(gui::shape* shape) {
-  if (shape->positions_id) glDeleteBuffers(1, &shape->positions_id);
-  if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
-  if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
-  if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
-  if (shape->tangents_id) glDeleteBuffers(1, &shape->tangents_id);
-  if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
-  if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
-  if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
-  if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
-  if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
-  shape->positions_id = 0;
-  shape->normals_id   = 0;
-  shape->texcoords_id = 0;
-  shape->colors_id    = 0;
-  shape->tangents_id  = 0;
-  shape->points_id    = 0;
-  shape->lines_id     = 0;
-  shape->triangles_id = 0;
-  shape->quads_id     = 0;
-  shape->edges_id     = 0;
+  clear_arraybuffer(shape->positions);
+  clear_arraybuffer(shape->normals);
+  clear_arraybuffer(shape->texcoords);
+  clear_arraybuffer(shape->colors);
+  clear_arraybuffer(shape->tangents);
+  clear_elementbuffer(shape->points);
+  clear_elementbuffer(shape->lines);
+  clear_elementbuffer(shape->triangles);
+  clear_elementbuffer(shape->quads);
+  clear_elementbuffer(shape->edges);
 }
 
 // Clear an OpenGL scene
 void clear_scene(gui::scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  if (scene->program_id) glDeleteProgram(scene->program_id);
-  if (scene->vertex_id) glDeleteShader(scene->vertex_id);
-  if (scene->fragment_id) glDeleteShader(scene->fragment_id);
-  if (scene->array_id) glDeleteVertexArrays(1, &scene->array_id);
-  scene->program_id  = 0;
-  scene->vertex_id   = 0;
-  scene->fragment_id = 0;
-  scene->array_id    = 0;
+  clear_program(scene->program);
 }
 
 // add camera
@@ -826,189 +1225,19 @@ gui::texture* add_texture(gui::scene* scene) {
   return scene->textures.emplace_back(new texture{});
 }
 
-void set_texture(gui::texture* texture, const vec2i& size, int nchan,
-    const byte* img, bool as_srgb) {
-  static auto sformat = std::unordered_map<int, uint>{
-      {1, GL_SRGB},
-      {2, GL_SRGB},
-      {3, GL_SRGB},
-      {4, GL_SRGB_ALPHA},
-  };
-  static auto iformat = std::unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = std::unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  assert(glGetError() == GL_NO_ERROR);
-  if (!img) {
-    glDeleteTextures(1, &texture->texture_id);
-    texture->texture_id = 0;
-    return;
-  }
-  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->nchan != nchan ||
-      texture->is_srgb != as_srgb || texture->is_float == true) {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-        as_srgb ? sformat.at(nchan) : iformat.at(nchan), size.x, size.y, 0,
-        cformat.at(nchan), GL_UNSIGNED_BYTE, img);
-    glTexParameteri(
-        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, cformat.at(nchan),
-        GL_UNSIGNED_BYTE, img);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
-  texture->size     = size;
-  texture->nchan    = nchan;
-  texture->is_srgb  = as_srgb;
-  texture->is_float = false;
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_texture(gui::texture* texture, const vec2i& size, int nchan,
-    const float* img, bool as_float) {
-  static auto fformat = std::unordered_map<int, uint>{
-      {1, GL_RGB16F},
-      {2, GL_RGB16F},
-      {3, GL_RGB16F},
-      {4, GL_RGBA32F},
-  };
-  static auto iformat = std::unordered_map<int, uint>{
-      {1, GL_RGB},
-      {2, GL_RGB},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  static auto cformat = std::unordered_map<int, uint>{
-      {1, GL_RED},
-      {2, GL_RG},
-      {3, GL_RGB},
-      {4, GL_RGBA},
-  };
-  assert(glGetError() == GL_NO_ERROR);
-  if (!img) {
-    glDeleteTextures(1, &texture->texture_id);
-    texture->texture_id = 0;
-    return;
-  }
-  if (!texture->texture_id) glGenTextures(1, &texture->texture_id);
-  if (texture->size != size || texture->nchan != nchan ||
-      texture->is_float != as_float || texture->is_srgb == true) {
-    glGenTextures(1, &texture->texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-        as_float ? fformat.at(nchan) : iformat.at(nchan), size.x, size.y, 0,
-        iformat.at(nchan), GL_FLOAT, img);
-    glTexParameteri(
-        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, iformat.at(nchan),
-        GL_FLOAT, img);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
-  texture->size     = size;
-  texture->nchan    = nchan;
-  texture->is_srgb  = false;
-  texture->is_float = as_float;
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_texture(
-    gui::texture* texture, const img::image<vec4b>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 4, (const byte*)img.data(), as_srgb);
-}
-void set_texture(
-    gui::texture* texture, const img::image<vec4f>& img, bool as_float) {
-  set_texture(texture, img.size(), 4, (const float*)img.data(), as_float);
-}
-
-void set_texture(
-    gui::texture* texture, const img::image<vec3b>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 3, (const byte*)img.data(), as_srgb);
-}
-void set_texture(
-    gui::texture* texture, const img::image<vec3f>& img, bool as_float) {
-  set_texture(texture, img.size(), 3, (const float*)img.data(), as_float);
-}
-
-void set_texture(
-    gui::texture* texture, const img::image<byte>& img, bool as_srgb) {
-  set_texture(texture, img.size(), 1, (const byte*)img.data(), as_srgb);
-}
-void set_texture(
-    gui::texture* texture, const img::image<float>& img, bool as_float) {
-  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float);
-}
-
 // add shape
 gui::shape* add_shape(gui::scene* scene) {
   return scene->shapes.emplace_back(new shape{});
 }
 
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
-    int size, int count, const float* values) {
-  if (!size || !values) {
-    if (array_id) glDeleteBuffers(1, &array_id);
-    array_id  = 0;
-    array_num = 0;
-    return;
-  }
-  if (!array_id) {
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else if (array_num != size) {
-    glDeleteBuffers(1, &array_id);
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else {
-    update_glbuffer(array_id, element, size, 3, values);
-  }
-}
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
-    int size, int count, const int* values) {
-  if (!size || !values) {
-    if (array_id) glDeleteBuffers(1, &array_id);
-    array_id  = 0;
-    array_num = 0;
-    return;
-  }
-  if (!array_id) {
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else if (array_num != size) {
-    glDeleteBuffers(1, &array_id);
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else {
-    update_glbuffer(array_id, element, size, 3, values);
-  }
-}
-
 void set_points(gui::shape* shape, const std::vector<int>& points) {
-  set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
-      1, (const int*)points.data());
+  set_elementbuffer(shape->points, points);
 }
 void set_lines(gui::shape* shape, const std::vector<vec2i>& lines) {
-  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
-      (const int*)lines.data());
+  set_elementbuffer(shape->lines, lines);
 }
 void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles) {
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
-      triangles.size(), 3, (const int*)triangles.data());
+  set_elementbuffer(shape->triangles, triangles);
 }
 void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
@@ -1017,8 +1246,7 @@ void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
-      3, (const int*)triangles.data());
+  set_elementbuffer(shape->quads, triangles);
 }
 void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads) {
@@ -1035,28 +1263,22 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
   }
   auto edges = std::vector(edgemap.begin(), edgemap.end());
-  set_glshape_buffer(shape->edges_id, shape->edges_num, true, edges.size(), 2,
-      (const int*)edges.data());
+  set_elementbuffer(shape->edges, edges);
 }
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
+  set_arraybuffer(shape->positions, positions);
 }
 void set_normals(gui::shape* shape, const std::vector<vec3f>& normals) {
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_arraybuffer(shape->normals, normals);
 }
 void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords) {
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
+  set_arraybuffer(shape->texcoords, texcoords);
 }
 void set_colors(gui::shape* shape, const std::vector<vec3f>& colors) {
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      3, (const float*)colors.data());
+  set_arraybuffer(shape->colors, colors);
 }
 void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents) {
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
-      tangents.size(), 4, (const float*)tangents.data());
+  set_arraybuffer(shape->tangents, tangents);
 }
 
 // add object
@@ -1163,139 +1385,44 @@ void draw_object(
   auto shape_xform     = mat4f(object->frame);
   auto shape_inv_xform = transpose(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"), 1,
-      false, &shape_xform.x.x);
-  glUniformMatrix4fv(
-      glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-      false, &shape_inv_xform.x.x);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "shape_normal_offset"), 0.0f);
+  set_uniform(scene->program, "frame", shape_xform);
+  set_uniform(scene->program, "frameit", shape_inv_xform);
+  set_uniform(scene->program, "offset", 0.0f);
   if (object->highlighted) {
-    glUniform4f(
-        glGetUniformLocation(scene->program_id, "highlight"), 1, 1, 0, 1);
+    set_uniform(scene->program, "highlight", vec4f{1, 1, 0, 1});
   } else {
-    glUniform4f(
-        glGetUniformLocation(scene->program_id, "highlight"), 0, 0, 0, 0);
+    set_uniform(scene->program, "highlight", vec4f{0, 0, 0, 0});
   }
 
   auto material = object->material;
   auto mtype    = 2;
-  glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"),
-      material->emission.x, material->emission.y, material->emission.z);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"),
-      material->color.x, material->color.y, material->color.z);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"),
-      material->metallic, material->metallic, material->metallic);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "mat_rs"), material->roughness);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "mat_op"), material->opacity);
-  glUniform1i(glGetUniformLocation(scene->program_id, "mat_double_sided"),
-      (int)params.double_sided);
-  if (material->emission_tex) {
-    glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, material->emission_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex"), 0);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex_on"), 0);
-  }
-  if (material->color_tex) {
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, material->color_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex"), 1);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex_on"), 0);
-  }
-  if (material->metallic_tex) {
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, material->metallic_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex"), 2);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex_on"), 0);
-  }
-  if (material->roughness_tex) {
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, material->roughness_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex"), 3);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex_on"), 0);
-  }
-  if (material->opacity_tex) {
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, material->opacity_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex"), 3);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex_on"), 0);
-  }
-  if (material->normal_tex) {
-    glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, material->normal_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex"), 4);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 1);
-  } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 0);
-  }
+  set_uniform(scene->program, "mtype", mtype);
+  set_uniform(scene->program, "emission", material->emission);
+  set_uniform(scene->program, "diffuse", material->color);
+  set_uniform(scene->program, "specular", vec3f{material->metallic});
+  set_uniform(scene->program, "roughness", material->roughness);
+  set_uniform(scene->program, "opacity", material->opacity);
+  set_uniform(scene->program, "double_sided", (int)params.double_sided);
+  set_uniform(
+      scene->program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(
+      scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+  set_uniform(
+      scene->program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
+      material->roughness_tex, 3);
+  set_uniform(
+      scene->program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
+      material->normal_tex, 5);
 
   auto shape = object->shape;
-  glUniform1i(glGetUniformLocation(scene->program_id, "elem_faceted"),
-      (int)!shape->normals_id);
-  if (shape->positions_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_pos"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_pos"), 3,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib3f(
-        glGetAttribLocation(scene->program_id, "vert_pos"), 0, 0, 0);
-  }
-  if (shape->normals_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->normals_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_norm"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_norm"),
-        3, GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib3f(
-        glGetAttribLocation(scene->program_id, "vert_norm"), 0, 0, 0);
-  }
-  if (shape->texcoords_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"), 2, GL_FLOAT,
-        false, 0, nullptr);
-  } else {
-    glVertexAttrib2f(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"), 0, 0);
-  }
-  if (shape->colors_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_color"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_color"),
-        4, GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib4f(
-        glGetAttribLocation(scene->program_id, "vert_color"), 1, 1, 1, 1);
-  }
-  if (shape->tangents_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_tangsp"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_tangsp"),
-        4, GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib4f(
-        glGetAttribLocation(scene->program_id, "vert_tangsp"), 0, 0, 1, 1);
-  }
+  set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
+  set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0, 0});
+  set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0, 1});
+  set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
+  set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
+  set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
 
   auto& instances = object->instance ? object->instance->frames
                                      : empty_instances;
@@ -1304,34 +1431,25 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
-        1, false, &shape_xform.x.x);
-    glUniformMatrix4fv(
-        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-        false, &shape_inv_xform.x.x);
+    set_uniform(scene->program, "frame", shape_xform);
+    set_uniform(scene->program, "frameit", shape_inv_xform);
 
-    if (shape->points_id) {
+    if (is_initialized(shape->points)) {
       glPointSize(shape->points_size);
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 1);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
-      glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
+      set_uniform(scene->program, "etype", 1);
+      draw_elements(shape->points);
     }
-    if (shape->lines_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
-      glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
+    if (is_initialized(shape->lines)) {
+      set_uniform(scene->program, "etype", 2);
+      draw_elements(shape->lines);
     }
-    if (shape->triangles_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
-      glDrawElements(
-          GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
+    if (is_initialized(shape->triangles)) {
+      set_uniform(scene->program, "etype", 3);
+      draw_elements(shape->triangles);
     }
-    if (shape->quads_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
-      glDrawElements(
-          GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+    if (is_initialized(shape->quads)) {
+      set_uniform(scene->program, "etype", 3);
+      draw_elements(shape->quads);
     }
   }
 
@@ -1339,21 +1457,17 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
-        1, false, &shape_xform.x.x);
-    glUniformMatrix4fv(
-        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-        false, &shape_inv_xform.x.x);
+    set_uniform(scene->program, "frame", shape_xform);
+    set_uniform(scene->program, "frameit", shape_inv_xform);
 
-    if (shape->edges_id && params.edges && !params.wireframe) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"), 0, 0, 0);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"), 0, 0, 0);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"), 0, 0, 0);
-      glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
-      glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+    if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
+      set_uniform(scene->program, "mtype", mtype);
+      set_uniform(scene->program, "emission", vec3f{0, 0, 0});
+      set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
+      set_uniform(scene->program, "specular", vec3f{0, 0, 0});
+      set_uniform(scene->program, "roughness", 1);
+      set_uniform(scene->program, "etype", 2);
+      draw_elements(shape->edges);
     }
   }
 }
@@ -1380,32 +1494,24 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
-  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+  clear_framebuffer(params.background);
+  set_viewport(viewport);
 
-  glUseProgram(scene->program_id);
-  glUniform3f(glGetUniformLocation(scene->program_id, "cam_pos"),
-      camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_xform_inv"),
-      1, false, &camera_view.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_proj"), 1,
-      false, &camera_proj.x.x);
-  glUniform1i(glGetUniformLocation(scene->program_id, "eyelight"),
+  bind_program(scene->program);
+  set_uniform(scene->program, "eye", camera->frame.o);
+  set_uniform(scene->program, "view", camera_view);
+  set_uniform(scene->program, "projection", camera_proj);
+  set_uniform(scene->program, "eyelight",
       params.shading == shading_type::eyelight ? 1 : 0);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(scene->program_id, "gamma"), params.gamma);
+  set_uniform(scene->program, "exposure", params.exposure);
+  set_uniform(scene->program, "gamma", params.gamma);
 
   if (params.shading == shading_type::lights ||
       params.shading == shading_type::camlights) {
     auto& lights = params.shading == shading_type::lights ? scene->lights
                                                           : camera_lights;
-    glUniform3f(glGetUniformLocation(scene->program_id, "lamb"), 0, 0, 0);
-    glUniform1i(
-        glGetUniformLocation(scene->program_id, "lnum"), (int)lights.size());
+    set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
+    set_uniform(scene->program, "lnum", (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
@@ -1414,31 +1520,25 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
-        glUniform3f(glGetUniformLocation(
-                        scene->program_id, ("lpos[" + is + "]").c_str()),
-            position.x, position.y, position.z);
+        set_uniform(scene->program, ("lpos[" + is + "]").c_str(), position);
       } else {
-        glUniform3f(glGetUniformLocation(
-                        scene->program_id, ("lpos[" + is + "]").c_str()),
-            light->position.x, light->position.y, light->position.z);
+        set_uniform(
+            scene->program, ("lpos[" + is + "]").c_str(), light->position);
       }
-      glUniform3f(
-          glGetUniformLocation(scene->program_id, ("lke[" + is + "]").c_str()),
-          light->emission.x, light->emission.y, light->emission.z);
-      glUniform1i(glGetUniformLocation(
-                      scene->program_id, ("ltype[" + is + "]").c_str()),
-          (int)light->type);
+      set_uniform(scene->program, ("lke[" + is + "]").c_str(), light->emission);
+      set_uniform(
+          scene->program, ("ltype[" + is + "]").c_str(), (int)light->type);
       lid++;
     }
   }
 
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  if (params.wireframe) set_wireframe(true);
   for (auto object : scene->objects) {
     draw_object(scene, object, params);
   }
 
-  glUseProgram(0);
-  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  unbind_program();
+  if (params.wireframe) set_wireframe(false);
 }
 
 }  // namespace yocto::gui
