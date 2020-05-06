@@ -194,12 +194,12 @@ bool is_initialized(gui::elementbuffer* buffer);
 void clear_elementbuffer(gui::elementbuffer* buffer);
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
-    element_type element, const std::vector<int>& data, bool dynamic = false);
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
-    element_type element, const std::vector<vec2i>& data, bool dynamic = false);
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
-    element_type element, const std::vector<vec3i>& data, bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer, const std::vector<int>& points,
+    bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer,
+    const std::vector<vec2i>& lines, bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer,
+    const std::vector<vec3i>& triangles, bool dynamic = false);
 
 // Opengl program
 struct program {
@@ -361,23 +361,18 @@ struct material {
 // Opengl shape
 struct shape {
   // vertex buffers
-  gui::arraybuffer* positions = new gui::arraybuffer{};
-  gui::arraybuffer* normals = new gui::arraybuffer{};
-  gui::arraybuffer* texcoords = new gui::arraybuffer{};
-  gui::arraybuffer* colors = new gui::arraybuffer{};
-  gui::arraybuffer* tangents = new gui::arraybuffer{};
-  int   points_num     = 0;
-  uint  points_id      = 0;
-  int   lines_num      = 0;
-  uint  lines_id       = 0;
-  int   triangles_num  = 0;
-  uint  triangles_id   = 0;
-  int   quads_num      = 0;
-  uint  quads_id       = 0;
-  int   edges_num      = 0;
-  uint  edges_id       = 0;
-  float points_size    = 10;
-  float line_thickness = 4;
+  gui::arraybuffer*   positions      = new gui::arraybuffer{};
+  gui::arraybuffer*   normals        = new gui::arraybuffer{};
+  gui::arraybuffer*   texcoords      = new gui::arraybuffer{};
+  gui::arraybuffer*   colors         = new gui::arraybuffer{};
+  gui::arraybuffer*   tangents       = new gui::arraybuffer{};
+  gui::elementbuffer* points         = new gui::elementbuffer{};
+  gui::elementbuffer* lines          = new gui::elementbuffer{};
+  gui::elementbuffer* triangles      = new gui::elementbuffer{};
+  gui::elementbuffer* quads          = new gui::elementbuffer{};
+  gui::elementbuffer* edges          = new gui::elementbuffer{};
+  float               points_size    = 10;
+  float               line_thickness = 4;
 
   shape() {}
   shape(const shape&) = delete;

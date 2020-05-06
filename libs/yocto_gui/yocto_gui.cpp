@@ -304,7 +304,7 @@ void set_texture(gui::texture* texture, const img::image<float>& img,
 void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_error();
-  if(size == 0 || data == nullptr) {
+  if (size == 0 || data == nullptr) {
     clear_arraybuffer(buffer);
     return;
   }
@@ -359,7 +359,7 @@ void set_arraybuffer(
 void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
     element_type element, const int* data, bool dynamic) {
   assert_error();
-  if(size == 0 || data == nullptr) {
+  if (size == 0 || data == nullptr) {
     clear_elementbuffer(buffer);
     return;
   }
@@ -392,6 +392,23 @@ void clear_elementbuffer(gui::elementbuffer* buffer) {
   buffer->size      = 0;
   buffer->element   = element_type::points;
   buffer->dynamic   = false;
+}
+
+// set buffer
+void set_elementbuffer(
+    gui::elementbuffer* buffer, const std::vector<int>& points, bool dynamic) {
+  set_elementbuffer(buffer, points.size() * 1, element_type::points,
+      (int*)points.data(), dynamic);
+}
+void set_elementbuffer(
+    gui::elementbuffer* buffer, const std::vector<vec2i>& lines, bool dynamic) {
+  set_elementbuffer(buffer, lines.size() * 2, element_type::lines,
+      (int*)lines.data(), dynamic);
+}
+void set_elementbuffer(gui::elementbuffer* buffer,
+    const std::vector<vec3i>& triangles, bool dynamic) {
+  set_elementbuffer(buffer, triangles.size() * 3, element_type::triangles,
+      (int*)triangles.data(), dynamic);
 }
 
 // initialize program
@@ -609,9 +626,9 @@ void main() {
 #endif
 
 image::~image() {
-  if(program) delete program;
-  if(texcoords) delete texcoords;
-  if(triangles) delete triangles;
+  if (program) delete program;
+  if (texcoords) delete texcoords;
+  if (triangles) delete triangles;
 }
 
 bool is_initialized(const gui::image* image) {
@@ -1119,9 +1136,9 @@ void main() {
 // forward declaration
 void clear_shape(gui::shape* shape);
 
-shape::~shape() { 
-  clear_shape(this); 
-  if(positions) delete positions;
+shape::~shape() {
+  clear_shape(this);
+  if (positions) delete positions;
 }
 
 scene::~scene() {
@@ -1152,16 +1169,11 @@ void clear_shape(gui::shape* shape) {
   clear_arraybuffer(shape->texcoords);
   clear_arraybuffer(shape->colors);
   clear_arraybuffer(shape->tangents);
-  if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
-  if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
-  if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
-  if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
-  if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
-  shape->points_id    = 0;
-  shape->lines_id     = 0;
-  shape->triangles_id = 0;
-  shape->quads_id     = 0;
-  shape->edges_id     = 0;
+  clear_elementbuffer(shape->points);
+  clear_elementbuffer(shape->lines);
+  clear_elementbuffer(shape->triangles);
+  clear_elementbuffer(shape->quads);
+  clear_elementbuffer(shape->edges);
 }
 
 // Clear an OpenGL scene
@@ -1219,16 +1231,13 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
 }
 
 void set_points(gui::shape* shape, const std::vector<int>& points) {
-  set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
-      1, (const int*)points.data());
+  set_elementbuffer(shape->points, points);
 }
 void set_lines(gui::shape* shape, const std::vector<vec2i>& lines) {
-  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
-      (const int*)lines.data());
+  set_elementbuffer(shape->lines, lines);
 }
 void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles) {
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
-      triangles.size(), 3, (const int*)triangles.data());
+  set_elementbuffer(shape->triangles, triangles);
 }
 void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
@@ -1237,8 +1246,7 @@ void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape->quads_id, shape->quads_num, true, triangles.size(),
-      3, (const int*)triangles.data());
+  set_elementbuffer(shape->quads, triangles);
 }
 void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads) {
@@ -1255,8 +1263,7 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
   }
   auto edges = std::vector(edgemap.begin(), edgemap.end());
-  set_glshape_buffer(shape->edges_id, shape->edges_num, true, edges.size(), 2,
-      (const int*)edges.data());
+  set_elementbuffer(shape->edges, edges);
 }
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
   set_arraybuffer(shape->positions, positions);
@@ -1554,32 +1561,32 @@ void draw_object(
                            "shape_xform_invtranspose"),
         1, false, &shape_inv_xform.x.x);
 
-    if (shape->points_id) {
+    if (is_initialized(shape->points)) {
       glPointSize(shape->points_size);
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "elem_type"), 1);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
-      glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points->buffer_id);
+      glDrawElements(GL_POINTS, shape->points->size, GL_UNSIGNED_INT, nullptr);
     }
-    if (shape->lines_id) {
+    if (is_initialized(shape->lines)) {
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "elem_type"), 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
-      glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines->buffer_id);
+      glDrawElements(GL_LINES, shape->lines->size, GL_UNSIGNED_INT, nullptr);
     }
-    if (shape->triangles_id) {
+    if (is_initialized(shape->triangles)) {
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "elem_type"), 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles->buffer_id);
       glDrawElements(
-          GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
+          GL_TRIANGLES, shape->triangles->size, GL_UNSIGNED_INT, nullptr);
     }
-    if (shape->quads_id) {
+    if (is_initialized(shape->quads)) {
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "elem_type"), 3);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads->buffer_id);
       glDrawElements(
-          GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+          GL_TRIANGLES, shape->quads->size, GL_UNSIGNED_INT, nullptr);
     }
   }
 
@@ -1594,7 +1601,7 @@ void draw_object(
                            "shape_xform_invtranspose"),
         1, false, &shape_inv_xform.x.x);
 
-    if (shape->edges_id && params.edges && !params.wireframe) {
+    if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "mat_type"), mtype);
       glUniform3f(
@@ -1607,8 +1614,8 @@ void draw_object(
           glGetUniformLocation(scene->program->program_id, "mat_rs"), 1);
       glUniform1i(
           glGetUniformLocation(scene->program->program_id, "elem_type"), 2);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
-      glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges->buffer_id);
+      glDrawElements(GL_LINES, shape->edges->size, GL_UNSIGNED_INT, nullptr);
     }
   }
 }
