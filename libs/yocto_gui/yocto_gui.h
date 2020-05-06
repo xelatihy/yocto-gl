@@ -194,8 +194,8 @@ bool is_initialized(gui::elementbuffer* buffer);
 void clear_elementbuffer(gui::elementbuffer* buffer);
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer, const std::vector<int>& points,
-    bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer,
+    const std::vector<int>& points, bool dynamic = false);
 void set_elementbuffer(gui::elementbuffer* buffer,
     const std::vector<vec2i>& lines, bool dynamic = false);
 void set_elementbuffer(gui::elementbuffer* buffer,
@@ -228,6 +228,9 @@ void unbind_program(gui::program* program);
 // unbind program
 void unbind_program();
 
+// get uniform location
+int get_uniform_location(gui::program* program, const char* name);
+
 // set uniforms
 void set_uniform(gui::program* program, int location, int value);
 void set_uniform(gui::program* program, int location, const vec2i& value);
@@ -242,11 +245,6 @@ void set_uniform(gui::program* program, int location, const mat3f& value);
 void set_uniform(gui::program* program, int location, const mat4f& value);
 void set_uniform(gui::program* program, int location, const frame2f& value);
 void set_uniform(gui::program* program, int location, const frame3f& value);
-
-// get uniform location
-int get_uniform_location(gui::program* program, const char* name);
-
-// set uniforms
 template <typename T>
 inline void set_uniform(
     gui::program* program, const char* name, const T& value) {
@@ -271,6 +269,33 @@ void set_attribute(
     gui::program* program, int location, gui::arraybuffer* buffer);
 void set_attribute(
     gui::program* program, const char* name, gui::arraybuffer* buffer);
+
+// set vertex attributes
+void set_attribute(gui::program* program, int location, float value);
+void set_attribute(gui::program* program, int location, const vec2f& value);
+void set_attribute(gui::program* program, int location, const vec3f& value);
+void set_attribute(gui::program* program, int location, const vec4f& value);
+template <typename T>
+inline void set_attribute(
+    gui::program* program, const char* name, const T& value) {
+  return set_attribute(program, get_attribute_location(program, name), value);
+}
+
+// set vertex attributes
+template <typename T>
+inline void set_attribute(gui::program* program, int location,
+    gui::arraybuffer* buffer, const T& value) {
+  if (buffer && is_initialized(buffer)) {
+    return set_attribute(program, location, buffer);
+  } else {
+    set_attribute(program, location, value);
+  }
+}
+template <typename T>
+inline void set_attribute(gui::program* program, const char* name,
+    gui::arraybuffer* buffer, const T& def) {
+  set_attribute(program, get_attribute_location(program, name), buffer, def);
+}
 
 // draw elements
 void draw_elements(gui::elementbuffer* buffer);

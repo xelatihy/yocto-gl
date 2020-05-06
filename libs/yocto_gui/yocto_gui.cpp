@@ -828,6 +828,20 @@ void set_attribute(
   return set_attribute(program, get_attribute_location(program, name), buffer);
 }
 
+// set vertex attributes
+void set_attribute(gui::program* program, int location, float value) {
+  glVertexAttrib1f(location, value);
+}
+void set_attribute(gui::program* program, int location, const vec2f& value) {
+  glVertexAttrib2f(location, value.x, value.y);
+}
+void set_attribute(gui::program* program, int location, const vec3f& value) {
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+}
+void set_attribute(gui::program* program, int location, const vec4f& value) {
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+}
+
 // draw elements
 void draw_elements(gui::elementbuffer* buffer) {
   static auto elements = std::unordered_map<element_type, uint>{
@@ -1392,63 +1406,11 @@ void draw_object(
 
   auto shape = object->shape;
   set_uniform(scene->program, "elem_faceted", !is_initialized(shape->normals));
-  if (is_initialized(shape->positions)) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->positions->buffer_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program->program_id, "vert_pos"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program->program_id, "vert_pos"), 3,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib3f(
-        glGetAttribLocation(scene->program->program_id, "vert_pos"), 0, 0, 0);
-  }
-  if (is_initialized(shape->normals)) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->normals->buffer_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program->program_id, "vert_norm"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program->program_id, "vert_norm"), 3,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib3f(
-        glGetAttribLocation(scene->program->program_id, "vert_norm"), 0, 0, 0);
-  }
-  if (is_initialized(shape->texcoords)) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords->buffer_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program->program_id, "vert_texcoord"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program->program_id, "vert_texcoord"), 2,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib2f(
-        glGetAttribLocation(scene->program->program_id, "vert_texcoord"), 0, 0);
-  }
-  if (is_initialized(shape->colors)) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->colors->buffer_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program->program_id, "vert_color"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program->program_id, "vert_color"), 4,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib4f(
-        glGetAttribLocation(scene->program->program_id, "vert_color"), 1, 1, 1,
-        1);
-  }
-  if (is_initialized(shape->tangents)) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents->buffer_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program->program_id, "vert_tangsp"));
-    glVertexAttribPointer(
-        glGetAttribLocation(scene->program->program_id, "vert_tangsp"), 4,
-        GL_FLOAT, false, 0, nullptr);
-  } else {
-    glVertexAttrib4f(
-        glGetAttribLocation(scene->program->program_id, "vert_tangsp"), 0, 0, 1,
-        1);
-  }
+  set_attribute(scene->program, "vert_pos", shape->positions, vec3f{0, 0, 0});
+  set_attribute(scene->program, "vert_norm", shape->normals, vec3f{0, 0, 1});
+  set_attribute(scene->program, "vert_texcoord", shape->texcoords, vec2f{0, 0});
+  set_attribute(scene->program, "vert_color", shape->colors, vec4f{1, 1, 1, 1});
+  set_attribute(scene->program, "vert_tangsp", shape->tangents, vec4f{0, 0, 1, 1});
 
   auto& instances = object->instance ? object->instance->frames
                                      : empty_instances;
