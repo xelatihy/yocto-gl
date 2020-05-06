@@ -876,16 +876,16 @@ layout(location = 2) in vec2 texcoords;           // vertex texcoords
 layout(location = 3) in vec4 colors;              // vertex color
 layout(location = 4) in vec4 tangents;            // vertex tangent space
 
-uniform mat4 shape_xform;                    // shape transform
-uniform mat4 shape_xform_invtranspose;       // shape transform
-uniform float shape_normal_offset;           // shape normal offset
+uniform mat4 frame;                    // shape transform
+uniform mat4 frameit;                  // shape transform
+uniform float normal_offset;           // shape normal offset
 
 uniform mat4 cam_xform;          // camera xform
 uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
 uniform mat4 cam_proj;           // camera projection
 
-out vec3 pos;                   // [to fragment shader] vertex position (in world coordinate)
-out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
+out vec3 position;                   // [to fragment shader] vertex position (in world coordinate)
+out vec3 normal;                  // [to fragment shader] vertex normal (in world coordinate)
 out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
 out vec4 color;                 // [to fragment shader] vertex color
 out vec4 tangsp;                // [to fragment shader] vertex tangent space
@@ -893,24 +893,24 @@ out vec4 tangsp;                // [to fragment shader] vertex tangent space
 // main function
 void main() {
     // copy values
-    pos = positions;
-    norm = normals;
+    position = positions;
+    normal = normals;
     tangsp = tangents;
     texcoord = texcoords;
     color = colors;
 
     // normal offset
-    if(shape_normal_offset != 0) {
-        pos += shape_normal_offset * norm;
+    if(normal_offset != 0) {
+        position += normal_offset * normal;
     }
 
     // world projection
-    pos = (shape_xform * vec4(pos,1)).xyz;
-    norm = (shape_xform_invtranspose * vec4(norm,0)).xyz;
-    tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
+    position = (frame * vec4(position,1)).xyz;
+    normal = (frameit * vec4(normal,0)).xyz;
+    tangsp.xyz = (frame * vec4(tangsp.xyz,0)).xyz;
 
     // clip
-    gl_Position = cam_proj * cam_xform_inv * vec4(pos,1);
+    gl_Position = cam_proj * cam_xform_inv * vec4(position,1);
 }
 )";
 
@@ -927,14 +927,14 @@ uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
 uniform vec3 lpos[16];         // light positions
 uniform vec3 lke[16];          // light intensities
 
-void evaluate_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
+void evaluate_light(int lid, vec3 position, out vec3 cl, out vec3 wi) {
     cl = vec3(0,0,0);
     wi = vec3(0,0,0);
     if(ltype[lid] == 0) {
-        // compute point light color at pos
-        cl = lke[lid] / pow(length(lpos[lid]-pos),2);
-        // compute light direction at pos
-        wi = normalize(lpos[lid]-pos);
+        // compute point light color at position
+        cl = lke[lid] / pow(length(lpos[lid]-position),2);
+        // compute light direction at position
+        wi = normalize(lpos[lid]-position);
     }
     else if(ltype[lid] == 1) {
         // compute light color
@@ -979,7 +979,7 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
 }
 
 uniform int elem_type;
-uniform bool elem_faceted;
+uniform bool faceted;
 uniform vec4 highlight;   // highlighted color
 
 uniform int mat_type;          // material type
@@ -1000,13 +1000,13 @@ uniform sampler2D mat_rs_tex;  // material rs texture
 uniform bool mat_op_tex_on;    // material op texture on
 uniform sampler2D mat_op_tex;  // material op texture
 
-uniform bool mat_norm_tex_on;    // material norm texture on
-uniform sampler2D mat_norm_tex;  // material norm texture
+uniform bool mat_norm_tex_on;    // material normal texture on
+uniform sampler2D mat_norm_tex;  // material normal texture
 
 uniform bool mat_double_sided;   // double sided rendering
 
-uniform mat4 shape_xform;              // shape transform
-uniform mat4 shape_xform_invtranspose; // shape transform
+uniform mat4 frame;              // shape transform
+uniform mat4 frameit;            // shape transform
 
 bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                     out vec3 kd, out vec3 ks, out float rs, out float op) {
@@ -1043,18 +1043,18 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
     return true;
 }
 
-vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
-    if(!mat_norm_tex_on) return norm;
-    vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
-    vec3 tangv = normalize(cross(norm, tangu));
+vec3 apply_normal_map(vec2 texcoord, vec3 normal, vec4 tangsp) {
+    if(!mat_norm_tex_on) return normal;
+    vec3 tangu = normalize((frame * vec4(normalize(tangsp.xyz),0)).xyz);
+    vec3 tangv = normalize(cross(normal, tangu));
     if(tangsp.w < 0) tangv = -tangv;
     vec3 texture = 2 * pow(texture(mat_norm_tex,texcoord).xyz, vec3(1/2.2)) - 1;
     // texture.y = -texture.y;
-    return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
+    return normalize( tangu * texture.x + tangv * texture.y + normal * texture.z );
 }
 
-in vec3 pos;                   // [from vertex shader] position in world space
-in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
+in vec3 position;                   // [from vertex shader] position in world space
+in vec3 normal;                  // [from vertex shader] normal in world space (need normalization)
 in vec2 texcoord;              // [from vertex shader] texcoord
 in vec4 color;                 // [from vertex shader] color
 in vec4 tangsp;                // [from vertex shader] tangent space
@@ -1068,23 +1068,23 @@ uniform float gamma;
 
 out vec4 frag_color;      
 
-vec3 triangle_normal(vec3 pos) {
-    vec3 fdx = dFdx(pos); 
-    vec3 fdy = dFdy(pos); 
-    return normalize((shape_xform * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+vec3 triangle_normal(vec3 position) {
+    vec3 fdx = dFdx(position); 
+    vec3 fdy = dFdy(position); 
+    return normalize((frame * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
 }
 
 // main
 void main() {
     // view vector
-    vec3 wo = normalize(cam_pos - pos);
+    vec3 wo = normalize(cam_pos - position);
 
     // prepare normals
     vec3 n;
-    if(elem_faceted) {
-        n = triangle_normal(pos);
+    if(faceted) {
+        n = triangle_normal(position);
     } else {
-        n = normalize(norm);
+        n = normalize(normal);
     }
 
     // apply normal map
@@ -1121,7 +1121,7 @@ void main() {
             // foreach light
             for(int lid = 0; lid < lnum; lid ++) {
                 vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-                evaluate_light(lid, pos, cl, wi);
+                evaluate_light(lid, position, cl, wi);
                 c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
             }
         }
@@ -1386,9 +1386,9 @@ void draw_object(
   auto shape_xform     = mat4f(object->frame);
   auto shape_inv_xform = transpose(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
-  set_uniform(scene->program, "shape_xform", shape_xform);
-  set_uniform(scene->program, "shape_xform_invtranspose", shape_inv_xform);
-  set_uniform(scene->program, "shape_normal_offset", 0.0f);
+  set_uniform(scene->program, "frame", shape_xform);
+  set_uniform(scene->program, "frameit", shape_inv_xform);
+  set_uniform(scene->program, "normal_offset", 0.0f);
   if (object->highlighted) {
     set_uniform(scene->program, "highlight", vec4f{1, 1, 0, 1});
   } else {
@@ -1418,7 +1418,7 @@ void draw_object(
       material->normal_tex, 5);
 
   auto shape = object->shape;
-  set_uniform(scene->program, "elem_faceted", !is_initialized(shape->normals));
+  set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
   set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0, 0});
   set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0, 1});
   set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
@@ -1432,8 +1432,8 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    set_uniform(scene->program, "shape_xform", shape_xform);
-    set_uniform(scene->program, "shape_xform_invtranspose", shape_inv_xform);
+    set_uniform(scene->program, "frame", shape_xform);
+    set_uniform(scene->program, "frameit", shape_inv_xform);
 
     if (is_initialized(shape->points)) {
       glPointSize(shape->points_size);
@@ -1458,8 +1458,8 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    set_uniform(scene->program, "shape_xform", shape_xform);
-    set_uniform(scene->program, "shape_xform_invtranspose", shape_inv_xform);
+    set_uniform(scene->program, "frame", shape_xform);
+    set_uniform(scene->program, "frameit", shape_inv_xform);
 
     if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
       set_uniform(scene->program, "mat_type", mtype);
