@@ -160,6 +160,16 @@ bool is_initialized(gui::arraybuffer* buffer);
 // clear buffer
 void clear_arraybuffer(gui::arraybuffer* buffer);
 
+// set buffer
+void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<float>& data,
+    bool dynamic = false);
+void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec2f>& data,
+    bool dynamic = false);
+void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec3f>& data,
+    bool dynamic = false);
+void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec4f>& data,
+    bool dynamic = false);
+
 // Opengl draw elements
 enum struct element_type { points, lines, triangles };
 
@@ -182,6 +192,14 @@ bool is_initialized(gui::elementbuffer* buffer);
 
 // clear buffer
 void clear_elementbuffer(gui::elementbuffer* buffer);
+
+// set buffer
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const std::vector<int>& data, bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const std::vector<vec2i>& data, bool dynamic = false);
+void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
+    element_type element, const std::vector<vec3i>& data, bool dynamic = false);
 
 // Opengl program
 struct program {
@@ -405,6 +423,7 @@ struct scene {
   scene& operator=(const scene&) = delete;
   ~scene();
 
+  // scene objects
   std::vector<gui::camera*>   cameras   = {};
   std::vector<gui::object*>   objects   = {};
   std::vector<gui::shape*>    shapes    = {};
@@ -414,10 +433,7 @@ struct scene {
   std::vector<gui::light*>    lights    = {};
 
   // OpenGL state
-  uint program_id  = 0;
-  uint vertex_id   = 0;
-  uint fragment_id = 0;
-  uint array_id    = 0;
+  gui::program* program = new gui::program{};
 };
 
 // Shading type

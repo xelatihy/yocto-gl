@@ -334,6 +334,24 @@ void clear_arraybuffer(gui::arraybuffer* buffer) {
 }
 
 // set buffer
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<float>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 1, 1, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec2f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 2, 2, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec3f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 3, 3, (float*)data.data(), dynamic);
+}
+void set_arraybuffer(
+    gui::arraybuffer* buffer, const std::vector<vec4f>& data, bool dynamic) {
+  set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
+}
+
+// set buffer
 void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
     element_type element, const int* data, bool dynamic) {
   assert_error();
@@ -353,7 +371,9 @@ void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
 }
 
 // check if buffer is initialized
-bool is_initialized(gui::elementbuffer* buffer) { return buffer->buffer_id != 0; }
+bool is_initialized(gui::elementbuffer* buffer) {
+  return buffer->buffer_id != 0;
+}
 
 // clear buffer
 void clear_elementbuffer(gui::elementbuffer* buffer) {
@@ -651,8 +671,8 @@ bool init_image(gui::image* image) {
     return false;
   set_arraybuffer(
       image->texcoords, texcoords.size() * 2, 2, (float*)texcoords.data());
-   set_elementbuffer(image->triangles, triangles.size() * 3,
-       element_type::triangles, (int*)triangles.data());
+  set_elementbuffer(image->triangles, triangles.size() * 3,
+      element_type::triangles, (int*)triangles.data());
   return true;
 }
 
@@ -1153,11 +1173,14 @@ scene::~scene() {
 
 // Initialize an OpenGL scene
 void init_scene(gui::scene* scene) {
-  if (scene->program_id) return;
-  init_glprogram(scene->program_id, scene->vertex_id, scene->fragment_id,
-      scene->array_id, glscene_vertex, glscene_fragment);
+  if (is_initialized(scene->program)) return;
+  auto error = ""s, errorlog = ""s;
+  init_program(
+      scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(gui::scene* scene) { return (bool)scene->program_id; }
+bool is_initialized(gui::scene* scene) {
+  return is_initialized(scene->program);
+}
 
 // Clear an OpenGL shape
 void clear_shape(gui::shape* shape) {
@@ -1187,14 +1210,7 @@ void clear_shape(gui::shape* shape) {
 void clear_scene(gui::scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  if (scene->program_id) glDeleteProgram(scene->program_id);
-  if (scene->vertex_id) glDeleteShader(scene->vertex_id);
-  if (scene->fragment_id) glDeleteShader(scene->fragment_id);
-  if (scene->array_id) glDeleteVertexArrays(1, &scene->array_id);
-  scene->program_id  = 0;
-  scene->vertex_id   = 0;
-  scene->fragment_id = 0;
-  scene->array_id    = 0;
+  clear_program(scene->program);
 }
 
 // add camera
@@ -1428,138 +1444,166 @@ void draw_object(
   auto shape_xform     = mat4f(object->frame);
   auto shape_inv_xform = transpose(
       mat4f(inverse(object->frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"), 1,
-      false, &shape_xform.x.x);
   glUniformMatrix4fv(
-      glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-      false, &shape_inv_xform.x.x);
+      glGetUniformLocation(scene->program->program_id, "shape_xform"), 1, false,
+      &shape_xform.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(scene->program->program_id,
+                         "shape_xform_invtranspose"),
+      1, false, &shape_inv_xform.x.x);
   glUniform1f(
-      glGetUniformLocation(scene->program_id, "shape_normal_offset"), 0.0f);
+      glGetUniformLocation(scene->program->program_id, "shape_normal_offset"),
+      0.0f);
   if (object->highlighted) {
-    glUniform4f(
-        glGetUniformLocation(scene->program_id, "highlight"), 1, 1, 0, 1);
+    glUniform4f(glGetUniformLocation(scene->program->program_id, "highlight"),
+        1, 1, 0, 1);
   } else {
-    glUniform4f(
-        glGetUniformLocation(scene->program_id, "highlight"), 0, 0, 0, 0);
+    glUniform4f(glGetUniformLocation(scene->program->program_id, "highlight"),
+        0, 0, 0, 0);
   }
 
   auto material = object->material;
   auto mtype    = 2;
-  glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"),
+  glUniform1i(
+      glGetUniformLocation(scene->program->program_id, "mat_type"), mtype);
+  glUniform3f(glGetUniformLocation(scene->program->program_id, "mat_ke"),
       material->emission.x, material->emission.y, material->emission.z);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"),
+  glUniform3f(glGetUniformLocation(scene->program->program_id, "mat_kd"),
       material->color.x, material->color.y, material->color.z);
-  glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"),
+  glUniform3f(glGetUniformLocation(scene->program->program_id, "mat_ks"),
       material->metallic, material->metallic, material->metallic);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "mat_rs"), material->roughness);
-  glUniform1f(
-      glGetUniformLocation(scene->program_id, "mat_op"), material->opacity);
-  glUniform1i(glGetUniformLocation(scene->program_id, "mat_double_sided"),
+  glUniform1f(glGetUniformLocation(scene->program->program_id, "mat_rs"),
+      material->roughness);
+  glUniform1f(glGetUniformLocation(scene->program->program_id, "mat_op"),
+      material->opacity);
+  glUniform1i(
+      glGetUniformLocation(scene->program->program_id, "mat_double_sided"),
       (int)params.double_sided);
   if (material->emission_tex) {
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, material->emission_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex"), 0);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ke_tex"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ke_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ke_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ke_tex_on"), 0);
   }
   if (material->color_tex) {
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_2D, material->color_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex"), 1);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_kd_tex"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_kd_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_kd_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_kd_tex_on"), 0);
   }
   if (material->metallic_tex) {
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, material->metallic_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex"), 2);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ks_tex"), 2);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ks_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_ks_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_ks_tex_on"), 0);
   }
   if (material->roughness_tex) {
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, material->roughness_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex"), 3);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_rs_tex"), 3);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_rs_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_rs_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_rs_tex_on"), 0);
   }
   if (material->opacity_tex) {
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, material->opacity_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex"), 3);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_op_tex"), 3);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_op_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_op_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_op_tex_on"), 0);
   }
   if (material->normal_tex) {
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, material->normal_tex->texture_id);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex"), 4);
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_norm_tex"), 4);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_norm_tex_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(scene->program_id, "mat_norm_tex_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(scene->program->program_id, "mat_norm_tex_on"), 0);
   }
 
   auto shape = object->shape;
-  glUniform1i(glGetUniformLocation(scene->program_id, "elem_faceted"),
+  glUniform1i(glGetUniformLocation(scene->program->program_id, "elem_faceted"),
       (int)!shape->normals_id);
   if (shape->positions_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_pos"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_pos"), 3,
+        glGetAttribLocation(scene->program->program_id, "vert_pos"));
+    glVertexAttribPointer(
+        glGetAttribLocation(scene->program->program_id, "vert_pos"), 3,
         GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib3f(
-        glGetAttribLocation(scene->program_id, "vert_pos"), 0, 0, 0);
+        glGetAttribLocation(scene->program->program_id, "vert_pos"), 0, 0, 0);
   }
   if (shape->normals_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->normals_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_norm"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_norm"),
-        3, GL_FLOAT, false, 0, nullptr);
+        glGetAttribLocation(scene->program->program_id, "vert_norm"));
+    glVertexAttribPointer(
+        glGetAttribLocation(scene->program->program_id, "vert_norm"), 3,
+        GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib3f(
-        glGetAttribLocation(scene->program_id, "vert_norm"), 0, 0, 0);
+        glGetAttribLocation(scene->program->program_id, "vert_norm"), 0, 0, 0);
   }
   if (shape->texcoords_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"));
+        glGetAttribLocation(scene->program->program_id, "vert_texcoord"));
     glVertexAttribPointer(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"), 2, GL_FLOAT,
-        false, 0, nullptr);
+        glGetAttribLocation(scene->program->program_id, "vert_texcoord"), 2,
+        GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib2f(
-        glGetAttribLocation(scene->program_id, "vert_texcoord"), 0, 0);
+        glGetAttribLocation(scene->program->program_id, "vert_texcoord"), 0, 0);
   }
   if (shape->colors_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_color"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_color"),
-        4, GL_FLOAT, false, 0, nullptr);
+        glGetAttribLocation(scene->program->program_id, "vert_color"));
+    glVertexAttribPointer(
+        glGetAttribLocation(scene->program->program_id, "vert_color"), 4,
+        GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib4f(
-        glGetAttribLocation(scene->program_id, "vert_color"), 1, 1, 1, 1);
+        glGetAttribLocation(scene->program->program_id, "vert_color"), 1, 1, 1,
+        1);
   }
   if (shape->tangents_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(scene->program_id, "vert_tangsp"));
-    glVertexAttribPointer(glGetAttribLocation(scene->program_id, "vert_tangsp"),
-        4, GL_FLOAT, false, 0, nullptr);
+        glGetAttribLocation(scene->program->program_id, "vert_tangsp"));
+    glVertexAttribPointer(
+        glGetAttribLocation(scene->program->program_id, "vert_tangsp"), 4,
+        GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib4f(
-        glGetAttribLocation(scene->program_id, "vert_tangsp"), 0, 0, 1, 1);
+        glGetAttribLocation(scene->program->program_id, "vert_tangsp"), 0, 0, 1,
+        1);
   }
 
   auto& instances = object->instance ? object->instance->frames
@@ -1569,31 +1613,36 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
-        1, false, &shape_xform.x.x);
     glUniformMatrix4fv(
-        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-        false, &shape_inv_xform.x.x);
+        glGetUniformLocation(scene->program->program_id, "shape_xform"), 1,
+        false, &shape_xform.x.x);
+    glUniformMatrix4fv(glGetUniformLocation(scene->program->program_id,
+                           "shape_xform_invtranspose"),
+        1, false, &shape_inv_xform.x.x);
 
     if (shape->points_id) {
       glPointSize(shape->points_size);
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 1);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "elem_type"), 1);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
       glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
     }
     if (shape->lines_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "elem_type"), 2);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
       glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
     }
     if (shape->triangles_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "elem_type"), 3);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
       glDrawElements(
           GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
     }
     if (shape->quads_id) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 3);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "elem_type"), 3);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
       glDrawElements(
           GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
@@ -1604,19 +1653,26 @@ void draw_object(
     auto shape_xform     = mat4f(object->frame * frame);
     auto shape_inv_xform = transpose(
         mat4f(inverse(object->frame * frame, params.non_rigid_frames)));
-    glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "shape_xform"),
-        1, false, &shape_xform.x.x);
     glUniformMatrix4fv(
-        glGetUniformLocation(scene->program_id, "shape_xform_invtranspose"), 1,
-        false, &shape_inv_xform.x.x);
+        glGetUniformLocation(scene->program->program_id, "shape_xform"), 1,
+        false, &shape_xform.x.x);
+    glUniformMatrix4fv(glGetUniformLocation(scene->program->program_id,
+                           "shape_xform_invtranspose"),
+        1, false, &shape_inv_xform.x.x);
 
     if (shape->edges_id && params.edges && !params.wireframe) {
-      glUniform1i(glGetUniformLocation(scene->program_id, "mat_type"), mtype);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ke"), 0, 0, 0);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_kd"), 0, 0, 0);
-      glUniform3f(glGetUniformLocation(scene->program_id, "mat_ks"), 0, 0, 0);
-      glUniform1f(glGetUniformLocation(scene->program_id, "mat_rs"), 1);
-      glUniform1i(glGetUniformLocation(scene->program_id, "elem_type"), 2);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "mat_type"), mtype);
+      glUniform3f(
+          glGetUniformLocation(scene->program->program_id, "mat_ke"), 0, 0, 0);
+      glUniform3f(
+          glGetUniformLocation(scene->program->program_id, "mat_kd"), 0, 0, 0);
+      glUniform3f(
+          glGetUniformLocation(scene->program->program_id, "mat_ks"), 0, 0, 0);
+      glUniform1f(
+          glGetUniformLocation(scene->program->program_id, "mat_rs"), 1);
+      glUniform1i(
+          glGetUniformLocation(scene->program->program_id, "elem_type"), 2);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->edges_id);
       glDrawElements(GL_LINES, shape->edges_num * 2, GL_UNSIGNED_INT, nullptr);
     }
@@ -1651,26 +1707,30 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   glEnable(GL_DEPTH_TEST);
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 
-  glUseProgram(scene->program_id);
-  glUniform3f(glGetUniformLocation(scene->program_id, "cam_pos"),
+  glUseProgram(scene->program->program_id);
+  glUniform3f(glGetUniformLocation(scene->program->program_id, "cam_pos"),
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_xform_inv"),
-      1, false, &camera_view.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(scene->program_id, "cam_proj"), 1,
-      false, &camera_proj.x.x);
-  glUniform1i(glGetUniformLocation(scene->program_id, "eyelight"),
+  glUniformMatrix4fv(
+      glGetUniformLocation(scene->program->program_id, "cam_xform_inv"), 1,
+      false, &camera_view.x.x);
+  glUniformMatrix4fv(
+      glGetUniformLocation(scene->program->program_id, "cam_proj"), 1, false,
+      &camera_proj.x.x);
+  glUniform1i(glGetUniformLocation(scene->program->program_id, "eyelight"),
       params.shading == shading_type::eyelight ? 1 : 0);
+  glUniform1f(glGetUniformLocation(scene->program->program_id, "exposure"),
+      params.exposure);
   glUniform1f(
-      glGetUniformLocation(scene->program_id, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(scene->program_id, "gamma"), params.gamma);
+      glGetUniformLocation(scene->program->program_id, "gamma"), params.gamma);
 
   if (params.shading == shading_type::lights ||
       params.shading == shading_type::camlights) {
     auto& lights = params.shading == shading_type::lights ? scene->lights
                                                           : camera_lights;
-    glUniform3f(glGetUniformLocation(scene->program_id, "lamb"), 0, 0, 0);
-    glUniform1i(
-        glGetUniformLocation(scene->program_id, "lnum"), (int)lights.size());
+    glUniform3f(
+        glGetUniformLocation(scene->program->program_id, "lamb"), 0, 0, 0);
+    glUniform1i(glGetUniformLocation(scene->program->program_id, "lnum"),
+        (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
@@ -1679,19 +1739,19 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
-        glUniform3f(glGetUniformLocation(
-                        scene->program_id, ("lpos[" + is + "]").c_str()),
+        glUniform3f(glGetUniformLocation(scene->program->program_id,
+                        ("lpos[" + is + "]").c_str()),
             position.x, position.y, position.z);
       } else {
-        glUniform3f(glGetUniformLocation(
-                        scene->program_id, ("lpos[" + is + "]").c_str()),
+        glUniform3f(glGetUniformLocation(scene->program->program_id,
+                        ("lpos[" + is + "]").c_str()),
             light->position.x, light->position.y, light->position.z);
       }
-      glUniform3f(
-          glGetUniformLocation(scene->program_id, ("lke[" + is + "]").c_str()),
+      glUniform3f(glGetUniformLocation(
+                      scene->program->program_id, ("lke[" + is + "]").c_str()),
           light->emission.x, light->emission.y, light->emission.z);
-      glUniform1i(glGetUniformLocation(
-                      scene->program_id, ("ltype[" + is + "]").c_str()),
+      glUniform1i(glGetUniformLocation(scene->program->program_id,
+                      ("ltype[" + is + "]").c_str()),
           (int)light->type);
       lid++;
     }
