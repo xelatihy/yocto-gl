@@ -977,7 +977,7 @@ vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
   }
 }
 
-uniform int elem_type;
+uniform int etype;
 uniform bool faceted;
 uniform vec4 highlight;   // highlighted color
 
@@ -1100,7 +1100,7 @@ void main() {
   if(brdf_op < 0.005) discard;
 
   // check const color
-  if(elem_type == 0) {
+  if(etype == 0) {
     frag_color = vec4(brdf_ke,brdf_op);
     return;
   }
@@ -1113,7 +1113,7 @@ void main() {
     // eyelight shading
     if(eyelight) {
       vec3 wi = wo;
-      c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+      c += pif * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
     } else {
       // accumulate ambient
       c += lamb * brdf_kd;
@@ -1121,7 +1121,7 @@ void main() {
       for(int lid = 0; lid < lnum; lid ++) {
         vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
         evaluate_light(lid, position, cl, wi);
-        c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+        c += cl * brdfcos((has_brdf) ? etype : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
       }
     }
   }
@@ -1436,19 +1436,19 @@ void draw_object(
 
     if (is_initialized(shape->points)) {
       glPointSize(shape->points_size);
-      set_uniform(scene->program, "elem_type", 1);
+      set_uniform(scene->program, "etype", 1);
       draw_elements(shape->points);
     }
     if (is_initialized(shape->lines)) {
-      set_uniform(scene->program, "elem_type", 2);
+      set_uniform(scene->program, "etype", 2);
       draw_elements(shape->lines);
     }
     if (is_initialized(shape->triangles)) {
-      set_uniform(scene->program, "elem_type", 3);
+      set_uniform(scene->program, "etype", 3);
       draw_elements(shape->triangles);
     }
     if (is_initialized(shape->quads)) {
-      set_uniform(scene->program, "elem_type", 3);
+      set_uniform(scene->program, "etype", 3);
       draw_elements(shape->quads);
     }
   }
@@ -1466,7 +1466,7 @@ void draw_object(
       set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
       set_uniform(scene->program, "specular", vec3f{0, 0, 0});
       set_uniform(scene->program, "roughness", 1);
-      set_uniform(scene->program, "elem_type", 2);
+      set_uniform(scene->program, "etype", 2);
       draw_elements(shape->edges);
     }
   }
