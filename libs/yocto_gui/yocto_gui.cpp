@@ -1153,6 +1153,15 @@ void clear_shape(gui::shape* shape);
 shape::~shape() {
   clear_shape(this);
   if (positions) delete positions;
+  if (normals) delete normals;
+  if (texcoords) delete texcoords;
+  if (colors) delete colors;
+  if (tangents) delete tangents;
+  if (points) delete points;
+  if (lines) delete lines;
+  if (triangles) delete triangles;
+  if (quads) delete quads;
+  if (edges) delete edges;
 }
 
 scene::~scene() {
@@ -1397,12 +1406,18 @@ void draw_object(
   set_uniform(scene->program, "mat_rs", material->roughness);
   set_uniform(scene->program, "mat_op", material->opacity);
   set_uniform(scene->program, "mat_double_sided", (int)params.double_sided);
-  set_uniform(scene->program, "mat_ke_tex", "mat_ke_tex_on", material->emission_tex, 0);
-  set_uniform(scene->program, "mat_kd_tex", "mat_kd_tex_on", material->color_tex, 1);
-  set_uniform(scene->program, "mat_ks_tex", "mat_ks_tex_on", material->metallic_tex, 2);
-  set_uniform(scene->program, "mat_rs_tex", "mat_rs_tex_on", material->roughness_tex, 3);
-  set_uniform(scene->program, "mat_op_tex", "mat_op_tex_on", material->opacity_tex, 4);
-  set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
+  set_uniform(
+      scene->program, "mat_ke_tex", "mat_ke_tex_on", material->emission_tex, 0);
+  set_uniform(
+      scene->program, "mat_kd_tex", "mat_kd_tex_on", material->color_tex, 1);
+  set_uniform(
+      scene->program, "mat_ks_tex", "mat_ks_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "mat_rs_tex", "mat_rs_tex_on",
+      material->roughness_tex, 3);
+  set_uniform(
+      scene->program, "mat_op_tex", "mat_op_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
+      material->normal_tex, 5);
 
   auto shape = object->shape;
   set_uniform(scene->program, "elem_faceted", !is_initialized(shape->normals));
@@ -1410,7 +1425,8 @@ void draw_object(
   set_attribute(scene->program, "vert_norm", shape->normals, vec3f{0, 0, 1});
   set_attribute(scene->program, "vert_texcoord", shape->texcoords, vec2f{0, 0});
   set_attribute(scene->program, "vert_color", shape->colors, vec4f{1, 1, 1, 1});
-  set_attribute(scene->program, "vert_tangsp", shape->tangents, vec4f{0, 0, 1, 1});
+  set_attribute(
+      scene->program, "vert_tangsp", shape->tangents, vec4f{0, 0, 1, 1});
 
   auto& instances = object->instance ? object->instance->frames
                                      : empty_instances;
