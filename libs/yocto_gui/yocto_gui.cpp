@@ -1485,7 +1485,7 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   clear_framebuffer(params.background);
   set_viewport(viewport);
 
-  glUseProgram(scene->program->program_id);
+  bind_program(scene->program);
   set_uniform(scene->program, "cam_pos", camera->frame.o);
   set_uniform(scene->program, "cam_xform_inv", camera_view);
   set_uniform(scene->program, "cam_proj", camera_proj);
