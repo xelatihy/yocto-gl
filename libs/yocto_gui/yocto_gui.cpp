@@ -164,7 +164,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
       {4, GL_RGBA},
   };
   assert_error();
-  if (!img) {
+  if (size == zero2i || img == nullptr) {
     clear_texture(texture);
     return;
   }
@@ -304,6 +304,10 @@ void set_texture(gui::texture* texture, const img::image<float>& img,
 void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
   assert_error();
+  if(size == 0 || data == nullptr) {
+    clear_arraybuffer(buffer);
+    return;
+  }
   if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
   auto target = GL_ARRAY_BUFFER;
   glBindBuffer(target, buffer->buffer_id);
@@ -355,6 +359,10 @@ void set_arraybuffer(
 void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
     element_type element, const int* data, bool dynamic) {
   assert_error();
+  if(size == 0 || data == nullptr) {
+    clear_elementbuffer(buffer);
+    return;
+  }
   if (!buffer->buffer_id) glGenBuffers(1, &buffer->buffer_id);
   auto target = GL_ELEMENT_ARRAY_BUFFER;
   glBindBuffer(target, buffer->buffer_id);
@@ -496,60 +504,6 @@ void unbind_program() { glUseProgram(0); }
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
-
-static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
-    uint& array_id, const char* vertex, const char* fragment) {
-  assert_error();
-  glGenVertexArrays(1, &array_id);
-  glBindVertexArray(array_id);
-  assert_error();
-
-  int  errflags;
-  char errbuf[10000];
-
-  // create vertex
-  assert_error();
-  vertex_id = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_id, 1, &vertex, NULL);
-  glCompileShader(vertex_id);
-  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf);
-    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
-  }
-  assert_error();
-
-  // create fragment
-  assert_error();
-  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_id, 1, &fragment, NULL);
-  glCompileShader(fragment_id);
-  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
-  if (!errflags) {
-    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf);
-    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
-  }
-  assert_error();
-
-  // create program
-  assert_error();
-  program_id = glCreateProgram();
-  glAttachShader(program_id, vertex_id);
-  glAttachShader(program_id, fragment_id);
-  glLinkProgram(program_id);
-  glValidateProgram(program_id);
-  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
-    throw std::runtime_error("program not linked with error\n"s + errbuf);
-  }
-  glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
-    throw std::runtime_error("program not linked with error\n"s + errbuf);
-  }
-  assert_error();
-}
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
@@ -1194,19 +1148,15 @@ bool is_initialized(gui::scene* scene) {
 // Clear an OpenGL shape
 void clear_shape(gui::shape* shape) {
   clear_arraybuffer(shape->positions);
-  if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
-  if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
-  if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
-  if (shape->tangents_id) glDeleteBuffers(1, &shape->tangents_id);
+  clear_arraybuffer(shape->normals);
+  clear_arraybuffer(shape->texcoords);
+  clear_arraybuffer(shape->colors);
+  clear_arraybuffer(shape->tangents);
   if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
   if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
   if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
   if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
   if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
-  shape->normals_id   = 0;
-  shape->texcoords_id = 0;
-  shape->colors_id    = 0;
-  shape->tangents_id  = 0;
   shape->points_id    = 0;
   shape->lines_id     = 0;
   shape->triangles_id = 0;
@@ -1248,25 +1198,6 @@ gui::shape* add_shape(gui::scene* scene) {
   return scene->shapes.emplace_back(new shape{});
 }
 
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
-    int size, int count, const float* values) {
-  if (!size || !values) {
-    if (array_id) glDeleteBuffers(1, &array_id);
-    array_id  = 0;
-    array_num = 0;
-    return;
-  }
-  if (!array_id) {
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else if (array_num != size) {
-    glDeleteBuffers(1, &array_id);
-    init_glbuffer(array_id, element, size, count, values);
-    array_num = size;
-  } else {
-    update_glbuffer(array_id, element, size, 3, values);
-  }
-}
 static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
     int size, int count, const int* values) {
   if (!size || !values) {
@@ -1331,20 +1262,16 @@ void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
   set_arraybuffer(shape->positions, positions);
 }
 void set_normals(gui::shape* shape, const std::vector<vec3f>& normals) {
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_arraybuffer(shape->normals, normals);
 }
 void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords) {
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
+  set_arraybuffer(shape->texcoords, texcoords);
 }
 void set_colors(gui::shape* shape, const std::vector<vec3f>& colors) {
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      3, (const float*)colors.data());
+  set_arraybuffer(shape->colors, colors);
 }
 void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents) {
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
-      tangents.size(), 4, (const float*)tangents.data());
+  set_arraybuffer(shape->tangents, tangents);
 }
 
 // add object
@@ -1554,7 +1481,7 @@ void draw_object(
 
   auto shape = object->shape;
   glUniform1i(glGetUniformLocation(scene->program->program_id, "elem_faceted"),
-      (int)!shape->normals_id);
+      !is_initialized(shape->normals));
   if (is_initialized(shape->positions)) {
     glBindBuffer(GL_ARRAY_BUFFER, shape->positions->buffer_id);
     glEnableVertexAttribArray(
@@ -1566,8 +1493,8 @@ void draw_object(
     glVertexAttrib3f(
         glGetAttribLocation(scene->program->program_id, "vert_pos"), 0, 0, 0);
   }
-  if (shape->normals_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->normals_id);
+  if (is_initialized(shape->normals)) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape->normals->buffer_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program->program_id, "vert_norm"));
     glVertexAttribPointer(
@@ -1577,8 +1504,8 @@ void draw_object(
     glVertexAttrib3f(
         glGetAttribLocation(scene->program->program_id, "vert_norm"), 0, 0, 0);
   }
-  if (shape->texcoords_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords_id);
+  if (is_initialized(shape->texcoords)) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords->buffer_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program->program_id, "vert_texcoord"));
     glVertexAttribPointer(
@@ -1588,8 +1515,8 @@ void draw_object(
     glVertexAttrib2f(
         glGetAttribLocation(scene->program->program_id, "vert_texcoord"), 0, 0);
   }
-  if (shape->colors_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
+  if (is_initialized(shape->colors)) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape->colors->buffer_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program->program_id, "vert_color"));
     glVertexAttribPointer(
@@ -1600,8 +1527,8 @@ void draw_object(
         glGetAttribLocation(scene->program->program_id, "vert_color"), 1, 1, 1,
         1);
   }
-  if (shape->tangents_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
+  if (is_initialized(shape->tangents)) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents->buffer_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(scene->program->program_id, "vert_tangsp"));
     glVertexAttribPointer(

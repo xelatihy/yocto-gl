@@ -362,14 +362,10 @@ struct material {
 struct shape {
   // vertex buffers
   gui::arraybuffer* positions = new gui::arraybuffer{};
-  int   normals_num    = 0;
-  uint  normals_id     = 0;
-  int   texcoords_num  = 0;
-  uint  texcoords_id   = 0;
-  int   colors_num     = 0;
-  uint  colors_id      = 0;
-  int   tangents_num   = 0;
-  uint  tangents_id    = 0;
+  gui::arraybuffer* normals = new gui::arraybuffer{};
+  gui::arraybuffer* texcoords = new gui::arraybuffer{};
+  gui::arraybuffer* colors = new gui::arraybuffer{};
+  gui::arraybuffer* tangents = new gui::arraybuffer{};
   int   points_num     = 0;
   uint  points_id      = 0;
   int   lines_num      = 0;
