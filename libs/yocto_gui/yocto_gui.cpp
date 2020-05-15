@@ -1262,7 +1262,7 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
     edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
   }
-  auto edges = std::vector(edgemap.begin(), edgemap.end());
+  auto edges = std::vector<vec2i>(edgemap.begin(), edgemap.end());
   set_elementbuffer(shape->edges, edges);
 }
 void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
