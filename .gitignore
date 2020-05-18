@@ -1,6 +1,7 @@
 bin
 build
 out
+out1
 .vscode/.cmaketools.json
 /*.hdr
 /*.exr
