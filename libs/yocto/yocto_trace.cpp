@@ -2422,8 +2422,8 @@ img::image<vec4f> trace_image(const trc::scene* scene,
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
     if (params.noparallel) {
-      for (auto j = 0; j < state->render.size().y; j++) {
-        for (auto i = 0; i < state->render.size().x; i++) {
+      for (auto j = 0; j < state->render.height(); j++) {
+        for (auto i = 0; i < state->render.width(); i++) {
           state->render[{i, j}] = trace_sample(
               state, scene, camera, {i, j}, params);
         }
@@ -2456,10 +2456,10 @@ void trace_start(trc::state* state, const trc::scene* scene,
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
   auto preview  = trace_image(scene, camera, pprms);
-  for (auto j = 0; j < state->render.size().y; j++) {
-    for (auto i = 0; i < state->render.size().x; i++) {
-      auto pi               = clamp(i / params.pratio, 0, preview.size().x - 1),
-           pj               = clamp(j / params.pratio, 0, preview.size().y - 1);
+  for (auto j = 0; j < state->render.height(); j++) {
+    for (auto i = 0; i < state->render.width(); i++) {
+      auto pi               = clamp(i / params.pratio, 0, preview.width() - 1),
+           pj               = clamp(j / params.pratio, 0, preview.height() - 1);
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }

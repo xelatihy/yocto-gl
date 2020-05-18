@@ -144,6 +144,8 @@ struct image {
   // size
   bool   empty() const;
   vec2i  size() const;
+  int    width() const;
+  int    height() const;
   size_t count() const;
   bool   contains(const vec2i& ij) const;
   void   clear();
@@ -428,6 +430,9 @@ struct volume {
   // size
   bool   empty() const;
   vec3i  size() const;
+  int    width() const;
+  int    height() const;
+  int    depth() const;
   size_t count() const;
   void   clear();
   void   resize(const vec3i& size);
@@ -567,6 +572,14 @@ inline vec2i image<T>::size() const {
   return extent;
 }
 template <typename T>
+inline int image<T>::width() const {
+  return extent[0];
+}
+template <typename T>
+inline int image<T>::height() const {
+  return extent[1];
+}
+template <typename T>
 inline size_t image<T>::count() const {
   return pixels.size();
 }
@@ -701,6 +714,18 @@ inline bool volume<T>::empty() const {
 template <typename T>
 inline vec3i volume<T>::size() const {
   return extent;
+}
+template <typename T>
+inline int volume<T>::width() const {
+  return extent[0];
+}
+template <typename T>
+inline int volume<T>::height() const {
+  return extent[1];
+}
+template <typename T>
+inline int volume<T>::depth() const {
+  return extent[2];
 }
 template <typename T>
 inline size_t volume<T>::count() const {

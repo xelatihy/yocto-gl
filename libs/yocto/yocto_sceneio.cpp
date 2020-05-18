@@ -202,23 +202,23 @@ std::vector<std::string> scene_stats(const scn::model* scene, bool verbose) {
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels3b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorb.size().x *
-               (size_t)texture->colorb.size().x;
+        return (size_t)texture->colorb.width() *
+               (size_t)texture->colorb.width();
       })));
   stats.push_back(
       "texels3f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorf.size().x *
-               (size_t)texture->colorf.size().y;
+        return (size_t)texture->colorf.width() *
+               (size_t)texture->colorf.height();
       })));
   stats.push_back(
       "texels1b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarb.size().x *
-               (size_t)texture->scalarb.size().x;
+        return (size_t)texture->scalarb.width() *
+               (size_t)texture->scalarb.width();
       })));
   stats.push_back(
       "texels1f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarf.size().x *
-               (size_t)texture->scalarf.size().y;
+        return (size_t)texture->scalarf.width() *
+               (size_t)texture->scalarf.height();
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
@@ -414,8 +414,8 @@ void add_sky(scn::model* scene, float sun_angle) {
   auto sunsky  = img::image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
-  for (auto j = 0; j < sunsky.size().y; j++)
-    for (auto i = 0; i < sunsky.size().x; i++)
+  for (auto j = 0; j < sunsky.height(); j++)
+    for (auto i = 0; i < sunsky.width(); i++)
       texture->colorf[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
@@ -2352,8 +2352,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       ctexture->colorf.resize(color_opacityf.size());
       otexture->scalarf.resize(color_opacityf.size());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityf.size().y; j++) {
-        for (auto i = 0; i < color_opacityf.size().x; i++) {
+      for (auto j = 0; j < color_opacityf.height(); j++) {
+        for (auto i = 0; i < color_opacityf.width(); i++) {
           ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
           otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
           if (color_opacityb[{i, j}].w != 1) oempty = false;
@@ -2366,8 +2366,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       ctexture->colorb.resize(color_opacityb.size());
       otexture->scalarb.resize(color_opacityb.size());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityb.size().y; j++) {
-        for (auto i = 0; i < color_opacityb.size().x; i++) {
+      for (auto j = 0; j < color_opacityb.height(); j++) {
+        for (auto i = 0; i < color_opacityb.width(); i++) {
           ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
           otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
           if (color_opacityb[{i, j}].w != 255) oempty = false;
@@ -2390,8 +2390,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       auto [mtexture, rtexture] = textures;
       mtexture->scalarf.resize(metallic_roughnessf.size());
       rtexture->scalarf.resize(metallic_roughnessf.size());
-      for (auto j = 0; j < metallic_roughnessf.size().y; j++) {
-        for (auto i = 0; i < metallic_roughnessf.size().x; i++) {
+      for (auto j = 0; j < metallic_roughnessf.height(); j++) {
+        for (auto i = 0; i < metallic_roughnessf.width(); i++) {
           mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
           rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
         }
@@ -2401,8 +2401,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       auto [mtexture, rtexture] = textures;
       mtexture->scalarb.resize(metallic_roughnessb.size());
       rtexture->scalarb.resize(metallic_roughnessb.size());
-      for (auto j = 0; j < metallic_roughnessb.size().y; j++) {
-        for (auto i = 0; i < metallic_roughnessb.size().x; i++) {
+      for (auto j = 0; j < metallic_roughnessb.height(); j++) {
+        for (auto i = 0; i < metallic_roughnessb.width(); i++) {
           mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
           rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
         }

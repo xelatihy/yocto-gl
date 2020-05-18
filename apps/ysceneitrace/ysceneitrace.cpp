@@ -356,17 +356,17 @@ bool draw_widgets(
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.size().x) + " x " +
-          std::to_string(iotexture->colorf.size().y));
+      std::to_string(iotexture->colorf.width()) + " x " +
+          std::to_string(iotexture->colorf.height()));
   draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.size().x) + " x " +
-          std::to_string(iotexture->colorb.size().y));
+      std::to_string(iotexture->colorb.width()) + " x " +
+          std::to_string(iotexture->colorb.height()));
   draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.size().x) + " x " +
-          std::to_string(iotexture->scalarf.size().y));
+      std::to_string(iotexture->scalarf.width()) + " x " +
+          std::to_string(iotexture->scalarf.height()));
   draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.size().x) + " x " +
-          std::to_string(iotexture->scalarb.size().y));
+      std::to_string(iotexture->scalarb.width()) + " x " +
+          std::to_string(iotexture->scalarb.height()));
   // TODO: load texture
   return edited;
 }
@@ -581,8 +581,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
     draw_label(win, "imagename", app->imagename);
     if (app->ok) {
       draw_label(win, "image",
-          std::to_string(app->render.size().x) + " x " +
-              std::to_string(app->render.size().y) + " @ " +
+          std::to_string(app->render.width()) + " x " +
+              std::to_string(app->render.height()) + " @ " +
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
@@ -599,8 +599,8 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
       draw_dragger(win, "mouse", ij);
-      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-          ij.y < app->render.size().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
       } else {
         auto zero4f_ = zero4f;
@@ -891,12 +891,12 @@ int main(int argc, const char* argv[]) {
         !input.widgets_active) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
-      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-          ij.y < app->render.size().y) {
+      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
+          ij.y < app->render.height()) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->film,
-            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
-                                                  (float)app->render.size().y});
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.width(),
+                                                  (float)app->render.height()});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_object = app->ioscene->objects[isec.object];
         }

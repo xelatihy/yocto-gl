@@ -51,15 +51,15 @@ img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
   auto fw           = std::vector<float>();
   for (auto feature_sigma : features_sigma)
     fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -filter_width; fj <= filter_width; fj++) {
         for (auto fi = -filter_width; fi <= filter_width; fi++) {
           auto ii = i + fi, jj = j + fj;
           if (ii < 0 || jj < 0) continue;
-          if (ii >= img.size().x || jj >= img.size().y) continue;
+          if (ii >= img.width() || jj >= img.height()) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{i, j}];
           auto w   = (float)math::exp(-dot(uv, uv) * sw) *
@@ -84,15 +84,15 @@ img::image<vec4f> filter_bilateral(
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  for (auto j = 0; j < img.height(); j++) {
+    for (auto i = 0; i < img.width(); i++) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -fwidth; fj <= fwidth; fj++) {
         for (auto fi = -fwidth; fi <= fwidth; fi++) {
           auto ii = i + fi, jj = j + fj;
           if (ii < 0 || jj < 0) continue;
-          if (ii >= img.size().x || jj >= img.size().y) continue;
+          if (ii >= img.width() || jj >= img.height()) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
           auto w   = math::exp(-dot(uv, uv) * sw) *
@@ -111,8 +111,8 @@ bool make_image_preset(
     const std::string& type, img::image<vec4f>& img, std::string& error) {
   auto set_region = [](img::image<vec4f>& img, const img::image<vec4f>& region,
                         const vec2i& offset) {
-    for (auto j = 0; j < region.size().y; j++) {
-      for (auto i = 0; i < region.size().x; i++) {
+    for (auto j = 0; j < region.height(); j++) {
+      for (auto i = 0; i < region.width(); i++) {
         if (!img.contains({i, j})) continue;
         img[vec2i{i, j} + offset] = region[{i, j}];
       }
@@ -162,14 +162,14 @@ bool make_image_preset(
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
+      montage_size.x += sub_img.width();
+      montage_size.y = max(montage_size.y, sub_img.height());
     }
     img      = img::image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
+      pos += sub_img.width();
     }
   } else if (type == "images2") {
     auto sub_types = std::vector<std::string>{"sky", "sunsky"};
@@ -179,14 +179,14 @@ bool make_image_preset(
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
+      montage_size.x += sub_img.width();
+      montage_size.y = max(montage_size.y, sub_img.height());
     }
     img      = img::image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
+      pos += sub_img.width();
     }
   } else if (type == "test-floor") {
     make_grid(img, size);
@@ -302,8 +302,8 @@ int main(int argc, const char* argv[]) {
     auto alpha = img::image<vec4f>{};
     if (!load_image(alpha_filename, alpha, ioerror)) cli::print_fatal(ioerror);
     if (img.size() != alpha.size()) cli::print_fatal("bad image size");
-    for (auto j = 0; j < img.size().y; j++)
-      for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
+    for (auto j = 0; j < img.height(); j++)
+      for (auto i = 0; i < img.width(); i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
@@ -312,8 +312,8 @@ int main(int argc, const char* argv[]) {
     if (!load_image(coloralpha_filename, alpha, ioerror))
       cli::print_fatal(ioerror);
     if (img.size() != alpha.size()) cli::print_fatal("bad image size");
-    for (auto j = 0; j < img.size().y; j++)
-      for (auto i = 0; i < img.size().x; i++)
+    for (auto j = 0; j < img.height(); j++)
+      for (auto i = 0; i < img.width(); i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
   }
 
