@@ -28,7 +28,7 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_math.h>
+#include <yocto/yocto_matht.h>
 #include <yocto/yocto_shape.h>
 using namespace yocto::math;
 namespace shp = yocto::shape;

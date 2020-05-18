@@ -28,7 +28,7 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
-#include <yocto/yocto_math.h>
+#include <yocto/yocto_matht.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
 using namespace yocto::math;

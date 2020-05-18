@@ -311,6 +311,8 @@ struct vec<T, 1> {
   vec();
   explicit vec(T x);
   explicit operator bool() const;
+  template <typename T1>
+  explicit operator vec<T1, 1>() const;
 
   T&       operator[](int i);
   const T& operator[](int i) const;
@@ -326,6 +328,8 @@ struct vec<T, 2> {
   vec(T x, T y);
   explicit vec(T v);
   explicit operator bool() const;
+  template <typename T1>
+  explicit operator vec<T1, 2>() const;
 
   T&       operator[](int i);
   const T& operator[](int i) const;
@@ -343,6 +347,8 @@ struct vec<T, 3> {
   vec(const vec<T, 2>& v, T z);
   explicit vec(T v);
   explicit operator bool() const;
+  template <typename T1>
+  explicit operator vec<T1, 3>() const;
 
   T&       operator[](int i);
   const T& operator[](int i) const;
@@ -361,6 +367,8 @@ struct vec<T, 4> {
   vec(const vec<T, 3>& v, T w);
   explicit vec(T v);
   explicit operator bool() const;
+  template <typename T1>
+  explicit operator vec<T1, 4>() const;
 
   T&       operator[](int i);
   const T& operator[](int i) const;
@@ -1443,6 +1451,10 @@ inline T sample_microfacet_pdf(T roughness, const vec<T, 3>& normal,
 template <typename T>
 inline vec<T, 3> eval_diffuse_reflection(const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
+// Evaluate a translucent BRDF lobe.
+template <typename T>
+inline vec<T, 3> eval_diffuse_transmission(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Evaluates a specular BRDF lobe.
 template <typename T>
 inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
@@ -1468,6 +1480,10 @@ inline vec<T, 3> eval_microfacet_refraction(T ior, T roughness,
 template <typename T>
 inline vec<T, 3> sample_diffuse_reflection(
     const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
+// Sample a translucency BRDF lobe.
+template <typename T>
+inline vec<T, 3> sample_diffuse_transmission(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn);
 // Sample a specular BRDF lobe.
 template <typename T>
 inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
@@ -1490,6 +1506,10 @@ inline vec<T, 3> sample_microfacet_refraction(T ior, T roughness,
 // Pdf for diffuse BRDF lobe sampling.
 template <typename T>
 inline T sample_diffuse_reflection_pdf(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
+// Pdf for translucency BRDF lobe sampling.
+template <typename T>
+inline T sample_diffuse_transmission_pdf(const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
 // Pdf for specular BRDF lobe sampling.
 template <typename T>
@@ -1564,6 +1584,10 @@ inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
 template <typename T>
 inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming);
+
+// Convert mean-free-path to transmission
+template <typename T>
+inline vec<T, 3> mfp_to_transmission(const vec<T, 3>& mfp, T depth);
 
 // Evaluate transmittance
 template <typename T>
@@ -1894,6 +1918,11 @@ template <typename T>
 inline vec<T, 1>::operator bool() const {
   return x;
 }
+template <typename T>
+template <typename T1>
+inline vec<T, 1>::operator vec<T1, 1>() const {
+  return {(T1)x};
+}
 
 template <typename T>
 inline T& vec<T, 1>::operator[](int i) {
@@ -1914,6 +1943,11 @@ inline vec<T, 2>::vec(T v) : x{v}, y{v} {}
 template <typename T>
 inline vec<T, 2>::operator bool() const {
   return x || y;
+}
+template <typename T>
+template <typename T1>
+inline vec<T, 2>::operator vec<T1, 2>() const {
+  return {(T1)x, (T1)y};
 }
 
 template <typename T>
@@ -1938,6 +1972,11 @@ template <typename T>
 inline vec<T, 3>::operator bool() const {
   return x || y || z;
 }
+template <typename T>
+template <typename T1>
+inline vec<T, 3>::operator vec<T1, 3>() const {
+  return {(T1)x, (T1)y, (T1)z};
+}
 
 template <typename T>
 inline T& vec<T, 3>::operator[](int i) {
@@ -1960,6 +1999,11 @@ inline vec<T, 4>::vec(T v) : x{v}, y{v}, z{v}, w{v} {}
 template <typename T>
 inline vec<T, 4>::operator bool() const {
   return x || y || z || w;
+}
+template <typename T>
+template <typename T1>
+inline vec<T, 4>::operator vec<T1, 4>() const {
+  return {(T1)x, (T1)y, (T1)z, (T1)w};
 }
 
 template <typename T>
@@ -4926,6 +4970,14 @@ inline vec<T, 3> eval_diffuse_reflection(const vec<T, 3>& normal,
   return vec<T, 3>{1} / (T)pi * dot(normal, incoming);
 }
 
+// Evaluate a translucent BRDF lobe.
+template <typename T>
+inline vec<T, 3> eval_diffuse_transmission(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return vec<T, 3>{0};
+  return vec<T, 3>{1} / (T)pi * abs(dot(normal, incoming));
+}
+
 // Evaluate a specular BRDF lobe.
 template <typename T>
 inline vec<T, 3> eval_microfacet_reflection(T ior, T roughness,
@@ -5018,6 +5070,14 @@ inline vec<T, 3> sample_diffuse_reflection(
   return sample_hemisphere_cos(normal, rn);
 }
 
+// Sample a translucency BRDF lobe.
+template <typename T>
+inline vec<T, 3> sample_diffuse_transmission(
+    const vec<T, 3>& normal, const vec<T, 3>& outgoing, const vec<T, 2>& rn) {
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos(-up_normal, rn);
+}
+
 // Sample a specular BRDF lobe.
 template <typename T>
 inline vec<T, 3> sample_microfacet_reflection(T ior, T roughness,
@@ -5072,6 +5132,15 @@ inline T sample_diffuse_reflection_pdf(const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return 0;
   return sample_hemisphere_cos_pdf(normal, incoming);
+}
+
+// Pdf for translucency BRDF lobe sampling.
+template <typename T>
+inline T sample_diffuse_transmission_pdf(const vec<T, 3>& normal,
+    const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return 0;
+  auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
+  return sample_hemisphere_cos_pdf(-up_normal, incoming);
 }
 
 // Pdf for specular BRDF lobe sampling.
@@ -5170,6 +5239,9 @@ inline vec<T, 3> eval_delta_transmission(T ior, const vec<T, 3>& normal,
 template <typename T>
 inline vec<T, 3> eval_delta_refraction(T ior, const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (abs(ior - 1) < 1e-3)
+    return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec<T, 3>{1}
+                                                              : vec<T, 3>{0};
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -5209,6 +5281,7 @@ inline vec<T, 3> sample_delta_transmission(
 template <typename T>
 inline vec<T, 3> sample_delta_refraction(
     T ior, const vec<T, 3>& normal, const vec<T, 3>& outgoing, T rnl) {
+  if (abs(ior - 1) < 1e-3) return -outgoing;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -5248,6 +5321,8 @@ inline T sample_delta_transmission_pdf(T ior, const vec<T, 3>& normal,
 template <typename T>
 inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
     const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
+  if (abs(ior - 1) < 1e-3)
+    return dot(normal, incoming) * dot(normal, outgoing) < 0 ? 1 : 0;
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
@@ -5256,6 +5331,12 @@ inline T sample_delta_refraction_pdf(T ior, const vec<T, 3>& normal,
   } else {
     return (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
+}
+
+// Convert mean-free-path to transmission
+template <typename T>
+inline vec<T, 3> mfp_to_transmission(const vec<T, 3>& mfp, T depth) {
+  return exp(-depth / mfp);
 }
 
 // Evaluate transmittance
@@ -5289,8 +5370,8 @@ inline T sample_transmittance_pdf(
 template <typename T>
 inline T eval_phasefunction(
     T anisotropy, const vec<T, 3>& outgoing, const vec<T, 3>& incoming) {
-  auto cosine = dot(outgoing, incoming);
-  auto denom  = 1 + anisotropy * anisotropy + 2 * anisotropy * cosine;
+  auto cosine = -dot(outgoing, incoming);
+  auto denom  = 1 + anisotropy * anisotropy - 2 * anisotropy * cosine;
   return (1 - anisotropy * anisotropy) / (4 * (T)pi * denom * sqrt(denom));
 }
 
@@ -5302,15 +5383,15 @@ inline vec3f sample_phasefunction(
   if (abs(anisotropy) < (T)1e-3) {
     cos_theta = 1 - 2 * rn.y;
   } else {
-    float square = (1 - anisotropy * anisotropy) /
-                   (1 - anisotropy + anisotropy * anisotropy * rn.y);
+    auto square = (1 - anisotropy * anisotropy) /
+                  (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }
 
   auto sin_theta      = sqrt(max((T)0, 1 - cos_theta * cos_theta));
   auto phi            = 2 * (T)pi * rn.x;
-  auto local_incoming = vec3f{
+  auto local_incoming = vec<T, 3>{
       sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
   return basis_fromz(-outgoing) * local_incoming;
 }

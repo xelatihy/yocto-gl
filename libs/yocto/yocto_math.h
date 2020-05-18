@@ -1536,6 +1536,9 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
 // Evaluates a diffuse BRDF lobe.
 inline vec3f eval_diffuse_reflection(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+// Evaluate a translucent BRDF lobe.
+inline vec3f eval_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Evaluates a specular BRDF lobe.
 inline vec3f eval_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
@@ -1553,6 +1556,9 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
 // Sample a diffuse BRDF lobe.
 inline vec3f sample_diffuse_reflection(
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
+// Sample a translucency BRDF lobe.
+inline vec3f sample_diffuse_transmission(
+    const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
 // Sample a specular BRDF lobe.
 inline vec3f sample_microfacet_reflection(float ior, float roughness,
     const vec3f& normal, const vec3f& outgoing, const vec2f& rn);
@@ -1569,6 +1575,9 @@ inline vec3f sample_microfacet_refraction(float ior, float roughness,
 
 // Pdf for diffuse BRDF lobe sampling.
 inline float sample_diffuse_reflection_pdf(
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+// Pdf for translucency BRDF lobe sampling.
+inline float sample_diffuse_transmission_pdf(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
 // Pdf for specular BRDF lobe sampling.
 inline float sample_microfacet_reflection_pdf(float ior, float roughness,
@@ -1622,6 +1631,9 @@ inline float sample_delta_transmission_pdf(float ior, const vec3f& normal,
 // Pdf for delta refraction BRDF lobe sampling.
 inline float sample_delta_refraction_pdf(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming);
+
+// Convert mean-free-path to transmission
+inline vec3f mfp_to_transmission(const vec3f& mfp, float depth);
 
 // Evaluate transmittance
 inline vec3f eval_transmittance(const vec3f& density, float distance);
@@ -4793,7 +4805,7 @@ inline vec3f sample_phasefunction(
   if (abs(anisotropy) < 1e-3f) {
     cos_theta = 1 - 2 * rn.y;
   } else {
-    float square = (1 - anisotropy * anisotropy) /
+    auto square = (1 - anisotropy * anisotropy) /
                    (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);

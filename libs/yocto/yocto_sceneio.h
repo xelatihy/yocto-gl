@@ -49,7 +49,7 @@
 #include <memory>
 
 #include "yocto_image.h"
-#include "yocto_math.h"
+#include "yocto_matht.h"
 
 // -----------------------------------------------------------------------------
 // ALIASES
