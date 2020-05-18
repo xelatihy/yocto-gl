@@ -264,8 +264,13 @@ inline void swap(int& a, int& b);
 namespace yocto::math {
 
 struct vec2f {
-  float x = 0;
-  float y = 0;
+  union {
+    struct {
+      float x = 0;
+      float y = 0;
+    };
+    float elems[2];
+  };
 
   vec2f();
   vec2f(float x, float y);
@@ -277,9 +282,14 @@ struct vec2f {
 };
 
 struct vec3f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
+  union {
+    struct {
+      float x = 0;
+      float y = 0;
+      float z = 0;
+    };
+    float elems[3];
+  };
 
   vec3f();
   vec3f(float x, float y, float z);
@@ -292,10 +302,15 @@ struct vec3f {
 };
 
 struct vec4f {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
+  union {
+    struct {
+      float x = 0;
+      float y = 0;
+      float z = 0;
+      float w = 0;
+    };
+    float elems[4];
+  };
 
   vec4f();
   vec4f(float x, float y, float z, float w);
@@ -539,8 +554,13 @@ inline vec4f quat_inverse(const vec4f& a);
 namespace yocto::math {
 
 struct vec2i {
-  int x = 0;
-  int y = 0;
+  union {
+    struct {
+      int x = 0;
+      int y = 0;
+    };
+    float elems[2];
+  };
 
   vec2i();
   vec2i(int x, int y);
@@ -550,12 +570,17 @@ struct vec2i {
 
   int&       operator[](int i);
   const int& operator[](int i) const;
-};
+};  // namespace yocto::math
 
 struct vec3i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
+  union {
+    struct {
+      int x = 0;
+      int y = 0;
+      int z = 0;
+    };
+    int elems[3];
+  };
 
   vec3i();
   vec3i(int x, int y, int z);
@@ -569,10 +594,15 @@ struct vec3i {
 };
 
 struct vec4i {
-  int x = 0;
-  int y = 0;
-  int z = 0;
-  int w = 0;
+  union {
+    struct {
+      int x = 0;
+      int y = 0;
+      int z = 0;
+      int w = 0;
+    };
+    int elems[4];
+  };
 
   vec4i();
   vec4i(int x, int y, int z, int w);
@@ -788,8 +818,13 @@ namespace yocto::math {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
+  union {
+    struct {
+      vec2f x = {1, 0};
+      vec2f y = {0, 1};
+    };
+    vec2f elems[2];
+  };
 
   mat2f();
   mat2f(const vec2f& x, const vec2f& y);
@@ -800,9 +835,14 @@ struct mat2f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
+  union {
+    struct {
+      vec3f x = {1, 0, 0};
+      vec3f y = {0, 1, 0};
+      vec3f z = {0, 0, 1};
+    };
+    vec3f elems[3];
+  };
 
   mat3f();
   mat3f(const vec3f& x, const vec3f& y, const vec3f& z);
@@ -813,10 +853,15 @@ struct mat3f {
 
 // Small Fixed-size matrices stored in column major format.
 struct mat4f {
-  vec4f x = {1, 0, 0, 0};
-  vec4f y = {0, 1, 0, 0};
-  vec4f z = {0, 0, 1, 0};
-  vec4f w = {0, 0, 0, 1};
+  union {
+    struct {
+      vec4f x = {1, 0, 0, 0};
+      vec4f y = {0, 1, 0, 0};
+      vec4f z = {0, 0, 1, 0};
+      vec4f w = {0, 0, 0, 1};
+    };
+    vec4f elems[4];
+  };
 
   mat4f();
   mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w);
@@ -913,9 +958,14 @@ namespace yocto::math {
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
-  vec2f x = {1, 0};
-  vec2f y = {0, 1};
-  vec2f o = {0, 0};
+  union {
+    struct {
+      vec2f x = {1, 0};
+      vec2f y = {0, 1};
+      vec2f o = {0, 0};
+    };
+    vec2f elems[3];
+  };
 
   frame2f();
   frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
@@ -930,10 +980,15 @@ struct frame2f {
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame3f {
-  vec3f x = {1, 0, 0};
-  vec3f y = {0, 1, 0};
-  vec3f z = {0, 0, 1};
-  vec3f o = {0, 0, 0};
+  union {
+    struct {
+      vec3f x = {1, 0, 0};
+      vec3f y = {0, 1, 0};
+      vec3f z = {0, 0, 1};
+      vec3f o = {0, 0, 0};
+    };
+    vec3f elems[3];
+  };
 
   frame3f();
   frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
@@ -994,14 +1049,21 @@ namespace yocto::math {
 
 // Quaternions to represent rotations
 struct quat4f {
+  union { struct {
   float x = 0;
   float y = 0;
   float z = 0;
   float w = 0;
+  };
+  float elems[4];
+  };
 
   // constructors
   quat4f();
   quat4f(float x, float y, float z, float w);
+
+  float&       operator[](int i);
+  const float& operator[](int i) const;
 };
 
 // Constants
@@ -1866,7 +1928,8 @@ inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 inline vec4f::vec4f() {}
 inline vec4f::vec4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
-inline vec4f::vec4f(const vec3f& v, float w) : x{v[0]}, y{v[1]}, z{v[2]}, w{w} {}
+inline vec4f::vec4f(const vec3f& v, float w)
+    : x{v[0]}, y{v[1]}, z{v[2]}, w{w} {}
 inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
 inline vec4f::operator bool() const { return x || y || z || w; }
 
@@ -1938,8 +2001,12 @@ inline float distance_squared(const vec2f& a, const vec2f& b) {
 }
 
 // Max element and clamp.
-inline vec2f max(const vec2f& a, float b) { return {max(a[0], b), max(a[1], b)}; }
-inline vec2f min(const vec2f& a, float b) { return {min(a[0], b), min(a[1], b)}; }
+inline vec2f max(const vec2f& a, float b) {
+  return {max(a[0], b), max(a[1], b)};
+}
+inline vec2f min(const vec2f& a, float b) {
+  return {min(a[0], b), min(a[1], b)};
+}
 inline vec2f max(const vec2f& a, const vec2f& b) {
   return {max(a[0], b[0]), max(a[1], b[1])};
 }
@@ -1968,7 +2035,9 @@ inline vec2f exp(const vec2f& a) { return {exp(a[0]), exp(a[1])}; };
 inline vec2f log(const vec2f& a) { return {log(a[0]), log(a[1])}; };
 inline vec2f exp2(const vec2f& a) { return {exp2(a[0]), exp2(a[1])}; };
 inline vec2f log2(const vec2f& a) { return {log2(a[0]), log2(a[1])}; };
-inline bool isfinite(const vec2f& a) { return isfinite(a[0]) && isfinite(a[1]); };
+inline bool  isfinite(const vec2f& a) {
+  return isfinite(a[0]) && isfinite(a[1]);
+};
 inline vec2f pow(const vec2f& a, float b) {
   return {pow(a[0], b), pow(a[1], b)};
 };
@@ -2043,7 +2112,8 @@ inline float dot(const vec3f& a, const vec3f& b) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 inline vec3f cross(const vec3f& a, const vec3f& b) {
-  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]};
 }
 
 inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
@@ -2110,11 +2180,17 @@ inline float mean(const vec3f& a) { return sum(a) / 3; }
 
 // Functions applied to std::vector elements
 inline vec3f abs(const vec3f& a) { return {abs(a[0]), abs(a[1]), abs(a[2])}; };
-inline vec3f sqrt(const vec3f& a) { return {sqrt(a[0]), sqrt(a[1]), sqrt(a[2])}; };
+inline vec3f sqrt(const vec3f& a) {
+  return {sqrt(a[0]), sqrt(a[1]), sqrt(a[2])};
+};
 inline vec3f exp(const vec3f& a) { return {exp(a[0]), exp(a[1]), exp(a[2])}; };
 inline vec3f log(const vec3f& a) { return {log(a[0]), log(a[1]), log(a[2])}; };
-inline vec3f exp2(const vec3f& a) { return {exp2(a[0]), exp2(a[1]), exp2(a[2])}; };
-inline vec3f log2(const vec3f& a) { return {log2(a[0]), log2(a[1]), log2(a[2])}; };
+inline vec3f exp2(const vec3f& a) {
+  return {exp2(a[0]), exp2(a[1]), exp2(a[2])};
+};
+inline vec3f log2(const vec3f& a) {
+  return {log2(a[0]), log2(a[1]), log2(a[2])};
+};
 inline vec3f pow(const vec3f& a, float b) {
   return {pow(a[0], b), pow(a[1], b), pow(a[2], b)};
 };
@@ -2239,8 +2315,12 @@ inline vec4f lerp(const vec4f& a, const vec4f& b, const vec4f& u) {
   return a * (1 - u) + b * u;
 }
 
-inline float max(const vec4f& a) { return max(max(max(a[0], a[1]), a[2]), a[3]); }
-inline float min(const vec4f& a) { return min(min(min(a[0], a[1]), a[2]), a[3]); }
+inline float max(const vec4f& a) {
+  return max(max(max(a[0], a[1]), a[2]), a[3]);
+}
+inline float min(const vec4f& a) {
+  return min(min(min(a[0], a[1]), a[2]), a[3]);
+}
 inline float sum(const vec4f& a) { return a[0] + a[1] + a[2] + a[3]; }
 inline float mean(const vec4f& a) { return sum(a) / 4; }
 
@@ -2288,7 +2368,9 @@ inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
       a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
       a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
 }
-inline vec4f quat_conjugate(const vec4f& a) { return {-a[0], -a[1], -a[2], a[3]}; }
+inline vec4f quat_conjugate(const vec4f& a) {
+  return {-a[0], -a[1], -a[2], a[3]};
+}
 inline vec4f quat_inverse(const vec4f& a) {
   return quat_conjugate(a) / dot(a, a);
 }
@@ -2745,9 +2827,12 @@ inline mat3f transpose(const mat3f& a) {
 }
 
 // Matrix adjoints, determinants and inverses.
-inline float determinant(const mat3f& a) { return dot(a[0], cross(a[1], a[2])); }
+inline float determinant(const mat3f& a) {
+  return dot(a[0], cross(a[1], a[2]));
+}
 inline mat3f adjoint(const mat3f& a) {
-  return transpose(mat3f{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
+  return transpose(
+      mat3f{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
 }
 inline mat3f inverse(const mat3f& a) {
   return adjoint(a) * (1 / determinant(a));
@@ -2794,7 +2879,9 @@ inline mat4f& operator*=(mat4f& a, const mat4f& b) { return a = a * b; }
 inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
 
 // Matrix diagonals and transposes.
-inline vec4f diagonal(const mat4f& a) { return {a[0][0], a[1][1], a[2][2], a[3][3]}; }
+inline vec4f diagonal(const mat4f& a) {
+  return {a[0][0], a[1][1], a[2][2], a[3][3]};
+}
 inline mat4f transpose(const mat4f& a) {
   return {
       {a[0][0], a[1][0], a[2][0], a[3][0]},
@@ -2848,7 +2935,7 @@ inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
-inline const vec3f& origin(const frame3f& a) { return a[2]; }
+inline const vec2f& origin(const frame2f& a) { return a[2]; }
 
 // Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b) {
@@ -2929,6 +3016,9 @@ namespace yocto::math {
 inline quat4f::quat4f() : x{0}, y{0}, z{0}, w{1} {}
 inline quat4f::quat4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
+
+inline float& quat4f::operator[](int i) { return (&x)[i]; }
+inline const float& quat4f::operator[](int i) const { return (&x)[i]; }
 
 // Quaternion operatons
 inline quat4f operator+(const quat4f& a, const quat4f& b) {
@@ -3700,12 +3790,18 @@ inline bool distance_check_bbox(
   auto dd = 0.0f;
 
   // For each axis count any excess distance outside box extents
-  if (pos[0] < bbox.min[0]) dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
-  if (pos[0] > bbox.max[0]) dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
-  if (pos[1] < bbox.min[1]) dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
-  if (pos[1] > bbox.max[1]) dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
-  if (pos[2] < bbox.min[2]) dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
-  if (pos[2] > bbox.max[2]) dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
+  if (pos[0] < bbox.min[0])
+    dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
+  if (pos[0] > bbox.max[0])
+    dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
+  if (pos[1] < bbox.min[1])
+    dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
+  if (pos[1] > bbox.max[1])
+    dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
+  if (pos[2] < bbox.min[2])
+    dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
+  if (pos[2] > bbox.max[2])
+    dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
 
   // check distance
   return dd < dist_max * dist_max;
@@ -3729,14 +3825,16 @@ namespace yocto::math {
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a) {
   return {(byte)clamp(int(a[0] * 256), 0, 255),
-      (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255)};
+      (byte)clamp(int(a[1] * 256), 0, 255),
+      (byte)clamp(int(a[2] * 256), 0, 255)};
 }
 inline vec3f byte_to_float(const vec3b& a) {
   return {a[0] / 255.0f, a[1] / 255.0f, a[2] / 255.0f};
 }
 inline vec4b float_to_byte(const vec4f& a) {
   return {(byte)clamp(int(a[0] * 256), 0, 255),
-      (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255),
+      (byte)clamp(int(a[1] * 256), 0, 255),
+      (byte)clamp(int(a[2] * 256), 0, 255),
       (byte)clamp(int(a[3] * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
@@ -3767,14 +3865,15 @@ inline vec3f srgb_to_rgb(const vec3f& srgb) {
   return {srgb_to_rgb(srgb[0]), srgb_to_rgb(srgb[1]), srgb_to_rgb(srgb[2])};
 }
 inline vec4f srgb_to_rgb(const vec4f& srgb) {
-  return {
-      srgb_to_rgb(srgb[0]), srgb_to_rgb(srgb[1]), srgb_to_rgb(srgb[2]), srgb[3]};
+  return {srgb_to_rgb(srgb[0]), srgb_to_rgb(srgb[1]), srgb_to_rgb(srgb[2]),
+      srgb[3]};
 }
 inline vec3f rgb_to_srgb(const vec3f& rgb) {
   return {rgb_to_srgb(rgb[0]), rgb_to_srgb(rgb[1]), rgb_to_srgb(rgb[2])};
 }
 inline vec4f rgb_to_srgb(const vec4f& rgb) {
-  return {rgb_to_srgb(rgb[0]), rgb_to_srgb(rgb[1]), rgb_to_srgb(rgb[2]), rgb[3]};
+  return {
+      rgb_to_srgb(rgb[0]), rgb_to_srgb(rgb[1]), rgb_to_srgb(rgb[2]), rgb[3]};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
@@ -3867,12 +3966,13 @@ inline vec3f xyz_to_rgb(const vec3f& xyz) {
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
   if (xyz == zero3f) return zero3f;
-  return {
-      xyz[0] / (xyz[0] + xyz[1] + xyz[2]), xyz[1] / (xyz[0] + xyz[1] + xyz[2]), xyz[1]};
+  return {xyz[0] / (xyz[0] + xyz[1] + xyz[2]),
+      xyz[1] / (xyz[0] + xyz[1] + xyz[2]), xyz[1]};
 }
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
   if (xyY[1] == 0) return zero3f;
-  return {xyY[0] * xyY[2] / xyY[1], xyY[2], (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
+  return {xyY[0] * xyY[2] / xyY[1], xyY[2],
+      (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
 }
 
 // Convert HSV to RGB
@@ -3930,7 +4030,7 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // x -> (kelvin/100) - 55}
     rgb[0] = (temperature / 100) - 55;
     rgb[0] = 351.97690566805693f + 0.114206453784165f * rgb[0] -
-            40.25366309332127f * log(rgb[0]);
+             40.25366309332127f * log(rgb[0]);
     if (rgb[0] < 0) rgb[0] = 0;
     if (rgb[0] > 255) rgb[0] = 255;
   }
@@ -3943,7 +4043,7 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // x -> (kelvin/100) - 2}
     rgb[1] = (temperature / 100) - 2;
     rgb[1] = -155.25485562709179f - 0.44596950469579133f * rgb[1] +
-            104.49216199393888f * log(rgb[1]);
+             104.49216199393888f * log(rgb[1]);
     if (rgb[1] < 0) rgb[1] = 0;
     if (rgb[1] > 255) rgb[1] = 255;
   } else {
@@ -3954,7 +4054,7 @@ inline vec3f blackbody_to_rgb(float temperature) {
     // x -> (kelvin/100) - 50}
     rgb[1] = (temperature / 100) - 50;
     rgb[1] = 325.4494125711974f + 0.07943456536662342f * rgb[1] -
-            28.0852963507957f * log(rgb[1]);
+             28.0852963507957f * log(rgb[1]);
     if (rgb[1] < 0) rgb[1] = 0;
     if (rgb[1] > 255) rgb[1] = 255;
   }
@@ -3972,7 +4072,7 @@ inline vec3f blackbody_to_rgb(float temperature) {
       // x -> kelvin/100 - 10}
       rgb[2] = (temperature / 100) - 10;
       rgb[2] = -254.76935184120902f + 0.8274096064007395f * rgb[2] +
-              115.67994401066147f * log(rgb[2]);
+               115.67994401066147f * log(rgb[2]);
       if (rgb[2] < 0) rgb[2] = 0;
       if (rgb[2] > 255) rgb[2] = 255;
     }
@@ -4193,8 +4293,8 @@ inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
 // adapeted  stb_perlin.h
 inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
     int octaves, float offset, const vec3i& wrap) {
-  return _stb_perlin_ridge_noise3(
-      p[0], p[1], p[2], lacunarity, gain, offset, octaves, wrap[0], wrap[1], wrap[2]);
+  return _stb_perlin_ridge_noise3(p[0], p[1], p[2], lacunarity, gain, offset,
+      octaves, wrap[0], wrap[1], wrap[2]);
 }
 
 // adapeted  stb_perlin.h
@@ -4418,7 +4518,8 @@ inline vec3f sample_microfacet(float roughness, const vec3f& normal,
     // Section 4.3: reprojection onto hemisphere
     auto Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1 - t1 * t1 - t2 * t2)) * Vh;
     // Section 3.4: transforming the normal back to the ellipsoid configuration
-    auto Ne = normalize(vec3f{alpha_x * Nh[0], alpha_y * Nh[1], max(0.0f, Nh[2])});
+    auto Ne = normalize(
+        vec3f{alpha_x * Nh[0], alpha_y * Nh[1], max(0.0f, Nh[2])});
     // move to world coordinate
     auto local_halfway = Ne;
     return transform_direction(basis, local_halfway);
@@ -4810,7 +4911,7 @@ inline vec3f sample_phasefunction(
     cos_theta = 1 - 2 * rn[1];
   } else {
     auto square = (1 - anisotropy * anisotropy) /
-                   (1 + anisotropy - 2 * anisotropy * rn[1]);
+                  (1 + anisotropy - 2 * anisotropy * rn[1]);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }
@@ -5102,8 +5203,8 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
 
   // pan if necessary
   if (dolly) {
-    auto c  = frame[3] - frame[2] * focus;
-    focus   = max(focus * (1 + dolly), 0.001f);
+    auto c   = frame[3] - frame[2] * focus;
+    focus    = max(focus * (1 + dolly), 0.001f);
     frame[3] = c + frame[2] * focus;
   }
 
