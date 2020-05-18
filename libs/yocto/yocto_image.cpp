@@ -237,7 +237,10 @@ static inline float gamma_linear_to_display(float x, float gamma) {
 // https://en.wikipedia.org/wiki/Rec._709
 static inline float gamma_display_to_linear(
     float x, float gamma, const vec4f& abcd) {
-  auto& [a, b, c, d] = abcd;
+  auto& a = abcd.x;
+  auto& b = abcd.y;
+  auto& c = abcd.z;
+  auto& d = abcd.w;
   if (x < 1 / d) {
     return x / c;
   } else {
@@ -246,7 +249,10 @@ static inline float gamma_display_to_linear(
 };
 static inline float gamma_linear_to_display(
     float x, float gamma, const vec4f& abcd) {
-  auto& [a, b, c, d] = abcd;
+  auto& a = abcd.x;
+  auto& b = abcd.y;
+  auto& c = abcd.z;
+  auto& d = abcd.w;
   if (x < d) {
     return x * c;
   } else {

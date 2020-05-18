@@ -306,7 +306,12 @@ struct vec;
 // One-dimensional vector.
 template <typename T>
 struct vec<T, 1> {
-  T x = 0;
+  union {
+    struct {
+      T x = 0;
+    };
+    T elems[1];
+  };
 
   vec();
   explicit vec(T x);
@@ -321,8 +326,13 @@ struct vec<T, 1> {
 // Two-dimensional vector.
 template <typename T>
 struct vec<T, 2> {
-  T x = 0;
-  T y = 0;
+  union {
+    struct {
+      T x = 0;
+      T y = 0;
+    };
+    T elems[2];
+  };
 
   vec();
   vec(T x, T y);
@@ -338,9 +348,14 @@ struct vec<T, 2> {
 // Three-dimensional vector.
 template <typename T>
 struct vec<T, 3> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
+  union {
+    struct {
+      T x = 0;
+      T y = 0;
+      T z = 0;
+    };
+    T elems[3];
+  };
 
   vec();
   vec(T x, T y, T z);
@@ -357,10 +372,15 @@ struct vec<T, 3> {
 // Four-dimensional vector.
 template <typename T>
 struct vec<T, 4> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
-  T w = 0;
+  union {
+    struct {
+      T x = 0;
+      T y = 0;
+      T z = 0;
+      T w = 0;
+    };
+    T elems[4];
+  };
 
   vec();
   vec(T x, T y, T z, T w);
@@ -580,7 +600,12 @@ struct mat;
 // One-dimensional matrix stored in column major format.
 template <typename T, size_t M>
 struct mat<T, M, 1> {
-  vec<T, M> x = vec<T, M>{0};
+  union {
+    struct {
+      vec<T, M> x = vec<T, M>{0};
+    };
+    vec<T, M> elems[1];
+  };
 
   mat();
   mat(const vec<T, M>& x);
@@ -592,8 +617,13 @@ struct mat<T, M, 1> {
 // Two-dimensional matrix stored in column major format.
 template <typename T, size_t M>
 struct mat<T, M, 2> {
-  vec<T, M> x = vec<T, M>{0};
-  vec<T, M> y = vec<T, M>{0};
+  union {
+    struct {
+      vec<T, M> x = vec<T, M>{0};
+      vec<T, M> y = vec<T, M>{0};
+    };
+    vec<T, M> elems[2];
+  };
 
   mat();
   mat(const vec<T, M>& x, const vec<T, M>& y);
@@ -605,9 +635,14 @@ struct mat<T, M, 2> {
 // Three-dimensional matrix stored in column major format.
 template <typename T, size_t M>
 struct mat<T, M, 3> {
-  vec<T, M> x = vec<T, M>{0};
-  vec<T, M> y = vec<T, M>{0};
-  vec<T, M> z = vec<T, M>{0};
+  union {
+    struct {
+      vec<T, M> x = vec<T, M>{0};
+      vec<T, M> y = vec<T, M>{0};
+      vec<T, M> z = vec<T, M>{0};
+    };
+    vec<T, M> elems[3];
+  };
 
   mat();
   mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z);
@@ -619,10 +654,15 @@ struct mat<T, M, 3> {
 // Four-dimensional matrix stored in column major format.
 template <typename T, size_t M>
 struct mat<T, M, 4> {
-  vec<T, M> x = vec<T, M>{0};
-  vec<T, M> y = vec<T, M>{0};
-  vec<T, M> z = vec<T, M>{0};
-  vec<T, M> w = vec<T, M>{0};
+  union {
+    struct {
+      vec<T, M> x = vec<T, M>{0};
+      vec<T, M> y = vec<T, M>{0};
+      vec<T, M> z = vec<T, M>{0};
+      vec<T, M> w = vec<T, M>{0};
+    };
+    vec<T, M> elems[4];
+  };
 
   mat();
   mat(const vec<T, M>& x, const vec<T, M>& y, const vec<T, M>& z,
@@ -702,8 +742,13 @@ struct frame;
 // One-dimensional frame stored in column major format.
 template <typename T>
 struct frame<T, 1> {
-  vec<T, 1> x = {1};
-  vec<T, 1> o = {0};
+  union {
+    struct {
+      vec<T, 1> x = {1};
+      vec<T, 1> o = {0};
+    };
+    vec<T, 1> elems[2];
+  };
 
   frame();
   frame(const vec<T, 1>& x, const vec<T, 1>& o);
@@ -719,9 +764,14 @@ struct frame<T, 1> {
 // Two-dimensional frame stored in column major format.
 template <typename T>
 struct frame<T, 2> {
-  vec<T, 2> x = {1, 0};
-  vec<T, 2> y = {0, 1};
-  vec<T, 2> o = {0, 0};
+  union {
+    struct {
+      vec<T, 2> x = {1, 0};
+      vec<T, 2> y = {0, 1};
+      vec<T, 2> o = {0, 0};
+    };
+    vec<T, 2> elems[3];
+  };
 
   frame();
   frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o);
@@ -737,10 +787,15 @@ struct frame<T, 2> {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 3> {
-  vec<T, 3> x = {1, 0, 0};
-  vec<T, 3> y = {0, 1, 0};
-  vec<T, 3> z = {0, 0, 1};
-  vec<T, 3> o = {0, 0, 0};
+  union {
+    struct {
+      vec<T, 3> x = {1, 0, 0};
+      vec<T, 3> y = {0, 1, 0};
+      vec<T, 3> z = {0, 0, 1};
+      vec<T, 3> o = {0, 0, 0};
+    };
+    vec<T, 3> elems[4];
+  };
 
   frame();
   frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
@@ -804,10 +859,15 @@ struct quat;
 // Quaternions to represent rotations
 template <typename T>
 struct quat<T, 4> {
-  T x = 0;
-  T y = 0;
-  T z = 0;
-  T w = 0;
+  union {
+    struct {
+      T x = 0;
+      T y = 0;
+      T z = 0;
+      T w = 0;
+    };
+    T elems[4];
+  };
 
   // constructors
   quat();

@@ -786,10 +786,12 @@ static void update_embree_bvh(trc::scene* scene,
     const trace_params&                   params) {
   // scene bvh
   auto escene = scene->embree_bvh;
-  for (auto& [object_id, instance_id] : scene->embree_instances) {
-    auto object    = scene->objects[object_id];
-    auto frame     = scene->objects[instance_id]->frame * object->frame;
-    auto egeometry = rtcGetGeometry(escene, instance_id);
+  for (auto& instance : scene->embree_instances) {
+    auto object_id   = instance.x;
+    auto instance_id = instance.y;
+    auto object      = scene->objects[object_id];
+    auto frame       = scene->objects[instance_id]->frame * object->frame;
+    auto egeometry   = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, object->shape->embree_bvh);
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
@@ -1524,10 +1526,11 @@ static bool intersect_scene_bvh(const trc::scene* scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto [object_id, instance_id] = scene->bvh->primitives[idx];
-        auto object                   = scene->objects[object_id];
-        auto frame   = object->instance->frames[instance_id] * object->frame;
-        auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
+        auto& instance_ = scene->bvh->primitives[idx];
+        auto  object_id = instance_.x, instance_id = instance_.y;
+        auto  object  = scene->objects[object_id];
+        auto  frame   = object->instance->frames[instance_id] * object->frame;
+        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
