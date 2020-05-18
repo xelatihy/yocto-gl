@@ -2031,7 +2031,7 @@ inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
   if constexpr (N == 1) {
     return a.x == b.x;
   } else if constexpr (N == 2) {
-    return a.x == b.x || a.y == b.y;
+    return a.x == b.x && a.y == b.y;
   } else if constexpr (N == 3) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
   } else if constexpr (N == 4) {
