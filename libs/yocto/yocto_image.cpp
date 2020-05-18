@@ -846,7 +846,7 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
       auto normal = vec3f{
           scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
       normal[1] = -normal[1];  // make green pointing up, even if y axis
-                             // points down
+                               // points down
       normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
       norm[{i, j}] = {normal[0], normal[1], normal[2], 1};
     }
@@ -907,7 +907,7 @@ void make_bumps(image<vec4f>& img, const vec2i& size, float scale,
     };
     auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
     auto val  = uv[0] <= 0.5f != uv[1] <= 0.5f ? (1 + sqrt(1 - dist)) / 2
-                                            : (dist * dist) / 2;
+                                              : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
 }
@@ -949,19 +949,20 @@ void make_uvgrid(
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
-    uv[1]     = 1 - uv[1];
+    uv[1]    = 1 - uv[1];
     auto hsv = zero3f;
-    hsv[0]    = (clamp((int)(uv[0] * 8), 0, 7) +
-                (clamp((int)(uv[1] * 8), 0, 7) + 5) % 8 * 8) /
-            64.0f;
+    hsv[0]   = (clamp((int)(uv[0] * 8), 0, 7) +
+                 (clamp((int)(uv[1] * 8), 0, 7) + 5) % 8 * 8) /
+             64.0f;
     auto vuv = uv * 4;
     vuv -= vec2f{(float)(int)vuv[0], (float)(int)vuv[1]};
     auto vc  = vuv[0] <= 0.5f != vuv[1] <= 0.5f;
-    hsv[2]    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    hsv[2]   = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
     auto suv = uv * 16;
     suv -= vec2f{(float)(int)suv[0], (float)(int)suv[1]};
     auto st = 0.01f / 2;
-    auto sc = suv[0] <= st || suv[0] >= 1 - st || suv[1] <= st || suv[1] >= 1 - st;
+    auto sc = suv[0] <= st || suv[0] >= 1 - st || suv[1] <= st ||
+              suv[1] >= 1 - st;
     if (sc) {
       hsv[1] = 0.2f;
       hsv[2] = 0.8f;
@@ -1030,7 +1031,8 @@ image<vec4f> add_border(
   for (auto j = 0; j < img.height(); j++) {
     for (auto i = 0; i < img.width(); i++) {
       auto uv = vec2f{i * scale, j * scale};
-      if (uv[0] < width || uv[1] < width || uv[0] > img.width() * scale - width ||
+      if (uv[0] < width || uv[1] < width ||
+          uv[0] > img.width() * scale - width ||
           uv[1] > img.height() * scale - width) {
         img[{i, j}] = color;
       }
@@ -1633,13 +1635,13 @@ bool is_hdr_filename(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
-            (float*)img.data()))
+    if (!stbi_write_hdr(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
-            (float*)img.data()))
+    if (!save_pfm(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
@@ -1791,13 +1793,13 @@ bool is_hdr_filename(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 3,
-            (float*)img.data()))
+    if (!stbi_write_hdr(
+            filename.c_str(), img.width(), img.height(), 3, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.width(), img.height(), 3,
-            (float*)img.data()))
+    if (!save_pfm(
+            filename.c_str(), img.width(), img.height(), 3, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
@@ -1960,8 +1962,8 @@ bool is_hdr_filename(const std::string& filename) {
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.width(), img.height(), 1,
-            (float*)img.data()))
+    if (!save_pfm(
+            filename.c_str(), img.width(), img.height(), 1, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {

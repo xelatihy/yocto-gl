@@ -704,7 +704,8 @@ inline volume<T>::volume(const vec3i& size, const T& value)
 template <typename T>
 inline volume<T>::volume(const vec3i& size, const T* value)
     : extent{size}
-    , voxels(value, value + (size_t)size[0] * (size_t)size[1] * (size_t)size[2]) {}
+    , voxels(
+          value, value + (size_t)size[0] * (size_t)size[1] * (size_t)size[2]) {}
 
 // size
 template <typename T>

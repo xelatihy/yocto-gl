@@ -149,8 +149,8 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
     auto area = 0.0f;
     if (!ioshape->triangles.empty()) {
       for (auto t : ioshape->triangles)
-        area += triangle_area(ioshape->positions[t[0]], ioshape->positions[t[1]],
-            ioshape->positions[t[2]]);
+        area += triangle_area(ioshape->positions[t[0]],
+            ioshape->positions[t[1]], ioshape->positions[t[2]]);
     } else if (!ioshape->quads.empty()) {
       for (auto q : ioshape->quads)
         area += quad_area(ioshape->positions[q[0]], ioshape->positions[q[1]],
@@ -172,10 +172,10 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
     sio::progress_callback progress_cb) {
   // handle progress
   auto current = 0;
-  auto total = (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
-             (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->subdivs.size() + (int)ioscene->instances.size() +
-             (int)ioscene->objects.size();
+  auto total   = (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
+               (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
+               (int)ioscene->subdivs.size() + (int)ioscene->instances.size() +
+               (int)ioscene->objects.size();
 
   // create scene
   init_scene(glscene);

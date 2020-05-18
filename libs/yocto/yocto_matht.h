@@ -2055,7 +2055,8 @@ inline vec<T, 4>::vec() {}
 template <typename T>
 inline vec<T, 4>::vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
 template <typename T>
-inline vec<T, 4>::vec(const vec<T, 3>& v, T w) : x{v[0]}, y{v[1]}, z{v[2]}, w{w} {}
+inline vec<T, 4>::vec(const vec<T, 3>& v, T w)
+    : x{v[0]}, y{v[1]}, z{v[2]}, w{w} {}
 template <typename T>
 inline vec<T, 4>::vec(T v) : x{v}, y{v}, z{v}, w{v} {}
 template <typename T>
@@ -2377,7 +2378,8 @@ inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
 }
 template <typename T>
 inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
-  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]};
 }
 template <typename T>
 inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -2389,7 +2391,7 @@ template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
   // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v[0]) > abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
-                             : vec<T, 3>{0, -v[2], v[1]};
+                               : vec<T, 3>{0, -v[2], v[1]};
 }
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -3003,7 +3005,8 @@ inline mat<T, N, N> adjoint(const mat<T, N, N>& a) {
   } else if constexpr (N == 2) {
     return {{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
   } else if constexpr (N == 3) {
-    return transpose(mat3f{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
+    return transpose(
+        mat3f{cross(a[1], a[2]), cross(a[2], a[0]), cross(a[0], a[1])});
   } else {
     static_assert(N >= 0 || N <= 3, "matrix size unsupported");
   }
@@ -3655,8 +3658,9 @@ template <typename T, typename T1>
 inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle) {
   auto len = length(axis);
   if (!len) return {0, 0, 0, 1};
-  return vec<T, 4>{sin(angle / 2) * axis[0] / len, sin(angle / 2) * axis[1] / len,
-      sin(angle / 2) * axis[2] / len, cos(angle / 2)};
+  return vec<T, 4>{sin(angle / 2) * axis[0] / len,
+      sin(angle / 2) * axis[1] / len, sin(angle / 2) * axis[2] / len,
+      cos(angle / 2)};
 }
 template <typename T>
 inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
@@ -4098,12 +4102,18 @@ inline bool distance_check_bbox(
   auto dd = 0.0f;
 
   // For each axis count any excess distance outside box extents
-  if (pos[0] < bbox.min[0]) dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
-  if (pos[0] > bbox.max[0]) dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
-  if (pos[1] < bbox.min[1]) dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
-  if (pos[1] > bbox.max[1]) dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
-  if (pos[2] < bbox.min[2]) dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
-  if (pos[2] > bbox.max[2]) dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
+  if (pos[0] < bbox.min[0])
+    dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
+  if (pos[0] > bbox.max[0])
+    dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
+  if (pos[1] < bbox.min[1])
+    dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
+  if (pos[1] > bbox.max[1])
+    dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
+  if (pos[2] < bbox.min[2])
+    dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
+  if (pos[2] > bbox.max[2])
+    dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
 
   // check distance
   return dd < dist_max * dist_max;
@@ -4128,14 +4138,16 @@ namespace yocto::math {
 // Conversion between flots and bytes
 inline vec3b float_to_byte(const vec3f& a) {
   return {(byte)clamp(int(a[0] * 256), 0, 255),
-      (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255)};
+      (byte)clamp(int(a[1] * 256), 0, 255),
+      (byte)clamp(int(a[2] * 256), 0, 255)};
 }
 inline vec3f byte_to_float(const vec3b& a) {
   return {a[0] / 255.0f, a[1] / 255.0f, a[2] / 255.0f};
 }
 inline vec4b float_to_byte(const vec4f& a) {
   return {(byte)clamp(int(a[0] * 256), 0, 255),
-      (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255),
+      (byte)clamp(int(a[1] * 256), 0, 255),
+      (byte)clamp(int(a[2] * 256), 0, 255),
       (byte)clamp(int(a[3] * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
@@ -4215,8 +4227,8 @@ inline vec<T, 3> srgb_to_rgb(const vec<T, 3>& srgb) {
 }
 template <typename T>
 inline vec<T, 4> srgb_to_rgb(const vec<T, 4>& srgb) {
-  return {
-      srgb_to_rgb(srgb[0]), srgb_to_rgb(srgb[1]), srgb_to_rgb(srgb[2]), srgb[3]};
+  return {srgb_to_rgb(srgb[0]), srgb_to_rgb(srgb[1]), srgb_to_rgb(srgb[2]),
+      srgb[3]};
 }
 template <typename T>
 inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb) {
@@ -4224,7 +4236,8 @@ inline vec<T, 3> rgb_to_srgb(const vec<T, 3>& rgb) {
 }
 template <typename T>
 inline vec<T, 4> rgb_to_srgb(const vec<T, 4>& rgb) {
-  return {rgb_to_srgb(rgb[0]), rgb_to_srgb(rgb[1]), rgb_to_srgb(rgb[2]), rgb[3]};
+  return {
+      rgb_to_srgb(rgb[0]), rgb_to_srgb(rgb[1]), rgb_to_srgb(rgb[2]), rgb[3]};
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
@@ -4330,13 +4343,14 @@ inline vec<T, 3> xyz_to_rgb(const vec<T, 3>& xyz) {
 template <typename T>
 inline vec<T, 3> xyz_to_xyY(const vec<T, 3>& xyz) {
   if (xyz == vec<T, 3>{0}) return {0};
-  return {
-      xyz[0] / (xyz[0] + xyz[1] + xyz[2]), xyz[1] / (xyz[0] + xyz[1] + xyz[2]), xyz[1]};
+  return {xyz[0] / (xyz[0] + xyz[1] + xyz[2]),
+      xyz[1] / (xyz[0] + xyz[1] + xyz[2]), xyz[1]};
 }
 template <typename T>
 inline vec<T, 3> xyY_to_xyz(const vec<T, 3>& xyY) {
   if (xyY[1] == 0) return vec<T, 3>{0};
-  return {xyY[0] * xyY[2] / xyY[1], xyY[2], (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
+  return {xyY[0] * xyY[2] / xyY[1], xyY[2],
+      (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
 }
 
 // Convert HSV to RGB
@@ -4398,7 +4412,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // x -> (kelvin/100) - 55}
     rgb[0] = (temperature / 100) - 55;
     rgb[0] = (T)351.97690566805693 + (T)0.114206453784165 * rgb[0] -
-            (T)40.25366309332127 * log(rgb[0]);
+             (T)40.25366309332127 * log(rgb[0]);
     if (rgb[0] < 0) rgb[0] = 0;
     if (rgb[0] > 255) rgb[0] = 255;
   }
@@ -4411,7 +4425,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // x -> (kelvin/100) - 2}
     rgb[1] = (temperature / 100) - 2;
     rgb[1] = (T)-155.25485562709179 - (T)0.44596950469579133 * rgb[1] +
-            (T)104.49216199393888 * log(rgb[1]);
+             (T)104.49216199393888 * log(rgb[1]);
     if (rgb[1] < 0) rgb[1] = 0;
     if (rgb[1] > 255) rgb[1] = 255;
   } else {
@@ -4422,7 +4436,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
     // x -> (kelvin/100) - 50}
     rgb[1] = (temperature / 100) - 50;
     rgb[1] = (T)325.4494125711974 + (T)0.07943456536662342 * rgb[1] -
-            (T)28.0852963507957 * log(rgb[1]);
+             (T)28.0852963507957 * log(rgb[1]);
     if (rgb[1] < 0) rgb[1] = 0;
     if (rgb[1] > 255) rgb[1] = 255;
   }
@@ -4440,7 +4454,7 @@ inline vec<T, 3> blackbody_to_rgb(T temperature) {
       // x -> kelvin/100 - 10}
       rgb[2] = (temperature / 100) - 10;
       rgb[2] = (T)-254.76935184120902 + (T)0.8274096064007395 * rgb[2] +
-              (T)115.67994401066147 * log(rgb[2]);
+               (T)115.67994401066147 * log(rgb[2]);
       if (rgb[2] < 0) rgb[2] = 0;
       if (rgb[2] > 255) rgb[2] = 255;
     }
@@ -4764,7 +4778,8 @@ template <typename T>
 inline T perlin_ridge(const vec<T, 3>& p, T lacunarity, T gain, int octaves,
     T offset, const vec<int, 3>& wrap) {
   return _stb_perlin_ridge_noise3((float)p[0], (float)p[1], (float)p[2],
-      (float)lacunarity, (float)gain, offset, octaves, wrap[0], wrap[1], wrap[2]);
+      (float)lacunarity, (float)gain, offset, octaves, wrap[0], wrap[1],
+      wrap[2]);
 }
 
 // adapeted  stb_perlin.h
@@ -5785,8 +5800,8 @@ inline void update_turntable(frame<T, 3>& frame, T& focus,
 
   // pan if necessary
   if (dolly) {
-    auto c  = frame[3] - frame[2] * focus;
-    focus   = max(focus * (1 + dolly), (T)0.001);
+    auto c   = frame[3] - frame[2] * focus;
+    focus    = max(focus * (1 + dolly), (T)0.001);
     frame[3] = c + frame[2] * focus;
   }
 

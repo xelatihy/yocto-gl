@@ -1122,7 +1122,7 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
   pcamera->frame      = command.frame;
   pcamera->frend      = command.frend;
   pcamera->frame      = inverse((frame3f)pcamera->frame);
-  pcamera->frame[2]    = -pcamera->frame[2];
+  pcamera->frame[2]   = -pcamera->frame[2];
   pcamera->resolution = resolution;
   auto film_aspect =
       (resolution == zero2i) ? 1 : (float)resolution[0] / (float)resolution[1];
@@ -1596,7 +1596,8 @@ inline void make_shape(std::vector<vec3i>& triangles,
     std::vector<vec2f>& texcoords, const vec2i& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
   auto vid = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
-  auto tid = [steps](int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
+  auto tid = [steps](
+                 int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
   positions.resize((steps[0] + 1) * (steps[1] + 1));
   normals.resize((steps[0] + 1) * (steps[1] + 1));
   texcoords.resize((steps[0] + 1) * (steps[1] + 1));
@@ -1626,7 +1627,8 @@ inline void make_sphere(std::vector<vec3i>& triangles,
       [radius](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
         return radius * vec3f{math::cos(pt[0]) * math::sin(pt[1]),
-                            math::sin(pt[0]) * math::sin(pt[1]), math::cos(pt[1])};
+                            math::sin(pt[0]) * math::sin(pt[1]),
+                            math::cos(pt[1])};
       },
       [](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};

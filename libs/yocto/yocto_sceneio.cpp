@@ -1261,7 +1261,8 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
         if (!get_value(ejs, "lookat", lookat)) return false;
-        environment->frame = lookat_frame(lookat[0], lookat[1], lookat[2], true);
+        environment->frame = lookat_frame(
+            lookat[0], lookat[1], lookat[2], true);
       }
     }
   }
@@ -1433,8 +1434,8 @@ static bool save_json_scene(const std::string& filename,
 
   // handle progress
   auto current = 0;
-  auto total = 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
-             (int)scene->textures.size() + (int)scene->instances.size();
+  auto total   = 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
+               (int)scene->textures.size() + (int)scene->instances.size();
   if (progress_cb) progress_cb("save scene", current++, total);
 
   // save yaml file
@@ -1910,10 +1911,11 @@ void print_obj_camera(scn::camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera->name.c_str(), (int)camera->orthographic, camera->film,
       camera->film / camera->aspect, camera->lens, camera->focus,
-      camera->aperture, camera->frame[0][0], camera->frame[0][1], camera->frame[0][2],
-      camera->frame[1][0], camera->frame[1][1], camera->frame[1][2],
-      camera->frame[2][0], camera->frame[2][1], camera->frame[2][2],
-      camera->frame[3][0], camera->frame[3][1], camera->frame[3][2]);
+      camera->aperture, camera->frame[0][0], camera->frame[0][1],
+      camera->frame[0][2], camera->frame[1][0], camera->frame[1][1],
+      camera->frame[1][2], camera->frame[2][0], camera->frame[2][1],
+      camera->frame[2][2], camera->frame[3][0], camera->frame[3][1],
+      camera->frame[3][2]);
 }
 
 }  // namespace yocto::sceneio

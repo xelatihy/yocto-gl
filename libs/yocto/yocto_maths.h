@@ -1049,13 +1049,14 @@ namespace yocto::math {
 
 // Quaternions to represent rotations
 struct quat4f {
-  union { struct {
-  float x = 0;
-  float y = 0;
-  float z = 0;
-  float w = 0;
-  };
-  float elems[4];
+  union {
+    struct {
+      float x = 0;
+      float y = 0;
+      float z = 0;
+      float w = 0;
+    };
+    float elems[4];
   };
 
   // constructors

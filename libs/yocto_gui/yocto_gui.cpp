@@ -174,8 +174,8 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
       texture->linear != linear || texture->mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size[0], size[1],
-        0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size[0],
+        size[1], 0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -674,8 +674,8 @@ void set_image(
 // draw image
 void draw_image(gui::image* image, const image_params& params) {
   assert_error();
-  glViewport(params.framebuffer[0], params.framebuffer[1], params.framebuffer[2],
-      params.framebuffer[3]);
+  glViewport(params.framebuffer[0], params.framebuffer[1],
+      params.framebuffer[2], params.framebuffer[3]);
   glClearColor(params.background[0], params.background[1], params.background[2],
       params.background[3]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1403,16 +1403,16 @@ void draw_object(
   set_uniform(scene->program, "roughness", material->roughness);
   set_uniform(scene->program, "opacity", material->opacity);
   set_uniform(scene->program, "double_sided", (int)params.double_sided);
-  set_uniform(
-      scene->program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(scene->program, "emission_tex", "emission_tex_on",
+      material->emission_tex, 0);
   set_uniform(
       scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
-      scene->program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "specular_tex", "specular_tex_on",
+      material->metallic_tex, 2);
   set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
       material->roughness_tex, 3);
-  set_uniform(
-      scene->program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "opacity_tex", "opacity_tex_on",
+      material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
 
@@ -1630,7 +1630,8 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
 
   // create window
   win->title = title;
-  win->win = glfwCreateWindow(size[0], size[1], title.c_str(), nullptr, nullptr);
+  win->win   = glfwCreateWindow(
+      size[0], size[1], title.c_str(), nullptr, nullptr);
   if (!win->win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win->win);
   glfwSwapInterval(1);  // Enable vsync
@@ -2255,7 +2256,7 @@ bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value) {
   auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     xyz(value) = xyz(color) * exp2(exposure);
-    value[3]    = color[3];
+    value[3]   = color[3];
     return true;
   } else {
     return false;

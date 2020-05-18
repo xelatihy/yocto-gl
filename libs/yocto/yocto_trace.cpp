@@ -125,23 +125,26 @@ static std::pair<vec3f, vec3f> eval_tangents(
     auto t = shape->triangles[element];
     if (shape->texcoords.empty()) {
       return triangle_tangents_fromuv(shape->positions[t[0]],
-          shape->positions[t[1]], shape->positions[t[2]], {0, 0}, {1, 0}, {0, 1});
+          shape->positions[t[1]], shape->positions[t[2]], {0, 0}, {1, 0},
+          {0, 1});
     } else {
       return triangle_tangents_fromuv(shape->positions[t[0]],
-          shape->positions[t[1]], shape->positions[t[2]], shape->texcoords[t[0]],
-          shape->texcoords[t[1]], shape->texcoords[t[2]]);
+          shape->positions[t[1]], shape->positions[t[2]],
+          shape->texcoords[t[0]], shape->texcoords[t[1]],
+          shape->texcoords[t[2]]);
     }
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
     if (shape->texcoords.empty()) {
-      return quad_tangents_fromuv(shape->positions[q[0]], shape->positions[q[1]],
-          shape->positions[q[2]], shape->positions[q[3]], {0, 0}, {1, 0}, {0, 1},
-          {1, 1}, uv);
+      return quad_tangents_fromuv(shape->positions[q[0]],
+          shape->positions[q[1]], shape->positions[q[2]],
+          shape->positions[q[3]], {0, 0}, {1, 0}, {0, 1}, {1, 1}, uv);
     } else {
-      return quad_tangents_fromuv(shape->positions[q[0]], shape->positions[q[1]],
-          shape->positions[q[2]], shape->positions[q[3]], shape->texcoords[q[0]],
-          shape->texcoords[q[1]], shape->texcoords[q[2]], shape->texcoords[q[3]],
-          uv);
+      return quad_tangents_fromuv(shape->positions[q[0]],
+          shape->positions[q[1]], shape->positions[q[2]],
+          shape->positions[q[3]], shape->texcoords[q[0]],
+          shape->texcoords[q[1]], shape->texcoords[q[2]],
+          shape->texcoords[q[3]], uv);
     }
   } else {
     return {zero3f, zero3f};
@@ -290,7 +293,7 @@ static ray3f eval_orthographic_camera(
       camera->film[1] * (image_uv[1] - 0.5f) * scale, camera->lens};
   // point on the lens
   auto e = vec3f{-q[0], -q[1], 0} + vec3f{lens_uv[0] * camera->aperture / 2,
-                                      lens_uv[1] * camera->aperture / 2, 0};
+                                        lens_uv[1] * camera->aperture / 2, 0};
   // point on the focus plane
   auto p = vec3f{-q[0], -q[1], -camera->focus};
   // correct ray direction to account for camera focusing
@@ -458,9 +461,9 @@ static trace_point eval_point(const trc::scene* scene,
               eval_texture(material->coat_tex, texcoord, true)[0];
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true)[0];
-  auto translucency =
-      material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true)[0];
+  auto translucency = material->translucency *
+                      eval_texture(
+                          material->translucency_tex, texcoord, true)[0];
   auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
@@ -571,9 +574,9 @@ static volume_point eval_volume(const trc::scene* scene,
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true)[0];
-  auto translucency =
-      material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true)[0];
+  auto translucency = material->translucency *
+                      eval_texture(
+                          material->translucency_tex, texcoord, true)[0];
   auto thin = material->thin ||
               (!material->transmission && !material->translucency);
   auto scattering = material->scattering *
@@ -1200,28 +1203,29 @@ static void init_bvh(trc::shape* shape, const trace_params& params) {
     }
   } else if (!shape->lines.empty()) {
     for (auto idx = 0; idx < shape->lines.size(); idx++) {
-      auto& l         = shape->lines[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = line_bounds(shape->positions[l[0]], shape->positions[l[1]],
-          shape->radius[l[0]], shape->radius[l[1]]);
+      auto& l             = shape->lines[idx];
+      auto& primitive     = primitives.emplace_back();
+      primitive.bbox      = line_bounds(shape->positions[l[0]],
+          shape->positions[l[1]], shape->radius[l[0]], shape->radius[l[1]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 1};
     }
   } else if (!shape->triangles.empty()) {
     for (auto idx = 0; idx < shape->triangles.size(); idx++) {
-      auto& primitive = primitives.emplace_back();
-      auto& t         = shape->triangles[idx];
-      primitive.bbox  = triangle_bounds(
-          shape->positions[t[0]], shape->positions[t[1]], shape->positions[t[2]]);
+      auto& primitive     = primitives.emplace_back();
+      auto& t             = shape->triangles[idx];
+      primitive.bbox      = triangle_bounds(shape->positions[t[0]],
+          shape->positions[t[1]], shape->positions[t[2]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 2};
     }
   } else if (!shape->quads.empty()) {
     for (auto idx = 0; idx < shape->quads.size(); idx++) {
-      auto& q         = shape->quads[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape->positions[q[0]], shape->positions[q[1]],
-          shape->positions[q[2]], shape->positions[q[3]]);
+      auto& q             = shape->quads[idx];
+      auto& primitive     = primitives.emplace_back();
+      primitive.bbox      = quad_bounds(shape->positions[q[0]],
+          shape->positions[q[1]], shape->positions[q[2]],
+          shape->positions[q[3]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 3};
     }
@@ -1321,8 +1325,8 @@ static void update_bvh(trc::shape* shape, const trace_params& params) {
     bboxes = std::vector<bbox3f>(shape->triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape->triangles[shape->bvh->primitives[idx][0]];
-      bboxes[idx] = triangle_bounds(
-          shape->positions[t[0]], shape->positions[t[1]], shape->positions[t[2]]);
+      bboxes[idx] = triangle_bounds(shape->positions[t[0]],
+          shape->positions[t[1]], shape->positions[t[2]]);
     }
   } else if (!shape->quads.empty()) {
     bboxes = std::vector<bbox3f>(shape->quads.size());
@@ -2302,13 +2306,13 @@ vec4f trace_sample(trc::state* state, const trc::scene* scene,
 // Init a sequence of random number generators.
 void init_state(trc::state* state, const trc::scene* scene,
     const trc::camera* camera, const trace_params& params) {
-  auto image_size =
-      (camera->film[0] > camera->film[1])
-          ? vec2i{params.resolution,
-                (int)round(params.resolution * camera->film[1] / camera->film[0])}
-          : vec2i{
-                (int)round(params.resolution * camera->film[0] / camera->film[1]),
-                params.resolution};
+  auto image_size = (camera->film[0] > camera->film[1])
+                        ? vec2i{params.resolution,
+                              (int)round(params.resolution * camera->film[1] /
+                                         camera->film[0])}
+                        : vec2i{(int)round(params.resolution * camera->film[0] /
+                                           camera->film[1]),
+                              params.resolution};
   state->pixels.assign(image_size, pixel{});
   state->render.assign(image_size, zero4f);
   auto rng = make_rng(1301081);
