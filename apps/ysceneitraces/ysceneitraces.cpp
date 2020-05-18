@@ -89,17 +89,17 @@ struct app_state {
 void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     sio::camera* iocamera, sio::progress_callback print_progress = {}) {
   // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
+  auto current = 0;
+  auto total = (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+             (int)ioscene->instances.size() + (int)ioscene->objects.size();
 
   auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
-      print_progress("convert camera", progress.x++, progress.y);
+      print_progress("convert camera", current++, total);
     auto camera = add_camera(scene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
@@ -112,7 +112,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
-      print_progress("convert texture", progress.x++, progress.y);
+      print_progress("convert texture", current++, total);
     auto texture = add_texture(scene);
     if (!iotexture->colorf.empty()) {
       set_texture(texture, iotexture->colorf);
@@ -130,7 +130,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
-      print_progress("convert material", progress.x++, progress.y);
+      print_progress("convert material", current++, total);
     auto material = add_material(scene);
     set_emission(material, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -158,7 +158,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 
   for (auto iosubdiv : ioscene->subdivs) {
     if (print_progress)
-      print_progress("convert subdiv", progress.x++, progress.y);
+      print_progress("convert subdiv", current++, total);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -166,7 +166,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
-      print_progress("convert shape", progress.x++, progress.y);
+      print_progress("convert shape", current++, total);
     auto shape = add_shape(scene);
     set_points(shape, ioshape->points);
     set_lines(shape, ioshape->lines);
@@ -185,7 +185,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
-      print_progress("convert instance", progress.x++, progress.y);
+      print_progress("convert instance", current++, total);
     auto instance = add_instance(scene);
     set_frames(instance, ioinstance->frames);
     instance_map[ioinstance] = instance;
@@ -193,7 +193,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 
   for (auto ioobject : ioscene->objects) {
     if (print_progress)
-      print_progress("convert object", progress.x++, progress.y);
+      print_progress("convert object", current++, total);
     auto object = add_object(scene);
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
@@ -203,7 +203,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 
   for (auto ioenvironment : ioscene->environments) {
     if (print_progress)
-      print_progress("convert environment", progress.x++, progress.y);
+      print_progress("convert environment", current++, total);
     auto environment = add_environment(scene);
     set_frame(environment, ioenvironment->frame);
     set_emission(environment, ioenvironment->emission,
@@ -211,7 +211,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
   }
 
   // done
-  if (print_progress) print_progress("convert done", progress.x++, progress.y);
+  if (print_progress) print_progress("convert done", current++, total);
 
   // get camera
   camera = camera_map.at(iocamera);
@@ -393,11 +393,11 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && !input.modifier_shift)
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+        dolly = (input.mouse_pos[0] - input.mouse_last[0]) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * app->camera->focus /
               200.0f;
-      pan.x = -pan.x;
+      pan[0] = -pan[0];
       update_turntable(
           app->camera->frame, app->camera->focus, rotate, dolly, pan);
       reset_display(app);

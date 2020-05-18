@@ -162,8 +162,8 @@ bool make_image_preset(
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width();
-      montage_size.y = max(montage_size.y, sub_img.height());
+      montage_size[0] += sub_img.width();
+      montage_size[1] = max(montage_size[1], sub_img.height());
     }
     img      = img::image<vec4f>(montage_size);
     auto pos = 0;
@@ -179,8 +179,8 @@ bool make_image_preset(
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.width();
-      montage_size.y = max(montage_size.y, sub_img.height());
+      montage_size[0] += sub_img.width();
+      montage_size[1] = max(montage_size[1], sub_img.height());
     }
     img      = img::image<vec4f>(montage_size);
     auto pos = 0;

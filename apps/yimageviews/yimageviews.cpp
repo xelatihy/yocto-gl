@@ -144,10 +144,10 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->source.size());
       draw_dragger(win, "mouse", ij);
       auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-          ij.y < app->source.height()) {
-        img_pixel     = app->source[{ij.x, ij.y}];
-        display_pixel = app->display[{ij.x, ij.y}];
+      if (ij[0] >= 0 && ij[0] < app->source.width() && ij[1] >= 0 &&
+          ij[1] < app->source.height()) {
+        img_pixel     = app->source[{ij[0], ij[1]}];
+        display_pixel = app->display[{ij[0], ij[1]}];
       }
       draw_coloredit(win, "image", img_pixel);
       draw_dragger(win, "display", display_pixel);
@@ -166,7 +166,7 @@ int main(int argc, const char* argv[]) {
     }
     if (input.mouse_right && !input.widgets_active) {
       app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+          2, (input.mouse_pos[0] - input.mouse_last[0]) * 0.001f);
     }
   };
 

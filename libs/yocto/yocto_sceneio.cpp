@@ -696,16 +696,16 @@ void tesselate_subdivs(scn::model* scene, progress_callback progress_cb) {
   if (scene->subdivs.empty()) return;
 
   // handle progress
-  auto progress = vec2i{0, (int)scene->subdivs.size()};
+  auto current = 0, total = (int)scene->subdivs.size();
 
   // tesselate subdivs
   for (auto subdiv : scene->subdivs) {
-    if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
+    if (progress_cb) progress_cb("tesseleate subdiv", current++, total);
     tesselate_subdiv(scene, subdiv);
   }
 
   // done
-  if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
+  if (progress_cb) progress_cb("tesseleate subdiv", current++, total);
 }
 
 }  // namespace yocto::sceneio
@@ -1077,8 +1077,8 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  auto current = 0, total = 2;
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // open file
   auto js = json{};
@@ -1221,7 +1221,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       {"", nullptr}};
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // asset
   if (js.contains("asset")) {
@@ -1331,10 +1331,10 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   }
 
   // handle progress
-  progress.y += scene->shapes.size();
-  progress.y += scene->subdivs.size();
-  progress.y += scene->textures.size();
-  progress.y += scene->instances.size();
+  total += scene->shapes.size();
+  total += scene->subdivs.size();
+  total += scene->textures.size();
+  total += scene->instances.size();
 
   // get filename from name
   auto get_filename = [filename](const std::string&       name,
@@ -1352,7 +1352,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   // load shapes
   shape_map.erase("");
   for (auto [name, shape] : shape_map) {
-    if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load shape", current++, total);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
     if (!yshp::load_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
@@ -1362,7 +1362,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   // load subdivs
   subdiv_map.erase("");
   for (auto [name, subdiv] : subdiv_map) {
-    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load subdiv", current++, total);
     auto path = get_filename(name, "subdivs", {".obj"});
     if (!yshp::load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
@@ -1372,7 +1372,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   // load textures
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     auto path = get_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
     if (!load_image(path, texture->colorf, texture->colorb, error))
@@ -1381,7 +1381,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   // load textures
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     auto path = get_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
     if (!load_image(path, texture->scalarf, texture->scalarb, error))
@@ -1390,7 +1390,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   // load instances
   instance_map.erase("");
   for (auto [name, instance] : instance_map) {
-    if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load instance", current++, total);
     auto path = get_filename(name, "instances", {".ply"});
     if (!load_instance(path, instance->frames, error)) return dependent_error();
   }
@@ -1403,7 +1403,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   trim_memory(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
   return true;
 }
 
@@ -1432,10 +1432,10 @@ static bool save_json_scene(const std::string& filename,
   };
 
   // handle progress
-  auto progress = vec2i{
-      0, 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
-             (int)scene->textures.size() + (int)scene->instances.size()};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto current = 0;
+  auto total = 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
+             (int)scene->textures.size() + (int)scene->instances.size();
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save yaml file
   auto js = json::object();
@@ -1522,7 +1522,7 @@ static bool save_json_scene(const std::string& filename,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save json
   if (!save_json(filename, js, error)) return false;
@@ -1536,7 +1536,7 @@ static bool save_json_scene(const std::string& filename,
 
   // save shapes
   for (auto shape : scene->shapes) {
-    if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save shape", current++, total);
     auto path = get_filename(shape->name, "shapes", ".ply");
     if (!yshp::save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
@@ -1546,7 +1546,7 @@ static bool save_json_scene(const std::string& filename,
 
   // save subdivs
   for (auto subdiv : scene->subdivs) {
-    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save subdiv", current++, total);
     auto path = get_filename(subdiv->name, "subdivs", ".obj");
     if (!yshp::save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
@@ -1556,14 +1556,14 @@ static bool save_json_scene(const std::string& filename,
 
   // save instances
   for (auto instance : scene->instances) {
-    if (progress_cb) progress_cb("save instance", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save instance", current++, total);
     auto path = get_filename(instance->name, "instances", ".ply");
     if (!save_instance(path, instance->frames, error)) return dependent_error();
   }
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", current++, total);
     auto path = get_filename(texture->name, "textures",
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
@@ -1577,7 +1577,7 @@ static bool save_json_scene(const std::string& filename,
   }
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save done", current++, total);
   return true;
 }
 
@@ -1601,8 +1601,8 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  auto current = 0, total = 2;
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // load obj
   auto obj_guard = std::make_unique<obj::model>();
@@ -1610,7 +1610,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // convert cameras
   for (auto ocam : obj->cameras) {
@@ -1732,7 +1732,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   }
 
   // handle progress
-  progress.y += (int)scene->textures.size();
+  total += (int)scene->textures.size();
 
   // get filename from name
   auto get_filename = [filename](const std::string& name) {
@@ -1742,7 +1742,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   // load textures
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(
             get_filename(name), texture->colorf, texture->colorb, error))
       return dependent_error();
@@ -1751,7 +1751,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   // load textures
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(
             get_filename(name), texture->scalarf, texture->scalarb, error))
       return dependent_error();
@@ -1764,7 +1764,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   add_materials(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
   return true;
 }
 
@@ -1780,8 +1780,8 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2 + (int)scene->textures.size()};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto current = 0, total = 2 + (int)scene->textures.size();
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   auto obj_guard = std::make_unique<obj::model>();
   auto obj       = obj_guard.get();
@@ -1874,7 +1874,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save obj
   if (!save_obj(filename, obj, error)) return false;
@@ -1888,7 +1888,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", current++, total);
     auto path = get_filename(texture->name, "textures",
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
@@ -1902,7 +1902,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", current++, total);
   return true;
 }
 
@@ -1926,8 +1926,8 @@ namespace yocto::sceneio {
 static bool load_ply_scene(const std::string& filename, scn::model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
   // handle progress
-  auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  auto current = 0, total = 1;
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // load ply mesh
   auto shape = add_shape(scene);
@@ -1946,7 +1946,7 @@ static bool load_ply_scene(const std::string& filename, scn::model* scene,
   add_materials(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
   return true;
 }
 
@@ -1956,8 +1956,8 @@ static bool save_ply_scene(const std::string& filename, const scn::model* scene,
     throw std::runtime_error{filename + ": empty shape"};
 
   // handle progress
-  auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto current = 0, total = 1;
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save shape
   auto shape = scene->shapes.front();
@@ -1967,7 +1967,7 @@ static bool save_ply_scene(const std::string& filename, const scn::model* scene,
     return false;
 
   // done
-  if (progress_cb) progress_cb("save done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save done", current++, total);
   return true;
 }
 
@@ -1995,8 +1995,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 3};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  auto current = 0, total = 3;
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // load gltf
   auto params = cgltf_options{};
@@ -2008,7 +2008,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       data, cgltf_free};
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // load buffers
   auto dirname = sfs::path(filename).parent_path().string();
@@ -2018,7 +2018,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     return read_error();
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // convert asset
   {
@@ -2327,12 +2327,12 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   }
 
   // handle progress
-  progress.y += (int)scene->textures.size();
+  total += (int)scene->textures.size();
 
   // load texture
   ctexture_map.erase("");
   for (auto [path, texture] : ctexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(sfs::path(filename).parent_path() / path, texture->colorf,
             texture->colorb, error))
       return dependent_error();
@@ -2341,7 +2341,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   // load texture
   cotexture_map.erase("");
   for (auto [path, textures] : cotexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     auto color_opacityf = img::image<vec4f>{};
     auto color_opacityb = img::image<vec4b>{};
     if (!load_image(sfs::path(filename).parent_path() / path, color_opacityf,
@@ -2380,7 +2380,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   // load texture
   mrtexture_map.erase("");
   for (auto [path, textures] : mrtexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     auto metallic_roughnessf = img::image<vec3f>{};
     auto metallic_roughnessb = img::image<vec3b>{};
     if (!load_image(sfs::path(filename).parent_path() / path,
@@ -2444,7 +2444,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   }
 
   // load done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
   return true;
 }
 
@@ -2464,8 +2464,8 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  auto current = 0, total = 2;
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // load pbrt
   auto pbrt_guard = std::make_unique<ypbrt::model>();
@@ -2473,7 +2473,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   if (!load_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
 
   // convert cameras
   for (auto pcamera : pbrt->cameras) {
@@ -2581,7 +2581,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   }
 
   // handle progress
-  progress.y += (int)scene->textures.size();
+  total += (int)scene->textures.size();
 
   // get filename from name
   auto get_filename = [filename](const std::string& name) {
@@ -2591,7 +2591,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   // load texture
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(
             get_filename(name), texture->colorf, texture->colorb, error))
       return dependent_error();
@@ -2600,7 +2600,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   // load texture
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(
             get_filename(name), texture->scalarf, texture->scalarb, error))
       return dependent_error();
@@ -2609,7 +2609,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   // load alpha
   atexture_map.erase("");
   for (auto [name, texture] : atexture_map) {
-    if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("load texture", current++, total);
     if (!load_image(
             get_filename(name), texture->scalarf, texture->scalarb, error))
       return dependent_error();
@@ -2624,7 +2624,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   add_materials(scene);
 
   // done
-  if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("load scene", current++, total);
   return true;
 }
 
@@ -2638,8 +2638,8 @@ static bool save_pbrt_scene(const std::string& filename,
   };
 
   // handle progress
-  auto progress = vec2i{0, 2};
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  auto current = 0, total = 2;
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save pbrt
   auto pbrt_guard = std::make_unique<ypbrt::model>();
@@ -2698,13 +2698,13 @@ static bool save_pbrt_scene(const std::string& filename,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", current++, total);
 
   // save pbrt
   if (!save_pbrt(filename, pbrt, error)) return false;
 
   // handle progress
-  progress.y += (int)scene->shapes.size() + (int)scene->textures.size();
+  total += (int)scene->shapes.size() + (int)scene->textures.size();
 
   // get filename from name
   auto get_filename = [filename](const std::string& name,
@@ -2715,7 +2715,7 @@ static bool save_pbrt_scene(const std::string& filename,
 
   // save textures
   for (auto texture : scene->textures) {
-    if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("save texture", current++, total);
     auto path = get_filename(texture->name, "textures",
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
@@ -2729,7 +2729,7 @@ static bool save_pbrt_scene(const std::string& filename,
   }
 
   // done
-  if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
+  if (progress_cb) progress_cb("save scene", current++, total);
   return true;
 }
 

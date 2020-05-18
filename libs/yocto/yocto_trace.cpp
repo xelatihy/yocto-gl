@@ -1242,11 +1242,11 @@ static void init_bvh(trc::shape* shape, const trace_params& params) {
 void init_bvh(trc::scene* scene, const trace_params& params,
     progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{0, 1 + (int)scene->shapes.size()};
+  auto current = 0, total = (int)scene->shapes.size();
 
   // shapes
   for (auto idx = 0; idx < scene->shapes.size(); idx++) {
-    if (progress_cb) progress_cb("build shape bvh", progress.x++, progress.y);
+    if (progress_cb) progress_cb("build shape bvh", current++, total);
     init_bvh(scene->shapes[idx], params);
   }
 
@@ -1260,7 +1260,7 @@ void init_bvh(trc::scene* scene, const trace_params& params,
 #endif
 
   // handle progress
-  if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
+  if (progress_cb) progress_cb("build scene bvh", current++, total);
 
   // instance bboxes
   auto primitives            = std::vector<bvh_primitive>{};
@@ -1293,7 +1293,7 @@ void init_bvh(trc::scene* scene, const trace_params& params,
   }
 
   // handle progress
-  if (progress_cb) progress_cb("build bvh", progress.x++, progress.y);
+  if (progress_cb) progress_cb("build bvh", current++, total);
 }
 
 static void update_bvh(trc::shape* shape, const trace_params& params) {
@@ -2323,8 +2323,8 @@ trc::light* add_light(trc::scene* scene);
 // Init trace lights
 void init_lights(trc::scene* scene, progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{0, 1};
-  if (progress_cb) progress_cb("build light", progress.x++, progress.y);
+  auto current = 0, total = 1;
+  if (progress_cb) progress_cb("build light", current++, total);
 
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
@@ -2333,7 +2333,7 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
     if (object->material->emission == zero3f) continue;
     auto shape = object->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
-    if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
+    if (progress_cb) progress_cb("build light", current++, ++total);
     if (!shape->triangles.empty()) {
       shape->elements_cdf = std::vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
@@ -2362,7 +2362,7 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
-    if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
+    if (progress_cb) progress_cb("build light", current++, ++total);
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
@@ -2384,7 +2384,7 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
   }
 
   // handle progress
-  if (progress_cb) progress_cb("build light", progress.x++, progress.y);
+  if (progress_cb) progress_cb("build light", current++, total);
 }
 
 using std::atomic;

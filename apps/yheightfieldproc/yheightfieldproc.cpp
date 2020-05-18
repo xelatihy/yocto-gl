@@ -59,16 +59,16 @@ int main(int argc, const char* argv[]) {
       "yheightfieldproc", "Makes a mesh from a heightfield");
   add_option(cli, "--height,-h", height, "Height scale");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
-  add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
-  add_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
-  add_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
-  add_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
-  add_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
-  add_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
+  add_option(cli, "--rotatex,-rx", rotate[0], "Rotate around x axis");
+  add_option(cli, "--rotatey,-ry", rotate[1], "Rotate around y axis");
+  add_option(cli, "--rotatez,-rz", rotate[2], "Rotate around z axis");
+  add_option(cli, "--translatex,-tx", translate[0], "Translate along x axis");
+  add_option(cli, "--translatey,-ty", translate[1], "Translate along y axis");
+  add_option(cli, "--translatez,-tz", translate[2], "Translate along z axis");
   add_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
-  add_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
-  add_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
-  add_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
+  add_option(cli, "--scalex,-sx", scale[0], "Scale along x axis");
+  add_option(cli, "--scaley,-sy", scale[1], "Scale along y axis");
+  add_option(cli, "--scalez,-sz", scale[2], "Scale along z axis");
   add_option(cli, "--info,-i", info, "print mesh info");
   add_option(cli, "--output,-o", output, "output mesh");
   add_option(cli, "mesh", filename, "input heightfield", true);
@@ -120,9 +120,9 @@ int main(int argc, const char* argv[]) {
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     cli::print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
-                 rotation_frame({1, 0, 0}, radians(rotate.x)) *
-                 rotation_frame({0, 0, 1}, radians(rotate.z)) *
-                 rotation_frame({0, 1, 0}, radians(rotate.y));
+                 rotation_frame({1, 0, 0}, radians(rotate[0])) *
+                 rotation_frame({0, 0, 1}, radians(rotate[2])) *
+                 rotation_frame({0, 1, 0}, radians(rotate[1]));
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));

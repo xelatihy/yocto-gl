@@ -171,11 +171,11 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
     gui::camera*& glcamera, sio::camera* iocamera,
     sio::progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
+  auto current = 0;
+  auto total = (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
              (int)ioscene->subdivs.size() + (int)ioscene->instances.size() +
-             (int)ioscene->objects.size()};
+             (int)ioscene->objects.size();
 
   // create scene
   init_scene(glscene);
@@ -184,7 +184,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   auto camera_map     = std::unordered_map<sio::camera*, gui::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
-    if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert camera", current++, total);
     auto camera = add_camera(glscene);
     set_frame(camera, iocamera->frame);
     set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film);
@@ -196,7 +196,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   auto texture_map     = std::unordered_map<sio::texture*, gui::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
-    if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert texture", current++, total);
     auto gltexture = add_texture(glscene);
     if (!iotexture->colorf.empty()) {
       set_texture(gltexture, iotexture->colorf);
@@ -214,7 +214,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   auto material_map     = std::unordered_map<sio::material*, gui::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
-    if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert material", current++, total);
     auto glmaterial = add_material(glscene);
     set_emission(glmaterial, iomaterial->emission,
         texture_map.at(iomaterial->emission_tex));
@@ -235,7 +235,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert subdiv", current++, total);
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
@@ -243,7 +243,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   auto shape_map     = std::unordered_map<sio::shape*, gui::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
-    if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert shape", current++, total);
     auto glshape = add_shape(glscene);
     set_positions(glshape, ioshape->positions);
     set_normals(glshape, ioshape->normals);
@@ -261,7 +261,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   auto instance_map     = std::unordered_map<sio::instance*, gui::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
-    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert instance", current++, total);
     auto glinstance = add_instance(glscene);
     set_frames(glinstance, ioinstance->frames);
     instance_map[ioinstance] = glinstance;
@@ -269,7 +269,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
 
   // shapes
   for (auto ioobject : ioscene->objects) {
-    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
+    if (progress_cb) progress_cb("convert object", current++, total);
     auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
@@ -278,7 +278,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // done
-  if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
+  if (progress_cb) progress_cb("convert done", current++, total);
 
   // get cmmera
   glcamera = camera_map.at(iocamera);

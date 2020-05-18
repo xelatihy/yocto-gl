@@ -116,9 +116,9 @@ void compute_stats(
     stats.min = min(stats.min, p);
     stats.max = max(stats.max, p);
     stats.average += p;
-    stats.histogram[(int)(clamp(p.x / max_histo, 0.f, 1.f) * 255)].x += 1;
-    stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
-    stats.histogram[(int)(clamp(p.z / max_histo, 0.f, 1.f) * 255)].z += 1;
+    stats.histogram[(int)(clamp(p[0] / max_histo, 0.f, 1.f) * 255)][0] += 1;
+    stats.histogram[(int)(clamp(p[1] / max_histo, 0.f, 1.f) * 255)][1] += 1;
+    stats.histogram[(int)(clamp(p[2] / max_histo, 0.f, 1.f) * 255)][2] += 1;
   }
   auto num_pixels = (size_t)img.width() * (size_t)img.height();
   for (auto& v : stats.histogram) v /= num_pixels;
@@ -245,10 +245,10 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
         app->glparams.scale, app->source.size());
     draw_dragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < app->source.width() && ij.y >= 0 &&
-        ij.y < app->source.height()) {
-      img_pixel     = app->source[{ij.x, ij.y}];
-      display_pixel = app->display[{ij.x, ij.y}];
+    if (ij[0] >= 0 && ij[0] < app->source.width() && ij[1] >= 0 &&
+        ij[1] < app->source.height()) {
+      img_pixel     = app->source[{ij[0], ij[1]}];
+      display_pixel = app->display[{ij[0], ij[1]}];
     }
     draw_coloredit(win, "image", img_pixel);
     draw_dragger(win, "display", display_pixel);
@@ -338,7 +338,7 @@ int main(int argc, const char* argv[]) {
     }
     if (input.mouse_right && !input.widgets_active) {
       app->glparams.scale *= powf(
-          2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+          2, (input.mouse_pos[0] - input.mouse_last[0]) * 0.001f);
     }
   };
   callbacks.drop_cb = [apps](gui::window*                 win,
