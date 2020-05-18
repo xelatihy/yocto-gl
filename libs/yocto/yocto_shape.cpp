@@ -68,10 +68,10 @@ std::vector<vec3f> compute_tangents(
   auto tangents = std::vector<vec3f>{positions.size()};
   for (auto& tangent : tangents) tangent = zero3f;
   for (auto& l : lines) {
-    auto tangent = line_tangent(positions[l.x], positions[l.y]);
-    auto length  = line_length(positions[l.x], positions[l.y]);
-    tangents[l.x] += tangent * length;
-    tangents[l.y] += tangent * length;
+    auto tangent = line_tangent(positions[l[0]], positions[l[1]]);
+    auto length  = line_length(positions[l[0]], positions[l[1]]);
+    tangents[l[0]] += tangent * length;
+    tangents[l[1]] += tangent * length;
   }
   for (auto& tangent : tangents) tangent = normalize(tangent);
   return tangents;
@@ -84,11 +84,11 @@ std::vector<vec3f> compute_normals(
   for (auto& normal : normals) normal = zero3f;
   for (auto& t : triangles) {
     auto normal = triangle_normal(
-        positions[t.x], positions[t.y], positions[t.z]);
-    auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    normals[t.x] += normal * area;
-    normals[t.y] += normal * area;
-    normals[t.z] += normal * area;
+        positions[t[0]], positions[t[1]], positions[t[2]]);
+    auto area = triangle_area(positions[t[0]], positions[t[1]], positions[t[2]]);
+    normals[t[0]] += normal * area;
+    normals[t[1]] += normal * area;
+    normals[t[2]] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
   return normals;
@@ -101,13 +101,13 @@ std::vector<vec3f> compute_normals(
   for (auto& normal : normals) normal = zero3f;
   for (auto& q : quads) {
     auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
     auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
+    normals[q[0]] += normal * area;
+    normals[q[1]] += normal * area;
+    normals[q[2]] += normal * area;
+    if (q[2] != q[3]) normals[q[3]] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
   return normals;
@@ -121,10 +121,10 @@ void update_tangents(std::vector<vec3f>& tangents,
   }
   for (auto& tangent : tangents) tangent = zero3f;
   for (auto& l : lines) {
-    auto tangent = line_tangent(positions[l.x], positions[l.y]);
-    auto length  = line_length(positions[l.x], positions[l.y]);
-    tangents[l.x] += tangent * length;
-    tangents[l.y] += tangent * length;
+    auto tangent = line_tangent(positions[l[0]], positions[l[1]]);
+    auto length  = line_length(positions[l[0]], positions[l[1]]);
+    tangents[l[0]] += tangent * length;
+    tangents[l[1]] += tangent * length;
   }
   for (auto& tangent : tangents) tangent = normalize(tangent);
 }
@@ -138,11 +138,11 @@ void update_normals(std::vector<vec3f>& normals,
   for (auto& normal : normals) normal = zero3f;
   for (auto& t : triangles) {
     auto normal = triangle_normal(
-        positions[t.x], positions[t.y], positions[t.z]);
-    auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    normals[t.x] += normal * area;
-    normals[t.y] += normal * area;
-    normals[t.z] += normal * area;
+        positions[t[0]], positions[t[1]], positions[t[2]]);
+    auto area = triangle_area(positions[t[0]], positions[t[1]], positions[t[2]]);
+    normals[t[0]] += normal * area;
+    normals[t[1]] += normal * area;
+    normals[t[2]] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
 }
@@ -156,13 +156,13 @@ void update_normals(std::vector<vec3f>& normals,
   for (auto& normal : normals) normal = zero3f;
   for (auto& q : quads) {
     auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
     auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
+    normals[q[0]] += normal * area;
+    normals[q[1]] += normal * area;
+    normals[q[2]] += normal * area;
+    if (q[2] != q[3]) normals[q[3]] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
 }
@@ -178,10 +178,10 @@ std::vector<vec4f> compute_tangent_spaces(const std::vector<vec3i>& triangles,
   auto tangu = std::vector<vec3f>(positions.size(), zero3f);
   auto tangv = std::vector<vec3f>(positions.size(), zero3f);
   for (auto t : triangles) {
-    auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
-        positions[t.z], texcoords[t.x], texcoords[t.y], texcoords[t.z]);
-    for (auto vid : {t.x, t.y, t.z}) tangu[vid] += normalize(tutv.first);
-    for (auto vid : {t.x, t.y, t.z}) tangv[vid] += normalize(tutv.second);
+    auto tutv = triangle_tangents_fromuv(positions[t[0]], positions[t[1]],
+        positions[t[2]], texcoords[t[0]], texcoords[t[1]], texcoords[t[2]]);
+    for (auto vid : {t[0], t[1], t[2]}) tangu[vid] += normalize(tutv.first);
+    for (auto vid : {t[0], t[1], t[2]}) tangv[vid] += normalize(tutv.second);
   }
   for (auto& t : tangu) t = normalize(t);
   for (auto& t : tangv) t = normalize(t);
@@ -191,7 +191,7 @@ std::vector<vec4f> compute_tangent_spaces(const std::vector<vec3i>& triangles,
   for (auto i = 0; i < positions.size(); i++) {
     tangu[i] = orthonormalize(tangu[i], normals[i]);
     auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-    tangent_spaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
+    tangent_spaces[i] = {tangu[i][0], tangu[i][1], tangu[i][2], s};
   }
   return tangent_spaces;
 }
@@ -205,17 +205,17 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_skinning(
   auto skinned_normals   = std::vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
     skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
+        transform_point(xforms[joints[i][0]], positions[i]) * weights[i][0] +
+        transform_point(xforms[joints[i][1]], positions[i]) * weights[i][1] +
+        transform_point(xforms[joints[i][2]], positions[i]) * weights[i][2] +
+        transform_point(xforms[joints[i][3]], positions[i]) * weights[i][3];
   }
   for (auto i = 0; i < normals.size(); i++) {
     skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
+        transform_direction(xforms[joints[i][0]], normals[i]) * weights[i][0] +
+        transform_direction(xforms[joints[i][1]], normals[i]) * weights[i][1] +
+        transform_direction(xforms[joints[i][2]], normals[i]) * weights[i][2] +
+        transform_direction(xforms[joints[i][3]], normals[i]) * weights[i][3]);
   }
   return {skinned_positions, skinned_normals};
 }
@@ -228,10 +228,10 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
   auto skinned_positions = std::vector<vec3f>{positions.size()};
   auto skinned_normals   = std::vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
+    auto xform = xforms[joints[i][0]] * weights[i][0] +
+                 xforms[joints[i][1]] * weights[i][1] +
+                 xforms[joints[i][2]] * weights[i][2] +
+                 xforms[joints[i][3]] * weights[i][3];
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -249,17 +249,17 @@ void update_skinning(std::vector<vec3f>& skinned_positions,
   }
   for (auto i = 0; i < positions.size(); i++) {
     skinned_positions[i] =
-        transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
-        transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
-        transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
-        transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
+        transform_point(xforms[joints[i][0]], positions[i]) * weights[i][0] +
+        transform_point(xforms[joints[i][1]], positions[i]) * weights[i][1] +
+        transform_point(xforms[joints[i][2]], positions[i]) * weights[i][2] +
+        transform_point(xforms[joints[i][3]], positions[i]) * weights[i][3];
   }
   for (auto i = 0; i < normals.size(); i++) {
     skinned_normals[i] = normalize(
-        transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-        transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-        transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-        transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
+        transform_direction(xforms[joints[i][0]], normals[i]) * weights[i][0] +
+        transform_direction(xforms[joints[i][1]], normals[i]) * weights[i][1] +
+        transform_direction(xforms[joints[i][2]], normals[i]) * weights[i][2] +
+        transform_direction(xforms[joints[i][3]], normals[i]) * weights[i][3]);
   }
 }
 
@@ -273,10 +273,10 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
     throw std::out_of_range("arrays should be the same size");
   }
   for (auto i = 0; i < positions.size(); i++) {
-    auto xform = xforms[joints[i].x] * weights[i].x +
-                 xforms[joints[i].y] * weights[i].y +
-                 xforms[joints[i].z] * weights[i].z +
-                 xforms[joints[i].w] * weights[i].w;
+    auto xform = xforms[joints[i][0]] * weights[i][0] +
+                 xforms[joints[i][1]] * weights[i][1] +
+                 xforms[joints[i][2]] * weights[i][2] +
+                 xforms[joints[i][3]] * weights[i][3];
     skinned_positions[i] = transform_point(xform, positions[i]);
     skinned_normals[i]   = normalize(transform_direction(xform, normals[i]));
   }
@@ -298,17 +298,17 @@ std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals) {
 // Flip face orientation
 std::vector<vec3i> flip_triangles(const std::vector<vec3i>& triangles) {
   auto flipped = triangles;
-  for (auto& t : flipped) swap(t.y, t.z);
+  for (auto& t : flipped) swap(t[1], t[2]);
   return flipped;
 }
 std::vector<vec4i> flip_quads(const std::vector<vec4i>& quads) {
   auto flipped = quads;
   for (auto& q : flipped) {
-    if (q.z != q.w) {
-      swap(q.y, q.w);
+    if (q[2] != q[3]) {
+      swap(q[1], q[3]);
     } else {
-      swap(q.y, q.z);
-      q.w = q.z;
+      swap(q[1], q[2]);
+      q[3] = q[2];
     }
   }
   return flipped;
@@ -320,20 +320,20 @@ std::vector<vec3f> align_vertices(
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
-  switch (alignment.x) {
-    case 1: offset.x = bounds.min.x; break;
-    case 2: offset.x = (bounds.min.x + bounds.max.x) / 2; break;
-    case 3: offset.x = bounds.max.x; break;
+  switch (alignment[0]) {
+    case 1: offset[0] = bounds.min[0]; break;
+    case 2: offset[0] = (bounds.min[0] + bounds.max[0]) / 2; break;
+    case 3: offset[0] = bounds.max[0]; break;
   }
-  switch (alignment.y) {
-    case 1: offset.y = bounds.min.y; break;
-    case 2: offset.y = (bounds.min.y + bounds.max.y) / 2; break;
-    case 3: offset.y = bounds.max.y; break;
+  switch (alignment[1]) {
+    case 1: offset[1] = bounds.min[1]; break;
+    case 2: offset[1] = (bounds.min[1] + bounds.max[1]) / 2; break;
+    case 3: offset[1] = bounds.max[1]; break;
   }
-  switch (alignment.z) {
-    case 1: offset.z = bounds.min.z; break;
-    case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
-    case 3: offset.z = bounds.max.z; break;
+  switch (alignment[2]) {
+    case 1: offset[2] = bounds.min[2]; break;
+    case 2: offset[2] = (bounds.min[2] + bounds.max[2]) / 2; break;
+    case 3: offset[2] = bounds.max[2]; break;
   }
   auto aligned = positions;
   for (auto& p : aligned) p -= offset;
@@ -351,40 +351,40 @@ namespace yocto::shape {
 edge_map make_edge_map(const std::vector<vec3i>& triangles) {
   auto emap = edge_map{};
   for (auto& t : triangles) {
-    insert_edge(emap, {t.x, t.y});
-    insert_edge(emap, {t.y, t.z});
-    insert_edge(emap, {t.z, t.x});
+    insert_edge(emap, {t[0], t[1]});
+    insert_edge(emap, {t[1], t[2]});
+    insert_edge(emap, {t[2], t[0]});
   }
   return emap;
 }
 edge_map make_edge_map(const std::vector<vec4i>& quads) {
   auto emap = edge_map{};
   for (auto& q : quads) {
-    insert_edge(emap, {q.x, q.y});
-    insert_edge(emap, {q.y, q.z});
-    if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-    insert_edge(emap, {q.w, q.x});
+    insert_edge(emap, {q[0], q[1]});
+    insert_edge(emap, {q[1], q[2]});
+    if (q[2] != q[3]) insert_edge(emap, {q[2], q[3]});
+    insert_edge(emap, {q[3], q[0]});
   }
   return emap;
 }
 void insert_edges(edge_map& emap, const std::vector<vec3i>& triangles) {
   for (auto& t : triangles) {
-    insert_edge(emap, {t.x, t.y});
-    insert_edge(emap, {t.y, t.z});
-    insert_edge(emap, {t.z, t.x});
+    insert_edge(emap, {t[0], t[1]});
+    insert_edge(emap, {t[1], t[2]});
+    insert_edge(emap, {t[2], t[0]});
   }
 }
 void insert_edges(edge_map& emap, const std::vector<vec4i>& quads) {
   for (auto& q : quads) {
-    insert_edge(emap, {q.x, q.y});
-    insert_edge(emap, {q.y, q.z});
-    if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-    insert_edge(emap, {q.w, q.x});
+    insert_edge(emap, {q[0], q[1]});
+    insert_edge(emap, {q[1], q[2]});
+    if (q[2] != q[3]) insert_edge(emap, {q[2], q[3]});
+    insert_edge(emap, {q[3], q[0]});
   }
 }
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge) {
-  auto es = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
+  auto es = edge[0] < edge[1] ? edge : vec2i{edge[1], edge[0]};
   auto it = emap.index.find(es);
   if (it == emap.index.end()) {
     auto idx = (int)emap.edges.size();
@@ -402,7 +402,7 @@ int insert_edge(edge_map& emap, const vec2i& edge) {
 int num_edges(const edge_map& emap) { return emap.edges.size(); }
 // Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge) {
-  auto es       = edge.x < edge.y ? edge : vec2i{edge.y, edge.x};
+  auto es       = edge[0] < edge[1] ? edge : vec2i{edge[1], edge[0]};
   auto iterator = emap.index.find(es);
   if (iterator == emap.index.end()) return -1;
   return iterator->second;
@@ -459,9 +459,9 @@ std::vector<std::vector<int>> vertex_adjacencies(
     const std::vector<vec3i>& triangles,
     const std::vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
-    if (v.x == x) return 0;
-    if (v.y == x) return 1;
-    if (v.z == x) return 2;
+    if (v[0] == x) return 0;
+    if (v[1] == x) return 1;
+    if (v[2] == x) return 2;
     return -1;
   };
 
@@ -506,9 +506,9 @@ std::vector<std::vector<int>> vertex_to_faces_adjacencies(
     const std::vector<vec3i>& triangles,
     const std::vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
-    if (v.x == x) return 0;
-    if (v.y == x) return 1;
-    if (v.z == x) return 2;
+    if (v[0] == x) return 0;
+    if (v[1] == x) return 1;
+    if (v[2] == x) return 2;
     return -1;
   };
 
@@ -649,15 +649,15 @@ void init_shape_embree_bvh(bvh_shape& shape) {
     auto epositions = std::vector<vec4f>{};
     auto last_index = -1;
     for (auto& l : shape.lines) {
-      if (last_index == l.x) {
+      if (last_index == l[0]) {
         elines.push_back((int)epositions.size() - 1);
-        epositions.push_back({shape.positions[l.y], shape.radius[l.y]});
+        epositions.push_back({shape.positions[l[1]], shape.radius[l[1]]});
       } else {
         elines.push_back((int)epositions.size());
-        epositions.push_back({shape.positions[l.x], shape.radius[l.x]});
-        epositions.push_back({shape.positions[l.y], shape.radius[l.y]});
+        epositions.push_back({shape.positions[l[0]], shape.radius[l[0]]});
+        epositions.push_back({shape.positions[l[1]], shape.radius[l[1]]});
       }
-      last_index = l.y;
+      last_index = l[1];
     }
     auto egeometry = rtcNewGeometry(
         edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
@@ -744,12 +744,12 @@ void update_scene_embree_bvh(
 bool intersect_shape_embree_bvh(const bvh_shape& shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
@@ -767,12 +767,12 @@ bool intersect_shape_embree_bvh(const bvh_shape& shape, const ray3f& ray,
 bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
@@ -827,8 +827,8 @@ static std::pair<int, int> split_sah(std::vector<int>& primitives,
   auto      min_cost = flt_max;
   auto      area     = [](auto& b) {
     auto size = b.max - b.min;
-    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-           2 * size.y * size.z;
+    return 1e-12f + 2 * size[0] * size[1] + 2 * size[0] * size[2] +
+           2 * size[1] * size[2];
   };
   for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
@@ -886,9 +886,9 @@ static std::pair<int, int> split_balanced(std::vector<int>& primitives,
   if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  if (csize[0] >= csize[1] && csize[0] >= csize[2]) axis = 0;
+  if (csize[1] >= csize[0] && csize[1] >= csize[2]) axis = 1;
+  if (csize[2] >= csize[0] && csize[2] >= csize[1]) axis = 2;
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
@@ -925,9 +925,9 @@ static std::pair<int, int> split_middle(std::vector<int>& primitives,
   if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  if (csize[0] >= csize[1] && csize[0] >= csize[2]) axis = 0;
+  if (csize[1] >= csize[0] && csize[1] >= csize[2]) axis = 1;
+  if (csize[2] >= csize[0] && csize[2] >= csize[1]) axis = 2;
 
   // split the space in the middle along the largest axis
   auto cmiddle = (cbbox.max + cbbox.min) / 2;
@@ -979,7 +979,7 @@ static void build_bvh(bvh_tree& bvh, std::vector<bbox3f>& bboxes) {
     // grab node to work on
     auto next = queue.front();
     queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+    auto nodeid = next[0], start = next[1], end = next[2];
 
     // grab node
     auto& node = nodes[nodeid];
@@ -1052,7 +1052,7 @@ void make_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
-        positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
+        positions[l[0]], positions[l[1]], radius[l[0]], radius[l[1]]);
   }
 
   // build nodes
@@ -1065,7 +1065,7 @@ void make_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
-        positions[t.x], positions[t.y], positions[t.z]);
+        positions[t[0]], positions[t[1]], positions[t[2]]);
   }
 
   // build nodes
@@ -1078,7 +1078,7 @@ void make_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
   }
 
   // build nodes
@@ -1104,7 +1104,7 @@ void update_lines_bvh(bvh_tree& bvh, const std::vector<vec2i>& lines,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
-        positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
+        positions[l[0]], positions[l[1]], radius[l[0]], radius[l[1]]);
   }
 
   // update nodes
@@ -1117,7 +1117,7 @@ void update_triangles_bvh(bvh_tree& bvh, const std::vector<vec3i>& triangles,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& t     = triangles[idx];
     bboxes[idx] = triangle_bounds(
-        positions[t.x], positions[t.y], positions[t.z]);
+        positions[t[0]], positions[t[1]], positions[t[2]]);
   }
 
   // update nodes
@@ -1130,7 +1130,7 @@ void update_quads_bvh(bvh_tree& bvh, const std::vector<vec4i>& quads,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
   }
 
   // update nodes
@@ -1157,9 +1157,9 @@ static bool intersect_elements_bvh(const bvh_tree& bvh,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = vec3f{1 / ray.d[0], 1 / ray.d[1], 1 / ray.d[2]};
+  auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+      (ray_dinv[2] < 0) ? 1 : 0};
 
   // walking stack
   while (node_cur) {
@@ -1225,8 +1225,8 @@ bvh_intersection intersect_lines_bvh(const bvh_tree& bvh,
       [&lines, &positions, &radius](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
         auto& l = lines[idx];
-        return intersect_line(ray, positions[l.x], positions[l.y], radius[l.x],
-            radius[l.y], uv, distance);
+        return intersect_line(ray, positions[l[0]], positions[l[1]], radius[l[0]],
+            radius[l[1]], uv, distance);
       },
       ray, intersection.element, intersection.uv, intersection.distance,
       find_any);
@@ -1242,7 +1242,7 @@ bvh_intersection intersect_triangles_bvh(const bvh_tree& bvh,
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
         auto& t = triangles[idx];
         return intersect_triangle(
-            ray, positions[t.x], positions[t.y], positions[t.z], uv, distance);
+            ray, positions[t[0]], positions[t[1]], positions[t[2]], uv, distance);
       },
       ray, intersection.element, intersection.uv, intersection.distance,
       find_any);
@@ -1257,8 +1257,8 @@ bvh_intersection intersect_quads_bvh(const bvh_tree& bvh,
       [&quads, &positions](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
         auto& t = quads[idx];
-        return intersect_quad(ray, positions[t.x], positions[t.y],
-            positions[t.z], positions[t.w], uv, distance);
+        return intersect_quad(ray, positions[t[0]], positions[t[1]],
+            positions[t[2]], positions[t[3]], uv, distance);
       },
       ray, intersection.element, intersection.uv, intersection.distance,
       find_any);
@@ -1344,8 +1344,8 @@ bvh_intersection overlap_lines_bvh(const bvh_tree& bvh,
       [&lines, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
         auto& l = lines[idx];
-        return overlap_line(pos, max_distance, positions[l.x], positions[l.y],
-            radius[l.x], radius[l.y], uv, distance);
+        return overlap_line(pos, max_distance, positions[l[0]], positions[l[1]],
+            radius[l[0]], radius[l[1]], uv, distance);
       },
       pos, max_distance, intersection.element, intersection.uv,
       intersection.distance, find_any);
@@ -1361,9 +1361,9 @@ bvh_intersection overlap_triangles_bvh(const bvh_tree& bvh,
       [&triangles, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
         auto& t = triangles[idx];
-        return overlap_triangle(pos, max_distance, positions[t.x],
-            positions[t.y], positions[t.z], radius[t.x], radius[t.y],
-            radius[t.z], uv, distance);
+        return overlap_triangle(pos, max_distance, positions[t[0]],
+            positions[t[1]], positions[t[2]], radius[t[0]], radius[t[1]],
+            radius[t[2]], uv, distance);
       },
       pos, max_distance, intersection.element, intersection.uv,
       intersection.distance, find_any);
@@ -1379,9 +1379,9 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
       [&quads, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
         auto& q = quads[idx];
-        return overlap_quad(pos, max_distance, positions[q.x], positions[q.y],
-            positions[q.z], positions[q.w], radius[q.x], radius[q.y],
-            radius[q.z], radius[q.w], uv, distance);
+        return overlap_quad(pos, max_distance, positions[q[0]], positions[q[1]],
+            positions[q[2]], positions[q[3]], radius[q[0]], radius[q[1]],
+            radius[q[2]], radius[q[3]], uv, distance);
       },
       pos, max_distance, intersection.element, intersection.uv,
       intersection.distance, find_any);
@@ -1415,22 +1415,22 @@ void init_shape_bvh(bvh_shape& shape, bool embree) {
     bboxes = std::vector<bbox3f>(shape.lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
-          shape.radius[l.x], shape.radius[l.y]);
+      bboxes[idx] = line_bounds(shape.positions[l[0]], shape.positions[l[1]],
+          shape.radius[l[0]], shape.radius[l[1]]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = std::vector<bbox3f>(shape.triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+          shape.positions[t[0]], shape.positions[t[1]], shape.positions[t[2]]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
+      bboxes[idx] = quad_bounds(shape.positions[q[0]], shape.positions[q[1]],
+          shape.positions[q[2]], shape.positions[q[3]]);
     }
   }
 
@@ -1484,22 +1484,22 @@ void update_shape_bvh(bvh_shape& shape) {
     bboxes = std::vector<bbox3f>(shape.lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
-          shape.radius[l.x], shape.radius[l.y]);
+      bboxes[idx] = line_bounds(shape.positions[l[0]], shape.positions[l[1]],
+          shape.radius[l[0]], shape.radius[l[1]]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = std::vector<bbox3f>(shape.triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape.triangles[idx];
       bboxes[idx] = triangle_bounds(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+          shape.positions[t[0]], shape.positions[t[1]], shape.positions[t[2]]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = std::vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
+      bboxes[idx] = quad_bounds(shape.positions[q[0]], shape.positions[q[1]],
+          shape.positions[q[2]], shape.positions[q[3]]);
     }
   }
 
@@ -1557,9 +1557,9 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = vec3f{1 / ray.d[0], 1 / ray.d[1], 1 / ray.d[2]};
+  auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+      (ray_dinv[2] < 0) ? 1 : 0};
 
   // walking stack
   while (node_cur) {
@@ -1595,8 +1595,8 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     } else if (!shape.lines.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& l = shape.lines[shape.bvh.primitives[idx]];
-        if (intersect_line(ray, shape.positions[l.x], shape.positions[l.y],
-                shape.radius[l.x], shape.radius[l.y], uv, distance)) {
+        if (intersect_line(ray, shape.positions[l[0]], shape.positions[l[1]],
+                shape.radius[l[0]], shape.radius[l[1]], uv, distance)) {
           hit      = true;
           element  = shape.bvh.primitives[idx];
           ray.tmax = distance;
@@ -1605,8 +1605,8 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     } else if (!shape.triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& t = shape.triangles[shape.bvh.primitives[idx]];
-        if (intersect_triangle(ray, shape.positions[t.x], shape.positions[t.y],
-                shape.positions[t.z], uv, distance)) {
+        if (intersect_triangle(ray, shape.positions[t[0]], shape.positions[t[1]],
+                shape.positions[t[2]], uv, distance)) {
           hit      = true;
           element  = shape.bvh.primitives[idx];
           ray.tmax = distance;
@@ -1615,8 +1615,8 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     } else if (!shape.quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& q = shape.quads[shape.bvh.primitives[idx]];
-        if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w], uv, distance)) {
+        if (intersect_quad(ray, shape.positions[q[0]], shape.positions[q[1]],
+                shape.positions[q[2]], shape.positions[q[3]], uv, distance)) {
           hit      = true;
           element  = shape.bvh.primitives[idx];
           ray.tmax = distance;
@@ -1658,9 +1658,9 @@ static bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray_,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = vec3f{1 / ray.d[0], 1 / ray.d[1], 1 / ray.d[2]};
+  auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+      (ray_dinv[2] < 0) ? 1 : 0};
 
   // walking stack
   while (node_cur) {
@@ -1758,8 +1758,8 @@ static bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
       for (auto idx = 0; idx < node.num; idx++) {
         auto  primitive = shape.bvh.primitives[node.start + idx];
         auto& l         = shape.lines[primitive];
-        if (overlap_line(pos, max_distance, shape.positions[l.x],
-                shape.positions[l.y], shape.radius[l.x], shape.radius[l.y], uv,
+        if (overlap_line(pos, max_distance, shape.positions[l[0]],
+                shape.positions[l[1]], shape.radius[l[0]], shape.radius[l[1]], uv,
                 distance)) {
           hit          = true;
           element      = primitive;
@@ -1770,9 +1770,9 @@ static bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
       for (auto idx = 0; idx < node.num; idx++) {
         auto  primitive = shape.bvh.primitives[node.start + idx];
         auto& t         = shape.triangles[primitive];
-        if (overlap_triangle(pos, max_distance, shape.positions[t.x],
-                shape.positions[t.y], shape.positions[t.z], shape.radius[t.x],
-                shape.radius[t.y], shape.radius[t.z], uv, distance)) {
+        if (overlap_triangle(pos, max_distance, shape.positions[t[0]],
+                shape.positions[t[1]], shape.positions[t[2]], shape.radius[t[0]],
+                shape.radius[t[1]], shape.radius[t[2]], uv, distance)) {
           hit          = true;
           element      = primitive;
           max_distance = distance;
@@ -1782,10 +1782,10 @@ static bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
       for (auto idx = 0; idx < node.num; idx++) {
         auto  primitive = shape.bvh.primitives[node.start + idx];
         auto& q         = shape.quads[primitive];
-        if (overlap_quad(pos, max_distance, shape.positions[q.x],
-                shape.positions[q.y], shape.positions[q.z],
-                shape.positions[q.w], shape.radius[q.x], shape.radius[q.y],
-                shape.radius[q.z], shape.radius[q.w], uv, distance)) {
+        if (overlap_quad(pos, max_distance, shape.positions[q[0]],
+                shape.positions[q[1]], shape.positions[q[2]],
+                shape.positions[q[3]], shape.radius[q[0]], shape.radius[q[1]],
+                shape.radius[q[2]], shape.radius[q[3]], uv, distance)) {
           hit          = true;
           element      = primitive;
           max_distance = distance;
@@ -1866,8 +1866,8 @@ static bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
         while (node_cur) {
             // grab node
             auto node_idx = node_stack[--node_cur];
-            const auto node1 = bvh1->nodes[node_idx.x];
-            const auto node2 = bvh2->nodes[node_idx.y];
+            const auto node1 = bvh1->nodes[node_idx[0]];
+            const auto node2 = bvh2->nodes[node_idx[1]];
 
             // intersect bbox
             if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
@@ -1891,12 +1891,12 @@ static bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
                 if (node1.isleaf) {
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
                          idx2++) {
-                        node_stack[node_cur++] = {node_idx.x, (int)idx2};
+                        node_stack[node_cur++] = {node_idx[0], (int)idx2};
                     }
                 } else if (node2.isleaf) {
                     for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
                          idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, node_idx.y};
+                        node_stack[node_cur++] = {(int)idx1, node_idx[1]};
                     }
                 } else {
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
@@ -1964,7 +1964,7 @@ namespace yocto::shape {
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
   auto scaledpos = position * grid.cell_inv_size;
-  return vec3i{(int)scaledpos.x, (int)scaledpos.y, (int)scaledpos.z};
+  return vec3i{(int)scaledpos[0], (int)scaledpos[1], (int)scaledpos[2]};
 }
 
 // Create a hash_grid
@@ -2071,14 +2071,14 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
 
     // If all vertices have same tag, then tag the whole triangle and continue.
     if (j == -1) {
-      tags[i] = get_tag(tr.x);
+      tags[i] = get_tag(tr[0]);
       continue;
     }
 
     // Reorder the triangle such that vertex with different tag is always z
     tr = {tr[(j + 2) % 3], tr[(j + 1) % 3], tr[j]};
 
-    auto values = vec3f{field[tr.x], field[tr.y], field[tr.z]};
+    auto values = vec3f{field[tr[0]], field[tr[1]], field[tr[2]]};
     values -= isoline;
 
     // Create or retrieve new vertices that split the edges
@@ -2086,8 +2086,8 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
     for (int k : {0, 1}) {
       int   vert = tr[k];
       float a    = values[k];
-      float b    = values.z;
-      auto  edge = make_edge(tr.z, vert);
+      float b    = values[2];
+      auto  edge = make_edge(tr[2], vert);
       auto  it   = emap.find(edge);
 
       if (it != emap.end()) {
@@ -2096,13 +2096,13 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
       } else {
         // Compute new vertex via interpolation.
         float alpha  = fabs(a / (b - a));
-        new_verts[k] = add_vertex(tr.z, vert, alpha);
+        new_verts[k] = add_vertex(tr[2], vert, alpha);
         emap.insert(it, {edge, new_verts[k]});
       }
     }
 
     /*
-                     tr.z
+                     tr[2]
                        /\
                       /  \
                      /    \
@@ -2114,20 +2114,20 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
                /           .    \
               / new_faces[1]  .  \
              /___________________.\
-       tr.y                      tr.x
+       tr[1]                      tr[0]
 
     */
 
     // Add two new faces.
-    triangles.push_back({new_verts[0], new_verts[1], tr.x});
-    tags.push_back(get_tag(tr.x));
+    triangles.push_back({new_verts[0], new_verts[1], tr[0]});
+    tags.push_back(get_tag(tr[0]));
 
-    triangles.push_back({tr.y, tr.x, new_verts[1]});
-    tags.push_back(get_tag(tr.y));
+    triangles.push_back({tr[1], tr[0], new_verts[1]});
+    tags.push_back(get_tag(tr[1]));
 
     // Edit old face.
-    triangles[i] = vec3i{new_verts[0], tr.z, new_verts[1]};
-    tags[i]      = get_tag(tr.z);
+    triangles[i] = vec3i{new_verts[0], tr[2], new_verts[1]};
+    tags[i]      = get_tag(tr[2]);
   }
 }
 
@@ -2143,8 +2143,8 @@ std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+    triangles.push_back({q[0], q[1], q[3]});
+    if (q[2] != q[3]) triangles.push_back({q[2], q[3], q[1]});
   }
   return triangles;
 }
@@ -2153,7 +2153,7 @@ std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads) {
 std::vector<vec4i> triangles_to_quads(const std::vector<vec3i>& triangles) {
   auto quads = std::vector<vec4i>{};
   quads.reserve(triangles.size());
-  for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
+  for (auto& t : triangles) quads.push_back({t[0], t[1], t[2], t[2]});
   return quads;
 }
 
@@ -2162,9 +2162,9 @@ std::vector<vec2i> bezier_to_lines(const std::vector<vec4i>& beziers) {
   auto lines = std::vector<vec2i>{};
   lines.reserve(beziers.size() * 3);
   for (auto b : beziers) {
-    lines.push_back({b.x, b.y});
-    lines.push_back({b.y, b.z});
-    lines.push_back({b.z, b.w});
+    lines.push_back({b[0], b[1]});
+    lines.push_back({b[1], b[2]});
+    lines.push_back({b[2], b[3]});
   }
   return lines;
 }
@@ -2187,17 +2187,17 @@ split_facevarying(const std::vector<vec4i>& quadspos,
   for (auto fid = 0; fid < quadspos.size(); fid++) {
     for (auto c = 0; c < 4; c++) {
       auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+          (&quadspos[fid][0])[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid][0])[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid][0])[c] : -1,
       };
       auto it = vert_map.find(v);
       if (it == vert_map.end()) {
         auto s = (int)vert_map.size();
         vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
+        (&split_quads[fid][0])[c] = s;
       } else {
-        (&split_quads[fid].x)[c] = it->second;
+        (&split_quads[fid][0])[c] = it->second;
       }
     }
   }
@@ -2207,21 +2207,21 @@ split_facevarying(const std::vector<vec4i>& quadspos,
   if (!positions.empty()) {
     split_positions.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
+      split_positions[index] = positions[vert[0]];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
     split_normals.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
+      split_normals[index] = normals[vert[1]];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
     split_texcoords.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
+      split_texcoords[index] = texcoords[vert[2]];
     }
   }
 
@@ -2277,7 +2277,7 @@ std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
     float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wtriangles            = triangles;
-  for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
+  for (auto& t : wtriangles) t = {indices[t[0]], indices[t[1]], indices[t[2]]};
   return {wtriangles, wpositions};
 }
 std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
@@ -2287,10 +2287,10 @@ std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
   auto wquads                = quads;
   for (auto& q : wquads)
     q = {
-        indices[q.x],
-        indices[q.y],
-        indices[q.z],
-        indices[q.w],
+        indices[q[0]],
+        indices[q[1]],
+        indices[q[2]],
+        indices[q[3]],
     };
   return {wquads, wpositions};
 }
@@ -2299,18 +2299,18 @@ std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
 void merge_lines(std::vector<vec2i>& lines,
     const std::vector<vec2i>& merge_lines, int num_verts) {
   for (auto& l : merge_lines)
-    lines.push_back({l.x + num_verts, l.y + num_verts});
+    lines.push_back({l[0] + num_verts, l[1] + num_verts});
 }
 void merge_triangles(std::vector<vec3i>& triangles,
     const std::vector<vec3i>& merge_triangles, int num_verts) {
   for (auto& t : merge_triangles)
-    triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
+    triangles.push_back({t[0] + num_verts, t[1] + num_verts, t[2] + num_verts});
 }
 void merge_quads(std::vector<vec4i>& quads,
     const std::vector<vec4i>& merge_quads, int num_verts) {
   for (auto& q : merge_quads)
     quads.push_back(
-        {q.x + num_verts, q.y + num_verts, q.z + num_verts, q.w + num_verts});
+        {q[0] + num_verts, q[1] + num_verts, q[2] + num_verts, q[3] + num_verts});
 }
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
     std::vector<vec3f>& tangents, std::vector<vec2f>& texcoords,
@@ -2321,7 +2321,7 @@ void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
     const std::vector<float>& merge_radius) {
   auto merge_verts = (int)positions.size();
   for (auto& l : merge_lines)
-    lines.push_back({l.x + merge_verts, l.y + merge_verts});
+    lines.push_back({l[0] + merge_verts, l[1] + merge_verts});
   positions.insert(
       positions.end(), merge_positions.begin(), merge_positions.end());
   tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
@@ -2338,7 +2338,7 @@ void merge_triangles(std::vector<vec3i>& triangles,
   auto merge_verts = (int)positions.size();
   for (auto& t : merge_triangles)
     triangles.push_back(
-        {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
+        {t[0] + merge_verts, t[1] + merge_verts, t[2] + merge_verts});
   positions.insert(
       positions.end(), merge_positions.begin(), merge_positions.end());
   normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
@@ -2353,8 +2353,8 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     const std::vector<vec2f>& merge_texturecoords) {
   auto merge_verts = (int)positions.size();
   for (auto& q : merge_quads)
-    quads.push_back({q.x + merge_verts, q.y + merge_verts, q.z + merge_verts,
-        q.w + merge_verts});
+    quads.push_back({q[0] + merge_verts, q[1] + merge_verts, q[2] + merge_verts,
+        q[3] + merge_verts});
   positions.insert(
       positions.end(), merge_positions.begin(), merge_positions.end());
   normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
@@ -2402,14 +2402,14 @@ void subdivide_lines_impl(std::vector<vec2i>& lines, std::vector<T>& vert,
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nlines; i++) {
       auto l            = lines[i];
-      tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
+      tvert[nverts + i] = (vert[l[0]] + vert[l[1]]) / 2;
     }
     // create lines
     auto tlines = std::vector<vec2i>(nlines * 2);
     for (auto i = 0; i < nlines; i++) {
       auto l            = lines[i];
-      tlines[i * 2 + 0] = {l.x, nverts + i};
-      tlines[i * 2 + 0] = {nverts + i, l.y};
+      tlines[i * 2 + 0] = {l[0], nverts + i};
+      tlines[i * 2 + 0] = {nverts + i, l[1]};
     }
     swap(tlines, lines);
     swap(tvert, vert);
@@ -2447,21 +2447,21 @@ void subdivide_triangles_impl(std::vector<vec3i>& triangles,
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+      tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
     }
     // create triangles
     auto ttriangles = std::vector<vec3i>(nfaces * 4);
     for (auto i = 0; i < nfaces; i++) {
       auto t                = triangles[i];
-      ttriangles[i * 4 + 0] = {t.x, nverts + edge_index(emap, {t.x, t.y}),
-          nverts + edge_index(emap, {t.z, t.x})};
-      ttriangles[i * 4 + 1] = {t.y, nverts + edge_index(emap, {t.y, t.z}),
-          nverts + edge_index(emap, {t.x, t.y})};
-      ttriangles[i * 4 + 2] = {t.z, nverts + edge_index(emap, {t.z, t.x}),
-          nverts + edge_index(emap, {t.y, t.z})};
-      ttriangles[i * 4 + 3] = {nverts + edge_index(emap, {t.x, t.y}),
-          nverts + edge_index(emap, {t.y, t.z}),
-          nverts + edge_index(emap, {t.z, t.x})};
+      ttriangles[i * 4 + 0] = {t[0], nverts + edge_index(emap, {t[0], t[1]}),
+          nverts + edge_index(emap, {t[2], t[0]})};
+      ttriangles[i * 4 + 1] = {t[1], nverts + edge_index(emap, {t[1], t[2]}),
+          nverts + edge_index(emap, {t[0], t[1]})};
+      ttriangles[i * 4 + 2] = {t[2], nverts + edge_index(emap, {t[2], t[0]}),
+          nverts + edge_index(emap, {t[1], t[2]})};
+      ttriangles[i * 4 + 3] = {nverts + edge_index(emap, {t[0], t[1]}),
+          nverts + edge_index(emap, {t[1], t[2]}),
+          nverts + edge_index(emap, {t[2], t[0]})};
     }
     swap(ttriangles, triangles);
     swap(tvert, vert);
@@ -2499,15 +2499,15 @@ void subdivide_quads_impl(std::vector<vec4i>& quads, std::vector<T>& vert,
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+      tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
     }
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
-      if (q.z != q.w) {
+      if (q[2] != q[3]) {
         tvert[nverts + nedges + i] =
-            (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            (vert[q[0]] + vert[q[1]] + vert[q[2]] + vert[q[3]]) / 4;
       } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
+        tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[2]]) / 3;
       }
     }
     // create quads
@@ -2515,22 +2515,22 @@ void subdivide_quads_impl(std::vector<vec4i>& quads, std::vector<T>& vert,
     auto qi     = 0;
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
-      if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.w})};
+      if (q[2] != q[3]) {
+        tquads[qi++] = {q[0], nverts + edge_index(emap, {q[0], q[1]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[3], q[0]})};
+        tquads[qi++] = {q[1], nverts + edge_index(emap, {q[1], q[2]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[0], q[1]})};
+        tquads[qi++] = {q[2], nverts + edge_index(emap, {q[2], q[3]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[1], q[2]})};
+        tquads[qi++] = {q[3], nverts + edge_index(emap, {q[3], q[0]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[2], q[3]})};
       } else {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
+        tquads[qi++] = {q[0], nverts + edge_index(emap, {q[0], q[1]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[2], q[0]})};
+        tquads[qi++] = {q[1], nverts + edge_index(emap, {q[1], q[2]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[0], q[1]})};
+        tquads[qi++] = {q[2], nverts + edge_index(emap, {q[2], q[0]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[1], q[2]})};
       }
     }
     tquads.resize(qi);
@@ -2564,23 +2564,23 @@ void subdivide_beziers_impl(std::vector<vec4i>& beziers, std::vector<T>& vert,
     auto tvert    = std::vector<T>();
     auto tbeziers = std::vector<vec4i>();
     for (auto b : beziers) {
-      if (vmap.find(b.x) == vmap.end()) {
-        vmap[b.x] = (int)tvert.size();
-        tvert.push_back(vert[b.x]);
+      if (vmap.find(b[0]) == vmap.end()) {
+        vmap[b[0]] = (int)tvert.size();
+        tvert.push_back(vert[b[0]]);
       }
-      if (vmap.find(b.w) == vmap.end()) {
-        vmap[b.w] = (int)tvert.size();
-        tvert.push_back(vert[b.w]);
+      if (vmap.find(b[3]) == vmap.end()) {
+        vmap[b[3]] = (int)tvert.size();
+        tvert.push_back(vert[b[3]]);
       }
       auto bo = (int)tvert.size();
-      tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
-      tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
-      tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
-      tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-      tvert.push_back(vert[b.x] / 8 + vert[b.y] * ((float)3 / (float)8) +
-                      vert[b.z] * ((float)3 / (float)8) + vert[b.w] / 8);
-      tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
-      tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+      tbeziers.push_back({vmap.at(b[0]), bo + 0, bo + 1, bo + 2});
+      tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b[3])});
+      tvert.push_back(vert[b[0]] / 2 + vert[b[1]] / 2);
+      tvert.push_back(vert[b[0]] / 4 + vert[b[1]] / 2 + vert[b[2]] / 4);
+      tvert.push_back(vert[b[0]] / 8 + vert[b[1]] * ((float)3 / (float)8) +
+                      vert[b[2]] * ((float)3 / (float)8) + vert[b[3]] / 8);
+      tvert.push_back(vert[b[1]] / 4 + vert[b[2]] / 2 + vert[b[3]] / 4);
+      tvert.push_back(vert[b[2]] / 2 + vert[b[3]] / 2);
     }
 
     // done
@@ -2624,15 +2624,15 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
-      tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+      tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
     }
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
-      if (q.z != q.w) {
+      if (q[2] != q[3]) {
         tvert[nverts + nedges + i] =
-            (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            (vert[q[0]] + vert[q[1]] + vert[q[2]] + vert[q[3]]) / 4;
       } else {
-        tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z]) / 3;
+        tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[2]]) / 3;
       }
     }
     // create quads
@@ -2640,22 +2640,22 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
     auto qi     = 0;
     for (auto i = 0; i < nfaces; i++) {
       auto q = quads[i];
-      if (q.z != q.w) {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.w, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.w}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
-        tquads[qi++] = {q.w, nverts + edge_index(emap, {q.w, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.w})};
+      if (q[2] != q[3]) {
+        tquads[qi++] = {q[0], nverts + edge_index(emap, {q[0], q[1]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[3], q[0]})};
+        tquads[qi++] = {q[1], nverts + edge_index(emap, {q[1], q[2]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[0], q[1]})};
+        tquads[qi++] = {q[2], nverts + edge_index(emap, {q[2], q[3]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[1], q[2]})};
+        tquads[qi++] = {q[3], nverts + edge_index(emap, {q[3], q[0]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[2], q[3]})};
       } else {
-        tquads[qi++] = {q.x, nverts + edge_index(emap, {q.x, q.y}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.z, q.x})};
-        tquads[qi++] = {q.y, nverts + edge_index(emap, {q.y, q.z}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.x, q.y})};
-        tquads[qi++] = {q.z, nverts + edge_index(emap, {q.z, q.x}),
-            nverts + nedges + i, nverts + edge_index(emap, {q.y, q.z})};
+        tquads[qi++] = {q[0], nverts + edge_index(emap, {q[0], q[1]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[2], q[0]})};
+        tquads[qi++] = {q[1], nverts + edge_index(emap, {q[1], q[2]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[0], q[1]})};
+        tquads[qi++] = {q[2], nverts + edge_index(emap, {q[2], q[0]}),
+            nverts + nedges + i, nverts + edge_index(emap, {q[1], q[2]})};
       }
     }
     tquads.resize(qi);
@@ -2664,8 +2664,8 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
     auto tboundary = std::vector<vec2i>(nboundary * 2);
     for (auto i = 0; i < nboundary; i++) {
       auto e               = boundary[i];
-      tboundary[i * 2 + 0] = {e.x, nverts + edge_index(emap, e)};
-      tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e.y};
+      tboundary[i * 2 + 0] = {e[0], nverts + edge_index(emap, e)};
+      tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e[1]};
     }
 
     // setup creases -----------------------------------
@@ -2673,8 +2673,8 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
     auto tcrease_verts = std::vector<int>();
     if (lock_boundary) {
       for (auto& b : tboundary) {
-        tcrease_verts.push_back(b.x);
-        tcrease_verts.push_back(b.y);
+        tcrease_verts.push_back(b[0]);
+        tcrease_verts.push_back(b[1]);
       }
     } else {
       for (auto& b : tboundary) tcrease_edges.push_back(b);
@@ -2683,8 +2683,8 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
     // define vertex valence ---------------------------
     auto tvert_val = std::vector<int>(tvert.size(), 2);
     for (auto& e : tboundary) {
-      tvert_val[e.x] = (lock_boundary) ? 0 : 1;
-      tvert_val[e.y] = (lock_boundary) ? 0 : 1;
+      tvert_val[e[0]] = (lock_boundary) ? 0 : 1;
+      tvert_val[e[1]] = (lock_boundary) ? 0 : 1;
     }
 
     // averaging pass ----------------------------------
@@ -2696,16 +2696,16 @@ void subdivide_catmullclark_impl(std::vector<vec4i>& quads,
       acount[p] += 1;
     }
     for (auto& e : tcrease_edges) {
-      auto c = (tvert[e.x] + tvert[e.y]) / 2;
-      for (auto vid : {e.x, e.y}) {
+      auto c = (tvert[e[0]] + tvert[e[1]]) / 2;
+      for (auto vid : {e[0], e[1]}) {
         if (tvert_val[vid] != 1) continue;
         avert[vid] += c;
         acount[vid] += 1;
       }
     }
     for (auto& q : tquads) {
-      auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4;
-      for (auto vid : {q.x, q.y, q.z, q.w}) {
+      auto c = (tvert[q[0]] + tvert[q[1]] + tvert[q[2]] + tvert[q[3]]) / 4;
+      for (auto vid : {q[0], q[1], q[2], q[3]}) {
         if (tvert_val[vid] != 2) continue;
         avert[vid] += c;
         acount[vid] += 1;
@@ -2869,7 +2869,7 @@ std::vector<float> sample_lines_cdf(
   auto cdf = std::vector<float>(lines.size());
   for (auto i = 0; i < cdf.size(); i++) {
     auto l = lines[i];
-    auto w = line_length(positions[l.x], positions[l.y]);
+    auto w = line_length(positions[l[0]], positions[l[1]]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -2885,7 +2885,7 @@ std::vector<float> sample_triangles_cdf(
   auto cdf = std::vector<float>(triangles.size());
   for (auto i = 0; i < cdf.size(); i++) {
     auto t = triangles[i];
-    auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
+    auto w = triangle_area(positions[t[0]], positions[t[1]], positions[t[2]]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -2899,7 +2899,7 @@ std::pair<int, vec2f> sample_quads(
 std::pair<int, vec2f> sample_quads(const std::vector<vec4i>& quads,
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
   auto element = sample_discrete_cdf(cdf, re);
-  if (quads[element].z == quads[element].w) {
+  if (quads[element][2] == quads[element][3]) {
     return {element, sample_triangle(ruv)};
   } else {
     return {element, ruv};
@@ -2911,7 +2911,7 @@ std::vector<float> sample_quads_cdf(
   for (auto i = 0; i < cdf.size(); i++) {
     auto q = quads[i];
     auto w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
@@ -2935,17 +2935,17 @@ void sample_triangles(std::vector<vec3f>& sampled_positions,
     auto& t              = triangles[sample.first];
     auto  uv             = sample.second;
     sampled_positions[i] = interpolate_triangle(
-        positions[t.x], positions[t.y], positions[t.z], uv);
+        positions[t[0]], positions[t[1]], positions[t[2]], uv);
     if (!sampled_normals.empty()) {
       sampled_normals[i] = normalize(
-          interpolate_triangle(normals[t.x], normals[t.y], normals[t.z], uv));
+          interpolate_triangle(normals[t[0]], normals[t[1]], normals[t[2]], uv));
     } else {
       sampled_normals[i] = triangle_normal(
-          positions[t.x], positions[t.y], positions[t.z]);
+          positions[t[0]], positions[t[1]], positions[t[2]]);
     }
     if (!sampled_texcoords.empty()) {
       sampled_texcoords[i] = interpolate_triangle(
-          texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
+          texcoords[t[0]], texcoords[t[1]], texcoords[t[2]], uv);
     } else {
       sampled_texcoords[i] = zero2f;
     }
@@ -2970,17 +2970,17 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
     auto& q              = quads[sample.first];
     auto  uv             = sample.second;
     sampled_positions[i] = interpolate_quad(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]], uv);
     if (!sampled_normals.empty()) {
       sampled_normals[i] = normalize(interpolate_quad(
-          normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
+          normals[q[0]], normals[q[1]], normals[q[2]], normals[q[3]], uv));
     } else {
       sampled_normals[i] = quad_normal(
-          positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+          positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
     }
     if (!sampled_texcoords.empty()) {
       sampled_texcoords[i] = interpolate_quad(
-          texcoords[q.x], texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
+          texcoords[q[0]], texcoords[q[1]], texcoords[q[2]], texcoords[q[3]], uv);
     } else {
       sampled_texcoords[i] = zero2f;
     }
@@ -3005,8 +3005,8 @@ static inline float opposite_nodes_arc_length(geodesic_solver& solver,
   // Triangles (a, b, d) and (b, d, c) are connected by (b, d) edge
   // Nodes a and c must be connected.
 
-  int  b  = edge.x;
-  int  d  = edge.y;
+  int  b  = edge[0];
+  int  d  = edge[1];
   auto ba = positions[a] - positions[b];
   auto bc = positions[c] - positions[b];
   auto bd = positions[d] - positions[b];
@@ -3035,7 +3035,7 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
     const vec2i& edge) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
     for (int i = 0; i < 3; ++i) {
-      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+      if (tr[i] != edge[0] && tr[i] != edge[1]) return tr[i];
     }
     return -1;
   };
@@ -3258,7 +3258,7 @@ static int adjacent_face(const std::vector<vec3i>& triangles,
     auto y = triangles[face][k < 2 ? k + 1 : 0];
     auto e = vec2i{x, y};
     if (e == edge) return adjacency[face][k];
-    if (vec2i{e.y, e.x} == edge) return adjacency[face][k];
+    if (vec2i{e[1], e[0]} == edge) return adjacency[face][k];
   }
   return -1;
 }
@@ -3266,7 +3266,7 @@ static int adjacent_face(const std::vector<vec3i>& triangles,
 static std::vector<int> get_face_ring(const std::vector<vec3i>& triangles,
     const std::vector<vec3i>& adjacency, int face, int vertex) {
   auto contains = [](const vec3i& v, int a) -> bool {
-    return v.x == a || v.y == a || v.z == a;
+    return v[0] == a || v[1] == a || v[2] == a;
   };
   auto containsv = [](const std::vector<int>& v, int a) -> bool {
     return find(v.begin(), v.end(), a) != v.end();
@@ -3294,7 +3294,7 @@ static std::vector<int> get_face_ring(const std::vector<vec3i>& triangles,
 
     for (int k = 0; k < 3; ++k) {
       auto edge = vec2i{triangles[f][k], triangles[f][(k + 1) % 3]};
-      if (edge.x == vertex || edge.y == vertex) {
+      if (edge[0] == vertex || edge[1] == vertex) {
         int neighbor_face = adjacency[f][k];
         if (neighbor_face == -1) continue;
         if (!containsv(result, neighbor_face)) {
@@ -3314,7 +3314,7 @@ static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
   auto inverse_transform = mat3f{right - left, left, normal};
   auto transform         = inverse(inverse_transform);
   auto dir               = transform * direction;
-  return clamp(1 - dir.x / dir.y, 0.0f + epsilon, 1.0f - epsilon);
+  return clamp(1 - dir[0] / dir[1], 0.0f + epsilon, 1.0f - epsilon);
 }
 static std::pair<float, bool> step_from_edge_to_edge(const vec3f& point,
     const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction,
@@ -3379,8 +3379,8 @@ static surface_path::vertex step_from_point(const std::vector<vec3i>& triangles,
     if (edge == vec2i{-1, -1}) throw std::runtime_error("edge is {-1, -1}\n");
 
     auto a         = positions[vertex];
-    auto b         = positions[edge.x];
-    auto c         = positions[edge.y];
+    auto b         = positions[edge[0]];
+    auto c         = positions[edge[1]];
     auto left      = c - a;
     auto right     = b - a;
     auto direction = normalize(
@@ -3414,14 +3414,14 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     int from) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
     for (int i = 0; i < 3; ++i) {
-      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+      if (tr[i] != edge[0] && tr[i] != edge[1]) return tr[i];
     }
     return -1;
   };
   auto find_index = [](const vec3i& v, int x) -> int {
-    if (v.x == x) return 0;
-    if (v.y == x) return 1;
-    if (v.z == x) return 2;
+    if (v[0] == x) return 0;
+    if (v[1] == x) return 1;
+    if (v[2] == x) return 2;
     return -1;
   };
 
@@ -3437,8 +3437,8 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
   for (auto i = 0; i < num_steps; i++) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
     if (old_face == -1) throw std::runtime_error("programmer error");
-    auto point = (1.0f - old_alpha) * positions[old_edge.x] +
-                 old_alpha * positions[old_edge.y];
+    auto point = (1.0f - old_alpha) * positions[old_edge[0]] +
+                 old_alpha * positions[old_edge[1]];
 
     auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
     if (face == -1) {
@@ -3447,10 +3447,10 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     }
 
     if (tags[face] != tag) {
-      auto k  = find_index(triangles[face], old_edge.x);
+      auto k  = find_index(triangles[face], old_edge[0]);
       auto to = triangles[face][(k + 1) % 3];
 
-      // @Hack!: We store the tag of the reached region in edge.x
+      // @Hack!: We store the tag of the reached region in edge[0]
       auto edge = vec2i{to, tags[face]};
       lerps.push_back({edge, face, 0});
       return surface_path{from, to, lerps};
@@ -3468,19 +3468,19 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     if (old_alpha < 0 || old_alpha > 1)
       throw std::runtime_error("programmer error");
 
-    auto& a = positions[old_edge.x];
+    auto& a = positions[old_edge[0]];
     auto& b = positions[front_idx];
-    auto& c = positions[old_edge.y];
+    auto& c = positions[old_edge[1]];
 
     auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
     auto edge = old_edge;
     if (step_right) {
       point  = (1 - x) * a + x * b;
-      edge.y = front_idx;
+      edge[1] = front_idx;
     } else {
       point  = (1 - x) * b + x * c;
-      edge.x = front_idx;
+      edge[0] = front_idx;
     }
     lerps.push_back({edge, face, x});
   }
@@ -3495,12 +3495,12 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     int from, int to) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
     for (int i = 0; i < 3; ++i) {
-      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+      if (tr[i] != edge[0] && tr[i] != edge[1]) return tr[i];
     }
     return -1;
   };
   auto contains = [](const vec3i& v, int a) -> bool {
-    return v.x == a || v.y == a || v.z == a;
+    return v[0] == a || v[1] == a || v[2] == a;
   };
 
   auto lerps = std::vector<surface_path::vertex>();
@@ -3512,8 +3512,8 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
 
   for (int i = 0; i < num_steps; i++) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
-    vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
-                  old_alpha * positions[old_edge.y];
+    vec3f point = (1.0f - old_alpha) * positions[old_edge[0]] +
+                  old_alpha * positions[old_edge[1]];
 
     auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
     if (face == -1) break;
@@ -3521,7 +3521,7 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     if (contains(triangles[face], to)) {
       for (int k = 0; k < 3; ++k) {
         auto edge = vec2i{triangles[face][k], triangles[face][(k + 1) % 3]};
-        if (edge.x == to) {
+        if (edge[0] == to) {
           lerps.push_back({edge, face, 0});
           return {from, to, lerps};
         }
@@ -3539,36 +3539,36 @@ surface_path integrate_field(const std::vector<vec3i>& triangles,
     if (old_alpha < 0 || old_alpha > 1)
       throw std::runtime_error("programmer error");
     if (old_alpha == 0 || old_alpha == 1) {
-      int  vertex = old_alpha == 0 ? old_edge.x : old_edge.y;
+      int  vertex = old_alpha == 0 ? old_edge[0] : old_edge[1];
       auto lerp   = step_from_point(
           triangles, positions, adjacency, tags, field, vertex, old_face);
       lerps.push_back(lerp);
-      if (lerp.alpha == 0 && lerp.edge.x == to) break;
-      if (lerp.alpha == 1 && lerp.edge.y == to) break;
+      if (lerp.alpha == 0 && lerp.edge[0] == to) break;
+      if (lerp.alpha == 1 && lerp.edge[1] == to) break;
       continue;
     }
 
-    auto& a = positions[old_edge.x];
+    auto& a = positions[old_edge[0]];
     auto& b = positions[front_idx];
-    auto& c = positions[old_edge.y];
+    auto& c = positions[old_edge[1]];
 
     auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
     auto edge = old_edge;
     if (step_right) {
       point  = (1 - x) * a + x * b;
-      edge.y = front_idx;
+      edge[1] = front_idx;
     } else {
       point  = (1 - x) * b + x * c;
-      edge.x = front_idx;
+      edge[0] = front_idx;
     }
     if (opposite_vertex(triangles[face], edge) == -1) {
       throw std::runtime_error("opposite vertex == -1");
     }
 
     lerps.push_back({edge, face, x});
-    if (x == 0 && edge.x == to) break;
-    if (x == 1 && edge.y == to) break;
+    if (x == 0 && edge[0] == to) break;
+    if (x == 1 && edge[1] == to) break;
   }
 
   return {from, to, lerps};
@@ -3584,8 +3584,8 @@ std::vector<vec3f> make_positions_from_path(
 
   for (int i = 0; i < path.vertices.size() - 1; ++i) {
     auto [edge, face, x] = path.vertices[i];
-    auto p0              = mesh_positions[edge.x];
-    auto p1              = mesh_positions[edge.y];
+    auto p0              = mesh_positions[edge[0]];
+    auto p1              = mesh_positions[edge[1]];
     auto position        = (1 - x) * p0 + x * p1;
     positions.push_back(position);
   }
@@ -3621,14 +3621,14 @@ std::vector<vec3f> make_positions_from_path(
 
 vec3f compute_gradient(const vec3i& triangle,
     const std::vector<vec3f>& positions, const std::vector<float>& field) {
-  auto xy     = positions[triangle.y] - positions[triangle.x];
-  auto yz     = positions[triangle.z] - positions[triangle.y];
-  auto zx     = positions[triangle.x] - positions[triangle.z];
+  auto xy     = positions[triangle[1]] - positions[triangle[0]];
+  auto yz     = positions[triangle[2]] - positions[triangle[1]];
+  auto zx     = positions[triangle[0]] - positions[triangle[2]];
   auto normal = normalize(cross(zx, xy));
   auto result = zero3f;
-  result += field[triangle.x] * cross(normal, yz);
-  result += field[triangle.y] * cross(normal, zx);
-  result += field[triangle.z] * cross(normal, xy);
+  result += field[triangle[0]] * cross(normal, yz);
+  result += field[triangle[1]] * cross(normal, zx);
+  result += field[triangle[2]] * cross(normal, xy);
   return result;
 }
 
@@ -3643,25 +3643,25 @@ namespace yocto::shape {
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  positions.resize((steps.x + 1) * (steps.y + 1));
-  normals.resize((steps.x + 1) * (steps.y + 1));
-  texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j = 0; j <= steps.y; j++) {
-    for (auto i = 0; i <= steps.x; i++) {
-      auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
-      positions[j * (steps.x + 1) + i] = {
-          (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
-      normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
+  positions.resize((steps[0] + 1) * (steps[1] + 1));
+  normals.resize((steps[0] + 1) * (steps[1] + 1));
+  texcoords.resize((steps[0] + 1) * (steps[1] + 1));
+  for (auto j = 0; j <= steps[1]; j++) {
+    for (auto i = 0; i <= steps[0]; i++) {
+      auto uv = vec2f{i / (float)steps[0], j / (float)steps[1]};
+      positions[j * (steps[0] + 1) + i] = {
+          (2 * uv[0] - 1) * scale[0], (2 * uv[1] - 1) * scale[1], 0};
+      normals[j * (steps[0] + 1) + i]   = {0, 0, 1};
+      texcoords[j * (steps[0] + 1) + i] = vec2f{uv[0], 1 - uv[1]} * uvscale;
     }
   }
 
-  quads.resize(steps.x * steps.y);
-  for (auto j = 0; j < steps.y; j++) {
-    for (auto i = 0; i < steps.x; i++) {
-      quads[j * steps.x + i] = {j * (steps.x + 1) + i,
-          j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
-          (j + 1) * (steps.x + 1) + i};
+  quads.resize(steps[0] * steps[1]);
+  for (auto j = 0; j < steps[1]; j++) {
+    for (auto i = 0; i < steps[0]; i++) {
+      quads[j * steps[0] + i] = {j * (steps[0] + 1) + i,
+          j * (steps[0] + 1) + i + 1, (j + 1) * (steps[0] + 1) + i + 1,
+          (j + 1) * (steps[0] + 1) + i};
     }
   }
 }
@@ -3688,10 +3688,10 @@ void make_recty(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
+    std::swap(p[1], p[2]);
+    p[2] = -p[2];
   }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& n : normals) std::swap(n[1], n[2]);
 }
 
 // Make a cube.
@@ -3707,47 +3707,47 @@ void make_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   auto qnormals       = std::vector<vec3f>{};
   auto qtexturecoords = std::vector<vec2f>{};
   // + z
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
-      {scale.x, scale.y}, {uvscale.x, uvscale.y});
-  for (auto& p : qpositions) p = {p.x, p.y, scale.z};
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[0], steps[1]},
+      {scale[0], scale[1]}, {uvscale[0], uvscale[1]});
+  for (auto& p : qpositions) p = {p[0], p[1], scale[2]};
   for (auto& n : qnormals) n = {0, 0, 1};
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
   // - z
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
-      {scale.x, scale.y}, {uvscale.x, uvscale.y});
-  for (auto& p : qpositions) p = {-p.x, p.y, -scale.z};
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[0], steps[1]},
+      {scale[0], scale[1]}, {uvscale[0], uvscale[1]});
+  for (auto& p : qpositions) p = {-p[0], p[1], -scale[2]};
   for (auto& n : qnormals) n = {0, 0, -1};
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
   // + x
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
-      {scale.z, scale.y}, {uvscale.z, uvscale.y});
-  for (auto& p : qpositions) p = {scale.x, p.y, -p.x};
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[2], steps[1]},
+      {scale[2], scale[1]}, {uvscale[2], uvscale[1]});
+  for (auto& p : qpositions) p = {scale[0], p[1], -p[0]};
   for (auto& n : qnormals) n = {1, 0, 0};
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
   // - x
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.z, steps.y},
-      {scale.z, scale.y}, {uvscale.z, uvscale.y});
-  for (auto& p : qpositions) p = {-scale.x, p.y, p.x};
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[2], steps[1]},
+      {scale[2], scale[1]}, {uvscale[2], uvscale[1]});
+  for (auto& p : qpositions) p = {-scale[0], p[1], p[0]};
   for (auto& n : qnormals) n = {-1, 0, 0};
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
   // + y
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
-      {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[0], steps[2]},
+      {scale[0], scale[2]}, {uvscale[0], uvscale[2]});
   for (auto i = 0; i < qpositions.size(); i++) {
-    qpositions[i] = {qpositions[i].x, scale.y, -qpositions[i].y};
+    qpositions[i] = {qpositions[i][0], scale[1], -qpositions[i][1]};
     qnormals[i]   = {0, 1, 0};
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
   // - y
-  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.z},
-      {scale.x, scale.z}, {uvscale.x, uvscale.z});
+  make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[0], steps[2]},
+      {scale[0], scale[2]}, {uvscale[0], uvscale[2]});
   for (auto i = 0; i < qpositions.size(); i++) {
-    qpositions[i] = {qpositions[i].x, -scale.y, qpositions[i].y};
+    qpositions[i] = {qpositions[i][0], -scale[1], qpositions[i][1]};
     qnormals[i]   = {0, -1, 0};
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
@@ -3764,24 +3764,24 @@ void make_rounded_box(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
       auto pc = vec3f{
-          abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
-      auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
-          positions[i].y < 0 ? -1.0f : 1.0f, positions[i].z < 0 ? -1.0f : 1.0f};
-      if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+          abs(positions[i][0]), abs(positions[i][1]), abs(positions[i][2])};
+      auto ps = vec3f{positions[i][0] < 0 ? -1.0f : 1.0f,
+          positions[i][1] < 0 ? -1.0f : 1.0f, positions[i][2] < 0 ? -1.0f : 1.0f};
+      if (pc[0] >= c[0] && pc[1] >= c[1] && pc[2] >= c[2]) {
         auto pn      = normalize(pc - c);
         positions[i] = c + radius * pn;
         normals[i]   = pn;
-      } else if (pc.x >= c.x && pc.y >= c.y) {
+      } else if (pc[0] >= c[0] && pc[1] >= c[1]) {
         auto pn      = normalize((pc - c) * vec3f{1, 1, 0});
-        positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+        positions[i] = {c[0] + radius * pn[0], c[1] + radius * pn[1], pc[2]};
         normals[i]   = pn;
-      } else if (pc.x >= c.x && pc.z >= c.z) {
+      } else if (pc[0] >= c[0] && pc[2] >= c[2]) {
         auto pn      = normalize((pc - c) * vec3f{1, 0, 1});
-        positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+        positions[i] = {c[0] + radius * pn[0], pc[1], c[2] + radius * pn[2]};
         normals[i]   = pn;
-      } else if (pc.y >= c.y && pc.z >= c.z) {
+      } else if (pc[1] >= c[1] && pc[2] >= c[2]) {
         auto pn      = normalize((pc - c) * vec3f{0, 1, 1});
-        positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+        positions[i] = {pc[0], c[1] + radius * pn[1], c[2] + radius * pn[2]};
         normals[i]   = pn;
       } else {
         continue;
@@ -3799,10 +3799,10 @@ void make_rect_stack(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   auto qpositions     = std::vector<vec3f>{};
   auto qnormals       = std::vector<vec3f>{};
   auto qtexturecoords = std::vector<vec2f>{};
-  for (auto i = 0; i <= steps.z; i++) {
-    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
-        {scale.x, scale.y}, uvscale);
-    for (auto& p : qpositions) p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
+  for (auto i = 0; i <= steps[2]; i++) {
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps[0], steps[1]},
+        {scale[0], scale[1]}, uvscale);
+    for (auto& p : qpositions) p[2] = (-1 + 2 * (float)i / steps[2]) * scale[2];
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
   }
@@ -3813,10 +3813,10 @@ void make_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
+    std::swap(p[1], p[2]);
+    p[2] = -p[2];
   }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& n : normals) std::swap(n[1], n[2]);
 }
 
 void make_bent_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -3825,16 +3825,16 @@ void make_bent_floor(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
-    radius     = min(radius, scale.y);
-    auto start = (scale.y - radius) / 2;
+    radius     = min(radius, scale[1]);
+    auto start = (scale[1] - radius) / 2;
     auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
-      if (positions[i].z < -end) {
-        positions[i] = {positions[i].x, -positions[i].z - end + radius, -end};
+      if (positions[i][2] < -end) {
+        positions[i] = {positions[i][0], -positions[i][2] - end + radius, -end};
         normals[i]   = {0, 0, 1};
-      } else if (positions[i].z < -start && positions[i].z >= -end) {
-        auto phi     = (pif / 2) * (-positions[i].z - start) / radius;
-        positions[i] = {positions[i].x, -cos(phi) * radius + radius,
+      } else if (positions[i][2] < -start && positions[i][2] >= -end) {
+        auto phi     = (pif / 2) * (-positions[i][2] - start) / radius;
+        positions[i] = {positions[i][0], -cos(phi) * radius + radius,
             -sin(phi) * radius - start};
         normals[i]   = {0, cos(phi), sin(phi)};
       } else {
@@ -3861,8 +3861,8 @@ void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto uv      = texcoords[i];
-    auto a       = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-    positions[i] = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} *
+    auto a       = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
+    positions[i] = vec3f{cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])} *
                    scale;
     normals[i]   = normalize(positions[i]);
     texcoords[i] = uv * uvscale;
@@ -3878,14 +3878,14 @@ void make_capped_uvsphere(std::vector<vec4i>& quads,
     cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
     for (auto i = 0; i < positions.size(); i++) {
-      if (positions[i].z > zflip) {
-        positions[i].z = 2 * zflip - positions[i].z;
-        normals[i].x   = -normals[i].x;
-        normals[i].y   = -normals[i].y;
-      } else if (positions[i].z < -zflip) {
-        positions[i].z = 2 * (-zflip) - positions[i].z;
-        normals[i].x   = -normals[i].x;
-        normals[i].y   = -normals[i].y;
+      if (positions[i][2] > zflip) {
+        positions[i][2] = 2 * zflip - positions[i][2];
+        normals[i][0]   = -normals[i][0];
+        normals[i][1]   = -normals[i][1];
+      } else if (positions[i][2] < -zflip) {
+        positions[i][2] = 2 * (-zflip) - positions[i][2];
+        normals[i][0]   = -normals[i][0];
+        normals[i][1]   = -normals[i][1];
       }
     }
   }
@@ -3900,10 +3900,10 @@ void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   for (auto i = 0; i < positions.size(); i++) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
-    auto xy = vec2f{positions[i].x, positions[i].y};
+    auto xy = vec2f{positions[i][0], positions[i][1]};
     auto uv = vec2f{
-        xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-    positions[i] = vec3f{uv.x, uv.y, 0} * scale;
+        xy[0] * sqrt(1 - xy[1] * xy[1] / 2), xy[1] * sqrt(1 - xy[0] * xy[0] / 2)};
+    positions[i] = vec3f{uv[0], uv[1], 0} * scale;
   }
 }
 
@@ -3930,8 +3930,8 @@ void make_uvdisk(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   make_rect(quads, positions, normals, texcoords, steps, {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto uv      = texcoords[i];
-    auto phi     = 2 * pif * uv.x;
-    positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
+    auto phi     = 2 * pif * uv[0];
+    positions[i] = vec3f{cos(phi) * uv[1], sin(phi) * uv[1], 0} * scale;
     normals[i]   = {0, 0, 1};
     texcoords[i] = uv * uvscale;
   }
@@ -3946,44 +3946,44 @@ void make_uvcylinder(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   auto qnormals   = std::vector<vec3f>{};
   auto qtexcoords = std::vector<vec2f>{};
   // side
-  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.y},
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps[0], steps[1]},
       {1, 1}, {1, 1});
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv       = qtexcoords[i];
-    auto phi      = 2 * pif * uv.x;
+    auto phi      = 2 * pif * uv[0];
     qpositions[i] = {
-        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+        cos(phi) * scale[0], sin(phi) * scale[0], (2 * uv[1] - 1) * scale[1]};
     qnormals[i]   = {cos(phi), sin(phi), 0};
-    qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+    qtexcoords[i] = uv * vec2f{uvscale[0], uvscale[1]};
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
   // top
-  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps[0], steps[2]},
       {1, 1}, {1, 1});
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv         = qtexcoords[i];
-    auto phi        = 2 * pif * uv.x;
-    qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    auto phi        = 2 * pif * uv[0];
+    qpositions[i]   = {cos(phi) * uv[1] * scale[0], sin(phi) * uv[1] * scale[0], 0};
     qnormals[i]     = {0, 0, 1};
-    qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-    qpositions[i].z = scale.y;
+    qtexcoords[i]   = uv * vec2f{uvscale[0], uvscale[2]};
+    qpositions[i][2] = scale[1];
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
   // bottom
-  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps[0], steps[2]},
       {1, 1}, {1, 1});
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv         = qtexcoords[i];
-    auto phi        = 2 * pif * uv.x;
-    qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    auto phi        = 2 * pif * uv[0];
+    qpositions[i]   = {cos(phi) * uv[1] * scale[0], sin(phi) * uv[1] * scale[0], 0};
     qnormals[i]     = {0, 0, 1};
-    qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-    qpositions[i].z = -scale.y;
+    qtexcoords[i]   = uv * vec2f{uvscale[0], uvscale[2]};
+    qpositions[i][2] = -scale[1];
     qnormals[i]     = -qnormals[i];
   }
-  for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
+  for (auto i = 0; i < qquads.size(); i++) swap(qquads[i][0], qquads[i][2]);
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
 }
@@ -3998,16 +3998,16 @@ void make_rounded_uvcylinder(std::vector<vec4i>& quads,
     radius = min(radius, min(scale));
     auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
-      auto phi = atan2(positions[i].y, positions[i].x);
-      auto r   = length(vec2f{positions[i].x, positions[i].y});
-      auto z   = positions[i].z;
+      auto phi = atan2(positions[i][1], positions[i][0]);
+      auto r   = length(vec2f{positions[i][0], positions[i][1]});
+      auto z   = positions[i][2];
       auto pc  = vec2f{r, abs(z)};
       auto ps  = (z < 0) ? -1.0f : 1.0f;
-      if (pc.x >= c.x && pc.y >= c.y) {
+      if (pc[0] >= c[0] && pc[1] >= c[1]) {
         auto pn      = normalize(pc - c);
-        positions[i] = {cos(phi) * (c.x + radius * pn.x),
-            sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
-        normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+        positions[i] = {cos(phi) * (c[0] + radius * pn[0]),
+            sin(phi) * (c[0] + radius * pn[0]), ps * (c[1] + radius * pn[1])};
+        normals[i]   = {cos(phi) * pn[0], sin(phi) * pn[0], ps * pn[1]};
       } else {
         continue;
       }
@@ -4021,10 +4021,10 @@ void make_yrect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
+    std::swap(p[1], p[2]);
+    p[2] = -p[2];
   }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& n : normals) std::swap(n[1], n[2]);
 }
 
 void make_bulged_yrect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -4034,10 +4034,10 @@ void make_bulged_yrect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   make_bulged_rect(
       quads, positions, normals, texcoords, steps, scale, uvscale, height);
   for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
+    std::swap(p[1], p[2]);
+    p[2] = -p[2];
   }
-  for (auto& n : normals) std::swap(n.y, n.z);
+  for (auto& n : normals) std::swap(n[1], n[2]);
 }
 
 // Generate lines set along a quad.
@@ -4045,38 +4045,38 @@ void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     std::vector<float>& radius, const vec2i& steps, const vec2f& size,
     const vec2f& uvscale, const vec2f& rad) {
-  auto nverts = (steps.x + 1) * steps.y;
-  auto nlines = steps.x * steps.y;
-  auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-  auto fid    = [steps](int i, int j) { return j * steps.x + i; };
+  auto nverts = (steps[0] + 1) * steps[1];
+  auto nlines = steps[0] * steps[1];
+  auto vid    = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
+  auto fid    = [steps](int i, int j) { return j * steps[0] + i; };
 
   positions.resize(nverts);
   normals.resize(nverts);
   texcoords.resize(nverts);
   radius.resize(nverts);
-  if (steps.y > 1) {
-    for (auto j = 0; j < steps.y; j++) {
-      for (auto i = 0; i <= steps.x; i++) {
+  if (steps[1] > 1) {
+    for (auto j = 0; j < steps[1]; j++) {
+      for (auto i = 0; i <= steps[0]; i++) {
         auto uv = vec2f{
-            i / (float)steps.x, j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
+            i / (float)steps[0], j / (float)(steps[1] > 1 ? steps[1] - 1 : 1)};
         positions[vid(i, j)] = {
-            (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+            (uv[0] - 0.5f) * size[0], (uv[1] - 0.5f) * size[1], 0};
         normals[vid(i, j)]   = {1, 0, 0};
         texcoords[vid(i, j)] = uv * uvscale;
       }
     }
   } else {
-    for (auto i = 0; i <= steps.x; i++) {
-      auto uv              = vec2f{i / (float)steps.x, 0};
-      positions[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
+    for (auto i = 0; i <= steps[0]; i++) {
+      auto uv              = vec2f{i / (float)steps[0], 0};
+      positions[vid(i, 0)] = {(uv[0] - 0.5f) * size[0], 0, 0};
       normals[vid(i, 0)]   = {1, 0, 0};
       texcoords[vid(i, 0)] = uv * uvscale;
     }
   }
 
   lines.resize(nlines);
-  for (int j = 0; j < steps.y; j++) {
-    for (int i = 0; i < steps.x; i++) {
+  for (int j = 0; j < steps[1]; j++) {
+    for (int i = 0; i < steps[0]; i++) {
       lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
     }
   }
@@ -4728,20 +4728,20 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
   auto bnorm     = std::vector<vec3f>{};
   auto btexcoord = std::vector<vec2f>{};
   sample_triangles(bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord,
-      steps.y, seed);
+      steps[1], seed);
 
   auto rng  = make_rng(seed, 3);
   auto blen = std::vector<float>(bpos.size());
   for (auto& l : blen) {
-    l = lerp(len.x, len.y, rand1f(rng));
+    l = lerp(len[0], len[1], rand1f(rng));
   }
 
   auto cidx = std::vector<int>();
-  if (clump.x > 0) {
+  if (clump[0] > 0) {
     for (auto bidx = 0; bidx < bpos.size(); bidx++) {
       cidx.push_back(0);
       auto cdist = flt_max;
-      for (auto c = 0; c < clump.y; c++) {
+      for (auto c = 0; c < clump[1]; c++) {
         auto d = length(bpos[bidx] - bpos[c]);
         if (d < cdist) {
           cdist       = d;
@@ -4754,28 +4754,28 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
   make_lines(lines, positions, normals, texcoords, radius, steps, {1, 1},
       {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
-    auto u       = texcoords[i].x;
-    auto bidx    = i / (steps.x + 1);
+    auto u       = texcoords[i][0];
+    auto bidx    = i / (steps[0] + 1);
     positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
     normals[i]   = bnorm[bidx];
-    radius[i]    = lerp(rad.x, rad.y, u);
-    if (clump.x > 0) {
+    radius[i]    = lerp(rad[0], rad[1], u);
+    if (clump[0] > 0) {
       positions[i] =
           positions[i] +
-          (positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] - positions[i]) *
-              u * clump.x;
+          (positions[i + (cidx[bidx] - bidx) * (steps[0] + 1)] - positions[i]) *
+              u * clump[0];
     }
-    if (noise.x > 0) {
-      auto nx = perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
-      auto ny = perlin_noise(positions[i] * noise.y + vec3f{3, 7, 11}) *
-                noise.x;
-      auto nz = perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) *
-                noise.x;
+    if (noise[0] > 0) {
+      auto nx = perlin_noise(positions[i] * noise[1] + vec3f{0, 0, 0}) * noise[0];
+      auto ny = perlin_noise(positions[i] * noise[1] + vec3f{3, 7, 11}) *
+                noise[0];
+      auto nz = perlin_noise(positions[i] * noise[1] + vec3f{13, 17, 19}) *
+                noise[0];
       positions[i] += {nx, ny, nz};
     }
   }
 
-  if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
+  if (clump[0] > 0 || noise[0] > 0 || rotation[0] > 0) {
     normals = compute_tangents(lines, positions);
   }
 }
@@ -4804,10 +4804,10 @@ void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     const vec2i& size, const std::vector<float>& height) {
   make_yrect(quads, positions, normals, texcoords, size - 1,
-      vec2f{(float)size.x, (float)size.y} / max(size));
-  for (auto j = 0; j < size.y; j++)
-    for (auto i = 0; i < size.x; i++)
-      positions[j * size.x + i].y = height[j * size.x + i];
+      vec2f{(float)size[0], (float)size[1]} / max(size));
+  for (auto j = 0; j < size[1]; j++)
+    for (auto i = 0; i < size[0]; i++)
+      positions[j * size[0] + i][1] = height[j * size[0] + i];
   normals = compute_normals(quads, positions);
 }
 
@@ -5102,8 +5102,8 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
     return str;
   };
   auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+    auto str = std::to_string(num[0]) + " " + std::to_string(num[1]) + " " +
+               std::to_string(num[2]);
     while (str.size() < 13) str = " " + str;
     return str;
   };

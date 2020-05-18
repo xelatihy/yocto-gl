@@ -1028,7 +1028,7 @@ inline bool get_values(ply::model* ply, const std::string& element,
     if (!get_value(ply, element, properties[idx], coords[idx])) return false;
   values = std::vector<frame3f>(coords[0].size());
   for (auto i = (size_t)0; i < values.size(); i++) {
-    for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
+    for (auto c = 0; c < 12; c++) (&values[i][0][0])[c] = coords[c][i];
   }
   return true;
 }
@@ -1069,7 +1069,7 @@ inline bool get_list_values(ply::model* ply, const std::string& element,
 
 inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoords) {
   auto flipped = texcoords;
-  for (auto& uv : flipped) uv.y = 1 - uv.y;
+  for (auto& uv : flipped) uv[1] = 1 - uv[1];
   return flipped;
 }
 
@@ -1088,7 +1088,7 @@ inline bool get_texcoords(
     if (!get_values(ply, "vertex", {"s", "t"}, texcoords)) return false;
   }
   if (flipv) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+    for (auto& uv : texcoords) uv[1] = 1 - uv[1];
   }
   return true;
 }
@@ -1344,7 +1344,7 @@ inline bool add_faces(ply::model* ply, const std::vector<vec3i>& triangles,
     return add_lists(ply, "face", "vertex_indices", triangles);
   } else if (triangles.empty() &&
              std::all_of(quads.begin(), quads.end(),
-                 [](const vec4i& q) { return q.z != q.w; })) {
+                 [](const vec4i& q) { return q[2] != q[3]; })) {
     return add_lists(ply, "face", "vertex_indices", quads);
   } else {
     auto sizes   = std::vector<uint8_t>();
@@ -1353,16 +1353,16 @@ inline bool add_faces(ply::model* ply, const std::vector<vec3i>& triangles,
     indices.reserve(triangles.size() * 3 + quads.size() * 4);
     for (auto& t : triangles) {
       sizes.push_back(3);
-      indices.push_back(t.x);
-      indices.push_back(t.y);
-      indices.push_back(t.z);
+      indices.push_back(t[0]);
+      indices.push_back(t[1]);
+      indices.push_back(t[2]);
     }
     for (auto& q : quads) {
-      sizes.push_back(q.z == q.w ? 3 : 4);
-      indices.push_back(q.x);
-      indices.push_back(q.y);
-      indices.push_back(q.z);
-      if (q.z != q.w) indices.push_back(q.w);
+      sizes.push_back(q[2] == q[3] ? 3 : 4);
+      indices.push_back(q[0]);
+      indices.push_back(q[1]);
+      indices.push_back(q[2]);
+      if (q[2] != q[3]) indices.push_back(q[3]);
     }
     return add_lists(ply, "face", "vertex_indices", sizes, indices);
   }

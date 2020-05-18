@@ -109,15 +109,15 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
     auto area = 0.0f;
     if (!ioshape->triangles.empty()) {
       for (auto t : ioshape->triangles)
-        area += triangle_area(ioshape->positions[t.x], ioshape->positions[t.y],
-            ioshape->positions[t.z]);
+        area += triangle_area(ioshape->positions[t[0]], ioshape->positions[t[1]],
+            ioshape->positions[t[2]]);
     } else if (!ioshape->quads.empty()) {
       for (auto q : ioshape->quads)
-        area += quad_area(ioshape->positions[q.x], ioshape->positions[q.y],
-            ioshape->positions[q.z], ioshape->positions[q.w]);
+        area += quad_area(ioshape->positions[q[0]], ioshape->positions[q[1]],
+            ioshape->positions[q[2]], ioshape->positions[q[3]]);
     } else if (!ioshape->lines.empty()) {
       for (auto l : ioshape->lines)
-        area += line_length(ioshape->positions[l.x], ioshape->positions[l.y]);
+        area += line_length(ioshape->positions[l[0]], ioshape->positions[l[1]]);
     } else {
       area += ioshape->positions.size();
     }
@@ -321,7 +321,7 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && !input.modifier_shift)
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+        dolly = (input.mouse_pos[0] - input.mouse_last[0]) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(

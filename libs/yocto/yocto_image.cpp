@@ -105,13 +105,13 @@ struct color_space_params {
 static inline mat3f rgb_to_xyz_mat(
     const vec2f& rc, const vec2f& gc, const vec2f& bc, const vec2f& wc) {
   auto rgb = mat3f{
-      {rc.x, rc.y, 1 - rc.x - rc.y},
-      {gc.x, gc.y, 1 - gc.x - gc.y},
-      {bc.x, bc.y, 1 - bc.x - bc.y},
+      {rc[0], rc[1], 1 - rc[0] - rc[1]},
+      {gc[0], gc[1], 1 - gc[0] - gc[1]},
+      {bc[0], bc[1], 1 - bc[0] - bc[1]},
   };
-  auto w = vec3f{wc.x, wc.y, 1 - wc.x - wc.y};
-  auto c = inverse(rgb) * vec3f{w.x / w.y, 1, w.z / w.y};
-  return mat3f{c.x * rgb.x, c.y * rgb.y, c.z * rgb.z};
+  auto w = vec3f{wc[0], wc[1], 1 - wc[0] - wc[1]};
+  auto c = inverse(rgb) * vec3f{w[0] / w[1], 1, w[2] / w[1]};
+  return mat3f{c[0] * rgb[0], c[1] * rgb[1], c[2] * rgb[2]};
 }
 
 // Construct an RGB color space. Predefined color spaces below
@@ -237,9 +237,9 @@ static inline float gamma_linear_to_display(float x, float gamma) {
 // https://en.wikipedia.org/wiki/Rec._709
 static inline float gamma_display_to_linear(
     float x, float gamma, const vec4f& abcd) {
-  auto& a = abcd.x;
-  auto& b = abcd.y;
-  auto& c = abcd.z;
+  auto& a = abcd[0];
+  auto& b = abcd[1];
+  auto& c = abcd[2];
   auto& d = abcd.w;
   if (x < 1 / d) {
     return x / c;
@@ -249,9 +249,9 @@ static inline float gamma_display_to_linear(
 };
 static inline float gamma_linear_to_display(
     float x, float gamma, const vec4f& abcd) {
-  auto& a = abcd.x;
-  auto& b = abcd.y;
-  auto& c = abcd.z;
+  auto& a = abcd[0];
+  auto& b = abcd[1];
+  auto& c = abcd[2];
   auto& d = abcd.w;
   if (x < d) {
     return x * c;
@@ -342,39 +342,39 @@ vec3f color_to_xyz(const vec3f& col, color_space from) {
     // do nothing
   } else if (space.curve_type == color_space_params::curve_t::gamma) {
     rgb = {
-        gamma_linear_to_display(rgb.x, space.curve_gamma),
-        gamma_linear_to_display(rgb.y, space.curve_gamma),
-        gamma_linear_to_display(rgb.z, space.curve_gamma),
+        gamma_linear_to_display(rgb[0], space.curve_gamma),
+        gamma_linear_to_display(rgb[1], space.curve_gamma),
+        gamma_linear_to_display(rgb[2], space.curve_gamma),
     };
   } else if (space.curve_type == color_space_params::curve_t::linear_gamma) {
     rgb = {
-        gamma_linear_to_display(rgb.x, space.curve_gamma, space.curve_abcd),
-        gamma_linear_to_display(rgb.y, space.curve_gamma, space.curve_abcd),
-        gamma_linear_to_display(rgb.z, space.curve_gamma, space.curve_abcd),
+        gamma_linear_to_display(rgb[0], space.curve_gamma, space.curve_abcd),
+        gamma_linear_to_display(rgb[1], space.curve_gamma, space.curve_abcd),
+        gamma_linear_to_display(rgb[2], space.curve_gamma, space.curve_abcd),
     };
   } else if (space.curve_type == color_space_params::curve_t::aces_cc) {
     rgb = {
-        acescc_linear_to_display(rgb.x),
-        acescc_linear_to_display(rgb.y),
-        acescc_linear_to_display(rgb.z),
+        acescc_linear_to_display(rgb[0]),
+        acescc_linear_to_display(rgb[1]),
+        acescc_linear_to_display(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::aces_cct) {
     rgb = {
-        acescct_linear_to_display(rgb.x),
-        acescct_linear_to_display(rgb.y),
-        acescct_linear_to_display(rgb.z),
+        acescct_linear_to_display(rgb[0]),
+        acescct_linear_to_display(rgb[1]),
+        acescct_linear_to_display(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::pq) {
     rgb = {
-        pq_linear_to_display(rgb.x),
-        pq_linear_to_display(rgb.y),
-        pq_linear_to_display(rgb.z),
+        pq_linear_to_display(rgb[0]),
+        pq_linear_to_display(rgb[1]),
+        pq_linear_to_display(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::hlg) {
     rgb = {
-        hlg_linear_to_display(rgb.x),
-        hlg_linear_to_display(rgb.y),
-        hlg_linear_to_display(rgb.z),
+        hlg_linear_to_display(rgb[0]),
+        hlg_linear_to_display(rgb[1]),
+        hlg_linear_to_display(rgb[2]),
     };
   } else {
     throw std::runtime_error("should not have gotten here");
@@ -388,39 +388,39 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
     // nothing
   } else if (space.curve_type == color_space_params::curve_t::gamma) {
     rgb = {
-        gamma_display_to_linear(rgb.x, space.curve_gamma),
-        gamma_display_to_linear(rgb.y, space.curve_gamma),
-        gamma_display_to_linear(rgb.z, space.curve_gamma),
+        gamma_display_to_linear(rgb[0], space.curve_gamma),
+        gamma_display_to_linear(rgb[1], space.curve_gamma),
+        gamma_display_to_linear(rgb[2], space.curve_gamma),
     };
   } else if (space.curve_type == color_space_params::curve_t::linear_gamma) {
     rgb = {
-        gamma_display_to_linear(rgb.x, space.curve_gamma, space.curve_abcd),
-        gamma_display_to_linear(rgb.y, space.curve_gamma, space.curve_abcd),
-        gamma_display_to_linear(rgb.z, space.curve_gamma, space.curve_abcd),
+        gamma_display_to_linear(rgb[0], space.curve_gamma, space.curve_abcd),
+        gamma_display_to_linear(rgb[1], space.curve_gamma, space.curve_abcd),
+        gamma_display_to_linear(rgb[2], space.curve_gamma, space.curve_abcd),
     };
   } else if (space.curve_type == color_space_params::curve_t::aces_cc) {
     rgb = {
-        acescc_display_to_linear(rgb.x),
-        acescc_display_to_linear(rgb.y),
-        acescc_display_to_linear(rgb.z),
+        acescc_display_to_linear(rgb[0]),
+        acescc_display_to_linear(rgb[1]),
+        acescc_display_to_linear(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::aces_cct) {
     rgb = {
-        acescct_display_to_linear(rgb.x),
-        acescct_display_to_linear(rgb.y),
-        acescct_display_to_linear(rgb.z),
+        acescct_display_to_linear(rgb[0]),
+        acescct_display_to_linear(rgb[1]),
+        acescct_display_to_linear(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::pq) {
     rgb = {
-        pq_display_to_linear(rgb.x),
-        pq_display_to_linear(rgb.y),
-        pq_display_to_linear(rgb.z),
+        pq_display_to_linear(rgb[0]),
+        pq_display_to_linear(rgb[1]),
+        pq_display_to_linear(rgb[2]),
     };
   } else if (space.curve_type == color_space_params::curve_t::hlg) {
     rgb = {
-        hlg_display_to_linear(rgb.x),
-        hlg_display_to_linear(rgb.y),
-        hlg_display_to_linear(rgb.z),
+        hlg_display_to_linear(rgb[0]),
+        hlg_display_to_linear(rgb[1]),
+        hlg_display_to_linear(rgb[2]),
     };
   } else {
     throw std::runtime_error("should not have gotten here");
@@ -476,18 +476,18 @@ inline R eval_image_generic(const image<T>& img, const vec2f& uv,
   // get coordinates normalized for tiling
   auto s = 0.0f, t = 0.0f;
   if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+    s = clamp(uv[0], 0.0f, 1.0f) * size[0];
+    t = clamp(uv[1], 0.0f, 1.0f) * size[1];
   } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
+    s = fmod(uv[0], 1.0f) * size[0];
+    if (s < 0) s += size[0];
+    t = fmod(uv[1], 1.0f) * size[1];
+    if (t < 0) t += size[1];
   }
 
   // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto i = clamp((int)s, 0, size[0] - 1), j = clamp((int)t, 0, size[1] - 1);
+  auto ii = (i + 1) % size[0], jj = (j + 1) % size[1];
   auto u = s - i, v = t - j;
 
   if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
@@ -545,9 +545,9 @@ template <typename T>
 inline void get_region(image<T>& clipped, const image<T>& img,
     const vec2i& offset, const vec2i& size) {
   clipped.resize(size);
-  for (auto j = 0; j < size.y; j++) {
-    for (auto i = 0; i < size.x; i++) {
-      clipped[{i, j}] = img[{i + offset.x, j + offset.y}];
+  for (auto j = 0; j < size[1]; j++) {
+    for (auto i = 0; i < size[0]; i++) {
+      clipped[{i, j}] = img[{i + offset[0], j + offset[1]}];
     }
   }
 }
@@ -564,8 +564,8 @@ inline void parallel_for(const vec2i& size, Func&& func) {
         std::async(std::launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
+            if (j >= size[1]) break;
+            for (auto i = 0; i < size[0]; i++) func({i, j});
           }
         }));
   }
@@ -783,10 +783,10 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   if (size == zero2i) {
     throw std::invalid_argument("bad image size in resize");
   }
-  if (size.y == 0) {
-    size.y = (int)round(size.x * (float)img_size.y / (float)img_size.x);
-  } else if (size.x == 0) {
-    size.x = (int)round(size.y * (float)img_size.x / (float)img_size.y);
+  if (size[1] == 0) {
+    size[1] = (int)round(size[0] * (float)img_size[1] / (float)img_size[0]);
+  } else if (size[0] == 0) {
+    size[0] = (int)round(size[1] * (float)img_size[0] / (float)img_size[1]);
   }
   return size;
 }
@@ -840,15 +840,15 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
     for (int i = 0; i < img.width(); i++) {
       auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
       auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
-      auto g00    = (p00.x + p00.y + p00.z) / 3;
-      auto g01    = (p01.x + p01.y + p01.z) / 3;
-      auto g10    = (p10.x + p10.y + p10.z) / 3;
+      auto g00    = (p00[0] + p00[1] + p00[2]) / 3;
+      auto g01    = (p01[0] + p01[1] + p01[2]) / 3;
+      auto g10    = (p10[0] + p10[1] + p10[2]) / 3;
       auto normal = vec3f{
           scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
-      normal.y = -normal.y;  // make green pointing up, even if y axis
+      normal[1] = -normal[1];  // make green pointing up, even if y axis
                              // points down
       normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-      norm[{i, j}] = {normal.x, normal.y, normal.z, 1};
+      norm[{i, j}] = {normal[0], normal[1], normal[2], 1};
     }
   }
 }
@@ -875,12 +875,12 @@ void make_grid(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
     auto thick = 0.01f / 2;
-    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
-             uv.y >= 1 - thick ||
-             (uv.x >= 0.5f - thick && uv.x <= 0.5f + thick) ||
-             (uv.y >= 0.5f - thick && uv.y <= 0.5f + thick);
+    auto c     = uv[0] <= thick || uv[0] >= 1 - thick || uv[1] <= thick ||
+             uv[1] >= 1 - thick ||
+             (uv[0] >= 0.5f - thick && uv[0] <= 0.5f + thick) ||
+             (uv[1] >= 0.5f - thick && uv[1] <= 0.5f + thick);
     return c ? color0 : color1;
   });
 }
@@ -889,8 +889,8 @@ void make_checker(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    auto c = uv.x <= 0.5f != uv.y <= 0.5f;
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    auto c = uv[0] <= 0.5f != uv[1] <= 0.5f;
     return c ? color0 : color1;
   });
 }
@@ -899,14 +899,14 @@ void make_bumps(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 4 * scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
     auto thick  = 0.125f;
     auto center = vec2f{
-        uv.x <= 0.5f ? 0.25f : 0.75f,
-        uv.y <= 0.5f ? 0.25f : 0.75f,
+        uv[0] <= 0.5f ? 0.25f : 0.75f,
+        uv[1] <= 0.5f ? 0.25f : 0.75f,
     };
     auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
-    auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
+    auto val  = uv[0] <= 0.5f != uv[1] <= 0.5f ? (1 + sqrt(1 - dist)) / 2
                                             : (dist * dist) / 2;
     return lerp(color0, color1, val);
   });
@@ -916,8 +916,8 @@ void make_ramp(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return lerp(color0, color1, uv.x);
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    return lerp(color0, color1, uv[0]);
   });
 }
 
@@ -925,13 +925,13 @@ void make_gammaramp(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    if (uv.y < 1 / 3.0f) {
-      return lerp(color0, color1, pow(uv.x, 2.2f));
-    } else if (uv.y < 2 / 3.0f) {
-      return lerp(color0, color1, uv.x);
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    if (uv[1] < 1 / 3.0f) {
+      return lerp(color0, color1, pow(uv[0], 2.2f));
+    } else if (uv[1] < 2 / 3.0f) {
+      return lerp(color0, color1, uv[0]);
     } else {
-      return lerp(color0, color1, pow(uv.x, 1 / 2.2f));
+      return lerp(color0, color1, pow(uv[0], 1 / 2.2f));
     }
   });
 }
@@ -939,8 +939,8 @@ void make_gammaramp(image<vec4f>& img, const vec2i& size, float scale,
 void make_uvramp(image<vec4f>& img, const vec2i& size, float scale) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{uv.x, uv.y, 0, 1};
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    return vec4f{uv[0], uv[1], 0, 1};
   });
 }
 
@@ -948,27 +948,27 @@ void make_uvgrid(
     image<vec4f>& img, const vec2i& size, float scale, bool colored) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    uv.y     = 1 - uv.y;
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    uv[1]     = 1 - uv[1];
     auto hsv = zero3f;
-    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
+    hsv[0]    = (clamp((int)(uv[0] * 8), 0, 7) +
+                (clamp((int)(uv[1] * 8), 0, 7) + 5) % 8 * 8) /
             64.0f;
     auto vuv = uv * 4;
-    vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
-    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
-    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    vuv -= vec2f{(float)(int)vuv[0], (float)(int)vuv[1]};
+    auto vc  = vuv[0] <= 0.5f != vuv[1] <= 0.5f;
+    hsv[2]    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
     auto suv = uv * 16;
-    suv -= vec2f{(float)(int)suv.x, (float)(int)suv.y};
+    suv -= vec2f{(float)(int)suv[0], (float)(int)suv[1]};
     auto st = 0.01f / 2;
-    auto sc = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    auto sc = suv[0] <= st || suv[0] >= 1 - st || suv[1] <= st || suv[1] >= 1 - st;
     if (sc) {
-      hsv.y = 0.2f;
-      hsv.z = 0.8f;
+      hsv[1] = 0.2f;
+      hsv[2] = 0.8f;
     } else {
-      hsv.y = 0.8f;
+      hsv[1] = 0.8f;
     }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z};
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv[2]};
     return vec4f{rgb, 1};
   });
 }
@@ -977,8 +977,8 @@ void make_blackbodyramp(
     image<vec4f>& img, const vec2i& size, float scale, float from, float to) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
-    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{math::blackbody_to_rgb(math::lerp(from, to, uv.x)), 1};
+    uv -= vec2f{(float)(int)uv[0], (float)(int)uv[1]};
+    return vec4f{math::blackbody_to_rgb(math::lerp(from, to, uv[0])), 1};
   });
 }
 
@@ -986,7 +986,7 @@ void make_noisemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_noise(vec3f{uv.x, uv.y, 0.5f});
+    auto v = math::perlin_noise(vec3f{uv[0], uv[1], 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -996,7 +996,7 @@ void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale,
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = math::perlin_fbm(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+        {uv[0], uv[1], 0.5f}, noise[0], noise[1], (int)noise[2]);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1006,7 +1006,7 @@ void make_turbulencemap(image<vec4f>& img, const vec2i& size, float scale,
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = math::perlin_turbulence(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+        {uv[0], uv[1], 0.5f}, noise[0], noise[1], (int)noise[2]);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1016,7 +1016,7 @@ void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale,
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = math::perlin_ridge(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
+        {uv[0], uv[1], 0.5f}, noise[0], noise[1], (int)noise[2], noise.w);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1030,8 +1030,8 @@ image<vec4f> add_border(
   for (auto j = 0; j < img.height(); j++) {
     for (auto i = 0; i < img.width(); i++) {
       auto uv = vec2f{i * scale, j * scale};
-      if (uv.x < width || uv.y < width || uv.x > img.width() * scale - width ||
-          uv.y > img.height() * scale - width) {
+      if (uv[0] < width || uv[1] < width || uv[0] > img.width() * scale - width ||
+          uv[1] > img.height() * scale - width) {
         img[{i, j}] = color;
       }
     }
@@ -1120,7 +1120,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   // the minimum 5 pixel diamater
   auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
   sun_angular_radius *= sun_radius;
-  sun_angular_radius = max(sun_angular_radius, 2 * pif / size.y);
+  sun_angular_radius = max(sun_angular_radius, 2 * pif / size[1]);
 
   // sun direction
   auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
@@ -1144,7 +1144,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
       sky_integral += mean(sky_col) * sin(theta);
       sun_integral += mean(sun_col) * sin(theta);
       auto col    = sky_col + sun_col;
-      img[{i, j}] = {col.x, col.y, col.z, 1};
+      img[{i, j}] = {col[0], col[1], col[2], 1};
     }
   }
 
@@ -1154,14 +1154,14 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
       auto theta = pif * ((j + 0.5f) / img.height());
       for (int i = 0; i < img.width(); i++) {
         auto pxl   = img[{i, j}];
-        auto le    = vec3f{pxl.x, pxl.y, pxl.z};
+        auto le    = vec3f{pxl[0], pxl[1], pxl[2]};
         auto angle = sin(theta) * 4 * pif / (img.width() * img.height());
         ground += le * (ground_albedo / pif) * cos(theta) * angle;
       }
     }
     for (auto j = img.height() / 2; j < img.height(); j++) {
       for (int i = 0; i < img.width(); i++) {
-        img[{i, j}] = {ground.x, ground.y, ground.z, 1};
+        img[{i, j}] = {ground[0], ground[1], ground[2], 1};
       }
     }
   } else {
@@ -1317,9 +1317,9 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
   if (vol.empty()) return 0;
 
   // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.width();
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.height();
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.depth();
+  auto s = clamp((uvw[0] + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.width();
+  auto t = clamp((uvw[1] + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.height();
+  auto r = clamp((uvw[2] + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.depth();
 
   // get image coordinates and residuals
   auto i  = clamp((int)s, 0, vol.width() - 1);
@@ -1366,7 +1366,7 @@ void make_test(
         auto p     = vec3f{i / (float)vol.width(), j / (float)vol.height(),
             k / (float)vol.depth()};
         auto value = pow(
-            max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
+            max(max(cos(scale * p[0]), cos(scale * p[1])), 0.0f), exponent);
         vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
       }
     }

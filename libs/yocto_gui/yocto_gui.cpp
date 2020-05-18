@@ -111,7 +111,7 @@ bool check_error(std::string& error) {
 }
 
 void clear_framebuffer(const vec4f& color, bool clear_depth) {
-  glClearColor(color.x, color.y, color.z, color.w);
+  glClearColor(color[0], color[1], color[2], color[3]);
   if (clear_depth) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -121,7 +121,7 @@ void clear_framebuffer(const vec4f& color, bool clear_depth) {
 }
 
 void set_viewport(const vec4i& viewport) {
-  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+  glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 }
 
 void set_wireframe(bool enabled) {
@@ -174,7 +174,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
       texture->linear != linear || texture->mipmap != mipmap) {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size.x, size.y,
+        as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size[0], size[1],
         0, cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
@@ -184,7 +184,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size[0], size[1],
         cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -229,8 +229,8 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
     glGenTextures(1, &texture->texture_id);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0,
-        as_float ? fformat.at(nchannels) : iformat.at(nchannels), size.x,
-        size.y, 0, iformat.at(nchannels), GL_FLOAT, img);
+        as_float ? fformat.at(nchannels) : iformat.at(nchannels), size[0],
+        size[1], 0, iformat.at(nchannels), GL_FLOAT, img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
         mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
                : (linear ? GL_LINEAR : GL_NEAREST));
@@ -239,7 +239,7 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size[0], size[1],
         iformat.at(nchannels), GL_FLOAT, img);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -674,10 +674,10 @@ void set_image(
 // draw image
 void draw_image(gui::image* image, const image_params& params) {
   assert_error();
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
-      params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z,
-      params.background.w);
+  glViewport(params.framebuffer[0], params.framebuffer[1], params.framebuffer[2],
+      params.framebuffer[3]);
+  glClearColor(params.background[0], params.background[1], params.background[2],
+      params.background[3]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   bind_program(image->program);
@@ -701,19 +701,19 @@ void set_uniform(gui::program* program, int location, int value) {
 
 void set_uniform(gui::program* program, int location, const vec2i& value) {
   assert_error();
-  glUniform2i(location, value.x, value.y);
+  glUniform2i(location, value[0], value[1]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const vec3i& value) {
   assert_error();
-  glUniform3i(location, value.x, value.y, value.z);
+  glUniform3i(location, value[0], value[1], value[2]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const vec4i& value) {
   assert_error();
-  glUniform4i(location, value.x, value.y, value.z, value.w);
+  glUniform4i(location, value[0], value[1], value[2], value[3]);
   assert_error();
 }
 
@@ -725,49 +725,49 @@ void set_uniform(gui::program* program, int location, float value) {
 
 void set_uniform(gui::program* program, int location, const vec2f& value) {
   assert_error();
-  glUniform2f(location, value.x, value.y);
+  glUniform2f(location, value[0], value[1]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const vec3f& value) {
   assert_error();
-  glUniform3f(location, value.x, value.y, value.z);
+  glUniform3f(location, value[0], value[1], value[2]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const vec4f& value) {
   assert_error();
-  glUniform4f(location, value.x, value.y, value.z, value.w);
+  glUniform4f(location, value[0], value[1], value[2], value[3]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const mat2f& value) {
   assert_error();
-  glUniformMatrix2fv(location, 1, false, &value.x.x);
+  glUniformMatrix2fv(location, 1, false, &value[0][0]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const mat3f& value) {
   assert_error();
-  glUniformMatrix3fv(location, 1, false, &value.x.x);
+  glUniformMatrix3fv(location, 1, false, &value[0][0]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const mat4f& value) {
   assert_error();
-  glUniformMatrix4fv(location, 1, false, &value.x.x);
+  glUniformMatrix4fv(location, 1, false, &value[0][0]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const frame2f& value) {
   assert_error();
-  glUniformMatrix3x2fv(location, 1, false, &value.x.x);
+  glUniformMatrix3x2fv(location, 1, false, &value[0][0]);
   assert_error();
 }
 
 void set_uniform(gui::program* program, int location, const frame3f& value) {
   assert_error();
-  glUniformMatrix4x3fv(location, 1, false, &value.x.x);
+  glUniformMatrix4x3fv(location, 1, false, &value[0][0]);
   assert_error();
 }
 
@@ -833,13 +833,13 @@ void set_attribute(gui::program* program, int location, float value) {
   glVertexAttrib1f(location, value);
 }
 void set_attribute(gui::program* program, int location, const vec2f& value) {
-  glVertexAttrib2f(location, value.x, value.y);
+  glVertexAttrib2f(location, value[0], value[1]);
 }
 void set_attribute(gui::program* program, int location, const vec3f& value) {
-  glVertexAttrib3f(location, value.x, value.y, value.z);
+  glVertexAttrib3f(location, value[0], value[1], value[2]);
 }
 void set_attribute(gui::program* program, int location, const vec4f& value) {
-  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+  glVertexAttrib4f(location, value[0], value[1], value[2], value[3]);
 }
 
 // draw elements
@@ -1243,8 +1243,8 @@ void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   auto triangles = std::vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+    triangles.push_back({q[0], q[1], q[3]});
+    if (q[2] != q[3]) triangles.push_back({q[2], q[3], q[1]});
   }
   set_elementbuffer(shape->quads, triangles);
 }
@@ -1252,15 +1252,15 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads) {
   auto edgemap = std::unordered_set<vec2i>{};
   for (auto t : triangles) {
-    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
-    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
-    edgemap.insert({min(t.z, t.x), max(t.z, t.x)});
+    edgemap.insert({min(t[0], t[1]), max(t[0], t[1])});
+    edgemap.insert({min(t[1], t[2]), max(t[1], t[2])});
+    edgemap.insert({min(t[2], t[0]), max(t[2], t[0])});
   }
   for (auto t : quads) {
-    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
-    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
-    edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
-    edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
+    edgemap.insert({min(t[0], t[1]), max(t[0], t[1])});
+    edgemap.insert({min(t[1], t[2]), max(t[1], t[2])});
+    edgemap.insert({min(t[2], t[3]), max(t[2], t[3])});
+    edgemap.insert({min(t[3], t[0]), max(t[3], t[0])});
   }
   auto edges = std::vector<vec2i>(edgemap.begin(), edgemap.end());
   set_elementbuffer(shape->edges, edges);
@@ -1485,7 +1485,7 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
       vec3f{pif / 4}, light_type::directional, true};
   static auto camera_lights = std::vector<gui::light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
-  auto camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto camera_aspect = (float)viewport[2] / (float)viewport[3];
   auto camera_yfov =
       camera_aspect >= 0
           ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
@@ -1498,7 +1498,7 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   set_viewport(viewport);
 
   bind_program(scene->program);
-  set_uniform(scene->program, "eye", camera->frame.o);
+  set_uniform(scene->program, "eye", camera->frame[3]);
   set_uniform(scene->program, "view", camera_view);
   set_uniform(scene->program, "projection", camera_proj);
   set_uniform(scene->program, "eyelight",
@@ -1583,8 +1583,8 @@ void run_ui(const vec2i& size, const std::string& title,
 namespace yocto::gui {
 
 static void draw_window(gui::window* win) {
-  glClearColor(win->background.x, win->background.y, win->background.z,
-      win->background.w);
+  glClearColor(win->background[0], win->background[1], win->background[2],
+      win->background[3]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win->draw_cb) win->draw_cb(win, win->input);
   if (win->widgets_cb) {
@@ -1592,13 +1592,13 @@ static void draw_window(gui::window* win) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     auto window = zero2i;
-    glfwGetWindowSize(win->win, &window.x, &window.y);
+    glfwGetWindowSize(win->win, &window[0], &window[1]);
     if (win->widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window[1]});
     } else {
-      ImGui::SetNextWindowPos({(float)(window.x - win->widgets_width), 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowPos({(float)(window[0] - win->widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window[1]});
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
@@ -1630,7 +1630,7 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
 
   // create window
   win->title = title;
-  win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  win->win = glfwCreateWindow(size[0], size[1], title.c_str(), nullptr, nullptr);
   if (!win->win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win->win);
   glfwSwapInterval(1);  // Enable vsync
@@ -1677,20 +1677,20 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
       win->win, [](GLFWwindow* glfw, int width, int height) {
         auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
         glfwGetWindowSize(
-            win->win, &win->input.window_size.x, &win->input.window_size.y);
-        if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-            &win->input.framebuffer_viewport.w);
-        win->input.framebuffer_viewport.x = 0;
-        win->input.framebuffer_viewport.y = 0;
+            win->win, &win->input.window_size[0], &win->input.window_size[1]);
+        if (win->widgets_width) win->input.window_size[0] -= win->widgets_width;
+        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport[2],
+            &win->input.framebuffer_viewport[3]);
+        win->input.framebuffer_viewport[0] = 0;
+        win->input.framebuffer_viewport[1] = 0;
         if (win->widgets_width) {
           auto win_size = zero2i;
-          glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+          glfwGetWindowSize(win->win, &win_size[0], &win_size[1]);
           auto offset = (int)(win->widgets_width *
-                              (float)win->input.framebuffer_viewport.z /
-                              win_size.x);
-          win->input.framebuffer_viewport.z -= offset;
-          if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+                              (float)win->input.framebuffer_viewport[2] /
+                              win_size[0]);
+          win->input.framebuffer_viewport[2] -= offset;
+          if (win->widgets_left) win->input.framebuffer_viewport[0] += offset;
         }
       });
 
@@ -1734,7 +1734,7 @@ void run_ui(gui::window* win) {
     glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
     win->input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
     if (win->widgets_width && win->widgets_left)
-      win->input.mouse_pos.x -= win->widgets_width;
+      win->input.mouse_pos[0] -= win->widgets_width;
     win->input.mouse_left = glfwGetMouseButton(
                                 win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     win->input.mouse_right =
@@ -1749,20 +1749,20 @@ void run_ui(gui::window* win) {
         glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
         glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     glfwGetWindowSize(
-        win->win, &win->input.window_size.x, &win->input.window_size.y);
-    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-        &win->input.framebuffer_viewport.w);
-    win->input.framebuffer_viewport.x = 0;
-    win->input.framebuffer_viewport.y = 0;
+        win->win, &win->input.window_size[0], &win->input.window_size[1]);
+    if (win->widgets_width) win->input.window_size[0] -= win->widgets_width;
+    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport[2],
+        &win->input.framebuffer_viewport[3]);
+    win->input.framebuffer_viewport[0] = 0;
+    win->input.framebuffer_viewport[1] = 0;
     if (win->widgets_width) {
       auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+      glfwGetWindowSize(win->win, &win_size[0], &win_size[1]);
       auto offset = (int)(win->widgets_width *
-                          (float)win->input.framebuffer_viewport.z /
-                          win_size.x);
-      win->input.framebuffer_viewport.z -= offset;
-      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+                          (float)win->input.framebuffer_viewport[2] /
+                          win_size[0]);
+      win->input.framebuffer_viewport[2] -= offset;
+      if (win->widgets_left) win->input.framebuffer_viewport[0] += offset;
     }
     if (win->widgets_width) {
       auto io                   = &ImGui::GetIO();
@@ -2148,15 +2148,15 @@ bool draw_slider(
 }
 bool draw_slider(
     window* win, const char* lbl, vec2f& value, float min, float max) {
-  return ImGui::SliderFloat2(lbl, &value.x, min, max);
+  return ImGui::SliderFloat2(lbl, &value[0], min, max);
 }
 bool draw_slider(
     window* win, const char* lbl, vec3f& value, float min, float max) {
-  return ImGui::SliderFloat3(lbl, &value.x, min, max);
+  return ImGui::SliderFloat3(lbl, &value[0], min, max);
 }
 bool draw_slider(
     window* win, const char* lbl, vec4f& value, float min, float max) {
-  return ImGui::SliderFloat4(lbl, &value.x, min, max);
+  return ImGui::SliderFloat4(lbl, &value[0], min, max);
 }
 
 bool draw_slider(
@@ -2165,15 +2165,15 @@ bool draw_slider(
 }
 bool draw_slider(
     gui::window* win, const char* lbl, vec2i& value, int min, int max) {
-  return ImGui::SliderInt2(lbl, &value.x, min, max);
+  return ImGui::SliderInt2(lbl, &value[0], min, max);
 }
 bool draw_slider(
     gui::window* win, const char* lbl, vec3i& value, int min, int max) {
-  return ImGui::SliderInt3(lbl, &value.x, min, max);
+  return ImGui::SliderInt3(lbl, &value[0], min, max);
 }
 bool draw_slider(
     gui::window* win, const char* lbl, vec4i& value, int min, int max) {
-  return ImGui::SliderInt4(lbl, &value.x, min, max);
+  return ImGui::SliderInt4(lbl, &value[0], min, max);
 }
 
 bool draw_dragger(gui::window* win, const char* lbl, float& value, float speed,
@@ -2182,15 +2182,15 @@ bool draw_dragger(gui::window* win, const char* lbl, float& value, float speed,
 }
 bool draw_dragger(gui::window* win, const char* lbl, vec2f& value, float speed,
     float min, float max) {
-  return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat2(lbl, &value[0], speed, min, max);
 }
 bool draw_dragger(gui::window* win, const char* lbl, vec3f& value, float speed,
     float min, float max) {
-  return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat3(lbl, &value[0], speed, min, max);
 }
 bool draw_dragger(gui::window* win, const char* lbl, vec4f& value, float speed,
     float min, float max) {
-  return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
+  return ImGui::DragFloat4(lbl, &value[0], speed, min, max);
 }
 
 bool draw_dragger(
@@ -2199,15 +2199,15 @@ bool draw_dragger(
 }
 bool draw_dragger(
     window* win, const char* lbl, vec2i& value, float speed, int min, int max) {
-  return ImGui::DragInt2(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt2(lbl, &value[0], speed, min, max);
 }
 bool draw_dragger(
     window* win, const char* lbl, vec3i& value, float speed, int min, int max) {
-  return ImGui::DragInt3(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt3(lbl, &value[0], speed, min, max);
 }
 bool draw_dragger(
     window* win, const char* lbl, vec4i& value, float speed, int min, int max) {
-  return ImGui::DragInt4(lbl, &value.x, speed, min, max);
+  return ImGui::DragInt4(lbl, &value[0], speed, min, max);
 }
 
 bool draw_checkbox(gui::window* win, const char* lbl, bool& value) {
@@ -2216,12 +2216,12 @@ bool draw_checkbox(gui::window* win, const char* lbl, bool& value) {
 
 bool draw_coloredit(gui::window* win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
-  return ImGui::ColorEdit3(lbl, &value.x, flags);
+  return ImGui::ColorEdit3(lbl, &value[0], flags);
 }
 
 bool draw_coloredit(gui::window* win, const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
-  return ImGui::ColorEdit4(lbl, &value.x, flags);
+  return ImGui::ColorEdit4(lbl, &value[0], flags);
 }
 
 bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value) {
@@ -2255,7 +2255,7 @@ bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value) {
   auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
     xyz(value) = xyz(color) * exp2(exposure);
-    value.w    = color.w;
+    value[3]    = color[3];
     return true;
   } else {
     return false;
@@ -2316,7 +2316,7 @@ bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
 void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
-  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing[0]);
   ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
   ImGui::PopStyleColor(1);
 }
@@ -2327,7 +2327,7 @@ void draw_progressbar(
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(
       (float)current / (float)total, ImVec2(0.0f, 0.0f), overlay.c_str());
-  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing[0]);
   ImGui::Text(lbl, ImVec2(0.0f, 0.0f));
   ImGui::PopStyleColor(1);
 }

@@ -101,14 +101,14 @@ static vec3f eval_normal(const trc::shape* shape, int element) {
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     norm   = triangle_normal(
-        shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
+        shape->positions[t[0]], shape->positions[t[1]], shape->positions[t[2]]);
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
-        shape->positions[q.z], shape->positions[q.w]);
+    norm   = quad_normal(shape->positions[q[0]], shape->positions[q[1]],
+        shape->positions[q[2]], shape->positions[q[3]]);
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
+    norm   = line_tangent(shape->positions[l[0]], shape->positions[l[1]]);
   } else if (!shape->points.empty()) {
     norm = {0, 0, 1};
   } else {
@@ -124,23 +124,23 @@ static std::pair<vec3f, vec3f> eval_tangents(
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     if (shape->texcoords.empty()) {
-      return triangle_tangents_fromuv(shape->positions[t.x],
-          shape->positions[t.y], shape->positions[t.z], {0, 0}, {1, 0}, {0, 1});
+      return triangle_tangents_fromuv(shape->positions[t[0]],
+          shape->positions[t[1]], shape->positions[t[2]], {0, 0}, {1, 0}, {0, 1});
     } else {
-      return triangle_tangents_fromuv(shape->positions[t.x],
-          shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
-          shape->texcoords[t.y], shape->texcoords[t.z]);
+      return triangle_tangents_fromuv(shape->positions[t[0]],
+          shape->positions[t[1]], shape->positions[t[2]], shape->texcoords[t[0]],
+          shape->texcoords[t[1]], shape->texcoords[t[2]]);
     }
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
     if (shape->texcoords.empty()) {
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], {0, 0}, {1, 0}, {0, 1},
+      return quad_tangents_fromuv(shape->positions[q[0]], shape->positions[q[1]],
+          shape->positions[q[2]], shape->positions[q[3]], {0, 0}, {1, 0}, {0, 1},
           {1, 1}, uv);
     } else {
-      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w], shape->texcoords[q.x],
-          shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w],
+      return quad_tangents_fromuv(shape->positions[q[0]], shape->positions[q[1]],
+          shape->positions[q[2]], shape->positions[q[3]], shape->texcoords[q[0]],
+          shape->texcoords[q[1]], shape->texcoords[q[2]], shape->texcoords[q[3]],
           uv);
     }
   } else {
@@ -155,15 +155,15 @@ static T eval_shape(const trc::shape* shape, const std::vector<T>& vals,
   if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
-    return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
+    return interpolate_triangle(vals[t[0]], vals[t[1]], vals[t[2]], uv);
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    if (q.w == q.z)
-      return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+    if (q[3] == q[2])
+      return interpolate_triangle(vals[q[0]], vals[q[1]], vals[q[2]], uv);
+    return interpolate_quad(vals[q[0]], vals[q[1]], vals[q[2]], vals[q[3]], uv);
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return interpolate_line(vals[l.x], vals[l.y], uv.x);
+    return interpolate_line(vals[l[0]], vals[l[1]], uv[0]);
   } else if (!shape->points.empty()) {
     return vals[shape->points[element]];
   } else {
@@ -218,18 +218,18 @@ static vec3f eval_texture(const trc::texture* texture, const vec2f& uv,
   // get coordinates normalized for tiling
   auto s = 0.0f, t = 0.0f;
   if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+    s = clamp(uv[0], 0.0f, 1.0f) * size[0];
+    t = clamp(uv[1], 0.0f, 1.0f) * size[1];
   } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
+    s = fmod(uv[0], 1.0f) * size[0];
+    if (s < 0) s += size[0];
+    t = fmod(uv[1], 1.0f) * size[1];
+    if (t < 0) t += size[1];
   }
 
   // get img::image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto i = clamp((int)s, 0, size[0] - 1), j = clamp((int)t, 0, size[1] - 1);
+  auto ii = (i + 1) % size[0], jj = (j + 1) % size[1];
   auto u = s - i, v = t - j;
 
   if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
@@ -251,15 +251,15 @@ static ray3f eval_perspective_camera(
   //   distance = camera->lens * camera->focus / (camera->focus - camera->lens);
   // }
   // point on the image plane
-  auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
-      camera->film.y * (image_uv.y - 0.5f), camera->lens};
+  auto q = vec3f{camera->film[0] * (0.5f - image_uv[0]),
+      camera->film[1] * (image_uv[1] - 0.5f), camera->lens};
   // ray direction through the lens center
   auto dc = -normalize(q);
   // point on the lens
   auto e = vec3f{
-      lens_uv.x * camera->aperture / 2, lens_uv.y * camera->aperture / 2, 0};
+      lens_uv[0] * camera->aperture / 2, lens_uv[1] * camera->aperture / 2, 0};
   // point on the focus plane
-  auto p = dc * camera->focus / abs(dc.z);
+  auto p = dc * camera->focus / abs(dc[2]);
   // correct ray direction to account for camera focusing
   auto d = normalize(p - e);
   // done
@@ -267,15 +267,15 @@ static ray3f eval_perspective_camera(
       transform_point(camera->frame, e), transform_direction(camera->frame, d)};
   // old implementation that was derived differently --- kept here in case
   // bugs start to show up
-  // auto e = vec3f{(lens_uv.x - 0.5f) * camera->aperture,
-  //     (lens_uv.y - 0.5f) * camera->aperture, 0};
-  // auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
-  //     camera->film.y * (image_uv.y - 0.5f), distance};
+  // auto e = vec3f{(lens_uv[0] - 0.5f) * camera->aperture,
+  //     (lens_uv[1] - 0.5f) * camera->aperture, 0};
+  // auto q = vec3f{camera->film[0] * (0.5f - image_uv[0]),
+  //     camera->film[1] * (image_uv[1] - 0.5f), distance};
   // // distance of the img::image of the point
   // auto distance1 = camera->lens * distance / (distance - camera->lens);
   // auto q1        = -q * distance1 / distance;
   // auto d         = normalize(q1 - e);
-  // // auto q1 = - normalize(q) * camera->focus / normalize(q).z;
+  // // auto q1 = - normalize(q) * camera->focus / normalize(q)[2];
   // auto ray = ray3f{transform_point(camera->frame, e),
   //     transform_direction(camera->frame, d)};
 }
@@ -286,13 +286,13 @@ static ray3f eval_orthographic_camera(
     const trc::camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   // point on the image plane
   auto scale = 1 / camera->lens;
-  auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
-      camera->film.y * (image_uv.y - 0.5f) * scale, camera->lens};
+  auto q     = vec3f{camera->film[0] * (0.5f - image_uv[0]) * scale,
+      camera->film[1] * (image_uv[1] - 0.5f) * scale, camera->lens};
   // point on the lens
-  auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera->aperture / 2,
-                                      lens_uv.y * camera->aperture / 2, 0};
+  auto e = vec3f{-q[0], -q[1], 0} + vec3f{lens_uv[0] * camera->aperture / 2,
+                                      lens_uv[1] * camera->aperture / 2, 0};
   // point on the focus plane
-  auto p = vec3f{-q.x, -q.y, -camera->focus};
+  auto p = vec3f{-q[0], -q[1], -camera->focus};
   // correct ray direction to account for camera focusing
   auto d = normalize(p - e);
   // done
@@ -315,7 +315,7 @@ static ray3f sample_camera(const trc::camera* camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
   if (!tent) {
     auto uv = vec2f{
-        (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
+        (ij[0] + puv[0]) / image_size[0], (ij[1] + puv[1]) / image_size[1]};
     return eval_camera(camera, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
@@ -323,12 +323,12 @@ static ray3f sample_camera(const trc::camera* camera, const vec2i& ij,
     auto       fuv =
         width *
             vec2f{
-                puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
-                puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+                puv[0] < 0.5f ? sqrt(2 * puv[0]) - 1 : 1 - sqrt(2 - 2 * puv[0]),
+                puv[1] - 0.5f ? sqrt(2 * puv[1]) - 1 : 1 - sqrt(2 - 2 * puv[1]),
             } +
         offset;
     auto uv = vec2f{
-        (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
+        (ij[0] + fuv[0]) / image_size[0], (ij[1] + fuv[1]) / image_size[1]};
     return eval_camera(camera, uv, sample_disk(luv));
   }
 }
@@ -415,9 +415,9 @@ static trace_point eval_point(const trc::scene* scene,
       auto x = orthonormalize(xyz(tangsp), z);
       auto y = normalize(cross(z, x));
       basis  = {x, y, z};
-      flip_v = tangsp.w < 0;
+      flip_v = tangsp[3] < 0;
     }
-    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    normalmap[1] *= flip_v ? 1 : -1;  // flip vertical axis
     point.normal = normalize(basis * normalmap);
   }
 
@@ -447,20 +447,20 @@ static trace_point eval_point(const trc::scene* scene,
   auto base = material->color * point.color *
               eval_texture(material->color_tex, texcoord, false);
   auto specular = material->specular *
-                  eval_texture(material->specular_tex, texcoord, true).x;
+                  eval_texture(material->specular_tex, texcoord, true)[0];
   auto metallic = material->metallic *
-                  eval_texture(material->metallic_tex, texcoord, true).x;
+                  eval_texture(material->metallic_tex, texcoord, true)[0];
   auto roughness = material->roughness *
-                   eval_texture(material->roughness_tex, texcoord, true).x;
+                   eval_texture(material->roughness_tex, texcoord, true)[0];
 
   auto ior  = material->ior;
   auto coat = material->coat *
-              eval_texture(material->coat_tex, texcoord, true).x;
+              eval_texture(material->coat_tex, texcoord, true)[0];
   auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord, true).x;
+                      eval_texture(material->emission_tex, texcoord, true)[0];
   auto translucency =
       material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true).x;
+      eval_texture(material->translucency_tex, texcoord, true)[0];
   auto opacity = material->opacity *
                  mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
@@ -570,10 +570,10 @@ static volume_point eval_volume(const trc::scene* scene,
   auto base     = material->color * color *
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
-                      eval_texture(material->emission_tex, texcoord, true).x;
+                      eval_texture(material->emission_tex, texcoord, true)[0];
   auto translucency =
       material->translucency *
-      eval_texture(material->translucency_tex, texcoord, true).x;
+      eval_texture(material->translucency_tex, texcoord, true)[0];
   auto thin = material->thin ||
               (!material->transmission && !material->translucency);
   auto scattering = material->scattering *
@@ -606,8 +606,8 @@ static vec3f eval_environment(const trc::scene* scene, const ray3f& ray) {
   for (auto environment : scene->environments) {
     auto wl       = transform_direction(inverse(environment->frame), ray.d);
     auto texcoord = vec2f{
-        atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-    if (texcoord.x < 0) texcoord.x += 1;
+        atan2(wl[2], wl[0]) / (2 * pif), acos(clamp(wl[1], -1.0f, 1.0f)) / pif};
+    if (texcoord[0] < 0) texcoord[0] += 1;
     emission += environment->emission *
                 eval_texture(environment->emission_tex, texcoord);
   }
@@ -676,15 +676,15 @@ static void init_embree_bvh(trc::shape* shape, const trace_params& params) {
     auto epositions = std::vector<vec4f>{};
     auto last_index = -1;
     for (auto& l : shape->lines) {
-      if (last_index == l.x) {
+      if (last_index == l[0]) {
         elines.push_back((int)epositions.size() - 1);
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        epositions.push_back({shape->positions[l[1]], shape->radius[l[1]]});
       } else {
         elines.push_back((int)epositions.size());
-        epositions.push_back({shape->positions[l.x], shape->radius[l.x]});
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        epositions.push_back({shape->positions[l[0]], shape->radius[l[0]]});
+        epositions.push_back({shape->positions[l[1]], shape->radius[l[1]]});
       }
-      last_index = l.y;
+      last_index = l[1];
     }
     auto egeometry = rtcNewGeometry(
         edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
@@ -787,8 +787,8 @@ static void update_embree_bvh(trc::scene* scene,
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& instance : scene->embree_instances) {
-    auto object_id   = instance.x;
-    auto instance_id = instance.y;
+    auto object_id   = instance[0];
+    auto instance_id = instance[1];
     auto object      = scene->objects[object_id];
     auto frame       = scene->objects[instance_id]->frame * object->frame;
     auto egeometry   = rtcGetGeometry(escene, instance_id);
@@ -803,12 +803,12 @@ static void update_embree_bvh(trc::scene* scene,
 static bool intersect_shape_embree_bvh(trc::shape* shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
@@ -828,12 +828,12 @@ static bool intersect_scene_embree_bvh(const trc::scene* scene,
     const ray3f& ray, int& shape, int& instance, int& element, vec2f& uv,
     float& distance, bool find_any) {
   RTCRayHit embree_ray;
-  embree_ray.ray.org_x     = ray.o.x;
-  embree_ray.ray.org_y     = ray.o.y;
-  embree_ray.ray.org_z     = ray.o.z;
-  embree_ray.ray.dir_x     = ray.d.x;
-  embree_ray.ray.dir_y     = ray.d.y;
-  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.org_x     = ray.o[0];
+  embree_ray.ray.org_y     = ray.o[1];
+  embree_ray.ray.org_z     = ray.o[2];
+  embree_ray.ray.dir_x     = ray.d[0];
+  embree_ray.ray.dir_y     = ray.d[1];
+  embree_ray.ray.dir_z     = ray.d[2];
   embree_ray.ray.tnear     = ray.tmin;
   embree_ray.ray.tfar      = ray.tmax;
   embree_ray.ray.flags     = 0;
@@ -843,8 +843,8 @@ static bool intersect_scene_embree_bvh(const trc::scene* scene,
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1(scene->embree_bvh, &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  shape    = scene->embree_instances[(int)embree_ray.hit.instID[0]].x;
-  instance = scene->embree_instances[(int)embree_ray.hit.instID[0]].y;
+  shape    = scene->embree_instances[(int)embree_ray.hit.instID[0]][0];
+  instance = scene->embree_instances[(int)embree_ray.hit.instID[0]][1];
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
   distance = embree_ray.ray.tfar;
@@ -878,8 +878,8 @@ static std::pair<int, int> split_sah(
   auto      min_cost = flt_max;
   auto      area     = [](auto& b) {
     auto size = b.max - b.min;
-    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-           2 * size.y * size.z;
+    return 1e-12f + 2 * size[0] * size[1] + 2 * size[0] * size[2] +
+           2 * size[1] * size[2];
   };
   for (auto saxis = 0; saxis < 3; saxis++) {
     for (auto b = 1; b < nbins; b++) {
@@ -936,9 +936,9 @@ static std::pair<int, int> split_balanced(
   if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  if (csize[0] >= csize[1] && csize[0] >= csize[2]) axis = 0;
+  if (csize[1] >= csize[0] && csize[1] >= csize[2]) axis = 1;
+  if (csize[2] >= csize[0] && csize[2] >= csize[1]) axis = 2;
 
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
@@ -972,9 +972,9 @@ static std::pair<int, int> split_middle(
   if (csize == zero3f) return {mid, axis};
 
   // split along largest
-  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
-  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
-  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+  if (csize[0] >= csize[1] && csize[0] >= csize[2]) axis = 0;
+  if (csize[1] >= csize[0] && csize[1] >= csize[2]) axis = 1;
+  if (csize[2] >= csize[0] && csize[2] >= csize[1]) axis = 2;
 
   // split the space in the middle along the largest axis
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
@@ -1023,7 +1023,7 @@ static void build_bvh_serial(std::vector<bvh_node>& nodes,
     // grab node to work on
     auto next = queue.front();
     queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+    auto nodeid = next[0], start = next[1], end = next[2];
 
     // grab node
     auto& node = nodes[nodeid];
@@ -1117,7 +1117,7 @@ static void build_bvh_parallel(
             }
 
             // grab node
-            auto  nodeid = next.x, start = next.y, end = next.z;
+            auto  nodeid = next[0], start = next[1], end = next[2];
             auto& node = nodes[nodeid];
 
             // compute bounds
@@ -1202,8 +1202,8 @@ static void init_bvh(trc::shape* shape, const trace_params& params) {
     for (auto idx = 0; idx < shape->lines.size(); idx++) {
       auto& l         = shape->lines[idx];
       auto& primitive = primitives.emplace_back();
-      primitive.bbox = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
+      primitive.bbox = line_bounds(shape->positions[l[0]], shape->positions[l[1]],
+          shape->radius[l[0]], shape->radius[l[1]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 1};
     }
@@ -1212,7 +1212,7 @@ static void init_bvh(trc::shape* shape, const trace_params& params) {
       auto& primitive = primitives.emplace_back();
       auto& t         = shape->triangles[idx];
       primitive.bbox  = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
+          shape->positions[t[0]], shape->positions[t[1]], shape->positions[t[2]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 2};
     }
@@ -1220,8 +1220,8 @@ static void init_bvh(trc::shape* shape, const trace_params& params) {
     for (auto idx = 0; idx < shape->quads.size(); idx++) {
       auto& q         = shape->quads[idx];
       auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
+      primitive.bbox = quad_bounds(shape->positions[q[0]], shape->positions[q[1]],
+          shape->positions[q[2]], shape->positions[q[3]]);
       primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 3};
     }
@@ -1307,29 +1307,29 @@ static void update_bvh(trc::shape* shape, const trace_params& params) {
   auto bboxes = std::vector<bbox3f>(shape->bvh->primitives.size());
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape->points[shape->bvh->primitives[idx].x];
+      auto& p     = shape->points[shape->bvh->primitives[idx][0]];
       bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
     }
   } else if (!shape->lines.empty()) {
     bboxes = std::vector<bbox3f>(shape->lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape->lines[shape->bvh->primitives[idx].x];
-      bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
-          shape->radius[l.x], shape->radius[l.y]);
+      auto& l     = shape->lines[shape->bvh->primitives[idx][0]];
+      bboxes[idx] = line_bounds(shape->positions[l[0]], shape->positions[l[1]],
+          shape->radius[l[0]], shape->radius[l[1]]);
     }
   } else if (!shape->triangles.empty()) {
     bboxes = std::vector<bbox3f>(shape->triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape->triangles[shape->bvh->primitives[idx].x];
+      auto& t     = shape->triangles[shape->bvh->primitives[idx][0]];
       bboxes[idx] = triangle_bounds(
-          shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
+          shape->positions[t[0]], shape->positions[t[1]], shape->positions[t[2]]);
     }
   } else if (!shape->quads.empty()) {
     bboxes = std::vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape->quads[shape->bvh->primitives[idx].x];
-      bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
-          shape->positions[q.z], shape->positions[q.w]);
+      auto& q     = shape->quads[shape->bvh->primitives[idx][0]];
+      bboxes[idx] = quad_bounds(shape->positions[q[0]], shape->positions[q[1]],
+          shape->positions[q[2]], shape->positions[q[3]]);
     }
   }
 
@@ -1355,10 +1355,10 @@ void update_bvh(trc::scene*            scene,
   auto bboxes = std::vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto instance = scene->bvh->primitives[idx];
-    auto object   = scene->objects[instance.x];
+    auto object   = scene->objects[instance[0]];
     auto sbvh     = object->shape->bvh;
     bboxes[idx]   = transform_bbox(
-        object->instance->frames[instance.y] * object->frame,
+        object->instance->frames[instance[1]] * object->frame,
         sbvh->nodes[0].bbox);
   }
 
@@ -1395,9 +1395,9 @@ static bool intersect_shape_bvh(trc::shape* shape, const ray3f& ray_,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = vec3f{1 / ray.d[0], 1 / ray.d[1], 1 / ray.d[2]};
+  auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+      (ray_dinv[2] < 0) ? 1 : 0};
 
   // walking stack
   while (node_cur) {
@@ -1422,41 +1422,41 @@ static bool intersect_shape_bvh(trc::shape* shape, const ray3f& ray_,
       }
     } else if (!shape->points.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& p = shape->points[shape->bvh->primitives[idx].x];
+        auto& p = shape->points[shape->bvh->primitives[idx][0]];
         if (intersect_point(
                 ray, shape->positions[p], shape->radius[p], uv, distance)) {
           hit      = true;
-          element  = shape->bvh->primitives[idx].x;
+          element  = shape->bvh->primitives[idx][0];
           ray.tmax = distance;
         }
       }
     } else if (!shape->lines.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& l = shape->lines[shape->bvh->primitives[idx].x];
-        if (intersect_line(ray, shape->positions[l.x], shape->positions[l.y],
-                shape->radius[l.x], shape->radius[l.y], uv, distance)) {
+        auto& l = shape->lines[shape->bvh->primitives[idx][0]];
+        if (intersect_line(ray, shape->positions[l[0]], shape->positions[l[1]],
+                shape->radius[l[0]], shape->radius[l[1]], uv, distance)) {
           hit      = true;
-          element  = shape->bvh->primitives[idx].x;
+          element  = shape->bvh->primitives[idx][0];
           ray.tmax = distance;
         }
       }
     } else if (!shape->triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& t = shape->triangles[shape->bvh->primitives[idx].x];
-        if (intersect_triangle(ray, shape->positions[t.x],
-                shape->positions[t.y], shape->positions[t.z], uv, distance)) {
+        auto& t = shape->triangles[shape->bvh->primitives[idx][0]];
+        if (intersect_triangle(ray, shape->positions[t[0]],
+                shape->positions[t[1]], shape->positions[t[2]], uv, distance)) {
           hit      = true;
-          element  = shape->bvh->primitives[idx].x;
+          element  = shape->bvh->primitives[idx][0];
           ray.tmax = distance;
         }
       }
     } else if (!shape->quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape->quads[shape->bvh->primitives[idx].x];
-        if (intersect_quad(ray, shape->positions[q.x], shape->positions[q.y],
-                shape->positions[q.z], shape->positions[q.w], uv, distance)) {
+        auto& q = shape->quads[shape->bvh->primitives[idx][0]];
+        if (intersect_quad(ray, shape->positions[q[0]], shape->positions[q[1]],
+                shape->positions[q[2]], shape->positions[q[3]], uv, distance)) {
           hit      = true;
-          element  = shape->bvh->primitives[idx].x;
+          element  = shape->bvh->primitives[idx][0];
           ray.tmax = distance;
         }
       }
@@ -1499,9 +1499,9 @@ static bool intersect_scene_bvh(const trc::scene* scene, const ray3f& ray_,
   auto ray = ray_;
 
   // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
+  auto ray_dinv  = vec3f{1 / ray.d[0], 1 / ray.d[1], 1 / ray.d[2]};
+  auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+      (ray_dinv[2] < 0) ? 1 : 0};
 
   // walking stack
   while (node_cur) {
@@ -1527,7 +1527,7 @@ static bool intersect_scene_bvh(const trc::scene* scene, const ray3f& ray_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene->bvh->primitives[idx];
-        auto  object_id = instance_.x, instance_id = instance_.y;
+        auto  object_id = instance_[0], instance_id = instance_[1];
         auto  object  = scene->objects[object_id];
         auto  frame   = object->instance->frames[instance_id] * object->frame;
         auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
@@ -1886,10 +1886,10 @@ static vec3f sample_lights(const trc::scene* scene, const vec3f& position,
       auto idx          = sample_discrete_cdf(environment->texels_cdf, rel);
       auto size         = texture_size(emission_tex);
       auto uv           = vec2f{
-          (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
+          (idx % size[0] + 0.5f) / size[0], (idx / size[0] + 0.5f) / size[1]};
       return transform_direction(environment->frame,
-          {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
-              sin(uv.x * 2 * pif) * sin(uv.y * pif)});
+          {cos(uv[0] * 2 * pif) * sin(uv[1] * pif), cos(uv[1] * pif),
+              sin(uv[0] * 2 * pif) * sin(uv[1] * pif)});
     } else {
       return sample_sphere(ruv);
     }
@@ -1934,14 +1934,14 @@ static float sample_lights_pdf(
         auto  emission_tex = environment->emission_tex;
         auto  size         = texture_size(emission_tex);
         auto  wl = transform_direction(inverse(environment->frame), direction);
-        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
-            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-        if (texcoord.x < 0) texcoord.x += 1;
-        auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-        auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-        auto prob  = sample_discrete_cdf_pdf(cdf, j * size.x + i) / cdf.back();
-        auto angle = (2 * pif / size.x) * (pif / size.y) *
-                     sin(pif * (j + 0.5f) / size.y);
+        auto  texcoord = vec2f{atan2(wl[2], wl[0]) / (2 * pif),
+            acos(clamp(wl[1], -1.0f, 1.0f)) / pif};
+        if (texcoord[0] < 0) texcoord[0] += 1;
+        auto i     = clamp((int)(texcoord[0] * size[0]), 0, size[0] - 1);
+        auto j     = clamp((int)(texcoord[1] * size[1]), 0, size[1] - 1);
+        auto prob  = sample_discrete_cdf_pdf(cdf, j * size[0] + i) / cdf.back();
+        auto angle = (2 * pif / size[0]) * (pif / size[1]) *
+                     sin(pif * (j + 0.5f) / size[1]);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -2218,7 +2218,7 @@ static std::pair<vec3f, bool> trace_falsecolor(const trc::scene* scene,
           dot(point.gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
     case falsecolor_type::texcoord:
       return {
-          {fmod(point.texcoord.x, 1.0f), fmod(point.texcoord.y, 1.0f), 0}, 1};
+          {fmod(point.texcoord[0], 1.0f), fmod(point.texcoord[1], 1.0f), 0}, 1};
     case falsecolor_type::color: return {point.color, 1};
     case falsecolor_type::emission: return {point.emission, 1};
     case falsecolor_type::diffuse: return {point.diffuse, 1};
@@ -2303,11 +2303,11 @@ vec4f trace_sample(trc::state* state, const trc::scene* scene,
 void init_state(trc::state* state, const trc::scene* scene,
     const trc::camera* camera, const trace_params& params) {
   auto image_size =
-      (camera->film.x > camera->film.y)
+      (camera->film[0] > camera->film[1])
           ? vec2i{params.resolution,
-                (int)round(params.resolution * camera->film.y / camera->film.x)}
+                (int)round(params.resolution * camera->film[1] / camera->film[0])}
           : vec2i{
-                (int)round(params.resolution * camera->film.x / camera->film.y),
+                (int)round(params.resolution * camera->film[0] / camera->film[1]),
                 params.resolution};
   state->pixels.assign(image_size, pixel{});
   state->render.assign(image_size, zero4f);
@@ -2338,8 +2338,8 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
       shape->elements_cdf = std::vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->triangles[idx];
-        shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
-            shape->positions[t.y], shape->positions[t.z]);
+        shape->elements_cdf[idx] = triangle_area(shape->positions[t[0]],
+            shape->positions[t[1]], shape->positions[t[2]]);
         if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
@@ -2347,9 +2347,9 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
       shape->elements_cdf = std::vector<float>(shape->quads.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->quads[idx];
-        shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
-            shape->positions[t.y], shape->positions[t.z],
-            shape->positions[t.w]);
+        shape->elements_cdf[idx] = quad_area(shape->positions[t[0]],
+            shape->positions[t[1]], shape->positions[t[2]],
+            shape->positions[t[3]]);
         if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
@@ -2366,11 +2366,11 @@ void init_lights(trc::scene* scene, progress_callback progress_cb) {
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
-      environment->texels_cdf = std::vector<float>(size.x * size.y);
+      environment->texels_cdf = std::vector<float>(size[0] * size[1]);
       if (size != zero2i) {
         for (auto i = 0; i < environment->texels_cdf.size(); i++) {
-          auto ij                    = vec2i{i % size.x, i / size.x};
-          auto th                    = (ij.y + 0.5f) * pif / size.y;
+          auto ij                    = vec2i{i % size[0], i / size[0]};
+          auto th                    = (ij[1] + 0.5f) * pif / size[1];
           auto value                 = lookup_texture(texture, ij);
           environment->texels_cdf[i] = max(value) * sin(th);
           if (i) environment->texels_cdf[i] += environment->texels_cdf[i - 1];
@@ -2403,8 +2403,8 @@ inline void parallel_for(const vec2i& size, Func&& func) {
         std::async(std::launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
+            if (j >= size[1]) break;
+            for (auto i = 0; i < size[0]; i++) func({i, j});
           }
         }));
   }

@@ -323,17 +323,17 @@ bool draw_widgets(
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
-  edited += draw_slider(win, "frame.x", iocamera->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", iocamera->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", iocamera->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", iocamera->frame.o, -10, 10);
+  edited += draw_slider(win, "frame.x", iocamera->frame[0], -1, 1);
+  edited += draw_slider(win, "frame.y", iocamera->frame[1], -1, 1);
+  edited += draw_slider(win, "frame.z", iocamera->frame[2], -1, 1);
+  edited += draw_slider(win, "frame.o", iocamera->frame[3], -10, 10);
   edited += draw_checkbox(win, "ortho", iocamera->orthographic);
   edited += draw_slider(win, "lens", iocamera->lens, 0.01f, 1);
   edited += draw_slider(win, "film", iocamera->film, 0.01f, 0.1f);
   edited += draw_slider(win, "focus", iocamera->focus, 0.01f, 1000);
   edited += draw_slider(win, "aperture", iocamera->aperture, 0, 5);
-  auto from         = iocamera->frame.o,
-       to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
+  auto from         = iocamera->frame[3],
+       to           = iocamera->frame[3] - iocamera->focus * iocamera->frame[2];
   auto from_changed = draw_slider(win, "!!from", from, -10, 10);
   auto to_changed   = draw_slider(win, "!!to", to, -10, 10);
   if (from_changed || to_changed) {
@@ -444,10 +444,10 @@ bool draw_widgets(
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
-  edited += draw_slider(win, "frame.x", ioobject->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", ioobject->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", ioobject->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", ioobject->frame.o, -10, 10);
+  edited += draw_slider(win, "frame.x", ioobject->frame[0], -1, 1);
+  edited += draw_slider(win, "frame.y", ioobject->frame[1], -1, 1);
+  edited += draw_slider(win, "frame.z", ioobject->frame[2], -1, 1);
+  edited += draw_slider(win, "frame.o", ioobject->frame[3], -10, 10);
   edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_combobox(
       win, "material", ioobject->material, ioscene->materials);
@@ -476,10 +476,10 @@ bool draw_widgets(
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
-  edited += draw_slider(win, "frame.x", ioenvironment->frame.x, -1, 1);
-  edited += draw_slider(win, "frame.y", ioenvironment->frame.y, -1, 1);
-  edited += draw_slider(win, "frame.z", ioenvironment->frame.z, -1, 1);
-  edited += draw_slider(win, "frame.o", ioenvironment->frame.o, -10, 10);
+  edited += draw_slider(win, "frame.x", ioenvironment->frame[0], -1, 1);
+  edited += draw_slider(win, "frame.y", ioenvironment->frame[1], -1, 1);
+  edited += draw_slider(win, "frame.z", ioenvironment->frame[2], -1, 1);
+  edited += draw_slider(win, "frame.o", ioenvironment->frame[3], -10, 10);
   edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
   edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
       ioscene->textures, true);
@@ -593,9 +593,9 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
       draw_dragger(win, "mouse", ij);
-      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
-          ij.y < app->render.height()) {
-        draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
+      if (ij[0] >= 0 && ij[0] < app->render.width() && ij[1] >= 0 &&
+          ij[1] < app->render.height()) {
+        draw_coloredit(win, "pixel", app->render[{ij[0], ij[1]}]);
       } else {
         auto zero4f_ = zero4f;
         draw_coloredit(win, "pixel", zero4f_);
@@ -865,11 +865,11 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && !input.modifier_shift)
         rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
       if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+        dolly = (input.mouse_pos[0] - input.mouse_last[0]) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * app->iocamera->focus /
               200.0f;
-      pan.x = -pan.x;
+      pan[0] = -pan[0];
       stop_display(app);
       update_turntable(
           app->iocamera->frame, app->iocamera->focus, rotate, dolly, pan);
@@ -885,11 +885,11 @@ int main(int argc, const char* argv[]) {
         !input.widgets_active) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
-      if (ij.x >= 0 && ij.x < app->render.width() && ij.y >= 0 &&
-          ij.y < app->render.height()) {
+      if (ij[0] >= 0 && ij[0] < app->render.width() && ij[1] >= 0 &&
+          ij[1] < app->render.height()) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->film,
-            vec2f{ij.x + 0.5f, ij.y + 0.5f} /
+            vec2f{ij[0] + 0.5f, ij[1] + 0.5f} /
                 vec2f{(float)app->render.width(), (float)app->render.height()});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_object = app->ioscene->objects[isec.object];

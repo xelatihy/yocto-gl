@@ -994,7 +994,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
       auto vector2f  = std::vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
-      value.value3f = math::blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.value3f = math::blackbody_to_rgb(blackbody[0]) * blackbody[1];
     } else if (type == "color" || type == "rgb") {
       value.type = value::type_t::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -1028,11 +1028,11 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
           } else if (sfs::path(filenamep).extension() == ".eta") {
             auto eta =
                 get_etak(sfs::path(filenamep).replace_extension("")).first;
-            value.value3f = {eta.x, eta.y, eta.z};
+            value.value3f = {eta[0], eta[1], eta[2]};
           } else if (sfs::path(filenamep).extension() == ".k") {
             auto k =
                 get_etak(sfs::path(filenamep).replace_extension("")).second;
-            value.value3f = {k.x, k.y, k.z};
+            value.value3f = {k[0], k[1], k[2]};
           } else {
             return false;
           }
@@ -1093,9 +1093,9 @@ inline bool convert_film(pbrt::film* film, const command& command,
 
   if (command.type == "image") {
     film->resolution = {512, 512};
-    if (!get_value(command.values, "xresolution", film->resolution.x))
+    if (!get_value(command.values, "xresolution", film->resolution[0]))
       return parse_error();
-    if (!get_value(command.values, "yresolution", film->resolution.y))
+    if (!get_value(command.values, "yresolution", film->resolution[1]))
       return parse_error();
     film->filename = "out.png"s;
     if (!get_value(command.values, "filename", film->filename))
@@ -1122,10 +1122,10 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
   pcamera->frame      = command.frame;
   pcamera->frend      = command.frend;
   pcamera->frame      = inverse((frame3f)pcamera->frame);
-  pcamera->frame.z    = -pcamera->frame.z;
+  pcamera->frame[2]    = -pcamera->frame[2];
   pcamera->resolution = resolution;
   auto film_aspect =
-      (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
+      (resolution == zero2i) ? 1 : (float)resolution[0] / (float)resolution[1];
   if (command.type == "perspective") {
     auto fov = 90.0f;
     if (!get_value(command.values, "fov", fov)) return parse_error();
@@ -1206,8 +1206,8 @@ inline bool convert_texture(pbrt::texture* ptexture, const command& command,
     //  tex1.first :
     // vec3f{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first :
     // vec3f{0.6f, 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type
-    // = proc_image_params::type_t::checker; params.color0 = {rgb1.x, rgb1.y,
-    // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
+    // = proc_image_params::type_t::checker; params.color0 = {rgb1[0], rgb1[1],
+    // rgb1[2], 1}; params.color1 = {rgb2[0], rgb2[1], rgb2[2], 1}; params.scale
     // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
     // texture.hdr); texture.hdr = {};
     ptexture->constant = {0.5, 0.5, 0.5};
@@ -1595,22 +1595,22 @@ inline void make_shape(std::vector<vec3i>& triangles,
     std::vector<vec3f>& positions, std::vector<vec3f>& normals,
     std::vector<vec2f>& texcoords, const vec2i& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
-  auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-  auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
-  positions.resize((steps.x + 1) * (steps.y + 1));
-  normals.resize((steps.x + 1) * (steps.y + 1));
-  texcoords.resize((steps.x + 1) * (steps.y + 1));
-  for (auto j = 0; j < steps.y + 1; j++) {
-    for (auto i = 0; i < steps.x + 1; i++) {
-      auto uv              = vec2f{i / (float)steps.x, j / (float)steps.y};
+  auto vid = [steps](int i, int j) { return j * (steps[0] + 1) + i; };
+  auto tid = [steps](int i, int j, int c) { return (j * steps[0] + i) * 2 + c; };
+  positions.resize((steps[0] + 1) * (steps[1] + 1));
+  normals.resize((steps[0] + 1) * (steps[1] + 1));
+  texcoords.resize((steps[0] + 1) * (steps[1] + 1));
+  for (auto j = 0; j < steps[1] + 1; j++) {
+    for (auto i = 0; i < steps[0] + 1; i++) {
+      auto uv              = vec2f{i / (float)steps[0], j / (float)steps[1]};
       positions[vid(i, j)] = position_func(uv);
       normals[vid(i, j)]   = normal_func(uv);
       texcoords[vid(i, j)] = uv;
     }
   }
-  triangles.resize(steps.x * steps.y * 2);
-  for (auto j = 0; j < steps.y; j++) {
-    for (auto i = 0; i < steps.x; i++) {
+  triangles.resize(steps[0] * steps[1] * 2);
+  for (auto j = 0; j < steps[1]; j++) {
+    for (auto i = 0; i < steps[0]; i++) {
       triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
       triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
     }
@@ -1624,14 +1624,14 @@ inline void make_sphere(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return radius * vec3f{math::cos(pt.x) * math::sin(pt.y),
-                            math::sin(pt.x) * math::sin(pt.y), math::cos(pt.y)};
+        auto pt = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
+        return radius * vec3f{math::cos(pt[0]) * math::sin(pt[1]),
+                            math::sin(pt[0]) * math::sin(pt[1]), math::cos(pt[1])};
       },
       [](const vec2f& uv) {
-        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return vec3f{math::cos(pt.x) * math::cos(pt.y),
-            math::sin(pt.x) * math::cos(pt.y), math::sin(pt.y)};
+        auto pt = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
+        return vec3f{math::cos(pt[0]) * math::cos(pt[1]),
+            math::sin(pt[0]) * math::cos(pt[1]), math::sin(pt[1])};
       });
 }
 inline void make_disk(std::vector<vec3i>& triangles,
@@ -1640,8 +1640,8 @@ inline void make_disk(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        auto a = 2 * pif * uv.x;
-        return radius * (1 - uv.y) * vec3f{math::cos(a), math::sin(a), 0};
+        auto a = 2 * pif * uv[0];
+        return radius * (1 - uv[1]) * vec3f{math::cos(a), math::sin(a), 0};
       },
       [](const vec2f& uv) {
         return vec3f{0, 0, 1};
@@ -1653,7 +1653,7 @@ inline void make_quad(std::vector<vec3i>& triangles,
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
-        return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
+        return vec3f{(uv[0] - 0.5f) * radius, (uv[1] - 0.5f) * radius, 0};
       },
       [](const vec2f& uv) {
         return vec3f{0, 0, 1};
@@ -1704,7 +1704,7 @@ inline bool convert_shape(pbrt::shape* shape, const command& command,
     if (!get_value(command.values, "N", shape->normals)) return parse_error();
     if (!get_value(command.values, "uv", shape->texcoords))
       return parse_error();
-    for (auto& uv : shape->texcoords) uv.y = (1 - uv.y);
+    for (auto& uv : shape->texcoords) uv[1] = (1 - uv[1]);
     if (!get_value(command.values, "indices", shape->triangles))
       return parse_error();
     return true;
@@ -2012,7 +2012,7 @@ struct context {
       auto v = zero4f;
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(),
-          rotation_frame(vec3f{v.y, v.z, v.w}, math::radians(v.x)));
+          rotation_frame(vec3f{v[1], v[2], v.w}, math::radians(v[0])));
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
       if (!parse_param(str, from)) return parse_error();
@@ -2351,8 +2351,8 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
   for (auto camera : pbrt->cameras) {
     auto command = pbrt::command{};
     command.type = "image";
-    command.values.push_back(make_value("xresolution", camera->resolution.x));
-    command.values.push_back(make_value("yresolution", camera->resolution.y));
+    command.values.push_back(make_value("xresolution", camera->resolution[0]));
+    command.values.push_back(make_value("yresolution", camera->resolution[1]));
     command.values.push_back(make_value("filename", "image.exr"s));
     if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();
@@ -2364,8 +2364,8 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     command.frame = camera->frame;
     command.values.push_back(make_value(
         "fov", 2 * math::tan(0.036f / (2 * camera->lens)) * 180 / pif));
-    if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
-            command.frame.o - command.frame.z, command.frame.y))
+    if (!format_values(fs, "LookAt {} {} {}\n", command.frame[3],
+            command.frame[3] - command.frame[2], command.frame[1]))
       return write_error();
     if (!format_values(fs, "Camera \"{}\" {}\n", command.type, command.values))
       return write_error();

@@ -171,8 +171,8 @@ std::vector<std::string> scene_stats(const scn::model* scene, bool verbose) {
     return str;
   };
   auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+    auto str = std::to_string(num[0]) + " " + std::to_string(num[1]) + " " +
+               std::to_string(num[2]);
     while (str.size() < 13) str = " " + str;
     return str;
   };
@@ -503,18 +503,18 @@ static vec3f eval_texture(const scn::texture* texture, const vec2f& uv,
   // get coordinates normalized for tiling
   auto s = 0.0f, t = 0.0f;
   if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+    s = clamp(uv[0], 0.0f, 1.0f) * size[0];
+    t = clamp(uv[1], 0.0f, 1.0f) * size[1];
   } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
+    s = fmod(uv[0], 1.0f) * size[0];
+    if (s < 0) s += size[0];
+    t = fmod(uv[1], 1.0f) * size[1];
+    if (t < 0) t += size[1];
   }
 
   // get img::image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto i = clamp((int)s, 0, size[0] - 1), j = clamp((int)t, 0, size[1] - 1);
+  auto ii = (i + 1) % size[0], jj = (j + 1) % size[1];
   auto u = s - i, v = t - j;
 
   if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
@@ -533,13 +533,13 @@ static std::vector<vec3f> compute_normals(
   for (auto& normal : normals) normal = zero3f;
   for (auto& q : quads) {
     auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
     auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
+        positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
+    normals[q[0]] += normal * area;
+    normals[q[1]] += normal * area;
+    normals[q[2]] += normal * area;
+    if (q[2] != q[3]) normals[q[3]] += normal * area;
   }
   for (auto& normal : normals) normal = normalize(normal);
   return normals;
@@ -563,17 +563,17 @@ std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
   for (auto fid = 0; fid < quadspos.size(); fid++) {
     for (auto c = 0; c < 4; c++) {
       auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
+          (&quadspos[fid][0])[c],
+          (!quadsnorm.empty()) ? (&quadsnorm[fid][0])[c] : -1,
+          (!quadstexcoord.empty()) ? (&quadstexcoord[fid][0])[c] : -1,
       };
       auto it = vert_map.find(v);
       if (it == vert_map.end()) {
         auto s = (int)vert_map.size();
         vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
+        (&split_quads[fid][0])[c] = s;
       } else {
-        (&split_quads[fid].x)[c] = it->second;
+        (&split_quads[fid][0])[c] = it->second;
       }
     }
   }
@@ -583,21 +583,21 @@ std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
   if (!positions.empty()) {
     split_positions.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
+      split_positions[index] = positions[vert[0]];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
     split_normals.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
+      split_normals[index] = normals[vert[1]];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
     split_texcoords.resize(vert_map.size());
     for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
+      split_texcoords[index] = texcoords[vert[2]];
     }
   }
 
@@ -1244,8 +1244,8 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
         if (!get_value(ejs, "lookat", lookat)) return false;
-        camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-        camera->focus = length(lookat.x - lookat.y);
+        camera->frame = lookat_frame(lookat[0], lookat[1], lookat[2]);
+        camera->focus = length(lookat[0] - lookat[1]);
       }
     }
   }
@@ -1261,7 +1261,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
         if (!get_value(ejs, "lookat", lookat)) return false;
-        environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        environment->frame = lookat_frame(lookat[0], lookat[1], lookat[2], true);
       }
     }
   }
@@ -1320,7 +1320,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
       if (ejs.contains("lookat")) {
         auto lookat = identity3x3f;
         if (!get_value(ejs, "lookat", lookat)) return false;
-        object->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        object->frame = lookat_frame(lookat[0], lookat[1], lookat[2], true);
       }
       if (!get_ref(ejs, "material", object->material, material_map))
         return false;
@@ -1910,10 +1910,10 @@ void print_obj_camera(scn::camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera->name.c_str(), (int)camera->orthographic, camera->film,
       camera->film / camera->aspect, camera->lens, camera->focus,
-      camera->aperture, camera->frame.x.x, camera->frame.x.y, camera->frame.x.z,
-      camera->frame.y.x, camera->frame.y.y, camera->frame.y.z,
-      camera->frame.z.x, camera->frame.z.y, camera->frame.z.z,
-      camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
+      camera->aperture, camera->frame[0][0], camera->frame[0][1], camera->frame[0][2],
+      camera->frame[1][0], camera->frame[1][1], camera->frame[1][2],
+      camera->frame[2][0], camera->frame[2][1], camera->frame[2][2],
+      camera->frame[3][0], camera->frame[3][1], camera->frame[3][2]);
 }
 
 }  // namespace yocto::sceneio
@@ -2055,7 +2055,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     auto gnde = &gltf->nodes[nid];
     if (!gnde->camera) continue;
     auto mat = mat4f{};
-    cgltf_node_transform_world(gnde, &mat.x.x);
+    cgltf_node_transform_world(gnde, &mat[0][0]);
     auto gcam            = gnde->camera;
     auto camera          = add_camera(scene);
     camera->frame        = (frame3f)mat;
@@ -2172,32 +2172,32 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
         if (semantic == "POSITION") {
           shape->positions.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape->positions[i].x, 3);
+            cgltf_accessor_read_float(gacc, i, &shape->positions[i][0], 3);
         } else if (semantic == "NORMAL") {
           shape->normals.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape->normals[i].x, 3);
+            cgltf_accessor_read_float(gacc, i, &shape->normals[i][0], 3);
         } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
           shape->texcoords.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape->texcoords[i].x, 2);
+            cgltf_accessor_read_float(gacc, i, &shape->texcoords[i][0], 2);
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape->colors.resize(gacc->count);
           if (cgltf_num_components(gacc->type) == 3) {
             for (auto i = 0; i < gacc->count; i++)
-              cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
+              cgltf_accessor_read_float(gacc, i, &shape->colors[i][0], 3);
           } else {
             for (auto i = 0; i < gacc->count; i++) {
               auto color4 = vec4f{0};
-              cgltf_accessor_read_float(gacc, i, &color4.x, 4);
+              cgltf_accessor_read_float(gacc, i, &color4[0], 4);
               shape->colors[i] = xyz(color4);
             }
           }
         } else if (semantic == "TANGENT") {
           shape->tangents.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
-            cgltf_accessor_read_float(gacc, i, &shape->tangents[i].x, 4);
-          for (auto& t : shape->tangents) t.w = -t.w;
+            cgltf_accessor_read_float(gacc, i, &shape->tangents[i][0], 4);
+          for (auto& t : shape->tangents) t[3] = -t[3];
         } else if (semantic == "RADIUS") {
           shape->radius.resize(gacc->count);
           for (auto i = 0; i < gacc->count; i++)
@@ -2245,55 +2245,55 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
           shape->triangles.resize(giacc->count / 3);
           for (auto i = 0; i < giacc->count / 3; i++) {
             cgltf_accessor_read_uint(
-                giacc, i * 3 + 0, (uint*)&shape->triangles[i].x, 1);
+                giacc, i * 3 + 0, (uint*)&shape->triangles[i][0], 1);
             cgltf_accessor_read_uint(
-                giacc, i * 3 + 1, (uint*)&shape->triangles[i].y, 1);
+                giacc, i * 3 + 1, (uint*)&shape->triangles[i][1], 1);
             cgltf_accessor_read_uint(
-                giacc, i * 3 + 2, (uint*)&shape->triangles[i].z, 1);
+                giacc, i * 3 + 2, (uint*)&shape->triangles[i][2], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
           shape->triangles.resize(giacc->count - 2);
           for (auto i = 2; i < giacc->count; i++) {
             cgltf_accessor_read_uint(
-                giacc, 0 + 0, (uint*)&shape->triangles[i - 2].x, 1);
+                giacc, 0 + 0, (uint*)&shape->triangles[i - 2][0], 1);
             cgltf_accessor_read_uint(
-                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+                giacc, i - 1, (uint*)&shape->triangles[i - 2][1], 1);
             cgltf_accessor_read_uint(
-                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
+                giacc, i + 0, (uint*)&shape->triangles[i - 2][2], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
           shape->triangles.resize(giacc->count - 2);
           for (auto i = 2; i < giacc->count; i++) {
             cgltf_accessor_read_uint(
-                giacc, i - 2, (uint*)&shape->triangles[i - 2].x, 1);
+                giacc, i - 2, (uint*)&shape->triangles[i - 2][0], 1);
             cgltf_accessor_read_uint(
-                giacc, i - 1, (uint*)&shape->triangles[i - 2].y, 1);
+                giacc, i - 1, (uint*)&shape->triangles[i - 2][1], 1);
             cgltf_accessor_read_uint(
-                giacc, i + 0, (uint*)&shape->triangles[i - 2].z, 1);
+                giacc, i + 0, (uint*)&shape->triangles[i - 2][2], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_lines) {
           shape->lines.resize(giacc->count / 2);
           for (auto i = 0; i < giacc->count / 2; i++) {
             cgltf_accessor_read_uint(
-                giacc, i * 2 + 0, (uint*)&shape->lines[i].x, 1);
+                giacc, i * 2 + 0, (uint*)&shape->lines[i][0], 1);
             cgltf_accessor_read_uint(
-                giacc, i * 2 + 1, (uint*)&shape->lines[i].y, 1);
+                giacc, i * 2 + 1, (uint*)&shape->lines[i][1], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape->lines.resize(giacc->count);
           for (auto i = 0; i < giacc->count; i++) {
             cgltf_accessor_read_uint(
-                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i][0], 1);
             cgltf_accessor_read_uint(
-                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i][1], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape->lines.resize(giacc->count - 1);
           for (auto i = 0; i < giacc->count - 1; i++) {
             cgltf_accessor_read_uint(
-                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i].x, 1);
+                giacc, (i + 0) % giacc->count, (uint*)&shape->lines[i][0], 1);
             cgltf_accessor_read_uint(
-                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i].y, 1);
+                giacc, (i + 1) % giacc->count, (uint*)&shape->lines[i][1], 1);
           }
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points
@@ -2312,7 +2312,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
     auto gnde = &gltf->nodes[nid];
     if (!gnde->mesh) continue;
     auto mat = mat4f{};
-    cgltf_node_transform_world(gnde, &mat.x.x);
+    cgltf_node_transform_world(gnde, &mat[0][0]);
     auto frame = (frame3f)mat;
     instance_map[gnde->mesh].push_back(frame);
   }
@@ -2355,8 +2355,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       for (auto j = 0; j < color_opacityf.height(); j++) {
         for (auto i = 0; i < color_opacityf.width(); i++) {
           ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
-          otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
-          if (color_opacityb[{i, j}].w != 1) oempty = false;
+          otexture->scalarf[{i, j}] = color_opacityf[{i, j}][3];
+          if (color_opacityb[{i, j}][3] != 1) oempty = false;
         }
       }
       if (oempty) otexture->scalarf.clear();
@@ -2369,8 +2369,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       for (auto j = 0; j < color_opacityb.height(); j++) {
         for (auto i = 0; i < color_opacityb.width(); i++) {
           ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
-          otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
-          if (color_opacityb[{i, j}].w != 255) oempty = false;
+          otexture->scalarb[{i, j}] = color_opacityb[{i, j}][3];
+          if (color_opacityb[{i, j}][3] != 255) oempty = false;
         }
       }
       if (oempty) otexture->scalarb.clear();
@@ -2392,8 +2392,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       rtexture->scalarf.resize(metallic_roughnessf.size());
       for (auto j = 0; j < metallic_roughnessf.height(); j++) {
         for (auto i = 0; i < metallic_roughnessf.width(); i++) {
-          mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
-          rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
+          mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}][2];
+          rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}][1];
         }
       }
     }
@@ -2403,8 +2403,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       rtexture->scalarb.resize(metallic_roughnessb.size());
       for (auto j = 0; j < metallic_roughnessb.height(); j++) {
         for (auto i = 0; i < metallic_roughnessb.width(); i++) {
-          mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
-          rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
+          mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}][2];
+          rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}][1];
         }
       }
     }
@@ -2439,7 +2439,7 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   auto bbox = compute_bounds(scene);
   for (auto camera : scene->cameras) {
     auto center   = (bbox.min + bbox.max) / 2;
-    auto distance = dot(-camera->frame.z, center - camera->frame.o);
+    auto distance = dot(-camera->frame[2], center - camera->frame[3]);
     if (distance > 0) camera->focus = distance;
   }
 
@@ -2556,7 +2556,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
     object->shape->normals   = pshape->normals;
     object->shape->texcoords = pshape->texcoords;
     object->shape->triangles = pshape->triangles;
-    for (auto& uv : object->shape->texcoords) uv.y = 1 - uv.y;
+    for (auto& uv : object->shape->texcoords) uv[1] = 1 - uv[1];
     object->material = material_map.at(pshape->material);
   }
 

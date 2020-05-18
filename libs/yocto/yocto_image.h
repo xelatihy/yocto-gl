@@ -557,10 +557,10 @@ template <typename T>
 inline image<T>::image() : extent{0, 0}, pixels{} {}
 template <typename T>
 inline image<T>::image(const vec2i& size, const T& value)
-    : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+    : extent{size}, pixels((size_t)size[0] * (size_t)size[1], value) {}
 template <typename T>
 inline image<T>::image(const vec2i& size, const T* value)
-    : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+    : extent{size}, pixels(value, value + (size_t)size[0] * (size_t)size[1]) {}
 
 // size
 template <typename T>
@@ -585,7 +585,7 @@ inline size_t image<T>::count() const {
 }
 template <typename T>
 inline bool image<T>::contains(const vec2i& ij) const {
-  return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+  return ij[0] > 0 && ij[0] < extent[0] && ij[1] > 0 && ij[1] < extent[1];
 }
 template <typename T>
 inline void image<T>::clear() {
@@ -596,12 +596,12 @@ template <typename T>
 inline void image<T>::resize(const vec2i& size) {
   if (size == extent) return;
   extent = size;
-  pixels.resize((size_t)size.x * (size_t)size.y);
+  pixels.resize((size_t)size[0] * (size_t)size[1]);
 }
 template <typename T>
 inline void image<T>::assign(const vec2i& size, const T& value) {
   extent = size;
-  pixels.assign((size_t)size.x * (size_t)size.y, value);
+  pixels.assign((size_t)size[0] * (size_t)size[1], value);
 }
 template <typename T>
 inline void image<T>::shrink_to_fit() {
@@ -624,11 +624,11 @@ inline const T& image<T>::operator[](int i) const {
 }
 template <typename T>
 inline T& image<T>::operator[](const vec2i& ij) {
-  return pixels[ij.y * extent.x + ij.x];
+  return pixels[ij[1] * extent[0] + ij[0]];
 }
 template <typename T>
 inline const T& image<T>::operator[](const vec2i& ij) const {
-  return pixels[ij.y * extent.x + ij.x];
+  return pixels[ij[1] * extent[0] + ij[0]];
 }
 
 // data access
@@ -700,11 +700,11 @@ inline volume<T>::volume() : extent{0, 0, 0}, voxels{} {}
 template <typename T>
 inline volume<T>::volume(const vec3i& size, const T& value)
     : extent{size}
-    , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+    , voxels((size_t)size[0] * (size_t)size[1] * (size_t)size[2], value) {}
 template <typename T>
 inline volume<T>::volume(const vec3i& size, const T* value)
     : extent{size}
-    , voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+    , voxels(value, value + (size_t)size[0] * (size_t)size[1] * (size_t)size[2]) {}
 
 // size
 template <typename T>
@@ -740,12 +740,12 @@ template <typename T>
 inline void volume<T>::resize(const vec3i& size) {
   if (size == extent) return;
   extent = size;
-  voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+  voxels.resize((size_t)size[0] * (size_t)size[1] * (size_t)size[2]);
 }
 template <typename T>
 inline void volume<T>::assign(const vec3i& size, const T& value) {
   extent = size;
-  voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
+  voxels.assign((size_t)size[0] * (size_t)size[1] * (size_t)size[2], value);
 }
 template <typename T>
 inline void volume<T>::shrink_to_fit() {
@@ -768,11 +768,11 @@ inline const T& volume<T>::operator[](size_t i) const {
 }
 template <typename T>
 inline T& volume<T>::operator[](const vec3i& ijk) {
-  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+  return voxels[ijk[2] * extent[0] * extent[1] + ijk[1] * extent[0] + ijk[0]];
 }
 template <typename T>
 inline const T& volume<T>::operator[](const vec3i& ijk) const {
-  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+  return voxels[ijk[2] * extent[0] * extent[1] + ijk[1] * extent[0] + ijk[0]];
 }
 
 // data access
