@@ -7,12 +7,18 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--scene', '-s', default='*.yaml')
-def render(scene='*.yaml'):
-    for filename in sorted(glob.glob(f'tests/{scene}')):
+@click.option('--scene', '-s', default='*')
+@click.option('--out', '-o', default='out')
+@click.option('--mode', '-m', default='default')
+def render(scene='*',out='out/',mode='default'):
+    modes = {
+      'default': '-t path -r 720 -s 256'
+    }
+    options = modes[mode]
+    for filename in sorted(glob.glob(f'tests/{scene}/{scene}.json')):
         print(f'rendering {filename}')
-        imfilename = filename.replace('.yaml','.hdr')
-        os.system(f'./bin/yscntrace {filename} -o {imfilename} -s 1024')
+        imfilename = out + '/' + os.path.basename(filename).replace('.json','.hdr')
+        os.system(f'./bin/yscenetrace {filename} -o {imfilename} {options}')
 
 @cli.command()
 @click.option('--image', '-i', default='*.hdr')
