@@ -2672,7 +2672,7 @@ namespace std {
 template <typename T, size_t N>
 struct hash<yocto::math::vec<T, N>> {
   size_t operator()(const yocto::math::vec<T, N>& v) const {
-    static const auto hasher = std::hash<int>();
+    static const auto hasher = std::hash<T>();
     auto              h      = (size_t)0;
     if constexpr (N == 1) {
       h ^= hasher(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
