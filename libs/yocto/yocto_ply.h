@@ -38,7 +38,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "yocto_matht.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // ALIASES

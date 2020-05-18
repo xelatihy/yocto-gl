@@ -126,7 +126,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "yocto_matht.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // ALIASES
