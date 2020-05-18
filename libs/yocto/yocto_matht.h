@@ -3,7 +3,7 @@
 //
 // **This is an experimental implementation of Yocto/Math using templates.**
 //
-// Yocto/Math provides the basic math primitives used in grahics, including
+// Yocto/Math provides the basic math primitives used in graphics, including
 // small-sized vectors and matrixes, frames, bounding boxes, transforms,
 // color and geometry functions, random number generation, noise.
 //
@@ -26,15 +26,15 @@
 // aliases for float coordinates (`frame2f`, `frame3f`).
 // The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
-// matrix. Transform operations are fater with this representation.
+// matrix. Transform operations are faster with this representation.
 //
 //
 // ## Rays and bounding boxes
 //
-// We represent 2-3 dimensinal rays as `ray<T, N>` with float alises
+// We represent 2-3 dimensional rays as `ray<T, N>` with float aliases
 // (`ray2f`, `ray3f`). Each ray support initialization and evaluation.
 //
-// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float alises
+// We represent 1-4 dimensional bounding boxes `bbox<T, N>` with float aliases
 // (`bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`).
 // Each bounding box support construction from points and other bounding box.
 // We provide operations to compute bounds for points, lines, triangles and
