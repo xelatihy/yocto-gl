@@ -2325,7 +2325,7 @@ inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
 // Orthogonal vectors.
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
-  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-std::vector-combing-coconuts)
+  // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
   return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
                              : vec<T, 3>{0, -v.z, v.y};
 }
