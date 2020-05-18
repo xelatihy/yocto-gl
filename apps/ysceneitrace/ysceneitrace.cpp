@@ -323,10 +323,10 @@ bool draw_widgets(
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
-  edited += draw_slider(win, "frame.x", iocamera->frame[0], -1, 1);
-  edited += draw_slider(win, "frame.y", iocamera->frame[1], -1, 1);
-  edited += draw_slider(win, "frame.z", iocamera->frame[2], -1, 1);
-  edited += draw_slider(win, "frame.o", iocamera->frame[3], -10, 10);
+  edited += draw_slider(win, "frame_x", iocamera->frame[0], -1, 1);
+  edited += draw_slider(win, "frame_y", iocamera->frame[1], -1, 1);
+  edited += draw_slider(win, "frame_z", iocamera->frame[2], -1, 1);
+  edited += draw_slider(win, "frame_o", iocamera->frame[3], -10, 10);
   edited += draw_checkbox(win, "ortho", iocamera->orthographic);
   edited += draw_slider(win, "lens", iocamera->lens, 0.01f, 1);
   edited += draw_slider(win, "film", iocamera->film, 0.01f, 0.1f);
@@ -444,10 +444,10 @@ bool draw_widgets(
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
-  edited += draw_slider(win, "frame.x", ioobject->frame[0], -1, 1);
-  edited += draw_slider(win, "frame.y", ioobject->frame[1], -1, 1);
-  edited += draw_slider(win, "frame.z", ioobject->frame[2], -1, 1);
-  edited += draw_slider(win, "frame.o", ioobject->frame[3], -10, 10);
+  edited += draw_slider(win, "frame_x", ioobject->frame[0], -1, 1);
+  edited += draw_slider(win, "frame_y", ioobject->frame[1], -1, 1);
+  edited += draw_slider(win, "frame_z", ioobject->frame[2], -1, 1);
+  edited += draw_slider(win, "frame_o", ioobject->frame[3], -10, 10);
   edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_combobox(
       win, "material", ioobject->material, ioscene->materials);
@@ -476,10 +476,10 @@ bool draw_widgets(
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
-  edited += draw_slider(win, "frame.x", ioenvironment->frame[0], -1, 1);
-  edited += draw_slider(win, "frame.y", ioenvironment->frame[1], -1, 1);
-  edited += draw_slider(win, "frame.z", ioenvironment->frame[2], -1, 1);
-  edited += draw_slider(win, "frame.o", ioenvironment->frame[3], -10, 10);
+  edited += draw_slider(win, "frame_x", ioenvironment->frame[0], -1, 1);
+  edited += draw_slider(win, "frame_y", ioenvironment->frame[1], -1, 1);
+  edited += draw_slider(win, "frame_z", ioenvironment->frame[2], -1, 1);
+  edited += draw_slider(win, "frame_o", ioenvironment->frame[3], -10, 10);
   edited += draw_hdrcoloredit(win, "emission", ioenvironment->emission);
   edited += draw_combobox(win, "emission texture", ioenvironment->emission_tex,
       ioscene->textures, true);
