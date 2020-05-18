@@ -821,6 +821,8 @@ inline const auto identity3x4f = frame3f{
 // Frame properties
 template <typename T, size_t N>
 inline const mat<T, N, N>& rotation(const frame<T, N>& a);
+template <typename T, size_t N>
+inline const vec<T, N>& origin(const frame<T, N>& a);
 
 // Frame comparisons.
 template <typename T, size_t N>
