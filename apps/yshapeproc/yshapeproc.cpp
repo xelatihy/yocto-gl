@@ -49,9 +49,9 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     std::vector<vec3f>& colors, std::vector<float>& radius,
     const std::string& type, std::string& error) {
   if (type == "default-quad") {
-    shp::make_recty(quads, positions, normals, texcoords);
-  } else if (type == "default-quady") {
     shp::make_rect(quads, positions, normals, texcoords);
+  } else if (type == "default-quady") {
+    shp::make_recty(quads, positions, normals, texcoords);
   } else if (type == "default-cube") {
     shp::make_box(quads, positions, normals, texcoords);
   } else if (type == "default-cube-rounded") {
