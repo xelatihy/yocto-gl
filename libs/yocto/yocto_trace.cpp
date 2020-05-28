@@ -804,15 +804,136 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
   }
 }
 
+static std::pair<vec3f, bool> trace_albedo(const trc::scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
+  auto intersection = intersect_scene_bvh(scene, ray);
+  if (!intersection.hit) {
+    return {eval_environment(scene, ray), true};
+  }
+
+  auto point    = eval_point(scene, intersection, ray);
+  auto object   = scene->objects[intersection.object];
+  auto shape    = object->shape;
+  auto material = object->material;
+  auto element  = intersection.element;
+  auto uv       = intersection.uv;
+
+  if (point.emission) {
+    return {point.emission, true};
+  }
+
+  auto color  = eval_shape(shape, shape->colors, element, uv, vec3f{1});
+  auto albedo = material->color * color *
+                eval_texture(material->color_tex, point.texcoord, false);
+
+  // handle opacity
+  if (point.opacity < 1.0f) {
+    auto [blend_albedo, h] = trace_albedo(scene,
+        ray3f{point.position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    return {lerp(blend_albedo, albedo, point.opacity), true};
+  }
+
+  if (point.roughness < 0.1 && bounce < 5) {
+    if (point.transmission && material->thin) {
+      auto outgoing           = -ray.d;
+      auto incoming           = -outgoing;
+      auto [trans_albedo, h1] = trace_albedo(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+
+      incoming               = reflect(outgoing, point.normal);
+      auto [spec_albedo, h2] = trace_albedo(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+
+      auto fresnel = fresnel_dielectric(material->ior, outgoing, point.normal);
+      auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
+      return {dielectric_albedo * albedo, true};
+    } else if (point.metal) {
+      auto outgoing         = -ray.d;
+      auto incoming         = reflect(outgoing, point.normal);
+      auto [refl_albedo, h] = trace_albedo(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+      return {refl_albedo * albedo, true};
+    }
+  }
+
+  return {albedo, true};
+}
+
+static std::pair<vec3f, bool> trace_albedo(const trc::scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params) {
+  auto [albedo, hit] = trace_albedo(scene, ray, rng, params, 0);
+  return {clamp(albedo, 0.0, 1.0), hit};
+}
+
+static std::pair<vec3f, bool> trace_normal(const trc::scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
+  auto intersection = intersect_scene_bvh(scene, ray);
+  if (!intersection.hit) {
+    return {zero3f, false};
+  }
+
+  auto point    = eval_point(scene, intersection, ray);
+  auto object   = scene->objects[intersection.object];
+  auto shape    = object->shape;
+  auto material = object->material;
+  auto element  = intersection.element;
+  auto uv       = intersection.uv;
+
+  // handle opacity
+  if (point.opacity < 1.0f) {
+    auto [normal, h] = trace_normal(scene,
+        ray3f{point.position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    return {lerp(normal, point.normal, point.opacity), true};
+  }
+
+  if (point.roughness < 0.05f && bounce < 5) {
+    if (point.transmission && material->thin) {
+      auto outgoing         = -ray.d;
+      auto incoming         = -outgoing;
+      auto [trans_norm, h1] = trace_normal(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+
+      incoming             = reflect(outgoing, point.normal);
+      auto [spec_norm, h2] = trace_normal(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+
+      auto fresnel = fresnel_dielectric(material->ior, outgoing, point.normal);
+      auto normal  = lerp(trans_norm, spec_norm, fresnel);
+      return {normal, true};
+    } else if (point.metal) {
+      auto outgoing = -ray.d;
+      auto incoming = reflect(outgoing, point.normal);
+      return trace_normal(
+          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+    }
+  }
+
+  return {point.normal, true};
+}
+
+static std::pair<vec3f, bool> trace_normal(const trc::scene* scene,
+    const ray3f& ray, rng_state& rng, const trace_params& params) {
+  return trace_normal(scene, ray, rng, params, 0);
+}
+
 // Trace a single ray from the camera using the given algorithm.
 using sampler_func = vec4f (*)(const scene_model* scene, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
+<<<<<<< HEAD
     case trace_sampler_type::path: return trace_path;
     case trace_sampler_type::naive: return trace_naive;
     case trace_sampler_type::eyelight: return trace_eyelight;
     case trace_sampler_type::falsecolor: return trace_falsecolor;
+=======
+    case sampler_type::path: return trace_path;
+    case sampler_type::naive: return trace_naive;
+    case sampler_type::eyelight: return trace_eyelight;
+    case sampler_type::falsecolor: return trace_falsecolor;
+    case sampler_type::albedo: return trace_albedo;
+    case sampler_type::normal: return trace_normal;
+>>>>>>> 2b23571... Integrate OIDN in the form of a new app and library
     default: {
       throw std::runtime_error("sampler unknown");
       return nullptr;
@@ -823,10 +944,12 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
-    case trace_sampler_type::path: return true;
-    case trace_sampler_type::naive: return true;
-    case trace_sampler_type::eyelight: return false;
-    case trace_sampler_type::falsecolor: return false;
+    case sampler_type::path: return true;
+    case sampler_type::naive: return true;
+    case sampler_type::eyelight: return false;
+    case sampler_type::falsecolor: return false;
+    case sampler_type::albedo: return false;
+    case sampler_type::normal: return false;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;

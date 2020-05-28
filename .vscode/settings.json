@@ -105,5 +105,6 @@
       ],
       "url": "./scripts/scene.schema.json"
     }
-  ]
+  ],
+  "editor.formatOnSave": true
 }
