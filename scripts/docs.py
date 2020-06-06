@@ -10,4 +10,8 @@ def cli():
 def serve():
     os.system('mkdocs serve')
 
+@cli.command()
+def deploy():
+    os.system('mkdocs gh-deploy')
+
 cli()
