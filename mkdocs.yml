@@ -1,0 +1,23 @@
+# Project information
+site_name: Yocto/GL
+site_author: Fabio Pellacini
+
+# Repository
+repo_name: xelatihy/yocto-gl
+repo_url: https://github.com/xelatihy/yocto-gl/
+edit_uri: ""
+
+# Copyright
+copyright: Copyright &copy; 2016 - 2020 Fabio Pellacini
+
+# Theme
+theme:
+  name: material
+  language: en
+  extra_css:
+    - css/extra.css
+
+# Pages
+nav:
+  - About: index.md
+  - Gallery: gallery.md

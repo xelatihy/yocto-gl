@@ -1,55 +1,12 @@
-
-<style type="text/css">
-.slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
-.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
-@keyframes slider {6.25%{opacity:1;} 9%{opacity:0;}}
-.slider img:nth-child(16){animation-delay:0s;}
-.slider img:nth-child(15){animation-delay:5s;}
-.slider img:nth-child(14){animation-delay:10s;}
-.slider img:nth-child(13){animation-delay:15s;}
-.slider img:nth-child(12){animation-delay:20s;}
-.slider img:nth-child(11){animation-delay:25s;}
-.slider img:nth-child(10){animation-delay:30s;}
-.slider img:nth-child(9){animation-delay:35s;}
-.slider img:nth-child(8){animation-delay:40s;}
-.slider img:nth-child(7){animation-delay:45s;}
-.slider img:nth-child(6){animation-delay:50s;}
-.slider img:nth-child(5){animation-delay:55s;}
-.slider img:nth-child(4){animation-delay:60s;}
-.slider img:nth-child(3){animation-delay:65s;}
-.slider img:nth-child(2){animation-delay:70s;}
-.slider img:nth-child(1){animation-delay:75s;}
-</style>
-
-<div class="slider">
- <img src="images/vokselia-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/rungholt-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/car2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/spaceship-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bistrointerior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/breakfastroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/kitchen-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/classroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bathroom1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/landscape-c3-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/landscape-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/sanmiguel-c2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/sanmiguel-c1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/bistroexterior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/island-c6-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
- <img src="images/island-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
-</div>
-
 # Yocto/GL: Tiny C++ Libraries for Data-Oriented Physically-based Graphics
-
-![windows build badge](https://github.com/xelatihy/yocto-gl/workflows/windows-build/badge.svg)
-![macos build badge](https://github.com/xelatihy/yocto-gl/workflows/macos-build/badge.svg)
-![ubuntu build badge](https://github.com/xelatihy/yocto-gl/workflows/ubuntu-build/badge.svg)
 
 Yocto/GL is a collection of small C++17 libraries for building
 physically-based graphics algorithms released under the MIT license.
-Yocto/GL is written in a deliberatly data-oriented style for ease of
+Yocto/GL is written in a deliberately data-oriented style for ease of
 development and use.
+
+## Libraries
+
 Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
 
@@ -76,6 +33,8 @@ See each header file for documentation.
 - `yocto/yocto_commonio.h`: printing utilities, file io utilities,
   command line parsing
 - `yocto/yocto_common.h`: container, iterators and concurrency utilities
+
+## Example Applications
 
 You can see Yocto/GL in action in the following applications written to
 test the library:
@@ -171,3 +130,50 @@ Finally, we optionally support the use of Intel's Embree for ray casting.
 At this point, we rely pon prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.
+
+
+<!--
+
+<style type="text/css">
+.slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
+.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
+@keyframes slider {6.25%{opacity:1;} 9%{opacity:0;}}
+.slider img:nth-child(16){animation-delay:0s;}
+.slider img:nth-child(15){animation-delay:5s;}
+.slider img:nth-child(14){animation-delay:10s;}
+.slider img:nth-child(13){animation-delay:15s;}
+.slider img:nth-child(12){animation-delay:20s;}
+.slider img:nth-child(11){animation-delay:25s;}
+.slider img:nth-child(10){animation-delay:30s;}
+.slider img:nth-child(9){animation-delay:35s;}
+.slider img:nth-child(8){animation-delay:40s;}
+.slider img:nth-child(7){animation-delay:45s;}
+.slider img:nth-child(6){animation-delay:50s;}
+.slider img:nth-child(5){animation-delay:55s;}
+.slider img:nth-child(4){animation-delay:60s;}
+.slider img:nth-child(3){animation-delay:65s;}
+.slider img:nth-child(2){animation-delay:70s;}
+.slider img:nth-child(1){animation-delay:75s;}
+</style>
+
+<div class="slider">
+ <img src="images/vokselia-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/rungholt-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/car2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/spaceship-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistrointerior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/breakfastroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/kitchen-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/classroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bathroom1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape-c3-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistroexterior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island-c6-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+</div>
+
+-->
+

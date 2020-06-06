@@ -1,6 +1,8 @@
 # Gallery
 
-Images rendered with Yocto/GL path tracer.
+This page contains a collection of images rendered with the Yocto/GL path tracer.
+
+## Environments
 
 ![Yocto/GL pathtraced image](images/island.png)
 
@@ -16,6 +18,8 @@ Images rendered with Yocto/GL path tracer.
 
 ![Yocto/GL pathtraced image](images/landscape-c3.png)
 
+## Interiors
+
 ![Yocto/GL pathtraced image](images/bathroom1.png)
 
 ![Yocto/GL pathtraced image](images/classroom.png)
@@ -26,15 +30,21 @@ Images rendered with Yocto/GL path tracer.
 
 ![Yocto/GL pathtraced image](images/bistrointerior.png)
 
+## Objects
+
 ![Yocto/GL pathtraced image](images/coffee.png){: style="max-height: 416px"}
 {: style="text-align: center"}
 
 ![Yocto/GL pathtraced image](images/crown.png){: style="max-height: 416px"}
 {: style="text-align: center"}
 
+## Vehicles
+
 ![Yocto/GL pathtraced image](images/spaceship.png)
 
 ![Yocto/GL pathtraced image](images/car2.png)
+
+## Minecraft
 
 ![Yocto/GL pathtraced image](images/rungholt.png)
 

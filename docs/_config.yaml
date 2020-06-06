@@ -1,9 +1,0 @@
-title: Yocto/GL
-author: Fabio Pellacini
-github_username: xelatihy
-theme: minima
-header_pages:
-  - gallery.md
-titles_from_headings:
-  enabled:     true
-  strip_title: true
