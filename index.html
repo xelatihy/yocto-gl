@@ -1,0 +1,570 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctogl-tiny-c-libraries-for-data-oriented-physically-based-graphics" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              About
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        About
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="." title="About" class="md-nav__link md-nav__link--active">
+      About
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#libraries" class="md-nav__link">
+    Libraries
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-applications" class="md-nav__link">
+    Example Applications
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-considerations" class="md-nav__link">
+    Design Considerations
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credits" class="md-nav__link">
+    Credits
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compilation" class="md-nav__link">
+    Compilation
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#libraries" class="md-nav__link">
+    Libraries
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-applications" class="md-nav__link">
+    Example Applications
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-considerations" class="md-nav__link">
+    Design Considerations
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credits" class="md-nav__link">
+    Credits
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compilation" class="md-nav__link">
+    Compilation
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctogl-tiny-c-libraries-for-data-oriented-physically-based-graphics">Yocto/GL: Tiny C++ Libraries for Data-Oriented Physically-based Graphics</h1>
+<p>Yocto/GL is a collection of small C++17 libraries for building
+physically-based graphics algorithms released under the MIT license.
+Yocto/GL is written in a deliberately data-oriented style for ease of
+development and use.</p>
+<h2 id="libraries">Libraries</h2>
+<p>Yocto/GL is split into small libraries to make code navigation easier.
+See each header file for documentation.</p>
+<ul>
+<li><code>yocto/yocto_math.{h}</code>: fixed-size vectors, matrices, rigid frames, rays,
+   bounding boxes, transforms, random number generation, color and geometry
+   functions, Perlin noise, shading and integration utilities</li>
+<li><code>yocto/yocto_shape.{h,cpp}</code>:  various utilities for manipulating
+   triangle meshes, quads meshes and line sets, computation of normals and
+   tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
+   procedural shapes generation, ray intersection and closest point queries of
+   triangle meshes, quads meshes, line sets and instances scenes using a
+   two-level bounding volume hierarchy</li>
+<li><code>yocto/yocto_image.{h,cpp}</code>: simple image data type, image resizing,
+   tonemapping, color correction, image loading and saving,
+   procedural images, procedural sun-sky, advanced color conversion utilities</li>
+<li><code>yocto/yocto_trace.{h,cpp}</code>: path tracing of surfaces and hairs supporting
+   area and environment illumination, microfacet GGX and subsurface scattering,
+   multiple importance sampling</li>
+<li><code>yocto/yocto_sceneio.{h,cpp}</code>: scene loading and saving of Ply/Obj/Pbrt/glTF 
+   and a custom and scalable Json format</li>
+<li><code>yocto/yocto_ply.h</code>: parsing and writing for Ply format</li>
+<li><code>yocto/yocto_obj.h</code>: parsing and writing for Obj format</li>
+<li><code>yocto/yocto_pbrt.h</code>: parsing and writing for Pbrt format</li>
+<li><code>yocto/yocto_commonio.h</code>: printing utilities, file io utilities,
+  command line parsing</li>
+<li><code>yocto/yocto_common.h</code>: container, iterators and concurrency utilities</li>
+</ul>
+<h2 id="example-applications">Example Applications</h2>
+<p>You can see Yocto/GL in action in the following applications written to
+test the library:</p>
+<ul>
+<li><code>apps/yscenetrace.cpp</code>:   command-line path-tracer</li>
+<li><code>apps/ysceneitrace.cpp</code>:  interactive path-tracer</li>
+<li><code>apps/ysceneitraces.cpp</code>: simpler version of <code>apps/ysceneitrace.cpp</code> for demos</li>
+<li><code>apps/ysceneproc.cpp</code>: command-line scene manipulation and conversion</li>
+<li><code>apps/yshapeproc.cpp</code>: command-line mesh manipulation and conversion</li>
+<li><code>apps/yimageview.cpp</code>: Hdr/Ldr image viewer with tonemapping and color grading</li>
+<li><code>apps/yimageviews.cpp</code>: simpler version of <code>apps/yimageview.cpp</code> for demos</li>
+<li><code>apps/yimageproc.cpp</code>: command-line image manipulation</li>
+<li><code>apps/ysceneview.cpp</code>: simple OpenGL viewer</li>
+</ul>
+<p>Here are some test images rendered with the path tracer. More images are
+included in the <a href="https://xelatihy.github.io/yocto-gl/">project site</a>.</p>
+<p><img alt="Example materials: matte, plastic, metal, glass, subsurface, normal mapping" src="images/features1.png" /></p>
+<p><img alt="Example shapes: procedural shapes, Catmull-Clark subdivision, hairs, displacement mapping" src="images/features2.png" /></p>
+<p><img alt="Image rendered with Yocto/GL path tracer. Model by Disney Animation Studios." src="images/island.png" /></p>
+<h2 id="design-considerations">Design Considerations</h2>
+<p>Yocto/GL follows a "data-oriented programming model" that makes data explicit.
+Data is stored in simple structs and accessed with free functions or directly.
+All data is public, so we make no attempt at encapsulation.
+Most objects is Yocto/GL have value semantic, while large data structures 
+use reference semnatic with strict ownership. This means that everything 
+can be trivially serialized and there is no need for memory management.</p>
+<p>We do this since this makes Yocto/GL easier to extend and quicker to learn,
+with a more explicit data flow that is easier when writing parallel code.
+Since Yocto/GL is mainly used for research and teaching,
+explicit data is both more hackable and easier to understand.</p>
+<p>In terms of code style we prefer a functional approach rather than an
+object oriented one, favoring free functions to class methods. All functions
+and data are defined in sibling namespaces contained in the <code>yocto</code> namespace 
+so libraries can call all others, but have to do so explicitly. </p>
+<p>The use of templates in Yocto was the reason for many refactorings, going
+from no template to heavy template use. At this point, Yocto uses some templates 
+for readability. In the future, we will increase the use of templates in math 
+code, while keeping many APIs explicitly typed.</p>
+<p>We do not use exception for error repoting, but only to report "programmers"
+errors. For example, IO operations use boolean flags and error strings for
+human readable errors, while exceptions are used when preconditions or 
+postconditions are violatd in functions.</p>
+<p>The current version of the library (2.x) is a major refacting of the previous 
+library versions (1.x) in three main aspects. First, we now allow the use of 
+reference semantric via pointers and adopt it for all large objects, while 
+keeping value semantic for all others. We did this to avoid erroneous copies
+that cannot detected and avoided at compile time. Second, we had trouble 
+interacting with C libraries that mostly use reference semantic. Third, we
+reduce the use of exceptions, again for better intergration with external code.</p>
+<h2 id="credits">Credits</h2>
+<p>Main contributors:</p>
+<ul>
+<li>Fabio Pellacini (lead developer): <a href="http://pellacini.di.uniroma1.it">web</a>, <a href="https://github.com/xelatihy">github</a></li>
+<li>Edoardo Carra: <a href="https://github.com/edoardocarra">github</a></li>
+<li>Giacomo Nazzaro: <a href="https://github.com/giacomonazzaro">github</a></li>
+</ul>
+<p>This library includes code from the <a href="http://www.pcg-random.org">PCG random number generator</a>,
+boost <code>hash_combine</code>, and public domain code from <code>github.com/sgorsten/linalg</code>,
+<code>gist.github.com/badboy/6267743</code> and <code>github.com/nothings/stb_perlin.h</code>.
+Other external libraries are included with their own license.</p>
+<h2 id="compilation">Compilation</h2>
+<p>This library requires a C++17 compiler and is know to compiled on
+OsX (Xcode &gt;= 10), Windows (MSVC 2019) and Linux (gcc &gt;= 7, clang &gt;= 4).</p>
+<p>You can build the example applications using CMake with
+    <code>mkdir build; cd build; cmake ..; cmake --build</code></p>
+<p>Yocto/GL depends on <code>stb_image.h</code>, <code>stb_image_write.h</code>, <code>stb_image_resize.h</code> and
+<code>tinyexr.h</code> for image loading, saving and resizing,  <code>cgltf.h</code> and <code>json.hpp</code>
+for glTF and JSON support, and <code>filesystem.hpp</code> to support C++17 filesystem API 
+when missing. All dependencies are included in the distribution.</p>
+<p>We optionally support building OpenGL demos, which are handled by including
+glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
+become part of the Yocto/GL libraries. OpenGL support is enabled by defining
+the cmake option <code>YOCTO_OPENGL</code> and contained in the <code>yocto_gui</code> library.</p>
+<p>Finally, we optionally support the use of Intel's Embree for ray casting.
+At this point, we rely pon prebuilt binaries distributed by Intel.
+See the main CMake file for how to link to it. Embree support is enabled by
+defining the cmake option <code>YOCTO_EMBREE</code>.</p>
+<!--
+
+<style type="text/css">
+.slider {width:100%; height:100%; padding-bottom: 50%; overflow:hidden; position:relative; }
+.slider img{ position:absolute; animation:slider 80s infinite; opacity:0; width: 100%; height: auto; top: auto; left: 0; right: 0; bottom: 0;}
+@keyframes slider {6.25%{opacity:1;} 9%{opacity:0;}}
+.slider img:nth-child(16){animation-delay:0s;}
+.slider img:nth-child(15){animation-delay:5s;}
+.slider img:nth-child(14){animation-delay:10s;}
+.slider img:nth-child(13){animation-delay:15s;}
+.slider img:nth-child(12){animation-delay:20s;}
+.slider img:nth-child(11){animation-delay:25s;}
+.slider img:nth-child(10){animation-delay:30s;}
+.slider img:nth-child(9){animation-delay:35s;}
+.slider img:nth-child(8){animation-delay:40s;}
+.slider img:nth-child(7){animation-delay:45s;}
+.slider img:nth-child(6){animation-delay:50s;}
+.slider img:nth-child(5){animation-delay:55s;}
+.slider img:nth-child(4){animation-delay:60s;}
+.slider img:nth-child(3){animation-delay:65s;}
+.slider img:nth-child(2){animation-delay:70s;}
+.slider img:nth-child(1){animation-delay:75s;}
+</style>
+
+<div class="slider">
+ <img src="images/vokselia-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/rungholt-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/car2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/spaceship-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistrointerior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/breakfastroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/kitchen-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/classroom-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bathroom1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape-c3-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/landscape-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c2-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/sanmiguel-c1-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/bistroexterior-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island-c6-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+ <img src="images/island-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
+</div>
+
+-->
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+        
+          <a href="gallery/" title="Gallery" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Gallery
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: ".",
+          features: [],
+          search: Object.assign({
+            worker: "assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
