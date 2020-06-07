@@ -2448,7 +2448,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load pbrt
-  auto pbrt_guard = std::make_unique<ypbrt::model>();
+  auto pbrt_guard = std::make_unique<ypbrt::pbrt_model>();
   auto pbrt       = pbrt_guard.get();
   if (!load_pbrt(filename, pbrt, error)) return false;
 
@@ -2501,7 +2501,7 @@ static bool load_pbrt_scene(const std::string& filename, scn::model* scene,
   };
 
   // convert material
-  auto material_map = std::unordered_map<ypbrt::material*, scn::material*>{};
+  auto material_map = std::unordered_map<ypbrt::pbrt_material*, scn::material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2622,7 +2622,7 @@ static bool save_pbrt_scene(const std::string& filename,
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save pbrt
-  auto pbrt_guard = std::make_unique<ypbrt::model>();
+  auto pbrt_guard = std::make_unique<ypbrt::pbrt_model>();
   auto pbrt       = pbrt_guard.get();
 
   // convert camera
@@ -2639,7 +2639,7 @@ static bool save_pbrt_scene(const std::string& filename,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<scn::material*, ypbrt::material*>{};
+  auto material_map = std::unordered_map<scn::material*, ypbrt::pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = sfs::path(material->name).stem();

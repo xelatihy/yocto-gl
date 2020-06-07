@@ -48,7 +48,7 @@
 namespace yocto::pbrt {
 
 // Pbrt camera
-struct camera {
+struct pbrt_camera {
   // camera parameters
   frame3f frame      = identity3x4f;
   frame3f frend      = identity3x4f;
@@ -60,7 +60,7 @@ struct camera {
 };
 
 // Pbrt material
-struct material {
+struct pbrt_material {
   // material parameters
   std::string name            = "";
   vec3f       emission        = {0, 0, 0};
@@ -81,7 +81,7 @@ struct material {
 };
 
 // Pbrt shape
-struct shape {
+struct pbrt_shape {
   // frames
   frame3f              frame     = identity3x4f;
   frame3f              frend     = identity3x4f;
@@ -94,11 +94,11 @@ struct shape {
   std::vector<vec2f> texcoords = {};
   std::vector<vec3i> triangles = {};
   // material
-  pbrt::material* material = nullptr;
+  pbrt::pbrt_material* material = nullptr;
 };
 
 // Pbrt lights
-struct light {
+struct pbrt_light {
   // light parameters
   frame3f frame    = identity3x4f;
   frame3f frend    = identity3x4f;
@@ -114,7 +114,7 @@ struct light {
   std::vector<vec3f> area_positions = {};
   std::vector<vec3f> area_normals   = {};
 };
-struct environment {
+struct pbrt_environment {
   // environment approximation
   frame3f     frame        = identity3x4f;
   frame3f     frend        = identity3x4f;
@@ -123,31 +123,31 @@ struct environment {
 };
 
 // Pbrt model
-struct model {
+struct pbrt_model {
   // pbrt data
   std::vector<std::string>        comments     = {};
-  std::vector<pbrt::camera*>      cameras      = {};
-  std::vector<pbrt::shape*>       shapes       = {};
-  std::vector<pbrt::environment*> environments = {};
-  std::vector<pbrt::light*>       lights       = {};
-  std::vector<pbrt::material*>    materials    = {};
+  std::vector<pbrt::pbrt_camera*>      cameras      = {};
+  std::vector<pbrt::pbrt_shape*>       shapes       = {};
+  std::vector<pbrt::pbrt_environment*> environments = {};
+  std::vector<pbrt::pbrt_light*>       lights       = {};
+  std::vector<pbrt::pbrt_material*>    materials    = {};
 
   // cleanup
-  ~model();
+  ~pbrt_model();
 };
 
 // Load/save pbrt
 bool load_pbrt(
-    const std::string& filename, pbrt::model* pbrt, std::string& error);
-bool save_pbrt(const std::string& filename, pbrt::model* pbrt,
+    const std::string& filename, pbrt::pbrt_model* pbrt, std::string& error);
+bool save_pbrt(const std::string& filename, pbrt::pbrt_model* pbrt,
     std::string& error, bool ply_meshes = false);
 
 // Create pbrt
-pbrt::camera*      add_camera(pbrt::model* pbrt);
-pbrt::shape*       add_shape(pbrt::model* pbrt);
-pbrt::material*    add_material(pbrt::model* pbrt);
-pbrt::environment* add_environment(pbrt::model* pbrt);
-pbrt::light*       add_light(pbrt::model* pbrt);
+pbrt::pbrt_camera*      add_camera(pbrt::pbrt_model* pbrt);
+pbrt::pbrt_shape*       add_shape(pbrt::pbrt_model* pbrt);
+pbrt::pbrt_material*    add_material(pbrt::pbrt_model* pbrt);
+pbrt::pbrt_environment* add_environment(pbrt::pbrt_model* pbrt);
+pbrt::pbrt_light*       add_light(pbrt::pbrt_model* pbrt);
 
 }  // namespace yocto::pbrt
 
