@@ -50,9 +50,9 @@ struct GLFWwindow;
 namespace yocto {
 
 // Commands to setup the opengl context and issue gpu operations.
-bool init_ogl(std::string& error);
+bool init_ogl(string& error);
 void assert_ogl_error();
-bool check_ogl_error(std::string& error);
+bool check_ogl_error(string& error);
 void clear_ogl_framebuffer(const vec4f& color, bool clear_depth = true);
 void set_ogl_viewport(const vec4i& viewport);
 void set_ogl_wireframe(bool enabled);
@@ -170,8 +170,8 @@ void set_elementbuffer(ogl_elementbuffer* buffer,
 // Opengl program
 struct ogl_program {
   // program code
-  std::string vertex_code;
-  std::string fragment_code;
+  string vertex_code;
+  string fragment_code;
   // OpenGL state
   uint program_id  = 0;
   uint vertex_id   = 0;
@@ -180,8 +180,8 @@ struct ogl_program {
 };
 
 // initialize program
-bool init_program(ogl_program* program, const std::string& vertex,
-    const std::string& fragment, std::string& error, std::string& errorlog);
+bool init_program(ogl_program* program, const string& vertex,
+    const string& fragment, string& error, string& errorlog);
 bool is_initialized(const ogl_program* program);
 
 // clear program
@@ -421,7 +421,7 @@ struct ogl_scene {
 enum struct ogl_shading_type { lights, eyelight, camlights };
 
 // Shading name
-const auto ogl_shading_names = std::vector<std::string>{
+const auto ogl_shading_names = std::vector<string>{
     "lights", "eyelight", "camlights"};
 
 // Draw options
@@ -555,7 +555,7 @@ using widgets_callback =
     std::function<void(gui_window*, const gui_input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback = std::function<void(
-    gui_window*, const std::vector<std::string>&, const gui_input& input)>;
+    gui_window*, const std::vector<string>&, const gui_input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback = std::function<void(
     gui_window*, int key, bool pressed, const gui_input& input)>;
@@ -592,7 +592,7 @@ struct gui_callbacks {
 };
 
 // run the user interface with the give callbacks
-void run_ui(const vec2i& size, const std::string& title,
+void run_ui(const vec2i& size, const string& title,
     const gui_callbacks& callbaks, int widgets_width = 320,
     bool widgets_left = true);
 
@@ -606,7 +606,7 @@ namespace yocto {
 // OpenGL window wrapper
 struct gui_window {
   GLFWwindow*       win           = nullptr;
-  std::string       title         = "";
+  string       title         = "";
   init_callback     init_cb       = {};
   clear_callback    clear_cb      = {};
   draw_callback     draw_cb       = {};
@@ -625,7 +625,7 @@ struct gui_window {
 };
 
 // Windows initialization
-void init_window(gui_window* win, const vec2i& size, const std::string& title,
+void init_window(gui_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
@@ -658,14 +658,14 @@ namespace yocto {
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
-void draw_label(gui_window* win, const char* lbl, const std::string& text);
+void draw_label(gui_window* win, const char* lbl, const string& text);
 
 void draw_separator(gui_window* win);
 void continue_line(gui_window* win);
 
 bool draw_button(gui_window* win, const char* lbl, bool enabled = true);
 
-bool draw_textinput(gui_window* win, const char* lbl, std::string& value);
+bool draw_textinput(gui_window* win, const char* lbl, string& value);
 
 bool draw_slider(
     gui_window* win, const char* lbl, float& value, float min, float max);
@@ -712,11 +712,11 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 
 bool draw_combobox(gui_window* win, const char* lbl, int& idx,
-    const std::vector<std::string>& labels);
-bool draw_combobox(gui_window* win, const char* lbl, std::string& value,
-    const std::vector<std::string>& labels);
+    const std::vector<string>& labels);
+bool draw_combobox(gui_window* win, const char* lbl, string& value,
+    const std::vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
-    const std::function<std::string(int)>& labels, bool include_null = false);
+    const std::function<string(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
@@ -735,7 +735,7 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
-    const std::vector<T*>& vals, const std::vector<std::string>& labels,
+    const std::vector<T*>& vals, const std::vector<string>& labels,
     bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -762,17 +762,17 @@ void draw_histogram(
     gui_window* win, const char* lbl, const std::vector<vec4f>& values);
 
 bool draw_messages(gui_window* win);
-void push_message(gui_window* win, const std::string& message);
-bool draw_filedialog(gui_window* win, const char* lbl, std::string& path,
-    bool save, const std::string& dirname, const std::string& filename,
-    const std::string& filter);
+void push_message(gui_window* win, const string& message);
+bool draw_filedialog(gui_window* win, const char* lbl, string& path,
+    bool save, const string& dirname, const string& filename,
+    const string& filter);
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
-    bool button_active, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
-    const std::string& filter);
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename,
+    const string& filter);
 
-void log_info(gui_window* win, const std::string& msg);
-void log_error(gui_window* win, const std::string& msg);
+void log_info(gui_window* win, const string& msg);
+void log_error(gui_window* win, const string& msg);
 void clear_log(gui_window* win);
 void draw_log(gui_window* win);
 

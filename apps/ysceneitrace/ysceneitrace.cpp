@@ -48,10 +48,10 @@ void print_obj_camera(scene_camera* camera);
 // Application scene
 struct app_state {
   // loading options
-  std::string filename  = "app->yaml";
-  std::string imagename = "out.png";
-  std::string outname   = "out.yaml";
-  std::string name      = "";
+  string filename  = "app->yaml";
+  string imagename = "out.png";
+  string outname   = "out.yaml";
+  string name      = "";
 
   // scene
   scene_model*  ioscene  = new scene_model{};
@@ -89,11 +89,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
+  string       status       = "";
+  string       error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  std::string       loader_error = "";
+  string       loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -268,7 +268,7 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const std::string& message, int sample, int nsamples) {
+      [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },
@@ -284,8 +284,8 @@ void reset_display(app_state* app) {
       });
 }
 
-void load_scene_async(app_states* apps, const std::string& filename,
-    const std::string& camera_name = "", bool add_skyenv = false) {
+void load_scene_async(app_states* apps, const string& filename,
+    const string& camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = sfs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -295,7 +295,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
   app->status    = "load";
   app->loader    = std::async(
       std::launch::async, [app, camera_name, add_skyenv]() {
-        auto progress_cb = [app](const std::string& message, int current,
+        auto progress_cb = [app](const string& message, int current,
                                int total) {
           app->current = current;
           app->total   = total;
@@ -498,7 +498,7 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
 }
 
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static std::string load_path = "", save_path = "", error_message = "";
+  static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
@@ -804,7 +804,7 @@ int main(int argc, const char* argv[]) {
   // application
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = std::vector<std::string>{};
+  auto filenames   = std::vector<string>{};
   auto add_skyenv  = false;
   auto camera_name = ""s;
 
@@ -846,7 +846,7 @@ int main(int argc, const char* argv[]) {
     draw_widgets(win, apps, input);
   };
   callbacks.drop_cb = [apps](gui_window*                  win,
-                          const std::vector<std::string>& paths,
+                          const std::vector<string>& paths,
                           const gui_input&                input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };

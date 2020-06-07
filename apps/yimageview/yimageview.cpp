@@ -47,9 +47,9 @@ struct image_stats {
 
 struct app_state {
   // original data
-  std::string name     = "";
-  std::string filename = "";
-  std::string outname  = "";
+  string name     = "";
+  string filename = "";
+  string outname  = "";
 
   // image data
   image<vec4f> source  = {};
@@ -73,9 +73,9 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
-  std::string       loader_error = "";
+  string       status       = "";
+  string       error        = "";
+  string       loader_error = "";
 
   // cleanup
   ~app_state() {
@@ -134,7 +134,7 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const std::string& filename) {
+void load_image_async(app_states* apps, const string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname = sfs::path(filename).replace_extension(".display.png").string();
@@ -159,7 +159,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
 }
 
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static std::string load_path = "", save_path = "", error_message = "";
+  static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -302,7 +302,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = std::make_unique<app_states>();
   auto apps       = apps_guard.get();
-  auto filenames  = std::vector<std::string>{};
+  auto filenames  = std::vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgview", "view images");
@@ -339,7 +339,7 @@ int main(int argc, const char* argv[]) {
     }
   };
   callbacks.drop_cb = [apps](gui_window*                  win,
-                          const std::vector<std::string>& paths,
+                          const std::vector<string>& paths,
                           const gui_input&                input) {
     for (auto path : paths) load_image_async(apps, path);
   };

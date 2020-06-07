@@ -40,9 +40,9 @@ using namespace std::string_literals;
 // Application state
 struct app_state {
   // loading options
-  std::string filename  = "scene.yaml";
-  std::string imagename = "out.png";
-  std::string name      = "";
+  string filename  = "scene.yaml";
+  string imagename = "out.png";
+  string name      = "";
 
   // options
   trace_params params = {};
@@ -50,7 +50,7 @@ struct app_state {
   // scene
   trace_scene*             scene        = new trace_scene{};
   trace_camera*            camera       = nullptr;
-  std::vector<std::string> camera_names = {};
+  std::vector<string> camera_names = {};
 
   // rendering state
   image<vec4f> render   = {};
@@ -213,7 +213,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
 }
 
 // init camera names
-void init_camera_names(std::vector<std::string>& names,
+void init_camera_names(std::vector<string>& names,
     const std::vector<scene_camera*>&            iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
@@ -228,7 +228,7 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const std::string& message, int sample, int nsamples) {
+      [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },

@@ -4779,19 +4779,19 @@ void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
 namespace yocto {
 
 // Get extension (not including '.').
-static std::string get_extension(const std::string& filename) {
+static string get_extension(const string& filename) {
   auto pos = filename.rfind('.');
-  if (pos == std::string::npos) return "";
+  if (pos == string::npos) return "";
   return filename.substr(pos);
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_shape(const std::string& filename,
+[[nodiscard]] bool load_shape(const string& filename,
     std::vector<int>& points, std::vector<vec2i>& lines,
     std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
     std::vector<vec3f>& positions, std::vector<vec3f>& normals,
     std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
-    std::vector<float>& radius, std::string& error, bool flip_texcoord) {
+    std::vector<float>& radius, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -4877,12 +4877,12 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_shape(const std::string& filename,
+[[nodiscard]] bool save_shape(const string& filename,
     const std::vector<int>& points, const std::vector<vec2i>& lines,
     const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
     const std::vector<vec2f>& texcoords, const std::vector<vec3f>& colors,
-    const std::vector<float>& radius, std::string& error, bool ascii,
+    const std::vector<float>& radius, string& error, bool ascii,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -4936,11 +4936,11 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_fvshape(const std::string& filename,
+[[nodiscard]] bool load_fvshape(const string& filename,
     std::vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    std::string& error, bool flip_texcoord) {
+    string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -4990,11 +4990,11 @@ static std::string get_extension(const std::string& filename) {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_fvshape(const std::string& filename,
+[[nodiscard]] bool save_fvshape(const string& filename,
     const std::vector<vec4i>& quadspos, const std::vector<vec4i>& quadsnorm,
     const std::vector<vec4i>& quadstexcoord,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>& texcoords, std::string& error, bool ascii,
+    const std::vector<vec2f>& texcoords, string& error, bool ascii,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -5048,7 +5048,7 @@ static std::string get_extension(const std::string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-std::vector<std::string> shape_stats(const std::vector<int>& points,
+std::vector<string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads, const std::vector<vec4i>& quadspos,
     const std::vector<vec4i>& quadsnorm,
@@ -5071,7 +5071,7 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
   auto bbox = invalidb3f;
   for (auto& pos : positions) bbox = merge(bbox, pos);
 
-  auto stats = std::vector<std::string>{};
+  auto stats = std::vector<string>{};
   stats.push_back("points:       " + format(points.size()));
   stats.push_back("lines:        " + format(lines.size()));
   stats.push_back("triangles:    " + format(triangles.size()));

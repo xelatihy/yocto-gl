@@ -34,7 +34,6 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-using std::string;
 using std::vector;
 using namespace std::string_literals;
 
@@ -45,7 +44,7 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     std::vector<vec3f>& colors, std::vector<float>& radius,
-    const std::string& type, std::string& error) {
+    const string& type, string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-quady") {
@@ -234,7 +233,7 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
     std::vector<vec3f>& positions, std::vector<vec3f>& normals,
     std::vector<vec2f>& texcoords, std::vector<vec3f>& colors,
-    std::vector<float>& radius, const std::string& type, std::string& error) {
+    std::vector<float>& radius, const string& type, string& error) {
   auto quadspos      = std::vector<vec4i>{};
   auto quadsnorm     = std::vector<vec4i>{};
   auto quadstexcoord = std::vector<vec4i>{};
@@ -250,7 +249,7 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
 bool make_shape_preset(vector<vec4i>& quadspos, std::vector<vec4i>& quadsnorm,
     std::vector<vec4i>& quadstexcoord, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
-    const std::string& type, std::string& error) {
+    const string& type, string& error) {
   auto points    = std::vector<int>{};
   auto lines     = std::vector<vec2i>{};
   auto triangles = std::vector<vec3i>{};

@@ -53,10 +53,10 @@ void print_obj_camera(scene_camera* camera);
 // Application state
 struct app_state {
   // loading parameters
-  std::string filename  = "scene.json";
-  std::string imagename = "out.png";
-  std::string outname   = "scene.json";
-  std::string name      = "";
+  string filename  = "scene.json";
+  string imagename = "out.png";
+  string outname   = "scene.json";
+  string name      = "";
 
   // options
   ogl_scene_params drawgl_prms = {};
@@ -82,11 +82,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
+  string       status       = "";
+  string       error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  std::string       loader_error = "";
+  string       loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -269,7 +269,7 @@ int main(int argc, const char* argv[]) {
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [app](gui_window* win, const gui_input& input) {
     init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
-        [app](const std::string& message, int current, int total) {
+        [app](const string& message, int current, int total) {
           app->status  = "init scene";
           app->current = current;
           app->total   = total;

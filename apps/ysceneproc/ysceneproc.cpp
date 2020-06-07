@@ -33,7 +33,6 @@
 using namespace yocto;
 
 #include <memory>
-using std::string;
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
@@ -41,7 +40,7 @@ namespace sfs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 bool make_preset(
-    scene_model* scene, const std::string& type, std::string& error) {
+    scene_model* scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;
@@ -52,7 +51,7 @@ bool make_preset(
   return true;
 }
 
-void make_dir(const std::string& dirname) {
+void make_dir(const string& dirname) {
   if (sfs::exists(dirname)) return;
   try {
     sfs::create_directories(dirname);

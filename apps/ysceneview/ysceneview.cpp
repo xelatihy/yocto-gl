@@ -53,10 +53,10 @@ void print_obj_camera(scene_camera* camera);
 // Application state
 struct app_state {
   // loading parameters
-  std::string filename  = "scene.json";
-  std::string imagename = "out.png";
-  std::string outname   = "scene.json";
-  std::string name      = "";
+  string filename  = "scene.json";
+  string imagename = "out.png";
+  string outname   = "scene.json";
+  string name      = "";
 
   // options
   ogl_scene_params drawgl_prms = {};
@@ -82,11 +82,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
+  string       status       = "";
+  string       error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  std::string       loader_error = "";
+  string       loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -110,8 +110,8 @@ struct app_states {
   }
 };
 
-void load_scene_async(app_states* apps, const std::string& filename,
-    const std::string& camera_name = "") {
+void load_scene_async(app_states* apps, const string& filename,
+    const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = sfs::path(filename).replace_extension(".png");
@@ -121,7 +121,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
     auto progress_cb = [app](
-                           const std::string& message, int current, int total) {
+                           const string& message, int current, int total) {
       app->current = current;
       app->total   = total;
     };
@@ -684,7 +684,7 @@ void update(gui_window* win, app_states* apps) {
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
     auto progress_cb = [app](
-                           const std::string& message, int current, int total) {
+                           const string& message, int current, int total) {
       app->current = current;
       app->total   = total;
     };
@@ -706,7 +706,7 @@ int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = std::vector<std::string>{};
+  auto filenames   = std::vector<string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -734,7 +734,7 @@ int main(int argc, const char* argv[]) {
     draw_widgets(win, apps, input);
   };
   callbacks.drop_cb = [apps](gui_window*                  win,
-                          const std::vector<std::string>& paths,
+                          const std::vector<string>& paths,
                           const gui_input&                input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };

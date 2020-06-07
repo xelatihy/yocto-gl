@@ -35,7 +35,6 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-using std::string;
 using std::vector;
 using namespace std::string_literals;
 

@@ -44,6 +44,16 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+
+}
+
+// -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,16 +72,16 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
 
 // Obj texture information.
 struct obj_texture {
-  std::string path  = "";     // file path
+  string path  = "";     // file path
   bool        clamp = false;  // clamp to edge
   float       scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
-  std::unordered_map<std::string, std::vector<float>> props;
+  std::unordered_map<string, std::vector<float>> props;
 
   obj_texture() {}
   obj_texture(const char* path) : path{path} {}
-  obj_texture(const std::string& path) : path{path} {}
+  obj_texture(const string& path) : path{path} {}
 };
 
 // Obj element
@@ -83,7 +93,7 @@ struct obj_element {
 // Obj material
 struct obj_material {
   // material name and type
-  std::string name  = "";
+  string name  = "";
   int         illum = 0;
 
   // material colors and values
@@ -149,7 +159,7 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  std::string                name      = "";
+  string                name      = "";
   std::vector<vec3f>         positions = {};
   std::vector<vec3f>         normals   = {};
   std::vector<vec2f>         texcoords = {};
@@ -163,7 +173,7 @@ struct obj_shape {
 
 // Obj camera
 struct obj_camera {
-  std::string name     = "";
+  string name     = "";
   frame3f     frame    = identity3x4f;
   bool        ortho    = false;
   float       width    = 0.036;
@@ -175,7 +185,7 @@ struct obj_camera {
 
 // Obj environment
 struct obj_environment {
-  std::string name         = "";
+  string name         = "";
   frame3f     frame        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
   obj_texture emission_tex = {};
@@ -183,7 +193,7 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  std::vector<std::string>      comments     = {};
+  std::vector<string>      comments     = {};
   std::vector<obj_shape*>       shapes       = {};
   std::vector<obj_material*>    materials    = {};
   std::vector<obj_camera*>      cameras      = {};
@@ -192,10 +202,10 @@ struct obj_model {
 };
 
 // Load and save obj
-bool load_obj(const std::string& filename, obj_model* obj, std::string& error,
+bool load_obj(const string& filename, obj_model* obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const std::string& filename, obj_model* obj, std::string& error);
+bool save_obj(const string& filename, obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,

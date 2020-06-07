@@ -52,7 +52,7 @@ inline void skip_whitespace(std::string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-// Parse values from a std::string
+// Parse values from a string
 [[nodiscard]] inline bool parse_value(
     std::string_view& str, std::string_view& value) {
   skip_whitespace(str);
@@ -78,10 +78,10 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, std::string& value) {
+    std::string_view& str, string& value) {
   auto valuev = std::string_view{};
   if (!parse_value(str, valuev)) return false;
-  value = std::string{valuev};
+  value = string{valuev};
   return true;
 }
 [[nodiscard]] inline bool parse_value(std::string_view& str, int32_t& value) {
@@ -121,33 +121,33 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 
-// Formats values to std::string
-inline void format_value(std::string& str, const std::string& value) {
+// Formats values to string
+inline void format_value(string& str, const string& value) {
   str += value;
 }
-inline void format_value(std::string& str, int value) {
+inline void format_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(std::string& str, float value) {
+inline void format_value(string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-inline void format_value(std::string& str, const vec2f& value) {
+inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(std::string& str, const vec3f& value) {
+inline void format_value(string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(std::string& str, const frame3f& value) {
+inline void format_value(string& str, const frame3f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
@@ -155,18 +155,18 @@ inline void format_value(std::string& str, const frame3f& value) {
 }
 
 // Foramt to file
-inline void format_values(std::string& str, const std::string& fmt) {
+inline void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != std::string::npos)
-    throw std::runtime_error("bad format std::string");
+  if (pos != string::npos)
+    throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-inline void format_values(std::string& str, const std::string& fmt,
+inline void format_values(string& str, const string& fmt,
     const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == std::string::npos)
-    throw std::invalid_argument("bad format std::string");
+  if (pos == string::npos)
+    throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -174,7 +174,7 @@ inline void format_values(std::string& str, const std::string& fmt,
 
 template <typename... Args>
 [[nodiscard]] inline bool format_values(
-    FILE* fs, const std::string& fmt, const Args&... args) {
+    FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
@@ -222,7 +222,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   info = obj_texture();
 
   // get tokens
-  auto tokens = std::vector<std::string>();
+  auto tokens = std::vector<string>();
   skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
@@ -238,7 +238,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
     if (c == '\\') c = '/';
 
   // texture params
-  auto last = std::string();
+  auto last = string();
   for (auto i = 0; i < tokens.size() - 1; i++) {
     if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
@@ -249,7 +249,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_mtl(
-    const std::string& filename, obj_model* obj, std::string& error) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -477,7 +477,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_objx(
-    const std::string& filename, obj_model* obj, std::string& error) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -498,7 +498,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // shape map for instances
-  auto shape_map = std::unordered_map<std::string, std::vector<obj_shape*>>{};
+  auto shape_map = std::unordered_map<string, std::vector<obj_shape*>>{};
   for (auto shape : obj->shapes) {
     shape_map[shape->name].push_back(shape);
   }
@@ -578,7 +578,7 @@ obj_shape* add_shape(obj_model* obj) {
 }
 
 // Read obj
-bool load_obj(const std::string& filename, obj_model* obj, std::string& error,
+bool load_obj(const string& filename, obj_model* obj, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -611,8 +611,8 @@ bool load_obj(const std::string& filename, obj_model* obj, std::string& error,
   auto oname        = ""s;
   auto gname        = ""s;
   auto mname        = ""s;
-  auto mtllibs      = std::vector<std::string>{};
-  auto material_map = std::unordered_map<std::string, obj_material*>{};
+  auto mtllibs      = std::vector<string>{};
+  auto material_map = std::unordered_map<string, obj_material*>{};
 
   // initialize obj
   obj->~obj_model();
@@ -796,10 +796,10 @@ bool load_obj(const std::string& filename, obj_model* obj, std::string& error,
 }
 
 // Format values
-inline void format_value(std::string& str, const obj_texture& value) {
+inline void format_value(string& str, const obj_texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
-inline void format_value(std::string& str, const obj_vertex& value) {
+inline void format_value(string& str, const obj_vertex& value) {
   format_value(str, value.position);
   if (value.texcoord) {
     str += "/";
@@ -816,7 +816,7 @@ inline void format_value(std::string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_mtl(
-    const std::string& filename, obj_model* obj, std::string& error) {
+    const string& filename, obj_model* obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
@@ -993,7 +993,7 @@ inline void format_value(std::string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_objx(
-    const std::string& filename, obj_model* obj, std::string& error) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1053,7 +1053,7 @@ inline void format_value(std::string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] bool save_obj(
-    const std::string& filename, obj_model* obj, std::string& error) {
+    const string& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1101,7 +1101,7 @@ inline void format_value(std::string& str, const obj_vertex& value) {
       if (!format_values(fs, "vn {}\n", n)) return write_error();
     for (auto& t : shape->texcoords)
       if (!format_values(fs, "vt {}\n", t)) return write_error();
-    auto element_labels = std::vector<std::string>{"f", "l", "p"};
+    auto element_labels = std::vector<string>{"f", "l", "p"};
     auto element_groups = std::vector<const std::vector<obj_element>*>{
         &shape->faces, &shape->lines, &shape->points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {

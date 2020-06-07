@@ -43,6 +43,16 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+
+}
+
+// -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -62,7 +72,7 @@ struct pbrt_camera {
 // Pbrt material
 struct pbrt_material {
   // material parameters
-  std::string name            = "";
+  string name            = "";
   vec3f       emission        = {0, 0, 0};
   vec3f       color           = {0, 0, 0};
   float       specular        = 0;
@@ -71,9 +81,9 @@ struct pbrt_material {
   float       roughness       = 0;
   float       ior             = 1.5;
   float       opacity         = 1;
-  std::string color_tex       = "";
-  std::string opacity_tex     = "";
-  std::string alpha_tex       = "";
+  string color_tex       = "";
+  string opacity_tex     = "";
+  string alpha_tex       = "";
   bool        thin            = true;
   vec3f       volmeanfreepath = {0, 0, 0};
   vec3f       volscatter      = {0, 0, 0};
@@ -88,7 +98,7 @@ struct pbrt_shape {
   std::vector<frame3f> instances = {};
   std::vector<frame3f> instaends = {};
   // shape
-  std::string        filename_ = "";
+  string        filename_ = "";
   std::vector<vec3f> positions = {};
   std::vector<vec3f> normals   = {};
   std::vector<vec2f> texcoords = {};
@@ -119,13 +129,13 @@ struct pbrt_environment {
   frame3f     frame        = identity3x4f;
   frame3f     frend        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
-  std::string emission_tex = "";
+  string emission_tex = "";
 };
 
 // Pbrt model
 struct pbrt_model {
   // pbrt data
-  std::vector<std::string>       comments     = {};
+  std::vector<string>       comments     = {};
   std::vector<pbrt_camera*>      cameras      = {};
   std::vector<pbrt_shape*>       shapes       = {};
   std::vector<pbrt_environment*> environments = {};
@@ -138,9 +148,9 @@ struct pbrt_model {
 
 // Load/save pbrt
 bool load_pbrt(
-    const std::string& filename, pbrt_model* pbrt, std::string& error);
-bool save_pbrt(const std::string& filename, pbrt_model* pbrt,
-    std::string& error, bool ply_meshes = false);
+    const string& filename, pbrt_model* pbrt, string& error);
+bool save_pbrt(const string& filename, pbrt_model* pbrt,
+    string& error, bool ply_meshes = false);
 
 // Create pbrt
 pbrt_camera*      add_camera(pbrt_model* pbrt);

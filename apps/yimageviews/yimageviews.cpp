@@ -36,8 +36,8 @@ using namespace std::string_literals;
 
 struct app_state {
   // original data
-  std::string filename = "image.png";
-  std::string outname  = "out.png";
+  string filename = "image.png";
+  string outname  = "out.png";
 
   // image data
   image<vec4f> source = {};
@@ -71,7 +71,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = std::vector<std::string>{};
+  auto filenames = std::vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgviews", "view images");

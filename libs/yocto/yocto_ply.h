@@ -43,6 +43,16 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+
+}
+
+// -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -53,7 +63,7 @@ enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 // Ply property
 struct ply_property {
   // description
-  std::string name    = "";
+  string name    = "";
   bool        is_list = false;
   ply_type    type    = ply_type::f32;
 
@@ -76,7 +86,7 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  std::string                name       = "";
+  string                name       = "";
   size_t                     count      = 0;
   std::vector<ply_property*> properties = {};
 
@@ -91,7 +101,7 @@ enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
 struct ply_model {
   // ply content
   ply_format                format   = ply_format::binary_little_endian;
-  std::vector<std::string>  comments = {};
+  std::vector<string>  comments = {};
   std::vector<ply_element*> elements = {};
 
   // cleanup
@@ -99,33 +109,33 @@ struct ply_model {
 };
 
 // Load and save ply
-bool load_ply(const std::string& filename, ply_model* ply, std::string& error);
-bool save_ply(const std::string& filename, ply_model* ply, std::string& error);
+bool load_ply(const string& filename, ply_model* ply, string& error);
+bool save_ply(const string& filename, ply_model* ply, string& error);
 
 // Get ply properties
 bool has_property(
-    ply_model* ply, const std::string& element, const std::string& property);
+    ply_model* ply, const string& element, const string& property);
 ply_property* get_property(
-    ply_model* ply, const std::string& element, const std::string& property);
+    ply_model* ply, const string& element, const string& property);
 
-bool get_value(ply_model* ply, const std::string& element,
-    const std::string& property, std::vector<float>& values);
-bool get_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 2>& properties, std::vector<vec4f>& values);
-bool get_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 3>& properties, std::vector<vec3f>& values);
-bool get_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 4>& properties, std::vector<vec4f>& values);
-bool get_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 12>& properties,
+bool get_value(ply_model* ply, const string& element,
+    const string& property, std::vector<float>& values);
+bool get_values(ply_model* ply, const string& element,
+    const std::array<string, 2>& properties, std::vector<vec4f>& values);
+bool get_values(ply_model* ply, const string& element,
+    const std::array<string, 3>& properties, std::vector<vec3f>& values);
+bool get_values(ply_model* ply, const string& element,
+    const std::array<string, 4>& properties, std::vector<vec4f>& values);
+bool get_values(ply_model* ply, const string& element,
+    const std::array<string, 12>& properties,
     std::vector<frame3f>&              values);
 
-bool get_lists(ply_model* ply, const std::string& element,
-    const std::string& property, std::vector<std::vector<int>>& lists);
-bool get_list_sizes(ply_model* ply, const std::string& element,
-    const std::string& property, std::vector<byte>& sizes);
-bool get_list_values(ply_model* ply, const std::string& element,
-    const std::string& property, std::vector<int>& values);
+bool get_lists(ply_model* ply, const string& element,
+    const string& property, std::vector<std::vector<int>>& lists);
+bool get_list_sizes(ply_model* ply, const string& element,
+    const string& property, std::vector<byte>& sizes);
+bool get_list_values(ply_model* ply, const string& element,
+    const string& property, std::vector<int>& values);
 
 // Get ply properties for meshes
 bool get_positions(ply_model* ply, std::vector<vec3f>& values);
@@ -142,34 +152,34 @@ bool get_quads(ply_model* ply, std::vector<vec4i>& values);
 bool has_quads(ply_model* ply);
 
 // Add ply properties
-bool add_value(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<float>& values);
-bool add_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 2>& properties,
+bool add_value(ply_model* ply, const string& element,
+    const string& property, const std::vector<float>& values);
+bool add_values(ply_model* ply, const string& element,
+    const std::array<string, 2>& properties,
     const std::vector<vec2f>&         values);
-bool add_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 3>& properties,
+bool add_values(ply_model* ply, const string& element,
+    const std::array<string, 3>& properties,
     const std::vector<vec3f>&         values);
-bool add_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 4>& properties,
+bool add_values(ply_model* ply, const string& element,
+    const std::array<string, 4>& properties,
     const std::vector<vec4f>&         values);
-bool add_values(ply_model* ply, const std::string& element,
-    const std::array<std::string, 12>& properties,
+bool add_values(ply_model* ply, const string& element,
+    const std::array<string, 12>& properties,
     const std::vector<frame3f>&        values);
 
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<std::vector<int>>& values);
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<byte>& sizes,
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<std::vector<int>>& values);
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<byte>& sizes,
     const std::vector<int>& values);
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<int>& values);
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<vec2i>& values);
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<vec3i>& values);
-bool add_lists(ply_model* ply, const std::string& element,
-    const std::string& property, const std::vector<vec4i>& values);
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<int>& values);
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<vec2i>& values);
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<vec3i>& values);
+bool add_lists(ply_model* ply, const string& element,
+    const string& property, const std::vector<vec4i>& values);
 
 // Add ply properties for meshes
 bool add_positions(ply_model* ply, const std::vector<vec3f>& values);

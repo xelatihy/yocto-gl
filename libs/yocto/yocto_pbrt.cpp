@@ -55,7 +55,7 @@ inline void skip_whitespace(std::string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-// Parse values from a std::string
+// Parse values from a string
 [[nodiscard]] inline bool parse_value(
     std::string_view& str, std::string_view& value) {
   skip_whitespace(str);
@@ -81,10 +81,10 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, std::string& value) {
+    std::string_view& str, string& value) {
   auto valuev = std::string_view{};
   if (!parse_value(str, valuev)) return false;
-  value = std::string{valuev};
+  value = string{valuev};
   return true;
 }
 [[nodiscard]] inline bool parse_value(std::string_view& str, int& value) {
@@ -123,41 +123,41 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 
-// Formats values to std::string
-inline void format_value(std::string& str, const std::string& value) {
+// Formats values to string
+inline void format_value(string& str, const string& value) {
   str += value;
 }
-inline void format_value(std::string& str, const char* value) { str += value; }
-inline void format_value(std::string& str, int value) {
+inline void format_value(string& str, const char* value) { str += value; }
+inline void format_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(std::string& str, float value) {
+inline void format_value(string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
 
-inline void format_value(std::string& str, const vec2f& value) {
+inline void format_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(std::string& str, const vec3f& value) {
+inline void format_value(string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(std::string& str, const vec4f& value) {
+inline void format_value(string& str, const vec4f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
 }
-inline void format_value(std::string& str, const mat4f& value) {
+inline void format_value(string& str, const mat4f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
@@ -165,18 +165,18 @@ inline void format_value(std::string& str, const mat4f& value) {
 }
 
 // Foramt to file
-inline void format_values(std::string& str, const std::string& fmt) {
+inline void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != std::string::npos)
-    throw std::runtime_error("bad format std::string");
+  if (pos != string::npos)
+    throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-inline void format_values(std::string& str, const std::string& fmt,
+inline void format_values(string& str, const string& fmt,
     const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == std::string::npos)
-    throw std::invalid_argument("bad format std::string");
+  if (pos == string::npos)
+    throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -184,7 +184,7 @@ inline void format_values(std::string& str, const std::string& fmt,
 
 template <typename... Args>
 [[nodiscard]] inline bool format_values(
-    FILE* fs, const std::string& fmt, const Args&... args) {
+    FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
@@ -208,14 +208,14 @@ enum struct pbrt_type {
 
 // Pbrt value
 struct pbrt_value {
-  std::string        name     = "";
+  string        name     = "";
   pbrt_type          type     = pbrt_type::real;
   int                value1i  = 0;
   float              value1f  = 0;
   vec2f              value2f  = {0, 0};
   vec3f              value3f  = {0, 0, 0};
   bool               value1b  = false;
-  std::string        value1s  = "";
+  string        value1s  = "";
   std::vector<float> vector1f = {};
   std::vector<vec2f> vector2f = {};
   std::vector<vec3f> vector3f = {};
@@ -224,15 +224,15 @@ struct pbrt_value {
 
 // Pbrt command
 struct pbrt_command {
-  std::string             name   = "";
-  std::string             type   = "";
+  string             name   = "";
+  string             type   = "";
   std::vector<pbrt_value> values = {};
   frame3f                 frame  = identity3x4f;
   frame3f                 frend  = identity3x4f;
 };
 
 // get pbrt value
-[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, std::string& val) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, string& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val = pbrt.value1s;
     return true;
@@ -368,7 +368,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::pair<float, std::string>& val) {
+    const pbrt_value& pbrt, std::pair<float, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = 0;
     return get_value(pbrt, val.second);
@@ -378,7 +378,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::pair<vec3f, std::string>& val) {
+    const pbrt_value& pbrt, std::pair<vec3f, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = zero3f;
     return get_value(pbrt, val.second);
@@ -389,7 +389,7 @@ struct pbrt_command {
 }
 template <typename T>
 [[nodiscard]] inline bool get_value(
-    const std::vector<pbrt_value>& pbrt, const std::string& name, T& val) {
+    const std::vector<pbrt_value>& pbrt, const string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_value(p, val);
@@ -399,7 +399,7 @@ template <typename T>
 }
 
 // pbrt value construction
-inline pbrt_value make_value(const std::string& name, const std::string& val,
+inline pbrt_value make_value(const string& name, const string& val,
     pbrt_type type = pbrt_type::string) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
@@ -408,7 +408,7 @@ inline pbrt_value make_value(const std::string& name, const std::string& val,
   return pbrt;
 }
 inline pbrt_value make_value(
-    const std::string& name, bool val, pbrt_type type = pbrt_type::boolean) {
+    const string& name, bool val, pbrt_type type = pbrt_type::boolean) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
@@ -416,7 +416,7 @@ inline pbrt_value make_value(
   return pbrt;
 }
 inline pbrt_value make_value(
-    const std::string& name, int val, pbrt_type type = pbrt_type::integer) {
+    const string& name, int val, pbrt_type type = pbrt_type::integer) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
@@ -424,14 +424,14 @@ inline pbrt_value make_value(
   return pbrt;
 }
 inline pbrt_value make_value(
-    const std::string& name, float val, pbrt_type type = pbrt_type::real) {
+    const string& name, float val, pbrt_type type = pbrt_type::real) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const std::string& name, const vec2f& val,
+inline pbrt_value make_value(const string& name, const vec2f& val,
     pbrt_type type = pbrt_type::point2) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
@@ -439,7 +439,7 @@ inline pbrt_value make_value(const std::string& name, const vec2f& val,
   pbrt.value2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const std::string& name, const vec3f& val,
+inline pbrt_value make_value(const string& name, const vec3f& val,
     pbrt_type type = pbrt_type::color) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
@@ -447,7 +447,7 @@ inline pbrt_value make_value(const std::string& name, const vec3f& val,
   pbrt.value3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const std::string& name,
+inline pbrt_value make_value(const string& name,
     const std::vector<vec2f>& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -455,7 +455,7 @@ inline pbrt_value make_value(const std::string& name,
   pbrt.vector2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const std::string& name,
+inline pbrt_value make_value(const string& name,
     const std::vector<vec3f>& val, pbrt_type type = pbrt_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -463,7 +463,7 @@ inline pbrt_value make_value(const std::string& name,
   pbrt.vector3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const std::string& name,
+inline pbrt_value make_value(const string& name,
     const std::vector<vec3i>& val, pbrt_type type = pbrt_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
@@ -485,7 +485,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-[[nodiscard]] inline bool read_cmdline(FILE* fs, std::string& cmd) {
+[[nodiscard]] inline bool read_cmdline(FILE* fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
@@ -517,9 +517,9 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   return found;
 }
 
-// parse a quoted std::string
+// parse a quoted string
 [[nodiscard]] inline bool parse_command(
-    std::string_view& str, std::string& value) {
+    std::string_view& str, string& value) {
   skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
@@ -550,26 +550,26 @@ template <typename T>
   return true;
 }
 
-// parse a quoted std::string
+// parse a quoted string
 [[nodiscard]] inline bool parse_nametype(
-    std::string_view& str_, std::string& name, std::string& type) {
+    std::string_view& str_, string& name, string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
   if (!str_.data()) return false;
   auto str  = std::string_view{value};
   auto pos1 = str.find(' ');
   if (pos1 == std::string_view::npos) return false;
-  type = std::string(str.substr(0, pos1));
+  type = string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
   if (pos2 == std::string_view::npos) return false;
   str.remove_prefix(pos2);
-  name = std::string(str);
+  name = string(str);
   return true;
 }
 
-inline std::pair<vec3f, vec3f> get_etak(const std::string& name) {
-  static const std::unordered_map<std::string, std::pair<vec3f, vec3f>>
+inline std::pair<vec3f, vec3f> get_etak(const string& name) {
+  static const std::unordered_map<string, std::pair<vec3f, vec3f>>
       metal_ior_table = {
           {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                       {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
@@ -657,8 +657,8 @@ inline std::pair<vec3f, vec3f> get_etak(const std::string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
-  static const std::unordered_map<std::string, std::pair<vec3f, vec3f>> params =
+inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
+  static const std::unordered_map<string, std::pair<vec3f, vec3f>> params =
       {
           // From "A Practical Model for Subsurface Light Transport"
           // Jensen, Marschner, Levoy, Hanrahan
@@ -793,19 +793,19 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
       value.type = pbrt_type::integer;
       if (!parse_pvalues(str, value.value1i, value.vector1i)) return false;
     } else if (type == "string") {
-      auto vector1s = std::vector<std::string>{};
+      auto vector1s = std::vector<string>{};
       value.type    = pbrt_type::string;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
-      auto vector1s = std::vector<std::string>{};
+      auto vector1s = std::vector<string>{};
       value.type    = pbrt_type::boolean;
       if (!parse_pvalues(str, value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
-      auto vector1s = std::vector<std::string>{};
+      auto vector1s = std::vector<string>{};
       value.type    = pbrt_type::texture;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
@@ -853,7 +853,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
       if (is_string) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
-        auto filenames = std::vector<std::string>{};
+        auto filenames = std::vector<string>{};
         if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
         auto filenamep = sfs::path(filename).filename();
@@ -890,34 +890,34 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
 // Other pbrt elements
 struct pbrt_film {
   // film approximation
-  std::string filename   = "";
+  string filename   = "";
   vec2i       resolution = {0, 0};
 };
 
 // Pbrt texture
 struct pbrt_texture {
   // texture parameters
-  std::string name     = "";
+  string name     = "";
   vec3f       constant = {1, 1, 1};
-  std::string filename = "";
+  string filename = "";
 };
 
 // Pbrt area light
 struct pbrt_arealight {
   // arealight parameters
-  std::string name     = "";
+  string name     = "";
   vec3f       emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
 struct pbrt_medium {
   // medium parameters
-  std::string name = "";
+  string name = "";
 };
 
 // convert pbrt films
 inline bool convert_film(pbrt_film* film, const pbrt_command& command,
-    const std::string& filename, std::string& error, bool verbose = false) {
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -944,7 +944,7 @@ inline bool convert_film(pbrt_film* film, const pbrt_command& command,
 
 // convert pbrt elements
 inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
-    const vec2i& resolution, const std::string& filename, std::string& error,
+    const vec2i& resolution, const string& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1001,8 +1001,8 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
 
 // convert pbrt textures
 inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
-    std::unordered_map<std::string, pbrt_texture>& texture_map,
-    const std::string& filename, std::string& error, bool verbose = false) {
+    std::unordered_map<string, pbrt_texture>& texture_map,
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1012,7 +1012,7 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     return false;
   };
 
-  auto get_filename = [&texture_map](const std::string& name) {
+  auto get_filename = [&texture_map](const string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
@@ -1096,9 +1096,9 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
 // convert pbrt materials
 inline bool convert_material(pbrt_material*               pmaterial,
     const pbrt_command&                                   command,
-    const std::unordered_map<std::string, pbrt_material>& named_materials,
-    const std::unordered_map<std::string, pbrt_texture>&  named_textures,
-    const std::string& filename, std::string& error, bool verbose = false) {
+    const std::unordered_map<string, pbrt_material>& named_materials,
+    const std::unordered_map<string, pbrt_texture>&  named_textures,
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1107,19 +1107,19 @@ inline bool convert_material(pbrt_material*               pmaterial,
     error = filename + ": unknown type " + command.type;
     return false;
   };
-  auto material_error = [filename, &error](const std::string& name) {
+  auto material_error = [filename, &error](const string& name) {
     error = filename + ": missing material " + name;
     return false;
   };
-  auto bsdf_error = [filename, &error](const std::string& name) {
+  auto bsdf_error = [filename, &error](const string& name) {
     error = filename + ": missing bsdf " + name;
     return false;
   };
 
   // helpers
   auto get_texture = [&](const std::vector<pbrt_value>& values,
-                         const std::string& name, vec3f& color,
-                         std::string& filename, const vec3f& def) -> bool {
+                         const string& name, vec3f& color,
+                         string& filename, const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1138,7 +1138,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
     return true;
   };
   auto get_scalar = [&](const std::vector<pbrt_value>& values,
-                        const std::string& name, float& scalar,
+                        const string& name, float& scalar,
                         float def) -> bool {
     auto textured = std::pair{vec3f{def}, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1155,7 +1155,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
     return true;
   };
   auto get_color = [&](const std::vector<pbrt_value>& values,
-                       const std::string& name, vec3f& color,
+                       const string& name, vec3f& color,
                        const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1380,7 +1380,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
   } else if (command.type == "fourier") {
     auto bsdffile = ""s;
     if (!get_value(command.values, "bsdffile", bsdffile)) return parse_error();
-    if (bsdffile.rfind("/") != std::string::npos)
+    if (bsdffile.rfind("/") != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
       pmaterial->color     = {0.6f, 0.6f, 0.6f};
@@ -1496,10 +1496,10 @@ inline void make_quad(std::vector<vec3i>& triangles,
 
 // Convert pbrt shapes
 inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
-    std::string&                                         alphamap,
-    const std::unordered_map<std::string, pbrt_texture>& named_textures,
-    const std::string& ply_dirname, const std::string& filename,
-    std::string& error, bool verbose = false) {
+    string&                                         alphamap,
+    const std::unordered_map<string, pbrt_texture>& named_textures,
+    const string& ply_dirname, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1515,7 +1515,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
 
   // helpers
   auto get_alpha = [&](const std::vector<pbrt_value>& values,
-                       const std::string& name, std::string& filename) -> bool {
+                       const string& name, string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1583,8 +1583,8 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
 
 // Convert pbrt arealights
 inline bool convert_arealight(pbrt_arealight* parealight,
-    const pbrt_command& command, const std::string& filename,
-    std::string& error, bool verbose = false) {
+    const pbrt_command& command, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1608,7 +1608,7 @@ inline bool convert_arealight(pbrt_arealight* parealight,
 
 // Convert pbrt lights
 inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
-    const std::string& filename, std::string& error, bool verbose = false) {
+    const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1667,8 +1667,8 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
 }
 
 inline bool convert_environment(pbrt_environment* penvironment,
-    const pbrt_command& command, const std::string& filename,
-    std::string& error, bool verbose = false) {
+    const pbrt_command& command, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1714,20 +1714,20 @@ struct stack_element {
 // pbrt parsing context
 struct context {
   std::vector<stack_element>                                stack      = {};
-  std::unordered_map<std::string, stack_element>            coordsys   = {};
-  std::unordered_map<std::string, std::vector<pbrt_shape*>> objects    = {};
-  std::string                                               cur_object = "";
+  std::unordered_map<string, stack_element>            coordsys   = {};
+  std::unordered_map<string, std::vector<pbrt_shape*>> objects    = {};
+  string                                               cur_object = "";
   vec2i film_resolution = {512, 512};
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const std::string& filename,
-    pbrt_model* pbrt, std::string& error, context& ctx,
-    std::unordered_map<std::string, pbrt_material*>& material_map,
-    std::unordered_map<std::string, pbrt_material>&  named_materials,
-    std::unordered_map<std::string, pbrt_texture>&   named_textures,
-    std::unordered_map<std::string, pbrt_medium>&    named_mediums,
-    const std::string&                               ply_dirname) {
+[[nodiscard]] inline bool load_pbrt(const string& filename,
+    pbrt_model* pbrt, string& error, context& ctx,
+    std::unordered_map<string, pbrt_material*>& material_map,
+    std::unordered_map<string, pbrt_material>&  named_materials,
+    std::unordered_map<string, pbrt_texture>&   named_textures,
+    std::unordered_map<string, pbrt_medium>&    named_mediums,
+    const string&                               ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -1745,7 +1745,7 @@ struct context {
     error = filename + ": error in " + error;
     return false;
   };
-  auto command_error = [filename, &error](const std::string& cmd) {
+  auto command_error = [filename, &error](const string& cmd) {
     error = filename + ": unknown command " + cmd;
     return false;
   };
@@ -2046,13 +2046,13 @@ pbrt_light* add_light(pbrt_model* pbrt) {
 
 // load pbrt
 bool load_pbrt(
-    const std::string& filename, pbrt_model* pbrt, std::string& error) {
+    const string& filename, pbrt_model* pbrt, string& error) {
   auto ctx             = context{};
-  auto material_map    = std::unordered_map<std::string, pbrt_material*>{};
-  auto named_materials = std::unordered_map<std::string, pbrt_material>{
+  auto material_map    = std::unordered_map<string, pbrt_material*>{};
+  auto named_materials = std::unordered_map<string, pbrt_material>{
       {"", {}}};
-  auto named_mediums  = std::unordered_map<std::string, pbrt_medium>{{"", {}}};
-  auto named_textures = std::unordered_map<std::string, pbrt_texture>{{"", {}}};
+  auto named_mediums  = std::unordered_map<string, pbrt_medium>{{"", {}}};
+  auto named_textures = std::unordered_map<string, pbrt_texture>{{"", {}}};
   auto dirname        = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
@@ -2074,12 +2074,12 @@ bool load_pbrt(
   return true;
 }
 
-inline void format_value(std::string& str, const pbrt_value& value) {
-  static auto type_labels = std::unordered_map<pbrt_type, std::string>{
+inline void format_value(string& str, const pbrt_value& value) {
+  static auto type_labels = std::unordered_map<pbrt_type, string>{
       {pbrt_type::real, "float"},
       {pbrt_type::integer, "integer"},
       {pbrt_type::boolean, "bool"},
-      {pbrt_type::string, "std::string"},
+      {pbrt_type::string, "string"},
       {pbrt_type::point, "point"},
       {pbrt_type::normal, "normal"},
       {pbrt_type::vector, "std::vector"},
@@ -2090,7 +2090,7 @@ inline void format_value(std::string& str, const pbrt_value& value) {
       {pbrt_type::spectrum, "spectrum"},
   };
 
-  auto format_vector = [](std::string& str, auto& values) {
+  auto format_vector = [](string& str, auto& values) {
     str += "[ ";
     for (auto& value : values) {
       str += " ";
@@ -2143,15 +2143,15 @@ inline void format_value(std::string& str, const pbrt_value& value) {
 }
 
 inline void format_value(
-    std::string& str, const std::vector<pbrt_value>& values) {
+    string& str, const std::vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);
   }
 }
 
-bool save_pbrt(const std::string& filename, pbrt_model* pbrt,
-    std::string& error, bool ply_meshes) {
+bool save_pbrt(const string& filename, pbrt_model* pbrt,
+    string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2291,7 +2291,7 @@ bool save_pbrt(const std::string& filename, pbrt_model* pbrt,
       }
     }
     if (!format_values(fs,
-            "MakeNamedMaterial \"{}\" \"std::string type\" \"{}\" {}\n",
+            "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
             material->name, command.type, command.values))
       return write_error();
   }

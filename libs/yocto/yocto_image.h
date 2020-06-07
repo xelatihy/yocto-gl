@@ -104,6 +104,16 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+
+}
+
+// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -274,41 +284,41 @@ image<vec4f> image_difference(
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const std::string& filename);
+bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
 bool load_image(
-    const std::string& filename, image<vec4f>& img, std::string& error);
+    const string& filename, image<vec4f>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<vec4f>& img, std::string& error);
+    const string& filename, const image<vec4f>& img, string& error);
 bool load_image(
-    const std::string& filename, image<vec4b>& img, std::string& error);
+    const string& filename, image<vec4b>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<vec4b>& img, std::string& error);
+    const string& filename, const image<vec4b>& img, string& error);
 
 // Loads/saves a 3 channels float/byte image in linear/srgb color space.
 bool load_image(
-    const std::string& filename, image<vec3f>& img, std::string& error);
+    const string& filename, image<vec3f>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<vec3f>& img, std::string& error);
+    const string& filename, const image<vec3f>& img, string& error);
 bool load_image(
-    const std::string& filename, image<vec3b>& img, std::string& error);
+    const string& filename, image<vec3b>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<vec3b>& img, std::string& error);
+    const string& filename, const image<vec3b>& img, string& error);
 
 // Loads/saves a 1 channels float/byte image in linear/srgb color space.
 bool load_image(
-    const std::string& filename, image<float>& img, std::string& error);
+    const string& filename, image<float>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<float>& img, std::string& error);
+    const string& filename, const image<float>& img, string& error);
 bool load_image(
-    const std::string& filename, image<byte>& img, std::string& error);
+    const string& filename, image<byte>& img, string& error);
 bool save_image(
-    const std::string& filename, const image<byte>& img, std::string& error);
+    const string& filename, const image<byte>& img, string& error);
 
 // Load/saves a 16 bit image in linear color space.
 bool load_image(
-    const std::string& filename, image<ushort>& img, std::string& error);
+    const string& filename, image<ushort>& img, string& error);
 
 }  // namespace yocto
 
@@ -379,11 +389,11 @@ image<vec4f> add_border(
     const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
-image<vec4b> make_logo(const std::string& name);
+image<vec4b> make_logo(const string& name);
 image<vec4f> add_logo(
-    const image<vec4f>& img, const std::string& name = "logo-medium");
+    const image<vec4f>& img, const string& name = "logo-medium");
 image<vec4b> add_logo(
-    const image<vec4b>& img, const std::string& name = "logo-medium");
+    const image<vec4b>& img, const string& name = "logo-medium");
 
 }  // namespace yocto
 
@@ -461,8 +471,8 @@ float eval_volume(const image<float>& img, const vec3f& uvw,
 namespace yocto {
 
 // Loads/saves a 1 channel volume.
-void load_volume(const std::string& filename, volume<float>& vol);
-void save_volume(const std::string& filename, const volume<float>& vol);
+void load_volume(const string& filename, volume<float>& vol);
+void save_volume(const string& filename, const volume<float>& vol);
 
 }  // namespace yocto
 
@@ -474,7 +484,7 @@ namespace yocto {
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
-void make_volume_preset(volume<float>& vol, const std::string& type);
+void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 

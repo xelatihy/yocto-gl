@@ -383,15 +383,15 @@ struct trace_params {
   float                 exposure   = 0;
 };
 
-const auto trace_sampler_names = std::vector<std::string>{
+const auto trace_sampler_names = std::vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = std::vector<std::string>{"normal",
+const auto trace_falsecolor_names = std::vector<string>{"normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
     "diffuse", "specular", "coat", "metal", "transmission", "translucency",
     "refraction", "roughness", "opacity", "ior", "object", "element",
     "highlight"};
-const auto bvh_names              = std::vector<std::string>{
+const auto bvh_names              = std::vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -400,7 +400,7 @@ const auto bvh_names              = std::vector<std::string>{
 
 // Progress report callback
 using progress_callback =
-    std::function<void(const std::string& message, int current, int total)>;
+    std::function<void(const string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback =
     std::function<void(const image<vec4f>& render, int current, int total)>;

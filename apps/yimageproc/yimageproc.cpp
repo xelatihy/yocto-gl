@@ -104,7 +104,7 @@ image<vec4f> filter_bilateral(
 }
 
 bool make_image_preset(
-    const std::string& type, image<vec4f>& img, std::string& error) {
+    const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
@@ -150,7 +150,7 @@ bool make_image_preset(
     make_bumps(img, size);
     img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
-    auto sub_types = std::vector<std::string>{"grid", "uvgrid", "checker",
+    auto sub_types = std::vector<string>{"grid", "uvgrid", "checker",
         "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
@@ -168,7 +168,7 @@ bool make_image_preset(
       pos += sub_img.size().x;
     }
   } else if (type == "images2") {
-    auto sub_types = std::vector<std::string>{"sky", "sunsky"};
+    auto sub_types = std::vector<string>{"sky", "sunsky"};
     auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
@@ -279,7 +279,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "filename", filename, "input image filename", true);
   parse_cli(cli, argc, argv);
 
-  // error std::string buffer
+  // error string buffer
   auto error = ""s;
 
   // load

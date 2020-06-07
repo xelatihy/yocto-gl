@@ -63,7 +63,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool init_ogl(std::string& error) {
+bool init_ogl(string& error) {
   if (!gladLoadGL()) {
     error = "Cannot initialize OpenGL context.";
     return false;
@@ -73,7 +73,7 @@ bool init_ogl(std::string& error) {
 
 void assert_ogl_error() { assert(glGetError() == GL_NO_ERROR); }
 
-bool check_ogl_error(std::string& error) {
+bool check_ogl_error(string& error) {
   if (glGetError() != GL_NO_ERROR) {
     error = "";
     return false;
@@ -383,8 +383,8 @@ void set_elementbuffer(ogl_elementbuffer* buffer,
 }
 
 // initialize program
-bool init_program(ogl_program* program, const std::string& vertex,
-    const std::string& fragment, std::string& error, std::string& errorlog) {
+bool init_program(ogl_program* program, const string& vertex,
+    const string& fragment, string& error, string& errorlog) {
   // error
   auto program_error = [&error, &errorlog, program](
                            const char* message, const char* log) {
@@ -1516,7 +1516,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
 namespace yocto {
 
 // run the user interface with the give callbacks
-void run_ui(const vec2i& size, const std::string& title,
+void run_ui(const vec2i& size, const string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   auto win_guard = std::make_unique<gui_window>();
   auto win       = win_guard.get();
@@ -1583,7 +1583,7 @@ static void draw_window(gui_window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_window(gui_window* win, const vec2i& size, const std::string& title,
+void init_window(gui_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -1614,7 +1614,7 @@ void init_window(gui_window* win, const vec2i& size, const std::string& title,
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
         auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
-          auto pathv = std::vector<std::string>();
+          auto pathv = std::vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
           win->drop_cb(win, pathv, win->input);
         }
@@ -1834,7 +1834,7 @@ bool is_glmodal_open(gui_window* win, const char* lbl) {
 }
 
 bool draw_message(
-    gui_window* win, const char* lbl, const std::string& message) {
+    gui_window* win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1849,9 +1849,9 @@ bool draw_message(
   }
 }
 
-std::deque<std::string> _message_queue = {};
+std::deque<string> _message_queue = {};
 std::mutex              _message_mutex;
-void push_message(gui_window* win, const std::string& message) {
+void push_message(gui_window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1875,7 +1875,7 @@ bool draw_messages(gui_window* win) {
 }
 
 // Utility to normalize a path
-static inline std::string normalize_path(const std::string& filename_) {
+static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -1896,43 +1896,43 @@ static inline std::string normalize_path(const std::string& filename_) {
 }
 
 // Get extension (not including '.').
-static std::string get_extension(const std::string& filename_) {
+static string get_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
-  if (pos == std::string::npos) return "";
+  if (pos == string::npos) return "";
   return filename.substr(pos);
 }
 
 struct filedialog_state {
-  std::string                               dirname       = "";
-  std::string                               filename      = "";
-  std::vector<std::pair<std::string, bool>> entries       = {};
+  string                               dirname       = "";
+  string                               filename      = "";
+  std::vector<std::pair<string, bool>> entries       = {};
   bool                                      save          = false;
   bool                                      remove_hidden = true;
-  std::string                               filter        = "";
-  std::vector<std::string>                  extensions    = {};
+  string                               filter        = "";
+  std::vector<string>                  extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const std::string& dirname, const std::string& filename,
-      bool save, const std::string& filter) {
+  filedialog_state(const string& dirname, const string& filename,
+      bool save, const string& filter) {
     this->save = save;
     set_filter(filter);
     set_dirname(dirname);
     set_filename(filename);
   }
-  void set_dirname(const std::string& name) {
+  void set_dirname(const string& name) {
     dirname = name;
     dirname = normalize_path(dirname);
     if (dirname == "") dirname = "./";
     if (dirname.back() != '/') dirname += '/';
     refresh();
   }
-  void set_filename(const std::string& name) {
+  void set_filename(const string& name) {
     filename = name;
     check_filename();
   }
-  void set_filter(const std::string& flt) {
-    auto globs = std::vector<std::string>{""};
+  void set_filter(const string& flt) {
+    auto globs = std::vector<string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
         globs.push_back("");
@@ -1994,18 +1994,18 @@ struct filedialog_state {
     });
   }
 
-  std::string get_path() const { return dirname + filename; }
-  bool        exists_file(const std::string& filename) {
+  string get_path() const { return dirname + filename; }
+  bool        exists_file(const string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
     return true;
   }
 };
-bool draw_filedialog(gui_window* win, const char* lbl, std::string& path,
-    bool save, const std::string& dirname, const std::string& filename,
-    const std::string& filter) {
-  static auto states = std::unordered_map<std::string, filedialog_state>{};
+bool draw_filedialog(gui_window* win, const char* lbl, string& path,
+    bool save, const string& dirname, const string& filename,
+    const string& filter) {
+  static auto states = std::unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
@@ -2059,9 +2059,9 @@ bool draw_filedialog(gui_window* win, const char* lbl, std::string& path,
   }
 }
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
-    bool button_active, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
-    const std::string& filter) {
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename,
+    const string& filter) {
   if (is_glmodal_open(win, lbl)) {
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
@@ -2085,7 +2085,7 @@ bool draw_button(gui_window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_label(gui_window* win, const char* lbl, const std::string& label) {
+void draw_label(gui_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
@@ -2093,7 +2093,7 @@ void draw_separator(gui_window* win) { ImGui::Separator(); }
 
 void continue_line(gui_window* win) { ImGui::SameLine(); }
 
-bool draw_textinput(gui_window* win, const char* lbl, std::string& value) {
+bool draw_textinput(gui_window* win, const char* lbl, string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -2224,7 +2224,7 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& value,
-    const std::vector<std::string>& labels) {
+    const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2237,8 +2237,8 @@ bool draw_combobox(gui_window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_combobox(gui_window* win, const char* lbl, std::string& value,
-    const std::vector<std::string>& labels) {
+bool draw_combobox(gui_window* win, const char* lbl, string& value,
+    const std::vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2253,7 +2253,7 @@ bool draw_combobox(gui_window* win, const char* lbl, std::string& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
-    const std::function<std::string(int)>& labels, bool include_null) {
+    const std::function<string(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
     return false;
@@ -2391,12 +2391,12 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_info(gui_window* win, const std::string& msg) {
+void        log_info(gui_window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_error(gui_window* win, const std::string& msg) {
+void log_error(gui_window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();

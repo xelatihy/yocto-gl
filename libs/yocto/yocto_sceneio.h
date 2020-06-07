@@ -52,6 +52,16 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+
+}
+
+// -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -70,7 +80,7 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct scene_camera {
-  std::string name         = "";
+  string name         = "";
   frame3f     frame        = identity3x4f;
   bool        orthographic = false;
   float       lens         = 0.050;
@@ -83,7 +93,7 @@ struct scene_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
-  std::string  name    = "";
+  string  name    = "";
   image<vec3f> colorf  = {};
   image<vec3b> colorb  = {};
   image<float> scalarf = {};
@@ -96,7 +106,7 @@ struct scene_texture {
 // For the documentation on the values, please see the OBJ format.
 struct scene_material {
   // material data
-  std::string name = "";
+  string name = "";
 
   // material
   vec3f emission     = {0, 0, 0};
@@ -142,7 +152,7 @@ struct scene_material {
 // each vertex data has its own topology.
 struct scene_shape {
   // shape data
-  std::string name = "";
+  string name = "";
 
   // primitives
   std::vector<int>   points    = {};
@@ -164,7 +174,7 @@ struct scene_shape {
 // face-varying quads.
 struct scene_subdiv {
   // shape data
-  std::string name = "";
+  string name = "";
 
   // face-varying primitives
   std::vector<vec4i> quadspos      = {};
@@ -180,14 +190,14 @@ struct scene_subdiv {
 // Instance data.
 struct scene_instance {
   // instance data
-  std::string          name   = "";
+  string          name   = "";
   std::vector<frame3f> frames = {};
 };
 
 // Object.
 struct scene_object {
   // object data
-  std::string     name     = "";
+  string     name     = "";
   frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
@@ -197,7 +207,7 @@ struct scene_object {
 
 // Environment map.
 struct scene_environment {
-  std::string    name         = "";
+  string    name         = "";
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   scene_texture* emission_tex = nullptr;
@@ -222,25 +232,25 @@ struct scene_model {
   std::vector<scene_instance*>    instances    = {};
 
   // additional information
-  std::string name      = "";
-  std::string copyright = "";
+  string name      = "";
+  string copyright = "";
 
   // cleanup
   ~scene_model();
 };
 
 // add element to a scene
-scene_camera*      add_camera(scene_model* scene, const std::string& name = "");
+scene_camera*      add_camera(scene_model* scene, const string& name = "");
 scene_environment* add_environment(
-    scene_model* scene, const std::string& name = "");
-scene_object*   add_object(scene_model* scene, const std::string& name = "");
-scene_instance* add_instance(scene_model* scene, const std::string& name = "");
-scene_material* add_material(scene_model* scene, const std::string& name = "");
-scene_shape*    add_shape(scene_model* scene, const std::string& name = "");
-scene_subdiv*   add_subdiv(scene_model* scene, const std::string& name = "");
-scene_texture*  add_texture(scene_model* scene, const std::string& name = "");
+    scene_model* scene, const string& name = "");
+scene_object*   add_object(scene_model* scene, const string& name = "");
+scene_instance* add_instance(scene_model* scene, const string& name = "");
+scene_material* add_material(scene_model* scene, const string& name = "");
+scene_shape*    add_shape(scene_model* scene, const string& name = "");
+scene_subdiv*   add_subdiv(scene_model* scene, const string& name = "");
+scene_texture*  add_texture(scene_model* scene, const string& name = "");
 scene_object*   add_complete_object(
-      scene_model* scene, const std::string& name = "");
+      scene_model* scene, const string& name = "");
 
 }  // namespace yocto
 
@@ -252,20 +262,20 @@ namespace yocto {
 
 // Progress callback called when loading.
 using progress_callback =
-    std::function<void(const std::string& message, int current, int total)>;
+    std::function<void(const string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const std::string& filename, scene_model* scene,
-    std::string& error, progress_callback progress_cb = {},
+bool load_scene(const string& filename, scene_model* scene,
+    string& error, progress_callback progress_cb = {},
     bool noparallel = false);
-bool save_scene(const std::string& filename, const scene_model* scene,
-    std::string& error, progress_callback progress_cb = {},
+bool save_scene(const string& filename, const scene_model* scene,
+    string& error, progress_callback progress_cb = {},
     bool noparallel = false);
 
 // get named camera or default if name is empty
 scene_camera* get_camera(
-    const scene_model* scene, const std::string& name = "");
+    const scene_model* scene, const string& name = "");
 
 // add a sky environment
 void add_sky(scene_model* scene, float sun_angle = pif / 4);
@@ -288,10 +298,10 @@ void make_cornellbox(scene_model* scene);
 namespace yocto {
 
 // Return scene statistics as list of strings.
-std::vector<std::string> scene_stats(
+std::vector<string> scene_stats(
     const scene_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-std::vector<std::string> scene_validation(
+std::vector<string> scene_validation(
     const scene_model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
