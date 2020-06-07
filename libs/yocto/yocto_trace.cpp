@@ -588,8 +588,8 @@ namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-atomic<ssize_t> embree_memory = 0;
-static RTCDevice     embree_device() {
+atomic<ssize_t>  embree_memory = 0;
+static RTCDevice embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
@@ -2356,8 +2356,8 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = std::thread::hardware_concurrency();
   atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(

@@ -570,8 +570,8 @@ namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-atomic<ssize_t> bvh_embree_memory = 0;
-static RTCDevice     bvh_embree_device() {
+atomic<ssize_t>  bvh_embree_memory = 0;
+static RTCDevice bvh_embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");

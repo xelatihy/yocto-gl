@@ -82,11 +82,11 @@
 namespace yocto {
 
 // using directives
+using std::atomic;
+using std::function;
+using std::future;
 using std::string;
 using std::vector;
-using std::function;
-using std::atomic;
-using std::future;
 
 }  // namespace yocto
 
@@ -452,8 +452,8 @@ struct trace_pixel {
 struct trace_state {
   image<vec4f>       render = {};
   image<trace_pixel> pixels = {};
-  future<void>  worker = {};  // async
-  atomic<bool>  stop   = {};  // async
+  future<void>       worker = {};  // async
+  atomic<bool>       stop   = {};  // async
 };
 
 // [experimental] Callback used to report partially computed image

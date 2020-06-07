@@ -50,9 +50,9 @@ struct GLFWwindow;
 namespace yocto {
 
 // using directives
+using std::function;
 using std::string;
 using std::vector;
-using std::function;
 
 }  // namespace yocto
 
@@ -563,14 +563,13 @@ using clear_callback = function<void(gui_window*, const gui_input& input)>;
 // Draw callback called every frame and when resizing
 using draw_callback = function<void(gui_window*, const gui_input& input)>;
 // Draw callback for drawing widgets
-using widgets_callback =
-    function<void(gui_window*, const gui_input& input)>;
+using widgets_callback = function<void(gui_window*, const gui_input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_callback = function<void(
-    gui_window*, const vector<string>&, const gui_input& input)>;
+using drop_callback =
+    function<void(gui_window*, const vector<string>&, const gui_input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
-using key_callback = function<void(
-    gui_window*, int key, bool pressed, const gui_input& input)>;
+using key_callback =
+    function<void(gui_window*, int key, bool pressed, const gui_input& input)>;
 // Char callback that returns ASCII key
 using char_callback =
     function<void(gui_window*, unsigned int key, const gui_input& input)>;
@@ -582,11 +581,9 @@ using click_callback = function<void(
 using scroll_callback =
     function<void(gui_window*, float amount, const gui_input& input)>;
 // Update functions called every frame
-using uiupdate_callback =
-    function<void(gui_window*, const gui_input& input)>;
+using uiupdate_callback = function<void(gui_window*, const gui_input& input)>;
 // Update functions called every frame
-using update_callback =
-    function<void(gui_window*, const gui_input& input)>;
+using update_callback = function<void(gui_window*, const gui_input& input)>;
 
 // User interface callcaks
 struct gui_callbacks {

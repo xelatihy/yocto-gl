@@ -57,9 +57,9 @@
 namespace yocto {
 
 // using directives
+using std::function;
 using std::string;
 using std::vector;
-using std::function;
 
 }  // namespace yocto
 

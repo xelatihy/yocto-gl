@@ -88,11 +88,11 @@
 namespace yocto {
 
 // using directives
-using std::string;
-using std::vector;
-using std::future;
 using std::atomic;
 using std::deque;
+using std::future;
+using std::string;
+using std::vector;
 
 }  // namespace yocto
 
@@ -152,8 +152,8 @@ struct concurrent_queue {
   bool try_pop(T& value);
 
  private:
-  std::mutex    mutex;
-  deque<T> queue;
+  std::mutex mutex;
+  deque<T>   queue;
 };
 
 // Run a task asynchronously
@@ -331,8 +331,8 @@ inline bool is_ready(const future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = std::thread::hardware_concurrency();
   atomic<int> next_idx(begin);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(

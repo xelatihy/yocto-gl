@@ -48,8 +48,8 @@
 namespace yocto {
 
 // using directives
-using std::future;
 using std::atomic;
+using std::future;
 
 }  // namespace yocto
 
@@ -535,8 +535,8 @@ inline void get_region(image<T>& clipped, const image<T>& img,
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = std::thread::hardware_concurrency();
   atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
