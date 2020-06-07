@@ -205,18 +205,18 @@ template <typename T>
   return true;
 }
 
-// Pbrt value
-struct value {
-  // Pbrt value type
-  enum struct type_t {
-    // clang-format off
-    real, integer, boolean, string, point, normal, vector, texture, color, 
-    point2, vector2, spectrum
-    // clang-format on
-  };
+// Pbrt type
+enum struct pbrt_type  {
+  // clang-format off
+  real, integer, boolean, string, point, normal, vector, texture, color, 
+  point2, vector2, spectrum
+  // clang-format on
+};
 
+// Pbrt value
+struct pbrt_value {
   std::string        name     = "";
-  type_t             type     = type_t::real;
+  pbrt_type          type     = pbrt_type::real;
   int                value1i  = 0;
   float              value1f  = 0;
   vec2f              value2f  = {0, 0};
@@ -230,63 +230,63 @@ struct value {
 };
 
 // Pbrt command
-struct command {
+struct pbrt_command {
   std::string        name   = "";
   std::string        type   = "";
-  std::vector<value> values = {};
+  std::vector<pbrt_value> values = {};
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
 };
 
 // get pbrt value
-[[nodiscard]] inline bool get_value(const value& pbrt, std::string& val) {
-  if (pbrt.type == value::type_t::string ||
-      pbrt.type == value::type_t::texture) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, std::string& val) {
+  if (pbrt.type == pbrt_type::string ||
+      pbrt.type == pbrt_type::texture) {
     val = pbrt.value1s;
     return true;
   } else {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, bool& val) {
-  if (pbrt.type == value::type_t::boolean) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, bool& val) {
+  if (pbrt.type == pbrt_type::boolean) {
     val = pbrt.value1b;
     return true;
   } else {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, int& val) {
-  if (pbrt.type == value::type_t::integer) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, int& val) {
+  if (pbrt.type == pbrt_type::integer) {
     val = pbrt.value1i;
     return true;
   } else {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, float& val) {
-  if (pbrt.type == value::type_t::real) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, float& val) {
+  if (pbrt.type == pbrt_type::real) {
     val = pbrt.value1f;
     return true;
   } else {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vec2f& val) {
-  if (pbrt.type == value::type_t::point2 ||
-      pbrt.type == value::type_t::vector2) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vec2f& val) {
+  if (pbrt.type == pbrt_type::point2 ||
+      pbrt.type == pbrt_type::vector2) {
     val = pbrt.value2f;
     return true;
   } else {
     return false;
   }
 }
-[[nodiscard]] inline bool get_value(const value& pbrt, vec3f& val) {
-  if (pbrt.type == value::type_t::point || pbrt.type == value::type_t::vector ||
-      pbrt.type == value::type_t::normal || pbrt.type == value::type_t::color) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vec3f& val) {
+  if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
+      pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     val = pbrt.value3f;
     return true;
-  } else if (pbrt.type == value::type_t::real) {
+  } else if (pbrt.type == pbrt_type::real) {
     val = vec3f{pbrt.value1f};
     return true;
   } else {
@@ -294,8 +294,8 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::vector<float>& val) {
-  if (pbrt.type == value::type_t::real) {
+    const pbrt_value& pbrt, std::vector<float>& val) {
+  if (pbrt.type == pbrt_type::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
     } else {
@@ -307,16 +307,16 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::vector<vec2f>& val) {
-  if (pbrt.type == value::type_t::point2 ||
-      pbrt.type == value::type_t::vector2) {
+    const pbrt_value& pbrt, std::vector<vec2f>& val) {
+  if (pbrt.type == pbrt_type::point2 ||
+      pbrt.type == pbrt_type::vector2) {
     if (!pbrt.vector2f.empty()) {
       val = pbrt.vector2f;
     } else {
       val = {pbrt.value2f};
     }
     return true;
-  } else if (pbrt.type == value::type_t::real) {
+  } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
       throw std::runtime_error("bad pbrt type");
     val.resize(pbrt.vector1f.size() / 2);
@@ -328,16 +328,16 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::vector<vec3f>& val) {
-  if (pbrt.type == value::type_t::point || pbrt.type == value::type_t::vector ||
-      pbrt.type == value::type_t::normal || pbrt.type == value::type_t::color) {
+    const pbrt_value& pbrt, std::vector<vec3f>& val) {
+  if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
+      pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     if (!pbrt.vector3f.empty()) {
       val = pbrt.vector3f;
     } else {
       val = {pbrt.value3f};
     }
     return true;
-  } else if (pbrt.type == value::type_t::real) {
+  } else if (pbrt.type == pbrt_type::real) {
     if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
       throw std::invalid_argument{"expected float3 array"};
     val.resize(pbrt.vector1f.size() / 3);
@@ -350,8 +350,8 @@ struct command {
   }
 }
 
-[[nodiscard]] inline bool get_value(const value& pbrt, std::vector<int>& val) {
-  if (pbrt.type == value::type_t::integer) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, std::vector<int>& val) {
+  if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
     } else {
@@ -363,8 +363,8 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::vector<vec3i>& val) {
-  if (pbrt.type == value::type_t::integer) {
+    const pbrt_value& pbrt, std::vector<vec3i>& val) {
+  if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
     val.resize(pbrt.vector1i.size() / 3);
@@ -377,9 +377,9 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::pair<float, std::string>& val) {
-  if (pbrt.type == value::type_t::string ||
-      pbrt.type == value::type_t::texture) {
+    const pbrt_value& pbrt, std::pair<float, std::string>& val) {
+  if (pbrt.type == pbrt_type::string ||
+      pbrt.type == pbrt_type::texture) {
     val.first = 0;
     return get_value(pbrt, val.second);
   } else {
@@ -388,9 +388,9 @@ struct command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const value& pbrt, std::pair<vec3f, std::string>& val) {
-  if (pbrt.type == value::type_t::string ||
-      pbrt.type == value::type_t::texture) {
+    const pbrt_value& pbrt, std::pair<vec3f, std::string>& val) {
+  if (pbrt.type == pbrt_type::string ||
+      pbrt.type == pbrt_type::texture) {
     val.first = zero3f;
     return get_value(pbrt, val.second);
   } else {
@@ -400,7 +400,7 @@ struct command {
 }
 template <typename T>
 [[nodiscard]] inline bool get_value(
-    const std::vector<value>& pbrt, const std::string& name, T& val) {
+    const std::vector<pbrt_value>& pbrt, const std::string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_value(p, val);
@@ -410,73 +410,73 @@ template <typename T>
 }
 
 // pbrt value construction
-inline value make_value(const std::string& name, const std::string& val,
-    value::type_t type = value::type_t::string) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, const std::string& val,
+    pbrt_type type = pbrt_type::string) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1s = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, bool val,
-    value::type_t type = value::type_t::boolean) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, bool val,
+    pbrt_type type = pbrt_type::boolean) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1b = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, int val,
-    value::type_t type = value::type_t::integer) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, int val,
+    pbrt_type type = pbrt_type::integer) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1i = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, float val,
-    value::type_t type = value::type_t::real) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, float val,
+    pbrt_type type = pbrt_type::real) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value1f = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, const vec2f& val,
-    value::type_t type = value::type_t::point2) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, const vec2f& val,
+    pbrt_type type = pbrt_type::point2) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value2f = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, const vec3f& val,
-    value::type_t type = value::type_t::color) {
-  auto pbrt    = value{};
+inline pbrt_value make_value(const std::string& name, const vec3f& val,
+    pbrt_type type = pbrt_type::color) {
+  auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value3f = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, const std::vector<vec2f>& val,
-    value::type_t type = value::type_t::point2) {
-  auto pbrt     = value{};
+inline pbrt_value make_value(const std::string& name, const std::vector<vec2f>& val,
+    pbrt_type type = pbrt_type::point2) {
+  auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector2f = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, const std::vector<vec3f>& val,
-    value::type_t type = value::type_t::point) {
-  auto pbrt     = value{};
+inline pbrt_value make_value(const std::string& name, const std::vector<vec3f>& val,
+    pbrt_type type = pbrt_type::point) {
+  auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = val;
   return pbrt;
 }
-inline value make_value(const std::string& name, const std::vector<vec3i>& val,
-    value::type_t type = value::type_t::integer) {
-  auto pbrt     = value{};
+inline pbrt_value make_value(const std::string& name, const std::vector<vec3i>& val,
+    pbrt_type type = pbrt_type::integer) {
+  auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector1i = {(int*)val.data(), (int*)val.data() + val.size() * 3};
@@ -761,7 +761,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
 }
 
 [[nodiscard]] inline bool parse_params(
-    std::string_view& str, std::vector<value>& values) {
+    std::string_view& str, std::vector<pbrt_value>& values) {
   auto parse_pvalues = [](std::string_view& str, auto& value,
                            auto& values) -> bool {
     values.clear();
@@ -798,55 +798,55 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
     skip_whitespace(str);
     if (str.empty()) return false;
     if (type == "float") {
-      value.type = value::type_t::real;
+      value.type = pbrt_type::real;
       if (!parse_pvalues(str, value.value1f, value.vector1f)) return false;
     } else if (type == "integer") {
-      value.type = value::type_t::integer;
+      value.type = pbrt_type::integer;
       if (!parse_pvalues(str, value.value1i, value.vector1i)) return false;
     } else if (type == "string") {
       auto vector1s = std::vector<std::string>{};
-      value.type    = value::type_t::string;
+      value.type    = pbrt_type::string;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
       auto vector1s = std::vector<std::string>{};
-      value.type    = value::type_t::boolean;
+      value.type    = pbrt_type::boolean;
       if (!parse_pvalues(str, value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
       auto vector1s = std::vector<std::string>{};
-      value.type    = value::type_t::texture;
+      value.type    = pbrt_type::texture;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "point" || type == "point3") {
-      value.type = value::type_t::point;
+      value.type = pbrt_type::point;
       parse_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "normal" || type == "normal3") {
-      value.type = value::type_t::normal;
+      value.type = pbrt_type::normal;
       parse_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "std::vector" || type == "vector3") {
-      value.type = value::type_t::vector;
+      value.type = pbrt_type::vector;
       parse_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "point2") {
-      value.type = value::type_t::point2;
+      value.type = pbrt_type::point2;
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "vector2") {
-      value.type = value::type_t::vector2;
+      value.type = pbrt_type::vector2;
       parse_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
-      value.type     = value::type_t::color;
+      value.type     = pbrt_type::color;
       auto blackbody = zero2f;
       auto vector2f  = std::vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
       value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
-      value.type = value::type_t::color;
+      value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
     } else if (type == "xyz") {
-      value.type = value::type_t::color;
+      value.type = pbrt_type::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
       // xyz conversion
       return false;
@@ -862,7 +862,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
         if (!str1.empty() && str1.front() == '"') is_string = true;
       }
       if (is_string) {
-        value.type     = value::type_t::color;
+        value.type     = pbrt_type::color;
         auto filename  = ""s;
         auto filenames = std::vector<std::string>{};
         if (!parse_value(str, filename)) return false;
@@ -887,7 +887,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
           return false;
         }
       } else {
-        value.type = value::type_t::spectrum;
+        value.type = pbrt_type::spectrum;
         if (!parse_pvalues(str, value.value1f, value.vector1f)) return false;
       }
     } else {
@@ -899,14 +899,14 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
 }
 
 // Other pbrt elements
-struct film {
+struct pbrt_film {
   // film approximation
   std::string filename   = "";
   vec2i       resolution = {0, 0};
 };
 
 // Pbrt texture
-struct texture {
+struct pbrt_texture {
   // texture parameters
   std::string name     = "";
   vec3f       constant = {1, 1, 1};
@@ -914,20 +914,20 @@ struct texture {
 };
 
 // Pbrt area light
-struct arealight {
+struct pbrt_arealight {
   // arealight parameters
   std::string name     = "";
   vec3f       emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
-struct medium {
+struct pbrt_medium {
   // medium parameters
   std::string name = "";
 };
 
 // convert pbrt films
-inline bool convert_film(pbrt::film* film, const command& command,
+inline bool convert_film(pbrt_film* film, const pbrt_command& command,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -954,7 +954,7 @@ inline bool convert_film(pbrt::film* film, const command& command,
 }
 
 // convert pbrt elements
-inline bool convert_camera(pbrt::pbrt_camera* pcamera, const command& command,
+inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
     const vec2i& resolution, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1013,8 +1013,8 @@ inline bool convert_camera(pbrt::pbrt_camera* pcamera, const command& command,
 }
 
 // convert pbrt textures
-inline bool convert_texture(pbrt::texture* ptexture, const command& command,
-    std::unordered_map<std::string, texture>& texture_map,
+inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
+    std::unordered_map<std::string, pbrt_texture>& texture_map,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1107,9 +1107,9 @@ inline bool convert_texture(pbrt::texture* ptexture, const command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(pbrt::pbrt_material* pmaterial, const command& command,
+inline bool convert_material(pbrt_material* pmaterial, const pbrt_command& command,
     const std::unordered_map<std::string, pbrt_material>& named_materials,
-    const std::unordered_map<std::string, texture>&  named_textures,
+    const std::unordered_map<std::string, pbrt_texture>&  named_textures,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1129,7 +1129,7 @@ inline bool convert_material(pbrt::pbrt_material* pmaterial, const command& comm
   };
 
   // helpers
-  auto get_texture = [&](const std::vector<value>& values,
+  auto get_texture = [&](const std::vector<pbrt_value>& values,
                          const std::string& name, vec3f& color,
                          std::string& filename, const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
@@ -1149,7 +1149,7 @@ inline bool convert_material(pbrt::pbrt_material* pmaterial, const command& comm
     }
     return true;
   };
-  auto get_scalar = [&](const std::vector<value>& values,
+  auto get_scalar = [&](const std::vector<pbrt_value>& values,
                         const std::string& name, float& scalar,
                         float def) -> bool {
     auto textured = std::pair{vec3f{def}, ""s};
@@ -1166,7 +1166,7 @@ inline bool convert_material(pbrt::pbrt_material* pmaterial, const command& comm
     }
     return true;
   };
-  auto get_color = [&](const std::vector<value>& values,
+  auto get_color = [&](const std::vector<pbrt_value>& values,
                        const std::string& name, vec3f& color,
                        const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
@@ -1184,7 +1184,7 @@ inline bool convert_material(pbrt::pbrt_material* pmaterial, const command& comm
     return true;
   };
 
-  auto get_roughness = [&](const std::vector<value>& values, float& roughness,
+  auto get_roughness = [&](const std::vector<pbrt_value>& values, float& roughness,
                            float def = 0.1) -> bool {
     auto roughness_ = std::pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
@@ -1508,9 +1508,9 @@ inline void make_quad(std::vector<vec3i>& triangles,
 }
 
 // Convert pbrt shapes
-inline bool convert_shape(pbrt::pbrt_shape* shape, const command& command,
+inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     std::string&                                    alphamap,
-    const std::unordered_map<std::string, texture>& named_textures,
+    const std::unordered_map<std::string, pbrt_texture>& named_textures,
     const std::string& ply_dirname, const std::string& filename,
     std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1527,7 +1527,7 @@ inline bool convert_shape(pbrt::pbrt_shape* shape, const command& command,
   };
 
   // helpers
-  auto get_alpha = [&](const std::vector<value>& values,
+  auto get_alpha = [&](const std::vector<pbrt_value>& values,
                        const std::string& name, std::string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = std::pair{def, ""s};
@@ -1595,8 +1595,8 @@ inline bool convert_shape(pbrt::pbrt_shape* shape, const command& command,
 }
 
 // Convert pbrt arealights
-inline bool convert_arealight(pbrt::arealight* parealight,
-    const command& command, const std::string& filename, std::string& error,
+inline bool convert_arealight(pbrt_arealight* parealight,
+    const pbrt_command& command, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1620,7 +1620,7 @@ inline bool convert_arealight(pbrt::arealight* parealight,
 }
 
 // Convert pbrt lights
-inline bool convert_light(pbrt::pbrt_light* plight, const command& command,
+inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     const std::string& filename, std::string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1679,8 +1679,8 @@ inline bool convert_light(pbrt::pbrt_light* plight, const command& command,
   }
 }
 
-inline bool convert_environment(pbrt::pbrt_environment* penvironment,
-    const command& command, const std::string& filename, std::string& error,
+inline bool convert_environment(pbrt_environment* penvironment,
+    const pbrt_command& command, const std::string& filename, std::string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1715,10 +1715,10 @@ inline bool convert_environment(pbrt::pbrt_environment* penvironment,
 struct stack_element {
   frame3f         transform_start        = identity3x4f;
   frame3f         transform_end          = identity3x4f;
-  pbrt::pbrt_material  material               = {};
-  pbrt::arealight arealight              = {};
-  pbrt::medium    interior               = {};
-  pbrt::medium    exterior               = {};
+  pbrt_material  material               = {};
+  pbrt_arealight arealight              = {};
+  pbrt_medium    interior               = {};
+  pbrt_medium    exterior               = {};
   bool            reverse                = false;
   bool            active_transform_start = true;
   bool            active_transform_end   = true;
@@ -1728,18 +1728,18 @@ struct stack_element {
 struct context {
   std::vector<stack_element>                                 stack      = {};
   std::unordered_map<std::string, stack_element>             coordsys   = {};
-  std::unordered_map<std::string, std::vector<pbrt::pbrt_shape*>> objects    = {};
+  std::unordered_map<std::string, std::vector<pbrt_shape*>> objects    = {};
   std::string                                                cur_object = "";
   vec2i film_resolution = {512, 512};
 };
 
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(const std::string& filename,
-    pbrt::pbrt_model* pbrt, std::string& error, context& ctx,
-    std::unordered_map<std::string, pbrt::pbrt_material*>& material_map,
+    pbrt_model* pbrt, std::string& error, context& ctx,
+    std::unordered_map<std::string, pbrt_material*>& material_map,
     std::unordered_map<std::string, pbrt_material>&        named_materials,
-    std::unordered_map<std::string, texture>&         named_textures,
-    std::unordered_map<std::string, medium>&          named_mediums,
+    std::unordered_map<std::string, pbrt_texture>&         named_textures,
+    std::unordered_map<std::string, pbrt_medium>&          named_mediums,
     const std::string&                                ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -1883,30 +1883,30 @@ struct context {
         ctx.stack.back().transform_end = ctx.coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Sampler") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "PixelFilter") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Film") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
-      auto film = pbrt::film{};
+      auto film = pbrt_film{};
       if (!convert_film(&film, command, filename, error)) return false;
       ctx.film_resolution = film.resolution;
     } else if (cmd == "Accelerator") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
     } else if (cmd == "Camera") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -1916,7 +1916,7 @@ struct context {
               camera, command, ctx.film_resolution, filename, error))
         return false;
     } else if (cmd == "Texture") {
-      auto command  = pbrt::command{};
+      auto command  = pbrt_command{};
       auto comptype = ""s;
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_param(str, comptype)) return parse_error();
@@ -1927,7 +1927,7 @@ struct context {
         return false;
     } else if (cmd == "Material") {
       static auto material_id = 0;
-      auto        command     = pbrt::command{};
+      auto        command     = pbrt_command{};
       command.name = "__unnamed__material__" + std::to_string(material_id++);
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
@@ -1940,7 +1940,7 @@ struct context {
           return false;
       }
     } else if (cmd == "MakeNamedMaterial") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.type = "";
@@ -1954,7 +1954,7 @@ struct context {
       if (!parse_param(str, name)) return parse_error();
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -1980,7 +1980,7 @@ struct context {
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
-      auto        command      = pbrt::command{};
+      auto        command      = pbrt_command{};
       command.name = "__unnamed__arealight__" + std::to_string(arealight_id++);
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
@@ -1990,7 +1990,7 @@ struct context {
               &ctx.stack.back().arealight, command, filename, error))
         return false;
     } else if (cmd == "LightSource") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.type)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.frame = ctx.stack.back().transform_start;
@@ -2004,13 +2004,13 @@ struct context {
         if (!convert_light(light, command, filename, error)) return false;
       }
     } else if (cmd == "MakeNamedMedium") {
-      auto command = pbrt::command{};
+      auto command = pbrt_command{};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_params(str, command.values)) return parse_error();
       command.type = "";
       for (auto& value : command.values)
         if (command.name == "type") command.type = value.value1s;
-      auto medium                 = pbrt::medium{};
+      auto medium                 = pbrt_medium{};
       named_mediums[command.name] = medium;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -2041,30 +2041,30 @@ pbrt_model::~pbrt_model() {
 }
 
 // Make pbrt
-pbrt::pbrt_camera* add_camera(pbrt::pbrt_model* pbrt) {
+pbrt_camera* add_camera(pbrt_model* pbrt) {
   return pbrt->cameras.emplace_back(new pbrt_camera{});
 }
-pbrt::pbrt_shape* add_shape(pbrt::pbrt_model* pbrt) {
+pbrt_shape* add_shape(pbrt_model* pbrt) {
   return pbrt->shapes.emplace_back(new pbrt_shape{});
 }
-pbrt::pbrt_material* add_material(pbrt::pbrt_model* pbrt) {
+pbrt_material* add_material(pbrt_model* pbrt) {
   return pbrt->materials.emplace_back(new pbrt_material{});
 }
-pbrt::pbrt_environment* add_environment(pbrt::pbrt_model* pbrt) {
+pbrt_environment* add_environment(pbrt_model* pbrt) {
   return pbrt->environments.emplace_back(new pbrt_environment{});
 }
-pbrt::pbrt_light* add_light(pbrt::pbrt_model* pbrt) {
+pbrt_light* add_light(pbrt_model* pbrt) {
   return pbrt->lights.emplace_back(new pbrt_light{});
 }
 
 // load pbrt
 bool load_pbrt(
-    const std::string& filename, pbrt::pbrt_model* pbrt, std::string& error) {
+    const std::string& filename, pbrt_model* pbrt, std::string& error) {
   auto ctx             = context{};
-  auto material_map    = std::unordered_map<std::string, pbrt::pbrt_material*>{};
+  auto material_map    = std::unordered_map<std::string, pbrt_material*>{};
   auto named_materials = std::unordered_map<std::string, pbrt_material>{{"", {}}};
-  auto named_mediums   = std::unordered_map<std::string, medium>{{"", {}}};
-  auto named_textures  = std::unordered_map<std::string, texture>{{"", {}}};
+  auto named_mediums   = std::unordered_map<std::string, pbrt_medium>{{"", {}}};
+  auto named_textures  = std::unordered_map<std::string, pbrt_texture>{{"", {}}};
   auto dirname         = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
@@ -2072,7 +2072,7 @@ bool load_pbrt(
     return false;
 
   // remove unused materials
-  auto used_materials = std::unordered_set<pbrt::pbrt_material*>{};
+  auto used_materials = std::unordered_set<pbrt_material*>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),
@@ -2086,20 +2086,20 @@ bool load_pbrt(
   return true;
 }
 
-inline void format_value(std::string& str, const value& value) {
-  static auto type_labels = std::unordered_map<value::type_t, std::string>{
-      {value::type_t::real, "float"},
-      {value::type_t::integer, "integer"},
-      {value::type_t::boolean, "bool"},
-      {value::type_t::string, "std::string"},
-      {value::type_t::point, "point"},
-      {value::type_t::normal, "normal"},
-      {value::type_t::vector, "std::vector"},
-      {value::type_t::texture, "texture"},
-      {value::type_t::color, "rgb"},
-      {value::type_t::point2, "point2"},
-      {value::type_t::vector2, "vector2"},
-      {value::type_t::spectrum, "spectrum"},
+inline void format_value(std::string& str, const pbrt_value& value) {
+  static auto type_labels = std::unordered_map<pbrt_type, std::string>{
+      {pbrt_type::real, "float"},
+      {pbrt_type::integer, "integer"},
+      {pbrt_type::boolean, "bool"},
+      {pbrt_type::string, "std::string"},
+      {pbrt_type::point, "point"},
+      {pbrt_type::normal, "normal"},
+      {pbrt_type::vector, "std::vector"},
+      {pbrt_type::texture, "texture"},
+      {pbrt_type::color, "rgb"},
+      {pbrt_type::point2, "point2"},
+      {pbrt_type::vector2, "vector2"},
+      {pbrt_type::spectrum, "spectrum"},
   };
 
   auto format_vector = [](std::string& str, auto& values) {
@@ -2113,40 +2113,40 @@ inline void format_value(std::string& str, const value& value) {
 
   format_values(str, "\"{} {}\" ", type_labels.at(value.type), value.name);
   switch (value.type) {
-    case value::type_t::real:
+    case pbrt_type::real:
       if (!value.vector1f.empty()) {
         format_vector(str, value.vector1f);
       } else {
         format_value(str, value.value1f);
       }
       break;
-    case value::type_t::integer:
+    case pbrt_type::integer:
       if (!value.vector1f.empty()) {
         format_vector(str, value.vector1i);
       } else {
         format_value(str, value.value1i);
       }
       break;
-    case value::type_t::boolean:
+    case pbrt_type::boolean:
       format_values(str, "\"{}\"", value.value1b ? "true" : "false");
       break;
-    case value::type_t::string:
-    case value::type_t::texture:
+    case pbrt_type::string:
+    case pbrt_type::texture:
       format_values(str, "\"{}\"", value.value1s);
       break;
-    case value::type_t::point:
-    case value::type_t::vector:
-    case value::type_t::normal:
-    case value::type_t::color:
+    case pbrt_type::point:
+    case pbrt_type::vector:
+    case pbrt_type::normal:
+    case pbrt_type::color:
       if (!value.vector3f.empty()) {
         format_vector(str, value.vector3f);
       } else {
         format_values(str, "[ {} ]", value.value3f);
       }
       break;
-    case value::type_t::spectrum: format_vector(str, value.vector1f); break;
-    case value::type_t::point2:
-    case value::type_t::vector2:
+    case pbrt_type::spectrum: format_vector(str, value.vector1f); break;
+    case pbrt_type::point2:
+    case pbrt_type::vector2:
       if (!value.vector2f.empty()) {
         format_vector(str, value.vector2f);
       } else {
@@ -2156,7 +2156,7 @@ inline void format_value(std::string& str, const value& value) {
   }
 }
 
-inline void format_value(std::string& str, const std::vector<value>& values) {
+inline void format_value(std::string& str, const std::vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);
@@ -2164,7 +2164,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
 }
 
 bool save_pbrt(const std::string& filename,
-    pbrt::pbrt_model* pbrt, std::string& error, bool ply_meshes) {
+    pbrt_model* pbrt, std::string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2196,7 +2196,7 @@ bool save_pbrt(const std::string& filename,
   if (!format_values(fs, "\n")) return write_error();
 
   for (auto camera : pbrt->cameras) {
-    auto command = pbrt::command{};
+    auto command = pbrt_command{};
     command.type = "image";
     command.values.push_back(make_value("xresolution", camera->resolution.x));
     command.values.push_back(make_value("yresolution", camera->resolution.y));
@@ -2206,7 +2206,7 @@ bool save_pbrt(const std::string& filename,
   }
 
   for (auto camera : pbrt->cameras) {
-    auto command  = pbrt::command{};
+    auto command  = pbrt_command{};
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
@@ -2221,7 +2221,7 @@ bool save_pbrt(const std::string& filename,
   if (!format_values(fs, "\nWorldBegin\n\n")) return write_error();
 
   for (auto light : pbrt->lights) {
-    auto command  = pbrt::command{};
+    auto command  = pbrt_command{};
     command.frame = light->frame;
     if (light->distant) {
       command.type = "distance";
@@ -2240,7 +2240,7 @@ bool save_pbrt(const std::string& filename,
   }
 
   for (auto environment : pbrt->environments) {
-    auto command  = pbrt::command{};
+    auto command  = pbrt_command{};
     command.frame = environment->frame;
     command.type  = "infinite";
     command.values.push_back(make_value("L", environment->emission));
@@ -2259,7 +2259,7 @@ bool save_pbrt(const std::string& filename,
   };
 
   for (auto material : pbrt->materials) {
-    auto command = pbrt::command{};
+    auto command = pbrt_command{};
     if (material->specular != 0 && material->transmission != 0 &&
         !material->thin) {
       command.type = "glass";
@@ -2283,7 +2283,7 @@ bool save_pbrt(const std::string& filename,
         command.values.push_back(make_value("Kd", material->color));
       } else if (material->color != zero3f) {
         command.values.push_back(
-            make_value("Kd", material->color_tex, value::type_t::texture));
+            make_value("Kd", material->color_tex, pbrt_type::texture));
       }
       if (material->specular != 0) {
         command.values.push_back(make_value("Ks", vec3f{material->specular}));
@@ -2298,7 +2298,7 @@ bool save_pbrt(const std::string& filename,
       }
       if (!material->opacity_tex.empty()) {
         command.values.push_back(make_value(
-            "opacity", material->opacity_tex, value::type_t::texture));
+            "opacity", material->opacity_tex, pbrt_type::texture));
       } else if (material->opacity != 1) {
         command.values.push_back(make_value("opacity", material->opacity));
       }
@@ -2311,7 +2311,7 @@ bool save_pbrt(const std::string& filename,
 
   auto object_id = 0;
   for (auto shape : pbrt->shapes) {
-    auto command  = pbrt::command{};
+    auto command  = pbrt_command{};
     command.frame = shape->frame;
     if (ply_meshes) {
       command.type = "plymesh";
@@ -2320,10 +2320,10 @@ bool save_pbrt(const std::string& filename,
       command.type = "trianglemesh";
       command.values.push_back(make_value("indices", shape->triangles));
       command.values.push_back(
-          make_value("P", shape->positions, value::type_t::point));
+          make_value("P", shape->positions, pbrt_type::point));
       if (!shape->normals.empty())
         command.values.push_back(
-            make_value("N", shape->triangles, value::type_t::normal));
+            make_value("N", shape->triangles, pbrt_type::normal));
       if (!shape->texcoords.empty())
         command.values.push_back(make_value("uv", shape->texcoords));
     }
@@ -2346,7 +2346,7 @@ bool save_pbrt(const std::string& filename,
     if (!format_values(fs, "Transform {}\n", (mat4f)shape->frame))
       return write_error();
     if (shape->material->emission != zero3f) {
-      auto acommand = pbrt::command{};
+      auto acommand = pbrt_command{};
       acommand.type = "diffuse";
       acommand.values.push_back(make_value("L", shape->material->emission));
       if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,

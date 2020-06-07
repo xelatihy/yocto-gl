@@ -94,7 +94,7 @@ struct pbrt_shape {
   std::vector<vec2f> texcoords = {};
   std::vector<vec3i> triangles = {};
   // material
-  pbrt::pbrt_material* material = nullptr;
+  pbrt_material* material = nullptr;
 };
 
 // Pbrt lights
@@ -126,11 +126,11 @@ struct pbrt_environment {
 struct pbrt_model {
   // pbrt data
   std::vector<std::string>        comments     = {};
-  std::vector<pbrt::pbrt_camera*>      cameras      = {};
-  std::vector<pbrt::pbrt_shape*>       shapes       = {};
-  std::vector<pbrt::pbrt_environment*> environments = {};
-  std::vector<pbrt::pbrt_light*>       lights       = {};
-  std::vector<pbrt::pbrt_material*>    materials    = {};
+  std::vector<pbrt_camera*>      cameras      = {};
+  std::vector<pbrt_shape*>       shapes       = {};
+  std::vector<pbrt_environment*> environments = {};
+  std::vector<pbrt_light*>       lights       = {};
+  std::vector<pbrt_material*>    materials    = {};
 
   // cleanup
   ~pbrt_model();
@@ -138,16 +138,16 @@ struct pbrt_model {
 
 // Load/save pbrt
 bool load_pbrt(
-    const std::string& filename, pbrt::pbrt_model* pbrt, std::string& error);
-bool save_pbrt(const std::string& filename, pbrt::pbrt_model* pbrt,
+    const std::string& filename, pbrt_model* pbrt, std::string& error);
+bool save_pbrt(const std::string& filename, pbrt_model* pbrt,
     std::string& error, bool ply_meshes = false);
 
 // Create pbrt
-pbrt::pbrt_camera*      add_camera(pbrt::pbrt_model* pbrt);
-pbrt::pbrt_shape*       add_shape(pbrt::pbrt_model* pbrt);
-pbrt::pbrt_material*    add_material(pbrt::pbrt_model* pbrt);
-pbrt::pbrt_environment* add_environment(pbrt::pbrt_model* pbrt);
-pbrt::pbrt_light*       add_light(pbrt::pbrt_model* pbrt);
+pbrt_camera*      add_camera(pbrt_model* pbrt);
+pbrt_shape*       add_shape(pbrt_model* pbrt);
+pbrt_material*    add_material(pbrt_model* pbrt);
+pbrt_environment* add_environment(pbrt_model* pbrt);
+pbrt_light*       add_light(pbrt_model* pbrt);
 
 }  // namespace yocto::pbrt
 
