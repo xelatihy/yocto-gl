@@ -29,10 +29,7 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace gui = yocto::gui;
+using namespace yocto;
 
 #include <atomic>
 #include <deque>
@@ -42,43 +39,43 @@ namespace gui = yocto::gui;
 namespace sfs = ghc::filesystem;
 
 struct image_stats {
-  vec4f              min       = zero4f;
-  vec4f              max       = zero4f;
-  vec4f              average   = zero4f;
-  std::vector<vec3f> histogram = {};
+  vec4f         min       = zero4f;
+  vec4f         max       = zero4f;
+  vec4f         average   = zero4f;
+  vector<vec3f> histogram = {};
 };
 
 struct app_state {
   // original data
-  std::string name     = "";
-  std::string filename = "";
-  std::string outname  = "";
+  string name     = "";
+  string filename = "";
+  string outname  = "";
 
   // image data
-  img::image<vec4f> source  = {};
-  img::image<vec4f> display = {};
+  image<vec4f> source  = {};
+  image<vec4f> display = {};
 
   // image stats
   image_stats source_stats  = {};
   image_stats display_stats = {};
 
   // tonemapping values
-  float                  exposure   = 0;
-  bool                   filmic     = false;
-  img::colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
+  bool              colorgrade = false;
 
   // viewing properties
-  gui::image*       glimage   = new gui::image{};
-  gui::image_params glparams  = {};
-  bool              glupdated = true;
+  ogl_image*       glimage   = new ogl_image{};
+  ogl_image_params glparams  = {};
+  bool             glupdated = true;
 
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
-  std::string       loader_error = "";
+  string            status       = "";
+  string            error        = "";
+  string            loader_error = "";
 
   // cleanup
   ~app_state() {
@@ -89,14 +86,14 @@ struct app_state {
 // app states
 struct app_states {
   // data
-  std::vector<app_state*> states   = {};
-  app_state*              selected = nullptr;
-  std::deque<app_state*>  loading  = {};
+  vector<app_state*>     states   = {};
+  app_state*             selected = nullptr;
+  std::deque<app_state*> loading  = {};
 
   // default options
-  float                  exposure = 0;
-  bool                   filmic   = false;
-  img::colorgrade_params params   = {};
+  float             exposure = 0;
+  bool              filmic   = false;
+  colorgrade_params params   = {};
 
   // cleanup
   ~app_states() {
@@ -106,7 +103,7 @@ struct app_states {
 
 // compute min/max
 void compute_stats(
-    image_stats& stats, const img::image<vec4f>& img, bool linear_hdr) {
+    image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
   stats.min      = vec4f{flt_max};
   stats.max      = vec4f{flt_min};
@@ -137,7 +134,7 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const std::string& filename) {
+void load_image_async(app_states* apps, const string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname = sfs::path(filename).replace_extension(".display.png").string();
@@ -149,7 +146,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
   app->loader   = std::async(std::launch::async, [app]() {
     if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
-        app->source_stats, app->source, img::is_hdr_filename(app->filename));
+        app->source_stats, app->source, is_hdr_filename(app->filename));
     if (app->colorgrade) {
       app->display = colorgrade_image(app->display, true, app->params);
     } else {
@@ -161,8 +158,8 @@ void load_image_async(app_states* apps, const std::string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
-  static std::string load_path = "", save_path = "", error_message = "";
+void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
+  static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -264,7 +261,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
   }
 }
 
-void draw(gui::window* win, app_states* apps, const gui::input& input) {
+void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -279,7 +276,7 @@ void draw(gui::window* win, app_states* apps, const gui::input& input) {
   draw_image(app->glimage, app->glparams);
 }
 
-void update(gui::window* win, app_states* apps) {
+void update(gui_window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -305,10 +302,10 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = std::make_unique<app_states>();
   auto apps       = apps_guard.get();
-  auto filenames  = std::vector<std::string>{};
+  auto filenames  = vector<string>{};
 
   // command line options
-  auto cli = cli::make_cli("yimgview", "view images");
+  auto cli = make_cli("yimgview", "view images");
   add_option(cli, "images", filenames, "image filenames", true);
   parse_cli(cli, argc, argv);
 
@@ -316,20 +313,20 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [apps](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
     for (auto app : apps->states) clear_image(app->glimage);
   };
-  callbacks.update_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
     update(win, apps);
   };
-  callbacks.draw_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
     draw(win, apps, input);
   };
-  callbacks.widgets_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.uiupdate_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
     // handle mouse
@@ -341,9 +338,8 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   };
-  callbacks.drop_cb = [apps](gui::window*                 win,
-                          const std::vector<std::string>& paths,
-                          const gui::input&               input) {
+  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
+                          const gui_input& input) {
     for (auto path : paths) load_image_async(apps, path);
   };
 

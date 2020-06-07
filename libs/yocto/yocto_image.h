@@ -15,7 +15,7 @@
 // ## Images
 //
 // Yocto/Math contains a simple image container that can be used to store
-// generic images. The container is similar in spirit to `std::std::vector`.
+// generic images. The container is similar in spirit to `std::vector`.
 // We provide only minimal image functions including lookup and sampling.
 //
 //
@@ -104,34 +104,20 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
+// USING DIRECTIVES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
-// Math defitions
-using math::byte;
-using math::mat3f;
-using math::pif;
-using math::ushort;
-using math::vec2f;
-using math::vec2i;
-using math::vec3b;
-using math::vec3f;
-using math::vec3i;
-using math::vec4b;
-using math::vec4f;
-using math::vec4i;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-using math::zero4f;
+// using directives
+using std::string;
+using std::vector;
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Image container.
 template <typename T>
@@ -169,13 +155,13 @@ struct image {
   const T* end() const;
 
   // [experimental] data access as vector --- will be replaced by views
-  std::vector<T>&       data_vector();
-  const std::vector<T>& data_vector() const;
+  vector<T>&       data_vector();
+  const vector<T>& data_vector() const;
 
  private:
   // data
-  vec2i          extent = {0, 0};
-  std::vector<T> pixels = {};
+  vec2i     extent = {0, 0};
+  vector<T> pixels = {};
 };
 
 // equality
@@ -188,12 +174,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 template <typename T>
 inline void swap(image<T>& a, image<T>& b);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
@@ -205,12 +191,12 @@ vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
 vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
     bool no_interpolation, bool clamp_to_edge);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Conversion from/to floats.
 image<vec4f>  byte_to_float(const image<vec4b>& bt);
@@ -291,56 +277,43 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const std::string& filename);
+bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(
-    const std::string& filename, image<vec4f>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<vec4f>& img, std::string& error);
-bool load_image(
-    const std::string& filename, image<vec4b>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<vec4b>& img, std::string& error);
+bool load_image(const string& filename, image<vec4f>& img, string& error);
+bool save_image(const string& filename, const image<vec4f>& img, string& error);
+bool load_image(const string& filename, image<vec4b>& img, string& error);
+bool save_image(const string& filename, const image<vec4b>& img, string& error);
 
 // Loads/saves a 3 channels float/byte image in linear/srgb color space.
-bool load_image(
-    const std::string& filename, image<vec3f>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<vec3f>& img, std::string& error);
-bool load_image(
-    const std::string& filename, image<vec3b>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<vec3b>& img, std::string& error);
+bool load_image(const string& filename, image<vec3f>& img, string& error);
+bool save_image(const string& filename, const image<vec3f>& img, string& error);
+bool load_image(const string& filename, image<vec3b>& img, string& error);
+bool save_image(const string& filename, const image<vec3b>& img, string& error);
 
 // Loads/saves a 1 channels float/byte image in linear/srgb color space.
-bool load_image(
-    const std::string& filename, image<float>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<float>& img, std::string& error);
-bool load_image(
-    const std::string& filename, image<byte>& img, std::string& error);
-bool save_image(
-    const std::string& filename, const image<byte>& img, std::string& error);
+bool load_image(const string& filename, image<float>& img, string& error);
+bool save_image(const string& filename, const image<float>& img, string& error);
+bool load_image(const string& filename, image<byte>& img, string& error);
+bool save_image(const string& filename, const image<byte>& img, string& error);
 
 // Load/saves a 16 bit image in linear color space.
-bool load_image(
-    const std::string& filename, image<ushort>& img, std::string& error);
+bool load_image(const string& filename, image<ushort>& img, string& error);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Make a grid image.
 void make_grid(image<vec4f>& img, const vec2i& size, float scale = 1,
@@ -404,18 +377,18 @@ image<vec4f> add_border(
     const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
-image<vec4b> make_logo(const std::string& name);
+image<vec4b> make_logo(const string& name);
 image<vec4f> add_logo(
-    const image<vec4f>& img, const std::string& name = "logo-medium");
+    const image<vec4f>& img, const string& name = "logo-medium");
 image<vec4b> add_logo(
-    const image<vec4b>& img, const std::string& name = "logo-medium");
+    const image<vec4b>& img, const string& name = "logo-medium");
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Volume container.
 template <typename T>
@@ -453,8 +426,8 @@ struct volume {
 
  private:
   // data
-  vec3i              extent = {0, 0, 0};
-  std::vector<float> voxels = {};
+  vec3i         extent = {0, 0, 0};
+  vector<float> voxels = {};
 };
 
 // equality
@@ -467,46 +440,46 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline void swap(volume<T>& a, volume<T>& b);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Evaluates a color image at a point `uv`.
 float eval_volume(const image<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VOLUME IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Loads/saves a 1 channel volume.
-void load_volume(const std::string& filename, volume<float>& vol);
-void save_volume(const std::string& filename, const volume<float>& vol);
+void load_volume(const string& filename, volume<float>& vol);
+void save_volume(const string& filename, const volume<float>& vol);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EXAMPLE VOLUMES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
-void make_volume_preset(volume<float>& vol, const std::string& type);
+void make_volume_preset(volume<float>& vol, const string& type);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // RGB color spaces
 enum struct color_space {
@@ -532,7 +505,7 @@ enum struct color_space {
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 //
@@ -545,7 +518,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to);
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // constructors
 template <typename T>
@@ -648,11 +621,11 @@ inline const T* image<T>::end() const {
 
 // data access as vector
 template <typename T>
-inline std::vector<T>& image<T>::data_vector() {
+inline vector<T>& image<T>::data_vector() {
   return pixels;
 }
 template <typename T>
-inline const std::vector<T>& image<T>::data_vector() const {
+inline const vector<T>& image<T>::data_vector() const {
   return pixels;
 }
 
@@ -672,12 +645,12 @@ inline void swap(image<T>& a, image<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Volume container ----------
 
@@ -794,6 +767,6 @@ inline void swap(volume<T>& a, volume<T>& b) {
   a.swap(b);
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 #endif

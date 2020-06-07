@@ -36,7 +36,6 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-using namespace std::string_literals;
 
 #include "ext/glad/glad.h"
 
@@ -59,40 +58,26 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
-// ALIASES
+// USING DIRECTIVES
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::exp2;
-using math::flt_max;
-using math::fmod;
-using math::log;
-using math::log2;
-using math::max;
-using math::min;
-using math::perspective_mat;
-using math::pif;
-using math::pow;
-using math::sin;
-using math::sqrt;
-using math::tan;
+// using directives
+using std::atomic;
+using std::deque;
+using std::mutex;
+using std::unordered_map;
+using std::unordered_set;
+using namespace std::string_literals;
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
-bool init_opengl(std::string& error) {
+bool init_ogl(string& error) {
   if (!gladLoadGL()) {
     error = "Cannot initialize OpenGL context.";
     return false;
@@ -100,9 +85,9 @@ bool init_opengl(std::string& error) {
   return true;
 }
 
-void assert_error() { assert(glGetError() == GL_NO_ERROR); }
+void assert_ogl_error() { assert(glGetError() == GL_NO_ERROR); }
 
-bool check_error(std::string& error) {
+bool check_ogl_error(string& error) {
   if (glGetError() != GL_NO_ERROR) {
     error = "";
     return false;
@@ -110,7 +95,7 @@ bool check_error(std::string& error) {
   return true;
 }
 
-void clear_framebuffer(const vec4f& color, bool clear_depth) {
+void clear_ogl_framebuffer(const vec4f& color, bool clear_depth) {
   glClearColor(color.x, color.y, color.z, color.w);
   if (clear_depth) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -120,18 +105,18 @@ void clear_framebuffer(const vec4f& color, bool clear_depth) {
   }
 }
 
-void set_viewport(const vec4i& viewport) {
+void set_ogl_viewport(const vec4i& viewport) {
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 }
 
-void set_wireframe(bool enabled) {
+void set_ogl_wireframe(bool enabled) {
   if (enabled)
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   else
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void set_blending(bool enabled) {
+void set_ogl_blending(bool enabled) {
   if (enabled) {
     glEnable(GL_BLEND);
     glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
@@ -141,29 +126,29 @@ void set_blending(bool enabled) {
   }
 }
 
-void set_point_size(int size) { glPointSize(size); }
+void set_ogl_point_size(int size) { glPointSize(size); }
 
-void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  static auto sformat = std::unordered_map<int, uint>{
+  static auto sformat = unordered_map<int, uint>{
       {1, GL_SRGB},
       {2, GL_SRGB},
       {3, GL_SRGB},
       {4, GL_SRGB_ALPHA},
   };
-  static auto iformat = std::unordered_map<int, uint>{
+  static auto iformat = unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = std::unordered_map<int, uint>{
+  static auto cformat = unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert_error();
+  assert_ogl_error();
   if (size == zero2i || img == nullptr) {
     clear_texture(texture);
     return;
@@ -194,30 +179,30 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
   texture->is_float  = false;
   texture->linear    = linear;
   texture->mipmap    = mipmap;
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const float* img, bool as_float, bool linear, bool mipmap) {
-  static auto fformat = std::unordered_map<int, uint>{
+  static auto fformat = unordered_map<int, uint>{
       {1, GL_RGB16F},
       {2, GL_RGB16F},
       {3, GL_RGB16F},
       {4, GL_RGBA32F},
   };
-  static auto iformat = std::unordered_map<int, uint>{
+  static auto iformat = unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = std::unordered_map<int, uint>{
+  static auto cformat = unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert_error();
+  assert_ogl_error();
   if (!img) {
     clear_texture(texture);
     return;
@@ -249,14 +234,14 @@ void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
   texture->is_float  = as_float;
   texture->linear    = linear;
   texture->mipmap    = mipmap;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if texture is initialized
-bool is_initialized(gui::texture* texture) { return texture->texture_id != 0; }
+bool is_initialized(ogl_texture* texture) { return texture->texture_id != 0; }
 
 // clear texture
-void clear_texture(gui::texture* texture) {
+void clear_texture(ogl_texture* texture) {
   if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
   texture->texture_id = 0;
   texture->size       = {0, 0};
@@ -267,43 +252,43 @@ void clear_texture(gui::texture* texture) {
   texture->mipmap     = false;
 }
 
-void set_texture(gui::texture* texture, const img::image<vec4b>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(gui::texture* texture, const img::image<vec4f>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(gui::texture* texture, const img::image<vec3b>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec3b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(gui::texture* texture, const img::image<vec3f>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec3f>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(gui::texture* texture, const img::image<byte>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<byte>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(gui::texture* texture, const img::image<float>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
 // set buffer
-void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
+void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
-  assert_error();
+  assert_ogl_error();
   if (size == 0 || data == nullptr) {
     clear_arraybuffer(buffer);
     return;
@@ -320,17 +305,17 @@ void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
   buffer->size    = size;
   buffer->esize   = esize;
   buffer->dynamic = dynamic;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if buffer is initialized
-bool is_initialized(gui::arraybuffer* buffer) { return buffer->buffer_id != 0; }
+bool is_initialized(ogl_arraybuffer* buffer) { return buffer->buffer_id != 0; }
 
 // clear buffer
-void clear_arraybuffer(gui::arraybuffer* buffer) {
-  assert_error();
+void clear_arraybuffer(ogl_arraybuffer* buffer) {
+  assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_error();
+  assert_ogl_error();
   buffer->buffer_id = 0;
   buffer->size      = 0;
   buffer->esize     = 0;
@@ -339,26 +324,26 @@ void clear_arraybuffer(gui::arraybuffer* buffer) {
 
 // set buffer
 void set_arraybuffer(
-    gui::arraybuffer* buffer, const std::vector<float>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 1, 1, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    gui::arraybuffer* buffer, const std::vector<vec2f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 2, 2, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    gui::arraybuffer* buffer, const std::vector<vec3f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 3, 3, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    gui::arraybuffer* buffer, const std::vector<vec4f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
 }
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
-    element_type element, const int* data, bool dynamic) {
-  assert_error();
+void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
+    ogl_element_type element, const int* data, bool dynamic) {
+  assert_ogl_error();
   if (size == 0 || data == nullptr) {
     clear_elementbuffer(buffer);
     return;
@@ -375,45 +360,45 @@ void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
   buffer->size    = size;
   buffer->element = element;
   buffer->dynamic = dynamic;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if buffer is initialized
-bool is_initialized(gui::elementbuffer* buffer) {
+bool is_initialized(ogl_elementbuffer* buffer) {
   return buffer->buffer_id != 0;
 }
 
 // clear buffer
-void clear_elementbuffer(gui::elementbuffer* buffer) {
-  assert_error();
+void clear_elementbuffer(ogl_elementbuffer* buffer) {
+  assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_error();
+  assert_ogl_error();
   buffer->buffer_id = 0;
   buffer->size      = 0;
-  buffer->element   = element_type::points;
+  buffer->element   = ogl_element_type::points;
   buffer->dynamic   = false;
 }
 
 // set buffer
 void set_elementbuffer(
-    gui::elementbuffer* buffer, const std::vector<int>& points, bool dynamic) {
-  set_elementbuffer(buffer, points.size() * 1, element_type::points,
+    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic) {
+  set_elementbuffer(buffer, points.size() * 1, ogl_element_type::points,
       (int*)points.data(), dynamic);
 }
 void set_elementbuffer(
-    gui::elementbuffer* buffer, const std::vector<vec2i>& lines, bool dynamic) {
-  set_elementbuffer(buffer, lines.size() * 2, element_type::lines,
+    ogl_elementbuffer* buffer, const vector<vec2i>& lines, bool dynamic) {
+  set_elementbuffer(buffer, lines.size() * 2, ogl_element_type::lines,
       (int*)lines.data(), dynamic);
 }
-void set_elementbuffer(gui::elementbuffer* buffer,
-    const std::vector<vec3i>& triangles, bool dynamic) {
-  set_elementbuffer(buffer, triangles.size() * 3, element_type::triangles,
+void set_elementbuffer(
+    ogl_elementbuffer* buffer, const vector<vec3i>& triangles, bool dynamic) {
+  set_elementbuffer(buffer, triangles.size() * 3, ogl_element_type::triangles,
       (int*)triangles.data(), dynamic);
 }
 
 // initialize program
-bool init_program(gui::program* program, const std::string& vertex,
-    const std::string& fragment, std::string& error, std::string& errorlog) {
+bool init_program(ogl_program* program, const string& vertex,
+    const string& fragment, string& error, string& errorlog) {
   // error
   auto program_error = [&error, &errorlog, program](
                            const char* message, const char* log) {
@@ -431,10 +416,10 @@ bool init_program(gui::program* program, const std::string& vertex,
   program->fragment_code = fragment;
 
   // create arrays
-  assert_error();
+  assert_ogl_error();
   glGenVertexArrays(1, &program->array_id);
   glBindVertexArray(program->array_id);
-  assert_error();
+  assert_ogl_error();
 
   const char* ccvertex   = vertex.data();
   const char* ccfragment = fragment.data();
@@ -442,7 +427,7 @@ bool init_program(gui::program* program, const std::string& vertex,
   char        errbuf[10000];
 
   // create vertex
-  assert_error();
+  assert_ogl_error();
   program->vertex_id = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
   glCompileShader(program->vertex_id);
@@ -451,10 +436,10 @@ bool init_program(gui::program* program, const std::string& vertex,
     glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf);
     return program_error("vertex shader not compiled", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // create fragment
-  assert_error();
+  assert_ogl_error();
   program->fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
   glCompileShader(program->fragment_id);
@@ -463,10 +448,10 @@ bool init_program(gui::program* program, const std::string& vertex,
     glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf);
     return program_error("fragment shader not compiled", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // create program
-  assert_error();
+  assert_ogl_error();
   program->program_id = glCreateProgram();
   glAttachShader(program->program_id, program->vertex_id);
   glAttachShader(program->program_id, program->fragment_id);
@@ -482,14 +467,14 @@ bool init_program(gui::program* program, const std::string& vertex,
     glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
     return program_error("program not validated", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // done
   return true;
 }
 
 // clear program
-void clear_program(gui::program* program) {
+void clear_program(ogl_program* program) {
   if (program->program_id) glDeleteProgram(program->program_id);
   if (program->vertex_id) glDeleteShader(program->vertex_id);
   if (program->fragment_id) glDeleteProgram(program->fragment_id);
@@ -500,72 +485,72 @@ void clear_program(gui::program* program) {
   program->array_id    = 0;
 }
 
-bool is_initialized(const gui::program* program) {
+bool is_initialized(const ogl_program* program) {
   return program->program_id != 0;
 }
 
 // bind program
-void bind_program(gui::program* program) {
-  assert_error();
+void bind_program(ogl_program* program) {
+  assert_ogl_error();
   glUseProgram(program->program_id);
-  assert_error();
+  assert_ogl_error();
 }
 // unbind program
-void unbind_program(gui::program* program) { glUseProgram(0); }
+void unbind_program(ogl_program* program) { glUseProgram(0); }
 // unbind program
 void unbind_program() { glUseProgram(0); }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_error();
+  assert_ogl_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(float), array, GL_STATIC_DRAW);
-  assert_error();
+  assert_ogl_error();
 }
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_error();
+  assert_ogl_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(int), array, GL_STATIC_DRAW);
-  assert_error();
+  assert_ogl_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_error();
+  assert_ogl_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(int), array);
-  assert_error();
+  assert_ogl_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_error();
+  assert_ogl_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(float), array);
-  assert_error();
+  assert_ogl_error();
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 auto glimage_vertex =
     R"(
@@ -625,22 +610,22 @@ void main() {
 )";
 #endif
 
-image::~image() {
+ogl_image::~ogl_image() {
   if (program) delete program;
   if (texcoords) delete texcoords;
   if (triangles) delete triangles;
 }
 
-bool is_initialized(const gui::image* image) {
+bool is_initialized(const ogl_image* image) {
   return is_initialized(image->program);
 }
 
 // init image program
-bool init_image(gui::image* image) {
+bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
 
-  auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
   auto error = ""s, errorlog = ""s;
   if (!init_program(
@@ -649,12 +634,12 @@ bool init_image(gui::image* image) {
   set_arraybuffer(
       image->texcoords, texcoords.size() * 2, 2, (float*)texcoords.data());
   set_elementbuffer(image->triangles, triangles.size() * 3,
-      element_type::triangles, (int*)triangles.data());
+      ogl_element_type::triangles, (int*)triangles.data());
   return true;
 }
 
 // clear an opengl image
-void clear_image(gui::image* image) {
+void clear_image(ogl_image* image) {
   clear_program(image->program);
   clear_texture(image->texture);
   clear_arraybuffer(image->texcoords);
@@ -663,17 +648,17 @@ void clear_image(gui::image* image) {
 
 // update image data
 void set_image(
-    gui::image* image, const img::image<vec4f>& img, bool linear, bool mipmap) {
-  set_texture(image->texture, img, false, linear, mipmap);
+    ogl_image* oimg, const image<vec4f>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
 }
 void set_image(
-    gui::image* image, const img::image<vec4b>& img, bool linear, bool mipmap) {
-  set_texture(image->texture, img, false, linear, mipmap);
+    ogl_image* oimg, const image<vec4b>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
 }
 
 // draw image
-void draw_image(gui::image* image, const image_params& params) {
-  assert_error();
+void draw_image(ogl_image* image, const ogl_image_params& params) {
+  assert_ogl_error();
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
   glClearColor(params.background.x, params.background.y, params.background.z,
@@ -689,110 +674,110 @@ void draw_image(gui::image* image, const image_params& params) {
   set_attribute(image->program, "texcoord", image->texcoords);
   draw_elements(image->triangles);
   unbind_program(image->program);
-  assert_error();
+  assert_ogl_error();
 }
 
 // set uniforms
-void set_uniform(gui::program* program, int location, int value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, int value) {
+  assert_ogl_error();
   glUniform1i(location, value);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec2i& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec2i& value) {
+  assert_ogl_error();
   glUniform2i(location, value.x, value.y);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec3i& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec3i& value) {
+  assert_ogl_error();
   glUniform3i(location, value.x, value.y, value.z);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec4i& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec4i& value) {
+  assert_ogl_error();
   glUniform4i(location, value.x, value.y, value.z, value.w);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, float value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, float value) {
+  assert_ogl_error();
   glUniform1f(location, value);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec2f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec2f& value) {
+  assert_ogl_error();
   glUniform2f(location, value.x, value.y);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec3f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec3f& value) {
+  assert_ogl_error();
   glUniform3f(location, value.x, value.y, value.z);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const vec4f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const vec4f& value) {
+  assert_ogl_error();
   glUniform4f(location, value.x, value.y, value.z, value.w);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const mat2f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const mat2f& value) {
+  assert_ogl_error();
   glUniformMatrix2fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const mat3f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const mat3f& value) {
+  assert_ogl_error();
   glUniformMatrix3fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const mat4f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const mat4f& value) {
+  assert_ogl_error();
   glUniformMatrix4fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const frame2f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const frame2f& value) {
+  assert_ogl_error();
   glUniformMatrix3x2fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
-void set_uniform(gui::program* program, int location, const frame3f& value) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, const frame3f& value) {
+  assert_ogl_error();
   glUniformMatrix4x3fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 // get uniform location
-int get_uniform_location(gui::program* program, const char* name) {
+int get_uniform_location(ogl_program* program, const char* name) {
   return glGetUniformLocation(program->program_id, name);
 }
 
 // set uniform texture
-void set_uniform(gui::program* program, int location,
-    const gui::texture* texture, int unit) {
-  assert_error();
+void set_uniform(
+    ogl_program* program, int location, const ogl_texture* texture, int unit) {
+  assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glUniform1i(location, unit);
-  assert_error();
+  assert_ogl_error();
 }
-void set_uniform(gui::program* program, const char* name,
-    const gui::texture* texture, int unit) {
+void set_uniform(ogl_program* program, const char* name,
+    const ogl_texture* texture, int unit) {
   return set_uniform(
       program, get_uniform_location(program, name), texture, unit);
 }
-void set_uniform(gui::program* program, int location, int location_on,
-    const gui::texture* texture, int unit) {
-  assert_error();
+void set_uniform(ogl_program* program, int location, int location_on,
+    const ogl_texture* texture, int unit) {
+  assert_ogl_error();
   if (texture && texture->texture_id) {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
@@ -801,65 +786,65 @@ void set_uniform(gui::program* program, int location, int location_on,
   } else {
     glUniform1i(location_on, 0);
   }
-  assert_error();
+  assert_ogl_error();
 }
-void set_uniform(gui::program* program, const char* name, const char* name_on,
-    const gui::texture* texture, int unit) {
+void set_uniform(ogl_program* program, const char* name, const char* name_on,
+    const ogl_texture* texture, int unit) {
   return set_uniform(program, get_uniform_location(program, name),
       get_uniform_location(program, name_on), texture, unit);
 }
 
 // get attribute location
-int get_attribute_location(gui::program* program, const char* name) {
+int get_attribute_location(ogl_program* program, const char* name) {
   return glGetAttribLocation(program->program_id, name);
 }
 
 // set vertex attributes
 void set_attribute(
-    gui::program* program, int location, gui::arraybuffer* buffer) {
-  assert_error();
+    ogl_program* program, int location, ogl_arraybuffer* buffer) {
+  assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
-  assert_error();
+  assert_ogl_error();
 }
 void set_attribute(
-    gui::program* program, const char* name, gui::arraybuffer* buffer) {
+    ogl_program* program, const char* name, ogl_arraybuffer* buffer) {
   return set_attribute(program, get_attribute_location(program, name), buffer);
 }
 
 // set vertex attributes
-void set_attribute(gui::program* program, int location, float value) {
+void set_attribute(ogl_program* program, int location, float value) {
   glVertexAttrib1f(location, value);
 }
-void set_attribute(gui::program* program, int location, const vec2f& value) {
+void set_attribute(ogl_program* program, int location, const vec2f& value) {
   glVertexAttrib2f(location, value.x, value.y);
 }
-void set_attribute(gui::program* program, int location, const vec3f& value) {
+void set_attribute(ogl_program* program, int location, const vec3f& value) {
   glVertexAttrib3f(location, value.x, value.y, value.z);
 }
-void set_attribute(gui::program* program, int location, const vec4f& value) {
+void set_attribute(ogl_program* program, int location, const vec4f& value) {
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
 }
 
 // draw elements
-void draw_elements(gui::elementbuffer* buffer) {
-  static auto elements = std::unordered_map<element_type, uint>{
-      {element_type::points, GL_POINTS},
-      {element_type::lines, GL_LINES},
-      {element_type::triangles, GL_TRIANGLES},
+void draw_elements(ogl_elementbuffer* buffer) {
+  static auto elements = unordered_map<ogl_element_type, uint>{
+      {ogl_element_type::points, GL_POINTS},
+      {ogl_element_type::lines, GL_LINES},
+      {ogl_element_type::triangles, GL_TRIANGLES},
   };
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
   glDrawElements(
       elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -1145,9 +1130,9 @@ void main() {
 #endif
 
 // forward declaration
-void clear_shape(gui::shape* shape);
+void clear_shape(ogl_shape* shape);
 
-shape::~shape() {
+ogl_shape::~ogl_shape() {
   clear_shape(this);
   if (positions) delete positions;
   if (normals) delete normals;
@@ -1161,7 +1146,7 @@ shape::~shape() {
   if (edges) delete edges;
 }
 
-scene::~scene() {
+ogl_scene::~ogl_scene() {
   clear_scene(this);
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
@@ -1172,18 +1157,16 @@ scene::~scene() {
 }
 
 // Initialize an OpenGL scene
-void init_scene(gui::scene* scene) {
+void init_scene(ogl_scene* scene) {
   if (is_initialized(scene->program)) return;
   auto error = ""s, errorlog = ""s;
   init_program(
       scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(gui::scene* scene) {
-  return is_initialized(scene->program);
-}
+bool is_initialized(ogl_scene* scene) { return is_initialized(scene->program); }
 
 // Clear an OpenGL shape
-void clear_shape(gui::shape* shape) {
+void clear_shape(ogl_shape* shape) {
   clear_arraybuffer(shape->positions);
   clear_arraybuffer(shape->normals);
   clear_arraybuffer(shape->texcoords);
@@ -1197,50 +1180,50 @@ void clear_shape(gui::shape* shape) {
 }
 
 // Clear an OpenGL scene
-void clear_scene(gui::scene* scene) {
+void clear_scene(ogl_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
   clear_program(scene->program);
 }
 
 // add camera
-gui::camera* add_camera(gui::scene* scene) {
-  return scene->cameras.emplace_back(new camera{});
+ogl_camera* add_camera(ogl_scene* scene) {
+  return scene->cameras.emplace_back(new ogl_camera{});
 }
-void set_frame(gui::camera* camera, const frame3f& frame) {
+void set_frame(ogl_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(gui::camera* camera, float lens, float aspect, float film) {
+void set_lens(ogl_camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(gui::camera* camera, float near, float far) {
+void set_nearfar(ogl_camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-gui::texture* add_texture(gui::scene* scene) {
-  return scene->textures.emplace_back(new texture{});
+ogl_texture* add_texture(ogl_scene* scene) {
+  return scene->textures.emplace_back(new ogl_texture{});
 }
 
 // add shape
-gui::shape* add_shape(gui::scene* scene) {
-  return scene->shapes.emplace_back(new shape{});
+ogl_shape* add_shape(ogl_scene* scene) {
+  return scene->shapes.emplace_back(new ogl_shape{});
 }
 
-void set_points(gui::shape* shape, const std::vector<int>& points) {
+void set_points(ogl_shape* shape, const vector<int>& points) {
   set_elementbuffer(shape->points, points);
 }
-void set_lines(gui::shape* shape, const std::vector<vec2i>& lines) {
+void set_lines(ogl_shape* shape, const vector<vec2i>& lines) {
   set_elementbuffer(shape->lines, lines);
 }
-void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles) {
+void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles) {
   set_elementbuffer(shape->triangles, triangles);
 }
-void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
-  auto triangles = std::vector<vec3i>{};
+void set_quads(ogl_shape* shape, const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
@@ -1248,9 +1231,9 @@ void set_quads(gui::shape* shape, const std::vector<vec4i>& quads) {
   }
   set_elementbuffer(shape->quads, triangles);
 }
-void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads) {
-  auto edgemap = std::unordered_set<vec2i>{};
+void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads) {
+  auto edgemap = unordered_set<vec2i>{};
   for (auto t : triangles) {
     edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
     edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
@@ -1262,123 +1245,121 @@ void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
     edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
     edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
   }
-  auto edges = std::vector<vec2i>(edgemap.begin(), edgemap.end());
+  auto edges = vector<vec2i>(edgemap.begin(), edgemap.end());
   set_elementbuffer(shape->edges, edges);
 }
-void set_positions(gui::shape* shape, const std::vector<vec3f>& positions) {
+void set_positions(ogl_shape* shape, const vector<vec3f>& positions) {
   set_arraybuffer(shape->positions, positions);
 }
-void set_normals(gui::shape* shape, const std::vector<vec3f>& normals) {
+void set_normals(ogl_shape* shape, const vector<vec3f>& normals) {
   set_arraybuffer(shape->normals, normals);
 }
-void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords) {
+void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
   set_arraybuffer(shape->texcoords, texcoords);
 }
-void set_colors(gui::shape* shape, const std::vector<vec3f>& colors) {
+void set_colors(ogl_shape* shape, const vector<vec3f>& colors) {
   set_arraybuffer(shape->colors, colors);
 }
-void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents) {
+void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
   set_arraybuffer(shape->tangents, tangents);
 }
 
 // add object
-gui::object* add_object(gui::scene* scene) {
-  return scene->objects.emplace_back(new object{});
+ogl_object* add_object(ogl_scene* scene) {
+  return scene->objects.emplace_back(new ogl_object{});
 }
-void set_frame(gui::object* object, const frame3f& frame) {
+void set_frame(ogl_object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(gui::object* object, gui::shape* shape) {
-  object->shape = shape;
-}
-void set_material(gui::object* object, gui::material* material) {
+void set_shape(ogl_object* object, ogl_shape* shape) { object->shape = shape; }
+void set_material(ogl_object* object, ogl_material* material) {
   object->material = material;
 }
-void set_instance(gui::object* object, gui::instance* instance) {
+void set_instance(ogl_object* object, ogl_instance* instance) {
   object->instance = instance;
 }
-void set_hidden(gui::object* object, bool hidden) { object->hidden = hidden; }
-void set_highlighted(gui::object* object, bool highlighted) {
+void set_hidden(ogl_object* object, bool hidden) { object->hidden = hidden; }
+void set_highlighted(ogl_object* object, bool highlighted) {
   object->highlighted = highlighted;
 }
 
 // add instance
-gui::instance* add_instance(gui::scene* scene) {
-  return scene->instances.emplace_back(new instance{});
+ogl_instance* add_instance(ogl_scene* scene) {
+  return scene->instances.emplace_back(new ogl_instance{});
 }
-void set_frames(gui::instance* instance, const std::vector<frame3f>& frames) {
+void set_frames(ogl_instance* instance, const vector<frame3f>& frames) {
   instance->frames = frames;
 }
 
 // add material
-gui::material* add_material(gui::scene* scene) {
-  return scene->materials.emplace_back(new material{});
+ogl_material* add_material(ogl_scene* scene) {
+  return scene->materials.emplace_back(new ogl_material{});
 }
-void set_emission(gui::material* material, const vec3f& emission,
-    gui::texture* emission_tex) {
+void set_emission(
+    ogl_material* material, const vec3f& emission, ogl_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    gui::material* material, const vec3f& color, gui::texture* color_tex) {
+    ogl_material* material, const vec3f& color, ogl_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    gui::material* material, float specular, gui::texture* specular_tex) {
+    ogl_material* material, float specular, ogl_texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    gui::material* material, float roughness, gui::texture* roughness_tex) {
+    ogl_material* material, float roughness, ogl_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    gui::material* material, float opacity, gui::texture* opacity_tex) {
+    ogl_material* material, float opacity, ogl_texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    gui::material* material, float metallic, gui::texture* metallic_tex) {
+    ogl_material* material, float metallic, ogl_texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(gui::material* material, gui::texture* normal_tex) {
+void set_normalmap(ogl_material* material, ogl_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // add light
-light* add_light(gui::scene* scene) {
-  return scene->lights.emplace_back(new light{});
+ogl_light* add_light(ogl_scene* scene) {
+  return scene->lights.emplace_back(new ogl_light{});
 }
-void set_light(light* light, const vec3f& position, const vec3f& emission,
-    light_type type, bool camera) {
+void set_light(ogl_light* light, const vec3f& position, const vec3f& emission,
+    ogl_light_type type, bool camera) {
   light->position = position;
   light->emission = emission;
   light->type     = type;
   light->camera   = camera;
 }
-void clear_lights(gui::scene* scene) {
+void clear_lights(ogl_scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
-bool has_max_lights(gui::scene* scene) { return scene->lights.size() >= 16; }
-void add_default_lights(gui::scene* scene) {
+bool has_max_lights(ogl_scene* scene) { return scene->lights.size() >= 16; }
+void add_default_lights(ogl_scene* scene) {
   clear_lights(scene);
   set_light(add_light(scene), normalize(vec3f{1, 1, 1}), vec3f{pif / 2},
-      gui::light_type::directional, true);
+      ogl_light_type::directional, true);
   set_light(add_light(scene), normalize(vec3f{-1, 1, 1}), vec3f{pif / 2},
-      gui::light_type::directional, true);
+      ogl_light_type::directional, true);
   set_light(add_light(scene), normalize(vec3f{-1, -1, 1}), vec3f{pif / 4},
-      gui::light_type::directional, true);
+      ogl_light_type::directional, true);
   set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4},
-      gui::light_type::directional, true);
+      ogl_light_type::directional, true);
 }
 
 // Draw a shape
 void draw_object(
-    gui::scene* scene, gui::object* object, const scene_params& params) {
-  static auto empty_instances = std::vector<frame3f>{identity3x4f};
+    ogl_scene* scene, ogl_object* object, const ogl_scene_params& params) {
+  static auto empty_instances = vector<frame3f>{identity3x4f};
 
   if (object->hidden) return;
 
@@ -1403,16 +1384,16 @@ void draw_object(
   set_uniform(scene->program, "roughness", material->roughness);
   set_uniform(scene->program, "opacity", material->opacity);
   set_uniform(scene->program, "double_sided", (int)params.double_sided);
-  set_uniform(
-      scene->program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(scene->program, "emission_tex", "emission_tex_on",
+      material->emission_tex, 0);
   set_uniform(
       scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
-      scene->program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "specular_tex", "specular_tex_on",
+      material->metallic_tex, 2);
   set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
       material->roughness_tex, 3);
-  set_uniform(
-      scene->program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "opacity_tex", "opacity_tex_on",
+      material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
 
@@ -1473,17 +1454,17 @@ void draw_object(
 }
 
 // Display a scene
-void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
-    const scene_params& params) {
-  static auto camera_light0 = gui::light{
-      normalize(vec3f{1, 1, 1}), vec3f{pif / 2}, light_type::directional, true};
-  static auto camera_light1 = gui::light{normalize(vec3f{-1, 1, 1}),
-      vec3f{pif / 2}, light_type::directional, true};
-  static auto camera_light2 = gui::light{normalize(vec3f{-1, -1, 1}),
-      vec3f{pif / 4}, light_type::directional, true};
-  static auto camera_light3 = gui::light{normalize(vec3f{0.1, 0.5, -1}),
-      vec3f{pif / 4}, light_type::directional, true};
-  static auto camera_lights = std::vector<gui::light*>{
+void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
+    const ogl_scene_params& params) {
+  static auto camera_light0 = ogl_light{normalize(vec3f{1, 1, 1}),
+      vec3f{pif / 2}, ogl_light_type::directional, true};
+  static auto camera_light1 = ogl_light{normalize(vec3f{-1, 1, 1}),
+      vec3f{pif / 2}, ogl_light_type::directional, true};
+  static auto camera_light2 = ogl_light{normalize(vec3f{-1, -1, 1}),
+      vec3f{pif / 4}, ogl_light_type::directional, true};
+  static auto camera_light3 = ogl_light{normalize(vec3f{0.1, 0.5, -1}),
+      vec3f{pif / 4}, ogl_light_type::directional, true};
+  static auto camera_lights = vector<ogl_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -1494,29 +1475,29 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  clear_framebuffer(params.background);
-  set_viewport(viewport);
+  clear_ogl_framebuffer(params.background);
+  set_ogl_viewport(viewport);
 
   bind_program(scene->program);
   set_uniform(scene->program, "eye", camera->frame.o);
   set_uniform(scene->program, "view", camera_view);
   set_uniform(scene->program, "projection", camera_proj);
   set_uniform(scene->program, "eyelight",
-      params.shading == shading_type::eyelight ? 1 : 0);
+      params.shading == ogl_shading_type::eyelight ? 1 : 0);
   set_uniform(scene->program, "exposure", params.exposure);
   set_uniform(scene->program, "gamma", params.gamma);
 
-  if (params.shading == shading_type::lights ||
-      params.shading == shading_type::camlights) {
-    auto& lights = params.shading == shading_type::lights ? scene->lights
-                                                          : camera_lights;
+  if (params.shading == ogl_shading_type::lights ||
+      params.shading == ogl_shading_type::camlights) {
+    auto& lights = params.shading == ogl_shading_type::lights ? scene->lights
+                                                              : camera_lights;
     set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
     set_uniform(scene->program, "lnum", (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
       if (light->camera) {
-        auto position = light->type == light_type::directional
+        auto position = light->type == ogl_light_type::directional
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
@@ -1532,41 +1513,41 @@ void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
     }
   }
 
-  if (params.wireframe) set_wireframe(true);
+  if (params.wireframe) set_ogl_wireframe(true);
   for (auto object : scene->objects) {
     draw_object(scene, object, params);
   }
 
   unbind_program();
-  if (params.wireframe) set_wireframe(false);
+  if (params.wireframe) set_ogl_wireframe(false);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI APPLICATION
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // run the user interface with the give callbacks
-void run_ui(const vec2i& size, const std::string& title,
-    const ui_callbacks& callbaks, int widgets_width, bool widgets_left) {
-  auto win_guard = std::make_unique<gui::window>();
+void run_ui(const vec2i& size, const string& title,
+    const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
+  auto win_guard = std::make_unique<gui_window>();
   auto win       = win_guard.get();
-  init_window(
-      win, size, title, (bool)callbaks.widgets_cb, widgets_width, widgets_left);
+  init_window(win, size, title, (bool)callbacks.widgets_cb, widgets_width,
+      widgets_left);
 
-  set_init_callback(win, callbaks.init_cb);
-  set_clear_callback(win, callbaks.clear_cb);
-  set_draw_callback(win, callbaks.draw_cb);
-  set_widgets_callback(win, callbaks.widgets_cb);
-  set_drop_callback(win, callbaks.drop_cb);
-  set_key_callback(win, callbaks.key_cb);
-  set_char_callback(win, callbaks.char_cb);
-  set_click_callback(win, callbaks.click_cb);
-  set_scroll_callback(win, callbaks.scroll_cb);
-  set_update_callback(win, callbaks.update_cb);
-  set_uiupdate_callback(win, callbaks.uiupdate_cb);
+  set_init_callback(win, callbacks.init_cb);
+  set_clear_callback(win, callbacks.clear_cb);
+  set_draw_callback(win, callbacks.draw_cb);
+  set_widgets_callback(win, callbacks.widgets_cb);
+  set_drop_callback(win, callbacks.drop_cb);
+  set_key_callback(win, callbacks.key_cb);
+  set_char_callback(win, callbacks.char_cb);
+  set_click_callback(win, callbacks.click_cb);
+  set_scroll_callback(win, callbacks.scroll_cb);
+  set_update_callback(win, callbacks.update_cb);
+  set_uiupdate_callback(win, callbacks.uiupdate_cb);
 
   // run ui
   run_ui(win);
@@ -1575,14 +1556,14 @@ void run_ui(const vec2i& size, const std::string& title,
   clear_window(win);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
-static void draw_window(gui::window* win) {
+static void draw_window(gui_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1616,7 +1597,7 @@ static void draw_window(gui::window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void init_window(gui::window* win, const vec2i& size, const std::string& title,
+void init_window(gui_window* win, const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
@@ -1640,42 +1621,42 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
 
   // set callbacks
   glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
-    auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+    auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
     draw_window(win);
   });
   glfwSetDropCallback(
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
-        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
-          auto pathv = std::vector<std::string>();
+          auto pathv = vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
           win->drop_cb(win, pathv, win->input);
         }
       });
   glfwSetKeyCallback(win->win,
       [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
-        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
       });
   glfwSetCharCallback(win->win, [](GLFWwindow* glfw, unsigned int key) {
-    auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+    auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
     if (win->char_cb) win->char_cb(win, key, win->input);
   });
   glfwSetMouseButtonCallback(
       win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
-        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->click_cb)
           win->click_cb(
               win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
       });
   glfwSetScrollCallback(
       win->win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
-        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
   glfwSetWindowSizeCallback(
       win->win, [](GLFWwindow* glfw, int width, int height) {
-        auto win = (gui::window*)glfwGetWindowUserPointer(glfw);
+        auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         glfwGetWindowSize(
             win->win, &win->input.window_size.x, &win->input.window_size.y);
         if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
@@ -1715,14 +1696,14 @@ void init_window(gui::window* win, const vec2i& size, const std::string& title,
   }
 }
 
-void clear_window(gui::window* win) {
+void clear_window(gui_window* win) {
   glfwDestroyWindow(win->win);
   glfwTerminate();
   win->win = nullptr;
 }
 
 // Run loop
-void run_ui(gui::window* win) {
+void run_ui(gui_window* win) {
   // init
   if (win->init_cb) win->init_cb(win, win->input);
 
@@ -1796,50 +1777,44 @@ void run_ui(gui::window* win) {
   if (win->clear_cb) win->clear_cb(win, win->input);
 }
 
-void set_init_callback(gui::window* win, init_callback cb) {
-  win->init_cb = cb;
-}
-void set_clear_callback(gui::window* win, clear_callback cb) {
+void set_init_callback(gui_window* win, init_callback cb) { win->init_cb = cb; }
+void set_clear_callback(gui_window* win, clear_callback cb) {
   win->clear_cb = cb;
 }
-void set_draw_callback(gui::window* win, draw_callback cb) {
-  win->draw_cb = cb;
-}
-void set_widgets_callback(gui::window* win, widgets_callback cb) {
+void set_draw_callback(gui_window* win, draw_callback cb) { win->draw_cb = cb; }
+void set_widgets_callback(gui_window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
-void set_drop_callback(gui::window* win, drop_callback drop_cb) {
+void set_drop_callback(gui_window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
-void set_key_callback(gui::window* win, key_callback cb) { win->key_cb = cb; }
-void set_char_callback(gui::window* win, char_callback cb) {
-  win->char_cb = cb;
-}
-void set_click_callback(gui::window* win, click_callback cb) {
+void set_key_callback(gui_window* win, key_callback cb) { win->key_cb = cb; }
+void set_char_callback(gui_window* win, char_callback cb) { win->char_cb = cb; }
+void set_click_callback(gui_window* win, click_callback cb) {
   win->click_cb = cb;
 }
-void set_scroll_callback(gui::window* win, scroll_callback cb) {
+void set_scroll_callback(gui_window* win, scroll_callback cb) {
   win->scroll_cb = cb;
 }
-void set_uiupdate_callback(gui::window* win, uiupdate_callback cb) {
+void set_uiupdate_callback(gui_window* win, uiupdate_callback cb) {
   win->uiupdate_cb = cb;
 }
-void set_update_callback(gui::window* win, update_callback cb) {
+void set_update_callback(gui_window* win, update_callback cb) {
   win->update_cb = cb;
 }
 
-void set_close(gui::window* win, bool close) {
+void set_close(gui_window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
-void init_glwidgets(gui::window* win, int width, bool left) {
+void init_glwidgets(gui_window* win, int width, bool left) {
   // init widgets
   ImGui::CreateContext();
   ImGui::GetIO().IniFilename       = nullptr;
@@ -1855,25 +1830,24 @@ void init_glwidgets(gui::window* win, int width, bool left) {
   win->widgets_left  = left;
 }
 
-bool begin_header(gui::window* win, const char* lbl) {
+bool begin_header(gui_window* win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_header(gui::window* win) { ImGui::PopID(); }
+void end_header(gui_window* win) { ImGui::PopID(); }
 
-void open_glmodal(gui::window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
-void clear_glmodal(gui::window* win) { ImGui::CloseCurrentPopup(); }
-bool begin_glmodal(gui::window* win, const char* lbl) {
+void open_glmodal(gui_window* win, const char* lbl) { ImGui::OpenPopup(lbl); }
+void clear_glmodal(gui_window* win) { ImGui::CloseCurrentPopup(); }
+bool begin_glmodal(gui_window* win, const char* lbl) {
   return ImGui::BeginPopupModal(lbl);
 }
-void end_glmodal(gui::window* win) { ImGui::EndPopup(); }
-bool is_glmodal_open(gui::window* win, const char* lbl) {
+void end_glmodal(gui_window* win) { ImGui::EndPopup(); }
+bool is_glmodal_open(gui_window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(
-    gui::window* win, const char* lbl, const std::string& message) {
+bool draw_message(gui_window* win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1888,13 +1862,13 @@ bool draw_message(
   }
 }
 
-std::deque<std::string> _message_queue = {};
-std::mutex              _message_mutex;
-void push_message(gui::window* win, const std::string& message) {
+deque<string> _message_queue = {};
+mutex         _message_mutex;
+void          push_message(gui_window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
-bool draw_messages(gui::window* win) {
+bool draw_messages(gui_window* win) {
   std::lock_guard lock(_message_mutex);
   if (_message_queue.empty()) return false;
   if (!is_glmodal_open(win, "<message>")) {
@@ -1914,7 +1888,7 @@ bool draw_messages(gui::window* win) {
 }
 
 // Utility to normalize a path
-static inline std::string normalize_path(const std::string& filename_) {
+static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -1935,43 +1909,43 @@ static inline std::string normalize_path(const std::string& filename_) {
 }
 
 // Get extension (not including '.').
-static std::string get_extension(const std::string& filename_) {
+static string get_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
-  if (pos == std::string::npos) return "";
+  if (pos == string::npos) return "";
   return filename.substr(pos);
 }
 
 struct filedialog_state {
-  std::string                               dirname       = "";
-  std::string                               filename      = "";
-  std::vector<std::pair<std::string, bool>> entries       = {};
-  bool                                      save          = false;
-  bool                                      remove_hidden = true;
-  std::string                               filter        = "";
-  std::vector<std::string>                  extensions    = {};
+  string                          dirname       = "";
+  string                          filename      = "";
+  vector<std::pair<string, bool>> entries       = {};
+  bool                            save          = false;
+  bool                            remove_hidden = true;
+  string                          filter        = "";
+  vector<string>                  extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const std::string& dirname, const std::string& filename,
-      bool save, const std::string& filter) {
+  filedialog_state(const string& dirname, const string& filename, bool save,
+      const string& filter) {
     this->save = save;
     set_filter(filter);
     set_dirname(dirname);
     set_filename(filename);
   }
-  void set_dirname(const std::string& name) {
+  void set_dirname(const string& name) {
     dirname = name;
     dirname = normalize_path(dirname);
     if (dirname == "") dirname = "./";
     if (dirname.back() != '/') dirname += '/';
     refresh();
   }
-  void set_filename(const std::string& name) {
+  void set_filename(const string& name) {
     filename = name;
     check_filename();
   }
-  void set_filter(const std::string& flt) {
-    auto globs = std::vector<std::string>{""};
+  void set_filter(const string& flt) {
+    auto globs = vector<string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
         globs.push_back("");
@@ -2033,18 +2007,17 @@ struct filedialog_state {
     });
   }
 
-  std::string get_path() const { return dirname + filename; }
-  bool        exists_file(const std::string& filename) {
+  string get_path() const { return dirname + filename; }
+  bool   exists_file(const string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
     return true;
   }
 };
-bool draw_filedialog(gui::window* win, const char* lbl, std::string& path,
-    bool save, const std::string& dirname, const std::string& filename,
-    const std::string& filter) {
-  static auto states = std::unordered_map<std::string, filedialog_state>{};
+bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
+  static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
@@ -2097,10 +2070,9 @@ bool draw_filedialog(gui::window* win, const char* lbl, std::string& path,
     return false;
   }
 }
-bool draw_filedialog_button(gui::window* win, const char* button_lbl,
-    bool button_active, const char* lbl, std::string& path, bool save,
-    const std::string& dirname, const std::string& filename,
-    const std::string& filter) {
+bool draw_filedialog_button(gui_window* win, const char* button_lbl,
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
@@ -2111,7 +2083,7 @@ bool draw_filedialog_button(gui::window* win, const char* button_lbl,
   }
 }
 
-bool draw_button(gui::window* win, const char* lbl, bool enabled) {
+bool draw_button(gui_window* win, const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
   } else {
@@ -2124,15 +2096,15 @@ bool draw_button(gui::window* win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_label(gui::window* win, const char* lbl, const std::string& label) {
+void draw_label(gui_window* win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
-void draw_separator(gui::window* win) { ImGui::Separator(); }
+void draw_separator(gui_window* win) { ImGui::Separator(); }
 
-void continue_line(gui::window* win) { ImGui::SameLine(); }
+void continue_line(gui_window* win) { ImGui::SameLine(); }
 
-bool draw_textinput(gui::window* win, const char* lbl, std::string& value) {
+bool draw_textinput(gui_window* win, const char* lbl, string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -2143,88 +2115,88 @@ bool draw_textinput(gui::window* win, const char* lbl, std::string& value) {
 }
 
 bool draw_slider(
-    window* win, const char* lbl, float& value, float min, float max) {
+    gui_window* win, const char* lbl, float& value, float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
 bool draw_slider(
-    window* win, const char* lbl, vec2f& value, float min, float max) {
+    gui_window* win, const char* lbl, vec2f& value, float min, float max) {
   return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    window* win, const char* lbl, vec3f& value, float min, float max) {
+    gui_window* win, const char* lbl, vec3f& value, float min, float max) {
   return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    window* win, const char* lbl, vec4f& value, float min, float max) {
+    gui_window* win, const char* lbl, vec4f& value, float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
 bool draw_slider(
-    gui::window* win, const char* lbl, int& value, int min, int max) {
+    gui_window* win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
 bool draw_slider(
-    gui::window* win, const char* lbl, vec2i& value, int min, int max) {
+    gui_window* win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    gui::window* win, const char* lbl, vec3i& value, int min, int max) {
+    gui_window* win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
 bool draw_slider(
-    gui::window* win, const char* lbl, vec4i& value, int min, int max) {
+    gui_window* win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger(gui::window* win, const char* lbl, float& value, float speed,
+bool draw_dragger(gui_window* win, const char* lbl, float& value, float speed,
     float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger(gui::window* win, const char* lbl, vec2f& value, float speed,
+bool draw_dragger(gui_window* win, const char* lbl, vec2f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(gui::window* win, const char* lbl, vec3f& value, float speed,
+bool draw_dragger(gui_window* win, const char* lbl, vec3f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(gui::window* win, const char* lbl, vec4f& value, float speed,
+bool draw_dragger(gui_window* win, const char* lbl, vec4f& value, float speed,
     float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger(
-    window* win, const char* lbl, int& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, int& value, float speed,
+    int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger(
-    window* win, const char* lbl, vec2i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec2i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(
-    window* win, const char* lbl, vec3i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec3i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(
-    window* win, const char* lbl, vec4i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_checkbox(gui::window* win, const char* lbl, bool& value) {
+bool draw_checkbox(gui_window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_coloredit(gui::window* win, const char* lbl, vec3f& value) {
+bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
-bool draw_coloredit(gui::window* win, const char* lbl, vec4f& value) {
+bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
-bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value) {
+bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -2242,7 +2214,7 @@ bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value) {
     return false;
   }
 }
-bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value) {
+bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -2262,8 +2234,8 @@ bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value) {
   }
 }
 
-bool draw_combobox(gui::window* win, const char* lbl, int& value,
-    const std::vector<std::string>& labels) {
+bool draw_combobox(gui_window* win, const char* lbl, int& value,
+    const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2276,8 +2248,8 @@ bool draw_combobox(gui::window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
-    const std::vector<std::string>& labels) {
+bool draw_combobox(gui_window* win, const char* lbl, string& value,
+    const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2291,8 +2263,8 @@ bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
   return value != old_val;
 }
 
-bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
-    const std::function<std::string(int)>& labels, bool include_null) {
+bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
+    const function<string(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
     return false;
@@ -2313,7 +2285,7 @@ bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
   return idx != old_idx;
 }
 
-void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
+void draw_progressbar(gui_window* win, const char* lbl, float fraction) {
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(fraction, ImVec2(0.0f, 0.0f));
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -2322,7 +2294,7 @@ void draw_progressbar(gui::window* win, const char* lbl, float fraction) {
 }
 
 void draw_progressbar(
-    gui::window* win, const char* lbl, int current, int total) {
+    gui_window* win, const char* lbl, int current, int total) {
   auto overlay = std::to_string(current) + "/" + std::to_string(total);
   ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5, 0.5, 1, 0.25));
   ImGui::ProgressBar(
@@ -2333,23 +2305,23 @@ void draw_progressbar(
 }
 
 void draw_histogram(
-    gui::window* win, const char* lbl, const float* values, int count) {
+    gui_window* win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<float>& values) {
+    gui_window* win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec2f>& values) {
+    gui_window* win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec3f>& values) {
+    gui_window* win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2358,7 +2330,7 @@ void draw_histogram(
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec4f>& values) {
+    gui_window* win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2430,25 +2402,25 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_info(gui::window* win, const std::string& msg) {
+void        log_info(gui_window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_error(gui::window* win, const std::string& msg) {
+void log_error(gui_window* win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();
 }
-void clear_log(gui::window* win) {
+void clear_log(gui_window* win) {
   _log_mutex.lock();
   _log_widget.Clear();
   _log_mutex.unlock();
 }
-void draw_log(gui::window* win) {
+void draw_log(gui_window* win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto

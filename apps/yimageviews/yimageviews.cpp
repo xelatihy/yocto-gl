@@ -29,32 +29,28 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace gui = yocto::gui;
+using namespace yocto;
 
 #include <future>
-using namespace std::string_literals;
 
 struct app_state {
   // original data
-  std::string filename = "image.png";
-  std::string outname  = "out.png";
+  string filename = "image.png";
+  string outname  = "out.png";
 
   // image data
-  img::image<vec4f> source = {};
+  image<vec4f> source = {};
 
   // diplay data
-  img::image<vec4f>      display    = {};
-  float                  exposure   = 0;
-  bool                   filmic     = false;
-  img::colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  image<vec4f>      display    = {};
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
+  bool              colorgrade = false;
 
   // viewing properties
-  gui::image*       glimage  = new gui::image{};
-  gui::image_params glparams = {};
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -74,10 +70,10 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = std::vector<std::string>{};
+  auto filenames = vector<string>{};
 
   // command line options
-  auto cli = cli::make_cli("yimgviews", "view images");
+  auto cli = make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -85,7 +81,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    cli::print_fatal(ioerror);
+    print_fatal(ioerror);
     return 1;
   }
 
@@ -93,11 +89,11 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_image(app->glimage);
   };
-  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
@@ -108,7 +104,7 @@ int main(int argc, const char* argv[]) {
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
   };
-  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     auto edited = 0;
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", app->exposure, -5, 5);
@@ -159,7 +155,7 @@ int main(int argc, const char* argv[]) {
       set_image(app->glimage, app->display, false, false);
     }
   };
-  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     // handle mouse
     if (input.mouse_left && !input.widgets_active) {
       app->glparams.center += input.mouse_pos - input.mouse_last;

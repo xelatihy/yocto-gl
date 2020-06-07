@@ -30,17 +30,10 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
-using namespace yocto::math;
-namespace shp = yocto::shape;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
+using namespace yocto;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
-
-using std::string;
-using std::vector;
-using namespace std::string_literals;
 
 int main(int argc, const char* argv[]) {
   // command line parameters
@@ -55,8 +48,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "heightfield.png"s;
 
   // parse command line
-  auto cli = cli::make_cli(
-      "yheightfieldproc", "Makes a mesh from a heightfield");
+  auto cli = make_cli("yheightfieldproc", "Makes a mesh from a heightfield");
   add_option(cli, "--height,-h", height, "Height scale");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
   add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
@@ -75,27 +67,25 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // mesh data
-  auto positions = std::vector<vec3f>{};
-  auto normals   = std::vector<vec3f>{};
-  auto texcoords = std::vector<vec2f>{};
-  auto quads     = std::vector<vec4i>{};
+  auto positions = vector<vec3f>{};
+  auto normals   = vector<vec3f>{};
+  auto texcoords = vector<vec2f>{};
+  auto quads     = vector<vec4i>{};
 
   // image data
-  auto heightfield = img::image<float>{};
+  auto heightfield = image<float>{};
 
   // load mesh
   auto ioerror = ""s;
-  cli::print_progress("load image", 0, 1);
-  if (img::is_hdr_filename(filename)) {
-    if (!img::load_image(filename, heightfield, ioerror))
-      cli::print_fatal(ioerror);
+  print_progress("load image", 0, 1);
+  if (is_hdr_filename(filename)) {
+    if (!load_image(filename, heightfield, ioerror)) print_fatal(ioerror);
   } else {
-    auto heightfield16 = img::image<ushort>{};
-    if (!img::load_image(filename, heightfield16, ioerror))
-      cli::print_fatal(ioerror);
-    heightfield = img::ushort_to_float(heightfield16);
+    auto heightfield16 = image<ushort>{};
+    if (!load_image(filename, heightfield16, ioerror)) print_fatal(ioerror);
+    heightfield = ushort_to_float(heightfield16);
   }
-  cli::print_progress("load shape", 1, 1);
+  print_progress("load shape", 1, 1);
 
   // adjust height
   if (height != 1) {
@@ -103,22 +93,22 @@ int main(int argc, const char* argv[]) {
   }
 
   // create heightfield
-  shp::make_heightfield(quads, positions, normals, texcoords,
-      heightfield.size(), heightfield.data_vector());
+  make_heightfield(quads, positions, normals, texcoords, heightfield.size(),
+      heightfield.data_vector());
   if (!smooth) normals.clear();
 
   // print info
   if (info) {
-    cli::print_info("shape stats ------------");
-    auto stats = shp::shape_stats(
+    print_info("shape stats ------------");
+    auto stats = shape_stats(
         {}, {}, {}, quads, {}, {}, {}, positions, normals, texcoords, {}, {});
-    for (auto& stat : stats) cli::print_info(stat);
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    cli::print_progress("transform shape", 0, 1);
+    print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -126,15 +116,15 @@ int main(int argc, const char* argv[]) {
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    cli::print_progress("transform shape", 1, 1);
+    print_progress("transform shape", 1, 1);
   }
 
   // save mesh
-  cli::print_progress("save shape", 0, 1);
-  if (!shp::save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
-          {}, {}, ioerror))
-    cli::print_fatal(ioerror);
-  cli::print_progress("save shape", 1, 1);
+  print_progress("save shape", 0, 1);
+  if (!save_shape(output, {}, {}, {}, quads, positions, normals, texcoords, {},
+          {}, ioerror))
+    print_fatal(ioerror);
+  print_progress("save shape", 1, 1);
 
   // done
   return 0;

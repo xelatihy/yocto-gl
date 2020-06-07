@@ -88,7 +88,15 @@
     "random": "cpp",
     "*.tcc": "cpp",
     "memory_resource": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "cassert": "cpp",
+    "ccomplex": "cpp",
+    "cerrno": "cpp",
+    "cfloat": "cpp",
+    "ciso646": "cpp",
+    "climits": "cpp",
+    "ctgmath": "cpp",
+    "cstdbool": "cpp"
   },
   "json.schemas": [
     {

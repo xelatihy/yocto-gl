@@ -31,22 +31,17 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
-using namespace yocto::math;
-namespace sio = yocto::sceneio;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace trc = yocto::trace;
+using namespace yocto;
 
 #include <map>
 #include <memory>
-using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
-    sio::camera* iocamera, sio::progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
+    scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -54,7 +49,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -66,7 +61,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::texture*, trc::texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -83,7 +78,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -117,7 +112,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::shape*, trc::shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -135,7 +130,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -171,7 +166,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params      = trc::trace_params{};
+  auto params      = trace_params{};
   auto save_batch  = false;
   auto add_skyenv  = false;
   auto camera_name = ""s;
@@ -179,32 +174,32 @@ int main(int argc, const char* argv[]) {
   auto filename    = "scene.json"s;
 
   // parse command line
-  auto cli = cli::make_cli("yscntrace", "Offline path tracing");
+  auto cli = make_cli("yscntrace", "Offline path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", trc::sampler_names);
+      cli, "--tracer,-t", params.sampler, "Trace type.", trace_sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trace_falsecolor_names);
   add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", params.bvh, "Bvh type", bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_option(cli, "scene", filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<sio::model>();
+  auto ioscene_guard = std::make_unique<scene_model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(filename, ioscene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!load_scene(filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // add sky
   if (add_skyenv) add_sky(ioscene);
@@ -213,45 +208,44 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // convert scene
-  auto scene_guard = std::make_unique<trc::scene>();
+  auto scene_guard = std::make_unique<trace_scene>();
   auto scene       = scene_guard.get();
-  auto camera      = (trc::camera*)nullptr;
-  init_scene(scene, ioscene, camera, iocamera, cli::print_progress);
+  auto camera      = (trace_camera*)nullptr;
+  init_scene(scene, ioscene, camera, iocamera, print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(scene, params, cli::print_progress);
+  init_bvh(scene, params, print_progress);
 
   // init renderer
-  init_lights(scene, cli::print_progress);
+  init_lights(scene, print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    cli::print_info("no lights presents, switching to eyelight shader");
-    params.sampler = trc::sampler_type::eyelight;
+    print_info("no lights presents, switching to eyelight shader");
+    params.sampler = trace_sampler_type::eyelight;
   }
 
   // render
-  auto render = trc::trace_image(scene, camera, params, cli::print_progress,
+  auto render = trace_image(scene, camera, params, print_progress,
       [save_batch, imfilename](
-          const img::image<vec4f>& render, int sample, int samples) {
+          const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    sfs::path(imfilename).extension().string();
         auto outfilename =
             sfs::path(imfilename).replace_extension(ext).string();
         auto ioerror = ""s;
-        cli::print_progress("save image", sample, samples);
-        if (!save_image(outfilename, render, ioerror))
-          cli::print_fatal(ioerror);
+        print_progress("save image", sample, samples);
+        if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });
 
   // save image
-  cli::print_progress("save image", 0, 1);
-  if (!save_image(imfilename, render, ioerror)) cli::print_fatal(ioerror);
-  cli::print_progress("save image", 1, 1);
+  print_progress("save image", 0, 1);
+  if (!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
+  print_progress("save image", 1, 1);
 
   // done
   return 0;

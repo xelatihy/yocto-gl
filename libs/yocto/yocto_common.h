@@ -23,11 +23,11 @@
 // the Yocto/GL collection they are the best way to do this.
 //
 // 1. use `range()` to iterato over an integer sequence
-// 2. use `enumerate()` to iteratare over a std::vector and number its elements
-// 3. use opeartors + to either concatenate two vectors or a std::vector and an
+// 2. use `enumerate()` to iteratare over a vector and number its elements
+// 3. use opeartors + to either concatenate two vectors or a vector and an
 //    element
-// 4. use operators += to append an element or a std::vector to a given
-// std::vector
+// 4. use operators += to append an element or a vector to a given
+// vector
 //
 //
 // ## Concurrency utilities
@@ -83,19 +83,33 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::atomic;
+using std::deque;
+using std::future;
+using std::string;
+using std::vector;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // TIMING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time();
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
 inline auto range(int min, int max);
@@ -104,27 +118,26 @@ inline auto range(int max);
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const std::vector<T>& vals);
+inline auto enumerate(const vector<T>& vals);
 template <typename T>
-inline auto enumerate(std::vector<T>& vals);
+inline auto enumerate(vector<T>& vals);
 
 // Vector append and concatenation
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b);
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const T& b);
+inline vector<T>& operator+=(vector<T>& a, const T& b);
 template <typename T>
-inline std::vector<T> operator+(
-    const std::vector<T>& a, const std::vector<T>& b);
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const T& b);
+inline vector<T> operator+(const vector<T>& a, const T& b);
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
@@ -139,8 +152,8 @@ struct concurrent_queue {
   bool try_pop(T& value);
 
  private:
-  std::mutex    mutex;
-  std::deque<T> queue;
+  std::mutex mutex;
+  deque<T>   queue;
 };
 
 // Run a task asynchronously
@@ -148,9 +161,9 @@ template <typename Func, typename... Args>
 inline auto run_async(Func&& func, Args&&... args);
 
 // Check if an async task is ready
-inline bool is_valid(const std::future<void>& result);
-inline bool is_running(const std::future<void>& result);
-inline bool is_ready(const std::future<void>& result);
+inline bool is_valid(const future<void>& result);
+inline bool is_running(const future<void>& result);
+inline bool is_ready(const future<void>& result);
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
@@ -162,11 +175,11 @@ inline void parallel_for(int num, Func&& func);
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(std::vector<T>& values, Func&& func);
+inline void parallel_foreach(vector<T>& values, Func&& func);
 template <typename T, typename Func>
-inline void parallel_foreach(const std::vector<T>& values, Func&& func);
+inline void parallel_foreach(const vector<T>& values, Func&& func);
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 //
@@ -179,19 +192,19 @@ inline void parallel_foreach(const std::vector<T>& values, Func&& func);
 // -----------------------------------------------------------------------------
 // TIMING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // Range object to support Python-like iteration. Use with `range()`.
 struct range_helper {
@@ -235,43 +248,42 @@ struct enumerate_helper {
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const std::vector<T>& vals) {
+inline auto enumerate(const vector<T>& vals) {
   return enumerate_helper<const T>{vals.data(), vals.size()};
 }
 template <typename T>
-inline auto enumerate(std::vector<T>& vals) {
+inline auto enumerate(vector<T>& vals) {
   return enumerate_helper<T>{vals.data(), vals.size()};
 }
 
 // Vector append and concatenation
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
   a.insert(a.end(), b.begin(), b.end());
   return a;
 }
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const T& b) {
+inline vector<T>& operator+=(vector<T>& a, const T& b) {
   a.push_back(b);
   return a;
 }
 template <typename T>
-inline std::vector<T> operator+(
-    const std::vector<T>& a, const std::vector<T>& b) {
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
   auto c = a;
   return c += b;
 }
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const T& b) {
+inline vector<T> operator+(const vector<T>& a, const T& b) {
   auto c = a;
   return c += b;
 }
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::common {
+namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
@@ -305,12 +317,12 @@ inline auto run_async(Func&& func, Args&&... args) {
       std::forward<Args>(args)...);
 }
 // Check if an async task is ready
-inline bool is_valid(const std::future<void>& result) { return result.valid(); }
-inline bool is_running(const std::future<void>& result) {
+inline bool is_valid(const future<void>& result) { return result.valid(); }
+inline bool is_running(const future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) !=
                                std::future_status::ready;
 }
-inline bool is_ready(const std::future<void>& result) {
+inline bool is_ready(const future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                std::future_status::ready;
 }
@@ -319,9 +331,9 @@ inline bool is_ready(const std::future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = std::vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = std::thread::hardware_concurrency();
+  atomic<int> next_idx(begin);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, end]() {
@@ -343,16 +355,16 @@ inline void parallel_for(int num, Func&& func) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(std::vector<T>& values, Func&& func) {
+inline void parallel_foreach(vector<T>& values, Func&& func) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 template <typename T, typename Func>
-inline void parallel_foreach(const std::vector<T>& values, Func&& func) {
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
-}  // namespace yocto::common
+}  // namespace yocto
 
 #endif

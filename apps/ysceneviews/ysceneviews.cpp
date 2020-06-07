@@ -31,10 +31,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
-namespace sio = yocto::sceneio;
-namespace cli = yocto::commonio;
-namespace gui = yocto::gui;
+using namespace yocto;
 
 #include <atomic>
 #include <deque>
@@ -50,46 +47,46 @@ namespace sfs = ghc::filesystem;
 #endif
 
 namespace yocto::sceneio {
-void print_obj_camera(sio::camera* camera);
+void print_obj_camera(scene_camera* camera);
 };
 
 // Application state
 struct app_state {
   // loading parameters
-  std::string filename  = "scene.json";
-  std::string imagename = "out.png";
-  std::string outname   = "scene.json";
-  std::string name      = "";
+  string filename  = "scene.json";
+  string imagename = "out.png";
+  string outname   = "scene.json";
+  string name      = "";
 
   // options
-  gui::scene_params drawgl_prms = {};
+  ogl_scene_params drawgl_prms = {};
 
   // scene
-  sio::model*  ioscene  = new sio::model{};
-  sio::camera* iocamera = nullptr;
+  scene_model*  ioscene  = new scene_model{};
+  scene_camera* iocamera = nullptr;
 
   // rendering state
-  gui::scene*  glscene  = new gui::scene{};
-  gui::camera* glcamera = nullptr;
+  ogl_scene*  glscene  = new ogl_scene{};
+  ogl_camera* glcamera = nullptr;
 
   // editing
-  sio::camera*      selected_camera      = nullptr;
-  sio::object*      selected_object      = nullptr;
-  sio::instance*    selected_instance    = nullptr;
-  sio::shape*       selected_shape       = nullptr;
-  sio::subdiv*      selected_subdiv      = nullptr;
-  sio::material*    selected_material    = nullptr;
-  sio::environment* selected_environment = nullptr;
-  sio::texture*     selected_texture     = nullptr;
+  scene_camera*      selected_camera      = nullptr;
+  scene_object*      selected_object      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
+  scene_shape*       selected_shape       = nullptr;
+  scene_subdiv*      selected_subdiv      = nullptr;
+  scene_material*    selected_material    = nullptr;
+  scene_environment* selected_environment = nullptr;
+  scene_texture*     selected_texture     = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
+  string            status       = "";
+  string            error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  std::string       loader_error = "";
+  string            loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -97,7 +94,7 @@ struct app_state {
   }
 };
 
-void update_lights(gui::scene* glscene, sio::model* ioscene) {
+void update_lights(ogl_scene* glscene, scene_model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -123,13 +120,13 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
     }
     auto ke = ioobject->material->emission * area;
     set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke,
-        gui::light_type::point, false);
+        ogl_light_type::point, false);
   }
 }
 
-void init_glscene(gui::scene* glscene, sio::model* ioscene,
-    gui::camera*& glcamera, sio::camera* iocamera,
-    sio::progress_callback progress_cb) {
+void init_glscene(ogl_scene* glscene, scene_model* ioscene,
+    ogl_camera*& glcamera, scene_camera* iocamera,
+    progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
@@ -141,7 +138,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<sio::camera*, gui::camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, ogl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -153,7 +150,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<sio::texture*, gui::texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -171,7 +168,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // material
-  auto material_map     = std::unordered_map<sio::material*, gui::material*>{};
+  auto material_map     = unordered_map<scene_material*, ogl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -200,7 +197,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<sio::shape*, gui::shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -218,7 +215,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = std::unordered_map<sio::instance*, gui::instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, ogl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -251,43 +248,43 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("ysceneviews", "views scene inteactively");
+  auto cli = make_cli("ysceneviews", "views scene inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
   add_option(cli, "--shading", app->drawgl_prms.shading, "Eyelight rendering.",
-      gui::shading_names);
+      ogl_shading_names);
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // loading scene
   auto ioerror = ""s;
-  if (!load_scene(app->filename, app->ioscene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!load_scene(app->filename, app->ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // get camera
   app->iocamera = get_camera(app->ioscene, camera_name);
 
   // callbacks
-  auto callbacks    = gui::ui_callbacks{};
-  callbacks.init_cb = [app](gui::window* win, const gui::input& input) {
+  auto callbacks    = gui_callbacks{};
+  callbacks.init_cb = [app](gui_window* win, const gui_input& input) {
     init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
-        [app](const std::string& message, int current, int total) {
+        [app](const string& message, int current, int total) {
           app->status  = "init scene";
           app->current = current;
           app->total   = total;
         });
   };
-  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_scene(app->glscene);
   };
-  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
-    if (app->drawgl_prms.shading == gui::shading_type::lights)
+  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
+    if (app->drawgl_prms.shading == ogl_shading_type::lights)
       update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
   };
-  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
     if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
@@ -298,7 +295,7 @@ int main(int argc, const char* argv[]) {
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);
-    draw_combobox(win, "shading", (int&)params.shading, gui::shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
     continue_line(win);
@@ -308,10 +305,10 @@ int main(int argc, const char* argv[]) {
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
   };
-  callbacks.update_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.update_cb = [app](gui_window* win, const gui_input& input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {

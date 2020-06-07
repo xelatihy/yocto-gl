@@ -31,45 +31,39 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
-namespace sio = yocto::sceneio;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace trc = yocto::trace;
-namespace gui = yocto::gui;
+using namespace yocto;
 
 #include <future>
 #include <memory>
-using namespace std::string_literals;
 
 // Application state
 struct app_state {
   // loading options
-  std::string filename  = "scene.yaml";
-  std::string imagename = "out.png";
-  std::string name      = "";
+  string filename  = "scene.yaml";
+  string imagename = "out.png";
+  string name      = "";
 
   // options
-  trc::trace_params params = {};
+  trace_params params = {};
 
   // scene
-  trc::scene*              scene        = new trc::scene{};
-  trc::camera*             camera       = nullptr;
-  std::vector<std::string> camera_names = {};
+  trace_scene*   scene        = new trace_scene{};
+  trace_camera*  camera       = nullptr;
+  vector<string> camera_names = {};
 
   // rendering state
-  img::image<vec4f> render   = {};
-  img::image<vec4f> display  = {};
-  float             exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  gui::image*       glimage  = new gui::image{};
-  gui::image_params glparams = {};
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
 
   // computation
-  int         render_sample  = 0;
-  int         render_counter = 0;
-  trc::state* render_state   = new trc::state{};
+  int          render_sample  = 0;
+  int          render_counter = 0;
+  trace_state* render_state   = new trace_state{};
 
   // status
   std::atomic<int> current = 0;
@@ -77,7 +71,7 @@ struct app_state {
 
   ~app_state() {
     if (render_state) {
-      trc::trace_stop(render_state);
+      trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -86,8 +80,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
-    sio::camera* iocamera, sio::progress_callback print_progress = {}) {
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
+    scene_camera* iocamera, progress_callback print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -95,7 +89,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -108,7 +102,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::texture*, trc::texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -126,7 +120,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -162,7 +156,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::shape*, trc::shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -181,7 +175,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -218,8 +212,8 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 }
 
 // init camera names
-void init_camera_names(std::vector<std::string>& names,
-    const std::vector<sio::camera*>&             iocameras) {
+void init_camera_names(
+    vector<string>& names, const vector<scene_camera*>& iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
   }
@@ -227,23 +221,23 @@ void init_camera_names(std::vector<std::string>& names,
 
 void reset_display(app_state* app) {
   // stop render
-  trc::trace_stop(app->render_state);
+  trace_stop(app->render_state);
 
   // start render
   app->render_counter = 0;
-  trc::trace_start(
+  trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const std::string& message, int sample, int nsamples) {
+      [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },
-      [app](const img::image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const img::image<vec4f>& render, int current, int total,
-          const vec2i& ij) {
+      [app](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
@@ -259,15 +253,15 @@ int main(int argc, const char* argv[]) {
   auto add_skyenv  = false;
 
   // parse command line
-  auto cli = cli::make_cli("yscnitraces", "progressive path tracing");
+  auto cli = make_cli("yscnitraces", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      trc::sampler_names);
+      trace_sampler_names);
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trace_falsecolor_names);
   add_option(
       cli, "--bounces,-b", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
@@ -275,18 +269,18 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", app->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", app->params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", app->params.bvh, "Bvh type", bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output,-o", app->imagename, "Image output");
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<sio::model>();
+  auto ioscene_guard = std::make_unique<scene_model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(app->filename, ioscene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // add sky
   if (add_skyenv) add_sky(ioscene);
@@ -295,7 +289,7 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // conversion
-  init_scene(app->scene, ioscene, app->camera, iocamera, cli::print_progress);
+  init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 
   // camera names
   init_camera_names(app->camera_names, ioscene->cameras);
@@ -304,26 +298,26 @@ int main(int argc, const char* argv[]) {
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(app->scene, app->params, cli::print_progress);
+  init_bvh(app->scene, app->params, print_progress);
 
   // init renderer
-  init_lights(app->scene, cli::print_progress);
+  init_lights(app->scene, print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    cli::print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = trc::sampler_type::eyelight;
+    print_info("no lights presents, switching to eyelight shader");
+    app->params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
   reset_display(app);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_image(app->glimage);
   };
-  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
     if (!is_initialized(app->glimage)) init_image(app->glimage);
     if (!app->render_counter)
       set_image(app->glimage, app->display, false, false);
@@ -335,7 +329,7 @@ int main(int argc, const char* argv[]) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   };
-  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
@@ -344,9 +338,9 @@ int main(int argc, const char* argv[]) {
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trc::sampler_names);
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
     edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trc::falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_line(win);
@@ -356,8 +350,8 @@ int main(int argc, const char* argv[]) {
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
   };
-  callbacks.char_cb = [app](gui::window* win, unsigned int key,
-                          const gui::input& input) {
+  callbacks.char_cb = [app](gui_window* win, unsigned int key,
+                          const gui_input& input) {
     switch (key) {
       case 'c': {
         auto ncameras = (int)app->scene->cameras.size();
@@ -370,21 +364,22 @@ int main(int argc, const char* argv[]) {
         }
       } break;
       case 'f':
-        app->params.sampler = trc::sampler_type::falsecolor;
+        app->params.sampler = trace_sampler_type::falsecolor;
         reset_display(app);
         break;
       case 'p':
-        app->params.sampler = trc::sampler_type::path;
+        app->params.sampler = trace_sampler_type::path;
         reset_display(app);
         break;
       case 'F':
-        app->params.falsecolor = (trc::falsecolor_type)(
-            ((int)app->params.falsecolor + 1) % (int)trc::sampler_names.size());
+        app->params.falsecolor = (trace_falsecolor_type)(
+            ((int)app->params.falsecolor + 1) %
+            (int)trace_sampler_names.size());
         reset_display(app);
         break;
     }
   };
-  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;
