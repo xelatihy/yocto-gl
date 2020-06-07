@@ -208,6 +208,16 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::vector;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto::math {
@@ -388,7 +398,7 @@ using vec2b = vec<byte, 2>;
 using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 
-// Zero std::vector constants.
+// Zero vector constants.
 inline const auto zero1f = vec1f{0};
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
@@ -484,7 +494,7 @@ inline vec<T, 3> orthogonal(const vec<T, 3>& v);
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
 
-// Reflected and refracted std::vector.
+// Reflected and refracted vector.
 template <typename T>
 inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
 template <typename T>
@@ -520,7 +530,7 @@ inline T sum(const vec<T, N>& a);
 template <typename T, size_t N>
 inline T mean(const vec<T, N>& a);
 
-// Functions applied to std::vector elements
+// Functions applied to vector elements
 template <typename T, size_t N>
 inline vec<T, N> abs(const vec<T, N>& a);
 template <typename T, size_t N>
@@ -562,7 +572,7 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a);
 // -----------------------------------------------------------------------------
 namespace std {
 
-// Hash functor for std::vector for use with hash_map
+// Hash functor for vector for use with hash_map
 template <typename T, size_t N>
 struct hash<yocto::math::vec<T, N>>;
 
@@ -1352,7 +1362,7 @@ inline vec4f rand4f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(std::vector<T>& vals, rng_state& rng);
+inline void shuffle(vector<T>& vals, rng_state& rng);
 
 }  // namespace yocto::math
 
@@ -1694,30 +1704,30 @@ inline T sample_uniform_pdf(int size);
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline T sample_uniform(const std::vector<T>& elements, T r);
+inline T sample_uniform(const vector<T>& elements, T r);
 template <typename T>
-inline T sample_uniform_pdf(const std::vector<T>& elements);
+inline T sample_uniform_pdf(const vector<T>& elements);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-[[deprecated]] inline int sample_discrete(const std::vector<T>& cdf, T r);
+[[deprecated]] inline int sample_discrete(const vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-[[deprecated]] inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx);
+[[deprecated]] inline T sample_discrete_pdf(const vector<T>& cdf, int idx);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_cdf(const std::vector<T>& cdf, T r);
+inline int sample_discrete_cdf(const vector<T>& cdf, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_cdf_pdf(const std::vector<T>& cdf, int idx);
+inline T sample_discrete_cdf_pdf(const vector<T>& cdf, int idx);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_weights(const std::vector<T>& weights, T r);
+inline int sample_discrete_weights(const vector<T>& weights, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_weights_pdf(const std::vector<T>& weights, int idx);
+inline T sample_discrete_weights_pdf(const vector<T>& weights, int idx);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T, size_t N>
@@ -2493,7 +2503,7 @@ inline T mean(const vec<T, N>& a) {
   return sum(a) / (T)N;
 }
 
-// Functions applied to std::vector elements
+// Functions applied to vector elements
 template <typename T, size_t N>
 inline vec<T, N> abs(const vec<T, N>& a) {
   if constexpr (N == 1) {
@@ -2668,7 +2678,7 @@ inline vec<T, N> quat_inverse(const vec<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace std {
 
-// Hash functor for std::vector for use with hash_map
+// Hash functor for vector for use with hash_map
 template <typename T, size_t N>
 struct hash<yocto::math::vec<T, N>> {
   size_t operator()(const yocto::math::vec<T, N>& v) const {
@@ -3220,7 +3230,7 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
 // -----------------------------------------------------------------------------
 namespace yocto::math {
 
-// Axis aligned bounding box represented as a min/max std::vector pairs.
+// Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T, size_t N>
 inline bbox<T, N>::bbox() {}
 template <typename T, size_t N>
@@ -4474,7 +4484,7 @@ inline vec4f rand4f(rng_state& rng) {
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(std::vector<T>& vals, rng_state& rng) {
+inline void shuffle(vector<T>& vals, rng_state& rng) {
   // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
   for (auto i = (int)vals.size() - 1; i > 0; i--) {
     auto j = rand1i(rng, i + 1);
@@ -5553,20 +5563,20 @@ inline T sample_uniform_pdf(int size) {
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline T sample_uniform(const std::vector<T>& elements, T r) {
+inline T sample_uniform(const vector<T>& elements, T r) {
   if (elements.empty()) return {};
   auto size = (int)elements.size();
   return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline T sample_uniform_pdf(const std::vector<T>& elements) {
+inline T sample_uniform_pdf(const vector<T>& elements) {
   if (elements.empty()) return 0;
   return (T)1 / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete(const std::vector<T>& cdf, T r) {
+inline int sample_discrete(const vector<T>& cdf, T r) {
   r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
@@ -5574,14 +5584,14 @@ inline int sample_discrete(const std::vector<T>& cdf, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx) {
+inline T sample_discrete_pdf(const vector<T>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_cdf(const std::vector<T>& cdf, T r) {
+inline int sample_discrete_cdf(const vector<T>& cdf, T r) {
   r        = clamp(r * cdf.back(), (T)0, cdf.back() - (T)0.00001);
   auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                    cdf.data());
@@ -5589,14 +5599,14 @@ inline int sample_discrete_cdf(const std::vector<T>& cdf, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline T sample_discrete_cdf_pdf(const std::vector<T>& cdf, int idx) {
+inline T sample_discrete_cdf_pdf(const vector<T>& cdf, int idx) {
   if (idx == 0) return cdf.at(0);
   return cdf.at(idx) - cdf.at(idx - 1);
 }
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T>
-inline int sample_discrete_weights(const std::vector<T>& weights, T r) {
+inline int sample_discrete_weights(const vector<T>& weights, T r) {
   auto sum = T{0};
   for (auto weight : weights) sum += weight;
   r            = clamp(r * sum, T{0}, sum - T{0.00001});
@@ -5609,8 +5619,7 @@ inline int sample_discrete_weights(const std::vector<T>& weights, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline float sample_discrete_weights_pdf(
-    const std::vector<T>& weights, int idx) {
+inline float sample_discrete_weights_pdf(const vector<T>& weights, int idx) {
   return weights[idx];
 }
 

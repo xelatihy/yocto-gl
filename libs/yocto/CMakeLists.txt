@@ -1,6 +1,8 @@
 add_library(yocto
   yocto_math.h yocto_commonio.h yocto_common.h 
-  yocto_ply.h yocto_obj.h yocto_pbrt.h 
+  yocto_ply.h yocto_ply.cpp
+  yocto_obj.h yocto_obj.cpp
+  yocto_pbrt.h yocto_pbrt.cpp
   yocto_shape.h yocto_shape.cpp 
   yocto_image.h yocto_image.cpp
   yocto_trace.h yocto_trace.cpp

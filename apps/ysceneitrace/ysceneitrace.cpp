@@ -31,78 +31,72 @@
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
-namespace sio = yocto::sceneio;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace trc = yocto::trace;
-namespace gui = yocto::gui;
+using namespace yocto;
 
 #include <atomic>
 #include <deque>
 #include <future>
-using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-namespace yocto::sceneio {
-void print_obj_camera(sio::camera* camera);
-};  // namespace yocto::sceneio
+namespace yocto {
+void print_obj_camera(scene_camera* camera);
+};  // namespace yocto
 
 // Application scene
 struct app_state {
   // loading options
-  std::string filename  = "app->yaml";
-  std::string imagename = "out.png";
-  std::string outname   = "out.yaml";
-  std::string name      = "";
+  string filename  = "app->yaml";
+  string imagename = "out.png";
+  string outname   = "out.yaml";
+  string name      = "";
 
   // scene
-  sio::model*  ioscene  = new sio::model{};
-  trc::scene*  scene    = new trc::scene{};
-  sio::camera* iocamera = nullptr;
-  trc::camera* camera   = nullptr;
+  scene_model*  ioscene  = new scene_model{};
+  trace_scene*  scene    = new trace_scene{};
+  scene_camera* iocamera = nullptr;
+  trace_camera* camera   = nullptr;
 
   // options
-  trc::trace_params params = {};
+  trace_params params = {};
 
   // rendering state
-  img::image<vec4f> render   = {};
-  img::image<vec4f> display  = {};
-  float             exposure = 0;
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  gui::image*       glimage  = new gui::image{};
-  gui::image_params glparams = {};
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
 
   // editing
-  sio::camera*      selected_camera      = nullptr;
-  sio::object*      selected_object      = nullptr;
-  sio::instance*    selected_instance    = nullptr;
-  sio::shape*       selected_shape       = nullptr;
-  sio::subdiv*      selected_subdiv      = nullptr;
-  sio::material*    selected_material    = nullptr;
-  sio::environment* selected_environment = nullptr;
-  sio::texture*     selected_texture     = nullptr;
+  scene_camera*      selected_camera      = nullptr;
+  scene_object*      selected_object      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
+  scene_shape*       selected_shape       = nullptr;
+  scene_subdiv*      selected_subdiv      = nullptr;
+  scene_material*    selected_material    = nullptr;
+  scene_environment* selected_environment = nullptr;
+  scene_texture*     selected_texture     = nullptr;
 
   // computation
-  int         render_sample  = 0;
-  int         render_counter = 0;
-  trc::state* render_state   = new trc::state{};
+  int          render_sample  = 0;
+  int          render_counter = 0;
+  trace_state* render_state   = new trace_state{};
 
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  std::string       status       = "";
-  std::string       error        = "";
+  string            status       = "";
+  string            error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  std::string       loader_error = "";
+  string            loader_error = "";
 
   ~app_state() {
     if (render_state) {
-      trc::trace_stop(render_state);
+      trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -114,13 +108,13 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::vector<app_state*> states   = {};
-  app_state*              selected = nullptr;
-  std::deque<app_state*>  loading  = {};
+  vector<app_state*>     states   = {};
+  app_state*             selected = nullptr;
+  std::deque<app_state*> loading  = {};
 
   // default options
-  trc::trace_params params     = {};
-  bool              add_skyenv = false;
+  trace_params params     = {};
+  bool         add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -129,8 +123,8 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
-    sio::camera* iocamera, sio::progress_callback progress_cb = {}) {
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
+    scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -138,7 +132,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -151,7 +145,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::texture*, trc::texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -169,7 +163,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -205,7 +199,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::shape*, trc::shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -223,7 +217,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -261,36 +255,36 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
 
 void stop_display(app_state* app) {
   // stop render
-  trc::trace_stop(app->render_state);
+  trace_stop(app->render_state);
 }
 
 void reset_display(app_state* app) {
   // stop render
-  trc::trace_stop(app->render_state);
+  trace_stop(app->render_state);
 
   // start render
   app->status         = "render";
   app->render_counter = 0;
-  trc::trace_start(
+  trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const std::string& message, int sample, int nsamples) {
+      [app](const string& message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },
-      [app](const img::image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const img::image<vec4f>& render, int current, int total,
-          const vec2i& ij) {
+      [app](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
 }
 
-void load_scene_async(app_states* apps, const std::string& filename,
-    const std::string& camera_name = "", bool add_skyenv = false) {
+void load_scene_async(app_states* apps, const string& filename,
+    const string& camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = sfs::path(filename).filename().string() + " [loading]";
   app->filename  = filename;
@@ -298,34 +292,33 @@ void load_scene_async(app_states* apps, const std::string& filename,
   app->outname   = sfs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
   app->status    = "load";
-  app->loader    = std::async(
-      std::launch::async, [app, camera_name, add_skyenv]() {
-        auto progress_cb = [app](const std::string& message, int current,
-                               int total) {
-          app->current = current;
-          app->total   = total;
-        };
-        if (!load_scene(
-                app->filename, app->ioscene, app->loader_error, progress_cb))
-          return;
-        app->current = 1;
-        app->total   = 1;
-        if (add_skyenv) add_sky(app->ioscene);
-        app->iocamera = get_camera(app->ioscene, camera_name);
-        init_scene(
-            app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
-        init_bvh(app->scene, app->params);
-        init_lights(app->scene);
-        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-          app->params.sampler = trc::sampler_type::eyelight;
-        }
-      });
+  app->loader    = std::async(std::launch::async, [app, camera_name,
+                                                   add_skyenv]() {
+    auto progress_cb = [app](const string& message, int current, int total) {
+      app->current = current;
+      app->total   = total;
+    };
+    if (!load_scene(
+            app->filename, app->ioscene, app->loader_error, progress_cb))
+      return;
+    app->current = 1;
+    app->total   = 1;
+    if (add_skyenv) add_sky(app->ioscene);
+    app->iocamera = get_camera(app->ioscene, camera_name);
+    init_scene(
+        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    init_bvh(app->scene, app->params);
+    init_lights(app->scene);
+    if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+      app->params.sampler = trace_sampler_type::eyelight;
+    }
+  });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::camera* iocamera) {
+    gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -351,7 +344,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::texture* iotexture) {
+    gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
@@ -372,7 +365,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::material* iomaterial) {
+    gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -419,7 +412,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui::window* win, sio::model* ioscene, sio::shape* ioshape) {
+bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -437,7 +430,7 @@ bool draw_widgets(gui::window* win, sio::model* ioscene, sio::shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::instance* ioinstance) {
+    gui_window* win, scene_model* ioscene, scene_instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -446,7 +439,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::object* ioobject) {
+    gui_window* win, scene_model* ioscene, scene_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -463,7 +456,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::subdiv* iosubdiv) {
+    gui_window* win, scene_model* ioscene, scene_subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -478,7 +471,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::environment* ioenvironment) {
+    gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -493,8 +486,8 @@ bool draw_widgets(
 }
 
 template <typename T, typename T1>
-T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
-    const std::vector<T1*>& elements) {
+T1* get_element(
+    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -502,8 +495,8 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
   throw std::runtime_error("element not found");
 }
 
-void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
-  static std::string load_path = "", save_path = "", error_message = "";
+void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
+  static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
@@ -561,9 +554,9 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trc::sampler_names);
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
     edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trc::falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_line(win);
@@ -594,7 +587,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
       }
       continue_line(win);
       if (draw_button(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene)) cli::print_info(stat);
+        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
@@ -609,7 +602,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
     }
     end_header(win);
   }
-  auto get_texture = [app](sio::texture* iotexture) {
+  auto get_texture = [app](scene_texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {
@@ -769,7 +762,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
   }
 }
 
-void draw(gui::window* win, app_states* apps, const gui::input& input) {
+void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -783,7 +776,7 @@ void draw(gui::window* win, app_states* apps, const gui::input& input) {
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(gui::window* win, app_states* apps) {
+void update(gui_window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -809,20 +802,20 @@ int main(int argc, const char* argv[]) {
   // application
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = std::vector<std::string>{};
+  auto filenames   = vector<string>{};
   auto add_skyenv  = false;
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("yscnitrace", "progressive path tracing");
+  auto cli = make_cli("yscnitrace", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      trc::sampler_names);
+      trace_sampler_names);
   add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trace_falsecolor_names);
   add_option(
       cli, "--bounces,-b", apps->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
@@ -830,7 +823,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
@@ -840,25 +833,24 @@ int main(int argc, const char* argv[]) {
     load_scene_async(apps, filename, camera_name, add_skyenv);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [apps](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
     for (auto app : apps->states) clear_image(app->glimage);
   };
-  callbacks.draw_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
     draw(win, apps, input);
   };
-  callbacks.widgets_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui::window*                 win,
-                          const std::vector<std::string>& paths,
-                          const gui::input&               input) {
+  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
+                          const gui_input& input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
-  callbacks.update_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
     update(win, apps);
   };
-  callbacks.uiupdate_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 
