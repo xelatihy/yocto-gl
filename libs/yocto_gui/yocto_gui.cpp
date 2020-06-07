@@ -238,35 +238,35 @@ void clear_texture(ogl_texture* texture) {
   texture->mipmap     = false;
 }
 
-void set_texture(ogl_texture* texture, const image<vec4b>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<vec4f>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const image<vec3b>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec3b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<vec3f>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<vec3f>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const image<byte>& img,
-    bool as_srgb, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<byte>& img, bool as_srgb,
+    bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const image<float>& img,
-    bool as_float, bool linear, bool mipmap) {
+void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
+    bool linear, bool mipmap) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
       linear, mipmap);
 }
@@ -748,8 +748,8 @@ int get_uniform_location(ogl_program* program, const char* name) {
 }
 
 // set uniform texture
-void set_uniform(ogl_program* program, int location,
-    const ogl_texture* texture, int unit) {
+void set_uniform(
+    ogl_program* program, int location, const ogl_texture* texture, int unit) {
   assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
@@ -1149,9 +1149,7 @@ void init_scene(ogl_scene* scene) {
   init_program(
       scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(ogl_scene* scene) {
-  return is_initialized(scene->program);
-}
+bool is_initialized(ogl_scene* scene) { return is_initialized(scene->program); }
 
 // Clear an OpenGL shape
 void clear_shape(ogl_shape* shape) {
@@ -1259,9 +1257,7 @@ ogl_object* add_object(ogl_scene* scene) {
 void set_frame(ogl_object* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(ogl_object* object, ogl_shape* shape) {
-  object->shape = shape;
-}
+void set_shape(ogl_object* object, ogl_shape* shape) { object->shape = shape; }
 void set_material(ogl_object* object, ogl_material* material) {
   object->material = material;
 }
@@ -1285,8 +1281,8 @@ void set_frames(ogl_instance* instance, const std::vector<frame3f>& frames) {
 ogl_material* add_material(ogl_scene* scene) {
   return scene->materials.emplace_back(new ogl_material{});
 }
-void set_emission(ogl_material* material, const vec3f& emission,
-    ogl_texture* emission_tex) {
+void set_emission(
+    ogl_material* material, const vec3f& emission, ogl_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
@@ -1374,16 +1370,16 @@ void draw_object(
   set_uniform(scene->program, "roughness", material->roughness);
   set_uniform(scene->program, "opacity", material->opacity);
   set_uniform(scene->program, "double_sided", (int)params.double_sided);
-  set_uniform(
-      scene->program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(scene->program, "emission_tex", "emission_tex_on",
+      material->emission_tex, 0);
   set_uniform(
       scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(
-      scene->program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(scene->program, "specular_tex", "specular_tex_on",
+      material->metallic_tex, 2);
   set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
       material->roughness_tex, 3);
-  set_uniform(
-      scene->program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(scene->program, "opacity_tex", "opacity_tex_on",
+      material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
 
@@ -1446,8 +1442,8 @@ void draw_object(
 // Display a scene
 void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
     const ogl_scene_params& params) {
-  static auto camera_light0 = ogl_light{
-      normalize(vec3f{1, 1, 1}), vec3f{pif / 2}, ogl_light_type::directional, true};
+  static auto camera_light0 = ogl_light{normalize(vec3f{1, 1, 1}),
+      vec3f{pif / 2}, ogl_light_type::directional, true};
   static auto camera_light1 = ogl_light{normalize(vec3f{-1, 1, 1}),
       vec3f{pif / 2}, ogl_light_type::directional, true};
   static auto camera_light2 = ogl_light{normalize(vec3f{-1, -1, 1}),
@@ -1480,7 +1476,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   if (params.shading == ogl_shading_type::lights ||
       params.shading == ogl_shading_type::camlights) {
     auto& lights = params.shading == ogl_shading_type::lights ? scene->lights
-                                                          : camera_lights;
+                                                              : camera_lights;
     set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
     set_uniform(scene->program, "lnum", (int)lights.size());
     auto lid = 0;
@@ -1524,8 +1520,8 @@ void run_ui(const vec2i& size, const std::string& title,
     const gui_callbacks& callbacks, int widgets_width, bool widgets_left) {
   auto win_guard = std::make_unique<gui_window>();
   auto win       = win_guard.get();
-  init_window(
-      win, size, title, (bool)callbacks.widgets_cb, widgets_width, widgets_left);
+  init_window(win, size, title, (bool)callbacks.widgets_cb, widgets_width,
+      widgets_left);
 
   set_init_callback(win, callbacks.init_cb);
   set_clear_callback(win, callbacks.clear_cb);
@@ -1767,15 +1763,11 @@ void run_ui(gui_window* win) {
   if (win->clear_cb) win->clear_cb(win, win->input);
 }
 
-void set_init_callback(gui_window* win, init_callback cb) {
-  win->init_cb = cb;
-}
+void set_init_callback(gui_window* win, init_callback cb) { win->init_cb = cb; }
 void set_clear_callback(gui_window* win, clear_callback cb) {
   win->clear_cb = cb;
 }
-void set_draw_callback(gui_window* win, draw_callback cb) {
-  win->draw_cb = cb;
-}
+void set_draw_callback(gui_window* win, draw_callback cb) { win->draw_cb = cb; }
 void set_widgets_callback(gui_window* win, widgets_callback cb) {
   win->widgets_cb = cb;
 }
@@ -1783,9 +1775,7 @@ void set_drop_callback(gui_window* win, drop_callback drop_cb) {
   win->drop_cb = drop_cb;
 }
 void set_key_callback(gui_window* win, key_callback cb) { win->key_cb = cb; }
-void set_char_callback(gui_window* win, char_callback cb) {
-  win->char_cb = cb;
-}
+void set_char_callback(gui_window* win, char_callback cb) { win->char_cb = cb; }
 void set_click_callback(gui_window* win, click_callback cb) {
   win->click_cb = cb;
 }
@@ -2164,20 +2154,20 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4f& value, float speed,
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger(
-    gui_window* win, const char* lbl, int& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, int& value, float speed,
+    int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger(
-    gui_window* win, const char* lbl, vec2i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec2i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(
-    gui_window* win, const char* lbl, vec3i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec3i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger(
-    gui_window* win, const char* lbl, vec4i& value, float speed, int min, int max) {
+bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
+    int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 

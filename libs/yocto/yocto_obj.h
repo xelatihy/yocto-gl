@@ -149,16 +149,16 @@ struct obj_material {
 
 // Obj shape
 struct obj_shape {
-  std::string            name      = "";
-  std::vector<vec3f>     positions = {};
-  std::vector<vec3f>     normals   = {};
-  std::vector<vec2f>     texcoords = {};
+  std::string                name      = "";
+  std::vector<vec3f>         positions = {};
+  std::vector<vec3f>         normals   = {};
+  std::vector<vec2f>         texcoords = {};
   std::vector<obj_material*> materials = {};
   std::vector<obj_vertex>    vertices  = {};
   std::vector<obj_element>   faces     = {};
   std::vector<obj_element>   lines     = {};
   std::vector<obj_element>   points    = {};
-  std::vector<frame3f>   instances = {};
+  std::vector<frame3f>       instances = {};
 };
 
 // Obj camera
@@ -178,12 +178,12 @@ struct obj_environment {
   std::string name         = "";
   frame3f     frame        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
-  obj_texture     emission_tex = {};
+  obj_texture emission_tex = {};
 };
 
 // Obj model
 struct obj_model {
-  std::vector<std::string>       comments     = {};
+  std::vector<std::string>      comments     = {};
   std::vector<obj_shape*>       shapes       = {};
   std::vector<obj_material*>    materials    = {};
   std::vector<obj_camera*>      cameras      = {};
@@ -256,8 +256,8 @@ void set_quads(obj_shape* shape, const std::vector<vec4i>& quads,
     const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 void set_lines(obj_shape* shape, const std::vector<vec2i>& lines,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>& texcoords, const std::vector<int>& ematerials = {},
-    bool flip_texcoord = false);
+    const std::vector<vec2f>& texcoords,
+    const std::vector<int>& ematerials = {}, bool flip_texcoord = false);
 void set_points(obj_shape* shape, const std::vector<int>& points,
     const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
     const std::vector<vec2f>& texcoords,
@@ -272,7 +272,7 @@ void set_materials(
     obj_shape* shape, const std::vector<obj_material*>& materials);
 void set_instances(obj_shape* shape, const std::vector<frame3f>& instances);
 
-}  // namespace yocto::obj
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HELPER FOR DICTIONARIES

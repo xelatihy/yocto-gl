@@ -55,7 +55,7 @@ struct ply_property {
   // description
   std::string name    = "";
   bool        is_list = false;
-  ply_type      type    = ply_type::f32;
+  ply_type    type    = ply_type::f32;
 
   // data
   std::vector<int8_t>   data_i8  = {};
@@ -76,8 +76,8 @@ struct ply_property {
 // Ply elements
 struct ply_element {
   // element content
-  std::string                 name       = "";
-  size_t                      count      = 0;
+  std::string                name       = "";
+  size_t                     count      = 0;
   std::vector<ply_property*> properties = {};
 
   // cleanup
@@ -90,8 +90,8 @@ enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
 // Ply model
 struct ply_model {
   // ply content
-  ply_format                 format   = ply_format::binary_little_endian;
-  std::vector<std::string>   comments = {};
+  ply_format                format   = ply_format::binary_little_endian;
+  std::vector<std::string>  comments = {};
   std::vector<ply_element*> elements = {};
 
   // cleanup

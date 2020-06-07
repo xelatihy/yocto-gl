@@ -579,12 +579,14 @@ image<byte> float_to_byte(const image<float>& fl) {
 // Conversion from/to floats.
 image<float> ushort_to_float(const image<ushort>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::ushort_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++)
+    fl[i] = yocto::ushort_to_float(bt[i]);
   return fl;
 }
 image<ushort> float_to_ushort(const image<float>& fl) {
   auto bt = image<ushort>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_ushort(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++)
+    bt[i] = yocto::float_to_ushort(fl[i]);
   return bt;
 }
 
@@ -639,7 +641,8 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.size()};
-  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = yocto::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++)
+    rgb[i] = yocto::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
@@ -963,9 +966,8 @@ void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_fbm(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }

@@ -48,22 +48,22 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene*              scene        = new trace_scene{};
-  trace_camera*             camera       = nullptr;
+  trace_scene*             scene        = new trace_scene{};
+  trace_camera*            camera       = nullptr;
   std::vector<std::string> camera_names = {};
 
   // rendering state
   image<vec4f> render   = {};
   image<vec4f> display  = {};
-  float             exposure = 0;
+  float        exposure = 0;
 
   // view scene
   ogl_image*       glimage  = new ogl_image{};
   ogl_image_params glparams = {};
 
   // computation
-  int         render_sample  = 0;
-  int         render_counter = 0;
+  int          render_sample  = 0;
+  int          render_counter = 0;
   trace_state* render_state   = new trace_state{};
 
   // status
@@ -121,7 +121,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trace_material*>{};
+  auto material_map = std::unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -176,7 +176,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map = std::unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -214,7 +214,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
 
 // init camera names
 void init_camera_names(std::vector<std::string>& names,
-    const std::vector<scene_camera*>&             iocameras) {
+    const std::vector<scene_camera*>&            iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
   }
@@ -237,8 +237,8 @@ void reset_display(app_state* app) {
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const image<vec4f>& render, int current, int total,
-          const vec2i& ij) {
+      [app](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
@@ -374,7 +374,8 @@ int main(int argc, const char* argv[]) {
         break;
       case 'F':
         app->params.falsecolor = (trace_falsecolor_type)(
-            ((int)app->params.falsecolor + 1) % (int)trace_sampler_names.size());
+            ((int)app->params.falsecolor + 1) %
+            (int)trace_sampler_names.size());
         reset_display(app);
         break;
     }

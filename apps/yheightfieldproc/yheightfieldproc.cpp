@@ -52,8 +52,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "heightfield.png"s;
 
   // parse command line
-  auto cli = make_cli(
-      "yheightfieldproc", "Makes a mesh from a heightfield");
+  auto cli = make_cli("yheightfieldproc", "Makes a mesh from a heightfield");
   add_option(cli, "--height,-h", height, "Height scale");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
   add_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
@@ -84,12 +83,10 @@ int main(int argc, const char* argv[]) {
   auto ioerror = ""s;
   print_progress("load image", 0, 1);
   if (is_hdr_filename(filename)) {
-    if (!load_image(filename, heightfield, ioerror))
-      print_fatal(ioerror);
+    if (!load_image(filename, heightfield, ioerror)) print_fatal(ioerror);
   } else {
     auto heightfield16 = image<ushort>{};
-    if (!load_image(filename, heightfield16, ioerror))
-      print_fatal(ioerror);
+    if (!load_image(filename, heightfield16, ioerror)) print_fatal(ioerror);
     heightfield = ushort_to_float(heightfield16);
   }
   print_progress("load shape", 1, 1);
@@ -100,8 +97,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // create heightfield
-  make_heightfield(quads, positions, normals, texcoords,
-      heightfield.size(), heightfield.data_vector());
+  make_heightfield(quads, positions, normals, texcoords, heightfield.size(),
+      heightfield.data_vector());
   if (!smooth) normals.clear();
 
   // print info
@@ -128,8 +125,8 @@ int main(int argc, const char* argv[]) {
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
-          {}, {}, ioerror))
+  if (!save_shape(output, {}, {}, {}, quads, positions, normals, texcoords, {},
+          {}, ioerror))
     print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 

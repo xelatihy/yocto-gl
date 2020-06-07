@@ -60,15 +60,15 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  float                  exposure   = 0;
-  bool                   filmic     = false;
+  float             exposure   = 0;
+  bool              filmic     = false;
   colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  bool              colorgrade = false;
 
   // viewing properties
   ogl_image*       glimage   = new ogl_image{};
   ogl_image_params glparams  = {};
-  bool              glupdated = true;
+  bool             glupdated = true;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -91,8 +91,8 @@ struct app_states {
   std::deque<app_state*>  loading  = {};
 
   // default options
-  float                  exposure = 0;
-  bool                   filmic   = false;
+  float             exposure = 0;
+  bool              filmic   = false;
   colorgrade_params params   = {};
 
   // cleanup
@@ -338,9 +338,9 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   };
-  callbacks.drop_cb = [apps](gui_window*                 win,
+  callbacks.drop_cb = [apps](gui_window*                  win,
                           const std::vector<std::string>& paths,
-                          const gui_input&               input) {
+                          const gui_input&                input) {
     for (auto path : paths) load_image_async(apps, path);
   };
 

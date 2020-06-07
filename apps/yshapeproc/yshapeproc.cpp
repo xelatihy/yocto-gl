@@ -71,8 +71,7 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
   } else if (type == "default-uvcylinder") {
     make_uvcylinder(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder-rounded") {
-    make_rounded_uvcylinder(
-        quads, positions, normals, texcoords, {32, 32, 32});
+    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
   } else if (type == "default-geosphere") {
     make_geosphere(triangles, positions);
   } else if (type == "default-floor") {
@@ -114,8 +113,8 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32},
-        0.075, {1, 1}, 0.3 * 0.075);
+    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075,
+        {1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
@@ -127,12 +126,11 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords,
-        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
+    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
+        {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
-    make_floor(
-        quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
+    make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-quad") {
     make_rect(
         quads, positions, normals, texcoords, {1, 1}, {0.075, 0.075}, {1, 1});
@@ -140,11 +138,11 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     make_recty(
         quads, positions, normals, texcoords, {1, 1}, {0.075, 0.075}, {1, 1});
   } else if (type == "test-quad-displaced") {
-    make_rect(quads, positions, normals, texcoords, {256, 256},
-        {0.075, 0.075}, {1, 1});
+    make_rect(quads, positions, normals, texcoords, {256, 256}, {0.075, 0.075},
+        {1, 1});
   } else if (type == "test-quady-displaced") {
-    make_recty(quads, positions, normals, texcoords, {256, 256},
-        {0.075, 0.075}, {1, 1});
+    make_recty(quads, positions, normals, texcoords, {256, 256}, {0.075, 0.075},
+        {1, 1});
   } else if (type == "test-matball") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
@@ -154,8 +152,8 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     auto base_positions = std::vector<vec3f>{};
     auto base_normals   = std::vector<vec3f>{};
     auto base_texcoords = std::vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords,
-        32, 0.075f * 0.8f, 1);
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
@@ -167,8 +165,8 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     auto base_positions = std::vector<vec3f>{};
     auto base_normals   = std::vector<vec3f>{};
     auto base_texcoords = std::vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords,
-        32, 0.075f * 0.8f, 1);
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
@@ -179,16 +177,15 @@ bool make_shape_preset(vector<int>& points, std::vector<vec2i>& lines,
     auto base_positions = std::vector<vec3f>{};
     auto base_normals   = std::vector<vec3f>{};
     auto base_texcoords = std::vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords,
-        32, 0.075f * 0.8f, 1);
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
         base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
         {0.5, 128});
   } else if (type == "test-hairball-interior") {
-    make_sphere(
-        quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
+    make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
     make_monkey(quads, positions, 0.075f * 0.8f);
@@ -357,8 +354,8 @@ int main(int argc, const char* argv[]) {
               normals, texcoords, basename, ioerror))
         print_fatal(ioerror);
     } else {
-      if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
-              positions, normals, texcoords, ioerror))
+      if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords, ioerror))
         print_fatal(ioerror);
     }
   }
@@ -438,8 +435,8 @@ int main(int argc, const char* argv[]) {
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
     print_progress("compute geodesic", 0, 1);
     auto adjacencies = face_adjacencies(triangles);
-    auto solver  = make_geodesic_solver(triangles, adjacencies, positions);
-    auto sources = std::vector<int>();
+    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
+    auto sources     = std::vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {
@@ -468,7 +465,7 @@ int main(int argc, const char* argv[]) {
     print_progress("cut mesh", 0, 1);
     auto tags        = std::vector<int>(triangles.size(), 0);
     auto adjacencies = face_adjacencies(triangles);
-    auto solver = make_geodesic_solver(triangles, adjacencies, positions);
+    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
 
     auto               paths = std::vector<surface_path>();
     std::vector<float> fields[3];
@@ -523,12 +520,12 @@ int main(int argc, const char* argv[]) {
   // save mesh
   print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
-    if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords, ioerror))
+    if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, ioerror))
       print_fatal(ioerror);
   } else {
-    if (!save_shape(output, points, lines, triangles, quads, positions,
-            normals, texcoords, colors, radius, ioerror))
+    if (!save_shape(output, points, lines, triangles, quads, positions, normals,
+            texcoords, colors, radius, ioerror))
       print_fatal(ioerror);
   }
   print_progress("save shape", 1, 1);

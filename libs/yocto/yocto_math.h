@@ -4806,7 +4806,7 @@ inline vec3f sample_phasefunction(
     cos_theta = 1 - 2 * rn.y;
   } else {
     auto square = (1 - anisotropy * anisotropy) /
-                   (1 + anisotropy - 2 * anisotropy * rn.y);
+                  (1 + anisotropy - 2 * anisotropy * rn.y);
     cos_theta = (1 + anisotropy * anisotropy - square * square) /
                 (2 * anisotropy);
   }

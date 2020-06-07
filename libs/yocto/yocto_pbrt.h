@@ -35,12 +35,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <memory>
+#include <string>
+#include <vector>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
@@ -125,7 +125,7 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_model {
   // pbrt data
-  std::vector<std::string>        comments     = {};
+  std::vector<std::string>       comments     = {};
   std::vector<pbrt_camera*>      cameras      = {};
   std::vector<pbrt_shape*>       shapes       = {};
   std::vector<pbrt_environment*> environments = {};

@@ -30,8 +30,8 @@
 
 #include <cstdio>
 #include <memory>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
@@ -303,20 +303,19 @@ inline ply_property* add_property(ply_element* element) {
 }
 
 // Load ply
-bool load_ply(
-    const std::string& filename, ply_model* ply, std::string& error) {
+bool load_ply(const std::string& filename, ply_model* ply, std::string& error) {
   // ply type names
   static auto type_map = std::unordered_map<std::string, ply_type>{
-      {"char", ply_type::i8}, {"short", ply_type::i16},
-      {"int", ply_type::i32}, {"long", ply_type::i64},
-      {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
-      {"uint", ply_type::u32}, {"ulong", ply_type::u64},
-      {"float", ply_type::f32}, {"double", ply_type::f64},
-      {"int8", ply_type::i8}, {"int16", ply_type::i16},
-      {"int32", ply_type::i32}, {"int64", ply_type::i64},
-      {"uint8", ply_type::u8}, {"uint16", ply_type::u16},
-      {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
-      {"float32", ply_type::f32}, {"float64", ply_type::f64}};
+      {"char", ply_type::i8}, {"short", ply_type::i16}, {"int", ply_type::i32},
+      {"long", ply_type::i64}, {"uchar", ply_type::u8},
+      {"ushort", ply_type::u16}, {"uint", ply_type::u32},
+      {"ulong", ply_type::u64}, {"float", ply_type::f32},
+      {"double", ply_type::f64}, {"int8", ply_type::i8},
+      {"int16", ply_type::i16}, {"int32", ply_type::i32},
+      {"int64", ply_type::i64}, {"uint8", ply_type::u8},
+      {"uint16", ply_type::u16}, {"uint32", ply_type::u32},
+      {"uint64", ply_type::u64}, {"float32", ply_type::f32},
+      {"float64", ply_type::f64}};
 
   // initialize data
   ply->comments.clear();
@@ -393,7 +392,8 @@ bool load_ply(
       if (!parse_value(str, elem->count)) return parse_error();
     } else if (cmd == "property") {
       if (ply->elements.empty()) return parse_error();
-      auto prop = ply->elements.back()->properties.emplace_back(new ply_property{});
+      auto prop = ply->elements.back()->properties.emplace_back(
+          new ply_property{});
       auto tname = ""s;
       if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
@@ -563,15 +563,14 @@ bool load_ply(
 }
 
 // Save ply
-bool save_ply(
-    const std::string& filename, ply_model* ply, std::string& error) {
+bool save_ply(const std::string& filename, ply_model* ply, std::string& error) {
   // ply type names
   static auto type_map = std::unordered_map<ply_type, std::string>{
-      {ply_type::i8, "char"}, {ply_type::i16, "short"},
-      {ply_type::i32, "int"}, {ply_type::i64, "uint"},
-      {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
-      {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
-      {ply_type::f32, "float"}, {ply_type::f64, "double"}};
+      {ply_type::i8, "char"}, {ply_type::i16, "short"}, {ply_type::i32, "int"},
+      {ply_type::i64, "uint"}, {ply_type::u8, "uchar"},
+      {ply_type::u16, "ushort"}, {ply_type::u32, "uint"},
+      {ply_type::u64, "ulong"}, {ply_type::f32, "float"},
+      {ply_type::f64, "double"}};
   static auto format_map = std::unordered_map<ply_format, std::string>{
       {ply_format::ascii, "ascii"},
       {ply_format::binary_little_endian, "binary_little_endian"},
@@ -895,8 +894,7 @@ bool get_positions(ply_model* ply, std::vector<vec3f>& positions) {
 bool get_normals(ply_model* ply, std::vector<vec3f>& normals) {
   return get_values(ply, "vertex", {"nx", "ny", "nz"}, normals);
 }
-bool get_texcoords(
-    ply_model* ply, std::vector<vec2f>& texcoords, bool flipv) {
+bool get_texcoords(ply_model* ply, std::vector<vec2f>& texcoords, bool flipv) {
   if (has_property(ply, "vertex", "u")) {
     if (!get_values(ply, "vertex", {"u", "v"}, texcoords)) return false;
   } else {
@@ -1023,8 +1021,7 @@ inline bool add_values(ply_model* ply, const float* values, size_t count,
     const std::string& element, const std::string* properties, int nprops) {
   if (!values) return false;
   for (auto p = 0; p < nprops; p++) {
-    if (!add_property(
-            ply, element, properties[p], count, ply_type::f32, false))
+    if (!add_property(ply, element, properties[p], count, ply_type::f32, false))
       return false;
     auto prop = get_property(ply, element, properties[p]);
     prop->data_f32.resize(count);
@@ -1072,8 +1069,7 @@ bool add_values(ply_model* ply, const std::string& element,
 bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<std::vector<int>>& values) {
   if (values.empty()) return false;
-  if (!add_property(
-          ply, element, property, values.size(), ply_type::i32, true))
+  if (!add_property(ply, element, property, values.size(), ply_type::i32, true))
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.reserve(values.size() * 4);
@@ -1088,16 +1084,15 @@ bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<byte>& sizes,
     const std::vector<int>& values) {
   if (values.empty()) return false;
-  if (!add_property(
-          ply, element, property, sizes.size(), ply_type::i32, true))
+  if (!add_property(ply, element, property, sizes.size(), ply_type::i32, true))
     return false;
   auto prop      = get_property(ply, element, property);
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
   return true;
 }
-bool add_lists(ply_model* ply, const int* values, size_t count,
-    int size, const std::string& element, const std::string& property) {
+bool add_lists(ply_model* ply, const int* values, size_t count, int size,
+    const std::string& element, const std::string& property) {
   if (!values) return false;
   if (!add_property(ply, element, property, count, ply_type::i32, true))
     return false;
@@ -1148,8 +1143,7 @@ bool add_colors(ply_model* ply, const std::vector<vec3f>& values) {
 bool add_radius(ply_model* ply, const std::vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);
 }
-bool add_faces(
-    ply_model* ply, const std::vector<std::vector<int>>& values) {
+bool add_faces(ply_model* ply, const std::vector<std::vector<int>>& values) {
   return add_lists(ply, "face", "vertex_indices", values);
 }
 bool add_faces(ply_model* ply, const std::vector<vec3i>& triangles,

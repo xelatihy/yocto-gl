@@ -38,10 +38,9 @@ namespace sfs = ghc::filesystem;
 
 namespace yocto {
 
-image<vec4f> filter_bilateral(const image<vec4f>& img,
-    float spatial_sigma, float range_sigma,
-    const std::vector<image<vec4f>>& features,
-    const std::vector<float>&             features_sigma) {
+image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
+    float range_sigma, const std::vector<image<vec4f>>& features,
+    const std::vector<float>& features_sigma) {
   auto filtered     = image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -93,8 +92,7 @@ image<vec4f> filter_bilateral(
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = exp(-dot(uv, uv) * sw) *
-                   exp(-dot(rgb, rgb) * rw);
+          auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
           av += w * img[{ii, jj}];
           aw += w;
         }
@@ -307,8 +305,7 @@ int main(int argc, const char* argv[]) {
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>{};
-    if (!load_image(coloralpha_filename, alpha, ioerror))
-      print_fatal(ioerror);
+    if (!load_image(coloralpha_filename, alpha, ioerror)) print_fatal(ioerror);
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
@@ -324,8 +321,7 @@ int main(int argc, const char* argv[]) {
   if (diff_filename != "") {
     auto diff = image<vec4f>{};
     if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
-    if (img.size() != diff.size())
-      print_fatal("image sizes are different");
+    if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -351,8 +347,7 @@ int main(int argc, const char* argv[]) {
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold)
-        print_fatal("image content differs");
+      if (max(xyz(c)) > diff_threshold) print_fatal("image content differs");
     }
   }
 

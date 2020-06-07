@@ -733,9 +733,9 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui_window*                 win,
+  callbacks.drop_cb = [apps](gui_window*                  win,
                           const std::vector<std::string>& paths,
-                          const gui_input&               input) {
+                          const gui_input&                input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {

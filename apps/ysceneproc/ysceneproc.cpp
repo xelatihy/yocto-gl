@@ -100,8 +100,7 @@ int main(int argc, const char* argv[]) {
 
   // validate scene
   if (validate) {
-    for (auto& error : scene_validation(scene))
-      print_info("error: " + error);
+    for (auto& error : scene_validation(scene)) print_info("error: " + error);
   }
 
   // print info
@@ -129,8 +128,7 @@ int main(int argc, const char* argv[]) {
     make_dir(sfs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, print_progress))
-    print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
 
   // done
   return 0;

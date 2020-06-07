@@ -43,7 +43,7 @@ namespace sfs = ghc::filesystem;
 
 namespace yocto {
 void print_obj_camera(scene_camera* camera);
-};  // namespace yocto::sceneio
+};  // namespace yocto
 
 // Application scene
 struct app_state {
@@ -65,7 +65,7 @@ struct app_state {
   // rendering state
   image<vec4f> render   = {};
   image<vec4f> display  = {};
-  float             exposure = 0;
+  float        exposure = 0;
 
   // view scene
   ogl_image*       glimage  = new ogl_image{};
@@ -82,8 +82,8 @@ struct app_state {
   scene_texture*     selected_texture     = nullptr;
 
   // computation
-  int         render_sample  = 0;
-  int         render_counter = 0;
+  int          render_sample  = 0;
+  int          render_counter = 0;
   trace_state* render_state   = new trace_state{};
 
   // loading status
@@ -115,7 +115,7 @@ struct app_states {
 
   // default options
   trace_params params     = {};
-  bool              add_skyenv = false;
+  bool         add_skyenv = false;
 
   // cleanup
   ~app_states() {
@@ -164,7 +164,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trace_material*>{};
+  auto material_map = std::unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -218,7 +218,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map = std::unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -277,8 +277,8 @@ void reset_display(app_state* app) {
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const image<vec4f>& render, int current, int total,
-          const vec2i& ij) {
+      [app](
+          const image<vec4f>& render, int current, int total, const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
@@ -845,9 +845,9 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui_window*                 win,
+  callbacks.drop_cb = [apps](gui_window*                  win,
                           const std::vector<std::string>& paths,
-                          const gui_input&               input) {
+                          const gui_input&                input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {

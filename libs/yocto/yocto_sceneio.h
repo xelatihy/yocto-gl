@@ -187,8 +187,8 @@ struct scene_instance {
 // Object.
 struct scene_object {
   // object data
-  std::string          name     = "";
-  frame3f              frame    = identity3x4f;
+  std::string     name     = "";
+  frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
   scene_instance* instance = nullptr;
@@ -197,9 +197,9 @@ struct scene_object {
 
 // Environment map.
 struct scene_environment {
-  std::string         name         = "";
-  frame3f             frame        = identity3x4f;
-  vec3f               emission     = {0, 0, 0};
+  std::string    name         = "";
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
   scene_texture* emission_tex = nullptr;
 };
 
@@ -230,24 +230,17 @@ struct scene_model {
 };
 
 // add element to a scene
-scene_camera* add_camera(
-    scene_model* scene, const std::string& name = "");
+scene_camera*      add_camera(scene_model* scene, const std::string& name = "");
 scene_environment* add_environment(
     scene_model* scene, const std::string& name = "");
-scene_object* add_object(
-    scene_model* scene, const std::string& name = "");
-scene_instance* add_instance(
-    scene_model* scene, const std::string& name = "");
-scene_material* add_material(
-    scene_model* scene, const std::string& name = "");
-scene_shape* add_shape(
-    scene_model* scene, const std::string& name = "");
-scene_subdiv* add_subdiv(
-    scene_model* scene, const std::string& name = "");
-scene_texture* add_texture(
-    scene_model* scene, const std::string& name = "");
-scene_object* add_complete_object(
-    scene_model* scene, const std::string& name = "");
+scene_object*   add_object(scene_model* scene, const std::string& name = "");
+scene_instance* add_instance(scene_model* scene, const std::string& name = "");
+scene_material* add_material(scene_model* scene, const std::string& name = "");
+scene_shape*    add_shape(scene_model* scene, const std::string& name = "");
+scene_subdiv*   add_subdiv(scene_model* scene, const std::string& name = "");
+scene_texture*  add_texture(scene_model* scene, const std::string& name = "");
+scene_object*   add_complete_object(
+      scene_model* scene, const std::string& name = "");
 
 }  // namespace yocto
 
@@ -312,8 +305,7 @@ bbox3f compute_bounds(const scene_model* scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(
-    scene_model* scene, progress_callback progress_cb = {});
+void tesselate_subdivs(scene_model* scene, progress_callback progress_cb = {});
 void tesselate_subdiv(scene_model* scene, scene_subdiv* subdiv);
 
 }  // namespace yocto

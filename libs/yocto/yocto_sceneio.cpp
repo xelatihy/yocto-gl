@@ -262,7 +262,8 @@ static T* add_element(std::vector<T*>& elements, const std::string& name,
 scene_camera* add_camera(scene_model* scene, const std::string& name) {
   return add_element(scene->cameras, name, "camera");
 }
-scene_environment* add_environment(scene_model* scene, const std::string& name) {
+scene_environment* add_environment(
+    scene_model* scene, const std::string& name) {
   return add_element(scene->environments, name, "environment");
 }
 scene_shape* add_shape(scene_model* scene, const std::string& name) {
@@ -502,9 +503,8 @@ std::unique_ptr<scene_subdiv> subdivide_subdiv(
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
       subdivide_catmullclark(
           tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
-  std::tie(tesselated->quadsnorm, tesselated->normals) =
-      subdivide_catmullclark(
-          tesselated->quadsnorm, tesselated->normals, subdivisions, true);
+  std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
+      tesselated->quadsnorm, tesselated->normals, subdivisions, true);
   std::tie(tesselated->quadspos, tesselated->positions) =
       subdivide_catmullclark(
           tesselated->quadspos, tesselated->positions, subdivisions);
@@ -519,8 +519,8 @@ std::unique_ptr<scene_subdiv> subdivide_subdiv(
   return tesselated;
 }
 // Apply displacement to a shape
-std::unique_ptr<scene_subdiv> displace_subdiv(scene_subdiv* subdiv, float displacement,
-    scene_texture* displacement_tex, bool smooth) {
+std::unique_ptr<scene_subdiv> displace_subdiv(scene_subdiv* subdiv,
+    float displacement, scene_texture* displacement_tex, bool smooth) {
   auto displaced = std::make_unique<scene_subdiv>(*subdiv);
 
   if (!displacement || !displacement_tex) return displaced;
@@ -615,14 +615,16 @@ static bool save_json_scene(const std::string& filename,
 // Load/save a scene from/to OBJ.
 static bool load_obj_scene(const std::string& filename, scene_model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_obj_scene(const std::string& filename, const scene_model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_obj_scene(const std::string& filename,
+    const scene_model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static bool load_ply_scene(const std::string& filename, scene_model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel);
-static bool save_ply_scene(const std::string& filename, const scene_model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel);
+static bool save_ply_scene(const std::string& filename,
+    const scene_model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel);
 
 // Load/save a scene from/to glTF.
 static bool load_gltf_scene(const std::string& filename, scene_model* scene,
@@ -706,9 +708,8 @@ static bool load_image(const std::string& filename, image<vec3f>& colorf,
     return load_image(filename, colorb, error);
   }
 }
-static bool save_image(const std::string& filename,
-    const image<vec3f>& colorf, const image<vec3b>& colorb,
-    std::string& error) {
+static bool save_image(const std::string& filename, const image<vec3f>& colorf,
+    const image<vec3b>& colorb, std::string& error) {
   if (is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
   } else {
@@ -725,9 +726,8 @@ static bool load_image(const std::string& filename, image<float>& scalarf,
     return load_image(filename, scalarb, error);
   }
 }
-static bool save_image(const std::string& filename,
-    const image<float>& scalarf, const image<byte>& scalarb,
-    std::string& error) {
+static bool save_image(const std::string& filename, const image<float>& scalarf,
+    const image<byte>& scalarb, std::string& error) {
   if (is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
   } else {
@@ -1312,7 +1312,8 @@ static bool save_json_scene(const std::string& filename,
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [](json& ejs, const std::string& name, scene_texture* texture) {
+  auto add_tex = [](json& ejs, const std::string& name,
+                     scene_texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1658,8 +1659,9 @@ static bool load_obj_scene(const std::string& filename, scene_model* scene,
   return true;
 }
 
-static bool save_obj_scene(const std::string& filename, const scene_model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_obj_scene(const std::string& filename,
+    const scene_model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   auto shape_error = [filename, &error]() {
     error = filename + ": empty shape";
     return false;
@@ -1840,8 +1842,9 @@ static bool load_ply_scene(const std::string& filename, scene_model* scene,
   return true;
 }
 
-static bool save_ply_scene(const std::string& filename, const scene_model* scene,
-    std::string& error, progress_callback progress_cb, bool noparallel) {
+static bool save_ply_scene(const std::string& filename,
+    const scene_model* scene, std::string& error, progress_callback progress_cb,
+    bool noparallel) {
   if (scene->shapes.empty())
     throw std::runtime_error{filename + ": empty shape"};
 
@@ -1984,9 +1987,8 @@ static bool load_gltf_scene(const std::string& filename, scene_model* scene,
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map =
-      std::unordered_map<std::string, std::pair<scene_texture*, scene_texture*>>{
-          {"", {nullptr, nullptr}}};
+  auto cotexture_map = std::unordered_map<std::string,
+      std::pair<scene_texture*, scene_texture*>>{{"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scene_texture*, scene_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
@@ -2000,9 +2002,8 @@ static bool load_gltf_scene(const std::string& filename, scene_model* scene,
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map =
-      std::unordered_map<std::string, std::pair<scene_texture*, scene_texture*>>{
-          {"", {nullptr, nullptr}}};
+  auto mrtexture_map = std::unordered_map<std::string,
+      std::pair<scene_texture*, scene_texture*>>{{"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scene_texture*, scene_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};

@@ -127,14 +127,14 @@ bool is_initialized(ogl_arraybuffer* buffer);
 void clear_arraybuffer(ogl_arraybuffer* buffer);
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer,
-    const std::vector<float>& data, bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer,
-    const std::vector<vec2f>& data, bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer,
-    const std::vector<vec3f>& data, bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer,
-    const std::vector<vec4f>& data, bool dynamic = false);
+void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<float>& data,
+    bool dynamic = false);
+void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec2f>& data,
+    bool dynamic = false);
+void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec3f>& data,
+    bool dynamic = false);
+void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec4f>& data,
+    bool dynamic = false);
 
 // Opengl draw elements
 enum struct ogl_element_type { points, lines, triangles };
@@ -218,21 +218,20 @@ inline void set_uniform(
 }
 
 // set uniform texture
-void set_uniform(ogl_program* program, int location,
-    const ogl_texture* texture, int unit);
+void set_uniform(
+    ogl_program* program, int location, const ogl_texture* texture, int unit);
 void set_uniform(ogl_program* program, const char* name,
     const ogl_texture* texture, int unit);
 void set_uniform(ogl_program* program, int location, int location_on,
     const ogl_texture* texture, int unit);
-void set_uniform(ogl_program* program, const char* name,
-    const char* name_on, const ogl_texture* texture, int unit);
+void set_uniform(ogl_program* program, const char* name, const char* name_on,
+    const ogl_texture* texture, int unit);
 
 // get attribute location
 int get_attribute_location(ogl_program* program, const char* name);
 
 // set vertex attributes
-void set_attribute(
-    ogl_program* program, int location, ogl_arraybuffer* buffer);
+void set_attribute(ogl_program* program, int location, ogl_arraybuffer* buffer);
 void set_attribute(
     ogl_program* program, const char* name, ogl_arraybuffer* buffer);
 
@@ -294,10 +293,10 @@ bool is_initialized(const ogl_image* oimg);
 void clear_image(ogl_image* oimg);
 
 // update image data
-void set_image(ogl_image* oimg, const image<vec4f>& img,
-    bool linear = false, bool mipmap = false);
-void set_image(ogl_image* oimg, const image<vec4b>& img,
-    bool linear = false, bool mipmap = false);
+void set_image(ogl_image* oimg, const image<vec4f>& img, bool linear = false,
+    bool mipmap = false);
+void set_image(ogl_image* oimg, const image<vec4b>& img, bool linear = false,
+    bool mipmap = false);
 
 // OpenGL image drawing params
 struct ogl_image_params {
@@ -334,12 +333,12 @@ struct ogl_camera {
 // Opengl material
 struct ogl_material {
   // material
-  vec3f             emission      = {0, 0, 0};
-  vec3f             color         = {0, 0, 0};
-  float             metallic      = 0;
-  float             roughness     = 0;
-  float             specular      = 0;
-  float             opacity       = 1;
+  vec3f        emission      = {0, 0, 0};
+  vec3f        color         = {0, 0, 0};
+  float        metallic      = 0;
+  float        roughness     = 0;
+  float        specular      = 0;
+  float        opacity       = 1;
   ogl_texture* emission_tex  = nullptr;
   ogl_texture* color_tex     = nullptr;
   ogl_texture* metallic_tex  = nullptr;
@@ -362,8 +361,8 @@ struct ogl_shape {
   ogl_elementbuffer* triangles      = new ogl_elementbuffer{};
   ogl_elementbuffer* quads          = new ogl_elementbuffer{};
   ogl_elementbuffer* edges          = new ogl_elementbuffer{};
-  float                   points_size    = 10;
-  float                   line_thickness = 4;
+  float              points_size    = 10;
+  float              line_thickness = 4;
 
   ogl_shape() {}
   ogl_shape(const ogl_shape&) = delete;
@@ -379,12 +378,12 @@ struct ogl_instance {
 // Opengl object
 struct ogl_object {
   // object properties
-  frame3f            frame       = identity3x4f;
+  frame3f       frame       = identity3x4f;
   ogl_shape*    shape       = nullptr;
   ogl_material* material    = nullptr;
   ogl_instance* instance    = nullptr;
-  bool               hidden      = false;
-  bool               highlighted = false;
+  bool          hidden      = false;
+  bool          highlighted = false;
 };
 
 // Light type
@@ -474,8 +473,8 @@ void set_roughness(ogl_material* material, float roughness,
     ogl_texture* roughness_tex = nullptr);
 void set_specular(ogl_material* material, float specular,
     ogl_texture* specular_tex = nullptr);
-void set_opacity(ogl_material* material, float opacity,
-    ogl_texture* opacity_tex = nullptr);
+void set_opacity(
+    ogl_material* material, float opacity, ogl_texture* opacity_tex = nullptr);
 void set_normalmap(ogl_material* material, ogl_texture* normal_tex);
 
 // shape properties
@@ -492,8 +491,7 @@ void set_colors(ogl_shape* shape, const std::vector<vec3f>& colors);
 void set_tangents(ogl_shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(
-    ogl_instance* instance, const std::vector<frame3f>& frames);
+void set_frames(ogl_instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
 void set_frame(ogl_object* object, const frame3f& frame);
@@ -505,16 +503,16 @@ void set_highlighted(ogl_object* object, bool highlighted);
 
 // light properties
 void add_default_lights(ogl_scene* scene);
-void set_light(ogl_light* light, const vec3f& position,
-    const vec3f& emission, ogl_light_type type, bool camera);
+void set_light(ogl_light* light, const vec3f& position, const vec3f& emission,
+    ogl_light_type type, bool camera);
 
 // light size
 void clear_lights(ogl_scene* scene);
 bool has_max_lights(ogl_scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(ogl_scene* scene, ogl_camera* camera,
-    const vec4i& viewport, const ogl_scene_params& params);
+void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
+    const ogl_scene_params& params);
 
 }  // namespace yocto
 
@@ -547,14 +545,11 @@ struct gui_input {
 };
 
 // Init callback called after the window has opened
-using init_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+using init_callback = std::function<void(gui_window*, const gui_input& input)>;
 // Clear callback called after the window is cloased
-using clear_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+using clear_callback = std::function<void(gui_window*, const gui_input& input)>;
 // Draw callback called every frame and when resizing
-using draw_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+using draw_callback = std::function<void(gui_window*, const gui_input& input)>;
 // Draw callback for drawing widgets
 using widgets_callback =
     std::function<void(gui_window*, const gui_input& input)>;
@@ -565,8 +560,8 @@ using drop_callback = std::function<void(
 using key_callback = std::function<void(
     gui_window*, int key, bool pressed, const gui_input& input)>;
 // Char callback that returns ASCII key
-using char_callback = std::function<void(
-    gui_window*, unsigned int key, const gui_input& input)>;
+using char_callback =
+    std::function<void(gui_window*, unsigned int key, const gui_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_callback = std::function<void(
@@ -610,7 +605,7 @@ namespace yocto {
 
 // OpenGL window wrapper
 struct gui_window {
-  GLFWwindow*   win           = nullptr;
+  GLFWwindow*       win           = nullptr;
   std::string       title         = "";
   init_callback     init_cb       = {};
   clear_callback    clear_cb      = {};
@@ -630,9 +625,8 @@ struct gui_window {
 };
 
 // Windows initialization
-void init_window(gui_window* win, const vec2i& size,
-    const std::string& title, bool widgets, int widgets_width = 320,
-    bool widgets_left = true);
+void init_window(gui_window* win, const vec2i& size, const std::string& title,
+    bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
 void clear_window(gui_window* win);
@@ -700,8 +694,8 @@ bool draw_dragger(gui_window* win, const char* lbl, vec3f& value,
 bool draw_dragger(gui_window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(gui_window* win, const char* lbl, int& value,
-    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger(gui_window* win, const char* lbl, int& value, float speed = 1,
+    int min = 0, int max = 0);
 bool draw_dragger(gui_window* win, const char* lbl, vec2i& value,
     float speed = 1, int min = 0, int max = 0);
 bool draw_dragger(gui_window* win, const char* lbl, vec3i& value,
@@ -756,8 +750,7 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
 }
 
 void draw_progressbar(gui_window* win, const char* lbl, float fraction);
-void draw_progressbar(
-    gui_window* win, const char* lbl, int current, int total);
+void draw_progressbar(gui_window* win, const char* lbl, int current, int total);
 
 void draw_histogram(
     gui_window* win, const char* lbl, const std::vector<float>& values);

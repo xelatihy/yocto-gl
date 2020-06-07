@@ -737,7 +737,7 @@ static void update_embree_bvh(trace_scene* scene,
     const std::vector<trace_object*>&      updated_objects,
     const std::vector<trace_shape*>&       updated_shapes,
     const std::vector<trace_instance*>&    updated_instances,
-    const trace_params&                   params) {
+    const trace_params&                    params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -945,13 +945,14 @@ static std::pair<int, int> split_middle(
 }
 
 // Split bvh nodes according to a type
-static std::pair<int, int> split_nodes(
-    std::vector<bvh_primitive>& primitives, int start, int end, trace_bvh_type type) {
+static std::pair<int, int> split_nodes(std::vector<bvh_primitive>& primitives,
+    int start, int end, trace_bvh_type type) {
   switch (type) {
     case trace_bvh_type::default_: return split_middle(primitives, start, end);
     case trace_bvh_type::highquality: return split_sah(primitives, start, end);
     case trace_bvh_type::middle: return split_middle(primitives, start, end);
-    case trace_bvh_type::balanced: return split_balanced(primitives, start, end);
+    case trace_bvh_type::balanced:
+      return split_balanced(primitives, start, end);
     default: throw std::runtime_error("should not have gotten here");
   }
 }
@@ -1293,7 +1294,7 @@ void update_bvh(trace_scene*            scene,
     const std::vector<trace_object*>&   updated_objects,
     const std::vector<trace_shape*>&    updated_shapes,
     const std::vector<trace_instance*>& updated_instances,
-    const trace_params&                params) {
+    const trace_params&                 params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1509,16 +1510,16 @@ static bool intersect_instance_bvh(const trace_object* object, int instance,
       object->shape, inv_ray, element, uv, distance, find_any);
 }
 
-trace_intersection intersect_scene_bvh(const trace_scene* scene, const ray3f& ray,
-    bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.object,
       intersection.instance, intersection.element, intersection.uv,
       intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_object* object, int instance,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_instance_bvh(const trace_object* object,
+    int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
   intersection.hit  = intersect_instance_bvh(object, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
@@ -2163,7 +2164,8 @@ static std::pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
     case trace_falsecolor_type::frontfacing:
       return {
           dot(point.normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
-    case trace_falsecolor_type::gnormal: return {point.gnormal * 0.5f + 0.5f, 1};
+    case trace_falsecolor_type::gnormal:
+      return {point.gnormal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::gfrontfacing:
       return {
           dot(point.gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
@@ -2184,7 +2186,8 @@ static std::pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
     case trace_falsecolor_type::ior: return {vec3f{point.ior}, 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
-    case trace_falsecolor_type::object: return {hashed_color(intersection.object), 1};
+    case trace_falsecolor_type::object:
+      return {hashed_color(intersection.object), 1};
     case trace_falsecolor_type::highlight: {
       auto emission = point.emission;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
@@ -2363,9 +2366,9 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
-    progress_callback progress_cb, image_callback image_cb) {
+image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+    const trace_params& params, progress_callback progress_cb,
+    image_callback image_cb) {
   auto state_guard = std::make_unique<trace_state>();
   auto state       = state_guard.get();
   init_state(state, scene, camera, params);
@@ -2428,8 +2431,7 @@ void trace_start(trace_state* state, const trace_scene* scene,
       });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
-    if (progress_cb)
-      progress_cb("trace image", params.samples, params.samples);
+    if (progress_cb) progress_cb("trace image", params.samples, params.samples);
     if (image_cb) image_cb(state->render, params.samples, params.samples);
   });
 }

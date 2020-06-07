@@ -44,10 +44,10 @@ struct app_state {
 
   // diplay data
   image<vec4f>      display    = {};
-  float                  exposure   = 0;
-  bool                   filmic     = false;
+  float             exposure   = 0;
+  bool              filmic     = false;
   colorgrade_params params     = {};
-  bool                   colorgrade = false;
+  bool              colorgrade = false;
 
   // viewing properties
   ogl_image*       glimage  = new ogl_image{};
