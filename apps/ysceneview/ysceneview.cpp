@@ -284,7 +284,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::model* ioscene,
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::camera* iocamera) {
+    gui::gui_window* win, sio::model* ioscene, sio::camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -311,7 +311,7 @@ bool draw_widgets(
 
 /// Visit struct elements.
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::texture* iotexture) {
+    gui::gui_window* win, sio::model* ioscene, sio::texture* iotexture) {
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
@@ -330,7 +330,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::material* iomaterial) {
+    gui::gui_window* win, sio::model* ioscene, sio::material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -375,7 +375,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui::window* win, sio::model* ioscene, sio::shape* ioshape) {
+bool draw_widgets(gui::gui_window* win, sio::model* ioscene, sio::shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -394,7 +394,7 @@ bool draw_widgets(gui::window* win, sio::model* ioscene, sio::shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::instance* ioinstance) {
+    gui::gui_window* win, sio::model* ioscene, sio::instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -404,7 +404,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::object* ioobject) {
+    gui::gui_window* win, sio::model* ioscene, sio::object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -422,7 +422,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::subdiv* iosubdiv) {
+    gui::gui_window* win, sio::model* ioscene, sio::subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -438,7 +438,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::window* win, sio::model* ioscene, sio::environment* ioenvironment) {
+    gui::gui_window* win, sio::model* ioscene, sio::environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   edited += draw_textinput(win, "name", ioenvironment->name);
@@ -463,7 +463,7 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
 }
 
 // draw with shading
-void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
+void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
@@ -665,7 +665,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
 }
 
 // draw with shading
-void draw(gui::window* win, app_states* apps, const gui::input& input) {
+void draw(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app = apps->selected;
   if (app->drawgl_prms.shading == gui::ogl_shading_type::lights)
@@ -675,7 +675,7 @@ void draw(gui::window* win, app_states* apps, const gui::input& input) {
 }
 
 // update
-void update(gui::window* win, app_states* apps) {
+void update(gui::gui_window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -725,25 +725,25 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename, camera_name);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [apps](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui::gui_callbacks{};
+  callbacks.clear_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
     for (auto app : apps->states) clear_scene(app->glscene);
   };
-  callbacks.draw_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
     draw(win, apps, input);
   };
-  callbacks.widgets_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui::window*                 win,
+  callbacks.drop_cb = [apps](gui::gui_window*                 win,
                           const std::vector<std::string>& paths,
-                          const gui::input&               input) {
+                          const gui::gui_input&               input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
-  callbacks.update_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.update_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
     update(win, apps);
   };
-  callbacks.uiupdate_cb = [apps](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
     if (!apps->selected || !apps->selected->ok) return;
     auto app = apps->selected;
 

@@ -138,14 +138,14 @@ bool is_initialized(gui::ogl_arraybuffer* buffer);
 void clear_arraybuffer(gui::ogl_arraybuffer* buffer);
 
 // set buffer
-void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<float>& data,
-    bool dynamic = false);
-void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec2f>& data,
-    bool dynamic = false);
-void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec3f>& data,
-    bool dynamic = false);
-void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec4f>& data,
-    bool dynamic = false);
+void set_arraybuffer(gui::ogl_arraybuffer* buffer,
+    const std::vector<float>& data, bool dynamic = false);
+void set_arraybuffer(gui::ogl_arraybuffer* buffer,
+    const std::vector<vec2f>& data, bool dynamic = false);
+void set_arraybuffer(gui::ogl_arraybuffer* buffer,
+    const std::vector<vec3f>& data, bool dynamic = false);
+void set_arraybuffer(gui::ogl_arraybuffer* buffer,
+    const std::vector<vec4f>& data, bool dynamic = false);
 
 // Opengl draw elements
 enum struct ogl_element_type { points, lines, triangles };
@@ -153,9 +153,9 @@ enum struct ogl_element_type { points, lines, triangles };
 // Opengl array/element buffer
 struct ogl_elementbuffer {
   // buffer data
-  size_t       size    = 0;
+  size_t           size    = 0;
   ogl_element_type element = ogl_element_type::points;
-  bool         dynamic = false;
+  bool             dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
@@ -229,14 +229,14 @@ inline void set_uniform(
 }
 
 // set uniform texture
-void set_uniform(
-    gui::ogl_program* program, int location, const gui::ogl_texture* texture, int unit);
+void set_uniform(gui::ogl_program* program, int location,
+    const gui::ogl_texture* texture, int unit);
 void set_uniform(gui::ogl_program* program, const char* name,
     const gui::ogl_texture* texture, int unit);
 void set_uniform(gui::ogl_program* program, int location, int location_on,
     const gui::ogl_texture* texture, int unit);
-void set_uniform(gui::ogl_program* program, const char* name, const char* name_on,
-    const gui::ogl_texture* texture, int unit);
+void set_uniform(gui::ogl_program* program, const char* name,
+    const char* name_on, const gui::ogl_texture* texture, int unit);
 
 // get attribute location
 int get_attribute_location(gui::ogl_program* program, const char* name);
@@ -345,12 +345,12 @@ struct ogl_camera {
 // Opengl material
 struct ogl_material {
   // material
-  vec3f         emission      = {0, 0, 0};
-  vec3f         color         = {0, 0, 0};
-  float         metallic      = 0;
-  float         roughness     = 0;
-  float         specular      = 0;
-  float         opacity       = 1;
+  vec3f             emission      = {0, 0, 0};
+  vec3f             color         = {0, 0, 0};
+  float             metallic      = 0;
+  float             roughness     = 0;
+  float             specular      = 0;
+  float             opacity       = 1;
   gui::ogl_texture* emission_tex  = nullptr;
   gui::ogl_texture* color_tex     = nullptr;
   gui::ogl_texture* metallic_tex  = nullptr;
@@ -373,8 +373,8 @@ struct ogl_shape {
   gui::ogl_elementbuffer* triangles      = new gui::ogl_elementbuffer{};
   gui::ogl_elementbuffer* quads          = new gui::ogl_elementbuffer{};
   gui::ogl_elementbuffer* edges          = new gui::ogl_elementbuffer{};
-  float               points_size    = 10;
-  float               line_thickness = 4;
+  float                   points_size    = 10;
+  float                   line_thickness = 4;
 
   ogl_shape() {}
   ogl_shape(const ogl_shape&) = delete;
@@ -390,12 +390,12 @@ struct ogl_instance {
 // Opengl object
 struct ogl_object {
   // object properties
-  frame3f        frame       = identity3x4f;
+  frame3f            frame       = identity3x4f;
   gui::ogl_shape*    shape       = nullptr;
   gui::ogl_material* material    = nullptr;
   gui::ogl_instance* instance    = nullptr;
-  bool           hidden      = false;
-  bool           highlighted = false;
+  bool               hidden      = false;
+  bool               highlighted = false;
 };
 
 // Light type
@@ -403,10 +403,10 @@ enum struct ogl_light_type { point = 0, directional };
 
 // Opengl light
 struct ogl_light {
-  vec3f      position = {0, 0, 0};
-  vec3f      emission = {0, 0, 0};
+  vec3f          position = {0, 0, 0};
+  vec3f          emission = {0, 0, 0};
   ogl_light_type type     = ogl_light_type::point;
-  bool       camera   = false;
+  bool           camera   = false;
 };
 
 // Opengl scene
@@ -438,19 +438,19 @@ const auto ogl_shading_names = std::vector<std::string>{
 
 // Draw options
 struct ogl_scene_params {
-  int          resolution       = 1280;
-  bool         wireframe        = false;
-  bool         edges            = false;
-  float        edge_offset      = 0.01f;
+  int              resolution       = 1280;
+  bool             wireframe        = false;
+  bool             edges            = false;
+  float            edge_offset      = 0.01f;
   ogl_shading_type shading          = ogl_shading_type::camlights;
-  float        exposure         = 0;
-  float        gamma            = 2.2f;
-  vec3f        ambient          = {0, 0, 0};
-  bool         double_sided     = true;
-  bool         non_rigid_frames = true;
-  float        near             = 0.01f;
-  float        far              = 10000.0f;
-  vec4f        background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+  float            exposure         = 0;
+  float            gamma            = 2.2f;
+  vec3f            ambient          = {0, 0, 0};
+  bool             double_sided     = true;
+  bool             non_rigid_frames = true;
+  float            near             = 0.01f;
+  float            far              = 10000.0f;
+  vec4f            background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Initialize an OpenGL scene
@@ -503,7 +503,8 @@ void set_colors(gui::ogl_shape* shape, const std::vector<vec3f>& colors);
 void set_tangents(gui::ogl_shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(gui::ogl_instance* instance, const std::vector<frame3f>& frames);
+void set_frames(
+    gui::ogl_instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
 void set_frame(gui::ogl_object* object, const frame3f& frame);
@@ -515,16 +516,16 @@ void set_highlighted(gui::ogl_object* object, bool highlighted);
 
 // light properties
 void add_default_lights(gui::ogl_scene* scene);
-void set_light(gui::ogl_light* light, const vec3f& position, const vec3f& emission,
-    ogl_light_type type, bool camera);
+void set_light(gui::ogl_light* light, const vec3f& position,
+    const vec3f& emission, ogl_light_type type, bool camera);
 
 // light size
 void clear_lights(gui::ogl_scene* scene);
 bool has_max_lights(gui::ogl_scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(gui::ogl_scene* scene, gui::ogl_camera* camera, const vec4i& viewport,
-    const ogl_scene_params& params);
+void draw_scene(gui::ogl_scene* scene, gui::ogl_camera* camera,
+    const vec4i& viewport, const ogl_scene_params& params);
 
 }  // namespace yocto::gui
 
@@ -534,10 +535,10 @@ void draw_scene(gui::ogl_scene* scene, gui::ogl_camera* camera, const vec4i& vie
 namespace yocto::gui {
 
 // Forward declaration of OpenGL window
-struct window;
+struct gui_window;
 
 // Input state
-struct input {
+struct gui_input {
   bool     mouse_left           = false;  // left button
   bool     mouse_right          = false;  // right button
   bool     mouse_middle         = false;  // middle button
@@ -557,36 +558,42 @@ struct input {
 };
 
 // Init callback called after the window has opened
-using init_callback = std::function<void(gui::window*, const input& input)>;
+using init_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 // Clear callback called after the window is cloased
-using clear_callback = std::function<void(gui::window*, const input& input)>;
+using clear_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 // Draw callback called every frame and when resizing
-using draw_callback = std::function<void(gui::window*, const input& input)>;
+using draw_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 // Draw callback for drawing widgets
-using widgets_callback = std::function<void(gui::window*, const input& input)>;
+using widgets_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback = std::function<void(
-    window*, const std::vector<std::string>&, const input& input)>;
+    gui_window*, const std::vector<std::string>&, const gui_input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback = std::function<void(
-    gui::window*, int key, bool pressed, const input& input)>;
+    gui::gui_window*, int key, bool pressed, const gui_input& input)>;
 // Char callback that returns ASCII key
-using char_callback =
-    std::function<void(gui::window*, unsigned int key, const input& input)>;
+using char_callback = std::function<void(
+    gui::gui_window*, unsigned int key, const gui_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_callback = std::function<void(
-    gui::window*, bool left, bool pressed, const input& input)>;
+    gui::gui_window*, bool left, bool pressed, const gui_input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_callback =
-    std::function<void(gui::window*, float amount, const input& input)>;
+    std::function<void(gui::gui_window*, float amount, const gui_input& input)>;
 // Update functions called every frame
-using uiupdate_callback = std::function<void(gui::window*, const input& input)>;
+using uiupdate_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 // Update functions called every frame
-using update_callback = std::function<void(gui::window*, const input& input)>;
+using update_callback =
+    std::function<void(gui::gui_window*, const gui_input& input)>;
 
 // User interface callcaks
-struct ui_callbacks {
+struct gui_callbacks {
   init_callback     init_cb     = {};
   clear_callback    clear_cb    = {};
   draw_callback     draw_cb     = {};
@@ -602,7 +609,7 @@ struct ui_callbacks {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
-    const ui_callbacks& callbaks, int widgets_width = 320,
+    const gui_callbacks& callbaks, int widgets_width = 320,
     bool widgets_left = true);
 
 }  // namespace yocto::gui
@@ -613,8 +620,8 @@ void run_ui(const vec2i& size, const std::string& title,
 namespace yocto::gui {
 
 // OpenGL window wrapper
-struct window {
-  GLFWwindow*       win           = nullptr;
+struct gui_window {
+  GLFWwindow*   win           = nullptr;
   std::string       title         = "";
   init_callback     init_cb       = {};
   clear_callback    clear_cb      = {};
@@ -629,33 +636,34 @@ struct window {
   uiupdate_callback uiupdate_cb   = {};
   int               widgets_width = 0;
   bool              widgets_left  = true;
-  yocto::gui::input input         = {};
+  gui_input         input         = {};
   vec4f             background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Windows initialization
-void init_window(gui::window* win, const vec2i& size, const std::string& title,
-    bool widgets, int widgets_width = 320, bool widgets_left = true);
+void init_window(gui::gui_window* win, const vec2i& size,
+    const std::string& title, bool widgets, int widgets_width = 320,
+    bool widgets_left = true);
 
 // Window cleanup
-void clear_window(gui::window* win);
+void clear_window(gui::gui_window* win);
 
 // Set callbacks
-void set_init_callback(gui::window* win, init_callback init_cb);
-void set_clear_callback(gui::window* win, clear_callback clear_cb);
-void set_draw_callback(gui::window* win, draw_callback draw_cb);
-void set_widgets_callback(gui::window* win, widgets_callback widgets_cb);
-void set_drop_callback(gui::window* win, drop_callback drop_cb);
-void set_key_callback(gui::window* win, key_callback cb);
-void set_char_callback(gui::window* win, char_callback cb);
-void set_click_callback(gui::window* win, click_callback cb);
-void set_scroll_callback(gui::window* win, scroll_callback cb);
-void set_uiupdate_callback(gui::window* win, uiupdate_callback cb);
-void set_update_callback(gui::window* win, update_callback cb);
+void set_init_callback(gui::gui_window* win, init_callback init_cb);
+void set_clear_callback(gui::gui_window* win, clear_callback clear_cb);
+void set_draw_callback(gui::gui_window* win, draw_callback draw_cb);
+void set_widgets_callback(gui::gui_window* win, widgets_callback widgets_cb);
+void set_drop_callback(gui::gui_window* win, drop_callback drop_cb);
+void set_key_callback(gui::gui_window* win, key_callback cb);
+void set_char_callback(gui::gui_window* win, char_callback cb);
+void set_click_callback(gui::gui_window* win, click_callback cb);
+void set_scroll_callback(gui::gui_window* win, scroll_callback cb);
+void set_uiupdate_callback(gui::gui_window* win, uiupdate_callback cb);
+void set_update_callback(gui::gui_window* win, update_callback cb);
 
 // Run loop
-void run_ui(gui::window* win);
-void set_close(gui::window* win, bool close);
+void run_ui(gui::gui_window* win);
+void set_close(gui::gui_window* win, bool close);
 
 }  // namespace yocto::gui
 
@@ -664,71 +672,71 @@ void set_close(gui::window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
-bool begin_header(gui::window* win, const char* title);
-void end_header(gui::window* win);
+bool begin_header(gui::gui_window* win, const char* title);
+void end_header(gui::gui_window* win);
 
-void draw_label(gui::window* win, const char* lbl, const std::string& text);
+void draw_label(gui::gui_window* win, const char* lbl, const std::string& text);
 
-void draw_separator(gui::window* win);
-void continue_line(gui::window* win);
+void draw_separator(gui::gui_window* win);
+void continue_line(gui::gui_window* win);
 
-bool draw_button(gui::window* win, const char* lbl, bool enabled = true);
+bool draw_button(gui::gui_window* win, const char* lbl, bool enabled = true);
 
-bool draw_textinput(gui::window* win, const char* lbl, std::string& value);
-
-bool draw_slider(
-    window* win, const char* lbl, float& value, float min, float max);
-bool draw_slider(
-    window* win, const char* lbl, vec2f& value, float min, float max);
-bool draw_slider(
-    window* win, const char* lbl, vec3f& value, float min, float max);
-bool draw_slider(
-    window* win, const char* lbl, vec4f& value, float min, float max);
+bool draw_textinput(gui::gui_window* win, const char* lbl, std::string& value);
 
 bool draw_slider(
-    gui::window* win, const char* lbl, int& value, int min, int max);
+    gui_window* win, const char* lbl, float& value, float min, float max);
 bool draw_slider(
-    gui::window* win, const char* lbl, vec2i& value, int min, int max);
+    gui_window* win, const char* lbl, vec2f& value, float min, float max);
 bool draw_slider(
-    gui::window* win, const char* lbl, vec3i& value, int min, int max);
+    gui_window* win, const char* lbl, vec3f& value, float min, float max);
 bool draw_slider(
-    gui::window* win, const char* lbl, vec4i& value, int min, int max);
+    gui_window* win, const char* lbl, vec4f& value, float min, float max);
 
-bool draw_dragger(gui::window* win, const char* lbl, float& value,
+bool draw_slider(
+    gui::gui_window* win, const char* lbl, int& value, int min, int max);
+bool draw_slider(
+    gui::gui_window* win, const char* lbl, vec2i& value, int min, int max);
+bool draw_slider(
+    gui::gui_window* win, const char* lbl, vec3i& value, int min, int max);
+bool draw_slider(
+    gui::gui_window* win, const char* lbl, vec4i& value, int min, int max);
+
+bool draw_dragger(gui::gui_window* win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(gui::window* win, const char* lbl, vec2f& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec2f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(gui::window* win, const char* lbl, vec3f& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec3f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger(gui::window* win, const char* lbl, vec4f& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_dragger(gui::window* win, const char* lbl, int& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, int& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(gui::window* win, const char* lbl, vec2i& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec2i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(gui::window* win, const char* lbl, vec3i& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec3i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_dragger(gui::window* win, const char* lbl, vec4i& value,
+bool draw_dragger(gui::gui_window* win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
-bool draw_checkbox(gui::window* win, const char* lbl, bool& value);
+bool draw_checkbox(gui::gui_window* win, const char* lbl, bool& value);
 
-bool draw_coloredit(gui::window* win, const char* lbl, vec3f& value);
-bool draw_coloredit(gui::window* win, const char* lbl, vec4f& value);
+bool draw_coloredit(gui::gui_window* win, const char* lbl, vec3f& value);
+bool draw_coloredit(gui::gui_window* win, const char* lbl, vec4f& value);
 
-bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec3f& value);
-bool draw_hdrcoloredit(gui::window* win, const char* lbl, vec4f& value);
+bool draw_hdrcoloredit(gui::gui_window* win, const char* lbl, vec3f& value);
+bool draw_hdrcoloredit(gui::gui_window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(gui::window* win, const char* lbl, int& idx,
+bool draw_combobox(gui::gui_window* win, const char* lbl, int& idx,
     const std::vector<std::string>& labels);
-bool draw_combobox(gui::window* win, const char* lbl, std::string& value,
+bool draw_combobox(gui::gui_window* win, const char* lbl, std::string& value,
     const std::vector<std::string>& labels);
-bool draw_combobox(gui::window* win, const char* lbl, int& idx, int num,
+bool draw_combobox(gui::gui_window* win, const char* lbl, int& idx, int num,
     const std::function<std::string(int)>& labels, bool include_null = false);
 
 template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
+inline bool draw_combobox(gui::gui_window* win, const char* lbl, T*& value,
     const std::vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -743,7 +751,7 @@ inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
 }
 
 template <typename T>
-inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
+inline bool draw_combobox(gui::gui_window* win, const char* lbl, T*& value,
     const std::vector<T*>& vals, const std::vector<std::string>& labels,
     bool include_null = false) {
   auto idx = -1;
@@ -758,33 +766,33 @@ inline bool draw_combobox(gui::window* win, const char* lbl, T*& value,
   return edited;
 }
 
-void draw_progressbar(gui::window* win, const char* lbl, float fraction);
+void draw_progressbar(gui::gui_window* win, const char* lbl, float fraction);
 void draw_progressbar(
-    gui::window* win, const char* lbl, int current, int total);
+    gui::gui_window* win, const char* lbl, int current, int total);
 
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<float>& values);
+    gui::gui_window* win, const char* lbl, const std::vector<float>& values);
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec2f>& values);
+    gui::gui_window* win, const char* lbl, const std::vector<vec2f>& values);
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec3f>& values);
+    gui::gui_window* win, const char* lbl, const std::vector<vec3f>& values);
 void draw_histogram(
-    gui::window* win, const char* lbl, const std::vector<vec4f>& values);
+    gui::gui_window* win, const char* lbl, const std::vector<vec4f>& values);
 
-bool draw_messages(gui::window* win);
-void push_message(gui::window* win, const std::string& message);
-bool draw_filedialog(gui::window* win, const char* lbl, std::string& path,
+bool draw_messages(gui::gui_window* win);
+void push_message(gui::gui_window* win, const std::string& message);
+bool draw_filedialog(gui::gui_window* win, const char* lbl, std::string& path,
     bool save, const std::string& dirname, const std::string& filename,
     const std::string& filter);
-bool draw_filedialog_button(gui::window* win, const char* button_lbl,
+bool draw_filedialog_button(gui::gui_window* win, const char* button_lbl,
     bool button_active, const char* lbl, std::string& path, bool save,
     const std::string& dirname, const std::string& filename,
     const std::string& filter);
 
-void log_info(gui::window* win, const std::string& msg);
-void log_error(gui::window* win, const std::string& msg);
-void clear_log(gui::window* win);
-void draw_log(gui::window* win);
+void log_info(gui::gui_window* win, const std::string& msg);
+void log_error(gui::gui_window* win, const std::string& msg);
+void clear_log(gui::gui_window* win);
+void draw_log(gui::gui_window* win);
 
 }  // namespace yocto::gui
 

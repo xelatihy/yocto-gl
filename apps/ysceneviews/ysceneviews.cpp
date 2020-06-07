@@ -268,8 +268,8 @@ int main(int argc, const char* argv[]) {
   app->iocamera = get_camera(app->ioscene, camera_name);
 
   // callbacks
-  auto callbacks    = gui::ui_callbacks{};
-  callbacks.init_cb = [app](gui::window* win, const gui::input& input) {
+  auto callbacks    = gui::gui_callbacks{};
+  callbacks.init_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     init_glscene(app->glscene, app->ioscene, app->glcamera, app->iocamera,
         [app](const std::string& message, int current, int total) {
           app->status  = "init scene";
@@ -277,16 +277,16 @@ int main(int argc, const char* argv[]) {
           app->total   = total;
         });
   };
-  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.clear_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     clear_scene(app->glscene);
   };
-  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     if (app->drawgl_prms.shading == gui::ogl_shading_type::lights)
       update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
   };
-  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     draw_progressbar(win, app->status.c_str(), app->current, app->total);
     if (draw_combobox(win, "camera", app->iocamera, app->ioscene->cameras)) {
       for (auto idx = 0; idx < app->ioscene->cameras.size(); idx++) {
@@ -307,10 +307,10 @@ int main(int argc, const char* argv[]) {
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
   };
-  callbacks.update_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.update_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     // update(win, apps);
   };
-  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     // handle mouse and keyboard for navigation
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {

@@ -318,11 +318,11 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // callbacks
-  auto callbacks     = gui::ui_callbacks{};
-  callbacks.clear_cb = [app](gui::window* win, const gui::input& input) {
+  auto callbacks     = gui::gui_callbacks{};
+  callbacks.clear_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     clear_image(app->glimage);
   };
-  callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.draw_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     if (!is_initialized(app->glimage)) init_image(app->glimage);
     if (!app->render_counter)
       set_image(app->glimage, app->display, false, false);
@@ -334,7 +334,7 @@ int main(int argc, const char* argv[]) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   };
-  callbacks.widgets_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.widgets_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
@@ -355,8 +355,8 @@ int main(int argc, const char* argv[]) {
     edited += draw_slider(win, "exposure", app->exposure, -5, 5);
     if (edited) reset_display(app);
   };
-  callbacks.char_cb = [app](gui::window* win, unsigned int key,
-                          const gui::input& input) {
+  callbacks.char_cb = [app](gui::gui_window* win, unsigned int key,
+                          const gui::gui_input& input) {
     switch (key) {
       case 'c': {
         auto ncameras = (int)app->scene->cameras.size();
@@ -383,7 +383,7 @@ int main(int argc, const char* argv[]) {
         break;
     }
   };
-  callbacks.uiupdate_cb = [app](gui::window* win, const gui::input& input) {
+  callbacks.uiupdate_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
     if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
         !input.widgets_active) {
       auto dolly  = 0.0f;
