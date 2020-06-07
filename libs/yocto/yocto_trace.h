@@ -87,198 +87,7 @@ namespace trc = yocto::trace;
 }  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
-// HIGH LEVEL API
-// -----------------------------------------------------------------------------
-namespace yocto::trace {
-
-// Trace scene
-struct scene;
-struct camera;
-struct environment;
-struct shape;
-struct texture;
-struct material;
-struct instance;
-struct object;
-
-// Add scene elements
-trc::camera*      add_camera(trc::scene* scene);
-trc::object*      add_object(trc::scene* scene);
-trc::texture*     add_texture(trc::scene* scene);
-trc::material*    add_material(trc::scene* scene);
-trc::shape*       add_shape(trc::scene* scene);
-trc::instance*    add_instance(trc::scene* scene);
-trc::environment* add_environment(trc::scene* scene);
-
-// camera properties
-void set_frame(trc::camera* camera, const frame3f& frame);
-void set_lens(trc::camera* camera, float lens, float aspect, float film,
-    bool ortho = false);
-void set_focus(trc::camera* camera, float aperture, float focus);
-
-// object properties
-void set_frame(trc::object* object, const frame3f& frame);
-void set_material(trc::object* object, trc::material* material);
-void set_shape(trc::object* object, trc::shape* shape);
-void set_instance(trc::object* object, trc::instance* instance);
-
-// texture properties
-void set_texture(trc::texture* texture, const image<vec3b>& img);
-void set_texture(trc::texture* texture, const image<vec3f>& img);
-void set_texture(trc::texture* texture, const image<byte>& img);
-void set_texture(trc::texture* texture, const image<float>& img);
-
-// material properties
-void set_emission(trc::material* material, const vec3f& emission,
-    trc::texture* emission_tex = nullptr);
-void set_color(trc::material* material, const vec3f& color,
-    trc::texture* color_tex = nullptr);
-void set_specular(trc::material* material, float specular = 1,
-    trc::texture* specular_tex = nullptr);
-void set_ior(trc::material* material, float ior);
-void set_metallic(trc::material* material, float metallic,
-    trc::texture* metallic_tex = nullptr);
-void set_transmission(trc::material* material, float transmission, bool thin,
-    float trdepth, trc::texture* transmission_tex = nullptr);
-void set_translucency(trc::material* material, float translucency, bool thin,
-    float trdepth, trc::texture* translucency_tex = nullptr);
-void set_roughness(trc::material* material, float roughness,
-    trc::texture* roughness_tex = nullptr);
-void set_opacity(trc::material* material, float opacity,
-    trc::texture* opacity_tex = nullptr);
-void set_thin(trc::material* material, bool thin);
-void set_scattering(trc::material* material, const vec3f& scattering,
-    float scanisotropy, trc::texture* scattering_tex = nullptr);
-void set_normalmap(trc::material* material, trc::texture* normal_tex);
-
-// shape properties
-void set_points(trc::shape* shape, const std::vector<int>& points);
-void set_lines(trc::shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(trc::shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(trc::shape* shape, const std::vector<vec4i>& quads);
-void set_positions(trc::shape* shape, const std::vector<vec3f>& positions);
-void set_normals(trc::shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(trc::shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(trc::shape* shape, const std::vector<vec3f>& colors);
-void set_radius(trc::shape* shape, const std::vector<float>& radius);
-void set_tangents(trc::shape* shape, const std::vector<vec4f>& tangents);
-
-// instance properties
-void set_frames(trc::instance* instance, const std::vector<frame3f>& frames);
-
-// environment properties
-void set_frame(trc::environment* environment, const frame3f& frame);
-void set_emission(trc::environment* environment, const vec3f& emission,
-    trc::texture* emission_tex = nullptr);
-
-// Type of tracing algorithm
-enum struct sampler_type {
-  path,        // path tracing
-  naive,       // naive path tracing
-  eyelight,    // eyelight rendering
-  falsecolor,  // false color rendering
-};
-// Type of false color visualization
-enum struct falsecolor_type {
-  // clang-format off
-  normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, coat, metal, transmission, translucency, refraction, 
-  roughness, opacity, ior, object, element, highlight
-  // clang-format on
-};
-// Strategy used to build the bvh
-enum struct bvh_type {
-  default_,
-  highquality,
-  middle,
-  balanced,
-#ifdef YOCTO_EMBREE
-  embree_default,
-  embree_highquality,
-  embree_compact  // only for copy interface
-#endif
-};
-
-// Default trace seed
-const auto default_seed = 961748941ull;
-
-// Options for trace functions
-struct trace_params {
-  int             resolution = 1280;
-  sampler_type    sampler    = sampler_type::path;
-  falsecolor_type falsecolor = falsecolor_type::diffuse;
-  int             samples    = 512;
-  int             bounces    = 8;
-  float           clamp      = 100;
-  bool            nocaustics = false;
-  bool            envhidden  = false;
-  bool            tentfilter = false;
-  uint64_t        seed       = default_seed;
-  bvh_type        bvh        = bvh_type::default_;
-  bool            noparallel = false;
-  int             pratio     = 8;
-  float           exposure   = 0;
-};
-
-const auto sampler_names = std::vector<std::string>{
-    "path", "naive", "eyelight", "falsecolor"};
-
-const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
-    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "translucency", "refraction",
-    "roughness", "opacity", "ior", "object", "element", "highlight"};
-const auto bvh_names        = std::vector<std::string>{
-    "default", "highquality", "middle", "balanced",
-#ifdef YOCTO_EMBREE
-    "embree-default", "embree-highquality", "embree-compact"
-#endif
-};
-
-// Progress report callback
-using progress_callback =
-    std::function<void(const std::string& message, int current, int total)>;
-// Callback used to report partially computed image
-using image_callback = std::function<void(
-    const image<vec4f>& render, int current, int total)>;
-
-// Initialize lights.
-void init_lights(trc::scene* scene, progress_callback progress_cb = {});
-
-// Build the bvh acceleration structure.
-void init_bvh(trc::scene* scene, const trace_params& params,
-    progress_callback progress_cb = {});
-
-// Refit bvh data
-void update_bvh(trc::scene*            scene,
-    const std::vector<trc::object*>&   updated_objects,
-    const std::vector<trc::shape*>&    updated_shapes,
-    const std::vector<trc::instance*>& updated_instances,
-    const trace_params&                params);
-
-// Progressively computes an image.
-image<vec4f> trace_image(const trc::scene* scene,
-    const trc::camera* camera, const trace_params& params,
-    progress_callback progress_cb = {}, image_callback image_cb = {});
-
-// Check is a sampler requires lights
-bool is_sampler_lit(const trace_params& params);
-
-// [experimental] Callback used to report partially computed image
-using async_callback = std::function<void(
-    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
-
-// [experimental] Asynchronous interface
-struct state;
-void trace_start(state* state, const trc::scene* scene,
-    const trc::camera* camera, const trace_params& params,
-    progress_callback progress_cb = {}, image_callback image_cb = {},
-    async_callback async_cb = {});
-void trace_stop(state* state);
-
-}  // namespace yocto::trace
-
-// -----------------------------------------------------------------------------
-// SCENE AND RENDERING DATA
+// TRACE SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
 
@@ -458,6 +267,175 @@ struct scene {
   ~scene();
 };
 
+// Add scene elements
+trc::camera*      add_camera(trc::scene* scene);
+trc::object*      add_object(trc::scene* scene);
+trc::texture*     add_texture(trc::scene* scene);
+trc::material*    add_material(trc::scene* scene);
+trc::shape*       add_shape(trc::scene* scene);
+trc::instance*    add_instance(trc::scene* scene);
+trc::environment* add_environment(trc::scene* scene);
+
+// camera properties
+void set_frame(trc::camera* camera, const frame3f& frame);
+void set_lens(trc::camera* camera, float lens, float aspect, float film,
+    bool ortho = false);
+void set_focus(trc::camera* camera, float aperture, float focus);
+
+// object properties
+void set_frame(trc::object* object, const frame3f& frame);
+void set_material(trc::object* object, trc::material* material);
+void set_shape(trc::object* object, trc::shape* shape);
+void set_instance(trc::object* object, trc::instance* instance);
+
+// texture properties
+void set_texture(trc::texture* texture, const image<vec3b>& img);
+void set_texture(trc::texture* texture, const image<vec3f>& img);
+void set_texture(trc::texture* texture, const image<byte>& img);
+void set_texture(trc::texture* texture, const image<float>& img);
+
+// material properties
+void set_emission(trc::material* material, const vec3f& emission,
+    trc::texture* emission_tex = nullptr);
+void set_color(trc::material* material, const vec3f& color,
+    trc::texture* color_tex = nullptr);
+void set_specular(trc::material* material, float specular = 1,
+    trc::texture* specular_tex = nullptr);
+void set_ior(trc::material* material, float ior);
+void set_metallic(trc::material* material, float metallic,
+    trc::texture* metallic_tex = nullptr);
+void set_transmission(trc::material* material, float transmission, bool thin,
+    float trdepth, trc::texture* transmission_tex = nullptr);
+void set_translucency(trc::material* material, float translucency, bool thin,
+    float trdepth, trc::texture* translucency_tex = nullptr);
+void set_roughness(trc::material* material, float roughness,
+    trc::texture* roughness_tex = nullptr);
+void set_opacity(trc::material* material, float opacity,
+    trc::texture* opacity_tex = nullptr);
+void set_thin(trc::material* material, bool thin);
+void set_scattering(trc::material* material, const vec3f& scattering,
+    float scanisotropy, trc::texture* scattering_tex = nullptr);
+void set_normalmap(trc::material* material, trc::texture* normal_tex);
+
+// shape properties
+void set_points(trc::shape* shape, const std::vector<int>& points);
+void set_lines(trc::shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(trc::shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(trc::shape* shape, const std::vector<vec4i>& quads);
+void set_positions(trc::shape* shape, const std::vector<vec3f>& positions);
+void set_normals(trc::shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(trc::shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(trc::shape* shape, const std::vector<vec3f>& colors);
+void set_radius(trc::shape* shape, const std::vector<float>& radius);
+void set_tangents(trc::shape* shape, const std::vector<vec4f>& tangents);
+
+// instance properties
+void set_frames(trc::instance* instance, const std::vector<frame3f>& frames);
+
+// environment properties
+void set_frame(trc::environment* environment, const frame3f& frame);
+void set_emission(trc::environment* environment, const vec3f& emission,
+    trc::texture* emission_tex = nullptr);
+
+}
+
+// -----------------------------------------------------------------------------
+// RENDERING API
+// -----------------------------------------------------------------------------
+namespace yocto::trace {
+
+// Type of tracing algorithm
+enum struct sampler_type {
+  path,        // path tracing
+  naive,       // naive path tracing
+  eyelight,    // eyelight rendering
+  falsecolor,  // false color rendering
+};
+// Type of false color visualization
+enum struct falsecolor_type {
+  // clang-format off
+  normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
+  diffuse, specular, coat, metal, transmission, translucency, refraction, 
+  roughness, opacity, ior, object, element, highlight
+  // clang-format on
+};
+// Strategy used to build the bvh
+enum struct bvh_type {
+  default_,
+  highquality,
+  middle,
+  balanced,
+#ifdef YOCTO_EMBREE
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
+#endif
+};
+
+// Default trace seed
+const auto default_seed = 961748941ull;
+
+// Options for trace functions
+struct trace_params {
+  int             resolution = 1280;
+  sampler_type    sampler    = sampler_type::path;
+  falsecolor_type falsecolor = falsecolor_type::diffuse;
+  int             samples    = 512;
+  int             bounces    = 8;
+  float           clamp      = 100;
+  bool            nocaustics = false;
+  bool            envhidden  = false;
+  bool            tentfilter = false;
+  uint64_t        seed       = default_seed;
+  bvh_type        bvh        = bvh_type::default_;
+  bool            noparallel = false;
+  int             pratio     = 8;
+  float           exposure   = 0;
+};
+
+const auto sampler_names = std::vector<std::string>{
+    "path", "naive", "eyelight", "falsecolor"};
+
+const auto falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
+    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
+    "specular", "coat", "metal", "transmission", "translucency", "refraction",
+    "roughness", "opacity", "ior", "object", "element", "highlight"};
+const auto bvh_names        = std::vector<std::string>{
+    "default", "highquality", "middle", "balanced",
+#ifdef YOCTO_EMBREE
+    "embree-default", "embree-highquality", "embree-compact"
+#endif
+};
+
+// Progress report callback
+using progress_callback =
+    std::function<void(const std::string& message, int current, int total)>;
+// Callback used to report partially computed image
+using image_callback = std::function<void(
+    const image<vec4f>& render, int current, int total)>;
+
+// Initialize lights.
+void init_lights(trc::scene* scene, progress_callback progress_cb = {});
+
+// Build the bvh acceleration structure.
+void init_bvh(trc::scene* scene, const trace_params& params,
+    progress_callback progress_cb = {});
+
+// Refit bvh data
+void update_bvh(trc::scene*            scene,
+    const std::vector<trc::object*>&   updated_objects,
+    const std::vector<trc::shape*>&    updated_shapes,
+    const std::vector<trc::instance*>& updated_instances,
+    const trace_params&                params);
+
+// Progressively computes an image.
+image<vec4f> trace_image(const trc::scene* scene,
+    const trc::camera* camera, const trace_params& params,
+    progress_callback progress_cb = {}, image_callback image_cb = {});
+
+// Check is a sampler requires lights
+bool is_sampler_lit(const trace_params& params);
+
 // State of a pixel during tracing
 struct pixel {
   vec3f     radiance = {0, 0, 0};
@@ -473,6 +451,18 @@ struct state {
   std::future<void> worker = {};  // async
   std::atomic<bool> stop   = {};  // async
 };
+
+// [experimental] Callback used to report partially computed image
+using async_callback = std::function<void(
+    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
+
+// [experimental] Asynchronous interface
+struct state;
+void trace_start(state* state, const trc::scene* scene,
+    const trc::camera* camera, const trace_params& params,
+    progress_callback progress_cb = {}, image_callback image_cb = {},
+    async_callback async_cb = {});
+void trace_stop(state* state);
 
 }  // namespace yocto::trace
 
