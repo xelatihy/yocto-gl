@@ -92,6 +92,7 @@ using std::string;
 using std::vector;
 using std::future;
 using std::atomic;
+using std::deque;
 
 }  // namespace yocto
 
@@ -152,7 +153,7 @@ struct concurrent_queue {
 
  private:
   std::mutex    mutex;
-  std::deque<T> queue;
+  deque<T> queue;
 };
 
 // Run a task asynchronously

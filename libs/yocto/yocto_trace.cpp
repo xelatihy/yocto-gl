@@ -979,7 +979,7 @@ static void build_bvh_serial(vector<trace_bvh_node>& nodes,
   nodes.reserve(primitives.size() * 2);
 
   // queue up first node
-  auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
+  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
   nodes.emplace_back();
 
   // create nodes until the queue is empty
@@ -1046,7 +1046,7 @@ static void build_bvh_parallel(
     centers[idx] = center(bboxes[idx]);
 
   // queue up first node
-  auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
+  auto queue = deque<vec3i>{{0, 0, (int)primitives.size()}};
   nodes.emplace_back();
 
   // synchronization

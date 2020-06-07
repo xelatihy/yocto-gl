@@ -24,6 +24,7 @@ namespace yocto {
 
 // using directives
 using std::atomic;
+using std::deque;
 
 }  // namespace yocto
 
@@ -938,7 +939,7 @@ static void build_bvh(bvh_tree& bvh, vector<bbox3f>& bboxes) {
     centers[idx] = center(bboxes[idx]);
 
   // queue up first node
-  auto queue = std::deque<vec3i>{{0, 0, (int)bboxes.size()}};
+  auto queue = deque<vec3i>{{0, 0, (int)bboxes.size()}};
   nodes.emplace_back();
 
   // create nodes until the queue is empty
@@ -3035,7 +3036,7 @@ void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
   auto in_queue = vector<bool>(solver.graph.size(), false);
 
   // setup queue
-  auto queue = std::deque<int>();
+  auto queue = deque<int>();
   for (auto source : sources) {
     in_queue[source] = true;
     queue.push_back(source);

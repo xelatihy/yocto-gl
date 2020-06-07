@@ -65,6 +65,9 @@ namespace yocto {
 // using directives
 using std::unordered_map;
 using std::unordered_set;
+using std::atomic;
+using std::deque;
+using std::mutex;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -1859,8 +1862,8 @@ bool draw_message(gui_window* win, const char* lbl, const string& message) {
   }
 }
 
-std::deque<string> _message_queue = {};
-std::mutex         _message_mutex;
+deque<string> _message_queue = {};
+mutex         _message_mutex;
 void               push_message(gui_window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
