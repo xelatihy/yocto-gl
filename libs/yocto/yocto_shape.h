@@ -134,10 +134,10 @@
 namespace yocto {
 
 // using directives
+using std::array;
 using std::string;
 using std::unordered_map;
 using std::vector;
-using std::array;
 
 }  // namespace yocto
 

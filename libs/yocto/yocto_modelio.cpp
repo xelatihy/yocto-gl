@@ -68,7 +68,8 @@ inline void skip_ply_whitespace(string_view& str) {
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_ply_value(string_view& str, string_view& value) {
+[[nodiscard]] inline bool parse_ply_value(
+    string_view& str, string_view& value) {
   skip_ply_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -524,43 +525,53 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!read_ply_value(fs, prop->data_i8.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_i8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i16:
-                if (!read_ply_value(fs, prop->data_i16.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_i16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i32:
-                if (!read_ply_value(fs, prop->data_i32.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_i32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i64:
-                if (!read_ply_value(fs, prop->data_i64.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_i64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u8:
-                if (!read_ply_value(fs, prop->data_u8.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_u8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u16:
-                if (!read_ply_value(fs, prop->data_u16.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_u16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u32:
-                if (!read_ply_value(fs, prop->data_u32.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_u32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u64:
-                if (!read_ply_value(fs, prop->data_u64.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_u64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f32:
-                if (!read_ply_value(fs, prop->data_f32.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_f32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f64:
-                if (!read_ply_value(fs, prop->data_f64.emplace_back(), big_endian))
+                if (!read_ply_value(
+                        fs, prop->data_f64.emplace_back(), big_endian))
                   return read_error();
                 break;
             }
@@ -604,7 +615,8 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
   if (!format_ply_values(fs, "ply\n")) return write_error();
   if (!format_ply_values(fs, "format {} 1.0\n", format_map.at(ply->format)))
     return write_error();
-  if (!format_ply_values(fs, "comment Written by Yocto/GL\n")) return write_error();
+  if (!format_ply_values(fs, "comment Written by Yocto/GL\n"))
+    return write_error();
   if (!format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   for (auto& comment : ply->comments)
@@ -701,43 +713,53 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!write_ply_value(fs, prop->data_i8[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_i8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i16:
-                if (!write_ply_value(fs, prop->data_i16[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_i16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i32:
-                if (!write_ply_value(fs, prop->data_i32[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_i32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i64:
-                if (!write_ply_value(fs, prop->data_i64[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_i64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u8:
-                if (!write_ply_value(fs, prop->data_u8[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_u8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u16:
-                if (!write_ply_value(fs, prop->data_u16[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_u16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u32:
-                if (!write_ply_value(fs, prop->data_u32[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_u32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u64:
-                if (!write_ply_value(fs, prop->data_u64[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_u64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f32:
-                if (!write_ply_value(fs, prop->data_f32[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_f32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f64:
-                if (!write_ply_value(fs, prop->data_f64[cur[pidx]++], big_endian))
+                if (!write_ply_value(
+                        fs, prop->data_f64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
             }
@@ -1208,7 +1230,8 @@ inline void skip_obj_whitespace(string_view& str) {
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_obj_value(string_view& str, string_view& value) {
+[[nodiscard]] inline bool parse_obj_value(
+    string_view& str, string_view& value) {
   skip_obj_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -1473,13 +1496,15 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
     } else if (cmd == "map_Ks") {
       if (!parse_obj_value(str, material->specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_obj_value(str, material->transmission_tex)) return parse_error();
+      if (!parse_obj_value(str, material->transmission_tex))
+        return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
       if (!parse_obj_value(str, material->opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
       if (!parse_obj_value(str, material->bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_obj_value(str, material->displacement_tex)) return parse_error();
+      if (!parse_obj_value(str, material->displacement_tex))
+        return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
       if (!parse_obj_value(str, material->normal_tex)) return parse_error();
     } else if (cmd == "Pe") {
@@ -1504,13 +1529,16 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
       if (!parse_obj_value(str, material->pbr_coat)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      if (!parse_obj_value(str, material->pbr_coatroughness)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_coatroughness))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pt") {
-      if (!parse_obj_value(str, material->pbr_transmission)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_transmission))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pss") {
-      if (!parse_obj_value(str, material->pbr_translucency)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_translucency))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pn") {
       if (!parse_obj_value(str, material->pbr_ior)) return parse_error();
@@ -1519,10 +1547,12 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
       if (!parse_obj_value(str, material->pbr_opacity)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      if (!parse_obj_value(str, material->pbr_volscattering)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_volscattering))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      if (!parse_obj_value(str, material->pbr_volanisotropy)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_volanisotropy))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvr") {
       if (!parse_obj_value(str, material->pbr_volscale)) return parse_error();
@@ -1531,19 +1561,23 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
       if (!parse_obj_value(str, material->pbr_thin)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      if (!parse_obj_value(str, material->pbr_emission_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_emission_tex))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pb") {
       if (!parse_obj_value(str, material->pbr_base_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      if (!parse_obj_value(str, material->pbr_specular_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_specular_tex))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      if (!parse_obj_value(str, material->pbr_metallic_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_metallic_tex))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      if (!parse_obj_value(str, material->pbr_roughness_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_roughness_tex))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Psh") {
       if (!parse_obj_value(str, material->pbr_sheen_tex)) return parse_error();
@@ -1556,7 +1590,8 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      if (!parse_obj_value(str, material->pbr_opacity_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_opacity_tex))
+        return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pt") {
       if (!parse_obj_value(str, material->pbr_transmission_tex))
@@ -1788,13 +1823,15 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
 
     // possible token values
     if (cmd == "v") {
-      if (!parse_obj_value(str, opositions.emplace_back())) return parse_error();
+      if (!parse_obj_value(str, opositions.emplace_back()))
+        return parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
       if (!parse_obj_value(str, onormals.emplace_back())) return parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if (!parse_obj_value(str, otexcoords.emplace_back())) return parse_error();
+      if (!parse_obj_value(str, otexcoords.emplace_back()))
+        return parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -1993,7 +2030,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // write material
   for (auto material : obj->materials) {
-    if (!format_obj_values(fs, "newmtl {}\n", material->name)) return write_error();
+    if (!format_obj_values(fs, "newmtl {}\n", material->name))
+      return write_error();
     if (!material->as_pbr) {
       if (!format_obj_values(fs, "illum {}\n", material->illum))
         return write_error();
@@ -2108,19 +2146,23 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
         if (!format_obj_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
           return write_error();
       if (!material->pbr_transmission_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
+        if (!format_obj_values(
+                fs, "map_Pt {}\n", material->pbr_transmission_tex))
           return write_error();
       if (!material->pbr_translucency_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
+        if (!format_obj_values(
+                fs, "map_Pss {}\n", material->pbr_translucency_tex))
           return write_error();
       if (!material->pbr_coat_tex.path.empty())
         if (!format_obj_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
           return write_error();
       if (!material->pbr_coatroughness_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
+        if (!format_obj_values(
+                fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
           return write_error();
       if (!material->pbr_volscattering_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
+        if (!format_obj_values(
+                fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
         if (!format_obj_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
@@ -2730,7 +2772,8 @@ inline void skip_pbrt_whitespace(string_view& str) {
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, string_view& value) {
+[[nodiscard]] inline bool parse_pbrt_value(
+    string_view& str, string_view& value) {
   skip_pbrt_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -2796,7 +2839,9 @@ inline void skip_pbrt_whitespace(string_view& str) {
 }
 
 // Formats values to string
-inline void format_pbrt_value(string& str, const string& value) { str += value; }
+inline void format_pbrt_value(string& str, const string& value) {
+  str += value;
+}
 inline void format_pbrt_value(string& str, const char* value) { str += value; }
 inline void format_pbrt_value(string& str, int value) {
   char buf[256];
@@ -3008,7 +3053,8 @@ struct pbrt_command {
   }
 }
 
-[[nodiscard]] inline bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& val) {
+[[nodiscard]] inline bool get_pbrt_value(
+    const pbrt_value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -3642,7 +3688,8 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
     return true;
   } else if (command.type == "realistic") {
     auto lensfile = ""s;
-    if (!get_pbrt_value(command.values, "lensfile", lensfile)) return parse_error();
+    if (!get_pbrt_value(command.values, "lensfile", lensfile))
+      return parse_error();
     lensfile          = lensfile.substr(0, lensfile.size() - 4);
     lensfile          = lensfile.substr(lensfile.find('.') + 1);
     lensfile          = lensfile.substr(0, lensfile.size() - 2);
@@ -3696,7 +3743,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     ptexture->constant = {1, 0, 0};
     return true;
   } else if (command.type == "checkerboard") {
-    // auto tex1     = if(!get_pbrt_value(command.values, "tex1", std::pair{vec3f{1},
+    // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
+    // std::pair{vec3f{1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
     //  std::pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
@@ -4039,7 +4087,8 @@ inline bool convert_material(pbrt_material*     pmaterial,
     return true;
   } else if (command.type == "fourier") {
     auto bsdffile = ""s;
-    if (!get_pbrt_value(command.values, "bsdffile", bsdffile)) return parse_error();
+    if (!get_pbrt_value(command.values, "bsdffile", bsdffile))
+      return parse_error();
     if (bsdffile.rfind("/") != string::npos)
       bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
@@ -4192,8 +4241,10 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     shape->normals   = {};
     shape->texcoords = {};
     shape->triangles = {};
-    if (!get_pbrt_value(command.values, "P", shape->positions)) return parse_error();
-    if (!get_pbrt_value(command.values, "N", shape->normals)) return parse_error();
+    if (!get_pbrt_value(command.values, "P", shape->positions))
+      return parse_error();
+    if (!get_pbrt_value(command.values, "N", shape->normals))
+      return parse_error();
     if (!get_pbrt_value(command.values, "uv", shape->texcoords))
       return parse_error();
     for (auto& uv : shape->texcoords) uv.y = (1 - uv.y);
@@ -4203,7 +4254,8 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   } else if (command.type == "loopsubdiv") {
     shape->positions = {};
     shape->triangles = {};
-    if (!get_pbrt_value(command.values, "P", shape->positions)) return parse_error();
+    if (!get_pbrt_value(command.values, "P", shape->positions))
+      return parse_error();
     if (!get_pbrt_value(command.values, "indices", shape->triangles))
       return parse_error();
     shape->normals.resize(shape->positions.size());
@@ -4285,7 +4337,8 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     plight->emission = l * scale;
     plight->from     = vec3f{0, 0, 0};
     plight->to       = vec3f{0, 0, 1};
-    if (!get_pbrt_value(command.values, "from", plight->from)) return parse_error();
+    if (!get_pbrt_value(command.values, "from", plight->from))
+      return parse_error();
     if (!get_pbrt_value(command.values, "to", plight->to)) return parse_error();
     plight->distant       = true;
     auto distant_dist     = 100;
@@ -4311,7 +4364,8 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     plight->emission = i * scale;
     plight->from     = zero3f;
-    if (!get_pbrt_value(command.values, "from", plight->from)) return parse_error();
+    if (!get_pbrt_value(command.values, "from", plight->from))
+      return parse_error();
     plight->area_emission = plight->emission;
     plight->area_frame    = plight->frame * translation_frame(plight->from);
     plight->area_frend    = plight->frend * translation_frame(plight->from);
@@ -4371,8 +4425,8 @@ struct pbrt_stack_element {
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element>                      stack           = {};
-  unordered_map<string, pbrt_stack_element>       coordsys        = {};
+  vector<pbrt_stack_element>                 stack           = {};
+  unordered_map<string, pbrt_stack_element>  coordsys        = {};
   unordered_map<string, vector<pbrt_shape*>> objects         = {};
   string                                     cur_object      = "";
   vec2i                                      film_resolution = {512, 512};
@@ -4775,7 +4829,9 @@ inline void format_pbrt_value(string& str, const pbrt_value& value) {
       format_pbrt_values(str, "\"{}\"", value.value1b ? "true" : "false");
       break;
     case pbrt_type::string:
-    case pbrt_type::texture: format_pbrt_values(str, "\"{}\"", value.value1s); break;
+    case pbrt_type::texture:
+      format_pbrt_values(str, "\"{}\"", value.value1s);
+      break;
     case pbrt_type::point:
     case pbrt_type::vector:
     case pbrt_type::normal:
@@ -4840,10 +4896,13 @@ bool save_pbrt(
   for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
     command.type = "image";
-    command.values.push_back(make_pbrt_value("xresolution", camera->resolution.x));
-    command.values.push_back(make_pbrt_value("yresolution", camera->resolution.y));
+    command.values.push_back(
+        make_pbrt_value("xresolution", camera->resolution.x));
+    command.values.push_back(
+        make_pbrt_value("yresolution", camera->resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
-    if (!format_pbrt_values(fs, "Film \"{}\" {}\n", command.type, command.values))
+    if (!format_pbrt_values(
+            fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();
   }
 
@@ -4851,12 +4910,13 @@ bool save_pbrt(
     auto command  = pbrt_command{};
     command.type  = "perspective";
     command.frame = camera->frame;
-    command.values.push_back(
-        make_pbrt_value("fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
+    command.values.push_back(make_pbrt_value(
+        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
     if (!format_pbrt_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
-    if (!format_pbrt_values(fs, "Camera \"{}\" {}\n", command.type, command.values))
+    if (!format_pbrt_values(
+            fs, "Camera \"{}\" {}\n", command.type, command.values))
       return write_error();
   }
 
@@ -4886,7 +4946,8 @@ bool save_pbrt(
     command.frame = environment->frame;
     command.type  = "infinite";
     command.values.push_back(make_pbrt_value("L", environment->emission));
-    command.values.push_back(make_pbrt_value("mapname", environment->emission_tex));
+    command.values.push_back(
+        make_pbrt_value("mapname", environment->emission_tex));
     if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
     if (!format_pbrt_values(fs, "Transform {}\n", (mat4f)command.frame))
       return write_error();
@@ -4928,7 +4989,8 @@ bool save_pbrt(
             make_pbrt_value("Kd", material->color_tex, pbrt_type::texture));
       }
       if (material->specular != 0) {
-        command.values.push_back(make_pbrt_value("Ks", vec3f{material->specular}));
+        command.values.push_back(
+            make_pbrt_value("Ks", vec3f{material->specular}));
         command.values.push_back(
             make_pbrt_value("roughness", pow(material->roughness, 2)));
         command.values.push_back(make_pbrt_value("eta", material->ior));
@@ -4939,8 +5001,8 @@ bool save_pbrt(
             make_pbrt_value("Kt", vec3f{material->transmission}));
       }
       if (!material->opacity_tex.empty()) {
-        command.values.push_back(
-            make_pbrt_value("opacity", material->opacity_tex, pbrt_type::texture));
+        command.values.push_back(make_pbrt_value(
+            "opacity", material->opacity_tex, pbrt_type::texture));
       } else if (material->opacity != 1) {
         command.values.push_back(make_pbrt_value("opacity", material->opacity));
       }
@@ -4990,14 +5052,17 @@ bool save_pbrt(
     if (shape->material->emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
-      acommand.values.push_back(make_pbrt_value("L", shape->material->emission));
+      acommand.values.push_back(
+          make_pbrt_value("L", shape->material->emission));
       if (!format_pbrt_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();
     }
-    if (!format_pbrt_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
+    if (!format_pbrt_values(
+            fs, "NamedMaterial \"{}\"\n", shape->material->name))
       return write_error();
-    if (!format_pbrt_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
+    if (!format_pbrt_values(
+            fs, "Shape \"{}\" {}\n", command.type, command.values))
       return write_error();
     if (!format_pbrt_values(fs, "AttributeEnd\n")) return write_error();
     if (!shape->instances.empty())

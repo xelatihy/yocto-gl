@@ -5638,8 +5638,7 @@ inline int sample_discrete_weights(const array<T, N>& weights, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, size_t N>
-inline float sample_discrete_weights_pdf(
-    const array<T, N>& weights, int idx) {
+inline float sample_discrete_weights_pdf(const array<T, N>& weights, int idx) {
   return weights[idx];
 }
 

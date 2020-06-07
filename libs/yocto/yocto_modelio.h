@@ -1,7 +1,7 @@
 //
 // # Yocto/ModelIO: Tiny library for parsing and writing Ply/Obj/Pbrt
 //
-// Yocto/ModelIO is a tiny library for loading and saving Ply, Obj and Pbrt 
+// Yocto/ModelIO is a tiny library for loading and saving Ply, Obj and Pbrt
 // files.
 //
 
@@ -39,8 +39,8 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "yocto_math.h"
 
@@ -50,10 +50,10 @@
 namespace yocto {
 
 // using directives
-using std::string;
-using std::vector;
 using std::array;
+using std::string;
 using std::unordered_map;
+using std::vector;
 
 }  // namespace yocto
 
