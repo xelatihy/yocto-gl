@@ -32,7 +32,6 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace sio = yocto::sceneio;
 namespace trc = yocto::trace;
 namespace gui = yocto::gui;
 
@@ -84,8 +83,8 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& camera,
-    sio::scene_camera* iocamera, sio::progress_callback print_progress = {}) {
+void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
+    scene_camera* iocamera, progress_callback print_progress = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -93,7 +92,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::scene_camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -106,7 +105,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::scene_texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -124,7 +123,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::scene_material*, trc::material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -160,7 +159,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::scene_shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -179,7 +178,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::scene_instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -217,7 +216,7 @@ void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& came
 
 // init camera names
 void init_camera_names(std::vector<std::string>& names,
-    const std::vector<sio::scene_camera*>&             iocameras) {
+    const std::vector<scene_camera*>&             iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
   }
@@ -280,7 +279,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<sio::scene_model>();
+  auto ioscene_guard = std::make_unique<scene_model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(app->filename, ioscene, ioerror, print_progress))

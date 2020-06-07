@@ -54,7 +54,7 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -249,13 +249,13 @@ scene_texture* add_texture(
 scene_object* add_complete_object(
     scene_model* scene, const std::string& name = "");
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
 
-namespace yocto::sceneio {
+namespace yocto {
 
 // Progress callback called when loading.
 using progress_callback =
@@ -277,22 +277,22 @@ scene_camera* get_camera(
 // add a sky environment
 void add_sky(scene_model* scene, float sun_angle = pif / 4);
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Make Cornell Box scene
 void make_cornellbox(scene_model* scene);
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(
@@ -304,18 +304,18 @@ std::vector<std::string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const scene_model* scene);
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdivs(
     scene_model* scene, progress_callback progress_cb = {});
 void tesselate_subdiv(scene_model* scene, scene_subdiv* subdiv);
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 #endif

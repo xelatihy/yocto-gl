@@ -31,7 +31,6 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 using namespace yocto;
-namespace sio = yocto::sceneio;
 
 #include <memory>
 using std::string;
@@ -42,9 +41,9 @@ namespace sfs = ghc::filesystem;
 
 // Shape presets used ofr testing.
 bool make_preset(
-    sio::scene_model* scene, const std::string& type, std::string& error) {
+    scene_model* scene, const std::string& type, std::string& error) {
   if (type == "cornellbox") {
-    sio::make_cornellbox(scene);
+    make_cornellbox(scene);
     return true;
   } else {
     error = "unknown preset";
@@ -82,7 +81,7 @@ int main(int argc, const char* argv[]) {
   // load scene
   auto ext         = sfs::path(filename).extension().string();
   auto basename    = sfs::path(filename).stem().string();
-  auto scene_guard = std::make_unique<sio::scene_model>();
+  auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (ext == ".ypreset") {

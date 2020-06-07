@@ -63,7 +63,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
 inline int keyframe_index(const std::vector<float>& times, const float& time) {
@@ -120,12 +120,12 @@ inline T keyframe_bezier(
       vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 std::vector<std::string> scene_stats(const scene_model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
@@ -231,12 +231,12 @@ std::vector<std::string> scene_validation(
   return errs;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 scene_model::~scene_model() {
   for (auto camera : cameras) delete camera;
@@ -598,12 +598,12 @@ void tesselate_subdivs(scene_model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
 static bool load_json_scene(const std::string& filename, scene_model* scene,
@@ -673,12 +673,12 @@ bool save_scene(const std::string& filename, const scene_model* scene,
   }
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // INDIVIDUAL ELEMENTS
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -778,7 +778,7 @@ static bool save_instance(const std::string& filename,
   }
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
@@ -811,7 +811,7 @@ inline void from_json(const json& j, frame3f& value) {
 // -----------------------------------------------------------------------------
 // JSON IO
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 using json = nlohmann::json;
 
@@ -1471,12 +1471,12 @@ static bool save_json_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Loads an OBJ
 static bool load_obj_scene(const std::string& filename, scene_model* scene,
@@ -1806,12 +1806,12 @@ void print_obj_camera(scene_camera* camera) {
       camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 static bool load_ply_scene(const std::string& filename, scene_model* scene,
     std::string& error, progress_callback progress_cb, bool noparallel) {
@@ -1861,12 +1861,12 @@ static bool save_ply_scene(const std::string& filename, const scene_model* scene
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // Load a scene
 static bool load_gltf_scene(const std::string& filename, scene_model* scene,
@@ -2338,12 +2338,12 @@ static bool load_gltf_scene(const std::string& filename, scene_model* scene,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 // load pbrt scenes
 static bool load_pbrt_scene(const std::string& filename, scene_model* scene,
@@ -2623,12 +2623,12 @@ static bool save_pbrt_scene(const std::string& filename,
   return true;
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
-namespace yocto::sceneio {
+namespace yocto {
 
 void make_cornellbox(scene_model* scene) {
   scene->name                = "cornellbox";
@@ -2695,4 +2695,4 @@ void make_cornellbox(scene_model* scene) {
   light->material->emission  = {17, 12, 4};
 }
 
-}  // namespace yocto::sceneio
+}  // namespace yocto

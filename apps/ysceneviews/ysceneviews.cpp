@@ -32,7 +32,6 @@
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace sio = yocto::sceneio;
 namespace gui = yocto::gui;
 
 #include <atomic>
@@ -49,7 +48,7 @@ namespace sfs = ghc::filesystem;
 #endif
 
 namespace yocto::sceneio {
-void print_obj_camera(sio::scene_camera* camera);
+void print_obj_camera(scene_camera* camera);
 };
 
 // Application state
@@ -64,22 +63,22 @@ struct app_state {
   gui::ogl_scene_params drawgl_prms = {};
 
   // scene
-  sio::scene_model*  ioscene  = new sio::scene_model{};
-  sio::scene_camera* iocamera = nullptr;
+  scene_model*  ioscene  = new scene_model{};
+  scene_camera* iocamera = nullptr;
 
   // rendering state
   gui::ogl_scene*  glscene  = new gui::ogl_scene{};
   gui::ogl_camera* glcamera = nullptr;
 
   // editing
-  sio::scene_camera*      selected_camera      = nullptr;
-  sio::scene_object*      selected_object      = nullptr;
-  sio::scene_instance*    selected_instance    = nullptr;
-  sio::scene_shape*       selected_shape       = nullptr;
-  sio::scene_subdiv*      selected_subdiv      = nullptr;
-  sio::scene_material*    selected_material    = nullptr;
-  sio::scene_environment* selected_environment = nullptr;
-  sio::scene_texture*     selected_texture     = nullptr;
+  scene_camera*      selected_camera      = nullptr;
+  scene_object*      selected_object      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
+  scene_shape*       selected_shape       = nullptr;
+  scene_subdiv*      selected_subdiv      = nullptr;
+  scene_material*    selected_material    = nullptr;
+  scene_environment* selected_environment = nullptr;
+  scene_texture*     selected_texture     = nullptr;
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -96,7 +95,7 @@ struct app_state {
   }
 };
 
-void update_lights(gui::ogl_scene* glscene, sio::scene_model* ioscene) {
+void update_lights(gui::ogl_scene* glscene, scene_model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -126,9 +125,9 @@ void update_lights(gui::ogl_scene* glscene, sio::scene_model* ioscene) {
   }
 }
 
-void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
-    gui::ogl_camera*& glcamera, sio::scene_camera* iocamera,
-    sio::progress_callback progress_cb) {
+void init_glscene(gui::ogl_scene* glscene, scene_model* ioscene,
+    gui::ogl_camera*& glcamera, scene_camera* iocamera,
+    progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
@@ -140,7 +139,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<sio::scene_camera*, gui::ogl_camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, gui::ogl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -152,7 +151,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<sio::scene_texture*, gui::ogl_texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, gui::ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -170,7 +169,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
   }
 
   // material
-  auto material_map     = std::unordered_map<sio::scene_material*, gui::ogl_material*>{};
+  auto material_map     = std::unordered_map<scene_material*, gui::ogl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -199,7 +198,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<sio::scene_shape*, gui::ogl_shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, gui::ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -217,7 +216,7 @@ void init_glscene(gui::ogl_scene* glscene, sio::scene_model* ioscene,
   }
 
   // instances
-  auto instance_map     = std::unordered_map<sio::scene_instance*, gui::ogl_instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, gui::ogl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
