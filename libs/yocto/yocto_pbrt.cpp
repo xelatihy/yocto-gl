@@ -39,6 +39,17 @@
 namespace sfs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_map;
+using namespace std::string_literals;
+
+}
+
+// -----------------------------------------------------------------------------
 // PBRT PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -569,7 +580,7 @@ template <typename T>
 }
 
 inline std::pair<vec3f, vec3f> get_etak(const string& name) {
-  static const std::unordered_map<string, std::pair<vec3f, vec3f>>
+  static const unordered_map<string, std::pair<vec3f, vec3f>>
       metal_ior_table = {
           {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                       {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
@@ -658,7 +669,7 @@ inline std::pair<vec3f, vec3f> get_etak(const string& name) {
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
 inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const std::unordered_map<string, std::pair<vec3f, vec3f>> params =
+  static const unordered_map<string, std::pair<vec3f, vec3f>> params =
       {
           // From "A Practical Model for Subsurface Light Transport"
           // Jensen, Marschner, Levoy, Hanrahan
@@ -1001,7 +1012,7 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
 
 // convert pbrt textures
 inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
-    std::unordered_map<string, pbrt_texture>& texture_map,
+    unordered_map<string, pbrt_texture>& texture_map,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1096,8 +1107,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
 // convert pbrt materials
 inline bool convert_material(pbrt_material*               pmaterial,
     const pbrt_command&                                   command,
-    const std::unordered_map<string, pbrt_material>& named_materials,
-    const std::unordered_map<string, pbrt_texture>&  named_textures,
+    const unordered_map<string, pbrt_material>& named_materials,
+    const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
@@ -1497,7 +1508,7 @@ inline void make_quad(vector<vec3i>& triangles,
 // Convert pbrt shapes
 inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     string&                                         alphamap,
-    const std::unordered_map<string, pbrt_texture>& named_textures,
+    const unordered_map<string, pbrt_texture>& named_textures,
     const string& ply_dirname, const string& filename,
     string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
@@ -1714,8 +1725,8 @@ struct stack_element {
 // pbrt parsing context
 struct context {
   vector<stack_element>                                stack      = {};
-  std::unordered_map<string, stack_element>            coordsys   = {};
-  std::unordered_map<string, vector<pbrt_shape*>> objects    = {};
+  unordered_map<string, stack_element>            coordsys   = {};
+  unordered_map<string, vector<pbrt_shape*>> objects    = {};
   string                                               cur_object = "";
   vec2i film_resolution = {512, 512};
 };
@@ -1723,10 +1734,10 @@ struct context {
 // load pbrt
 [[nodiscard]] inline bool load_pbrt(const string& filename,
     pbrt_model* pbrt, string& error, context& ctx,
-    std::unordered_map<string, pbrt_material*>& material_map,
-    std::unordered_map<string, pbrt_material>&  named_materials,
-    std::unordered_map<string, pbrt_texture>&   named_textures,
-    std::unordered_map<string, pbrt_medium>&    named_mediums,
+    unordered_map<string, pbrt_material*>& material_map,
+    unordered_map<string, pbrt_material>&  named_materials,
+    unordered_map<string, pbrt_texture>&   named_textures,
+    unordered_map<string, pbrt_medium>&    named_mediums,
     const string&                               ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -2048,11 +2059,11 @@ pbrt_light* add_light(pbrt_model* pbrt) {
 bool load_pbrt(
     const string& filename, pbrt_model* pbrt, string& error) {
   auto ctx             = context{};
-  auto material_map    = std::unordered_map<string, pbrt_material*>{};
-  auto named_materials = std::unordered_map<string, pbrt_material>{
+  auto material_map    = unordered_map<string, pbrt_material*>{};
+  auto named_materials = unordered_map<string, pbrt_material>{
       {"", {}}};
-  auto named_mediums  = std::unordered_map<string, pbrt_medium>{{"", {}}};
-  auto named_textures = std::unordered_map<string, pbrt_texture>{{"", {}}};
+  auto named_mediums  = unordered_map<string, pbrt_medium>{{"", {}}};
+  auto named_textures = unordered_map<string, pbrt_texture>{{"", {}}};
   auto dirname        = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
@@ -2075,7 +2086,7 @@ bool load_pbrt(
 }
 
 inline void format_value(string& str, const pbrt_value& value) {
-  static auto type_labels = std::unordered_map<pbrt_type, string>{
+  static auto type_labels = unordered_map<pbrt_type, string>{
       {pbrt_type::real, "float"},
       {pbrt_type::integer, "integer"},
       {pbrt_type::boolean, "bool"},

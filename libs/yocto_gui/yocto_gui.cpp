@@ -59,6 +59,17 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_map;
+using namespace std::string_literals;
+
+}
+
+// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -116,19 +127,19 @@ void set_ogl_point_size(int size) { glPointSize(size); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
-  static auto sformat = std::unordered_map<int, uint>{
+  static auto sformat = unordered_map<int, uint>{
       {1, GL_SRGB},
       {2, GL_SRGB},
       {3, GL_SRGB},
       {4, GL_SRGB_ALPHA},
   };
-  static auto iformat = std::unordered_map<int, uint>{
+  static auto iformat = unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = std::unordered_map<int, uint>{
+  static auto cformat = unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
@@ -170,19 +181,19 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const float* img, bool as_float, bool linear, bool mipmap) {
-  static auto fformat = std::unordered_map<int, uint>{
+  static auto fformat = unordered_map<int, uint>{
       {1, GL_RGB16F},
       {2, GL_RGB16F},
       {3, GL_RGB16F},
       {4, GL_RGBA32F},
   };
-  static auto iformat = std::unordered_map<int, uint>{
+  static auto iformat = unordered_map<int, uint>{
       {1, GL_RGB},
       {2, GL_RGB},
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  static auto cformat = std::unordered_map<int, uint>{
+  static auto cformat = unordered_map<int, uint>{
       {1, GL_RED},
       {2, GL_RG},
       {3, GL_RGB},
@@ -815,7 +826,7 @@ void set_attribute(ogl_program* program, int location, const vec4f& value) {
 
 // draw elements
 void draw_elements(ogl_elementbuffer* buffer) {
-  static auto elements = std::unordered_map<ogl_element_type, uint>{
+  static auto elements = unordered_map<ogl_element_type, uint>{
       {ogl_element_type::points, GL_POINTS},
       {ogl_element_type::lines, GL_LINES},
       {ogl_element_type::triangles, GL_TRIANGLES},
@@ -2005,7 +2016,7 @@ struct filedialog_state {
 bool draw_filedialog(gui_window* win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
-  static auto states = std::unordered_map<string, filedialog_state>{};
+  static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {

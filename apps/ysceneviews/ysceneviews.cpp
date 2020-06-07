@@ -138,7 +138,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<scene_camera*, ogl_camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, ogl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -150,7 +150,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<scene_texture*, ogl_texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -168,7 +168,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // material
-  auto material_map     = std::unordered_map<scene_material*, ogl_material*>{};
+  auto material_map     = unordered_map<scene_material*, ogl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -197,7 +197,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<scene_shape*, ogl_shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -215,7 +215,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // instances
-  auto instance_map     = std::unordered_map<scene_instance*, ogl_instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, ogl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

@@ -49,7 +49,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trace_camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -61,7 +61,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -78,7 +78,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = std::unordered_map<scene_material*, trace_material*>{};
+  auto material_map = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -112,7 +112,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -130,7 +130,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = std::unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

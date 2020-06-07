@@ -51,6 +51,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::unordered_map;
 
 }
 
@@ -78,7 +79,7 @@ struct obj_texture {
   float       scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
-  std::unordered_map<string, vector<float>> props;
+  unordered_map<string, vector<float>> props;
 
   obj_texture() {}
   obj_texture(const char* path) : path{path} {}

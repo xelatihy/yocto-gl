@@ -34,6 +34,17 @@
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_map;
+using namespace std::string_literals;
+
+}
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -305,7 +316,7 @@ inline ply_property* add_property(ply_element* element) {
 // Load ply
 bool load_ply(const string& filename, ply_model* ply, string& error) {
   // ply type names
-  static auto type_map = std::unordered_map<string, ply_type>{
+  static auto type_map = unordered_map<string, ply_type>{
       {"char", ply_type::i8}, {"short", ply_type::i16}, {"int", ply_type::i32},
       {"long", ply_type::i64}, {"uchar", ply_type::u8},
       {"ushort", ply_type::u16}, {"uint", ply_type::u32},
@@ -565,13 +576,13 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 // Save ply
 bool save_ply(const string& filename, ply_model* ply, string& error) {
   // ply type names
-  static auto type_map = std::unordered_map<ply_type, string>{
+  static auto type_map = unordered_map<ply_type, string>{
       {ply_type::i8, "char"}, {ply_type::i16, "short"}, {ply_type::i32, "int"},
       {ply_type::i64, "uint"}, {ply_type::u8, "uchar"},
       {ply_type::u16, "ushort"}, {ply_type::u32, "uint"},
       {ply_type::u64, "ulong"}, {ply_type::f32, "float"},
       {ply_type::f64, "double"}};
-  static auto format_map = std::unordered_map<ply_format, string>{
+  static auto format_map = unordered_map<ply_format, string>{
       {ply_format::ascii, "ascii"},
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};

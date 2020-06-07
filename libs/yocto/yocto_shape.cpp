@@ -390,7 +390,7 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
     return x < y ? vec2i{x, y} : vec2i{y, x};
   };
   auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
-  auto edge_map    = std::unordered_map<vec2i, int>();
+  auto edge_map    = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
   for (int i = 0; i < triangles.size(); ++i) {
     for (int k = 0; k < 3; ++k) {
@@ -1999,7 +1999,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
 
   // Edgemap to keep track of the added vertex on each splitted edge.
   // key: edge (ordered std::pair), value: vertex index
-  auto emap = std::unordered_map<vec2i, int>();
+  auto emap = unordered_map<vec2i, int>();
 
   // Helper procedures.
   auto make_edge = [](int a, int b) -> vec2i {
@@ -2142,7 +2142,7 @@ split_facevarying(const vector<vec4i>& quadspos,
       vector<vec3f>, vector<vec2f>>{};
   auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
   // make faces unique
-  std::unordered_map<vec3i, int> vert_map;
+  unordered_map<vec3i, int> vert_map;
   split_quads.resize(quadspos.size());
   for (auto fid = 0; fid < quadspos.size(); fid++) {
     for (auto c = 0; c < 4; c++) {
@@ -2520,7 +2520,7 @@ void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
   // loop over levels
   for (auto l = 0; l < level; l++) {
     // get edges
-    auto vmap     = std::unordered_map<int, int>();
+    auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
     auto tbeziers = vector<vec4i>();
     for (auto b : beziers) {

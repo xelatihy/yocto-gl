@@ -36,6 +36,17 @@
 namespace sfs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::unordered_map;
+using namespace std::string_literals;
+
+}
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -498,7 +509,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // shape map for instances
-  auto shape_map = std::unordered_map<string, vector<obj_shape*>>{};
+  auto shape_map = unordered_map<string, vector<obj_shape*>>{};
   for (auto shape : obj->shapes) {
     shape_map[shape->name].push_back(shape);
   }
@@ -612,7 +623,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   auto gname        = ""s;
   auto mname        = ""s;
   auto mtllibs      = vector<string>{};
-  auto material_map = std::unordered_map<string, obj_material*>{};
+  auto material_map = unordered_map<string, obj_material*>{};
 
   // initialize obj
   obj->~obj_model();
@@ -1154,7 +1165,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 void get_vertices(const obj_shape* shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
-  auto vmap = std::unordered_map<obj_vertex, int>{};
+  auto vmap = unordered_map<obj_vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.reserve(shape->vertices.size());
   for (auto& vert : shape->vertices) {
@@ -1351,7 +1362,7 @@ void get_vertices(const obj_shape* shape, int material,
     }
     count += elem.size;
   }
-  auto vmap = std::unordered_map<obj_vertex, int>{};
+  auto vmap = unordered_map<obj_vertex, int>{};
   vmap.reserve(shape->vertices.size());
   vindex.resize(shape->vertices.size());
   for (auto vid = 0; vid < shape->vertices.size(); vid++) {

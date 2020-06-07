@@ -199,7 +199,7 @@ vector<string> scene_validation(
     const scene_model* scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
-    auto used = std::unordered_map<string, int>();
+    auto used = unordered_map<string, int>();
     used.reserve(vals.size());
     for (auto& value : vals) used[value->name] += 1;
     for (auto& [name, used] : used) {
@@ -311,7 +311,7 @@ scene_camera* get_camera(const scene_model* scene, const string& name) {
 
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene_model* scene) {
-  auto shape_bbox = std::unordered_map<scene_shape*, bbox3f>{};
+  auto shape_bbox = unordered_map<scene_shape*, bbox3f>{};
   auto bbox       = invalidb3f;
   for (auto shape : scene->shapes) {
     auto sbvh = invalidb3f;
@@ -1003,7 +1003,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // parse json reference
-  auto ctexture_map = std::unordered_map<string, scene_texture*>{
+  auto ctexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_ctexture = [scene, &ctexture_map, &get_value](const json& ejs,
                           const string& name, scene_texture*& value,
@@ -1024,7 +1024,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // parse json reference
-  auto stexture_map = std::unordered_map<string, scene_texture*>{
+  auto stexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_stexture = [scene, &stexture_map, &get_value](const json& ejs,
                           const string& name, scene_texture*& value,
@@ -1045,7 +1045,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // parse json reference
-  auto shape_map = std::unordered_map<string, scene_shape*>{{"", nullptr}};
+  auto shape_map = unordered_map<string, scene_shape*>{{"", nullptr}};
   auto get_shape = [scene, &shape_map, &get_value](const json& ejs,
                        const string& name, scene_shape*& value,
                        const string& dirname = "shapes/") -> bool {
@@ -1065,7 +1065,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // parse json reference
-  auto subdiv_map = std::unordered_map<string, scene_subdiv*>{
+  auto subdiv_map = unordered_map<string, scene_subdiv*>{
       {"", nullptr}};
   auto get_subdiv = [scene, &subdiv_map, &get_value](const json& ejs,
                         const string& name, scene_subdiv*& value,
@@ -1086,7 +1086,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // load json instance
-  auto instance_map = std::unordered_map<string, scene_instance*>{
+  auto instance_map = unordered_map<string, scene_instance*>{
       {"", nullptr}};
   auto get_instance = [scene, &instance_map, &get_value](const json& ejs,
                           const string& name, scene_instance*& value,
@@ -1107,7 +1107,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   };
 
   // material map
-  auto material_map = std::unordered_map<string, scene_material*>{
+  auto material_map = unordered_map<string, scene_material*>{
       {"", nullptr}};
 
   // handle progress
@@ -1517,7 +1517,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   }
 
   // helper to create texture maps
-  auto ctexture_map = std::unordered_map<string, scene_texture*>{
+  auto ctexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
                           const obj_texture& tinfo) -> scene_texture* {
@@ -1531,7 +1531,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   };
 
   // helper to create texture maps
-  auto stexture_map = std::unordered_map<string, scene_texture*>{
+  auto stexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
                           const obj_texture& tinfo) -> scene_texture* {
@@ -1545,7 +1545,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<obj_material*, scene_material*>{};
+  auto material_map = unordered_map<obj_material*, scene_material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1578,7 +1578,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   }
 
   // convert shapes
-  auto shape_name_counts = std::unordered_map<string, int>{};
+  auto shape_name_counts = unordered_map<string, int>{};
   for (auto oshape : obj->shapes) {
     auto& materials = oshape->materials;
     if (materials.empty()) materials.push_back(nullptr);
@@ -1700,7 +1700,7 @@ static bool save_obj_scene(const string& filename,
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<scene_material*, obj_material*>{
+  auto material_map = unordered_map<scene_material*, obj_material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
@@ -1923,7 +1923,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   auto visible_nodes = vector<bool>(gltf->nodes_count, false);
   auto gscene        = gltf->scene ? gltf->scene : gltf->scenes;
   if (gscene) {
-    auto node_index = std::unordered_map<cgltf_node*, int>{};
+    auto node_index = unordered_map<cgltf_node*, int>{};
     node_index.reserve(gltf->nodes_count);
     for (auto nid = 0; nid < gltf->nodes_count; nid++)
       node_index[&gltf->nodes[nid]] = nid;
@@ -1973,7 +1973,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert color textures
-  auto ctexture_map = std::unordered_map<string, scene_texture*>{
+  auto ctexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const cgltf_texture_view& ginfo) -> scene_texture* {
@@ -1987,7 +1987,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     return texture;
   };
   // convert color opacity textures
-  auto cotexture_map = std::unordered_map<string,
+  auto cotexture_map = unordered_map<string,
       std::pair<scene_texture*, scene_texture*>>{{"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scene_texture*, scene_texture*> {
@@ -2002,7 +2002,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     return {color_texture, opacity_texture};
   };
   // convert textures
-  auto mrtexture_map = std::unordered_map<string,
+  auto mrtexture_map = unordered_map<string,
       std::pair<scene_texture*, scene_texture*>>{{"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
       -> std::pair<scene_texture*, scene_texture*> {
@@ -2018,7 +2018,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<cgltf_material*, scene_material*>{
+  auto material_map = unordered_map<cgltf_material*, scene_material*>{
       {nullptr, nullptr}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmaterial         = &gltf->materials[mid];
@@ -2044,7 +2044,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert meshes
-  auto mesh_map = std::unordered_map<cgltf_mesh*, vector<scene_object*>>{
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<scene_object*>>{
       {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
@@ -2197,7 +2197,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert nodes
-  auto instance_map = std::unordered_map<cgltf_mesh*, vector<frame3f>>{};
+  auto instance_map = unordered_map<cgltf_mesh*, vector<frame3f>>{};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];
@@ -2377,7 +2377,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   }
 
   // convert materials
-  auto ctexture_map = std::unordered_map<string, scene_texture*>{
+  auto ctexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_ctexture = [&scene, &ctexture_map](
                           const string& path) -> scene_texture* {
@@ -2388,7 +2388,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
     ctexture_map[path] = texture;
     return texture;
   };
-  auto stexture_map = std::unordered_map<string, scene_texture*>{
+  auto stexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_stexture = [&scene, &stexture_map](
                           const string& path) -> scene_texture* {
@@ -2399,7 +2399,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
     stexture_map[path] = texture;
     return texture;
   };
-  auto atexture_map = std::unordered_map<string, scene_texture*>{
+  auto atexture_map = unordered_map<string, scene_texture*>{
       {"", nullptr}};
   auto get_atexture = [&scene, &atexture_map](
                           const string& path) -> scene_texture* {
@@ -2412,7 +2412,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   };
 
   // convert material
-  auto material_map = std::unordered_map<pbrt_material*, scene_material*>{};
+  auto material_map = unordered_map<pbrt_material*, scene_material*>{};
   for (auto pmaterial : pbrt->materials) {
     auto material          = add_material(scene);
     material->emission     = pmaterial->emission;
@@ -2550,7 +2550,7 @@ static bool save_pbrt_scene(const string& filename,
   };
 
   // convert materials
-  auto material_map = std::unordered_map<scene_material*, pbrt_material*>{};
+  auto material_map = unordered_map<scene_material*, pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
     pmaterial->name         = sfs::path(material->name).stem();
