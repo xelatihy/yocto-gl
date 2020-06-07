@@ -103,6 +103,8 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
+using namespace std::string_literals;
 
 }
 
@@ -169,15 +171,15 @@ inline void add_option(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req = false);
 // Parse an enum
 inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const std::vector<string>& choices,
+    const string& usage, const vector<string>& choices,
     bool req = false);
 template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
 inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const std::vector<string>& choices,
+    const string& usage, const vector<string>& choices,
     bool req = false);
 // Parse all arguments left on the command line.
 inline void add_option(cli_state& cli, const string& name,
-    std::vector<string>& value, const string& usage,
+    vector<string>& value, const string& usage,
     bool req = false);
 
 }  // namespace yocto
@@ -232,9 +234,9 @@ using byte = unsigned char;
 
 // Load/save a binary file
 inline bool load_binary(
-    const string& filename, std::vector<byte>& data, string& error);
+    const string& filename, vector<byte>& data, string& error);
 inline bool save_binary(const string& filename,
-    const std::vector<byte>& data, string& error);
+    const vector<byte>& data, string& error);
 
 }  // namespace yocto
 
@@ -470,7 +472,7 @@ inline bool save_text(
 
 // Load a binary file
 inline bool load_binary(
-    const string& filename, std::vector<byte>& data, string& error) {
+    const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
   if (!fs) {
@@ -491,7 +493,7 @@ inline bool load_binary(
 
 // Save a binary file
 inline bool save_binary(const string& filename,
-    const std::vector<byte>& data, string& error) {
+    const vector<byte>& data, string& error) {
   auto fs = fopen(filename.c_str(), "wb");
   if (!fs) {
     error = filename + ": file not found";
@@ -525,12 +527,12 @@ struct cmdline_option {
   void*                    value   = nullptr;
   bool                     req     = false;
   bool                     set     = false;
-  std::vector<string> choices = {};
+  vector<string> choices = {};
 };
 struct cli_state {
   string                 name            = "";
   string                 usage           = "";
-  std::vector<cmdline_option> options         = {};
+  vector<cmdline_option> options         = {};
   string                 usage_options   = "";
   string                 usage_arguments = "";
   bool                        help            = false;
@@ -545,9 +547,9 @@ inline cli_state make_cli(const string& cmd, const string& usage) {
   return cli;
 }
 
-inline std::vector<string> split_cli_names(const string& name_) {
+inline vector<string> split_cli_names(const string& name_) {
   auto name  = name_;
-  auto split = std::vector<string>{};
+  auto split = vector<string>{};
   if (name.empty()) throw std::runtime_error("option name cannot be empty");
   if (name.find_first_of(" \t\r\n") != string::npos)
     throw std::runtime_error("option name cannot contain whitespaces");
@@ -566,7 +568,7 @@ inline std::vector<string> split_cli_names(const string& name_) {
 
 inline void add_option(cli_state& cli, const string& name, cli_type type,
     void* value, const string& usage, bool req,
-    const std::vector<string>& choices) {
+    const vector<string>& choices) {
   static auto type_name = std::unordered_map<cli_type, string>{
       {cli_type::string_, "<string>"},
       {cli_type::int_, "<int>"},
@@ -590,9 +592,9 @@ inline void add_option(cli_state& cli, const string& name, cli_type type,
       case cli_type::flag_: line += *(bool*)value ? "true" : "false"; break;
       case cli_type::enum_: line += choices.at(*(int*)value); break;
       case cli_type::string_vector_: {
-        for (auto i = 0; i < (*(std::vector<string>*)value).size(); i++) {
+        for (auto i = 0; i < (*(vector<string>*)value).size(); i++) {
           if (i) line += ",";
-          line += (*(std::vector<string>*)value)[i];
+          line += (*(vector<string>*)value)[i];
         }
       } break;
       default: throw std::runtime_error("unknown type");
@@ -643,7 +645,7 @@ inline void add_option(cli_state& cli, const string& name, bool& value,
   return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name,
-    std::vector<string>& value, const string& usage, bool req) {
+    vector<string>& value, const string& usage, bool req) {
   return add_option(
       cli, name, cli_type::string_vector_, &value, usage, req, {});
 }
@@ -652,13 +654,13 @@ inline void add_flag(cli_state& cli, const string& name, bool& value,
   return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const std::vector<string>& choices,
+    const string& usage, const vector<string>& choices,
     bool req) {
   return add_option(cli, name, cli_type::enum_, &value, usage, req, choices);
 }
 template <typename T, typename>
 inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const std::vector<string>& choices,
+    const string& usage, const vector<string>& choices,
     bool req) {
   return add_option(cli, name, (int&)value, usage, choices, req);
 }
@@ -721,7 +723,7 @@ inline bool parse_cli(
     }
   }
   // prepare args
-  auto args = std::vector<string>{argv + 1, argv + argc};
+  auto args = vector<string>{argv + 1, argv + argc};
   // parse options
   for (auto& option : cli.options) {
     if (option.name[0] != '-') continue;
@@ -778,7 +780,7 @@ inline bool parse_cli(
     if (args.empty()) {
       if (option.req) return cli_error("missing value for " + option.name);
     } else if (option.type == cli_type::string_vector_) {
-      *(std::vector<string>*)option.value = args;
+      *(vector<string>*)option.value = args;
       option.set                               = true;
       args.clear();
     } else {

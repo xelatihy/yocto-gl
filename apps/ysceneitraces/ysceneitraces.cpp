@@ -35,7 +35,6 @@ using namespace yocto;
 
 #include <future>
 #include <memory>
-using namespace std::string_literals;
 
 // Application state
 struct app_state {
@@ -50,7 +49,7 @@ struct app_state {
   // scene
   trace_scene*             scene        = new trace_scene{};
   trace_camera*            camera       = nullptr;
-  std::vector<string> camera_names = {};
+  vector<string> camera_names = {};
 
   // rendering state
   image<vec4f> render   = {};
@@ -213,8 +212,8 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
 }
 
 // init camera names
-void init_camera_names(std::vector<string>& names,
-    const std::vector<scene_camera*>&            iocameras) {
+void init_camera_names(vector<string>& names,
+    const vector<scene_camera*>&            iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
   }

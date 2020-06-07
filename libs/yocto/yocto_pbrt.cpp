@@ -216,17 +216,17 @@ struct pbrt_value {
   vec3f              value3f  = {0, 0, 0};
   bool               value1b  = false;
   string        value1s  = "";
-  std::vector<float> vector1f = {};
-  std::vector<vec2f> vector2f = {};
-  std::vector<vec3f> vector3f = {};
-  std::vector<int>   vector1i = {};
+  vector<float> vector1f = {};
+  vector<vec2f> vector2f = {};
+  vector<vec3f> vector3f = {};
+  vector<int>   vector1i = {};
 };
 
 // Pbrt command
 struct pbrt_command {
   string             name   = "";
   string             type   = "";
-  std::vector<pbrt_value> values = {};
+  vector<pbrt_value> values = {};
   frame3f                 frame  = identity3x4f;
   frame3f                 frend  = identity3x4f;
 };
@@ -285,7 +285,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::vector<float>& val) {
+    const pbrt_value& pbrt, vector<float>& val) {
   if (pbrt.type == pbrt_type::real) {
     if (!pbrt.vector1f.empty()) {
       val = pbrt.vector1f;
@@ -298,7 +298,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::vector<vec2f>& val) {
+    const pbrt_value& pbrt, vector<vec2f>& val) {
   if (pbrt.type == pbrt_type::point2 || pbrt.type == pbrt_type::vector2) {
     if (!pbrt.vector2f.empty()) {
       val = pbrt.vector2f;
@@ -318,7 +318,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::vector<vec3f>& val) {
+    const pbrt_value& pbrt, vector<vec3f>& val) {
   if (pbrt.type == pbrt_type::point || pbrt.type == pbrt_type::vector ||
       pbrt.type == pbrt_type::normal || pbrt.type == pbrt_type::color) {
     if (!pbrt.vector3f.empty()) {
@@ -341,7 +341,7 @@ struct pbrt_command {
 }
 
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::vector<int>& val) {
+    const pbrt_value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -354,7 +354,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, std::vector<vec3i>& val) {
+    const pbrt_value& pbrt, vector<vec3i>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::invalid_argument{"expected int3 array"};
@@ -389,7 +389,7 @@ struct pbrt_command {
 }
 template <typename T>
 [[nodiscard]] inline bool get_value(
-    const std::vector<pbrt_value>& pbrt, const string& name, T& val) {
+    const vector<pbrt_value>& pbrt, const string& name, T& val) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_value(p, val);
@@ -448,7 +448,7 @@ inline pbrt_value make_value(const string& name, const vec3f& val,
   return pbrt;
 }
 inline pbrt_value make_value(const string& name,
-    const std::vector<vec2f>& val, pbrt_type type = pbrt_type::point2) {
+    const vector<vec2f>& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
@@ -456,7 +456,7 @@ inline pbrt_value make_value(const string& name,
   return pbrt;
 }
 inline pbrt_value make_value(const string& name,
-    const std::vector<vec3f>& val, pbrt_type type = pbrt_type::point) {
+    const vector<vec3f>& val, pbrt_type type = pbrt_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
@@ -464,7 +464,7 @@ inline pbrt_value make_value(const string& name,
   return pbrt;
 }
 inline pbrt_value make_value(const string& name,
-    const std::vector<vec3i>& val, pbrt_type type = pbrt_type::integer) {
+    const vector<vec3i>& val, pbrt_type type = pbrt_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
@@ -750,7 +750,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
 }
 
 [[nodiscard]] inline bool parse_params(
-    std::string_view& str, std::vector<pbrt_value>& values) {
+    std::string_view& str, vector<pbrt_value>& values) {
   auto parse_pvalues = [](std::string_view& str, auto& value,
                            auto& values) -> bool {
     values.clear();
@@ -793,19 +793,19 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
       value.type = pbrt_type::integer;
       if (!parse_pvalues(str, value.value1i, value.vector1i)) return false;
     } else if (type == "string") {
-      auto vector1s = std::vector<string>{};
+      auto vector1s = vector<string>{};
       value.type    = pbrt_type::string;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
       auto value1s  = ""s;
-      auto vector1s = std::vector<string>{};
+      auto vector1s = vector<string>{};
       value.type    = pbrt_type::boolean;
       if (!parse_pvalues(str, value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
       value.value1b = value1s == "true";
     } else if (type == "texture") {
-      auto vector1s = std::vector<string>{};
+      auto vector1s = vector<string>{};
       value.type    = pbrt_type::texture;
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
@@ -815,7 +815,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "normal" || type == "normal3") {
       value.type = pbrt_type::normal;
       parse_pvalues(str, value.value3f, value.vector3f);
-    } else if (type == "std::vector" || type == "vector3") {
+    } else if (type == "vector" || type == "vector3") {
       value.type = pbrt_type::vector;
       parse_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "point2") {
@@ -827,7 +827,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "blackbody") {
       value.type     = pbrt_type::color;
       auto blackbody = zero2f;
-      auto vector2f  = std::vector<vec2f>{};
+      auto vector2f  = vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
       value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
@@ -853,7 +853,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
       if (is_string) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
-        auto filenames = std::vector<string>{};
+        auto filenames = vector<string>{};
         if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
         auto filenamep = sfs::path(filename).filename();
@@ -1117,7 +1117,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
   };
 
   // helpers
-  auto get_texture = [&](const std::vector<pbrt_value>& values,
+  auto get_texture = [&](const vector<pbrt_value>& values,
                          const string& name, vec3f& color,
                          string& filename, const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
@@ -1137,7 +1137,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
     }
     return true;
   };
-  auto get_scalar = [&](const std::vector<pbrt_value>& values,
+  auto get_scalar = [&](const vector<pbrt_value>& values,
                         const string& name, float& scalar,
                         float def) -> bool {
     auto textured = std::pair{vec3f{def}, ""s};
@@ -1154,7 +1154,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
     }
     return true;
   };
-  auto get_color = [&](const std::vector<pbrt_value>& values,
+  auto get_color = [&](const vector<pbrt_value>& values,
                        const string& name, vec3f& color,
                        const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
@@ -1172,7 +1172,7 @@ inline bool convert_material(pbrt_material*               pmaterial,
     return true;
   };
 
-  auto get_roughness = [&](const std::vector<pbrt_value>& values,
+  auto get_roughness = [&](const vector<pbrt_value>& values,
                            float& roughness, float def = 0.1) -> bool {
     auto roughness_ = std::pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
@@ -1426,9 +1426,9 @@ inline bool convert_material(pbrt_material*               pmaterial,
 
 // Make a triangle shape from a quad grid
 template <typename PositionFunc, typename NormalFunc>
-inline void make_shape(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, const vec2i& steps,
+inline void make_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, const vec2i& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
   auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
   auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
@@ -1453,9 +1453,9 @@ inline void make_shape(std::vector<vec3i>& triangles,
 }
 
 // pbrt sphere
-inline void make_sphere(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_sphere(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1468,9 +1468,9 @@ inline void make_sphere(std::vector<vec3i>& triangles,
         return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
       });
 }
-inline void make_disk(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_disk(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1481,9 +1481,9 @@ inline void make_disk(std::vector<vec3i>& triangles,
         return vec3f{0, 0, 1};
       });
 }
-inline void make_quad(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& positions, std::vector<vec3f>& normals,
-    std::vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_quad(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1514,7 +1514,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   };
 
   // helpers
-  auto get_alpha = [&](const std::vector<pbrt_value>& values,
+  auto get_alpha = [&](const vector<pbrt_value>& values,
                        const string& name, string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = std::pair{def, ""s};
@@ -1642,7 +1642,7 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
         plight->frend *
         lookat_frame(normalize(plight->from - plight->to) * distant_dist,
             {0, 0, 0}, {0, 1, 0}, true);
-    auto texcoords = std::vector<vec2f>{};
+    auto texcoords = vector<vec2f>{};
     make_quad(plight->area_triangles, plight->area_positions,
         plight->area_normals, texcoords, {4, 2}, size);
     return true;
@@ -1657,7 +1657,7 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     plight->area_emission = plight->emission;
     plight->area_frame    = plight->frame * translation_frame(plight->from);
     plight->area_frend    = plight->frend * translation_frame(plight->from);
-    auto texcoords        = std::vector<vec2f>{};
+    auto texcoords        = vector<vec2f>{};
     make_sphere(plight->area_triangles, plight->area_positions,
         plight->area_normals, texcoords, {4, 2}, 0.0025f);
     return true;
@@ -1713,9 +1713,9 @@ struct stack_element {
 
 // pbrt parsing context
 struct context {
-  std::vector<stack_element>                                stack      = {};
+  vector<stack_element>                                stack      = {};
   std::unordered_map<string, stack_element>            coordsys   = {};
-  std::unordered_map<string, std::vector<pbrt_shape*>> objects    = {};
+  std::unordered_map<string, vector<pbrt_shape*>> objects    = {};
   string                                               cur_object = "";
   vec2i film_resolution = {512, 512};
 };
@@ -2082,7 +2082,7 @@ inline void format_value(string& str, const pbrt_value& value) {
       {pbrt_type::string, "string"},
       {pbrt_type::point, "point"},
       {pbrt_type::normal, "normal"},
-      {pbrt_type::vector, "std::vector"},
+      {pbrt_type::vector, "vector"},
       {pbrt_type::texture, "texture"},
       {pbrt_type::color, "rgb"},
       {pbrt_type::point2, "point2"},
@@ -2143,7 +2143,7 @@ inline void format_value(string& str, const pbrt_value& value) {
 }
 
 inline void format_value(
-    string& str, const std::vector<pbrt_value>& values) {
+    string& str, const vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);

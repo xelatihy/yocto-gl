@@ -66,7 +66,7 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int keyframe_index(const std::vector<float>& times, const float& time) {
+inline int keyframe_index(const vector<float>& times, const float& time) {
   for (auto i = 0; i < times.size(); i++)
     if (times[i] > time) return i;
   return (int)times.size();
@@ -75,7 +75,7 @@ inline int keyframe_index(const std::vector<float>& times, const float& time) {
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
 inline T keyframe_step(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -85,8 +85,8 @@ inline T keyframe_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f keyframe_slerp(const std::vector<float>& times,
-    const std::vector<vec4f>& vals, float time) {
+inline vec4f keyframe_slerp(const vector<float>& times,
+    const vector<vec4f>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -98,7 +98,7 @@ inline vec4f keyframe_slerp(const std::vector<float>& times,
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline T keyframe_linear(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -110,7 +110,7 @@ inline T keyframe_linear(
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
 inline T keyframe_bezier(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -127,7 +127,7 @@ inline T keyframe_bezier(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-std::vector<string> scene_stats(const scene_model* scene, bool verbose) {
+vector<string> scene_stats(const scene_model* scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -147,7 +147,7 @@ std::vector<string> scene_stats(const scene_model* scene, bool verbose) {
 
   auto bbox = compute_bounds(scene);
 
-  auto stats = std::vector<string>{};
+  auto stats = vector<string>{};
   stats.push_back("cameras:      " + format(scene->cameras.size()));
   stats.push_back("shapes:       " + format(scene->shapes.size()));
   stats.push_back("subdivs:      " + format(scene->subdivs.size()));
@@ -195,9 +195,9 @@ std::vector<string> scene_stats(const scene_model* scene, bool verbose) {
 }
 
 // Checks for validity of the scene->
-std::vector<string> scene_validation(
+vector<string> scene_validation(
     const scene_model* scene, bool notextures) {
-  auto errs        = std::vector<string>();
+  auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = std::unordered_map<string, int>();
     used.reserve(vals.size());
@@ -210,7 +210,7 @@ std::vector<string> scene_validation(
       }
     }
   };
-  auto check_empty_textures = [&errs](const std::vector<scene_texture*>& vals) {
+  auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
     for (auto value : vals) {
       if (value->colorf.empty() && value->colorb.empty() &&
           value->scalarf.empty() && value->scalarb.empty()) {
@@ -251,7 +251,7 @@ scene_model::~scene_model() {
 
 // add an element
 template <typename T>
-static T* add_element(std::vector<T*>& elements, const string& name,
+static T* add_element(vector<T*>& elements, const string& name,
     const string& base) {
   auto element  = elements.emplace_back(new T{});
   element->name = name != "" ? name : (base + std::to_string(elements.size()));
@@ -528,8 +528,8 @@ std::unique_ptr<scene_subdiv> displace_subdiv(scene_subdiv* subdiv,
     throw std::runtime_error("missing texture coordinates");
 
   // facevarying case
-  auto offset = std::vector<float>(subdiv->positions.size(), 0);
-  auto count  = std::vector<int>(subdiv->positions.size(), 0);
+  auto offset = vector<float>(subdiv->positions.size(), 0);
+  auto count  = vector<int>(subdiv->positions.size(), 0);
   for (auto fid = 0; fid < subdiv->quadspos.size(); fid++) {
     auto qpos = subdiv->quadspos[fid];
     auto qtxt = subdiv->quadstexcoord[fid];
@@ -737,7 +737,7 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 
 // load instances
 static bool load_instance(const string& filename,
-    std::vector<frame3f>& frames, string& error) {
+    vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -758,7 +758,7 @@ static bool load_instance(const string& filename,
 
 // save instances
 static bool save_instance(const string& filename,
-    const std::vector<frame3f>& frames, string& error,
+    const vector<frame3f>& frames, string& error,
     bool ascii = false) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -869,7 +869,7 @@ inline string load_text(const string& filename, string& error) {
 
 // Load a binary file
 inline bool load_binary(
-    const string& filename, std::vector<byte>& data, string& error) {
+    const string& filename, vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -894,7 +894,7 @@ inline bool load_binary(
 
 // Save a binary file
 inline bool save_binary(const string& filename,
-    const std::vector<byte>& data, string& error) {
+    const vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -914,9 +914,9 @@ inline bool save_binary(const string& filename,
 }
 
 // Load a binary file
-inline std::vector<byte> load_binary(
+inline vector<byte> load_binary(
     const string& filename, string& error) {
-  auto data = std::vector<byte>{};
+  auto data = vector<byte>{};
   if (!load_binary(filename, data, error)) return {};
   return data;
 }
@@ -1229,7 +1229,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string&       name,
                           const string&              group,
-                          const std::vector<string>& extensions) {
+                          const vector<string>& extensions) {
     for (auto& extension : extensions) {
       auto filepath = sfs::path(filename).parent_path() / group /
                       (name + extension);
@@ -1920,14 +1920,14 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // prepare list of effective nodes
-  auto visible_nodes = std::vector<bool>(gltf->nodes_count, false);
+  auto visible_nodes = vector<bool>(gltf->nodes_count, false);
   auto gscene        = gltf->scene ? gltf->scene : gltf->scenes;
   if (gscene) {
     auto node_index = std::unordered_map<cgltf_node*, int>{};
     node_index.reserve(gltf->nodes_count);
     for (auto nid = 0; nid < gltf->nodes_count; nid++)
       node_index[&gltf->nodes[nid]] = nid;
-    auto stack = std::vector<cgltf_node*>{};
+    auto stack = vector<cgltf_node*>{};
     for (auto nid = 0; nid < gscene->nodes_count; nid++)
       stack.push_back(gscene->nodes[nid]);
     while (!stack.empty()) {
@@ -2044,7 +2044,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert meshes
-  auto mesh_map = std::unordered_map<cgltf_mesh*, std::vector<scene_object*>>{
+  auto mesh_map = std::unordered_map<cgltf_mesh*, vector<scene_object*>>{
       {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
@@ -2197,7 +2197,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert nodes
-  auto instance_map = std::unordered_map<cgltf_mesh*, std::vector<frame3f>>{};
+  auto instance_map = std::unordered_map<cgltf_mesh*, vector<frame3f>>{};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     if (!visible_nodes[nid]) continue;
     auto gnde = &gltf->nodes[nid];

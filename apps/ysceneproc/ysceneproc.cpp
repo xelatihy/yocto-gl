@@ -33,7 +33,6 @@
 using namespace yocto;
 
 #include <memory>
-using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;

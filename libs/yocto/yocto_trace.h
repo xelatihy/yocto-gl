@@ -77,6 +77,17 @@
 #endif
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+using std::vector;
+
+}
+
+// -----------------------------------------------------------------------------
 // TRACE SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -98,8 +109,8 @@ struct trace_bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
 struct trace_bvh {
-  std::vector<trace_bvh_node> nodes      = {};
-  std::vector<vec2i>          primitives = {};
+  vector<trace_bvh_node> nodes      = {};
+  vector<vec2i>          primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -175,18 +186,18 @@ struct trace_material {
 // each verftex data has its own topology.
 struct trace_shape {
   // primitives
-  std::vector<int>   points    = {};
-  std::vector<vec2i> lines     = {};
-  std::vector<vec3i> triangles = {};
-  std::vector<vec4i> quads     = {};
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
 
   // vertex data
-  std::vector<vec3f> positions = {};
-  std::vector<vec3f> normals   = {};
-  std::vector<vec2f> texcoords = {};
-  std::vector<vec3f> colors    = {};
-  std::vector<float> radius    = {};
-  std::vector<vec4f> tangents  = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
 
   // computed properties
   trace_bvh* bvh = nullptr;
@@ -195,7 +206,7 @@ struct trace_shape {
 #endif
 
   // element cdf for sampling
-  std::vector<float> elements_cdf = {};
+  vector<float> elements_cdf = {};
 
   // cleanup
   ~trace_shape();
@@ -203,7 +214,7 @@ struct trace_shape {
 
 // Instances.
 struct trace_instance {
-  std::vector<frame3f> frames = {};
+  vector<frame3f> frames = {};
 };
 
 // Object.
@@ -219,7 +230,7 @@ struct trace_environment {
   frame3f            frame        = identity3x4f;
   vec3f              emission     = {0, 0, 0};
   trace_texture*     emission_tex = nullptr;
-  std::vector<float> texels_cdf   = {};
+  vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
@@ -237,20 +248,20 @@ struct trace_light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct trace_scene {
-  std::vector<trace_camera*>      cameras      = {};
-  std::vector<trace_object*>      objects      = {};
-  std::vector<trace_shape*>       shapes       = {};
-  std::vector<trace_material*>    materials    = {};
-  std::vector<trace_instance*>    instances    = {};
-  std::vector<trace_texture*>     textures     = {};
-  std::vector<trace_environment*> environments = {};
+  vector<trace_camera*>      cameras      = {};
+  vector<trace_object*>      objects      = {};
+  vector<trace_shape*>       shapes       = {};
+  vector<trace_material*>    materials    = {};
+  vector<trace_instance*>    instances    = {};
+  vector<trace_texture*>     textures     = {};
+  vector<trace_environment*> environments = {};
 
   // computed properties
-  std::vector<trace_light*> lights = {};
+  vector<trace_light*> lights = {};
   trace_bvh*                bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene           embree_bvh       = nullptr;
-  std::vector<vec2i> embree_instances = {};
+  vector<vec2i> embree_instances = {};
 #endif
 
   // cleanup
@@ -308,19 +319,19 @@ void set_scattering(trace_material* material, const vec3f& scattering,
 void set_normalmap(trace_material* material, trace_texture* normal_tex);
 
 // shape properties
-void set_points(trace_shape* shape, const std::vector<int>& points);
-void set_lines(trace_shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(trace_shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(trace_shape* shape, const std::vector<vec4i>& quads);
-void set_positions(trace_shape* shape, const std::vector<vec3f>& positions);
-void set_normals(trace_shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(trace_shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(trace_shape* shape, const std::vector<vec3f>& colors);
-void set_radius(trace_shape* shape, const std::vector<float>& radius);
-void set_tangents(trace_shape* shape, const std::vector<vec4f>& tangents);
+void set_points(trace_shape* shape, const vector<int>& points);
+void set_lines(trace_shape* shape, const vector<vec2i>& lines);
+void set_triangles(trace_shape* shape, const vector<vec3i>& triangles);
+void set_quads(trace_shape* shape, const vector<vec4i>& quads);
+void set_positions(trace_shape* shape, const vector<vec3f>& positions);
+void set_normals(trace_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(trace_shape* shape, const vector<vec3f>& colors);
+void set_radius(trace_shape* shape, const vector<float>& radius);
+void set_tangents(trace_shape* shape, const vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(trace_instance* instance, const std::vector<frame3f>& frames);
+void set_frames(trace_instance* instance, const vector<frame3f>& frames);
 
 // environment properties
 void set_frame(trace_environment* environment, const frame3f& frame);
@@ -383,15 +394,15 @@ struct trace_params {
   float                 exposure   = 0;
 };
 
-const auto trace_sampler_names = std::vector<string>{
+const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = std::vector<string>{"normal",
+const auto trace_falsecolor_names = vector<string>{"normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
     "diffuse", "specular", "coat", "metal", "transmission", "translucency",
     "refraction", "roughness", "opacity", "ior", "object", "element",
     "highlight"};
-const auto bvh_names              = std::vector<string>{
+const auto bvh_names              = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -414,9 +425,9 @@ void init_bvh(trace_scene* scene, const trace_params& params,
 
 // Refit bvh data
 void update_bvh(trace_scene*            scene,
-    const std::vector<trace_object*>&   updated_objects,
-    const std::vector<trace_shape*>&    updated_shapes,
-    const std::vector<trace_instance*>& updated_instances,
+    const vector<trace_object*>&   updated_objects,
+    const vector<trace_shape*>&    updated_shapes,
+    const vector<trace_instance*>& updated_instances,
     const trace_params&                 params);
 
 // Progressively computes an image.

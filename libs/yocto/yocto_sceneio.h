@@ -58,6 +58,7 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
 
 }
 
@@ -155,18 +156,18 @@ struct scene_shape {
   string name = "";
 
   // primitives
-  std::vector<int>   points    = {};
-  std::vector<vec2i> lines     = {};
-  std::vector<vec3i> triangles = {};
-  std::vector<vec4i> quads     = {};
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
 
   // vertex data
-  std::vector<vec3f> positions = {};
-  std::vector<vec3f> normals   = {};
-  std::vector<vec2f> texcoords = {};
-  std::vector<vec3f> colors    = {};
-  std::vector<float> radius    = {};
-  std::vector<vec4f> tangents  = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
 };
 
 // Subdiv data represented as indexed meshes of elements.
@@ -177,21 +178,21 @@ struct scene_subdiv {
   string name = "";
 
   // face-varying primitives
-  std::vector<vec4i> quadspos      = {};
-  std::vector<vec4i> quadsnorm     = {};
-  std::vector<vec4i> quadstexcoord = {};
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
 
   // vertex data
-  std::vector<vec3f> positions = {};
-  std::vector<vec3f> normals   = {};
-  std::vector<vec2f> texcoords = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
 };
 
 // Instance data.
 struct scene_instance {
   // instance data
   string          name   = "";
-  std::vector<frame3f> frames = {};
+  vector<frame3f> frames = {};
 };
 
 // Object.
@@ -222,14 +223,14 @@ struct scene_environment {
 // updates node transformations only if defined.
 struct scene_model {
   // scene elements
-  std::vector<scene_camera*>      cameras      = {};
-  std::vector<scene_object*>      objects      = {};
-  std::vector<scene_environment*> environments = {};
-  std::vector<scene_shape*>       shapes       = {};
-  std::vector<scene_subdiv*>      subdivs      = {};
-  std::vector<scene_texture*>     textures     = {};
-  std::vector<scene_material*>    materials    = {};
-  std::vector<scene_instance*>    instances    = {};
+  vector<scene_camera*>      cameras      = {};
+  vector<scene_object*>      objects      = {};
+  vector<scene_environment*> environments = {};
+  vector<scene_shape*>       shapes       = {};
+  vector<scene_subdiv*>      subdivs      = {};
+  vector<scene_texture*>     textures     = {};
+  vector<scene_material*>    materials    = {};
+  vector<scene_instance*>    instances    = {};
 
   // additional information
   string name      = "";
@@ -298,10 +299,10 @@ void make_cornellbox(scene_model* scene);
 namespace yocto {
 
 // Return scene statistics as list of strings.
-std::vector<string> scene_stats(
+vector<string> scene_stats(
     const scene_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
-std::vector<string> scene_validation(
+vector<string> scene_validation(
     const scene_model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.

@@ -23,11 +23,11 @@
 // the Yocto/GL collection they are the best way to do this.
 //
 // 1. use `range()` to iterato over an integer sequence
-// 2. use `enumerate()` to iteratare over a std::vector and number its elements
-// 3. use opeartors + to either concatenate two vectors or a std::vector and an
+// 2. use `enumerate()` to iteratare over a vector and number its elements
+// 3. use opeartors + to either concatenate two vectors or a vector and an
 //    element
-// 4. use operators += to append an element or a std::vector to a given
-// std::vector
+// 4. use operators += to append an element or a vector to a given
+// vector
 //
 //
 // ## Concurrency utilities
@@ -89,6 +89,7 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
 
 }
 
@@ -114,20 +115,20 @@ inline auto range(int max);
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const std::vector<T>& vals);
+inline auto enumerate(const vector<T>& vals);
 template <typename T>
-inline auto enumerate(std::vector<T>& vals);
+inline auto enumerate(vector<T>& vals);
 
 // Vector append and concatenation
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b);
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const T& b);
+inline vector<T>& operator+=(vector<T>& a, const T& b);
 template <typename T>
-inline std::vector<T> operator+(
-    const std::vector<T>& a, const std::vector<T>& b);
+inline vector<T> operator+(
+    const vector<T>& a, const vector<T>& b);
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const T& b);
+inline vector<T> operator+(const vector<T>& a, const T& b);
 
 }  // namespace yocto
 
@@ -172,9 +173,9 @@ inline void parallel_for(int num, Func&& func);
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(std::vector<T>& values, Func&& func);
+inline void parallel_foreach(vector<T>& values, Func&& func);
 template <typename T, typename Func>
-inline void parallel_foreach(const std::vector<T>& values, Func&& func);
+inline void parallel_foreach(const vector<T>& values, Func&& func);
 
 }  // namespace yocto
 
@@ -245,33 +246,33 @@ struct enumerate_helper {
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
-inline auto enumerate(const std::vector<T>& vals) {
+inline auto enumerate(const vector<T>& vals) {
   return enumerate_helper<const T>{vals.data(), vals.size()};
 }
 template <typename T>
-inline auto enumerate(std::vector<T>& vals) {
+inline auto enumerate(vector<T>& vals) {
   return enumerate_helper<T>{vals.data(), vals.size()};
 }
 
 // Vector append and concatenation
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
   a.insert(a.end(), b.begin(), b.end());
   return a;
 }
 template <typename T>
-inline std::vector<T>& operator+=(std::vector<T>& a, const T& b) {
+inline vector<T>& operator+=(vector<T>& a, const T& b) {
   a.push_back(b);
   return a;
 }
 template <typename T>
-inline std::vector<T> operator+(
-    const std::vector<T>& a, const std::vector<T>& b) {
+inline vector<T> operator+(
+    const vector<T>& a, const vector<T>& b) {
   auto c = a;
   return c += b;
 }
 template <typename T>
-inline std::vector<T> operator+(const std::vector<T>& a, const T& b) {
+inline vector<T> operator+(const vector<T>& a, const T& b) {
   auto c = a;
   return c += b;
 }
@@ -329,7 +330,7 @@ inline bool is_ready(const std::future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = std::vector<std::future<void>>{};
+  auto             futures  = vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(begin);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -353,12 +354,12 @@ inline void parallel_for(int num, Func&& func) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(std::vector<T>& values, Func&& func) {
+inline void parallel_foreach(vector<T>& values, Func&& func) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 template <typename T, typename Func>
-inline void parallel_foreach(const std::vector<T>& values, Func&& func) {
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }

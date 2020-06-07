@@ -310,19 +310,19 @@ void clear_arraybuffer(ogl_arraybuffer* buffer) {
 
 // set buffer
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const std::vector<float>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 1, 1, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const std::vector<vec2f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 2, 2, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const std::vector<vec3f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 3, 3, (float*)data.data(), dynamic);
 }
 void set_arraybuffer(
-    ogl_arraybuffer* buffer, const std::vector<vec4f>& data, bool dynamic) {
+    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic) {
   set_arraybuffer(buffer, data.size() * 4, 4, (float*)data.data(), dynamic);
 }
 
@@ -367,17 +367,17 @@ void clear_elementbuffer(ogl_elementbuffer* buffer) {
 
 // set buffer
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const std::vector<int>& points, bool dynamic) {
+    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic) {
   set_elementbuffer(buffer, points.size() * 1, ogl_element_type::points,
       (int*)points.data(), dynamic);
 }
 void set_elementbuffer(
-    ogl_elementbuffer* buffer, const std::vector<vec2i>& lines, bool dynamic) {
+    ogl_elementbuffer* buffer, const vector<vec2i>& lines, bool dynamic) {
   set_elementbuffer(buffer, lines.size() * 2, ogl_element_type::lines,
       (int*)lines.data(), dynamic);
 }
 void set_elementbuffer(ogl_elementbuffer* buffer,
-    const std::vector<vec3i>& triangles, bool dynamic) {
+    const vector<vec3i>& triangles, bool dynamic) {
   set_elementbuffer(buffer, triangles.size() * 3, ogl_element_type::triangles,
       (int*)triangles.data(), dynamic);
 }
@@ -610,8 +610,8 @@ bool is_initialized(const ogl_image* image) {
 bool init_image(ogl_image* image) {
   if (is_initialized(image)) return true;
 
-  auto texcoords = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
   auto error = ""s, errorlog = ""s;
   if (!init_program(
@@ -1199,17 +1199,17 @@ ogl_shape* add_shape(ogl_scene* scene) {
   return scene->shapes.emplace_back(new ogl_shape{});
 }
 
-void set_points(ogl_shape* shape, const std::vector<int>& points) {
+void set_points(ogl_shape* shape, const vector<int>& points) {
   set_elementbuffer(shape->points, points);
 }
-void set_lines(ogl_shape* shape, const std::vector<vec2i>& lines) {
+void set_lines(ogl_shape* shape, const vector<vec2i>& lines) {
   set_elementbuffer(shape->lines, lines);
 }
-void set_triangles(ogl_shape* shape, const std::vector<vec3i>& triangles) {
+void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles) {
   set_elementbuffer(shape->triangles, triangles);
 }
-void set_quads(ogl_shape* shape, const std::vector<vec4i>& quads) {
-  auto triangles = std::vector<vec3i>{};
+void set_quads(ogl_shape* shape, const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
@@ -1217,8 +1217,8 @@ void set_quads(ogl_shape* shape, const std::vector<vec4i>& quads) {
   }
   set_elementbuffer(shape->quads, triangles);
 }
-void set_edges(ogl_shape* shape, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads) {
+void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads) {
   auto edgemap = std::unordered_set<vec2i>{};
   for (auto t : triangles) {
     edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
@@ -1231,22 +1231,22 @@ void set_edges(ogl_shape* shape, const std::vector<vec3i>& triangles,
     edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
     edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
   }
-  auto edges = std::vector<vec2i>(edgemap.begin(), edgemap.end());
+  auto edges = vector<vec2i>(edgemap.begin(), edgemap.end());
   set_elementbuffer(shape->edges, edges);
 }
-void set_positions(ogl_shape* shape, const std::vector<vec3f>& positions) {
+void set_positions(ogl_shape* shape, const vector<vec3f>& positions) {
   set_arraybuffer(shape->positions, positions);
 }
-void set_normals(ogl_shape* shape, const std::vector<vec3f>& normals) {
+void set_normals(ogl_shape* shape, const vector<vec3f>& normals) {
   set_arraybuffer(shape->normals, normals);
 }
-void set_texcoords(ogl_shape* shape, const std::vector<vec2f>& texcoords) {
+void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
   set_arraybuffer(shape->texcoords, texcoords);
 }
-void set_colors(ogl_shape* shape, const std::vector<vec3f>& colors) {
+void set_colors(ogl_shape* shape, const vector<vec3f>& colors) {
   set_arraybuffer(shape->colors, colors);
 }
-void set_tangents(ogl_shape* shape, const std::vector<vec4f>& tangents) {
+void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
   set_arraybuffer(shape->tangents, tangents);
 }
 
@@ -1273,7 +1273,7 @@ void set_highlighted(ogl_object* object, bool highlighted) {
 ogl_instance* add_instance(ogl_scene* scene) {
   return scene->instances.emplace_back(new ogl_instance{});
 }
-void set_frames(ogl_instance* instance, const std::vector<frame3f>& frames) {
+void set_frames(ogl_instance* instance, const vector<frame3f>& frames) {
   instance->frames = frames;
 }
 
@@ -1345,7 +1345,7 @@ void add_default_lights(ogl_scene* scene) {
 // Draw a shape
 void draw_object(
     ogl_scene* scene, ogl_object* object, const ogl_scene_params& params) {
-  static auto empty_instances = std::vector<frame3f>{identity3x4f};
+  static auto empty_instances = vector<frame3f>{identity3x4f};
 
   if (object->hidden) return;
 
@@ -1450,7 +1450,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
       vec3f{pif / 4}, ogl_light_type::directional, true};
   static auto camera_light3 = ogl_light{normalize(vec3f{0.1, 0.5, -1}),
       vec3f{pif / 4}, ogl_light_type::directional, true};
-  static auto camera_lights = std::vector<ogl_light*>{
+  static auto camera_lights = vector<ogl_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -1614,7 +1614,7 @@ void init_window(gui_window* win, const vec2i& size, const string& title,
       win->win, [](GLFWwindow* glfw, int num, const char** paths) {
         auto win = (gui_window*)glfwGetWindowUserPointer(glfw);
         if (win->drop_cb) {
-          auto pathv = std::vector<string>();
+          auto pathv = vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
           win->drop_cb(win, pathv, win->input);
         }
@@ -1906,11 +1906,11 @@ static string get_extension(const string& filename_) {
 struct filedialog_state {
   string                               dirname       = "";
   string                               filename      = "";
-  std::vector<std::pair<string, bool>> entries       = {};
+  vector<std::pair<string, bool>> entries       = {};
   bool                                      save          = false;
   bool                                      remove_hidden = true;
   string                               filter        = "";
-  std::vector<string>                  extensions    = {};
+  vector<string>                  extensions    = {};
 
   filedialog_state() {}
   filedialog_state(const string& dirname, const string& filename,
@@ -1932,7 +1932,7 @@ struct filedialog_state {
     check_filename();
   }
   void set_filter(const string& flt) {
-    auto globs = std::vector<string>{""};
+    auto globs = vector<string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
         globs.push_back("");
@@ -2224,7 +2224,7 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& value,
-    const std::vector<string>& labels) {
+    const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2238,7 +2238,7 @@ bool draw_combobox(gui_window* win, const char* lbl, int& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const std::vector<string>& labels) {
+    const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
   for (auto i = 0; i < labels.size(); i++) {
@@ -2298,19 +2298,19 @@ void draw_histogram(
   ImGui::PlotHistogram(lbl, values, count);
 }
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<float>& values) {
+    gui_window* win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec2f>& values) {
+    gui_window* win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec3f>& values) {
+    gui_window* win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2319,7 +2319,7 @@ void draw_histogram(
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec4f>& values) {
+    gui_window* win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,

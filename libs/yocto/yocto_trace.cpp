@@ -104,7 +104,7 @@ static std::pair<vec3f, vec3f> eval_tangents(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-static T eval_shape(const trace_shape* shape, const std::vector<T>& vals,
+static T eval_shape(const trace_shape* shape, const vector<T>& vals,
     int element, const vec2f& uv, const T& def) {
   if (vals.empty()) return def;
   if (!shape->triangles.empty()) {
@@ -626,8 +626,8 @@ static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
   if (!shape->points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape->lines.empty()) {
-    auto elines     = std::vector<int>{};
-    auto epositions = std::vector<vec4f>{};
+    auto elines     = vector<int>{};
+    auto epositions = vector<vec4f>{};
     auto last_index = -1;
     for (auto& l : shape->lines) {
       if (last_index == l.x) {
@@ -734,9 +734,9 @@ static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
 }
 
 static void update_embree_bvh(trace_scene* scene,
-    const std::vector<trace_object*>&      updated_objects,
-    const std::vector<trace_shape*>&       updated_shapes,
-    const std::vector<trace_instance*>&    updated_instances,
+    const vector<trace_object*>&      updated_objects,
+    const vector<trace_shape*>&       updated_shapes,
+    const vector<trace_instance*>&    updated_instances,
     const trace_params&                    params) {
   // scene bvh
   auto escene = scene->embree_bvh;
@@ -813,7 +813,7 @@ struct bvh_primitive {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static std::pair<int, int> split_sah(
-    std::vector<bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -876,7 +876,7 @@ static std::pair<int, int> split_sah(
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
 static std::pair<int, int> split_balanced(
-    std::vector<bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -912,7 +912,7 @@ static std::pair<int, int> split_balanced(
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
 static std::pair<int, int> split_middle(
-    std::vector<bvh_primitive>& primitives, int start, int end) {
+    vector<bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -945,7 +945,7 @@ static std::pair<int, int> split_middle(
 }
 
 // Split bvh nodes according to a type
-static std::pair<int, int> split_nodes(std::vector<bvh_primitive>& primitives,
+static std::pair<int, int> split_nodes(vector<bvh_primitive>& primitives,
     int start, int end, trace_bvh_type type) {
   switch (type) {
     case trace_bvh_type::default_: return split_middle(primitives, start, end);
@@ -961,8 +961,8 @@ static std::pair<int, int> split_nodes(std::vector<bvh_primitive>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh_serial(std::vector<trace_bvh_node>& nodes,
-    std::vector<bvh_primitive>& primitives, trace_bvh_type type) {
+static void build_bvh_serial(vector<trace_bvh_node>& nodes,
+    vector<bvh_primitive>& primitives, trace_bvh_type type) {
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(primitives.size() * 2);
@@ -1016,7 +1016,7 @@ static void build_bvh_serial(std::vector<trace_bvh_node>& nodes,
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    const shared_ptr<bvh_tree>& bvh, std::vector<bbox3f>& bboxes, bvh_type type) {
+    const shared_ptr<bvh_tree>& bvh, vector<bbox3f>& bboxes, bvh_type type) {
   // get values
   auto& nodes      = bvh->nodes;
   auto& primitives = bvh->primitives;
@@ -1030,7 +1030,7 @@ static void build_bvh_parallel(
   for (auto idx = 0; idx < bboxes.size(); idx++) bvh->primitives[idx] = idx;
 
   // prepare centers
-  auto centers = std::vector<vec3f>(bboxes.size());
+  auto centers = vector<vec3f>(bboxes.size());
   for (auto idx = 0; idx < bboxes.size(); idx++)
     centers[idx] = center(bboxes[idx]);
 
@@ -1041,7 +1041,7 @@ static void build_bvh_parallel(
   // synchronization
   std::atomic<int>          num_processed_prims(0);
   std::mutex                queue_mutex;
-  std::vector<std::future<void>> futures;
+  vector<std::future<void>> futures;
   auto                      nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
@@ -1115,7 +1115,7 @@ static void build_bvh_parallel(
 #endif
 
 // Update bvh
-static void update_bvh(trace_bvh* bvh, const std::vector<bbox3f>& bboxes) {
+static void update_bvh(trace_bvh* bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh->nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh->nodes[nodeid];
     node.bbox  = invalidb3f;
@@ -1142,7 +1142,7 @@ static void init_bvh(trace_shape* shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto primitives = std::vector<bvh_primitive>{};
+  auto primitives = vector<bvh_primitive>{};
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < shape->points.size(); idx++) {
       auto& p             = shape->points[idx];
@@ -1216,9 +1216,9 @@ void init_bvh(trace_scene* scene, const trace_params& params,
   if (progress_cb) progress_cb("build scene bvh", progress.x++, progress.y);
 
   // instance bboxes
-  auto primitives            = std::vector<bvh_primitive>{};
+  auto primitives            = vector<bvh_primitive>{};
   auto object_id             = 0;
-  auto empty_instance_frames = std::vector<frame3f>{identity3x4f};
+  auto empty_instance_frames = vector<frame3f>{identity3x4f};
   for (auto object : scene->objects) {
     auto instance_id = 0;
     for (auto& frame : object->instance->frames) {
@@ -1257,28 +1257,28 @@ static void update_bvh(trace_shape* shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto bboxes = std::vector<bbox3f>(shape->bvh->primitives.size());
+  auto bboxes = vector<bbox3f>(shape->bvh->primitives.size());
   if (!shape->points.empty()) {
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& p     = shape->points[shape->bvh->primitives[idx].x];
       bboxes[idx] = point_bounds(shape->positions[p], shape->radius[p]);
     }
   } else if (!shape->lines.empty()) {
-    bboxes = std::vector<bbox3f>(shape->lines.size());
+    bboxes = vector<bbox3f>(shape->lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& l     = shape->lines[shape->bvh->primitives[idx].x];
       bboxes[idx] = line_bounds(shape->positions[l.x], shape->positions[l.y],
           shape->radius[l.x], shape->radius[l.y]);
     }
   } else if (!shape->triangles.empty()) {
-    bboxes = std::vector<bbox3f>(shape->triangles.size());
+    bboxes = vector<bbox3f>(shape->triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& t     = shape->triangles[shape->bvh->primitives[idx].x];
       bboxes[idx] = triangle_bounds(
           shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
     }
   } else if (!shape->quads.empty()) {
-    bboxes = std::vector<bbox3f>(shape->quads.size());
+    bboxes = vector<bbox3f>(shape->quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
       auto& q     = shape->quads[shape->bvh->primitives[idx].x];
       bboxes[idx] = quad_bounds(shape->positions[q.x], shape->positions[q.y],
@@ -1291,9 +1291,9 @@ static void update_bvh(trace_shape* shape, const trace_params& params) {
 }
 
 void update_bvh(trace_scene*            scene,
-    const std::vector<trace_object*>&   updated_objects,
-    const std::vector<trace_shape*>&    updated_shapes,
-    const std::vector<trace_instance*>& updated_instances,
+    const vector<trace_object*>&   updated_objects,
+    const vector<trace_shape*>&    updated_shapes,
+    const vector<trace_instance*>& updated_instances,
     const trace_params&                 params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
@@ -1305,7 +1305,7 @@ void update_bvh(trace_scene*            scene,
 #endif
 
   // build primitives
-  auto bboxes = std::vector<bbox3f>(scene->bvh->primitives.size());
+  auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto instance = scene->bvh->primitives[idx];
     auto object   = scene->objects[instance.x];
@@ -1911,7 +1911,7 @@ static std::pair<vec3f, bool> trace_path(const trace_scene* scene,
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = std::vector<volume_point>{};
+  auto volume_stack  = vector<volume_point>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
 
@@ -2289,7 +2289,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (!shape->triangles.empty()) {
-      shape->elements_cdf = std::vector<float>(shape->triangles.size());
+      shape->elements_cdf = vector<float>(shape->triangles.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->triangles[idx];
         shape->elements_cdf[idx] = triangle_area(shape->positions[t.x],
@@ -2298,7 +2298,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
       }
     }
     if (!shape->quads.empty()) {
-      shape->elements_cdf = std::vector<float>(shape->quads.size());
+      shape->elements_cdf = vector<float>(shape->quads.size());
       for (auto idx = 0; idx < shape->elements_cdf.size(); idx++) {
         auto& t                  = shape->quads[idx];
         shape->elements_cdf[idx] = quad_area(shape->positions[t.x],
@@ -2320,7 +2320,7 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
     if (environment->emission_tex) {
       auto texture            = environment->emission_tex;
       auto size               = texture_size(texture);
-      environment->texels_cdf = std::vector<float>(size.x * size.y);
+      environment->texels_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
         for (auto i = 0; i < environment->texels_cdf.size(); i++) {
           auto ij                    = vec2i{i % size.x, i / size.x};
@@ -2349,7 +2349,7 @@ using std::future;
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = std::vector<std::future<void>>{};
+  auto             futures  = vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
@@ -2545,34 +2545,34 @@ void set_texture(trace_texture* texture, const image<float>& img) {
 }
 
 // Add shape
-void set_points(trace_shape* shape, const std::vector<int>& points) {
+void set_points(trace_shape* shape, const vector<int>& points) {
   shape->points = points;
 }
-void set_lines(trace_shape* shape, const std::vector<vec2i>& lines) {
+void set_lines(trace_shape* shape, const vector<vec2i>& lines) {
   shape->lines = lines;
 }
-void set_triangles(trace_shape* shape, const std::vector<vec3i>& triangles) {
+void set_triangles(trace_shape* shape, const vector<vec3i>& triangles) {
   shape->triangles = triangles;
 }
-void set_quads(trace_shape* shape, const std::vector<vec4i>& quads) {
+void set_quads(trace_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
-void set_positions(trace_shape* shape, const std::vector<vec3f>& positions) {
+void set_positions(trace_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
-void set_normals(trace_shape* shape, const std::vector<vec3f>& normals) {
+void set_normals(trace_shape* shape, const vector<vec3f>& normals) {
   shape->normals = normals;
 }
-void set_texcoords(trace_shape* shape, const std::vector<vec2f>& texcoords) {
+void set_texcoords(trace_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(trace_shape* shape, const std::vector<vec3f>& colors) {
+void set_colors(trace_shape* shape, const vector<vec3f>& colors) {
   shape->colors = colors;
 }
-void set_radius(trace_shape* shape, const std::vector<float>& radius) {
+void set_radius(trace_shape* shape, const vector<float>& radius) {
   shape->radius = radius;
 }
-void set_tangents(trace_shape* shape, const std::vector<vec4f>& tangents) {
+void set_tangents(trace_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 
@@ -2592,7 +2592,7 @@ void set_instance(trace_object* object, trace_instance* instance) {
 }
 
 // Add instance
-void set_frames(trace_instance* instance, const std::vector<frame3f>& frames) {
+void set_frames(trace_instance* instance, const vector<frame3f>& frames) {
   instance->frames = frames;
 }
 

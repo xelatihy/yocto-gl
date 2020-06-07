@@ -42,7 +42,7 @@ struct image_stats {
   vec4f              min       = zero4f;
   vec4f              max       = zero4f;
   vec4f              average   = zero4f;
-  std::vector<vec3f> histogram = {};
+  vector<vec3f> histogram = {};
 };
 
 struct app_state {
@@ -86,7 +86,7 @@ struct app_state {
 // app states
 struct app_states {
   // data
-  std::vector<app_state*> states   = {};
+  vector<app_state*> states   = {};
   app_state*              selected = nullptr;
   std::deque<app_state*>  loading  = {};
 
@@ -302,7 +302,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto apps_guard = std::make_unique<app_states>();
   auto apps       = apps_guard.get();
-  auto filenames  = std::vector<string>{};
+  auto filenames  = vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgview", "view images");
@@ -339,7 +339,7 @@ int main(int argc, const char* argv[]) {
     }
   };
   callbacks.drop_cb = [apps](gui_window*                  win,
-                          const std::vector<string>& paths,
+                          const vector<string>& paths,
                           const gui_input&                input) {
     for (auto path : paths) load_image_async(apps, path);
   };

@@ -36,7 +36,6 @@ using namespace yocto;
 #include <atomic>
 #include <deque>
 #include <future>
-using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
@@ -97,7 +96,7 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::vector<app_state*> states   = {};
+  vector<app_state*> states   = {};
   app_state*              selected = nullptr;
   std::deque<app_state*>  loading  = {};
 
@@ -451,8 +450,8 @@ bool draw_widgets(
 }
 
 template <typename T, typename T1>
-T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
-    const std::vector<T1*>& elements) {
+T1* get_element(T* ioelement, const vector<T*>& ioelements,
+    const vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -706,7 +705,7 @@ int main(int argc, const char* argv[]) {
   // initialize app
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
-  auto filenames   = std::vector<string>{};
+  auto filenames   = vector<string>{};
   auto camera_name = ""s;
 
   // parse command line
@@ -734,7 +733,7 @@ int main(int argc, const char* argv[]) {
     draw_widgets(win, apps, input);
   };
   callbacks.drop_cb = [apps](gui_window*                  win,
-                          const std::vector<string>& paths,
+                          const vector<string>& paths,
                           const gui_input&                input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };

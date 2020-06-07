@@ -49,6 +49,7 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
 
 }
 
@@ -95,14 +96,14 @@ struct pbrt_shape {
   // frames
   frame3f              frame     = identity3x4f;
   frame3f              frend     = identity3x4f;
-  std::vector<frame3f> instances = {};
-  std::vector<frame3f> instaends = {};
+  vector<frame3f> instances = {};
+  vector<frame3f> instaends = {};
   // shape
   string        filename_ = "";
-  std::vector<vec3f> positions = {};
-  std::vector<vec3f> normals   = {};
-  std::vector<vec2f> texcoords = {};
-  std::vector<vec3i> triangles = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3i> triangles = {};
   // material
   pbrt_material* material = nullptr;
 };
@@ -120,9 +121,9 @@ struct pbrt_light {
   vec3f              area_emission  = {0, 0, 0};
   frame3f            area_frame     = identity3x4f;
   frame3f            area_frend     = identity3x4f;
-  std::vector<vec3i> area_triangles = {};
-  std::vector<vec3f> area_positions = {};
-  std::vector<vec3f> area_normals   = {};
+  vector<vec3i> area_triangles = {};
+  vector<vec3f> area_positions = {};
+  vector<vec3f> area_normals   = {};
 };
 struct pbrt_environment {
   // environment approximation
@@ -135,12 +136,12 @@ struct pbrt_environment {
 // Pbrt model
 struct pbrt_model {
   // pbrt data
-  std::vector<string>       comments     = {};
-  std::vector<pbrt_camera*>      cameras      = {};
-  std::vector<pbrt_shape*>       shapes       = {};
-  std::vector<pbrt_environment*> environments = {};
-  std::vector<pbrt_light*>       lights       = {};
-  std::vector<pbrt_material*>    materials    = {};
+  vector<string>       comments     = {};
+  vector<pbrt_camera*>      cameras      = {};
+  vector<pbrt_shape*>       shapes       = {};
+  vector<pbrt_environment*> environments = {};
+  vector<pbrt_light*>       lights       = {};
+  vector<pbrt_material*>    materials    = {};
 
   // cleanup
   ~pbrt_model();

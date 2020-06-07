@@ -15,7 +15,7 @@
 // ## Images
 //
 // Yocto/Math contains a simple image container that can be used to store
-// generic images. The container is similar in spirit to `std::std::vector`.
+// generic images. The container is similar in spirit to `std::vector`.
 // We provide only minimal image functions including lookup and sampling.
 //
 //
@@ -110,6 +110,7 @@ namespace yocto {
 
 // using directives
 using std::string;
+using std::vector;
 
 }
 
@@ -154,13 +155,13 @@ struct image {
   const T* end() const;
 
   // [experimental] data access as vector --- will be replaced by views
-  std::vector<T>&       data_vector();
-  const std::vector<T>& data_vector() const;
+  vector<T>&       data_vector();
+  const vector<T>& data_vector() const;
 
  private:
   // data
   vec2i          extent = {0, 0};
-  std::vector<T> pixels = {};
+  vector<T> pixels = {};
 };
 
 // equality
@@ -439,7 +440,7 @@ struct volume {
  private:
   // data
   vec3i              extent = {0, 0, 0};
-  std::vector<float> voxels = {};
+  vector<float> voxels = {};
 };
 
 // equality
@@ -633,11 +634,11 @@ inline const T* image<T>::end() const {
 
 // data access as vector
 template <typename T>
-inline std::vector<T>& image<T>::data_vector() {
+inline vector<T>& image<T>::data_vector() {
   return pixels;
 }
 template <typename T>
-inline const std::vector<T>& image<T>::data_vector() const {
+inline const vector<T>& image<T>::data_vector() const {
   return pixels;
 }
 

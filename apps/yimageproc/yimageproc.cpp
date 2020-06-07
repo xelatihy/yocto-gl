@@ -31,21 +31,19 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 
-using namespace std::string_literals;
-
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
 namespace yocto {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const std::vector<image<vec4f>>& features,
-    const std::vector<float>& features_sigma) {
+    float range_sigma, const vector<image<vec4f>>& features,
+    const vector<float>& features_sigma) {
   auto filtered     = image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
-  auto fw           = std::vector<float>();
+  auto fw           = vector<float>();
   for (auto feature_sigma : features_sigma)
     fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
   for (auto j = 0; j < img.size().y; j++) {
@@ -150,9 +148,9 @@ bool make_image_preset(
     make_bumps(img, size);
     img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
-    auto sub_types = std::vector<string>{"grid", "uvgrid", "checker",
+    auto sub_types = vector<string>{"grid", "uvgrid", "checker",
         "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
+    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
@@ -168,8 +166,8 @@ bool make_image_preset(
       pos += sub_img.size().x;
     }
   } else if (type == "images2") {
-    auto sub_types = std::vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
+    auto sub_types = vector<string>{"sky", "sunsky"};
+    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }

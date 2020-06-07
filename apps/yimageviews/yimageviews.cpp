@@ -32,7 +32,6 @@
 using namespace yocto;
 
 #include <future>
-using namespace std::string_literals;
 
 struct app_state {
   // original data
@@ -71,7 +70,7 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = std::vector<string>{};
+  auto filenames = vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgviews", "view images");

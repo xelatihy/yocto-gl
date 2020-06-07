@@ -45,6 +45,17 @@
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+using std::vector;
+
+}
+
+// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -127,13 +138,13 @@ bool is_initialized(ogl_arraybuffer* buffer);
 void clear_arraybuffer(ogl_arraybuffer* buffer);
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<float>& data,
+void set_arraybuffer(ogl_arraybuffer* buffer, const vector<float>& data,
     bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec2f>& data,
+void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec2f>& data,
     bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec3f>& data,
+void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec3f>& data,
     bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const std::vector<vec4f>& data,
+void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec4f>& data,
     bool dynamic = false);
 
 // Opengl draw elements
@@ -161,11 +172,11 @@ void clear_elementbuffer(ogl_elementbuffer* buffer);
 
 // set buffer
 void set_elementbuffer(ogl_elementbuffer* buffer,
-    const std::vector<int>& points, bool dynamic = false);
+    const vector<int>& points, bool dynamic = false);
 void set_elementbuffer(ogl_elementbuffer* buffer,
-    const std::vector<vec2i>& lines, bool dynamic = false);
+    const vector<vec2i>& lines, bool dynamic = false);
 void set_elementbuffer(ogl_elementbuffer* buffer,
-    const std::vector<vec3i>& triangles, bool dynamic = false);
+    const vector<vec3i>& triangles, bool dynamic = false);
 
 // Opengl program
 struct ogl_program {
@@ -372,7 +383,7 @@ struct ogl_shape {
 
 // Opengl instance
 struct ogl_instance {
-  std::vector<frame3f> frames = {};
+  vector<frame3f> frames = {};
 };
 
 // Opengl object
@@ -405,13 +416,13 @@ struct ogl_scene {
   ~ogl_scene();
 
   // scene objects
-  std::vector<ogl_camera*>   cameras   = {};
-  std::vector<ogl_object*>   objects   = {};
-  std::vector<ogl_shape*>    shapes    = {};
-  std::vector<ogl_material*> materials = {};
-  std::vector<ogl_instance*> instances = {};
-  std::vector<ogl_texture*>  textures  = {};
-  std::vector<ogl_light*>    lights    = {};
+  vector<ogl_camera*>   cameras   = {};
+  vector<ogl_object*>   objects   = {};
+  vector<ogl_shape*>    shapes    = {};
+  vector<ogl_material*> materials = {};
+  vector<ogl_instance*> instances = {};
+  vector<ogl_texture*>  textures  = {};
+  vector<ogl_light*>    lights    = {};
 
   // OpenGL state
   ogl_program* program = new ogl_program{};
@@ -421,7 +432,7 @@ struct ogl_scene {
 enum struct ogl_shading_type { lights, eyelight, camlights };
 
 // Shading name
-const auto ogl_shading_names = std::vector<string>{
+const auto ogl_shading_names = vector<string>{
     "lights", "eyelight", "camlights"};
 
 // Draw options
@@ -478,20 +489,20 @@ void set_opacity(
 void set_normalmap(ogl_material* material, ogl_texture* normal_tex);
 
 // shape properties
-void set_points(ogl_shape* shape, const std::vector<int>& points);
-void set_lines(ogl_shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(ogl_shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(ogl_shape* shape, const std::vector<vec4i>& quads);
-void set_edges(ogl_shape* shape, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads);
-void set_positions(ogl_shape* shape, const std::vector<vec3f>& positions);
-void set_normals(ogl_shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(ogl_shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(ogl_shape* shape, const std::vector<vec3f>& colors);
-void set_tangents(ogl_shape* shape, const std::vector<vec4f>& tangents);
+void set_points(ogl_shape* shape, const vector<int>& points);
+void set_lines(ogl_shape* shape, const vector<vec2i>& lines);
+void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles);
+void set_quads(ogl_shape* shape, const vector<vec4i>& quads);
+void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads);
+void set_positions(ogl_shape* shape, const vector<vec3f>& positions);
+void set_normals(ogl_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(ogl_shape* shape, const vector<vec3f>& colors);
+void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(ogl_instance* instance, const std::vector<frame3f>& frames);
+void set_frames(ogl_instance* instance, const vector<frame3f>& frames);
 
 // object properties
 void set_frame(ogl_object* object, const frame3f& frame);
@@ -555,7 +566,7 @@ using widgets_callback =
     std::function<void(gui_window*, const gui_input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_callback = std::function<void(
-    gui_window*, const std::vector<string>&, const gui_input& input)>;
+    gui_window*, const vector<string>&, const gui_input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
 using key_callback = std::function<void(
     gui_window*, int key, bool pressed, const gui_input& input)>;
@@ -712,15 +723,15 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 
 bool draw_combobox(gui_window* win, const char* lbl, int& idx,
-    const std::vector<string>& labels);
+    const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
-    const std::vector<string>& labels);
+    const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
     const std::function<string(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
-    const std::vector<T*>& vals, bool include_null = false) {
+    const vector<T*>& vals, bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
     if (vals[pos] == value) idx = pos;
@@ -735,7 +746,7 @@ inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,
-    const std::vector<T*>& vals, const std::vector<string>& labels,
+    const vector<T*>& vals, const vector<string>& labels,
     bool include_null = false) {
   auto idx = -1;
   for (auto pos = 0; pos < vals.size(); pos++)
@@ -753,13 +764,13 @@ void draw_progressbar(gui_window* win, const char* lbl, float fraction);
 void draw_progressbar(gui_window* win, const char* lbl, int current, int total);
 
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<float>& values);
+    gui_window* win, const char* lbl, const vector<float>& values);
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec2f>& values);
+    gui_window* win, const char* lbl, const vector<vec2f>& values);
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec3f>& values);
+    gui_window* win, const char* lbl, const vector<vec3f>& values);
 void draw_histogram(
-    gui_window* win, const char* lbl, const std::vector<vec4f>& values);
+    gui_window* win, const char* lbl, const vector<vec4f>& values);
 
 bool draw_messages(gui_window* win);
 void push_message(gui_window* win, const string& message);

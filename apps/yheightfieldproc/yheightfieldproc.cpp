@@ -35,9 +35,6 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-using std::vector;
-using namespace std::string_literals;
-
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto smooth    = false;
@@ -70,10 +67,10 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // mesh data
-  auto positions = std::vector<vec3f>{};
-  auto normals   = std::vector<vec3f>{};
-  auto texcoords = std::vector<vec2f>{};
-  auto quads     = std::vector<vec4i>{};
+  auto positions = vector<vec3f>{};
+  auto normals   = vector<vec3f>{};
+  auto texcoords = vector<vec2f>{};
+  auto quads     = vector<vec4i>{};
 
   // image data
   auto heightfield = image<float>{};
