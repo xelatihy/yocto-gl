@@ -2195,8 +2195,7 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-bool load_volume(
-    const string& filename, volume<float>& vol, string& error) {
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
   auto read_error = [filename, &error]() {
     error = filename + ": read error";
     return false;
@@ -2225,8 +2224,7 @@ bool save_volume(
 }  // namespace impl
 
 // Loads volume data from binary format.
-bool load_volume(
-    const string& filename, volume<float>& vol, string& error) {
+bool load_volume(const string& filename, volume<float>& vol, string& error) {
   return impl::load_volume(filename, vol, error);
 }
 

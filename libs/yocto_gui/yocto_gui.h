@@ -53,7 +53,7 @@ namespace yocto {
 using std::string;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
@@ -138,14 +138,14 @@ bool is_initialized(ogl_arraybuffer* buffer);
 void clear_arraybuffer(ogl_arraybuffer* buffer);
 
 // set buffer
-void set_arraybuffer(ogl_arraybuffer* buffer, const vector<float>& data,
-    bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec2f>& data,
-    bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec3f>& data,
-    bool dynamic = false);
-void set_arraybuffer(ogl_arraybuffer* buffer, const vector<vec4f>& data,
-    bool dynamic = false);
+void set_arraybuffer(
+    ogl_arraybuffer* buffer, const vector<float>& data, bool dynamic = false);
+void set_arraybuffer(
+    ogl_arraybuffer* buffer, const vector<vec2f>& data, bool dynamic = false);
+void set_arraybuffer(
+    ogl_arraybuffer* buffer, const vector<vec3f>& data, bool dynamic = false);
+void set_arraybuffer(
+    ogl_arraybuffer* buffer, const vector<vec4f>& data, bool dynamic = false);
 
 // Opengl draw elements
 enum struct ogl_element_type { points, lines, triangles };
@@ -171,10 +171,10 @@ bool is_initialized(ogl_elementbuffer* buffer);
 void clear_elementbuffer(ogl_elementbuffer* buffer);
 
 // set buffer
-void set_elementbuffer(ogl_elementbuffer* buffer,
-    const vector<int>& points, bool dynamic = false);
-void set_elementbuffer(ogl_elementbuffer* buffer,
-    const vector<vec2i>& lines, bool dynamic = false);
+void set_elementbuffer(
+    ogl_elementbuffer* buffer, const vector<int>& points, bool dynamic = false);
+void set_elementbuffer(ogl_elementbuffer* buffer, const vector<vec2i>& lines,
+    bool dynamic = false);
 void set_elementbuffer(ogl_elementbuffer* buffer,
     const vector<vec3i>& triangles, bool dynamic = false);
 
@@ -617,7 +617,7 @@ namespace yocto {
 // OpenGL window wrapper
 struct gui_window {
   GLFWwindow*       win           = nullptr;
-  string       title         = "";
+  string            title         = "";
   init_callback     init_cb       = {};
   clear_callback    clear_cb      = {};
   draw_callback     draw_cb       = {};
@@ -722,8 +722,8 @@ bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value);
 
-bool draw_combobox(gui_window* win, const char* lbl, int& idx,
-    const vector<string>& labels);
+bool draw_combobox(
+    gui_window* win, const char* lbl, int& idx, const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
     const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
@@ -774,13 +774,11 @@ void draw_histogram(
 
 bool draw_messages(gui_window* win);
 void push_message(gui_window* win, const string& message);
-bool draw_filedialog(gui_window* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter);
+bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter);
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename,
-    const string& filter);
+    const string& dirname, const string& filename, const string& filter);
 
 void log_info(gui_window* win, const string& msg);
 void log_error(gui_window* win, const string& msg);

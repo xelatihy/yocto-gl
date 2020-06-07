@@ -44,12 +44,12 @@ namespace sfs = ghc::filesystem;
 namespace yocto {
 
 // using directives
+using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
-using std::string_view;
 using namespace std::string_literals;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PBRT PARSING
@@ -69,8 +69,7 @@ inline void skip_whitespace(string_view& str) {
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_value(
-    string_view& str, string_view& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -93,8 +92,7 @@ inline void skip_whitespace(string_view& str) {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(
-    string_view& str, string& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
   if (!parse_value(str, valuev)) return false;
   value = string{valuev};
@@ -137,9 +135,7 @@ inline void skip_whitespace(string_view& str) {
 }
 
 // Formats values to string
-inline void format_value(string& str, const string& value) {
-  str += value;
-}
+inline void format_value(string& str, const string& value) { str += value; }
 inline void format_value(string& str, const char* value) { str += value; }
 inline void format_value(string& str, int value) {
   char buf[256];
@@ -180,16 +176,14 @@ inline void format_value(string& str, const mat4f& value) {
 // Foramt to file
 inline void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != string::npos)
-    throw std::runtime_error("bad format string");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-inline void format_values(string& str, const string& fmt,
-    const Arg& arg, const Args&... args) {
+inline void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == string::npos)
-    throw std::invalid_argument("bad format string");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
@@ -222,12 +216,12 @@ enum struct pbrt_type {
 // Pbrt value
 struct pbrt_value {
   string        name     = "";
-  pbrt_type          type     = pbrt_type::real;
-  int                value1i  = 0;
-  float              value1f  = 0;
-  vec2f              value2f  = {0, 0};
-  vec3f              value3f  = {0, 0, 0};
-  bool               value1b  = false;
+  pbrt_type     type     = pbrt_type::real;
+  int           value1i  = 0;
+  float         value1f  = 0;
+  vec2f         value2f  = {0, 0};
+  vec3f         value3f  = {0, 0, 0};
+  bool          value1b  = false;
   string        value1s  = "";
   vector<float> vector1f = {};
   vector<vec2f> vector2f = {};
@@ -240,8 +234,8 @@ struct pbrt_command {
   string             name   = "";
   string             type   = "";
   vector<pbrt_value> values = {};
-  frame3f                 frame  = identity3x4f;
-  frame3f                 frend  = identity3x4f;
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
 };
 
 // get pbrt value
@@ -353,8 +347,7 @@ struct pbrt_command {
   }
 }
 
-[[nodiscard]] inline bool get_value(
-    const pbrt_value& pbrt, vector<int>& val) {
+[[nodiscard]] inline bool get_value(const pbrt_value& pbrt, vector<int>& val) {
   if (pbrt.type == pbrt_type::integer) {
     if (!pbrt.vector1i.empty()) {
       val = pbrt.vector1i;
@@ -412,8 +405,8 @@ template <typename T>
 }
 
 // pbrt value construction
-inline pbrt_value make_value(const string& name, const string& val,
-    pbrt_type type = pbrt_type::string) {
+inline pbrt_value make_value(
+    const string& name, const string& val, pbrt_type type = pbrt_type::string) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
@@ -444,40 +437,40 @@ inline pbrt_value make_value(
   pbrt.value1f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vec2f& val,
-    pbrt_type type = pbrt_type::point2) {
+inline pbrt_value make_value(
+    const string& name, const vec2f& val, pbrt_type type = pbrt_type::point2) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name, const vec3f& val,
-    pbrt_type type = pbrt_type::color) {
+inline pbrt_value make_value(
+    const string& name, const vec3f& val, pbrt_type type = pbrt_type::color) {
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec2f>& val, pbrt_type type = pbrt_type::point2) {
+inline pbrt_value make_value(const string& name, const vector<vec2f>& val,
+    pbrt_type type = pbrt_type::point2) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector2f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec3f>& val, pbrt_type type = pbrt_type::point) {
+inline pbrt_value make_value(const string& name, const vector<vec3f>& val,
+    pbrt_type type = pbrt_type::point) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
   pbrt.vector3f = val;
   return pbrt;
 }
-inline pbrt_value make_value(const string& name,
-    const vector<vec3i>& val, pbrt_type type = pbrt_type::integer) {
+inline pbrt_value make_value(const string& name, const vector<vec3i>& val,
+    pbrt_type type = pbrt_type::integer) {
   auto pbrt     = pbrt_value{};
   pbrt.name     = name;
   pbrt.type     = type;
@@ -531,8 +524,7 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // parse a quoted string
-[[nodiscard]] inline bool parse_command(
-    string_view& str, string& value) {
+[[nodiscard]] inline bool parse_command(string_view& str, string& value) {
   skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
@@ -582,8 +574,8 @@ template <typename T>
 }
 
 inline std::pair<vec3f, vec3f> get_etak(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>>
-      metal_ior_table = {
+  static const unordered_map<string, std::pair<vec3f, vec3f>> metal_ior_table =
+      {
           {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                       {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
           {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -671,101 +663,97 @@ inline std::pair<vec3f, vec3f> get_etak(const string& name) {
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
 inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>> params =
-      {
-          // From "A Practical Model for Subsurface Light Transport"
-          // Jensen, Marschner, Levoy, Hanrahan
-          // Proc SIGGRAPH 2001
-          {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
-          {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
-          {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
-          {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
-          {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
-          {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
-          {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
-          {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
-          {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
-          {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
-          {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
-          {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
-          // From "Acquiring Scattering Properties of Participating Media by
-          // Dilution",
-          // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
-          // Proc SIGGRAPH 2006
-          {"Lowfat Milk",
-              {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
-          {"Reduced Milk",
-              {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
-          {"Regular Milk",
-              {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
-          {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
-          {"Mint Mocha Coffee",
-              {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
-          {"Lowfat Soy Milk",
-              {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
-          {"Regular Soy Milk",
-              {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
-          {"Lowfat Chocolate Milk",
-              {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
-          {"Regular Chocolate Milk",
-              {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
-          {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
-          {"Pepsi",
-              {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
-          {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
-                         {0.001886, 0.0018308, 0.0020025}}},
-          {"Gatorade", {{0.0024574, 0.003007, 0.0037325},
-                           {0.024794, 0.019289, 0.008878}}},
-          {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
-                             {0.010782, 0.011855, 0.023997}}},
-          {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
-                                  {0.012072, 0.016184, 0.019843}}},
-          {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
-          {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
-                                 {0.011492, 0.024911, 0.057786}}},
-          {"Coors Light Beer",
-              {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
-          {"Clorox", {{0.0024035, 0.0031373, 0.003991},
-                         {0.0033542, 0.014892, 0.026297}}},
-          {"Apple Juice", {{0.00013612, 0.00015836, 0.000227},
-                              {0.012957, 0.023741, 0.052184}}},
-          {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
-                                  {0.039437, 0.094223, 0.12426}}},
-          {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
-          {"Ruby Grapefruit Juice",
-              {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
-          {"White Grapefruit Juice",
-              {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
-          {"Shampoo", {{0.0007176, 0.0008303, 0.0009016},
-                          {0.014107, 0.045693, 0.061717}}},
-          {"Strawberry Shampoo", {{0.00015671, 0.00015947, 1.518e-05},
-                                     {0.01449, 0.05796, 0.075823}}},
-          {"Head & Shoulders Shampoo",
-              {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
-          {"Lemon Tea Powder",
-              {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
-          {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
-                                {0.001449, 0.003441, 0.007863}}},
-          {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
-                                       {0.001165, 0.002366, 0.003195}}},
-          {"Cappuccino Powder",
-              {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
-          {"Salt Powder",
-              {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
-          {"Sugar Powder", {{0.00022272, 0.00025513, 0.000271},
-                               {0.012638, 0.031051, 0.050124}}},
-          {"Suisse Mocha Powder",
-              {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
-          {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
-                                              {0.031845, 0.031324, 0.030147}}},
-      };
+  static const unordered_map<string, std::pair<vec3f, vec3f>> params = {
+      // From "A Practical Model for Subsurface Light Transport"
+      // Jensen, Marschner, Levoy, Hanrahan
+      // Proc SIGGRAPH 2001
+      {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
+      {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
+      {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
+      {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
+      {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
+      {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
+      {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
+      {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
+      {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
+      {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
+      {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
+      {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
+      // From "Acquiring Scattering Properties of Participating Media by
+      // Dilution",
+      // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
+      // Proc SIGGRAPH 2006
+      {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
+      {"Reduced Milk",
+          {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
+      {"Regular Milk",
+          {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
+      {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
+      {"Mint Mocha Coffee",
+          {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
+      {"Lowfat Soy Milk",
+          {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
+      {"Regular Soy Milk",
+          {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
+      {"Lowfat Chocolate Milk",
+          {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
+      {"Regular Chocolate Milk",
+          {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
+      {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
+      {"Pepsi", {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
+      {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
+                     {0.001886, 0.0018308, 0.0020025}}},
+      {"Gatorade",
+          {{0.0024574, 0.003007, 0.0037325}, {0.024794, 0.019289, 0.008878}}},
+      {"Chardonnay", {{1.7982e-05, 1.3758e-05, 1.2023e-05},
+                         {0.010782, 0.011855, 0.023997}}},
+      {"White Zinfandel", {{1.7501e-05, 1.9069e-05, 1.288e-05},
+                              {0.012072, 0.016184, 0.019843}}},
+      {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
+      {"Budweiser Beer", {{2.4356e-05, 2.4079e-05, 1.0564e-05},
+                             {0.011492, 0.024911, 0.057786}}},
+      {"Coors Light Beer",
+          {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
+      {"Clorox",
+          {{0.0024035, 0.0031373, 0.003991}, {0.0033542, 0.014892, 0.026297}}},
+      {"Apple Juice",
+          {{0.00013612, 0.00015836, 0.000227}, {0.012957, 0.023741, 0.052184}}},
+      {"Cranberry Juice", {{0.00010402, 0.00011646, 7.8139e-05},
+                              {0.039437, 0.094223, 0.12426}}},
+      {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
+      {"Ruby Grapefruit Juice",
+          {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
+      {"White Grapefruit Juice",
+          {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
+      {"Shampoo",
+          {{0.0007176, 0.0008303, 0.0009016}, {0.014107, 0.045693, 0.061717}}},
+      {"Strawberry Shampoo",
+          {{0.00015671, 0.00015947, 1.518e-05}, {0.01449, 0.05796, 0.075823}}},
+      {"Head & Shoulders Shampoo",
+          {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
+      {"Lemon Tea Powder",
+          {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
+      {"Orange Powder", {{0.00015617, 0.00017482, 0.0001762},
+                            {0.001449, 0.003441, 0.007863}}},
+      {"Pink Lemonade Powder", {{0.00012103, 0.00013073, 0.00012528},
+                                   {0.001165, 0.002366, 0.003195}}},
+      {"Cappuccino Powder",
+          {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
+      {"Salt Powder",
+          {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
+      {"Sugar Powder",
+          {{0.00022272, 0.00025513, 0.000271}, {0.012638, 0.031051, 0.050124}}},
+      {"Suisse Mocha Powder",
+          {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
+      {"Pacific Ocean Surface Water", {{0.0001764, 0.00032095, 0.00019617},
+                                          {0.031845, 0.031324, 0.030147}}},
+  };
   return params.at(name);
 }
 
 [[nodiscard]] inline bool parse_params(
     string_view& str, vector<pbrt_value>& values) {
-  auto parse_pvalues = [](string_view& str, auto& value,
-                           auto& values) -> bool {
+  auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
     if (str.empty()) return false;
@@ -904,14 +892,14 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
 struct pbrt_film {
   // film approximation
   string filename   = "";
-  vec2i       resolution = {0, 0};
+  vec2i  resolution = {0, 0};
 };
 
 // Pbrt texture
 struct pbrt_texture {
   // texture parameters
   string name     = "";
-  vec3f       constant = {1, 1, 1};
+  vec3f  constant = {1, 1, 1};
   string filename = "";
 };
 
@@ -919,7 +907,7 @@ struct pbrt_texture {
 struct pbrt_arealight {
   // arealight parameters
   string name     = "";
-  vec3f       emission = {0, 0, 0};
+  vec3f  emission = {0, 0, 0};
 };
 
 // Pbrt medium. Not parsed at the moment.
@@ -1014,8 +1002,8 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
 
 // convert pbrt textures
 inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
-    unordered_map<string, pbrt_texture>& texture_map,
-    const string& filename, string& error, bool verbose = false) {
+    unordered_map<string, pbrt_texture>& texture_map, const string& filename,
+    string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1107,8 +1095,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
 }
 
 // convert pbrt materials
-inline bool convert_material(pbrt_material*               pmaterial,
-    const pbrt_command&                                   command,
+inline bool convert_material(pbrt_material*     pmaterial,
+    const pbrt_command&                         command,
     const unordered_map<string, pbrt_material>& named_materials,
     const unordered_map<string, pbrt_texture>&  named_textures,
     const string& filename, string& error, bool verbose = false) {
@@ -1130,9 +1118,9 @@ inline bool convert_material(pbrt_material*               pmaterial,
   };
 
   // helpers
-  auto get_texture = [&](const vector<pbrt_value>& values,
-                         const string& name, vec3f& color,
-                         string& filename, const vec3f& def) -> bool {
+  auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
+                         vec3f& color, string& filename,
+                         const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1150,9 +1138,8 @@ inline bool convert_material(pbrt_material*               pmaterial,
     }
     return true;
   };
-  auto get_scalar = [&](const vector<pbrt_value>& values,
-                        const string& name, float& scalar,
-                        float def) -> bool {
+  auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
+                        float& scalar, float def) -> bool {
     auto textured = std::pair{vec3f{def}, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1167,9 +1154,8 @@ inline bool convert_material(pbrt_material*               pmaterial,
     }
     return true;
   };
-  auto get_color = [&](const vector<pbrt_value>& values,
-                       const string& name, vec3f& color,
-                       const vec3f& def) -> bool {
+  auto get_color = [&](const vector<pbrt_value>& values, const string& name,
+                       vec3f& color, const vec3f& def) -> bool {
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
@@ -1185,8 +1171,8 @@ inline bool convert_material(pbrt_material*               pmaterial,
     return true;
   };
 
-  auto get_roughness = [&](const vector<pbrt_value>& values,
-                           float& roughness, float def = 0.1) -> bool {
+  auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
+                           float def = 0.1) -> bool {
     auto roughness_ = std::pair{vec3f{def}, ""s};
     if (!get_value(values, "roughness", roughness_)) return parse_error();
     auto uroughness = roughness_, vroughness = roughness_;
@@ -1439,9 +1425,8 @@ inline bool convert_material(pbrt_material*               pmaterial,
 
 // Make a triangle shape from a quad grid
 template <typename PositionFunc, typename NormalFunc>
-inline void make_shape(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, const vec2i& steps,
+inline void make_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const PositionFunc& position_func, const NormalFunc& normal_func) {
   auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
   auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
@@ -1466,9 +1451,9 @@ inline void make_shape(vector<vec3i>& triangles,
 }
 
 // pbrt sphere
-inline void make_sphere(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1481,9 +1466,9 @@ inline void make_sphere(vector<vec3i>& triangles,
         return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
       });
 }
-inline void make_disk(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1494,9 +1479,9 @@ inline void make_disk(vector<vec3i>& triangles,
         return vec3f{0, 0, 1};
       });
 }
-inline void make_quad(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, const vec2i& steps, float radius) {
+inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1509,10 +1494,9 @@ inline void make_quad(vector<vec3i>& triangles,
 
 // Convert pbrt shapes
 inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
-    string&                                         alphamap,
-    const unordered_map<string, pbrt_texture>& named_textures,
-    const string& ply_dirname, const string& filename,
-    string& error, bool verbose = false) {
+    string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
+    const string& ply_dirname, const string& filename, string& error,
+    bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1527,8 +1511,8 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   };
 
   // helpers
-  auto get_alpha = [&](const vector<pbrt_value>& values,
-                       const string& name, string& filename) -> bool {
+  auto get_alpha = [&](const vector<pbrt_value>& values, const string& name,
+                       string& filename) -> bool {
     auto def      = 1.0f;
     auto textured = std::pair{def, ""s};
     if (!get_value(values, name, textured)) return parse_error();
@@ -1596,8 +1580,8 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
 
 // Convert pbrt arealights
 inline bool convert_arealight(pbrt_arealight* parealight,
-    const pbrt_command& command, const string& filename,
-    string& error, bool verbose = false) {
+    const pbrt_command& command, const string& filename, string& error,
+    bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1680,8 +1664,8 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
 }
 
 inline bool convert_environment(pbrt_environment* penvironment,
-    const pbrt_command& command, const string& filename,
-    string& error, bool verbose = false) {
+    const pbrt_command& command, const string& filename, string& error,
+    bool verbose = false) {
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error";
     return false;
@@ -1726,21 +1710,21 @@ struct stack_element {
 
 // pbrt parsing context
 struct context {
-  vector<stack_element>                                stack      = {};
-  unordered_map<string, stack_element>            coordsys   = {};
-  unordered_map<string, vector<pbrt_shape*>> objects    = {};
-  string                                               cur_object = "";
-  vec2i film_resolution = {512, 512};
+  vector<stack_element>                      stack           = {};
+  unordered_map<string, stack_element>       coordsys        = {};
+  unordered_map<string, vector<pbrt_shape*>> objects         = {};
+  string                                     cur_object      = "";
+  vec2i                                      film_resolution = {512, 512};
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename,
-    pbrt_model* pbrt, string& error, context& ctx,
+[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_model* pbrt,
+    string& error, context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_material>&  named_materials,
     unordered_map<string, pbrt_texture>&   named_textures,
     unordered_map<string, pbrt_medium>&    named_mediums,
-    const string&                               ply_dirname) {
+    const string&                          ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -2058,15 +2042,13 @@ pbrt_light* add_light(pbrt_model* pbrt) {
 }
 
 // load pbrt
-bool load_pbrt(
-    const string& filename, pbrt_model* pbrt, string& error) {
+bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
   auto ctx             = context{};
   auto material_map    = unordered_map<string, pbrt_material*>{};
-  auto named_materials = unordered_map<string, pbrt_material>{
-      {"", {}}};
-  auto named_mediums  = unordered_map<string, pbrt_medium>{{"", {}}};
-  auto named_textures = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname        = sfs::path(filename).parent_path().string();
+  auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
+  auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
+  auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
+  auto dirname         = sfs::path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
           named_textures, named_mediums, dirname))
@@ -2155,16 +2137,15 @@ inline void format_value(string& str, const pbrt_value& value) {
   }
 }
 
-inline void format_value(
-    string& str, const vector<pbrt_value>& values) {
+inline void format_value(string& str, const vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
     format_value(str, value);
   }
 }
 
-bool save_pbrt(const string& filename, pbrt_model* pbrt,
-    string& error, bool ply_meshes) {
+bool save_pbrt(
+    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";

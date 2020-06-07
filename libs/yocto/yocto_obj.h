@@ -50,10 +50,10 @@ namespace yocto {
 
 // using directives
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER
@@ -75,8 +75,8 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
 // Obj texture information.
 struct obj_texture {
   string path  = "";     // file path
-  bool        clamp = false;  // clamp to edge
-  float       scale = 1;      // scale for bump/displacement
+  bool   clamp = false;  // clamp to edge
+  float  scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
@@ -96,7 +96,7 @@ struct obj_element {
 struct obj_material {
   // material name and type
   string name  = "";
-  int         illum = 0;
+  int    illum = 0;
 
   // material colors and values
   vec3f emission     = {0, 0, 0};
@@ -175,19 +175,19 @@ struct obj_shape {
 
 // Obj camera
 struct obj_camera {
-  string name     = "";
-  frame3f     frame    = identity3x4f;
-  bool        ortho    = false;
-  float       width    = 0.036;
-  float       height   = 0.028;
-  float       lens     = 0.50;
-  float       focus    = 0;
-  float       aperture = 0;
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  bool    ortho    = false;
+  float   width    = 0.036;
+  float   height   = 0.028;
+  float   lens     = 0.50;
+  float   focus    = 0;
+  float   aperture = 0;
 };
 
 // Obj environment
 struct obj_environment {
-  string name         = "";
+  string      name         = "";
   frame3f     frame        = identity3x4f;
   vec3f       emission     = {0, 0, 0};
   obj_texture emission_tex = {};
@@ -195,7 +195,7 @@ struct obj_environment {
 
 // Obj model
 struct obj_model {
-  vector<string>      comments     = {};
+  vector<string>           comments     = {};
   vector<obj_shape*>       shapes       = {};
   vector<obj_material*>    materials    = {};
   vector<obj_camera*>      cameras      = {};
@@ -214,42 +214,41 @@ bool save_obj(const string& filename, obj_model* obj, string& error);
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
 void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 void get_quads(const obj_shape* shape, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 void get_lines(const obj_shape* shape, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 void get_points(const obj_shape* shape, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<obj_material*>& materials,
-    vector<int>& ematerials, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<obj_material*>& materials, vector<int>& ematerials,
+    bool flip_texcoord = false);
 bool has_quads(obj_shape* shape);
 
 // Get obj shape by extracting the elements beloing to only one material.
 void get_triangles(const obj_shape* shape, int material,
-    vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    bool flip_texcoord = false);
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
 void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
 void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
 void get_points(const obj_shape* shape, int material, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, bool flip_texcoord = false);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord = false);
 
 // Create OBJ
 obj_camera*      add_camera(obj_model* obj);
@@ -260,28 +259,26 @@ obj_shape*       add_shape(obj_model* obj);
 // Add obj shape
 void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
 void set_quads(obj_shape* shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
 void set_lines(obj_shape* shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
 void set_points(obj_shape* shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
 void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
-void set_materials(
-    obj_shape* shape, const vector<obj_material*>& materials);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
+void set_materials(obj_shape* shape, const vector<obj_material*>& materials);
 void set_instances(obj_shape* shape, const vector<frame3f>& instances);
 
 }  // namespace yocto

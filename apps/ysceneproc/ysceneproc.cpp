@@ -38,8 +38,7 @@ using namespace yocto;
 namespace sfs = ghc::filesystem;
 
 // Shape presets used ofr testing.
-bool make_preset(
-    scene_model* scene, const string& type, string& error) {
+bool make_preset(scene_model* scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
     return true;

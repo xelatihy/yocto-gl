@@ -78,7 +78,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -130,7 +130,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);

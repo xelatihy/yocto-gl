@@ -38,12 +38,11 @@ using namespace std::string_literals;
 
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec3f>& colors, vector<float>& radius,
-    const string& type, string& error) {
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec3f>& colors, vector<float>& radius, const string& type,
+    string& error) {
   if (type == "default-quad") {
     make_rect(quads, positions, normals, texcoords);
   } else if (type == "default-quady") {
@@ -229,9 +228,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
     vector<float>& radius, const string& type, string& error) {
   auto quadspos      = vector<vec4i>{};
   auto quadsnorm     = vector<vec4i>{};
@@ -247,8 +245,8 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const string& type, string& error) {
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
+    string& error) {
   auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
@@ -465,7 +463,7 @@ int main(int argc, const char* argv[]) {
     auto adjacencies = face_adjacencies(triangles);
     auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
 
-    auto               paths = vector<surface_path>();
+    auto          paths = vector<surface_path>();
     vector<float> fields[3];
     fields[0] = compute_geodesic_distances(solver, {p0});
     fields[1] = compute_geodesic_distances(solver, {p1});

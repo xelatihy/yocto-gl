@@ -91,7 +91,7 @@ namespace yocto {
 using std::string;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // TIMING UTILITIES
@@ -125,8 +125,7 @@ inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
 template <typename T>
 inline vector<T>& operator+=(vector<T>& a, const T& b);
 template <typename T>
-inline vector<T> operator+(
-    const vector<T>& a, const vector<T>& b);
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
 template <typename T>
 inline vector<T> operator+(const vector<T>& a, const T& b);
 
@@ -266,8 +265,7 @@ inline vector<T>& operator+=(vector<T>& a, const T& b) {
   return a;
 }
 template <typename T>
-inline vector<T> operator+(
-    const vector<T>& a, const vector<T>& b) {
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
   auto c = a;
   return c += b;
 }

@@ -85,7 +85,7 @@ namespace yocto {
 using std::string;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // TRACE SCENE DATA
@@ -227,10 +227,10 @@ struct trace_object {
 
 // Environment map.
 struct trace_environment {
-  frame3f            frame        = identity3x4f;
-  vec3f              emission     = {0, 0, 0};
-  trace_texture*     emission_tex = nullptr;
-  vector<float> texels_cdf   = {};
+  frame3f        frame        = identity3x4f;
+  vec3f          emission     = {0, 0, 0};
+  trace_texture* emission_tex = nullptr;
+  vector<float>  texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
@@ -258,9 +258,9 @@ struct trace_scene {
 
   // computed properties
   vector<trace_light*> lights = {};
-  trace_bvh*                bvh    = nullptr;
+  trace_bvh*           bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  RTCScene           embree_bvh       = nullptr;
+  RTCScene      embree_bvh       = nullptr;
   vector<vec2i> embree_instances = {};
 #endif
 
@@ -397,11 +397,10 @@ struct trace_params {
 const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = vector<string>{"normal",
-    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
-    "diffuse", "specular", "coat", "metal", "transmission", "translucency",
-    "refraction", "roughness", "opacity", "ior", "object", "element",
-    "highlight"};
+const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
+    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
+    "specular", "coat", "metal", "transmission", "translucency", "refraction",
+    "roughness", "opacity", "ior", "object", "element", "highlight"};
 const auto bvh_names              = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -424,11 +423,11 @@ void init_bvh(trace_scene* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_scene*            scene,
+void update_bvh(trace_scene*       scene,
     const vector<trace_object*>&   updated_objects,
     const vector<trace_shape*>&    updated_shapes,
     const vector<trace_instance*>& updated_instances,
-    const trace_params&                 params);
+    const trace_params&            params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,

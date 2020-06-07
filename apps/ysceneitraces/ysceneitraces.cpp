@@ -47,8 +47,8 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene*             scene        = new trace_scene{};
-  trace_camera*            camera       = nullptr;
+  trace_scene*   scene        = new trace_scene{};
+  trace_camera*  camera       = nullptr;
   vector<string> camera_names = {};
 
   // rendering state
@@ -120,7 +120,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -175,7 +175,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -212,8 +212,8 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
 }
 
 // init camera names
-void init_camera_names(vector<string>& names,
-    const vector<scene_camera*>&            iocameras) {
+void init_camera_names(
+    vector<string>& names, const vector<scene_camera*>& iocameras) {
   for (auto iocamera : iocameras) {
     names.push_back(iocamera->name);
   }

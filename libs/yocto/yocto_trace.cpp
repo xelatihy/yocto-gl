@@ -734,9 +734,9 @@ static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
 }
 
 static void update_embree_bvh(trace_scene* scene,
-    const vector<trace_object*>&      updated_objects,
-    const vector<trace_shape*>&       updated_shapes,
-    const vector<trace_instance*>&    updated_instances,
+    const vector<trace_object*>&           updated_objects,
+    const vector<trace_shape*>&            updated_shapes,
+    const vector<trace_instance*>&         updated_instances,
     const trace_params&                    params) {
   // scene bvh
   auto escene = scene->embree_bvh;
@@ -1290,11 +1290,11 @@ static void update_bvh(trace_shape* shape, const trace_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(trace_scene*            scene,
+void update_bvh(trace_scene*       scene,
     const vector<trace_object*>&   updated_objects,
     const vector<trace_shape*>&    updated_shapes,
     const vector<trace_instance*>& updated_instances,
-    const trace_params&                 params) {
+    const trace_params&            params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE

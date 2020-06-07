@@ -81,11 +81,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  string       status       = "";
-  string       error        = "";
+  string            status       = "";
+  string            error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  string       loader_error = "";
+  string            loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;
@@ -96,9 +96,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
-  app_state*              selected = nullptr;
-  std::deque<app_state*>  loading  = {};
+  vector<app_state*>     states   = {};
+  app_state*             selected = nullptr;
+  std::deque<app_state*> loading  = {};
 
   // default options
   ogl_scene_params drawgl_prms = {};
@@ -109,8 +109,8 @@ struct app_states {
   }
 };
 
-void load_scene_async(app_states* apps, const string& filename,
-    const string& camera_name = "") {
+void load_scene_async(
+    app_states* apps, const string& filename, const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = sfs::path(filename).replace_extension(".png");
@@ -119,8 +119,7 @@ void load_scene_async(app_states* apps, const string& filename,
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](
-                           const string& message, int current, int total) {
+    auto progress_cb = [app](const string& message, int current, int total) {
       app->current = current;
       app->total   = total;
     };
@@ -450,8 +449,8 @@ bool draw_widgets(
 }
 
 template <typename T, typename T1>
-T1* get_element(T* ioelement, const vector<T*>& ioelements,
-    const vector<T1*>& elements) {
+T1* get_element(
+    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -682,8 +681,7 @@ void update(gui_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    auto progress_cb = [app](
-                           const string& message, int current, int total) {
+    auto progress_cb = [app](const string& message, int current, int total) {
       app->current = current;
       app->total   = total;
     };
@@ -732,9 +730,8 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui_window*                  win,
-                          const vector<string>& paths,
-                          const gui_input&                input) {
+  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
+                          const gui_input& input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {

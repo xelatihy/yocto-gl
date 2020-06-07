@@ -39,9 +39,9 @@ using namespace yocto;
 namespace sfs = ghc::filesystem;
 
 struct image_stats {
-  vec4f              min       = zero4f;
-  vec4f              max       = zero4f;
-  vec4f              average   = zero4f;
+  vec4f         min       = zero4f;
+  vec4f         max       = zero4f;
+  vec4f         average   = zero4f;
   vector<vec3f> histogram = {};
 };
 
@@ -73,9 +73,9 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  string       status       = "";
-  string       error        = "";
-  string       loader_error = "";
+  string            status       = "";
+  string            error        = "";
+  string            loader_error = "";
 
   // cleanup
   ~app_state() {
@@ -86,9 +86,9 @@ struct app_state {
 // app states
 struct app_states {
   // data
-  vector<app_state*> states   = {};
-  app_state*              selected = nullptr;
-  std::deque<app_state*>  loading  = {};
+  vector<app_state*>     states   = {};
+  app_state*             selected = nullptr;
+  std::deque<app_state*> loading  = {};
 
   // default options
   float             exposure = 0;
@@ -338,9 +338,8 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   };
-  callbacks.drop_cb = [apps](gui_window*                  win,
-                          const vector<string>& paths,
-                          const gui_input&                input) {
+  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
+                          const gui_input& input) {
     for (auto path : paths) load_image_async(apps, path);
   };
 

@@ -82,11 +82,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  string       status       = "";
-  string       error        = "";
+  string            status       = "";
+  string            error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  string       loader_error = "";
+  string            loader_error = "";
 
   ~app_state() {
     if (ioscene) delete ioscene;

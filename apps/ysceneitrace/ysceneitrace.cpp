@@ -88,11 +88,11 @@ struct app_state {
   // loading status
   std::atomic<bool> ok           = false;
   std::future<void> loader       = {};
-  string       status       = "";
-  string       error        = "";
+  string            status       = "";
+  string            error        = "";
   std::atomic<int>  current      = 0;
   std::atomic<int>  total        = 0;
-  string       loader_error = "";
+  string            loader_error = "";
 
   ~app_state() {
     if (render_state) {
@@ -108,9 +108,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  vector<app_state*> states   = {};
-  app_state*              selected = nullptr;
-  std::deque<app_state*>  loading  = {};
+  vector<app_state*>     states   = {};
+  app_state*             selected = nullptr;
+  std::deque<app_state*> loading  = {};
 
   // default options
   trace_params params     = {};
@@ -163,7 +163,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -217,7 +217,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map = unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -292,28 +292,27 @@ void load_scene_async(app_states* apps, const string& filename,
   app->outname   = sfs::path(filename).replace_extension(".edited.yaml");
   app->params    = apps->params;
   app->status    = "load";
-  app->loader    = std::async(
-      std::launch::async, [app, camera_name, add_skyenv]() {
-        auto progress_cb = [app](const string& message, int current,
-                               int total) {
-          app->current = current;
-          app->total   = total;
-        };
-        if (!load_scene(
-                app->filename, app->ioscene, app->loader_error, progress_cb))
-          return;
-        app->current = 1;
-        app->total   = 1;
-        if (add_skyenv) add_sky(app->ioscene);
-        app->iocamera = get_camera(app->ioscene, camera_name);
-        init_scene(
-            app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
-        init_bvh(app->scene, app->params);
-        init_lights(app->scene);
-        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-          app->params.sampler = trace_sampler_type::eyelight;
-        }
-      });
+  app->loader    = std::async(std::launch::async, [app, camera_name,
+                                                   add_skyenv]() {
+    auto progress_cb = [app](const string& message, int current, int total) {
+      app->current = current;
+      app->total   = total;
+    };
+    if (!load_scene(
+            app->filename, app->ioscene, app->loader_error, progress_cb))
+      return;
+    app->current = 1;
+    app->total   = 1;
+    if (add_skyenv) add_sky(app->ioscene);
+    app->iocamera = get_camera(app->ioscene, camera_name);
+    init_scene(
+        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    init_bvh(app->scene, app->params);
+    init_lights(app->scene);
+    if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+      app->params.sampler = trace_sampler_type::eyelight;
+    }
+  });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }
@@ -487,8 +486,8 @@ bool draw_widgets(
 }
 
 template <typename T, typename T1>
-T1* get_element(T* ioelement, const vector<T*>& ioelements,
-    const vector<T1*>& elements) {
+T1* get_element(
+    T* ioelement, const vector<T*>& ioelements, const vector<T1*>& elements) {
   if (!ioelement) return nullptr;
   for (auto pos = 0; pos < ioelements.size(); pos++) {
     if (ioelements[pos] == ioelement) return elements[pos];
@@ -844,9 +843,8 @@ int main(int argc, const char* argv[]) {
   callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui_window*                  win,
-                          const vector<string>& paths,
-                          const gui_input&                input) {
+  callbacks.drop_cb = [apps](gui_window* win, const vector<string>& paths,
+                          const gui_input& input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
   callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {

@@ -101,8 +101,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-bool make_image_preset(
-    const string& type, image<vec4f>& img, string& error) {
+bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
@@ -148,8 +147,8 @@ bool make_image_preset(
     make_bumps(img, size);
     img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
-    auto sub_types = vector<string>{"grid", "uvgrid", "checker",
-        "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;

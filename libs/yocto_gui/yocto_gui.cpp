@@ -68,7 +68,7 @@ using std::unordered_map;
 using std::unordered_set;
 using namespace std::string_literals;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
@@ -388,8 +388,8 @@ void set_elementbuffer(
   set_elementbuffer(buffer, lines.size() * 2, ogl_element_type::lines,
       (int*)lines.data(), dynamic);
 }
-void set_elementbuffer(ogl_elementbuffer* buffer,
-    const vector<vec3i>& triangles, bool dynamic) {
+void set_elementbuffer(
+    ogl_elementbuffer* buffer, const vector<vec3i>& triangles, bool dynamic) {
   set_elementbuffer(buffer, triangles.size() * 3, ogl_element_type::triangles,
       (int*)triangles.data(), dynamic);
 }
@@ -1845,8 +1845,7 @@ bool is_glmodal_open(gui_window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(
-    gui_window* win, const char* lbl, const string& message) {
+bool draw_message(gui_window* win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1862,8 +1861,8 @@ bool draw_message(
 }
 
 std::deque<string> _message_queue = {};
-std::mutex              _message_mutex;
-void push_message(gui_window* win, const string& message) {
+std::mutex         _message_mutex;
+void               push_message(gui_window* win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
@@ -1916,17 +1915,17 @@ static string get_extension(const string& filename_) {
 }
 
 struct filedialog_state {
-  string                               dirname       = "";
-  string                               filename      = "";
+  string                          dirname       = "";
+  string                          filename      = "";
   vector<std::pair<string, bool>> entries       = {};
-  bool                                      save          = false;
-  bool                                      remove_hidden = true;
-  string                               filter        = "";
+  bool                            save          = false;
+  bool                            remove_hidden = true;
+  string                          filter        = "";
   vector<string>                  extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const string& dirname, const string& filename,
-      bool save, const string& filter) {
+  filedialog_state(const string& dirname, const string& filename, bool save,
+      const string& filter) {
     this->save = save;
     set_filter(filter);
     set_dirname(dirname);
@@ -2007,16 +2006,15 @@ struct filedialog_state {
   }
 
   string get_path() const { return dirname + filename; }
-  bool        exists_file(const string& filename) {
+  bool   exists_file(const string& filename) {
     auto f = fopen(filename.c_str(), "r");
     if (!f) return false;
     fclose(f);
     return true;
   }
 };
-bool draw_filedialog(gui_window* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter) {
+bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
@@ -2072,8 +2070,7 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path,
 }
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename,
-    const string& filter) {
+    const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {

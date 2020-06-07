@@ -215,7 +215,7 @@ namespace yocto {
 // using directives
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -5619,8 +5619,7 @@ inline int sample_discrete_weights(const vector<T>& weights, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T>
-inline float sample_discrete_weights_pdf(
-    const vector<T>& weights, int idx) {
+inline float sample_discrete_weights_pdf(const vector<T>& weights, int idx) {
   return weights[idx];
 }
 
