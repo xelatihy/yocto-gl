@@ -66,7 +66,6 @@ using namespace std::string_literals;
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace yobj  = yocto::obj;
 namespace ypbrt = yocto::pbrt;
 namespace yshp  = yocto::shape;
 namespace yimg  = yocto::image;
@@ -1586,7 +1585,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load obj
-  auto obj_guard = std::make_unique<obj::model>();
+  auto obj_guard = std::make_unique<obj_model>();
   auto obj       = obj_guard.get();
   if (!load_obj(filename, obj, error, false, true, false)) return false;
 
@@ -1610,7 +1609,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   auto ctexture_map = std::unordered_map<std::string, scn::texture*>{
       {"", nullptr}};
   auto get_ctexture = [&ctexture_map, scene](
-                          const obj::texture& tinfo) -> scn::texture* {
+                          const obj_texture& tinfo) -> scn::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = ctexture_map.find(path);
@@ -1624,7 +1623,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   auto stexture_map = std::unordered_map<std::string, scn::texture*>{
       {"", nullptr}};
   auto get_stexture = [&stexture_map, scene](
-                          const obj::texture& tinfo) -> scn::texture* {
+                          const obj_texture& tinfo) -> scn::texture* {
     auto path = tinfo.path;
     if (path == "") return nullptr;
     auto it = stexture_map.find(path);
@@ -1635,7 +1634,7 @@ static bool load_obj_scene(const std::string& filename, scn::model* scene,
   };
 
   // handler for materials
-  auto material_map = std::unordered_map<obj::material*, scn::material*>{};
+  auto material_map = std::unordered_map<obj_material*, scn::material*>{};
   for (auto omat : obj->materials) {
     auto material = add_material(scene);
     // material->name             = make_safe_name("material", omat->name);
@@ -1764,7 +1763,7 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
   auto progress = vec2i{0, 2 + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  auto obj_guard = std::make_unique<obj::model>();
+  auto obj_guard = std::make_unique<obj_model>();
   auto obj       = obj_guard.get();
 
   // convert cameras
@@ -1782,14 +1781,14 @@ static bool save_obj_scene(const std::string& filename, const scn::model* scene,
 
   // textures
   auto get_texture = [](scn::texture* texture) {
-    if (!texture) return obj::texture{};
-    auto tinfo = obj::texture{};
+    if (!texture) return obj_texture{};
+    auto tinfo = obj_texture{};
     tinfo.path = texture->name;
     return tinfo;
   };
 
   // convert materials and textures
-  auto material_map = std::unordered_map<scn::material*, obj::material*>{
+  auto material_map = std::unordered_map<scn::material*, obj_material*>{
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
