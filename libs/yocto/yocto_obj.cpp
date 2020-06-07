@@ -56,21 +56,21 @@ namespace yocto {
 using namespace std::string_literals;
 
 // utilities
-inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
-inline bool is_space(char c) {
+inline bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
+inline bool is_obj_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(string_view& str) {
-  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+inline void skip_obj_whitespace(string_view& str) {
+  while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
 }
 
 // Parse values from a string
-[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
-  skip_whitespace(str);
+[[nodiscard]] inline bool parse_obj_value(string_view& str, string_view& value) {
+  skip_obj_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -88,26 +88,26 @@ inline void skip_whitespace(string_view& str) {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if (!parse_value(str, valuev)) return false;
+  if (!parse_obj_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, bool& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, bool& value) {
   auto valuei = 0;
-  if (!parse_value(str, valuei)) return false;
+  if (!parse_obj_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
@@ -115,105 +115,105 @@ inline void skip_whitespace(string_view& str) {
   return true;
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, vec2f& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
-    if (!parse_value(str, value[i])) return false;
+    if (!parse_obj_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, vec3f& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, vec3f& value) {
   for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
+    if (!parse_obj_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(string_view& str, frame3f& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, frame3f& value) {
   for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
+    if (!parse_obj_value(str, value[i])) return false;
   return true;
 }
 
 // Formats values to string
-inline void format_value(string& str, const string& value) { str += value; }
-inline void format_value(string& str, int value) {
+inline void format_obj_value(string& str, const string& value) { str += value; }
+inline void format_obj_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-inline void format_value(string& str, float value) {
+inline void format_obj_value(string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-inline void format_value(string& str, const vec2f& value) {
+inline void format_obj_value(string& str, const vec2f& value) {
   for (auto i = 0; i < 2; i++) {
     if (i) str += " ";
-    format_value(str, value[i]);
+    format_obj_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const vec3f& value) {
+inline void format_obj_value(string& str, const vec3f& value) {
   for (auto i = 0; i < 3; i++) {
     if (i) str += " ";
-    format_value(str, value[i]);
+    format_obj_value(str, value[i]);
   }
 }
-inline void format_value(string& str, const frame3f& value) {
+inline void format_obj_value(string& str, const frame3f& value) {
   for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
-    format_value(str, value[i]);
+    format_obj_value(str, value[i]);
   }
 }
 
 // Foramt to file
-inline void format_values(string& str, const string& fmt) {
+inline void format_obj_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
   if (pos != string::npos) throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-inline void format_values(
+inline void format_obj_values(
     string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
   if (pos == string::npos) throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
-  format_value(str, arg);
-  format_values(str, fmt.substr(pos + 2), args...);
+  format_obj_value(str, arg);
+  format_obj_values(str, fmt.substr(pos + 2), args...);
 }
 
 template <typename... Args>
-[[nodiscard]] inline bool format_values(
+[[nodiscard]] inline bool format_obj_values(
     FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
-  format_values(str, fmt, args...);
+  format_obj_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
 }
 template <typename T>
-[[nodiscard]] inline bool format_value(FILE* fs, const T& value) {
+[[nodiscard]] inline bool format_obj_value(FILE* fs, const T& value) {
   auto str = ""s;
-  format_value(str, value);
+  format_obj_value(str, value);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
 }
 
-inline void remove_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+inline void remove_obj_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
-[[nodiscard]] inline bool parse_value(string_view& str, obj_vertex& value) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
-  if (!parse_value(str, value.position)) return false;
+  if (!parse_obj_value(str, value.position)) return false;
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
     if (!str.empty() && str.front() == '/') {
       str.remove_prefix(1);
-      if (!parse_value(str, value.normal)) return false;
+      if (!parse_obj_value(str, value.normal)) return false;
     } else {
-      if (!parse_value(str, value.texcoord)) return false;
+      if (!parse_obj_value(str, value.texcoord)) return false;
       if (!str.empty() && str.front() == '/') {
         str.remove_prefix(1);
-        if (!parse_value(str, value.normal)) return false;
+        if (!parse_obj_value(str, value.normal)) return false;
       }
     }
   }
@@ -221,18 +221,18 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 }
 
 // Input for OBJ textures
-[[nodiscard]] inline bool parse_value(string_view& str, obj_texture& info) {
+[[nodiscard]] inline bool parse_obj_value(string_view& str, obj_texture& info) {
   // initialize
   info = obj_texture();
 
   // get tokens
   auto tokens = vector<string>();
-  skip_whitespace(str);
+  skip_obj_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
-    if (!parse_value(str, token)) return false;
+    if (!parse_obj_value(str, token)) return false;
     tokens.push_back(token);
-    skip_whitespace(str);
+    skip_obj_whitespace(str);
   }
   if (tokens.empty()) return false;
 
@@ -281,13 +281,13 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return parse_error();
+    if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // grab material
@@ -296,142 +296,142 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
     // possible token values
     if (cmd == "newmtl") {
       auto material = add_material(obj);
-      if (!parse_value(str, material->name)) return parse_error();
+      if (!parse_obj_value(str, material->name)) return parse_error();
     } else if (cmd == "illum") {
-      if (!parse_value(str, material->illum)) return parse_error();
+      if (!parse_obj_value(str, material->illum)) return parse_error();
     } else if (cmd == "Ke") {
-      if (!parse_value(str, material->emission)) return parse_error();
+      if (!parse_obj_value(str, material->emission)) return parse_error();
     } else if (cmd == "Ka") {
-      if (!parse_value(str, material->ambient)) return parse_error();
+      if (!parse_obj_value(str, material->ambient)) return parse_error();
     } else if (cmd == "Kd") {
-      if (!parse_value(str, material->diffuse)) return parse_error();
+      if (!parse_obj_value(str, material->diffuse)) return parse_error();
     } else if (cmd == "Ks") {
-      if (!parse_value(str, material->specular)) return parse_error();
+      if (!parse_obj_value(str, material->specular)) return parse_error();
     } else if (cmd == "Kt") {
-      if (!parse_value(str, material->transmission)) return parse_error();
+      if (!parse_obj_value(str, material->transmission)) return parse_error();
     } else if (cmd == "Tf") {
-      if (!parse_value(str, material->transmission)) return parse_error();
+      if (!parse_obj_value(str, material->transmission)) return parse_error();
       material->transmission = max(1 - material->transmission, 0.0f);
       if (max(material->transmission) < 0.001)
         material->transmission = {0, 0, 0};
     } else if (cmd == "Tr") {
-      if (!parse_value(str, material->opacity)) return parse_error();
+      if (!parse_obj_value(str, material->opacity)) return parse_error();
       material->opacity = 1 - material->opacity;
     } else if (cmd == "Ns") {
-      if (!parse_value(str, material->exponent)) return parse_error();
+      if (!parse_obj_value(str, material->exponent)) return parse_error();
     } else if (cmd == "d") {
-      if (!parse_value(str, material->opacity)) return parse_error();
+      if (!parse_obj_value(str, material->opacity)) return parse_error();
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material->emission_tex)) return parse_error();
+      if (!parse_obj_value(str, material->emission_tex)) return parse_error();
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material->ambient_tex)) return parse_error();
+      if (!parse_obj_value(str, material->ambient_tex)) return parse_error();
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material->diffuse_tex)) return parse_error();
+      if (!parse_obj_value(str, material->diffuse_tex)) return parse_error();
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material->specular_tex)) return parse_error();
+      if (!parse_obj_value(str, material->specular_tex)) return parse_error();
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material->transmission_tex)) return parse_error();
+      if (!parse_obj_value(str, material->transmission_tex)) return parse_error();
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material->opacity_tex)) return parse_error();
+      if (!parse_obj_value(str, material->opacity_tex)) return parse_error();
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material->bump_tex)) return parse_error();
+      if (!parse_obj_value(str, material->bump_tex)) return parse_error();
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material->displacement_tex)) return parse_error();
+      if (!parse_obj_value(str, material->displacement_tex)) return parse_error();
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material->normal_tex)) return parse_error();
+      if (!parse_obj_value(str, material->normal_tex)) return parse_error();
     } else if (cmd == "Pe") {
-      if (!parse_value(str, material->pbr_emission)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_emission)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pb") {
-      if (!parse_value(str, material->pbr_base)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_base)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Ps") {
-      if (!parse_value(str, material->pbr_specular)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_specular)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pm") {
-      if (!parse_value(str, material->pbr_metallic)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_metallic)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pr") {
-      if (!parse_value(str, material->pbr_roughness)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_roughness)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Psh") {
-      if (!parse_value(str, material->pbr_sheen)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_sheen)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pc") {
-      if (!parse_value(str, material->pbr_coat)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_coat)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_coatroughness)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pt") {
-      if (!parse_value(str, material->pbr_transmission)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_transmission)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pss") {
-      if (!parse_value(str, material->pbr_translucency)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_translucency)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pn") {
-      if (!parse_value(str, material->pbr_ior)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_ior)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Po") {
-      if (!parse_value(str, material->pbr_opacity)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_opacity)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvs") {
-      if (!parse_value(str, material->pbr_volscattering)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_volscattering)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvg") {
-      if (!parse_value(str, material->pbr_volanisotropy)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_volanisotropy)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pvr") {
-      if (!parse_value(str, material->pbr_volscale)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_volscale)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "Pthin") {
-      if (!parse_value(str, material->pbr_thin)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_thin)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pe") {
-      if (!parse_value(str, material->pbr_emission_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_emission_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pb") {
-      if (!parse_value(str, material->pbr_base_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_base_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Ps") {
-      if (!parse_value(str, material->pbr_specular_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_specular_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pm") {
-      if (!parse_value(str, material->pbr_metallic_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_metallic_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pr") {
-      if (!parse_value(str, material->pbr_roughness_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_roughness_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Psh") {
-      if (!parse_value(str, material->pbr_sheen_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_sheen_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pc") {
-      if (!parse_value(str, material->pbr_coat_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_coat_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, material->pbr_coatroughness_tex))
+      if (!parse_obj_value(str, material->pbr_coatroughness_tex))
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Po") {
-      if (!parse_value(str, material->pbr_opacity_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_opacity_tex)) return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pt") {
-      if (!parse_value(str, material->pbr_transmission_tex))
+      if (!parse_obj_value(str, material->pbr_transmission_tex))
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pss") {
-      if (!parse_value(str, material->pbr_translucency_tex))
+      if (!parse_obj_value(str, material->pbr_translucency_tex))
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pvs") {
-      if (!parse_value(str, material->pbr_volscattering_tex))
+      if (!parse_obj_value(str, material->pbr_volscattering_tex))
         return parse_error();
       material->as_pbr = true;
     } else if (cmd == "map_Pdisp") {
-      if (!parse_value(str, material->pbr_displacement_tex))
+      if (!parse_obj_value(str, material->pbr_displacement_tex))
         return parse_error();
     } else if (cmd == "map_Pnorm") {
-      if (!parse_value(str, material->pbr_normal_tex)) return parse_error();
+      if (!parse_obj_value(str, material->pbr_normal_tex)) return parse_error();
     } else {
       continue;
     }
@@ -512,40 +512,40 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return parse_error();
+    if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto camera = add_camera(obj);
-      if (!parse_value(str, camera->name)) return parse_error();
-      if (!parse_value(str, camera->ortho)) return parse_error();
-      if (!parse_value(str, camera->width)) return parse_error();
-      if (!parse_value(str, camera->height)) return parse_error();
-      if (!parse_value(str, camera->lens)) return parse_error();
-      if (!parse_value(str, camera->focus)) return parse_error();
-      if (!parse_value(str, camera->aperture)) return parse_error();
-      if (!parse_value(str, camera->frame)) return parse_error();
+      if (!parse_obj_value(str, camera->name)) return parse_error();
+      if (!parse_obj_value(str, camera->ortho)) return parse_error();
+      if (!parse_obj_value(str, camera->width)) return parse_error();
+      if (!parse_obj_value(str, camera->height)) return parse_error();
+      if (!parse_obj_value(str, camera->lens)) return parse_error();
+      if (!parse_obj_value(str, camera->focus)) return parse_error();
+      if (!parse_obj_value(str, camera->aperture)) return parse_error();
+      if (!parse_obj_value(str, camera->frame)) return parse_error();
     } else if (cmd == "e") {
       auto environment = add_environment(obj);
-      if (!parse_value(str, environment->name)) return parse_error();
-      if (!parse_value(str, environment->emission)) return parse_error();
+      if (!parse_obj_value(str, environment->name)) return parse_error();
+      if (!parse_obj_value(str, environment->emission)) return parse_error();
       auto emission_path = ""s;
-      if (!parse_value(str, emission_path)) return parse_error();
+      if (!parse_obj_value(str, emission_path)) return parse_error();
       if (emission_path == "\"\"") emission_path = "";
       environment->emission_tex.path = emission_path;
-      if (!parse_value(str, environment->frame)) return parse_error();
+      if (!parse_obj_value(str, environment->frame)) return parse_error();
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      if (!parse_value(str, object)) return parse_error();
-      if (!parse_value(str, frame)) return parse_error();
+      if (!parse_obj_value(str, object)) return parse_error();
+      if (!parse_obj_value(str, frame)) return parse_error();
       if (shape_map.find(object) == shape_map.end()) {
         return parse_error();
       }
@@ -634,24 +634,24 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return parse_error();
+    if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      if (!parse_value(str, opositions.emplace_back())) return parse_error();
+      if (!parse_obj_value(str, opositions.emplace_back())) return parse_error();
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if (!parse_value(str, onormals.emplace_back())) return parse_error();
+      if (!parse_obj_value(str, onormals.emplace_back())) return parse_error();
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if (!parse_value(str, otexcoords.emplace_back())) return parse_error();
+      if (!parse_obj_value(str, otexcoords.emplace_back())) return parse_error();
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -696,10 +696,10 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
         element.material = (uint8_t)mat_idx;
       }
       // parse vertices
-      skip_whitespace(str);
+      skip_obj_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
-        if (!parse_value(str, vert)) return parse_error();
+        if (!parse_obj_value(str, vert)) return parse_error();
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -708,22 +708,22 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         shape->vertices.push_back(vert);
         element.size += 1;
-        skip_whitespace(str);
+        skip_obj_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      skip_whitespace(str);
+      skip_obj_whitespace(str);
       if (cmd == "o") {
         if (str.empty()) {
           oname = "";
         } else {
-          if (!parse_value(str, oname)) return parse_error();
+          if (!parse_obj_value(str, oname)) return parse_error();
         }
       } else {
         if (str.empty()) {
           gname = "";
         } else {
-          if (!parse_value(str, gname)) return parse_error();
+          if (!parse_obj_value(str, gname)) return parse_error();
         }
       }
       if (!obj->shapes.back()->vertices.empty()) {
@@ -734,13 +734,13 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      if (!parse_value(str, mname)) return parse_error();
+      if (!parse_obj_value(str, mname)) return parse_error();
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      if (!parse_value(str, mtllib)) return parse_error();
+      if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
         if (!load_mtl(sfs::path(filename).parent_path() / mtllib, obj, error))
@@ -800,21 +800,21 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
 }
 
 // Format values
-inline void format_value(string& str, const obj_texture& value) {
+inline void format_obj_value(string& str, const obj_texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
-inline void format_value(string& str, const obj_vertex& value) {
-  format_value(str, value.position);
+inline void format_obj_value(string& str, const obj_vertex& value) {
+  format_obj_value(str, value.position);
   if (value.texcoord) {
     str += "/";
-    format_value(str, value.texcoord);
+    format_obj_value(str, value.texcoord);
     if (value.normal) {
       str += "/";
-      format_value(str, value.normal);
+      format_obj_value(str, value.normal);
     }
   } else if (value.normal) {
     str += "//";
-    format_value(str, value.normal);
+    format_obj_value(str, value.normal);
   }
 }
 
@@ -838,159 +838,159 @@ inline void format_value(string& str, const obj_vertex& value) {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
-  if (!format_values(fs, "#\n")) return write_error();
-  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_obj_values(fs, "#\n")) return write_error();
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_values(fs, "#\n\n")) return write_error();
+  if (!format_obj_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_values(fs, "\n")) return write_error();
+  if (!format_obj_values(fs, "\n")) return write_error();
 
   // write material
   for (auto material : obj->materials) {
-    if (!format_values(fs, "newmtl {}\n", material->name)) return write_error();
+    if (!format_obj_values(fs, "newmtl {}\n", material->name)) return write_error();
     if (!material->as_pbr) {
-      if (!format_values(fs, "illum {}\n", material->illum))
+      if (!format_obj_values(fs, "illum {}\n", material->illum))
         return write_error();
       if (material->emission != zero3f)
-        if (!format_values(fs, "Ke {}\n", material->emission))
+        if (!format_obj_values(fs, "Ke {}\n", material->emission))
           return write_error();
       if (material->ambient != zero3f)
-        if (!format_values(fs, "Ka {}\n", material->ambient))
+        if (!format_obj_values(fs, "Ka {}\n", material->ambient))
           return write_error();
-      if (!format_values(fs, "Kd {}\n", material->diffuse))
+      if (!format_obj_values(fs, "Kd {}\n", material->diffuse))
         return write_error();
-      if (!format_values(fs, "Ks {}\n", material->specular))
+      if (!format_obj_values(fs, "Ks {}\n", material->specular))
         return write_error();
       if (material->reflection != zero3f)
-        if (!format_values(fs, "Kr {}\n", material->reflection))
+        if (!format_obj_values(fs, "Kr {}\n", material->reflection))
           return write_error();
       if (material->transmission != zero3f)
-        if (!format_values(fs, "Kt {}\n", material->transmission))
+        if (!format_obj_values(fs, "Kt {}\n", material->transmission))
           return write_error();
-      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
+      if (!format_obj_values(fs, "Ns {}\n", (int)material->exponent))
         return write_error();
       if (material->opacity != 1)
-        if (!format_values(fs, "d {}\n", material->opacity))
+        if (!format_obj_values(fs, "d {}\n", material->opacity))
           return write_error();
       if (!material->emission_tex.path.empty())
-        if (!format_values(fs, "map_Ke {}\n", material->emission_tex))
+        if (!format_obj_values(fs, "map_Ke {}\n", material->emission_tex))
           return write_error();
       if (!material->diffuse_tex.path.empty())
-        if (!format_values(fs, "map_Kd {}\n", material->diffuse_tex))
+        if (!format_obj_values(fs, "map_Kd {}\n", material->diffuse_tex))
           return write_error();
       if (!material->specular_tex.path.empty())
-        if (!format_values(fs, "map_Ks {}\n", material->specular_tex))
+        if (!format_obj_values(fs, "map_Ks {}\n", material->specular_tex))
           return write_error();
       if (!material->transmission_tex.path.empty())
-        if (!format_values(fs, "map_Kt {}\n", material->transmission_tex))
+        if (!format_obj_values(fs, "map_Kt {}\n", material->transmission_tex))
           return write_error();
       if (!material->reflection_tex.path.empty())
-        if (!format_values(fs, "map_Kr {}\n", material->reflection_tex))
+        if (!format_obj_values(fs, "map_Kr {}\n", material->reflection_tex))
           return write_error();
       if (!material->exponent_tex.path.empty())
-        if (!format_values(fs, "map_Ns {}\n", material->exponent_tex))
+        if (!format_obj_values(fs, "map_Ns {}\n", material->exponent_tex))
           return write_error();
       if (!material->opacity_tex.path.empty())
-        if (!format_values(fs, "map_d {}\n", material->opacity_tex))
+        if (!format_obj_values(fs, "map_d {}\n", material->opacity_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material->bump_tex))
+        if (!format_obj_values(fs, "map_bump {}\n", material->bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material->displacement_tex))
+        if (!format_obj_values(fs, "map_disp {}\n", material->displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material->normal_tex))
+        if (!format_obj_values(fs, "map_norm {}\n", material->normal_tex))
           return write_error();
     } else {
-      if (!format_values(fs, "illum 2\n")) return write_error();
+      if (!format_obj_values(fs, "illum 2\n")) return write_error();
       if (material->pbr_emission != zero3f)
-        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
+        if (!format_obj_values(fs, "Pe {}\n", material->pbr_emission))
           return write_error();
       if (material->pbr_base != zero3f)
-        if (!format_values(fs, "Pb {}\n", material->pbr_base))
+        if (!format_obj_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
       if (material->pbr_specular)
-        if (!format_values(fs, "Ps {}\n", material->pbr_specular))
+        if (!format_obj_values(fs, "Ps {}\n", material->pbr_specular))
           return write_error();
       if (material->pbr_roughness)
-        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
+        if (!format_obj_values(fs, "Pr {}\n", material->pbr_roughness))
           return write_error();
       if (material->pbr_metallic)
-        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
+        if (!format_obj_values(fs, "Pm {}\n", material->pbr_metallic))
           return write_error();
       if (material->pbr_sheen)
-        if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
+        if (!format_obj_values(fs, "Psh {}\n", material->pbr_sheen))
           return write_error();
       if (material->pbr_transmission)
-        if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
+        if (!format_obj_values(fs, "Pt {}\n", material->pbr_transmission))
           return write_error();
       if (material->pbr_translucency)
-        if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
+        if (!format_obj_values(fs, "Pss {}\n", material->pbr_translucency))
           return write_error();
       if (material->pbr_coat)
-        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
+        if (!format_obj_values(fs, "Pc {}\n", material->pbr_coat))
           return write_error();
       if (material->pbr_coatroughness)
-        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
+        if (!format_obj_values(fs, "Pcr {}\n", material->pbr_coatroughness))
           return write_error();
       if (material->pbr_volscattering != zero3f)
-        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
+        if (!format_obj_values(fs, "Pvs {}\n", material->pbr_volscattering))
           return write_error();
       if (material->pbr_volanisotropy)
-        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
+        if (!format_obj_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
           return write_error();
       if (material->pbr_volscale)
-        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
+        if (!format_obj_values(fs, "Pvr {}\n", material->pbr_volscale))
           return write_error();
       if (!material->pbr_emission_tex.path.empty())
-        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
+        if (!format_obj_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
           return write_error();
       if (!material->pbr_base_tex.path.empty())
-        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_tex))
+        if (!format_obj_values(fs, "map_Pb {}\n", material->pbr_base_tex))
           return write_error();
       if (!material->pbr_specular_tex.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
+        if (!format_obj_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
           return write_error();
       if (!material->pbr_roughness_tex.path.empty())
-        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
+        if (!format_obj_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
           return write_error();
       if (!material->pbr_metallic_tex.path.empty())
-        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
+        if (!format_obj_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
           return write_error();
       if (!material->pbr_sheen_tex.path.empty())
-        if (!format_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
+        if (!format_obj_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
           return write_error();
       if (!material->pbr_transmission_tex.path.empty())
-        if (!format_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
+        if (!format_obj_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
           return write_error();
       if (!material->pbr_translucency_tex.path.empty())
-        if (!format_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
+        if (!format_obj_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
           return write_error();
       if (!material->pbr_coat_tex.path.empty())
-        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
+        if (!format_obj_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
           return write_error();
       if (!material->pbr_coatroughness_tex.path.empty())
-        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
+        if (!format_obj_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
           return write_error();
       if (!material->pbr_volscattering_tex.path.empty())
-        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
+        if (!format_obj_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
-        if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
+        if (!format_obj_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_values(
+        if (!format_obj_values(
                 fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
-        if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
+        if (!format_obj_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
           return write_error();
     }
-    if (!format_values(fs, "\n")) return write_error();
+    if (!format_obj_values(fs, "\n")) return write_error();
   }
   return true;
 }
@@ -1014,19 +1014,19 @@ inline void format_value(string& str, const obj_vertex& value) {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
-  if (!format_values(fs, "#\n")) return write_error();
-  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_obj_values(fs, "#\n")) return write_error();
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_values(fs, "#\n\n")) return write_error();
+  if (!format_obj_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_values(fs, "\n")) return write_error();
+  if (!format_obj_values(fs, "\n")) return write_error();
 
   // cameras
   for (auto camera : obj->cameras) {
-    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
+    if (!format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
             camera->ortho, camera->width, camera->height, camera->lens,
             camera->focus, camera->aperture, camera->frame))
       return write_error();
@@ -1034,7 +1034,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
   // environments
   for (auto environment : obj->environments) {
-    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
+    if (!format_obj_values(fs, "e {} {} {} {}\n", environment->name,
             environment->emission,
             environment->emission_tex.path.empty()
                 ? "\"\""s
@@ -1046,7 +1046,7 @@ inline void format_value(string& str, const obj_vertex& value) {
   // instances
   for (auto shape : obj->shapes) {
     for (auto& frame : shape->instances) {
-      if (!format_values(fs, "i {} {}\n", shape->name, frame))
+      if (!format_obj_values(fs, "i {} {}\n", shape->name, frame))
         return write_error();
     }
   }
@@ -1078,19 +1078,19 @@ inline void format_value(string& str, const obj_vertex& value) {
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
-  if (!format_values(fs, "#\n")) return write_error();
-  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_obj_values(fs, "#\n")) return write_error();
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_values(fs, "#\n\n")) return write_error();
+  if (!format_obj_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_values(fs, "\n")) return write_error();
+  if (!format_obj_values(fs, "\n")) return write_error();
 
   // save material library
   if (!obj->materials.empty()) {
-    if (!format_values(fs, "mtllib {}\n\n",
+    if (!format_obj_values(fs, "mtllib {}\n\n",
             sfs::path(filename).filename().replace_extension(".mtl")))
       return write_error();
   }
@@ -1098,13 +1098,13 @@ inline void format_value(string& str, const obj_vertex& value) {
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto shape : obj->shapes) {
-    if (!format_values(fs, "o {}\n", shape->name)) return write_error();
+    if (!format_obj_values(fs, "o {}\n", shape->name)) return write_error();
     for (auto& p : shape->positions)
-      if (!format_values(fs, "v {}\n", p)) return write_error();
+      if (!format_obj_values(fs, "v {}\n", p)) return write_error();
     for (auto& n : shape->normals)
-      if (!format_values(fs, "vn {}\n", n)) return write_error();
+      if (!format_obj_values(fs, "vn {}\n", n)) return write_error();
     for (auto& t : shape->texcoords)
-      if (!format_values(fs, "vt {}\n", t)) return write_error();
+      if (!format_obj_values(fs, "vt {}\n", t)) return write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape->faces, &shape->lines, &shape->points};
@@ -1114,23 +1114,23 @@ inline void format_value(string& str, const obj_vertex& value) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape->materials.empty() && cur_material != element.material) {
-          if (!format_values(
+          if (!format_obj_values(
                   fs, "usemtl {}\n", shape->materials[element.material]->name))
             return write_error();
           cur_material = element.material;
         }
-        if (!format_values(fs, "{}", label)) return write_error();
+        if (!format_obj_values(fs, "{}", label)) return write_error();
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape->vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          if (!format_values(fs, " {}", vert)) return write_error();
+          if (!format_obj_values(fs, " {}", vert)) return write_error();
         }
-        if (!format_values(fs, "\n")) return write_error();
+        if (!format_obj_values(fs, "\n")) return write_error();
       }
     }
-    if (!format_values(fs, "\n")) return write_error();
+    if (!format_obj_values(fs, "\n")) return write_error();
     vert_size.position += (int)shape->positions.size();
     vert_size.normal += (int)shape->normals.size();
     vert_size.texcoord += (int)shape->texcoords.size();
