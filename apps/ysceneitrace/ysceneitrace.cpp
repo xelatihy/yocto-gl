@@ -57,9 +57,9 @@ struct app_state {
 
   // scene
   scene_model*  ioscene  = new scene_model{};
-  trc::scene*  scene    = new trc::scene{};
+  trc::trace_scene*  scene    = new trc::trace_scene{};
   scene_camera* iocamera = nullptr;
-  trc::camera* camera   = nullptr;
+  trc::trace_camera* camera   = nullptr;
 
   // options
   trc::trace_params params = {};
@@ -86,7 +86,7 @@ struct app_state {
   // computation
   int         render_sample  = 0;
   int         render_counter = 0;
-  trc::state* render_state   = new trc::state{};
+  trc::trace_state* render_state   = new trc::trace_state{};
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -126,7 +126,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
+void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -135,7 +135,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trc::trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -148,7 +148,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trc::trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -166,7 +166,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trc::material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trc::trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -202,7 +202,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trc::trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -220,7 +220,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trc::trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -314,7 +314,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
         init_bvh(app->scene, app->params);
         init_lights(app->scene);
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-          app->params.sampler = trc::sampler_type::eyelight;
+          app->params.sampler = trc::trace_sampler_type::eyelight;
         }
       });
   apps->loading.push_back(app);
@@ -558,9 +558,9 @@ void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& 
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trc::sampler_names);
+        win, "tracer", (int&)tparams.sampler, trc::trace_sampler_names);
     edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trc::falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, trc::trace_falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_line(win);
@@ -817,9 +817,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      trc::sampler_names);
+      trc::trace_sampler_names);
   add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trc::trace_falsecolor_names);
   add_option(
       cli, "--bounces,-b", apps->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");

@@ -42,7 +42,7 @@ using namespace std::string_literals;
 namespace sfs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
+void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -51,7 +51,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trc::trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -63,7 +63,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trc::trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -80,7 +80,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trc::material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trc::trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -114,7 +114,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trc::trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -132,7 +132,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trc::trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -181,9 +181,9 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", trc::sampler_names);
+      cli, "--tracer,-t", params.sampler, "Trace type.", trc::trace_sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trc::trace_falsecolor_names);
   add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
@@ -210,9 +210,9 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // convert scene
-  auto scene_guard = std::make_unique<trc::scene>();
+  auto scene_guard = std::make_unique<trc::trace_scene>();
   auto scene       = scene_guard.get();
-  auto camera      = (trc::camera*)nullptr;
+  auto camera      = (trc::trace_camera*)nullptr;
   init_scene(scene, ioscene, camera, iocamera, print_progress);
 
   // cleanup
@@ -227,7 +227,7 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
-    params.sampler = trc::sampler_type::eyelight;
+    params.sampler = trc::trace_sampler_type::eyelight;
   }
 
   // render

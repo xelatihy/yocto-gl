@@ -50,8 +50,8 @@ struct app_state {
   trc::trace_params params = {};
 
   // scene
-  trc::scene*              scene        = new trc::scene{};
-  trc::camera*             camera       = nullptr;
+  trc::trace_scene*              scene        = new trc::trace_scene{};
+  trc::trace_camera*             camera       = nullptr;
   std::vector<std::string> camera_names = {};
 
   // rendering state
@@ -66,7 +66,7 @@ struct app_state {
   // computation
   int         render_sample  = 0;
   int         render_counter = 0;
-  trc::state* render_state   = new trc::state{};
+  trc::trace_state* render_state   = new trc::trace_state{};
 
   // status
   std::atomic<int> current = 0;
@@ -83,7 +83,7 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
+void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera*& camera,
     scene_camera* iocamera, progress_callback print_progress = {}) {
   // handle progress
   auto progress = vec2i{
@@ -92,7 +92,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trc::trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (print_progress)
@@ -105,7 +105,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trc::trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (print_progress)
@@ -123,7 +123,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trc::material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trc::trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (print_progress)
@@ -159,7 +159,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trc::trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (print_progress)
@@ -178,7 +178,7 @@ void init_scene(trc::scene* scene, scene_model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trc::trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (print_progress)
@@ -262,9 +262,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", app->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", app->params.sampler, "Tracer type.",
-      trc::sampler_names);
+      trc::trace_sampler_names);
   add_option(cli, "--falsecolor,-F", app->params.falsecolor,
-      "Tracer false color type.", trc::falsecolor_names);
+      "Tracer false color type.", trc::trace_falsecolor_names);
   add_option(
       cli, "--bounces,-b", app->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
@@ -309,7 +309,7 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
-    app->params.sampler = trc::sampler_type::eyelight;
+    app->params.sampler = trc::trace_sampler_type::eyelight;
   }
 
   // allocate buffers
@@ -341,9 +341,9 @@ int main(int argc, const char* argv[]) {
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trc::sampler_names);
+        win, "tracer", (int&)tparams.sampler, trc::trace_sampler_names);
     edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trc::falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, trc::trace_falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_line(win);
@@ -367,16 +367,16 @@ int main(int argc, const char* argv[]) {
         }
       } break;
       case 'f':
-        app->params.sampler = trc::sampler_type::falsecolor;
+        app->params.sampler = trc::trace_sampler_type::falsecolor;
         reset_display(app);
         break;
       case 'p':
-        app->params.sampler = trc::sampler_type::path;
+        app->params.sampler = trc::trace_sampler_type::path;
         reset_display(app);
         break;
       case 'F':
-        app->params.falsecolor = (trc::falsecolor_type)(
-            ((int)app->params.falsecolor + 1) % (int)trc::sampler_names.size());
+        app->params.falsecolor = (trc::trace_falsecolor_type)(
+            ((int)app->params.falsecolor + 1) % (int)trc::trace_sampler_names.size());
         reset_display(app);
         break;
     }
