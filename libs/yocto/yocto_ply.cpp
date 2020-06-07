@@ -800,7 +800,7 @@ bool get_value(ply_model* ply, const string& element, const string& property,
   return true;
 }
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 2>& properties, vector<vec2f>& values) {
+    const array<string, 2>& properties, vector<vec2f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{};
   if (!get_value(ply, element, properties[0], x)) return false;
@@ -810,7 +810,7 @@ bool get_values(ply_model* ply, const string& element,
   return true;
 }
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 3>& properties, vector<vec3f>& values) {
+    const array<string, 3>& properties, vector<vec3f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{};
   if (!get_value(ply, element, properties[0], x)) return false;
@@ -822,7 +822,7 @@ bool get_values(ply_model* ply, const string& element,
   return true;
 }
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 4>& properties, vector<vec4f>& values) {
+    const array<string, 4>& properties, vector<vec4f>& values) {
   values.clear();
   auto x = vector<float>{}, y = vector<float>{}, z = vector<float>{},
        w = vector<float>{};
@@ -836,9 +836,9 @@ bool get_values(ply_model* ply, const string& element,
   return true;
 }
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 12>& properties, vector<frame3f>& values) {
+    const array<string, 12>& properties, vector<frame3f>& values) {
   values.clear();
-  auto coords = std::array<vector<float>, 12>{};
+  auto coords = array<vector<float>, 12>{};
   for (auto idx = 0; idx < 12; idx++)
     if (!get_value(ply, element, properties[idx], coords[idx])) return false;
   values = vector<frame3f>(coords[0].size());
@@ -1038,25 +1038,25 @@ bool add_value(ply_model* ply, const string& element, const string& property,
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 2>& properties, const vector<vec2f>& values) {
+    const array<string, 2>& properties, const vector<vec2f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 3>& properties, const vector<vec3f>& values) {
+    const array<string, 3>& properties, const vector<vec3f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 4>& properties, const vector<vec4f>& values) {
+    const array<string, 4>& properties, const vector<vec4f>& values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 12>& properties, const vector<frame3f>& values) {
+    const array<string, 12>& properties, const vector<frame3f>& values) {
   if (values.empty()) return false;
   return add_values(ply, (float*)values.data(), values.size(), element,
       properties.data(), properties.size());

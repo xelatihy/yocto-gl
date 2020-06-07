@@ -209,6 +209,7 @@ namespace yocto {
 
 // using directives
 using std::vector;
+using std::array;
 
 }  // namespace yocto
 
@@ -1742,11 +1743,11 @@ inline float sample_discrete_weights_pdf(const vector<float>& weights, int idx);
 // Sample a discrete distribution represented by its weights.
 template <size_t N>
 inline int sample_discrete_weights(
-    const std::array<float, N>& weights, float r);
+    const array<float, N>& weights, float r);
 // Pdf for uniform discrete distribution sampling.
 template <size_t N>
 inline float sample_discrete_weights_pdf(
-    const std::array<float, N>& weights, int idx);
+    const array<float, N>& weights, int idx);
 
 }  // namespace yocto
 
@@ -5007,7 +5008,7 @@ inline float sample_discrete_weights_pdf(
 // Sample a discrete distribution represented by its cdf.
 template <size_t N>
 inline int sample_discrete_weights(
-    const std::array<float, N>& weights, float r) {
+    const array<float, N>& weights, float r) {
   auto sum = 0.0f;
   for (auto weight : weights) sum += weight;
   r            = clamp(r * sum, (float)0, sum - (float)0.00001);
@@ -5021,7 +5022,7 @@ inline int sample_discrete_weights(
 // Pdf for uniform discrete distribution sampling.
 template <size_t N>
 inline float sample_discrete_weights_pdf(
-    const std::array<float, N>& weights, int idx) {
+    const array<float, N>& weights, int idx) {
   return weights[idx];
 }
 

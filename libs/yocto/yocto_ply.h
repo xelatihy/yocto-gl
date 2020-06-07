@@ -50,6 +50,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::array;
 
 }  // namespace yocto
 
@@ -122,13 +123,13 @@ ply_property* get_property(
 bool get_value(ply_model* ply, const string& element, const string& property,
     vector<float>& values);
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 2>& properties, vector<vec4f>& values);
+    const array<string, 2>& properties, vector<vec4f>& values);
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 3>& properties, vector<vec3f>& values);
+    const array<string, 3>& properties, vector<vec3f>& values);
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 4>& properties, vector<vec4f>& values);
+    const array<string, 4>& properties, vector<vec4f>& values);
 bool get_values(ply_model* ply, const string& element,
-    const std::array<string, 12>& properties, vector<frame3f>& values);
+    const array<string, 12>& properties, vector<frame3f>& values);
 
 bool get_lists(ply_model* ply, const string& element, const string& property,
     vector<vector<int>>& lists);
@@ -154,13 +155,13 @@ bool has_quads(ply_model* ply);
 bool add_value(ply_model* ply, const string& element, const string& property,
     const vector<float>& values);
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 2>& properties, const vector<vec2f>& values);
+    const array<string, 2>& properties, const vector<vec2f>& values);
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 3>& properties, const vector<vec3f>& values);
+    const array<string, 3>& properties, const vector<vec3f>& values);
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 4>& properties, const vector<vec4f>& values);
+    const array<string, 4>& properties, const vector<vec4f>& values);
 bool add_values(ply_model* ply, const string& element,
-    const std::array<string, 12>& properties, const vector<frame3f>& values);
+    const array<string, 12>& properties, const vector<frame3f>& values);
 
 bool add_lists(ply_model* ply, const string& element, const string& property,
     const vector<vector<int>>& values);
