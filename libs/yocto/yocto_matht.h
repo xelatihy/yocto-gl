@@ -1731,10 +1731,10 @@ inline T sample_discrete_weights_pdf(const vector<T>& weights, int idx);
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T, size_t N>
-inline int sample_discrete_weights(const std::array<T, N>& weights, T r);
+inline int sample_discrete_weights(const array<T, N>& weights, T r);
 // Pdf for uniform discrete distribution sampling.
 template <typename T, size_t N>
-inline T sample_discrete_weights_pdf(const std::array<T, N>& weights, int idx);
+inline T sample_discrete_weights_pdf(const array<T, N>& weights, int idx);
 
 }  // namespace yocto::math
 
@@ -5625,7 +5625,7 @@ inline float sample_discrete_weights_pdf(const vector<T>& weights, int idx) {
 
 // Sample a discrete distribution represented by its cdf.
 template <typename T, size_t N>
-inline int sample_discrete_weights(const std::array<T, N>& weights, T r) {
+inline int sample_discrete_weights(const array<T, N>& weights, T r) {
   auto sum = T{0};
   for (auto weight : weights) sum += weight;
   r            = clamp(r * sum, T{0}, sum - T{0.00001});
@@ -5638,8 +5638,7 @@ inline int sample_discrete_weights(const std::array<T, N>& weights, T r) {
 }
 // Pdf for uniform discrete distribution sampling.
 template <typename T, size_t N>
-inline float sample_discrete_weights_pdf(
-    const std::array<T, N>& weights, int idx) {
+inline float sample_discrete_weights_pdf(const array<T, N>& weights, int idx) {
   return weights[idx];
 }
 
