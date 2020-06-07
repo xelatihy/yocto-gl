@@ -27,9 +27,7 @@ See each header file for documentation.
    multiple importance sampling
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF 
    and a custom and scalable Json format
-- `yocto/yocto_ply.h`: parsing and writing for Ply format
-- `yocto/yocto_obj.h`: parsing and writing for Obj format
-- `yocto/yocto_pbrt.h`: parsing and writing for Pbrt format
+- `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
 - `yocto/yocto_commonio.h`: printing utilities, file io utilities,
   command line parsing
 - `yocto/yocto_common.h`: container, iterators and concurrency utilities
