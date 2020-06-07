@@ -59,35 +59,6 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::gui {
-
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::exp2;
-using math::flt_max;
-using math::fmod;
-using math::log;
-using math::log2;
-using math::max;
-using math::min;
-using math::perspective_mat;
-using math::pif;
-using math::pow;
-using math::sin;
-using math::sqrt;
-using math::tan;
-
-}  // namespace yocto::gui
-
-// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
 namespace yocto::gui {

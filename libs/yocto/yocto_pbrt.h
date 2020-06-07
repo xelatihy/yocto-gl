@@ -41,31 +41,6 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::pbrt {
-
-// Math defitions
-using math::frame3f;
-using math::identity3x4f;
-using math::identity4x4f;
-using math::mat4f;
-using math::pif;
-using math::vec2f;
-using math::vec2i;
-using math::vec3f;
-using math::vec3i;
-using math::vec4f;
-using math::vec4i;
-using math::zero2f;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-using math::zero4f;
-
-}  // namespace yocto::pbrt
-
-// -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto::pbrt {
@@ -994,7 +969,7 @@ inline std::pair<vec3f, vec3f> get_subsurface(const std::string& name) {
       auto vector2f  = std::vector<vec2f>{};
       parse_pvalues(str, blackbody, vector2f);
       if (!vector2f.empty()) return false;
-      value.value3f = math::blackbody_to_rgb(blackbody.x) * blackbody.y;
+      value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
       value.type = value::type_t::color;
       if (!parse_pvalues(str, value.value3f, value.vector3f)) return false;
@@ -1133,10 +1108,10 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     pcamera->aspect = film_aspect;
     if (pcamera->aspect >= 1) {
       pcamera->lens = (0.036 / pcamera->aspect) /
-                      (2 * math::tan(math::radians(fov) / 2));
+                      (2 * tan(radians(fov) / 2));
     } else {
       pcamera->lens = (0.036 * pcamera->aspect) /
-                      (2 * math::tan(math::radians(fov) / 2));
+                      (2 * tan(radians(fov) / 2));
     }
     if (!get_value(command.values, "frameaspectratio", pcamera->aspect))
       return parse_error();
@@ -1150,7 +1125,7 @@ inline bool convert_camera(pbrt::camera* pcamera, const command& command,
     lensfile  = lensfile.substr(0, lensfile.size() - 4);
     lensfile  = lensfile.substr(lensfile.find('.') + 1);
     lensfile  = lensfile.substr(0, lensfile.size() - 2);
-    auto lens = math::max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+    auto lens = max((float)std::atof(lensfile.c_str()), 35.0f) * 0.001f;
     pcamera->lens     = 2 * atan(0.036f / (2 * lens));
     pcamera->aperture = 0.0f;
     if (!get_value(command.values, "aperturediameter", pcamera->aperture))
@@ -1353,8 +1328,8 @@ inline bool convert_material(pbrt::material* pmaterial, const command& command,
     roughness = mean(vec2f{mean(uroughness.first), mean(vroughness.first)});
     // from pbrt code
     if (remaproughness) {
-      roughness = math::max(roughness, 1e-3f);
-      auto x    = math::log(roughness);
+      roughness = max(roughness, 1e-3f);
+      auto x    = log(roughness);
       roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
                   0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
     }
@@ -1625,13 +1600,13 @@ inline void make_sphere(std::vector<vec3i>& triangles,
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return radius * vec3f{math::cos(pt.x) * math::sin(pt.y),
-                            math::sin(pt.x) * math::sin(pt.y), math::cos(pt.y)};
+        return radius * vec3f{cos(pt.x) * sin(pt.y),
+                            sin(pt.x) * sin(pt.y), cos(pt.y)};
       },
       [](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        return vec3f{math::cos(pt.x) * math::cos(pt.y),
-            math::sin(pt.x) * math::cos(pt.y), math::sin(pt.y)};
+        return vec3f{cos(pt.x) * cos(pt.y),
+            sin(pt.x) * cos(pt.y), sin(pt.y)};
       });
 }
 inline void make_disk(std::vector<vec3i>& triangles,
@@ -1641,7 +1616,7 @@ inline void make_disk(std::vector<vec3i>& triangles,
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto a = 2 * pif * uv.x;
-        return radius * (1 - uv.y) * vec3f{math::cos(a), math::sin(a), 0};
+        return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
       },
       [](const vec2f& uv) {
         return vec3f{0, 0, 1};
@@ -1797,7 +1772,7 @@ inline bool convert_light(pbrt::light* plight, const command& command,
     if (!get_value(command.values, "to", plight->to)) return parse_error();
     plight->distant       = true;
     auto distant_dist     = 100;
-    auto size             = distant_dist * math::sin(5 * pif / 180);
+    auto size             = distant_dist * sin(5 * pif / 180);
     plight->area_emission = plight->emission * (distant_dist * distant_dist) /
                             (size * size);
     plight->area_frame =
@@ -2012,7 +1987,7 @@ struct context {
       auto v = zero4f;
       if (!parse_param(str, v)) return parse_error();
       concat_transform(ctx.stack.back(),
-          rotation_frame(vec3f{v.y, v.z, v.w}, math::radians(v.x)));
+          rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
       if (!parse_param(str, from)) return parse_error();
@@ -2363,7 +2338,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
     command.type  = "perspective";
     command.frame = camera->frame;
     command.values.push_back(make_value(
-        "fov", 2 * math::tan(0.036f / (2 * camera->lens)) * 180 / pif));
+        "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
     if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
@@ -2419,14 +2394,14 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
       command.values.push_back(make_value("Kr", vec3f{1, 1, 1}));
       command.values.push_back(make_value("Kt", vec3f{1, 1, 1}));
       command.values.push_back(
-          make_value("roughness", math::pow(material->roughness, 2)));
+          make_value("roughness", pow(material->roughness, 2)));
       command.values.push_back(make_value("eta", material->ior));
       command.values.push_back(make_value("remaproughness", false));
     } else if (material->metallic > 0.1f) {
       command.type = "metal";
       command.values.push_back(make_value("Kr", vec3f{1, 1, 1}));
       command.values.push_back(
-          make_value("roughness", math::pow(material->roughness, 2)));
+          make_value("roughness", pow(material->roughness, 2)));
       command.values.push_back(
           make_value("eta", reflectivity_to_eta(material->color)));
       command.values.push_back(make_value("remaproughness", false));
@@ -2441,7 +2416,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
       if (material->specular != 0) {
         command.values.push_back(make_value("Ks", vec3f{material->specular}));
         command.values.push_back(
-            make_value("roughness", math::pow(material->roughness, 2)));
+            make_value("roughness", pow(material->roughness, 2)));
         command.values.push_back(make_value("eta", material->ior));
         command.values.push_back(make_value("remaproughness", false));
       }

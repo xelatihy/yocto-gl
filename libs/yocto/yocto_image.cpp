@@ -43,32 +43,6 @@
 #include "ext/tinyexr.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::image {
-
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::exp2;
-using math::fmod;
-using math::lerp;
-using math::log;
-using math::log2;
-using math::max;
-using math::min;
-using math::pow;
-using math::sin;
-using math::sqrt;
-using math::tan;
-
-}  // namespace yocto::image
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::image {
@@ -593,24 +567,24 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = math::byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = math::float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
 image<float> ushort_to_float(const image<ushort>& bt) {
   auto fl = image<float>{bt.size()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = math::ushort_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::ushort_to_float(bt[i]);
   return fl;
 }
 image<ushort> float_to_ushort(const image<float>& fl) {
   auto bt = image<ushort>{fl.size()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = math::float_to_ushort(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_ushort(fl[i]);
   return bt;
 }
 
@@ -665,25 +639,25 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.size()};
-  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = math::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = yocto::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.size()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = math::rgb_to_srgb(rgb[i]);
+    srgb[i] = yocto::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.size()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = math::srgb_to_rgb(math::byte_to_float(srgb[i]));
+    rgb[i] = yocto::srgb_to_rgb(yocto::byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.size()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = math::float_to_byte(math::rgb_to_srgb(rgb[i]));
+    srgb[i] = yocto::float_to_byte(yocto::rgb_to_srgb(rgb[i]));
   return srgb;
 }
 
@@ -972,7 +946,7 @@ void make_blackbodyramp(
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{math::blackbody_to_rgb(math::lerp(from, to, uv.x)), 1};
+    return vec4f{yocto::blackbody_to_rgb(lerp(from, to, uv.x)), 1};
   });
 }
 
@@ -980,7 +954,7 @@ void make_noisemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_noise(vec3f{uv.x, uv.y, 0.5f});
+    auto v = perlin_noise(vec3f{uv.x, uv.y, 0.5f});
     v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -989,7 +963,7 @@ void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_fbm(
+    auto v = perlin_fbm(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
@@ -999,7 +973,7 @@ void make_turbulencemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_turbulence(
+    auto v = perlin_turbulence(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
@@ -1009,7 +983,7 @@ void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(img, size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = math::perlin_ridge(
+    auto v = perlin_ridge(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
@@ -1128,7 +1102,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
-    theta      = clamp(theta, 0.0f, pif / 2 - math::flt_eps);
+    theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
     for (int i = 0; i < img.size().x; i++) {
       auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};

@@ -30,7 +30,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
-using namespace yocto::math;
 namespace sio = yocto::sceneio;
 namespace cli = yocto::commonio;
 

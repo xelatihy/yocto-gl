@@ -53,29 +53,6 @@ namespace yocto::gui {
 namespace gui = yocto::gui;
 namespace img = yocto::image;
 
-// Math defitions
-using math::bbox3f;
-using math::byte;
-using math::frame2f;
-using math::frame3f;
-using math::identity3x4f;
-using math::mat2f;
-using math::mat3f;
-using math::mat4f;
-using math::uint;
-using math::vec2f;
-using math::vec2i;
-using math::vec3b;
-using math::vec3f;
-using math::vec3i;
-using math::vec4b;
-using math::vec4f;
-using math::vec4i;
-using math::zero2f;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-
 }  // namespace yocto::gui
 
 // -----------------------------------------------------------------------------

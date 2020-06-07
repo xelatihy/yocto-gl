@@ -129,30 +129,6 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::shape {
-
-// Math defitions
-using math::bbox3f;
-using math::byte;
-using math::flt_max;
-using math::frame3f;
-using math::identity3x4f;
-using math::mat3f;
-using math::mat4f;
-using math::ray3f;
-using math::vec2f;
-using math::vec2i;
-using math::vec3b;
-using math::vec3f;
-using math::vec3i;
-using math::vec4f;
-using math::vec4i;
-
-}  // namespace yocto::shape
-
-// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto::shape {

@@ -104,31 +104,6 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::image {
-
-// Math defitions
-using math::byte;
-using math::mat3f;
-using math::pif;
-using math::ushort;
-using math::vec2f;
-using math::vec2i;
-using math::vec3b;
-using math::vec3f;
-using math::vec3i;
-using math::vec4b;
-using math::vec4f;
-using math::vec4i;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-using math::zero4f;
-
-}  // namespace yocto::image
-
-// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::image {

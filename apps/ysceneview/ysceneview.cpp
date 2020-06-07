@@ -31,7 +31,7 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
+using namespace yocto;
 namespace sio = yocto::sceneio;
 namespace cli = yocto::commonio;
 namespace gui = yocto::gui;

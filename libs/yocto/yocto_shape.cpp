@@ -26,35 +26,6 @@ namespace yocto::shape {
 namespace yply = yocto::ply;
 namespace yobj = yocto::obj;
 
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::flt_max;
-using math::fmod;
-using math::invalidb3f;
-using math::lerp;
-using math::log;
-using math::make_rng;
-using math::max;
-using math::min;
-using math::pif;
-using math::pow;
-using math::rng_state;
-using math::sample_discrete_cdf;
-using math::sample_discrete_cdf_pdf;
-using math::sample_uniform;
-using math::sample_uniform_pdf;
-using math::sin;
-using math::sqrt;
-using math::swap;
-using math::zero2f;
-using math::zero3f;
-using math::zero4f;
-
 }  // namespace yocto::shape
 
 // -----------------------------------------------------------------------------
@@ -4786,9 +4757,9 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& positions,
 void make_shell(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
     std::vector<vec3f>& normals, std::vector<vec2f>& texcoords,
     float thickness) {
-  auto bbox = math::invalidb3f;
+  auto bbox = invalidb3f;
   for (auto p : positions) bbox = merge(bbox, p);
-  auto center              = math::center(bbox);
+  auto center              = yocto::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;

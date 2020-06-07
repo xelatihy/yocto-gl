@@ -29,7 +29,7 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
-using namespace yocto::math;
+using namespace yocto;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;
 namespace gui = yocto::gui;

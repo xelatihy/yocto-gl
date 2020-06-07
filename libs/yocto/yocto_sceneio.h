@@ -60,26 +60,6 @@ namespace yocto::sceneio {
 namespace scn = yocto::sceneio;
 namespace img = yocto::image;
 
-// Math defitions
-using math::bbox3f;
-using math::byte;
-using math::frame3f;
-using math::identity3x3f;
-using math::identity3x4f;
-using math::mat4f;
-using math::vec2f;
-using math::vec2i;
-using math::vec3b;
-using math::vec3f;
-using math::vec3i;
-using math::vec4b;
-using math::vec4f;
-using math::vec4i;
-using math::zero2f;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-
 }  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
@@ -298,7 +278,7 @@ bool save_scene(const std::string& filename, const scn::model* scene,
 scn::camera* get_camera(const scn::model* scene, const std::string& name = "");
 
 // add a sky environment
-void add_sky(scn::model* scene, float sun_angle = math::pif / 4);
+void add_sky(scn::model* scene, float sun_angle = pif / 4);
 
 }  // namespace yocto::sceneio
 

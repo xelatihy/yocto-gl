@@ -29,7 +29,7 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
-using namespace yocto::math;
+using namespace yocto;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;
 
@@ -62,11 +62,11 @@ img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{i, j}];
-          auto w   = (float)math::exp(-dot(uv, uv) * sw) *
-                   (float)math::exp(-dot(rgb, rgb) * rw);
+          auto w   = (float)exp(-dot(uv, uv) * sw) *
+                   (float)exp(-dot(rgb, rgb) * rw);
           for (auto fi = 0; fi < features.size(); fi++) {
             auto feat = features[fi][{i, j}] - features[fi][{i, j}];
-            w *= math::exp(-dot(feat, feat) * fw[fi]);
+            w *= exp(-dot(feat, feat) * fw[fi]);
           }
           av += w * img[{ii, jj}];
           aw += w;
@@ -95,8 +95,8 @@ img::image<vec4f> filter_bilateral(
           if (ii >= img.size().x || jj >= img.size().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
-          auto w   = math::exp(-dot(uv, uv) * sw) *
-                   math::exp(-dot(rgb, rgb) * rw);
+          auto w   = exp(-dot(uv, uv) * sw) *
+                   exp(-dot(rgb, rgb) * rw);
           av += w * img[{ii, jj}];
           aw += w;
         }

@@ -72,24 +72,6 @@ namespace ypbrt = yocto::pbrt;
 namespace yshp  = yocto::shape;
 namespace yimg  = yocto::image;
 
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::fmod;
-using math::invalidb3f;
-using math::log;
-using math::max;
-using math::min;
-using math::pow;
-using math::sin;
-using math::sqrt;
-using math::tan;
-using math::uint;
-
 }  // namespace yocto::sceneio
 
 // -----------------------------------------------------------------------------
@@ -893,7 +875,7 @@ static bool save_instance(const std::string& filename,
 // -----------------------------------------------------------------------------
 // JSON SUPPORT
 // -----------------------------------------------------------------------------
-namespace yocto::math {
+namespace yocto {
 
 using json = nlohmann::json;
 using std::array;
@@ -916,7 +898,7 @@ inline void from_json(const json& j, frame3f& value) {
   nlohmann::from_json(j, (array<float, 12>&)value);
 }
 
-}  // namespace yocto::math
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // JSON IO
@@ -2072,9 +2054,9 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
       camera->film = 0.036;
       if (camera->aspect >= 1) {
         camera->lens = (camera->film / camera->aspect) /
-                       (2 * math::tan(persp->yfov / 2));
+                       (2 * tan(persp->yfov / 2));
       } else {
-        camera->lens = camera->film / (2 * math::tan(persp->yfov / 2));
+        camera->lens = camera->film / (2 * tan(persp->yfov / 2));
       }
     }
   }

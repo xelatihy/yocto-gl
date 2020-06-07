@@ -41,23 +41,6 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::ply {
-
-// Math defitions
-using math::byte;
-using math::frame3f;
-using math::vec2f;
-using math::vec2i;
-using math::vec3f;
-using math::vec3i;
-using math::vec4f;
-using math::vec4i;
-
-}  // namespace yocto::ply
-
-// -----------------------------------------------------------------------------
 // PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto::ply {

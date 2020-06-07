@@ -30,7 +30,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
-using namespace yocto::math;
+using namespace yocto;
 namespace shp = yocto::shape;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;

@@ -44,25 +44,6 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::obj {
-
-// Math defitions
-using math::frame3f;
-using math::identity3x4f;
-using math::vec2f;
-using math::vec2i;
-using math::vec3f;
-using math::vec3i;
-using math::vec4f;
-using math::vec4i;
-using math::zero2f;
-using math::zero3f;
-
-}  // namespace yocto::obj
-
-// -----------------------------------------------------------------------------
 // OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto::obj {

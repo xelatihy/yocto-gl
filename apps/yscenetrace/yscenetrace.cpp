@@ -31,7 +31,7 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
-using namespace yocto::math;
+using namespace yocto;
 namespace sio = yocto::sceneio;
 namespace img = yocto::image;
 namespace cli = yocto::commonio;

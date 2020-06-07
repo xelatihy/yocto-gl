@@ -41,52 +41,6 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::trace {
-
-// import math symbols for use
-using math::abs;
-using math::acos;
-using math::atan2;
-using math::clamp;
-using math::cos;
-using math::exp;
-using math::flt_max;
-using math::fmod;
-using math::fresnel_conductor;
-using math::fresnel_dielectric;
-using math::identity3x3f;
-using math::invalidb3f;
-using math::log;
-using math::make_rng;
-using math::max;
-using math::min;
-using math::pif;
-using math::pow;
-using math::rng_state;
-using math::sample_discrete_cdf;
-using math::sample_discrete_cdf_pdf;
-using math::sample_uniform;
-using math::sample_uniform_pdf;
-using math::sign;
-using math::sin;
-using math::sqrt;
-using math::zero2f;
-using math::zero2i;
-using math::zero3f;
-using math::zero3i;
-using math::zero4f;
-using math::zero4i;
-
-}  // namespace yocto::trace
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto::trace {}  // namespace yocto::trace
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
 // -----------------------------------------------------------------------------
 namespace yocto::trace {
