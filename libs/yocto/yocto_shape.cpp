@@ -20,7 +20,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Compute per-vertex tangents for lines.
 std::vector<vec3f> compute_tangents(
@@ -242,12 +242,12 @@ void update_matrix_skinning(std::vector<vec3f>& skinned_positions,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Flip vertex normals
 std::vector<vec3f> flip_normals(const std::vector<vec3f>& normals) {
@@ -300,12 +300,12 @@ std::vector<vec3f> align_vertices(
   return aligned;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Initialize an edge map with elements.
 edge_map make_edge_map(const std::vector<vec3i>& triangles) {
@@ -549,7 +549,7 @@ std::vector<std::vector<int>> ordered_boundaries(
   return boundaries;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -558,7 +558,7 @@ std::vector<std::vector<int>> ordered_boundaries(
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR EMBREE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -750,12 +750,12 @@ bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
 }
 #endif
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR BVH
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push
@@ -1348,12 +1348,12 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
   return intersection;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 void init_shape_bvh(bvh_shape& shape, bool embree) {
 #ifdef YOCTO_EMBREE
@@ -1913,13 +1913,13 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
   return intersection;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HASH GRID AND NEAREST NEIGHTBORS
 // -----------------------------------------------------------------------------
 
-namespace yocto::shape {
+namespace yocto {
 
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
@@ -1983,12 +1983,12 @@ void find_neighbors(const hash_grid& grid, std::vector<int>& neighbors,
   find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Extract isoline from surface scalar field.
 void meandering_triangles(const std::vector<float>& field, float isoline,
@@ -2091,12 +2091,12 @@ void meandering_triangles(const std::vector<float>& field, float isoline,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Convert quads to triangles
 std::vector<vec3i> quads_to_triangles(const std::vector<vec4i>& quads) {
@@ -2336,12 +2336,12 @@ void merge_triangles_and_quads(std::vector<vec3i>& triangles,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SUBDIVISION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Subdivide lines.
 template <typename T>
@@ -2801,12 +2801,12 @@ std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Pick a point in a point set uniformly.
 int sample_points(int npoints, float re) { return sample_uniform(npoints, re); }
@@ -2947,12 +2947,12 @@ void sample_quads(std::vector<vec3f>& sampled_positions,
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
@@ -3201,12 +3201,12 @@ std::vector<vec3f> colors_from_field(const std::vector<float>& field,
   return colors;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF INTEGRAL PATHS
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 namespace integral_paths {
 
@@ -3592,12 +3592,12 @@ vec3f compute_gradient(const vec3i& triangle,
   return result;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Make a quad.
 void make_rect(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
@@ -4771,12 +4771,12 @@ void make_heightfield(std::vector<vec4i>& quads, std::vector<vec3f>& positions,
   normals = compute_normals(quads, positions);
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 // Get extension (not including '.').
 static std::string get_extension(const std::string& filename) {
@@ -5041,12 +5041,12 @@ static std::string get_extension(const std::string& filename) {
   }
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
-namespace yocto::shape {
+namespace yocto {
 
 std::vector<std::string> shape_stats(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
@@ -5090,4 +5090,4 @@ std::vector<std::string> shape_stats(const std::vector<int>& points,
   return stats;
 }
 
-}  // namespace yocto::shape
+}  // namespace yocto

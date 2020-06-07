@@ -66,7 +66,6 @@ using namespace std::string_literals;
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace yshp  = yocto::shape;
 namespace yimg  = yocto::image;
 
 }  // namespace yocto::sceneio
@@ -505,97 +504,19 @@ static vec3f eval_texture(const scn::texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
-// Compute per-vertex normals for quads.
-static std::vector<vec3f> compute_normals(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& positions) {
-  auto normals = std::vector<vec3f>{positions.size()};
-  for (auto& normal : normals) normal = zero3f;
-  for (auto& q : quads) {
-    auto normal = quad_normal(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    auto area = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    normals[q.x] += normal * area;
-    normals[q.y] += normal * area;
-    normals[q.z] += normal * area;
-    if (q.z != q.w) normals[q.w] += normal * area;
-  }
-  for (auto& normal : normals) normal = normalize(normal);
-  return normals;
-}
-
-// Convert face varying data to single primitives. Returns the quads indices
-// and filled vectors for pos, norm and texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>> static split_facevarying(const std::vector<vec4i>&
-                                                     quadspos,
-    const std::vector<vec4i>&                        quadsnorm,
-    const std::vector<vec4i>&                        quadstexcoord,
-    const std::vector<vec3f>& positions, const std::vector<vec3f>& normals,
-    const std::vector<vec2f>& texcoords) {
-  auto split = std::tuple<std::vector<vec4i>, std::vector<vec3f>,
-      std::vector<vec3f>, std::vector<vec2f>>{};
-  auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
-  // make faces unique
-  std::unordered_map<vec3i, int> vert_map;
-  split_quads.resize(quadspos.size());
-  for (auto fid = 0; fid < quadspos.size(); fid++) {
-    for (auto c = 0; c < 4; c++) {
-      auto v = vec3i{
-          (&quadspos[fid].x)[c],
-          (!quadsnorm.empty()) ? (&quadsnorm[fid].x)[c] : -1,
-          (!quadstexcoord.empty()) ? (&quadstexcoord[fid].x)[c] : -1,
-      };
-      auto it = vert_map.find(v);
-      if (it == vert_map.end()) {
-        auto s = (int)vert_map.size();
-        vert_map.insert(it, {v, s});
-        (&split_quads[fid].x)[c] = s;
-      } else {
-        (&split_quads[fid].x)[c] = it->second;
-      }
-    }
-  }
-
-  // fill vert data
-  split_positions.clear();
-  if (!positions.empty()) {
-    split_positions.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_positions[index] = positions[vert.x];
-    }
-  }
-  split_normals.clear();
-  if (!normals.empty()) {
-    split_normals.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_normals[index] = normals[vert.y];
-    }
-  }
-  split_texcoords.clear();
-  if (!texcoords.empty()) {
-    split_texcoords.resize(vert_map.size());
-    for (auto& [vert, index] : vert_map) {
-      split_texcoords[index] = texcoords[vert.z];
-    }
-  }
-
-  return split;
-}
-
 // Apply subdivision and displacement rules.
 std::unique_ptr<subdiv> subdivide_subdiv(
     scn::subdiv* shape, int subdivisions, bool smooth) {
   auto tesselated = std::make_unique<subdiv>(*shape);
   if (!subdivisions) return tesselated;
   std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-      yshp::subdivide_catmullclark(
+      subdivide_catmullclark(
           tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
   std::tie(tesselated->quadsnorm, tesselated->normals) =
-      yshp::subdivide_catmullclark(
+      subdivide_catmullclark(
           tesselated->quadsnorm, tesselated->normals, subdivisions, true);
   std::tie(tesselated->quadspos, tesselated->positions) =
-      yshp::subdivide_catmullclark(
+      subdivide_catmullclark(
           tesselated->quadspos, tesselated->positions, subdivisions);
   if (smooth) {
     tesselated->normals = compute_normals(
@@ -1333,7 +1254,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   for (auto [name, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
-    if (!yshp::load_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!load_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1343,7 +1264,7 @@ static bool load_json_scene(const std::string& filename, scn::model* scene,
   for (auto [name, subdiv] : subdiv_map) {
     if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
     auto path = get_filename(name, "subdivs", {".obj"});
-    if (!yshp::load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1517,7 +1438,7 @@ static bool save_json_scene(const std::string& filename,
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = get_filename(shape->name, "shapes", ".ply");
-    if (!yshp::save_shape(path, shape->points, shape->lines, shape->triangles,
+    if (!save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->positions, shape->normals, shape->texcoords,
             shape->colors, shape->radius, error))
       return dependent_error();
@@ -1527,7 +1448,7 @@ static bool save_json_scene(const std::string& filename,
   for (auto subdiv : scene->subdivs) {
     if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
     auto path = get_filename(subdiv->name, "subdivs", ".obj");
-    if (!yshp::save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
+    if (!save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
             subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
             subdiv->texcoords, error))
       return dependent_error();
@@ -1910,7 +1831,7 @@ static bool load_ply_scene(const std::string& filename, scn::model* scene,
 
   // load ply mesh
   auto shape = add_shape(scene);
-  if (!yshp::load_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!load_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;
@@ -1940,7 +1861,7 @@ static bool save_ply_scene(const std::string& filename, const scn::model* scene,
 
   // save shape
   auto shape = scene->shapes.front();
-  if (!yshp::save_shape(filename, shape->points, shape->lines, shape->triangles,
+  if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
           shape->quads, shape->positions, shape->normals, shape->texcoords,
           shape->colors, shape->radius, error))
     return false;

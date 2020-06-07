@@ -31,7 +31,6 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
 using namespace yocto;
-namespace shp = yocto::shape;
 namespace img = yocto::image;
 
 #include "ext/filesystem.hpp"
@@ -102,14 +101,14 @@ int main(int argc, const char* argv[]) {
   }
 
   // create heightfield
-  shp::make_heightfield(quads, positions, normals, texcoords,
+  make_heightfield(quads, positions, normals, texcoords,
       heightfield.size(), heightfield.data_vector());
   if (!smooth) normals.clear();
 
   // print info
   if (info) {
     print_info("shape stats ------------");
-    auto stats = shp::shape_stats(
+    auto stats = shape_stats(
         {}, {}, {}, quads, {}, {}, {}, positions, normals, texcoords, {}, {});
     for (auto& stat : stats) print_info(stat);
   }
@@ -130,7 +129,7 @@ int main(int argc, const char* argv[]) {
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!shp::save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
+  if (!save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
           {}, {}, ioerror))
     print_fatal(ioerror);
   print_progress("save shape", 1, 1);
