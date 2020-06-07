@@ -36,7 +36,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // string literals
 using namespace std::string_literals;
@@ -287,36 +287,36 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
-element::~element() {
+ply_element::~ply_element() {
   for (auto property : properties) delete property;
 }
-model::~model() {
+ply_model::~ply_model() {
   for (auto element : elements) delete element;
 }
 
 // Make ply
-inline ply::element* add_property(ply::model* ply) {
-  return ply->elements.emplace_back(new element{});
+inline ply_element* add_property(ply_model* ply) {
+  return ply->elements.emplace_back(new ply_element{});
 }
-inline ply::property* add_property(ply::element* element) {
-  return element->properties.emplace_back(new property{});
+inline ply_property* add_property(ply_element* element) {
+  return element->properties.emplace_back(new ply_property{});
 }
 
 // Load ply
 bool load_ply(
-    const std::string& filename, ply::model* ply, std::string& error) {
+    const std::string& filename, ply_model* ply, std::string& error) {
   // ply type names
-  static auto type_map = std::unordered_map<std::string, property::type_t>{
-      {"char", property::type_t::i8}, {"short", property::type_t::i16},
-      {"int", property::type_t::i32}, {"long", property::type_t::i64},
-      {"uchar", property::type_t::u8}, {"ushort", property::type_t::u16},
-      {"uint", property::type_t::u32}, {"ulong", property::type_t::u64},
-      {"float", property::type_t::f32}, {"double", property::type_t::f64},
-      {"int8", property::type_t::i8}, {"int16", property::type_t::i16},
-      {"int32", property::type_t::i32}, {"int64", property::type_t::i64},
-      {"uint8", property::type_t::u8}, {"uint16", property::type_t::u16},
-      {"uint32", property::type_t::u32}, {"uint64", property::type_t::u64},
-      {"float32", property::type_t::f32}, {"float64", property::type_t::f64}};
+  static auto type_map = std::unordered_map<std::string, ply_type>{
+      {"char", ply_type::i8}, {"short", ply_type::i16},
+      {"int", ply_type::i32}, {"long", ply_type::i64},
+      {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
+      {"uint", ply_type::u32}, {"ulong", ply_type::u64},
+      {"float", ply_type::f32}, {"double", ply_type::f64},
+      {"int8", ply_type::i8}, {"int16", ply_type::i16},
+      {"int32", ply_type::i32}, {"int64", ply_type::i64},
+      {"uint8", ply_type::u8}, {"uint16", ply_type::u16},
+      {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
+      {"float32", ply_type::f32}, {"float64", ply_type::f64}};
 
   // initialize data
   ply->comments.clear();
@@ -373,11 +373,11 @@ bool load_ply(
       auto fmt = ""s;
       if (!parse_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
-        ply->format = model::format_t::ascii;
+        ply->format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
-        ply->format = model::format_t::binary_little_endian;
+        ply->format = ply_format::binary_little_endian;
       } else if (fmt == "binary_big_endian") {
-        ply->format = model::format_t::binary_big_endian;
+        ply->format = ply_format::binary_big_endian;
       } else {
         return parse_error();
       }
@@ -388,19 +388,19 @@ bool load_ply(
       skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
-      auto elem = ply->elements.emplace_back(new element{});
+      auto elem = ply->elements.emplace_back(new ply_element{});
       if (!parse_value(str, elem->name)) return parse_error();
       if (!parse_value(str, elem->count)) return parse_error();
     } else if (cmd == "property") {
       if (ply->elements.empty()) return parse_error();
-      auto prop = ply->elements.back()->properties.emplace_back(new property{});
+      auto prop = ply->elements.back()->properties.emplace_back(new ply_property{});
       auto tname = ""s;
       if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop->is_list = true;
         if (!parse_value(str, tname)) return parse_error();
         auto itype = type_map.at(tname);
-        if (itype != property::type_t::u8) return parse_error();
+        if (itype != ply_type::u8) return parse_error();
         if (!parse_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end()) return parse_error();
         prop->type = type_map.at(tname);
@@ -426,23 +426,23 @@ bool load_ply(
     for (auto property : element->properties) {
       auto count = property->is_list ? element->count * 3 : element->count;
       switch (property->type) {
-        case property::type_t::i8: property->data_i8.reserve(count); break;
-        case property::type_t::i16: property->data_i16.reserve(count); break;
-        case property::type_t::i32: property->data_i32.reserve(count); break;
-        case property::type_t::i64: property->data_i64.reserve(count); break;
-        case property::type_t::u8: property->data_u8.reserve(count); break;
-        case property::type_t::u16: property->data_u16.reserve(count); break;
-        case property::type_t::u32: property->data_u32.reserve(count); break;
-        case property::type_t::u64: property->data_u64.reserve(count); break;
-        case property::type_t::f32: property->data_f32.reserve(count); break;
-        case property::type_t::f64: property->data_f64.reserve(count); break;
+        case ply_type::i8: property->data_i8.reserve(count); break;
+        case ply_type::i16: property->data_i16.reserve(count); break;
+        case ply_type::i32: property->data_i32.reserve(count); break;
+        case ply_type::i64: property->data_i64.reserve(count); break;
+        case ply_type::u8: property->data_u8.reserve(count); break;
+        case ply_type::u16: property->data_u16.reserve(count); break;
+        case ply_type::u32: property->data_u32.reserve(count); break;
+        case ply_type::u64: property->data_u64.reserve(count); break;
+        case ply_type::f32: property->data_f32.reserve(count); break;
+        case ply_type::f64: property->data_f64.reserve(count); break;
       }
       if (property->is_list) property->ldata_u8.reserve(element->count);
     }
   }
 
   // read data -------------------------------------
-  if (ply->format == model::format_t::ascii) {
+  if (ply->format == ply_format::ascii) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -456,43 +456,43 @@ bool load_ply(
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case property::type_t::i8:
+              case ply_type::i8:
                 if (!parse_value(str, prop->data_i8.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::i16:
+              case ply_type::i16:
                 if (!parse_value(str, prop->data_i16.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::i32:
+              case ply_type::i32:
                 if (!parse_value(str, prop->data_i32.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::i64:
+              case ply_type::i64:
                 if (!parse_value(str, prop->data_i64.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::u8:
+              case ply_type::u8:
                 if (!parse_value(str, prop->data_u8.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::u16:
+              case ply_type::u16:
                 if (!parse_value(str, prop->data_u16.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::u32:
+              case ply_type::u32:
                 if (!parse_value(str, prop->data_u32.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::u64:
+              case ply_type::u64:
                 if (!parse_value(str, prop->data_u64.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::f32:
+              case ply_type::f32:
                 if (!parse_value(str, prop->data_f32.emplace_back()))
                   return parse_error();
                 break;
-              case property::type_t::f64:
+              case ply_type::f64:
                 if (!parse_value(str, prop->data_f64.emplace_back()))
                   return parse_error();
                 break;
@@ -502,7 +502,7 @@ bool load_ply(
       }
     }
   } else {
-    auto big_endian = ply->format == model::format_t::binary_big_endian;
+    auto big_endian = ply->format == ply_format::binary_big_endian;
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto prop : elem->properties) {
@@ -513,43 +513,43 @@ bool load_ply(
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case property::type_t::i8:
+              case ply_type::i8:
                 if (!read_value(fs, prop->data_i8.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::i16:
+              case ply_type::i16:
                 if (!read_value(fs, prop->data_i16.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::i32:
+              case ply_type::i32:
                 if (!read_value(fs, prop->data_i32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::i64:
+              case ply_type::i64:
                 if (!read_value(fs, prop->data_i64.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::u8:
+              case ply_type::u8:
                 if (!read_value(fs, prop->data_u8.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::u16:
+              case ply_type::u16:
                 if (!read_value(fs, prop->data_u16.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::u32:
+              case ply_type::u32:
                 if (!read_value(fs, prop->data_u32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::u64:
+              case ply_type::u64:
                 if (!read_value(fs, prop->data_u64.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::f32:
+              case ply_type::f32:
                 if (!read_value(fs, prop->data_f32.emplace_back(), big_endian))
                   return read_error();
                 break;
-              case property::type_t::f64:
+              case ply_type::f64:
                 if (!read_value(fs, prop->data_f64.emplace_back(), big_endian))
                   return read_error();
                 break;
@@ -564,18 +564,18 @@ bool load_ply(
 
 // Save ply
 bool save_ply(
-    const std::string& filename, ply::model* ply, std::string& error) {
+    const std::string& filename, ply_model* ply, std::string& error) {
   // ply type names
-  static auto type_map = std::unordered_map<property::type_t, std::string>{
-      {property::type_t::i8, "char"}, {property::type_t::i16, "short"},
-      {property::type_t::i32, "int"}, {property::type_t::i64, "uint"},
-      {property::type_t::u8, "uchar"}, {property::type_t::u16, "ushort"},
-      {property::type_t::u32, "uint"}, {property::type_t::u64, "ulong"},
-      {property::type_t::f32, "float"}, {property::type_t::f64, "double"}};
-  static auto format_map = std::unordered_map<model::format_t, std::string>{
-      {model::format_t::ascii, "ascii"},
-      {model::format_t::binary_little_endian, "binary_little_endian"},
-      {model::format_t::binary_big_endian, "binary_big_endian"}};
+  static auto type_map = std::unordered_map<ply_type, std::string>{
+      {ply_type::i8, "char"}, {ply_type::i16, "short"},
+      {ply_type::i32, "int"}, {ply_type::i64, "uint"},
+      {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
+      {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
+      {ply_type::f32, "float"}, {ply_type::f64, "double"}};
+  static auto format_map = std::unordered_map<ply_format, std::string>{
+      {ply_format::ascii, "ascii"},
+      {ply_format::binary_little_endian, "binary_little_endian"},
+      {ply_format::binary_big_endian, "binary_big_endian"}};
 
   // error helpers
   auto open_error = [filename, &error]() {
@@ -621,7 +621,7 @@ bool save_ply(
   if (!format_values(fs, "end_header\n")) return write_error();
 
   // properties
-  if (ply->format == model::format_t::ascii) {
+  if (ply->format == ply_format::ascii) {
     for (auto elem : ply->elements) {
       auto cur = std::vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -633,43 +633,43 @@ bool save_ply(
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case property::type_t::i8:
+              case ply_type::i8:
                 if (!format_values(fs, "{} ", prop->data_i8[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::i16:
+              case ply_type::i16:
                 if (!format_values(fs, "{} ", prop->data_i16[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::i32:
+              case ply_type::i32:
                 if (!format_values(fs, "{} ", prop->data_i32[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::i64:
+              case ply_type::i64:
                 if (!format_values(fs, "{} ", prop->data_i64[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::u8:
+              case ply_type::u8:
                 if (!format_values(fs, "{} ", prop->data_u8[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::u16:
+              case ply_type::u16:
                 if (!format_values(fs, "{} ", prop->data_u16[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::u32:
+              case ply_type::u32:
                 if (!format_values(fs, "{} ", prop->data_u32[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::u64:
+              case ply_type::u64:
                 if (!format_values(fs, "{} ", prop->data_u64[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::f32:
+              case ply_type::f32:
                 if (!format_values(fs, "{} ", prop->data_f32[cur[idx]++]))
                   return write_error();
                 break;
-              case property::type_t::f64:
+              case ply_type::f64:
                 if (!format_values(fs, "{} ", prop->data_f64[cur[idx]++]))
                   return write_error();
                 break;
@@ -680,7 +680,7 @@ bool save_ply(
       }
     }
   } else {
-    auto big_endian = ply->format == model::format_t::binary_big_endian;
+    auto big_endian = ply->format == ply_format::binary_big_endian;
     for (auto elem : ply->elements) {
       auto cur = std::vector<size_t>(elem->properties.size(), 0);
       for (auto idx = 0; idx < elem->count; idx++) {
@@ -692,43 +692,43 @@ bool save_ply(
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
-              case property::type_t::i8:
+              case ply_type::i8:
                 if (!write_value(fs, prop->data_i8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::i16:
+              case ply_type::i16:
                 if (!write_value(fs, prop->data_i16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::i32:
+              case ply_type::i32:
                 if (!write_value(fs, prop->data_i32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::i64:
+              case ply_type::i64:
                 if (!write_value(fs, prop->data_i64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::u8:
+              case ply_type::u8:
                 if (!write_value(fs, prop->data_u8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::u16:
+              case ply_type::u16:
                 if (!write_value(fs, prop->data_u16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::u32:
+              case ply_type::u32:
                 if (!write_value(fs, prop->data_u32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::u64:
+              case ply_type::u64:
                 if (!write_value(fs, prop->data_u64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::f32:
+              case ply_type::f32:
                 if (!write_value(fs, prop->data_f32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
-              case property::type_t::f64:
+              case ply_type::f64:
                 if (!write_value(fs, prop->data_f64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
@@ -744,7 +744,7 @@ bool save_ply(
 
 // Get ply properties
 bool has_property(
-    ply::model* ply, const std::string& element, const std::string& property) {
+    ply_model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -753,8 +753,8 @@ bool has_property(
   }
   return false;
 }
-ply::property* get_property(
-    ply::model* ply, const std::string& element, const std::string& property) {
+ply_property* get_property(
+    ply_model* ply, const std::string& element, const std::string& property) {
   for (auto elem : ply->elements) {
     if (elem->name != element) continue;
     for (auto prop : elem->properties) {
@@ -771,24 +771,24 @@ inline bool convert_property(
   return true;
 }
 template <typename T>
-inline bool convert_property(ply::property* prop, std::vector<T>& values) {
+inline bool convert_property(ply_property* prop, std::vector<T>& values) {
   switch (prop->type) {
-    case property::type_t::i8: return convert_property(prop->data_i8, values);
-    case property::type_t::i16: return convert_property(prop->data_i16, values);
-    case property::type_t::i32: return convert_property(prop->data_i32, values);
-    case property::type_t::i64: return convert_property(prop->data_i64, values);
-    case property::type_t::u8: return convert_property(prop->data_u8, values);
-    case property::type_t::u16: return convert_property(prop->data_u16, values);
-    case property::type_t::u32: return convert_property(prop->data_u32, values);
-    case property::type_t::u64: return convert_property(prop->data_u64, values);
-    case property::type_t::f32: return convert_property(prop->data_f32, values);
-    case property::type_t::f64: return convert_property(prop->data_f64, values);
+    case ply_type::i8: return convert_property(prop->data_i8, values);
+    case ply_type::i16: return convert_property(prop->data_i16, values);
+    case ply_type::i32: return convert_property(prop->data_i32, values);
+    case ply_type::i64: return convert_property(prop->data_i64, values);
+    case ply_type::u8: return convert_property(prop->data_u8, values);
+    case ply_type::u16: return convert_property(prop->data_u16, values);
+    case ply_type::u32: return convert_property(prop->data_u32, values);
+    case ply_type::u64: return convert_property(prop->data_u64, values);
+    case ply_type::f32: return convert_property(prop->data_f32, values);
+    case ply_type::f64: return convert_property(prop->data_f64, values);
   }
   // return here to silence warnings
   std::runtime_error("should not have gotten here");
   return false;
 }
-bool get_value(ply::model* ply, const std::string& element,
+bool get_value(ply_model* ply, const std::string& element,
     const std::string& property, std::vector<float>& values) {
   values.clear();
   if (!has_property(ply, element, property)) return false;
@@ -797,7 +797,7 @@ bool get_value(ply::model* ply, const std::string& element,
   if (!convert_property(prop, values)) return false;
   return true;
 }
-bool get_values(ply::model* ply, const std::string& element,
+bool get_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 2>& properties, std::vector<vec2f>& values) {
   values.clear();
   auto x = std::vector<float>{}, y = std::vector<float>{};
@@ -807,7 +807,7 @@ bool get_values(ply::model* ply, const std::string& element,
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return true;
 }
-bool get_values(ply::model* ply, const std::string& element,
+bool get_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 3>& properties, std::vector<vec3f>& values) {
   values.clear();
   auto x = std::vector<float>{}, y = std::vector<float>{},
@@ -820,7 +820,7 @@ bool get_values(ply::model* ply, const std::string& element,
     values[i] = {x[i], y[i], z[i]};
   return true;
 }
-bool get_values(ply::model* ply, const std::string& element,
+bool get_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 4>& properties, std::vector<vec4f>& values) {
   values.clear();
   auto x = std::vector<float>{}, y = std::vector<float>{},
@@ -834,7 +834,7 @@ bool get_values(ply::model* ply, const std::string& element,
     values[i] = {x[i], y[i], z[i], w[i]};
   return true;
 }
-bool get_values(ply::model* ply, const std::string& element,
+bool get_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 12>& properties,
     std::vector<frame3f>&              values) {
   values.clear();
@@ -847,7 +847,7 @@ bool get_values(ply::model* ply, const std::string& element,
   }
   return true;
 }
-bool get_lists(ply::model* ply, const std::string& element,
+bool get_lists(ply_model* ply, const std::string& element,
     const std::string& property, std::vector<std::vector<int>>& lists) {
   lists.clear();
   if (!has_property(ply, element, property)) return false;
@@ -866,7 +866,7 @@ bool get_lists(ply::model* ply, const std::string& element,
   }
   return true;
 }
-bool get_list_sizes(ply::model* ply, const std::string& element,
+bool get_list_sizes(ply_model* ply, const std::string& element,
     const std::string& property, std::vector<byte>& sizes) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
@@ -874,7 +874,7 @@ bool get_list_sizes(ply::model* ply, const std::string& element,
   sizes = prop->ldata_u8;
   return true;
 }
-bool get_list_values(ply::model* ply, const std::string& element,
+bool get_list_values(ply_model* ply, const std::string& element,
     const std::string& property, std::vector<int>& values) {
   if (!has_property(ply, element, property)) return {};
   auto prop = get_property(ply, element, property);
@@ -889,14 +889,14 @@ inline std::vector<vec2f> flip_texcoord(const std::vector<vec2f>& texcoords) {
 }
 
 // Get ply properties for meshes
-bool get_positions(ply::model* ply, std::vector<vec3f>& positions) {
+bool get_positions(ply_model* ply, std::vector<vec3f>& positions) {
   return get_values(ply, "vertex", {"x", "y", "z"}, positions);
 }
-bool get_normals(ply::model* ply, std::vector<vec3f>& normals) {
+bool get_normals(ply_model* ply, std::vector<vec3f>& normals) {
   return get_values(ply, "vertex", {"nx", "ny", "nz"}, normals);
 }
 bool get_texcoords(
-    ply::model* ply, std::vector<vec2f>& texcoords, bool flipv) {
+    ply_model* ply, std::vector<vec2f>& texcoords, bool flipv) {
   if (has_property(ply, "vertex", "u")) {
     if (!get_values(ply, "vertex", {"u", "v"}, texcoords)) return false;
   } else {
@@ -907,16 +907,16 @@ bool get_texcoords(
   }
   return true;
 }
-bool get_colors(ply::model* ply, std::vector<vec3f>& colors) {
+bool get_colors(ply_model* ply, std::vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
-bool get_radius(ply::model* ply, std::vector<float>& radius) {
+bool get_radius(ply_model* ply, std::vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
-bool get_faces(ply::model* ply, std::vector<std::vector<int>>& faces) {
+bool get_faces(ply_model* ply, std::vector<std::vector<int>>& faces) {
   return get_lists(ply, "face", "vertex_indices", faces);
 }
-bool get_triangles(ply::model* ply, std::vector<vec3i>& triangles) {
+bool get_triangles(ply_model* ply, std::vector<vec3i>& triangles) {
   triangles.clear();
   auto indices = std::vector<int>{};
   auto sizes   = std::vector<uint8_t>{};
@@ -934,7 +934,7 @@ bool get_triangles(ply::model* ply, std::vector<vec3i>& triangles) {
   }
   return true;
 }
-bool get_quads(ply::model* ply, std::vector<vec4i>& quads) {
+bool get_quads(ply_model* ply, std::vector<vec4i>& quads) {
   quads.clear();
   auto indices = std::vector<int>{};
   auto sizes   = std::vector<uint8_t>{};
@@ -957,7 +957,7 @@ bool get_quads(ply::model* ply, std::vector<vec4i>& quads) {
   }
   return true;
 }
-bool get_lines(ply::model* ply, std::vector<vec2i>& lines) {
+bool get_lines(ply_model* ply, std::vector<vec2i>& lines) {
   auto indices = std::vector<int>{};
   auto sizes   = std::vector<uint8_t>{};
   if (!get_list_values(ply, "line", "vertex_indices", indices)) return false;
@@ -973,10 +973,10 @@ bool get_lines(ply::model* ply, std::vector<vec2i>& lines) {
   }
   return true;
 }
-bool get_points(ply::model* ply, std::vector<int>& values) {
+bool get_points(ply_model* ply, std::vector<int>& values) {
   return get_list_values(ply, "point", "vertex_indices", values);
 }
-bool has_quads(ply::model* ply) {
+bool has_quads(ply_model* ply) {
   auto sizes = std::vector<uint8_t>{};
   if (!get_list_sizes(ply, "face", "vertex_indices", sizes)) return false;
   for (auto size : sizes)
@@ -985,26 +985,26 @@ bool has_quads(ply::model* ply) {
 }
 
 // Add ply properties
-inline ply::element* add_element(
-    ply::model* ply, const std::string& element_name, size_t count) {
+inline ply_element* add_element(
+    ply_model* ply, const std::string& element_name, size_t count) {
   for (auto elem : ply->elements) {
     if (elem->name == element_name) return elem;
   }
-  auto elem   = ply->elements.emplace_back(new element{});
+  auto elem   = ply->elements.emplace_back(new ply_element{});
   elem->name  = element_name;
   elem->count = count;
   return elem;
 }
-inline ply::property* add_property(ply::model* ply,
+inline ply_property* add_property(ply_model* ply,
     const std::string& element_name, const std::string& property_name,
-    size_t count, property::type_t type, bool is_list) {
+    size_t count, ply_type type, bool is_list) {
   if (!add_element(ply, element_name, count)) return nullptr;
   for (auto elem : ply->elements) {
     if (elem->name != element_name) continue;
     for (auto prop : elem->properties) {
       if (prop->name == property_name) return prop;
     }
-    auto prop     = elem->properties.emplace_back(new property{});
+    auto prop     = elem->properties.emplace_back(new ply_property{});
     prop->name    = property_name;
     prop->type    = type;
     prop->is_list = is_list;
@@ -1019,12 +1019,12 @@ inline std::vector<T> make_vector(const T* value, size_t count, int stride) {
   return ret;
 }
 
-inline bool add_values(ply::model* ply, const float* values, size_t count,
+inline bool add_values(ply_model* ply, const float* values, size_t count,
     const std::string& element, const std::string* properties, int nprops) {
   if (!values) return false;
   for (auto p = 0; p < nprops; p++) {
     if (!add_property(
-            ply, element, properties[p], count, property::type_t::f32, false))
+            ply, element, properties[p], count, ply_type::f32, false))
       return false;
     auto prop = get_property(ply, element, properties[p]);
     prop->data_f32.resize(count);
@@ -1033,35 +1033,35 @@ inline bool add_values(ply::model* ply, const float* values, size_t count,
   return true;
 }
 
-bool add_value(ply::model* ply, const std::string& element,
+bool add_value(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<float>& values) {
   if (values.empty()) return false;
   auto properties = std::vector{property};
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
-bool add_values(ply::model* ply, const std::string& element,
+bool add_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 2>& properties,
     const std::vector<vec2f>&         values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
-bool add_values(ply::model* ply, const std::string& element,
+bool add_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 3>& properties,
     const std::vector<vec3f>&         values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
-bool add_values(ply::model* ply, const std::string& element,
+bool add_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 4>& properties,
     const std::vector<vec4f>&         values) {
   if (values.empty()) return false;
   return add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
-bool add_values(ply::model* ply, const std::string& element,
+bool add_values(ply_model* ply, const std::string& element,
     const std::array<std::string, 12>& properties,
     const std::vector<frame3f>&        values) {
   if (values.empty()) return false;
@@ -1069,11 +1069,11 @@ bool add_values(ply::model* ply, const std::string& element,
       properties.data(), properties.size());
 }
 
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<std::vector<int>>& values) {
   if (values.empty()) return false;
   if (!add_property(
-          ply, element, property, values.size(), property::type_t::i32, true))
+          ply, element, property, values.size(), ply_type::i32, true))
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.reserve(values.size() * 4);
@@ -1084,46 +1084,46 @@ bool add_lists(ply::model* ply, const std::string& element,
   }
   return true;
 }
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<byte>& sizes,
     const std::vector<int>& values) {
   if (values.empty()) return false;
   if (!add_property(
-          ply, element, property, sizes.size(), property::type_t::i32, true))
+          ply, element, property, sizes.size(), ply_type::i32, true))
     return false;
   auto prop      = get_property(ply, element, property);
   prop->data_i32 = values;
   prop->ldata_u8 = sizes;
   return true;
 }
-bool add_lists(ply::model* ply, const int* values, size_t count,
+bool add_lists(ply_model* ply, const int* values, size_t count,
     int size, const std::string& element, const std::string& property) {
   if (!values) return false;
-  if (!add_property(ply, element, property, count, property::type_t::i32, true))
+  if (!add_property(ply, element, property, count, ply_type::i32, true))
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
   prop->ldata_u8.assign(count, size);
   return true;
 }
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<int>& values) {
   if (values.empty()) return false;
   return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<vec2i>& values) {
   if (values.empty()) return false;
   return add_lists(
       ply, (int*)values.data(), values.size(), 2, element, property);
 }
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<vec3i>& values) {
   if (values.empty()) return false;
   return add_lists(
       ply, (int*)values.data(), values.size(), 3, element, property);
 }
-bool add_lists(ply::model* ply, const std::string& element,
+bool add_lists(ply_model* ply, const std::string& element,
     const std::string& property, const std::vector<vec4i>& values) {
   if (values.empty()) return false;
   return add_lists(
@@ -1131,28 +1131,28 @@ bool add_lists(ply::model* ply, const std::string& element,
 }
 
 // Add ply properties for meshes
-bool add_positions(ply::model* ply, const std::vector<vec3f>& values) {
+bool add_positions(ply_model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, "vertex", {"x", "y", "z"}, values);
 }
-bool add_normals(ply::model* ply, const std::vector<vec3f>& values) {
+bool add_normals(ply_model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, "vertex", {"nx", "ny", "nz"}, values);
 }
 bool add_texcoords(
-    ply::model* ply, const std::vector<vec2f>& values, bool flipv) {
+    ply_model* ply, const std::vector<vec2f>& values, bool flipv) {
   return add_values(
       ply, "vertex", {"u", "v"}, flipv ? flip_texcoord(values) : values);
 }
-bool add_colors(ply::model* ply, const std::vector<vec3f>& values) {
+bool add_colors(ply_model* ply, const std::vector<vec3f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue"}, values);
 }
-bool add_radius(ply::model* ply, const std::vector<float>& values) {
+bool add_radius(ply_model* ply, const std::vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);
 }
 bool add_faces(
-    ply::model* ply, const std::vector<std::vector<int>>& values) {
+    ply_model* ply, const std::vector<std::vector<int>>& values) {
   return add_lists(ply, "face", "vertex_indices", values);
 }
-bool add_faces(ply::model* ply, const std::vector<vec3i>& triangles,
+bool add_faces(ply_model* ply, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return false;
   if (quads.empty()) {
@@ -1182,17 +1182,17 @@ bool add_faces(ply::model* ply, const std::vector<vec3i>& triangles,
     return add_lists(ply, "face", "vertex_indices", sizes, indices);
   }
 }
-bool add_triangles(ply::model* ply, const std::vector<vec3i>& values) {
+bool add_triangles(ply_model* ply, const std::vector<vec3i>& values) {
   return add_faces(ply, values, {});
 }
-bool add_quads(ply::model* ply, const std::vector<vec4i>& values) {
+bool add_quads(ply_model* ply, const std::vector<vec4i>& values) {
   return add_faces(ply, {}, values);
 }
-bool add_lines(ply::model* ply, const std::vector<vec2i>& values) {
+bool add_lines(ply_model* ply, const std::vector<vec2i>& values) {
   return add_lists(ply, "line", "vertex_indices", values);
 }
-bool add_points(ply::model* ply, const std::vector<int>& values) {
+bool add_points(ply_model* ply, const std::vector<int>& values) {
   return add_lists(ply, "point", "vertex_indices", values);
 }
 
-}  // namespace yocto::ply
+}  // namespace yocto

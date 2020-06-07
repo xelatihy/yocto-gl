@@ -1697,7 +1697,7 @@ inline bool convert_shape(pbrt::shape* shape, const command& command,
     if (!get_value(command.values, "filename", shape->filename_))
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
-    auto ply = std::make_unique<ply::model>();
+    auto ply = std::make_unique<ply_model>();
     if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
       return dependent_error();
     get_positions(ply.get(), shape->positions);
@@ -2456,7 +2456,7 @@ inline void format_value(std::string& str, const std::vector<value>& values) {
         command.values.push_back(make_value("uv", shape->texcoords));
     }
     if (ply_meshes) {
-      auto ply_guard = std::make_unique<ply::model>();
+      auto ply_guard = std::make_unique<ply_model>();
       auto ply       = ply_guard.get();
       add_positions(ply, shape->positions);
       add_normals(ply, shape->normals);

@@ -66,7 +66,6 @@ using namespace std::string_literals;
 namespace yocto::sceneio {
 
 // Namespace aliases
-namespace yply  = yocto::ply;
 namespace yobj  = yocto::obj;
 namespace ypbrt = yocto::pbrt;
 namespace yshp  = yocto::shape;
@@ -836,7 +835,7 @@ static bool load_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply::model{};
+    auto ply = ply_model{};
     if (!load_ply(filename, &ply, error)) return false;
     get_values(&ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
@@ -858,7 +857,7 @@ static bool save_instance(const std::string& filename,
   };
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply = ply::model{};
+    auto ply = ply_model{};
     add_values(&ply, "instance",
         {"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz", "ox", "oy",
             "oz"},

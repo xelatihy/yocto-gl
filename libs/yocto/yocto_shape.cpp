@@ -23,7 +23,6 @@ using namespace std::string_literals;
 namespace yocto::shape {
 
 // Namespace aliases
-namespace yply = yocto::ply;
 namespace yobj = yocto::obj;
 
 }  // namespace yocto::shape
@@ -4825,7 +4824,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<ply_model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
@@ -4907,7 +4906,7 @@ static std::string get_extension(const std::string& filename) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<ply_model>();
     auto ply       = ply_guard.get();
     add_positions(ply, positions);
     add_normals(ply, normals);
@@ -4970,7 +4969,7 @@ static std::string get_extension(const std::string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<ply_model>();
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
     get_positions(ply, positions);
@@ -5024,7 +5023,7 @@ static std::string get_extension(const std::string& filename) {
             quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
 
     // ply model
-    auto ply_guard = std::make_unique<ply::model>();
+    auto ply_guard = std::make_unique<ply_model>();
     auto ply       = ply_guard.get();
     add_positions(ply, split_positions);
     add_normals(ply, split_normals);
