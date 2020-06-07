@@ -33,7 +33,6 @@
 #include <yocto/yocto_trace.h>
 using namespace yocto;
 namespace sio = yocto::sceneio;
-namespace img = yocto::image;
 namespace trc = yocto::trace;
 
 #include <map>
@@ -235,7 +234,7 @@ int main(int argc, const char* argv[]) {
   // render
   auto render = trc::trace_image(scene, camera, params, print_progress,
       [save_batch, imfilename](
-          const img::image<vec4f>& render, int sample, int samples) {
+          const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    sfs::path(imfilename).extension().string();

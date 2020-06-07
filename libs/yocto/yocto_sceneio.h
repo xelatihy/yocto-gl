@@ -58,7 +58,6 @@ namespace yocto::sceneio {
 
 // Namespace aliases
 namespace scn = yocto::sceneio;
-namespace img = yocto::image;
 
 }  // namespace yocto::sceneio
 
@@ -95,10 +94,10 @@ struct camera {
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
   std::string       name    = "";
-  img::image<vec3f> colorf  = {};
-  img::image<vec3b> colorb  = {};
-  img::image<float> scalarf = {};
-  img::image<byte>  scalarb = {};
+  image<vec3f> colorf  = {};
+  image<vec3b> colorb  = {};
+  image<float> scalarf = {};
+  image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.

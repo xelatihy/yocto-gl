@@ -30,7 +30,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace img = yocto::image;
 namespace gui = yocto::gui;
 
 #include <future>
@@ -42,13 +41,13 @@ struct app_state {
   std::string outname  = "out.png";
 
   // image data
-  img::image<vec4f> source = {};
+  image<vec4f> source = {};
 
   // diplay data
-  img::image<vec4f>      display    = {};
+  image<vec4f>      display    = {};
   float                  exposure   = 0;
   bool                   filmic     = false;
-  img::colorgrade_params params     = {};
+  colorgrade_params params     = {};
   bool                   colorgrade = false;
 
   // viewing properties

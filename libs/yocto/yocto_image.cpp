@@ -45,7 +45,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // RGB color space definition. Various predefined color spaces are listed below.
 struct color_space_params {
@@ -401,12 +401,12 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
   return xyz_to_color(color_to_xyz(col, from), to);
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Lookup an image at coordinates `ij`
 vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
@@ -491,12 +491,12 @@ vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 template <typename T>
 inline void set_region(
@@ -793,12 +793,12 @@ image<vec4f> image_difference(
   return diff;
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
@@ -1266,12 +1266,12 @@ image<vec4b> add_logo(const image<vec4b>& img, const std::string& type) {
   return wlogo;
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Lookup volume
 inline float lookup_volume(
@@ -1317,12 +1317,12 @@ inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
          lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // make a simple example volume
 void make_test(
@@ -1360,12 +1360,12 @@ volume<float> make_volume_preset(const std::string& type) {
   return vol;
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 // Split a std::string
 static inline std::vector<std::string> split_string(const std::string& str) {
@@ -2046,12 +2046,12 @@ bool is_hdr_filename(const std::string& filename) {
   }
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yocto::image {
+namespace yocto {
 
 namespace impl {
 
@@ -2234,4 +2234,4 @@ bool save_volume(
   return impl::save_volume(filename, vol, error);
 }
 
-}  // namespace yocto::image
+}  // namespace yocto

@@ -30,20 +30,19 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 using namespace yocto;
-namespace img = yocto::image;
 
 using namespace std::string_literals;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-namespace yocto::image {
+namespace yocto {
 
-img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
+image<vec4f> filter_bilateral(const image<vec4f>& img,
     float spatial_sigma, float range_sigma,
-    const std::vector<img::image<vec4f>>& features,
+    const std::vector<image<vec4f>>& features,
     const std::vector<float>&             features_sigma) {
-  auto filtered     = img::image{img.size(), zero4f};
+  auto filtered     = image{img.size(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -77,8 +76,8 @@ img::image<vec4f> filter_bilateral(const img::image<vec4f>& img,
   return filtered;
 }
 
-img::image<vec4f> filter_bilateral(
-    const img::image<vec4f>& img, float spatial_sigma, float range_sigma) {
+image<vec4f> filter_bilateral(
+    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
   auto filtered = image{img.size(), zero4f};
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -107,8 +106,8 @@ img::image<vec4f> filter_bilateral(
 }
 
 bool make_image_preset(
-    const std::string& type, img::image<vec4f>& img, std::string& error) {
-  auto set_region = [](img::image<vec4f>& img, const img::image<vec4f>& region,
+    const std::string& type, image<vec4f>& img, std::string& error) {
+  auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.size().y; j++) {
       for (auto i = 0; i < region.size().x; i++) {
@@ -155,7 +154,7 @@ bool make_image_preset(
   } else if (type == "images1") {
     auto sub_types = std::vector<std::string>{"grid", "uvgrid", "checker",
         "gammaramp", "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = std::vector<img::image<vec4f>>(sub_types.size());
+    auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
@@ -164,7 +163,7 @@ bool make_image_preset(
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img      = img::image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
@@ -172,7 +171,7 @@ bool make_image_preset(
     }
   } else if (type == "images2") {
     auto sub_types = std::vector<std::string>{"sky", "sunsky"};
-    auto sub_imgs  = std::vector<img::image<vec4f>>(sub_types.size());
+    auto sub_imgs  = std::vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       if (!make_image_preset(sub_types[i], sub_imgs[i], error)) return false;
     }
@@ -181,7 +180,7 @@ bool make_image_preset(
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img      = img::image<vec4f>(montage_size);
+    img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
@@ -235,7 +234,7 @@ bool make_image_preset(
   return true;
 }
 
-}  // namespace yocto::image
+}  // namespace yocto
 
 int main(int argc, const char* argv[]) {
   // command line parameters
@@ -289,7 +288,7 @@ int main(int argc, const char* argv[]) {
   auto ext      = sfs::path(filename).extension().string();
   auto basename = sfs::path(filename).stem().string();
   auto ioerror  = ""s;
-  auto img      = img::image<vec4f>{};
+  auto img      = image<vec4f>{};
   if (ext == ".ypreset") {
     if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
   } else {
@@ -298,7 +297,7 @@ int main(int argc, const char* argv[]) {
 
   // set alpha
   if (alpha_filename != "") {
-    auto alpha = img::image<vec4f>{};
+    auto alpha = image<vec4f>{};
     if (!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
@@ -307,7 +306,7 @@ int main(int argc, const char* argv[]) {
 
   // set alpha
   if (coloralpha_filename != "") {
-    auto alpha = img::image<vec4f>{};
+    auto alpha = image<vec4f>{};
     if (!load_image(coloralpha_filename, alpha, ioerror))
       print_fatal(ioerror);
     if (img.size() != alpha.size()) print_fatal("bad image size");
@@ -323,7 +322,7 @@ int main(int argc, const char* argv[]) {
 
   // diff
   if (diff_filename != "") {
-    auto diff = img::image<vec4f>{};
+    auto diff = image<vec4f>{};
     if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
     if (img.size() != diff.size())
       print_fatal("image sizes are different");

@@ -33,7 +33,6 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
 namespace sio = yocto::sceneio;
-namespace img = yocto::image;
 namespace trc = yocto::trace;
 namespace gui = yocto::gui;
 
@@ -67,8 +66,8 @@ struct app_state {
   trc::trace_params params = {};
 
   // rendering state
-  img::image<vec4f> render   = {};
-  img::image<vec4f> display  = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
   float             exposure = 0;
 
   // view scene
@@ -276,12 +275,12 @@ void reset_display(app_state* app) {
         app->current = sample;
         app->total   = nsamples;
       },
-      [app](const img::image<vec4f>& render, int current, int total) {
+      [app](const image<vec4f>& render, int current, int total) {
         if (current > 0) return;
         app->render  = render;
         app->display = tonemap_image(app->render, app->exposure);
       },
-      [app](const img::image<vec4f>& render, int current, int total,
+      [app](const image<vec4f>& render, int current, int total,
           const vec2i& ij) {
         app->render[ij]  = render[ij];
         app->display[ij] = tonemap(app->render[ij], app->exposure);

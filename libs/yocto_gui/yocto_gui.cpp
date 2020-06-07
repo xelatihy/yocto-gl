@@ -238,34 +238,34 @@ void clear_texture(ogl_texture* texture) {
   texture->mipmap     = false;
 }
 
-void set_texture(ogl_texture* texture, const img::image<vec4b>& img,
+void set_texture(ogl_texture* texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const img::image<vec4f>& img,
+void set_texture(ogl_texture* texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap) {
   set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const img::image<vec3b>& img,
+void set_texture(ogl_texture* texture, const image<vec3b>& img,
     bool as_srgb, bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const img::image<vec3f>& img,
+void set_texture(ogl_texture* texture, const image<vec3f>& img,
     bool as_float, bool linear, bool mipmap) {
   set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
-void set_texture(ogl_texture* texture, const img::image<byte>& img,
+void set_texture(ogl_texture* texture, const image<byte>& img,
     bool as_srgb, bool linear, bool mipmap) {
   set_texture(
       texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
 }
-void set_texture(ogl_texture* texture, const img::image<float>& img,
+void set_texture(ogl_texture* texture, const image<float>& img,
     bool as_float, bool linear, bool mipmap) {
   set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
       linear, mipmap);
@@ -634,12 +634,12 @@ void clear_image(ogl_image* image) {
 
 // update image data
 void set_image(
-    ogl_image* image, const img::image<vec4f>& img, bool linear, bool mipmap) {
-  set_texture(image->texture, img, false, linear, mipmap);
+    ogl_image* oimg, const image<vec4f>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
 }
 void set_image(
-    ogl_image* image, const img::image<vec4b>& img, bool linear, bool mipmap) {
-  set_texture(image->texture, img, false, linear, mipmap);
+    ogl_image* oimg, const image<vec4b>& img, bool linear, bool mipmap) {
+  set_texture(oimg->texture, img, false, linear, mipmap);
 }
 
 // draw image

@@ -166,7 +166,7 @@ static vec3f eval_texture(const trc::texture* texture, const vec2f& uv,
   // get texture
   if (!texture) return {1, 1, 1};
 
-  // get img::image width/height
+  // get image width/height
   auto size = texture_size(texture);
 
   // get coordinates normalized for tiling
@@ -181,7 +181,7 @@ static vec3f eval_texture(const trc::texture* texture, const vec2f& uv,
     if (t < 0) t += size.y;
   }
 
-  // get img::image coordinates and residuals
+  // get image coordinates and residuals
   auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
@@ -195,7 +195,7 @@ static vec3f eval_texture(const trc::texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
-// Generates a ray from a camera for img::image plane coordinate uv and
+// Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
     const trc::camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -225,7 +225,7 @@ static ray3f eval_perspective_camera(
   //     (lens_uv.y - 0.5f) * camera->aperture, 0};
   // auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
   //     camera->film.y * (image_uv.y - 0.5f), distance};
-  // // distance of the img::image of the point
+  // // distance of the image of the point
   // auto distance1 = camera->lens * distance / (distance - camera->lens);
   // auto q1        = -q * distance1 / distance;
   // auto d         = normalize(q1 - e);
@@ -234,7 +234,7 @@ static ray3f eval_perspective_camera(
   //     transform_direction(camera->frame, d)};
 }
 
-// Generates a ray from a camera for img::image plane coordinate uv and
+// Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
     const trc::camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
@@ -254,7 +254,7 @@ static ray3f eval_orthographic_camera(
       transform_point(camera->frame, e), transform_direction(camera->frame, d)};
 }
 
-// Generates a ray from a camera for img::image plane coordinate uv and
+// Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
     const trc::camera* camera, const vec2f& uv, const vec2f& luv) {
@@ -2363,7 +2363,7 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-img::image<vec4f> trace_image(const trc::scene* scene,
+image<vec4f> trace_image(const trc::scene* scene,
     const trc::camera* camera, const trace_params& params,
     progress_callback progress_cb, image_callback image_cb) {
   auto state_guard = std::make_unique<state>();
@@ -2420,7 +2420,7 @@ void trace_start(trc::state* state, const trc::scene* scene,
   state->worker = std::async(std::launch::async, [=]() {
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
-      if (progress_cb) progress_cb("trace img::image", sample, params.samples);
+      if (progress_cb) progress_cb("trace image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
         state->render[ij] = trace_sample(state, scene, camera, ij, params);
@@ -2429,7 +2429,7 @@ void trace_start(trc::state* state, const trc::scene* scene,
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb)
-      progress_cb("trace img::image", params.samples, params.samples);
+      progress_cb("trace image", params.samples, params.samples);
     if (image_cb) image_cb(state->render, params.samples, params.samples);
   });
 }
@@ -2517,25 +2517,25 @@ void set_focus(trc::camera* camera, float aperture, float focus) {
 }
 
 // Add texture
-void set_texture(trc::texture* texture, const img::image<vec3b>& img) {
+void set_texture(trc::texture* texture, const image<vec3b>& img) {
   texture->colorb  = img;
   texture->colorf  = {};
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(trc::texture* texture, const img::image<vec3f>& img) {
+void set_texture(trc::texture* texture, const image<vec3f>& img) {
   texture->colorb  = {};
   texture->colorf  = img;
   texture->scalarb = {};
   texture->scalarf = {};
 }
-void set_texture(trc::texture* texture, const img::image<byte>& img) {
+void set_texture(trc::texture* texture, const image<byte>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = img;
   texture->scalarf = {};
 }
-void set_texture(trc::texture* texture, const img::image<float>& img) {
+void set_texture(trc::texture* texture, const image<float>& img) {
   texture->colorb  = {};
   texture->colorf  = {};
   texture->scalarb = {};

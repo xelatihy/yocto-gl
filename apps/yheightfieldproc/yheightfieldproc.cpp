@@ -31,7 +31,6 @@
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_shape.h>
 using namespace yocto;
-namespace img = yocto::image;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
@@ -79,19 +78,19 @@ int main(int argc, const char* argv[]) {
   auto quads     = std::vector<vec4i>{};
 
   // image data
-  auto heightfield = img::image<float>{};
+  auto heightfield = image<float>{};
 
   // load mesh
   auto ioerror = ""s;
   print_progress("load image", 0, 1);
-  if (img::is_hdr_filename(filename)) {
-    if (!img::load_image(filename, heightfield, ioerror))
+  if (is_hdr_filename(filename)) {
+    if (!load_image(filename, heightfield, ioerror))
       print_fatal(ioerror);
   } else {
-    auto heightfield16 = img::image<ushort>{};
-    if (!img::load_image(filename, heightfield16, ioerror))
+    auto heightfield16 = image<ushort>{};
+    if (!load_image(filename, heightfield16, ioerror))
       print_fatal(ioerror);
-    heightfield = img::ushort_to_float(heightfield16);
+    heightfield = ushort_to_float(heightfield16);
   }
   print_progress("load shape", 1, 1);
 

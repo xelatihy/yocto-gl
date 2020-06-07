@@ -51,7 +51,6 @@ namespace yocto::gui {
 
 // Namespace aliases
 namespace gui = yocto::gui;
-namespace img = yocto::image;
 
 }  // namespace yocto::gui
 
@@ -104,17 +103,17 @@ bool is_initialized(ogl_texture* texture);
 void clear_texture(ogl_texture* texture);
 
 // set texture
-void set_texture(ogl_texture* texture, const img::image<vec4b>& img,
+void set_texture(ogl_texture* texture, const image<vec4b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const img::image<vec4f>& img,
+void set_texture(ogl_texture* texture, const image<vec4f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const img::image<vec3b>& img,
+void set_texture(ogl_texture* texture, const image<vec3b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const img::image<vec3f>& img,
+void set_texture(ogl_texture* texture, const image<vec3f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const img::image<byte>& img,
+void set_texture(ogl_texture* texture, const image<byte>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(ogl_texture* texture, const img::image<float>& img,
+void set_texture(ogl_texture* texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
 // Opengl array/element buffer
@@ -298,16 +297,16 @@ struct ogl_image {
 };
 
 // create image drawing program
-bool init_image(ogl_image* image);
-bool is_initialized(const ogl_image* image);
+bool init_image(ogl_image* oimg);
+bool is_initialized(const ogl_image* oimg);
 
 // clear image
-void clear_image(ogl_image* image);
+void clear_image(ogl_image* oimg);
 
 // update image data
-void set_image(ogl_image* image, const img::image<vec4f>& img,
+void set_image(ogl_image* oimg, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_image(ogl_image* image, const img::image<vec4b>& img,
+void set_image(ogl_image* oimg, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params

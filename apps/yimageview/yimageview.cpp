@@ -30,7 +30,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace img = yocto::image;
 namespace gui = yocto::gui;
 
 #include <atomic>
@@ -54,8 +53,8 @@ struct app_state {
   std::string outname  = "";
 
   // image data
-  img::image<vec4f> source  = {};
-  img::image<vec4f> display = {};
+  image<vec4f> source  = {};
+  image<vec4f> display = {};
 
   // image stats
   image_stats source_stats  = {};
@@ -64,7 +63,7 @@ struct app_state {
   // tonemapping values
   float                  exposure   = 0;
   bool                   filmic     = false;
-  img::colorgrade_params params     = {};
+  colorgrade_params params     = {};
   bool                   colorgrade = false;
 
   // viewing properties
@@ -95,7 +94,7 @@ struct app_states {
   // default options
   float                  exposure = 0;
   bool                   filmic   = false;
-  img::colorgrade_params params   = {};
+  colorgrade_params params   = {};
 
   // cleanup
   ~app_states() {
@@ -105,7 +104,7 @@ struct app_states {
 
 // compute min/max
 void compute_stats(
-    image_stats& stats, const img::image<vec4f>& img, bool linear_hdr) {
+    image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
   stats.min      = vec4f{flt_max};
   stats.max      = vec4f{flt_min};
@@ -148,7 +147,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
   app->loader   = std::async(std::launch::async, [app]() {
     if (!load_image(app->filename, app->source, app->loader_error)) return;
     compute_stats(
-        app->source_stats, app->source, img::is_hdr_filename(app->filename));
+        app->source_stats, app->source, is_hdr_filename(app->filename));
     if (app->colorgrade) {
       app->display = colorgrade_image(app->display, true, app->params);
     } else {

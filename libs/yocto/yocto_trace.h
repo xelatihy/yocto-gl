@@ -83,7 +83,6 @@ namespace yocto::trace {
 
 // Namespace aliases
 namespace trc = yocto::trace;
-namespace img = yocto::image;
 
 }  // namespace yocto::trace
 
@@ -124,10 +123,10 @@ void set_shape(trc::object* object, trc::shape* shape);
 void set_instance(trc::object* object, trc::instance* instance);
 
 // texture properties
-void set_texture(trc::texture* texture, const img::image<vec3b>& img);
-void set_texture(trc::texture* texture, const img::image<vec3f>& img);
-void set_texture(trc::texture* texture, const img::image<byte>& img);
-void set_texture(trc::texture* texture, const img::image<float>& img);
+void set_texture(trc::texture* texture, const image<vec3b>& img);
+void set_texture(trc::texture* texture, const image<vec3f>& img);
+void set_texture(trc::texture* texture, const image<byte>& img);
+void set_texture(trc::texture* texture, const image<float>& img);
 
 // material properties
 void set_emission(trc::material* material, const vec3f& emission,
@@ -240,7 +239,7 @@ using progress_callback =
     std::function<void(const std::string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback = std::function<void(
-    const img::image<vec4f>& render, int current, int total)>;
+    const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
 void init_lights(trc::scene* scene, progress_callback progress_cb = {});
@@ -257,7 +256,7 @@ void update_bvh(trc::scene*            scene,
     const trace_params&                params);
 
 // Progressively computes an image.
-img::image<vec4f> trace_image(const trc::scene* scene,
+image<vec4f> trace_image(const trc::scene* scene,
     const trc::camera* camera, const trace_params& params,
     progress_callback progress_cb = {}, image_callback image_cb = {});
 
@@ -266,7 +265,7 @@ bool is_sampler_lit(const trace_params& params);
 
 // [experimental] Callback used to report partially computed image
 using async_callback = std::function<void(
-    const img::image<vec4f>& render, int current, int total, const vec2i& ij)>;
+    const image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface
 struct state;
@@ -328,10 +327,10 @@ struct camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct texture {
-  img::image<vec3f> colorf  = {};
-  img::image<vec3b> colorb  = {};
-  img::image<float> scalarf = {};
-  img::image<byte>  scalarb = {};
+  image<vec3f> colorf  = {};
+  image<vec3b> colorb  = {};
+  image<float> scalarf = {};
+  image<byte>  scalarb = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -469,8 +468,8 @@ struct pixel {
 
 // [experimental] Asynchronous state
 struct state {
-  img::image<vec4f> render = {};
-  img::image<pixel> pixels = {};
+  image<vec4f> render = {};
+  image<pixel> pixels = {};
   std::future<void> worker = {};  // async
   std::atomic<bool> stop   = {};  // async
 };

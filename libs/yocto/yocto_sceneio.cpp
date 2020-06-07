@@ -61,16 +61,6 @@ using namespace std::string_literals;
 #include "ext/cgltf.h"
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::sceneio {
-
-// Namespace aliases
-namespace yimg  = yocto::image;
-
-}  // namespace yocto::sceneio
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto::sceneio {
@@ -389,7 +379,7 @@ void add_materials(scn::model* scene) {
 // Add a sky environment
 void add_sky(scn::model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = img::image<vec4f>{{1024, 512}};
+  auto sunsky  = image<vec4f>{{1024, 512}};
   make_sunsky(sunsky, sunsky.size(), sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
@@ -475,7 +465,7 @@ static vec3f eval_texture(const scn::texture* texture, const vec2f& uv,
   // get texture
   if (!texture) return {1, 1, 1};
 
-  // get img::image width/height
+  // get image width/height
   auto size = texture_size(texture);
 
   // get coordinates normalized for tiling
@@ -490,7 +480,7 @@ static vec3f eval_texture(const scn::texture* texture, const vec2f& uv,
     if (t < 0) t += size.y;
   }
 
-  // get img::image coordinates and residuals
+  // get image coordinates and residuals
   auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
@@ -697,48 +687,48 @@ static std::string get_extension(const std::string& filename) {
   return filename.substr(pos);
 }
 
-// Loads/saves a  channel float/byte img::image in linear/srgb color space.
-static bool load_image(const std::string& filename, img::image<vec4f>& colorf,
-    img::image<vec4b>& colorb, std::string& error) {
-  if (img::is_hdr_filename(filename)) {
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+static bool load_image(const std::string& filename, image<vec4f>& colorf,
+    image<vec4b>& colorb, std::string& error) {
+  if (is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
   } else {
     return load_image(filename, colorb, error);
   }
 }
 
-// Loads/saves a 3 channel float/byte img::image in linear/srgb color space.
-static bool load_image(const std::string& filename, img::image<vec3f>& colorf,
-    img::image<vec3b>& colorb, std::string& error) {
-  if (img::is_hdr_filename(filename)) {
+// Loads/saves a 3 channel float/byte image in linear/srgb color space.
+static bool load_image(const std::string& filename, image<vec3f>& colorf,
+    image<vec3b>& colorb, std::string& error) {
+  if (is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
   } else {
     return load_image(filename, colorb, error);
   }
 }
 static bool save_image(const std::string& filename,
-    const img::image<vec3f>& colorf, const img::image<vec3b>& colorb,
+    const image<vec3f>& colorf, const image<vec3b>& colorb,
     std::string& error) {
-  if (img::is_hdr_filename(filename)) {
+  if (is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
   } else {
     return save_image(filename, colorb, error);
   }
 }
 
-// Loads/saves a 1 channel float/byte img::image in linear/srgb color space.
-static bool load_image(const std::string& filename, img::image<float>& scalarf,
-    img::image<byte>& scalarb, std::string& error) {
-  if (img::is_hdr_filename(filename)) {
+// Loads/saves a 1 channel float/byte image in linear/srgb color space.
+static bool load_image(const std::string& filename, image<float>& scalarf,
+    image<byte>& scalarb, std::string& error) {
+  if (is_hdr_filename(filename)) {
     return load_image(filename, scalarf, error);
   } else {
     return load_image(filename, scalarb, error);
   }
 }
 static bool save_image(const std::string& filename,
-    const img::image<float>& scalarf, const img::image<byte>& scalarb,
+    const image<float>& scalarf, const image<byte>& scalarb,
     std::string& error) {
-  if (img::is_hdr_filename(filename)) {
+  if (is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
   } else {
     return save_image(filename, scalarb, error);
@@ -2242,8 +2232,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   cotexture_map.erase("");
   for (auto [path, textures] : cotexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto color_opacityf = img::image<vec4f>{};
-    auto color_opacityb = img::image<vec4b>{};
+    auto color_opacityf = image<vec4f>{};
+    auto color_opacityb = image<vec4b>{};
     if (!load_image(sfs::path(filename).parent_path() / path, color_opacityf,
             color_opacityb, error))
       return dependent_error();
@@ -2281,8 +2271,8 @@ static bool load_gltf_scene(const std::string& filename, scn::model* scene,
   mrtexture_map.erase("");
   for (auto [path, textures] : mrtexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto metallic_roughnessf = img::image<vec3f>{};
-    auto metallic_roughnessb = img::image<vec3b>{};
+    auto metallic_roughnessf = image<vec3f>{};
+    auto metallic_roughnessb = image<vec3b>{};
     if (!load_image(sfs::path(filename).parent_path() / path,
             metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
