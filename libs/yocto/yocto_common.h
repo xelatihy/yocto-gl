@@ -90,6 +90,8 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::future;
+using std::atomic;
 
 }  // namespace yocto
 
@@ -158,9 +160,9 @@ template <typename Func, typename... Args>
 inline auto run_async(Func&& func, Args&&... args);
 
 // Check if an async task is ready
-inline bool is_valid(const std::future<void>& result);
-inline bool is_running(const std::future<void>& result);
-inline bool is_ready(const std::future<void>& result);
+inline bool is_valid(const future<void>& result);
+inline bool is_running(const future<void>& result);
+inline bool is_ready(const future<void>& result);
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
@@ -314,12 +316,12 @@ inline auto run_async(Func&& func, Args&&... args) {
       std::forward<Args>(args)...);
 }
 // Check if an async task is ready
-inline bool is_valid(const std::future<void>& result) { return result.valid(); }
-inline bool is_running(const std::future<void>& result) {
+inline bool is_valid(const future<void>& result) { return result.valid(); }
+inline bool is_running(const future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) !=
                                std::future_status::ready;
 }
-inline bool is_ready(const std::future<void>& result) {
+inline bool is_ready(const future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                std::future_status::ready;
 }
@@ -328,9 +330,9 @@ inline bool is_ready(const std::future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
+  auto             futures  = vector<future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
+  atomic<int> next_idx(begin);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, end]() {

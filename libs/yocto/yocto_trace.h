@@ -452,8 +452,8 @@ struct trace_pixel {
 struct trace_state {
   image<vec4f>       render = {};
   image<trace_pixel> pixels = {};
-  std::future<void>  worker = {};  // async
-  std::atomic<bool>  stop   = {};  // async
+  future<void>  worker = {};  // async
+  atomic<bool>  stop   = {};  // async
 };
 
 // [experimental] Callback used to report partially computed image

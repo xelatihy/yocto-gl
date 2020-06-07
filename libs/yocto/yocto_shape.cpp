@@ -18,7 +18,17 @@ using namespace std::string_literals;
 #include "yocto_ply.h"
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPETIES
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::atomic;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COMPUTATION OF PER-VERTEX PROPERTIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -559,7 +569,7 @@ namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-std::atomic<ssize_t> bvh_embree_memory = 0;
+atomic<ssize_t> bvh_embree_memory = 0;
 static RTCDevice     bvh_embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {

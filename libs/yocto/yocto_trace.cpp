@@ -45,6 +45,8 @@
 namespace yocto {
 
 // using directives
+using std::atomic;
+using std::deque;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -586,7 +588,7 @@ namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-std::atomic<ssize_t> embree_memory = 0;
+atomic<ssize_t> embree_memory = 0;
 static RTCDevice     embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
@@ -1048,9 +1050,9 @@ static void build_bvh_parallel(
   nodes.emplace_back();
 
   // synchronization
-  std::atomic<int>          num_processed_prims(0);
+  atomic<int>          num_processed_prims(0);
   std::mutex                queue_mutex;
-  vector<std::future<void>> futures;
+  vector<future<void>> futures;
   auto                      nthreads = std::thread::hardware_concurrency();
 
   // create nodes until the queue is empty
@@ -2350,17 +2352,13 @@ void init_lights(trace_scene* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
-using std::atomic;
-using std::deque;
-using std::future;
-
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
+  auto             futures  = vector<future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
         std::async(std::launch::async, [&func, &next_idx, size]() {
