@@ -109,7 +109,7 @@ struct trace_bvh_node {
 // Application data is not stored explicitly.
 struct trace_bvh {
   std::vector<trace_bvh_node> nodes      = {};
-  std::vector<vec2i>    primitives = {};
+  std::vector<vec2i>          primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -218,7 +218,7 @@ struct trace_instance {
 
 // Object.
 struct trace_object {
-  frame3f        frame    = identity3x4f;
+  frame3f              frame    = identity3x4f;
   trc::trace_shape*    shape    = nullptr;
   trc::trace_material* material = nullptr;
   trc::trace_instance* instance = nullptr;
@@ -226,16 +226,16 @@ struct trace_object {
 
 // Environment map.
 struct trace_environment {
-  frame3f            frame        = identity3x4f;
-  vec3f              emission     = {0, 0, 0};
-  trc::trace_texture*      emission_tex = nullptr;
-  std::vector<float> texels_cdf   = {};
+  frame3f             frame        = identity3x4f;
+  vec3f               emission     = {0, 0, 0};
+  trc::trace_texture* emission_tex = nullptr;
+  std::vector<float>  texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
   trc::trace_object*      object      = nullptr;
-  int               instance    = -1;
+  int                     instance    = -1;
   trc::trace_environment* environment = nullptr;
 };
 
@@ -257,7 +257,7 @@ struct trace_scene {
 
   // computed properties
   std::vector<trc::trace_light*> lights = {};
-  trace_bvh*                bvh    = nullptr;
+  trace_bvh*                     bvh    = nullptr;
 #ifdef YOCTO_EMBREE
   RTCScene           embree_bvh       = nullptr;
   std::vector<vec2i> embree_instances = {};
@@ -304,10 +304,10 @@ void set_specular(trc::trace_material* material, float specular = 1,
 void set_ior(trc::trace_material* material, float ior);
 void set_metallic(trc::trace_material* material, float metallic,
     trc::trace_texture* metallic_tex = nullptr);
-void set_transmission(trc::trace_material* material, float transmission, bool thin,
-    float trdepth, trc::trace_texture* transmission_tex = nullptr);
-void set_translucency(trc::trace_material* material, float translucency, bool thin,
-    float trdepth, trc::trace_texture* translucency_tex = nullptr);
+void set_transmission(trc::trace_material* material, float transmission,
+    bool thin, float trdepth, trc::trace_texture* transmission_tex = nullptr);
+void set_translucency(trc::trace_material* material, float translucency,
+    bool thin, float trdepth, trc::trace_texture* translucency_tex = nullptr);
 void set_roughness(trc::trace_material* material, float roughness,
     trc::trace_texture* roughness_tex = nullptr);
 void set_opacity(trc::trace_material* material, float opacity,
@@ -315,29 +315,34 @@ void set_opacity(trc::trace_material* material, float opacity,
 void set_thin(trc::trace_material* material, bool thin);
 void set_scattering(trc::trace_material* material, const vec3f& scattering,
     float scanisotropy, trc::trace_texture* scattering_tex = nullptr);
-void set_normalmap(trc::trace_material* material, trc::trace_texture* normal_tex);
+void set_normalmap(
+    trc::trace_material* material, trc::trace_texture* normal_tex);
 
 // shape properties
 void set_points(trc::trace_shape* shape, const std::vector<int>& points);
 void set_lines(trc::trace_shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(trc::trace_shape* shape, const std::vector<vec3i>& triangles);
+void set_triangles(
+    trc::trace_shape* shape, const std::vector<vec3i>& triangles);
 void set_quads(trc::trace_shape* shape, const std::vector<vec4i>& quads);
-void set_positions(trc::trace_shape* shape, const std::vector<vec3f>& positions);
+void set_positions(
+    trc::trace_shape* shape, const std::vector<vec3f>& positions);
 void set_normals(trc::trace_shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(trc::trace_shape* shape, const std::vector<vec2f>& texcoords);
+void set_texcoords(
+    trc::trace_shape* shape, const std::vector<vec2f>& texcoords);
 void set_colors(trc::trace_shape* shape, const std::vector<vec3f>& colors);
 void set_radius(trc::trace_shape* shape, const std::vector<float>& radius);
 void set_tangents(trc::trace_shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(trc::trace_instance* instance, const std::vector<frame3f>& frames);
+void set_frames(
+    trc::trace_instance* instance, const std::vector<frame3f>& frames);
 
 // environment properties
 void set_frame(trc::trace_environment* environment, const frame3f& frame);
 void set_emission(trc::trace_environment* environment, const vec3f& emission,
     trc::trace_texture* emission_tex = nullptr);
 
-}
+}  // namespace yocto::trace
 
 // -----------------------------------------------------------------------------
 // RENDERING API
@@ -377,30 +382,31 @@ const auto trace_default_seed = 961748941ull;
 
 // Options for trace functions
 struct trace_params {
-  int             resolution = 1280;
+  int                   resolution = 1280;
   trace_sampler_type    sampler    = trace_sampler_type::path;
   trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
-  int             samples    = 512;
-  int             bounces    = 8;
-  float           clamp      = 100;
-  bool            nocaustics = false;
-  bool            envhidden  = false;
-  bool            tentfilter = false;
-  uint64_t        seed       = trace_default_seed;
+  int                   samples    = 512;
+  int                   bounces    = 8;
+  float                 clamp      = 100;
+  bool                  nocaustics = false;
+  bool                  envhidden  = false;
+  bool                  tentfilter = false;
+  uint64_t              seed       = trace_default_seed;
   trace_bvh_type        bvh        = trace_bvh_type::default_;
-  bool            noparallel = false;
-  int             pratio     = 8;
-  float           exposure   = 0;
+  bool                  noparallel = false;
+  int                   pratio     = 8;
+  float                 exposure   = 0;
 };
 
 const auto trace_sampler_names = std::vector<std::string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = std::vector<std::string>{"normal", "frontfacing",
-    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "translucency", "refraction",
-    "roughness", "opacity", "ior", "object", "element", "highlight"};
-const auto bvh_names        = std::vector<std::string>{
+const auto trace_falsecolor_names = std::vector<std::string>{"normal",
+    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
+    "diffuse", "specular", "coat", "metal", "transmission", "translucency",
+    "refraction", "roughness", "opacity", "ior", "object", "element",
+    "highlight"};
+const auto bvh_names              = std::vector<std::string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -411,8 +417,8 @@ const auto bvh_names        = std::vector<std::string>{
 using progress_callback =
     std::function<void(const std::string& message, int current, int total)>;
 // Callback used to report partially computed image
-using image_callback = std::function<void(
-    const image<vec4f>& render, int current, int total)>;
+using image_callback =
+    std::function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
 void init_lights(trc::trace_scene* scene, progress_callback progress_cb = {});
@@ -426,7 +432,7 @@ void update_bvh(trc::trace_scene*            scene,
     const std::vector<trc::trace_object*>&   updated_objects,
     const std::vector<trc::trace_shape*>&    updated_shapes,
     const std::vector<trc::trace_instance*>& updated_instances,
-    const trace_params&                params);
+    const trace_params&                      params);
 
 // Progressively computes an image.
 image<vec4f> trace_image(const trc::trace_scene* scene,
@@ -446,10 +452,10 @@ struct trace_pixel {
 
 // [experimental] Asynchronous state
 struct trace_state {
-  image<vec4f> render = {};
+  image<vec4f>       render = {};
   image<trace_pixel> pixels = {};
-  std::future<void> worker = {};  // async
-  std::atomic<bool> stop   = {};  // async
+  std::future<void>  worker = {};  // async
+  std::atomic<bool>  stop   = {};  // async
 };
 
 // [experimental] Callback used to report partially computed image
@@ -486,10 +492,11 @@ struct trace_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trc::trace_scene* scene, const ray3f& ray,
-    bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trc::trace_object* object, int instance,
+trace_intersection intersect_scene_bvh(const trc::trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(const trc::trace_object* object,
+    int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto::trace
 
