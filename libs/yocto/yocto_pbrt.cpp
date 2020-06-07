@@ -45,6 +45,8 @@ namespace yocto {
 
 // using directives
 using std::unordered_map;
+using std::unordered_set;
+using std::string_view;
 using namespace std::string_literals;
 
 }
@@ -62,13 +64,13 @@ inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(std::string_view& str) {
+inline void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
 // Parse values from a string
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, std::string_view& value) {
+    string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -92,20 +94,20 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, string& value) {
-  auto valuev = std::string_view{};
+    string_view& str, string& value) {
+  auto valuev = string_view{};
   if (!parse_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, int& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
@@ -113,22 +115,22 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 
-[[nodiscard]] inline bool parse_value(std::string_view& str, vec2f& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, vec2f& value) {
   for (auto i = 0; i < 2; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, vec3f& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, vec3f& value) {
   for (auto i = 0; i < 3; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, vec4f& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, vec4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, mat4f& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
@@ -483,7 +485,7 @@ inline pbrt_value make_value(const string& name,
   return pbrt;
 }
 
-inline void remove_comment(std::string_view& str, char comment_char = '#') {
+inline void remove_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
@@ -503,7 +505,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
   auto pos   = ftell(fs);
   while (fgets(buffer, sizeof(buffer), fs)) {
     // line
-    auto line = std::string_view{buffer};
+    auto line = string_view{buffer};
     remove_comment(line);
     skip_whitespace(line);
     if (line.empty()) continue;
@@ -530,12 +532,12 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
 
 // parse a quoted string
 [[nodiscard]] inline bool parse_command(
-    std::string_view& str, string& value) {
+    string_view& str, string& value) {
   skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-  if (pos == std::string_view::npos) {
+  if (pos == string_view::npos) {
     value.assign(str);
     str.remove_prefix(str.size());
   } else {
@@ -547,7 +549,7 @@ inline void remove_comment(std::string_view& str, char comment_char = '#') {
 
 // parse pbrt value with optional parens
 template <typename T>
-[[nodiscard]] inline bool parse_param(std::string_view& str, T& value) {
+[[nodiscard]] inline bool parse_param(string_view& str, T& value) {
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
@@ -563,17 +565,17 @@ template <typename T>
 
 // parse a quoted string
 [[nodiscard]] inline bool parse_nametype(
-    std::string_view& str_, string& name, string& type) {
+    string_view& str_, string& name, string& type) {
   auto value = ""s;
   if (!parse_value(str_, value)) return false;
   if (!str_.data()) return false;
-  auto str  = std::string_view{value};
+  auto str  = string_view{value};
   auto pos1 = str.find(' ');
-  if (pos1 == std::string_view::npos) return false;
+  if (pos1 == string_view::npos) return false;
   type = string(str.substr(0, pos1));
   str.remove_prefix(pos1);
   auto pos2 = str.find_first_not_of(' ');
-  if (pos2 == std::string_view::npos) return false;
+  if (pos2 == string_view::npos) return false;
   str.remove_prefix(pos2);
   name = string(str);
   return true;
@@ -761,8 +763,8 @@ inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
 }
 
 [[nodiscard]] inline bool parse_params(
-    std::string_view& str, vector<pbrt_value>& values) {
-  auto parse_pvalues = [](std::string_view& str, auto& value,
+    string_view& str, vector<pbrt_value>& values) {
+  auto parse_pvalues = [](string_view& str, auto& value,
                            auto& values) -> bool {
     values.clear();
     skip_whitespace(str);
@@ -1782,7 +1784,7 @@ struct context {
   // parse command by command
   auto line = ""s;
   while (read_cmdline(fs, line)) {
-    auto str = std::string_view{line};
+    auto str = string_view{line};
     // get command
     auto cmd = ""s;
     if (!parse_command(str, cmd)) return parse_error();
@@ -2071,7 +2073,7 @@ bool load_pbrt(
     return false;
 
   // remove unused materials
-  auto used_materials = std::unordered_set<pbrt_material*>{};
+  auto used_materials = unordered_set<pbrt_material*>{};
   for (auto shape : pbrt->shapes) used_materials.insert(shape->material);
   pbrt->materials.erase(
       std::remove_if(pbrt->materials.begin(), pbrt->materials.end(),

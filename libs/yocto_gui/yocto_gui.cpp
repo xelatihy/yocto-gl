@@ -65,6 +65,7 @@ namespace yocto {
 
 // using directives
 using std::unordered_map;
+using std::unordered_set;
 using namespace std::string_literals;
 
 }
@@ -1230,7 +1231,7 @@ void set_quads(ogl_shape* shape, const vector<vec4i>& quads) {
 }
 void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
     const vector<vec4i>& quads) {
-  auto edgemap = std::unordered_set<vec2i>{};
+  auto edgemap = unordered_set<vec2i>{};
   for (auto t : triangles) {
     edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
     edgemap.insert({min(t.y, t.z), max(t.y, t.z)});

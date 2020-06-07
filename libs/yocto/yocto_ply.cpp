@@ -40,6 +40,7 @@ namespace yocto {
 
 // using directives
 using std::unordered_map;
+using std::string_view;
 using namespace std::string_literals;
 
 }
@@ -57,13 +58,13 @@ inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_whitespace(std::string_view& str) {
+inline void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
 // Parse values from a string
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, std::string_view& value) {
+    string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -87,76 +88,76 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 [[nodiscard]] inline bool parse_value(
-    std::string_view& str, string& value) {
-  auto valuev = std::string_view{};
+    string_view& str, string& value) {
+  auto valuev = string_view{};
   if (!parse_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, int8_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, int16_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, int32_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, int64_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, uint8_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, uint16_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, uint32_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, uint64_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_value(std::string_view& str, double& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -164,7 +165,7 @@ inline void skip_whitespace(std::string_view& str) {
   return true;
 }
 #ifdef __APPLE__
-[[nodiscard]] inline bool parse_value(std::string_view& str, size_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -291,7 +292,7 @@ template <typename T>
   return true;
 }
 
-inline void remove_comment(std::string_view& str, char comment_char = '#') {
+inline void remove_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -359,7 +360,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
-    auto str = std::string_view{buffer};
+    auto str = string_view{buffer};
     remove_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
@@ -458,7 +459,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
         if (!fgets(buffer, sizeof(buffer), fs)) return read_error();
-        auto str = std::string_view{buffer};
+        auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
             if (!parse_value(str, prop->ldata_u8.emplace_back()))
