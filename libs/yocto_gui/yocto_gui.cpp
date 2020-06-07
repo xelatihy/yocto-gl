@@ -63,7 +63,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto::gui {
 
-bool init_opengl(std::string& error) {
+bool init_ogl(std::string& error) {
   if (!gladLoadGL()) {
     error = "Cannot initialize OpenGL context.";
     return false;
@@ -71,9 +71,9 @@ bool init_opengl(std::string& error) {
   return true;
 }
 
-void assert_error() { assert(glGetError() == GL_NO_ERROR); }
+void assert_ogl_error() { assert(glGetError() == GL_NO_ERROR); }
 
-bool check_error(std::string& error) {
+bool check_ogl_error(std::string& error) {
   if (glGetError() != GL_NO_ERROR) {
     error = "";
     return false;
@@ -81,7 +81,7 @@ bool check_error(std::string& error) {
   return true;
 }
 
-void clear_framebuffer(const vec4f& color, bool clear_depth) {
+void clear_ogl_framebuffer(const vec4f& color, bool clear_depth) {
   glClearColor(color.x, color.y, color.z, color.w);
   if (clear_depth) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -91,18 +91,18 @@ void clear_framebuffer(const vec4f& color, bool clear_depth) {
   }
 }
 
-void set_viewport(const vec4i& viewport) {
+void set_ogl_viewport(const vec4i& viewport) {
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 }
 
-void set_wireframe(bool enabled) {
+void set_ogl_wireframe(bool enabled) {
   if (enabled)
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   else
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void set_blending(bool enabled) {
+void set_ogl_blending(bool enabled) {
   if (enabled) {
     glEnable(GL_BLEND);
     glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
@@ -112,7 +112,7 @@ void set_blending(bool enabled) {
   }
 }
 
-void set_point_size(int size) { glPointSize(size); }
+void set_ogl_point_size(int size) { glPointSize(size); }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
     const byte* img, bool as_srgb, bool linear, bool mipmap) {
@@ -134,7 +134,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert_error();
+  assert_ogl_error();
   if (size == zero2i || img == nullptr) {
     clear_texture(texture);
     return;
@@ -165,7 +165,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
   texture->is_float  = false;
   texture->linear    = linear;
   texture->mipmap    = mipmap;
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
@@ -188,7 +188,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
       {3, GL_RGB},
       {4, GL_RGBA},
   };
-  assert_error();
+  assert_ogl_error();
   if (!img) {
     clear_texture(texture);
     return;
@@ -220,7 +220,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
   texture->is_float  = as_float;
   texture->linear    = linear;
   texture->mipmap    = mipmap;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if texture is initialized
@@ -274,7 +274,7 @@ void set_texture(ogl_texture* texture, const img::image<float>& img,
 // set buffer
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
-  assert_error();
+  assert_ogl_error();
   if (size == 0 || data == nullptr) {
     clear_arraybuffer(buffer);
     return;
@@ -291,7 +291,7 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
   buffer->size    = size;
   buffer->esize   = esize;
   buffer->dynamic = dynamic;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if buffer is initialized
@@ -299,9 +299,9 @@ bool is_initialized(ogl_arraybuffer* buffer) { return buffer->buffer_id != 0; }
 
 // clear buffer
 void clear_arraybuffer(ogl_arraybuffer* buffer) {
-  assert_error();
+  assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_error();
+  assert_ogl_error();
   buffer->buffer_id = 0;
   buffer->size      = 0;
   buffer->esize     = 0;
@@ -329,7 +329,7 @@ void set_arraybuffer(
 // set buffer
 void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
     ogl_element_type element, const int* data, bool dynamic) {
-  assert_error();
+  assert_ogl_error();
   if (size == 0 || data == nullptr) {
     clear_elementbuffer(buffer);
     return;
@@ -346,7 +346,7 @@ void set_elementbuffer(ogl_elementbuffer* buffer, size_t size,
   buffer->size    = size;
   buffer->element = element;
   buffer->dynamic = dynamic;
-  assert_error();
+  assert_ogl_error();
 }
 
 // check if buffer is initialized
@@ -356,9 +356,9 @@ bool is_initialized(ogl_elementbuffer* buffer) {
 
 // clear buffer
 void clear_elementbuffer(ogl_elementbuffer* buffer) {
-  assert_error();
+  assert_ogl_error();
   if (buffer->buffer_id) glDeleteBuffers(1, &buffer->buffer_id);
-  assert_error();
+  assert_ogl_error();
   buffer->buffer_id = 0;
   buffer->size      = 0;
   buffer->element   = ogl_element_type::points;
@@ -402,10 +402,10 @@ bool init_program(ogl_program* program, const std::string& vertex,
   program->fragment_code = fragment;
 
   // create arrays
-  assert_error();
+  assert_ogl_error();
   glGenVertexArrays(1, &program->array_id);
   glBindVertexArray(program->array_id);
-  assert_error();
+  assert_ogl_error();
 
   const char* ccvertex   = vertex.data();
   const char* ccfragment = fragment.data();
@@ -413,7 +413,7 @@ bool init_program(ogl_program* program, const std::string& vertex,
   char        errbuf[10000];
 
   // create vertex
-  assert_error();
+  assert_ogl_error();
   program->vertex_id = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(program->vertex_id, 1, &ccvertex, NULL);
   glCompileShader(program->vertex_id);
@@ -422,10 +422,10 @@ bool init_program(ogl_program* program, const std::string& vertex,
     glGetShaderInfoLog(program->vertex_id, 10000, 0, errbuf);
     return program_error("vertex shader not compiled", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // create fragment
-  assert_error();
+  assert_ogl_error();
   program->fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(program->fragment_id, 1, &ccfragment, NULL);
   glCompileShader(program->fragment_id);
@@ -434,10 +434,10 @@ bool init_program(ogl_program* program, const std::string& vertex,
     glGetShaderInfoLog(program->fragment_id, 10000, 0, errbuf);
     return program_error("fragment shader not compiled", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // create program
-  assert_error();
+  assert_ogl_error();
   program->program_id = glCreateProgram();
   glAttachShader(program->program_id, program->vertex_id);
   glAttachShader(program->program_id, program->fragment_id);
@@ -453,7 +453,7 @@ bool init_program(ogl_program* program, const std::string& vertex,
     glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
     return program_error("program not validated", errbuf);
   }
-  assert_error();
+  assert_ogl_error();
 
   // done
   return true;
@@ -477,9 +477,9 @@ bool is_initialized(const ogl_program* program) {
 
 // bind program
 void bind_program(ogl_program* program) {
-  assert_error();
+  assert_ogl_error();
   glUseProgram(program->program_id);
-  assert_error();
+  assert_ogl_error();
 }
 // unbind program
 void unbind_program(ogl_program* program) { glUseProgram(0); }
@@ -495,40 +495,40 @@ namespace yocto::gui {
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_error();
+  assert_ogl_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(float), array, GL_STATIC_DRAW);
-  assert_error();
+  assert_ogl_error();
 }
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_error();
+  assert_ogl_error();
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(int), array, GL_STATIC_DRAW);
-  assert_error();
+  assert_ogl_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const int* array) {
-  assert_error();
+  assert_ogl_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(int), array);
-  assert_error();
+  assert_ogl_error();
 }
 
 void update_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
-  assert_error();
+  assert_ogl_error();
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(float), array);
-  assert_error();
+  assert_ogl_error();
 }
 
 }  // namespace yocto::gui
@@ -644,7 +644,7 @@ void set_image(
 
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params) {
-  assert_error();
+  assert_ogl_error();
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
   glClearColor(params.background.x, params.background.y, params.background.z,
@@ -660,86 +660,86 @@ void draw_image(ogl_image* image, const ogl_image_params& params) {
   set_attribute(image->program, "texcoord", image->texcoords);
   draw_elements(image->triangles);
   unbind_program(image->program);
-  assert_error();
+  assert_ogl_error();
 }
 
 // set uniforms
 void set_uniform(ogl_program* program, int location, int value) {
-  assert_error();
+  assert_ogl_error();
   glUniform1i(location, value);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec2i& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform2i(location, value.x, value.y);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec3i& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform3i(location, value.x, value.y, value.z);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec4i& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform4i(location, value.x, value.y, value.z, value.w);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, float value) {
-  assert_error();
+  assert_ogl_error();
   glUniform1f(location, value);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec2f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform2f(location, value.x, value.y);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec3f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform3f(location, value.x, value.y, value.z);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const vec4f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniform4f(location, value.x, value.y, value.z, value.w);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const mat2f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniformMatrix2fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const mat3f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniformMatrix3fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const mat4f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniformMatrix4fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const frame2f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniformMatrix3x2fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 void set_uniform(ogl_program* program, int location, const frame3f& value) {
-  assert_error();
+  assert_ogl_error();
   glUniformMatrix4x3fv(location, 1, false, &value.x.x);
-  assert_error();
+  assert_ogl_error();
 }
 
 // get uniform location
@@ -750,11 +750,11 @@ int get_uniform_location(ogl_program* program, const char* name) {
 // set uniform texture
 void set_uniform(ogl_program* program, int location,
     const ogl_texture* texture, int unit) {
-  assert_error();
+  assert_ogl_error();
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glUniform1i(location, unit);
-  assert_error();
+  assert_ogl_error();
 }
 void set_uniform(ogl_program* program, const char* name,
     const ogl_texture* texture, int unit) {
@@ -763,7 +763,7 @@ void set_uniform(ogl_program* program, const char* name,
 }
 void set_uniform(ogl_program* program, int location, int location_on,
     const ogl_texture* texture, int unit) {
-  assert_error();
+  assert_ogl_error();
   if (texture && texture->texture_id) {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, texture->texture_id);
@@ -772,7 +772,7 @@ void set_uniform(ogl_program* program, int location, int location_on,
   } else {
     glUniform1i(location_on, 0);
   }
-  assert_error();
+  assert_ogl_error();
 }
 void set_uniform(ogl_program* program, const char* name, const char* name_on,
     const ogl_texture* texture, int unit) {
@@ -788,11 +788,11 @@ int get_attribute_location(ogl_program* program, const char* name) {
 // set vertex attributes
 void set_attribute(
     ogl_program* program, int location, ogl_arraybuffer* buffer) {
-  assert_error();
+  assert_ogl_error();
   glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
   glEnableVertexAttribArray(location);
   glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
-  assert_error();
+  assert_ogl_error();
 }
 void set_attribute(
     ogl_program* program, const char* name, ogl_arraybuffer* buffer) {
@@ -1465,8 +1465,8 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  clear_framebuffer(params.background);
-  set_viewport(viewport);
+  clear_ogl_framebuffer(params.background);
+  set_ogl_viewport(viewport);
 
   bind_program(scene->program);
   set_uniform(scene->program, "eye", camera->frame.o);
@@ -1503,13 +1503,13 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
     }
   }
 
-  if (params.wireframe) set_wireframe(true);
+  if (params.wireframe) set_ogl_wireframe(true);
   for (auto object : scene->objects) {
     draw_object(scene, object, params);
   }
 
   unbind_program();
-  if (params.wireframe) set_wireframe(false);
+  if (params.wireframe) set_ogl_wireframe(false);
 }
 
 }  // namespace yocto::gui

@@ -61,14 +61,14 @@ namespace img = yocto::image;
 namespace yocto::gui {
 
 // Commands to setup the opengl context and issue gpu operations.
-bool init_opengl(std::string& error);
-void assert_error();
-bool check_error(std::string& error);
-void clear_framebuffer(const vec4f& color, bool clear_depth = true);
-void set_viewport(const vec4i& viewport);
-void set_wireframe(bool enabled);
-void set_blending(bool enabled);
-void set_point_size(int size);
+bool init_ogl(std::string& error);
+void assert_ogl_error();
+bool check_ogl_error(std::string& error);
+void clear_ogl_framebuffer(const vec4f& color, bool clear_depth = true);
+void set_ogl_viewport(const vec4i& viewport);
+void set_ogl_wireframe(bool enabled);
+void set_ogl_blending(bool enabled);
+void set_ogl_point_size(int size);
 
 // OpenGL texture
 struct ogl_texture {
