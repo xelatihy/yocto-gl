@@ -68,8 +68,8 @@ struct app_state {
   bool                   colorgrade = false;
 
   // viewing properties
-  gui::image*       glimage   = new gui::image{};
-  gui::image_params glparams  = {};
+  gui::ogl_image*       glimage   = new gui::ogl_image{};
+  gui::ogl_image_params glparams  = {};
   bool              glupdated = true;
 
   // loading status

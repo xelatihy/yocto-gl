@@ -72,8 +72,8 @@ struct app_state {
   float             exposure = 0;
 
   // view scene
-  gui::image*       glimage  = new gui::image{};
-  gui::image_params glparams = {};
+  gui::ogl_image*       glimage  = new gui::ogl_image{};
+  gui::ogl_image_params glparams = {};
 
   // editing
   sio::camera*      selected_camera      = nullptr;

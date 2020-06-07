@@ -61,15 +61,15 @@ struct app_state {
   std::string name      = "";
 
   // options
-  gui::scene_params drawgl_prms = {};
+  gui::ogl_scene_params drawgl_prms = {};
 
   // scene
   sio::model*  ioscene  = new sio::model{};
   sio::camera* iocamera = nullptr;
 
   // rendering state
-  gui::scene*  glscene  = new gui::scene{};
-  gui::camera* glcamera = nullptr;
+  gui::ogl_scene*  glscene  = new gui::ogl_scene{};
+  gui::ogl_camera* glcamera = nullptr;
 
   // editing
   sio::camera*      selected_camera      = nullptr;
@@ -96,7 +96,7 @@ struct app_state {
   }
 };
 
-void update_lights(gui::scene* glscene, sio::model* ioscene) {
+void update_lights(gui::ogl_scene* glscene, sio::model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->objects) {
     if (has_max_lights(glscene)) break;
@@ -122,12 +122,12 @@ void update_lights(gui::scene* glscene, sio::model* ioscene) {
     }
     auto ke = ioobject->material->emission * area;
     set_light(add_light(glscene), transform_point(ioobject->frame, pos), ke,
-        gui::light_type::point, false);
+        gui::ogl_light_type::point, false);
   }
 }
 
-void init_glscene(gui::scene* glscene, sio::model* ioscene,
-    gui::camera*& glcamera, sio::camera* iocamera,
+void init_glscene(gui::ogl_scene* glscene, sio::model* ioscene,
+    gui::ogl_camera*& glcamera, sio::camera* iocamera,
     sio::progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -140,7 +140,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = std::unordered_map<sio::camera*, gui::camera*>{};
+  auto camera_map     = std::unordered_map<sio::camera*, gui::ogl_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -152,7 +152,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // textures
-  auto texture_map     = std::unordered_map<sio::texture*, gui::texture*>{};
+  auto texture_map     = std::unordered_map<sio::texture*, gui::ogl_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -170,7 +170,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // material
-  auto material_map     = std::unordered_map<sio::material*, gui::material*>{};
+  auto material_map     = std::unordered_map<sio::material*, gui::ogl_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -199,7 +199,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // shapes
-  auto shape_map     = std::unordered_map<sio::shape*, gui::shape*>{};
+  auto shape_map     = std::unordered_map<sio::shape*, gui::ogl_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -217,7 +217,7 @@ void init_glscene(gui::scene* glscene, sio::model* ioscene,
   }
 
   // instances
-  auto instance_map     = std::unordered_map<sio::instance*, gui::instance*>{};
+  auto instance_map     = std::unordered_map<sio::instance*, gui::ogl_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -255,7 +255,7 @@ int main(int argc, const char* argv[]) {
   add_option(
       cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
   add_option(cli, "--shading", app->drawgl_prms.shading, "Eyelight rendering.",
-      gui::shading_names);
+      gui::ogl_shading_names);
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
@@ -281,7 +281,7 @@ int main(int argc, const char* argv[]) {
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui::window* win, const gui::input& input) {
-    if (app->drawgl_prms.shading == gui::shading_type::lights)
+    if (app->drawgl_prms.shading == gui::ogl_shading_type::lights)
       update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
@@ -297,7 +297,7 @@ int main(int argc, const char* argv[]) {
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);
-    draw_combobox(win, "shading", (int&)params.shading, gui::shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, gui::ogl_shading_names);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
     continue_line(win);

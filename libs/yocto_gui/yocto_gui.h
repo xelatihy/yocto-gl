@@ -71,7 +71,7 @@ void set_blending(bool enabled);
 void set_point_size(int size);
 
 // OpenGL texture
-struct texture {
+struct ogl_texture {
   // Texture properties
   vec2i size      = {0, 0};
   int   nchannels = 0;
@@ -84,41 +84,41 @@ struct texture {
   uint texture_id = 0;
 
   // ensuring no copies
-  texture() {}
-  texture(const texture&) = delete;
-  texture& operator=(texture&) = delete;
+  ogl_texture() {}
+  ogl_texture(const ogl_texture&) = delete;
+  ogl_texture& operator=(ogl_texture&) = delete;
 };
 
 // set texture
-void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+void set_texture(gui::ogl_texture* texture, const vec2i& size, int nchannels,
     const byte* img, bool as_srgb = false, bool linear = true,
     bool mipmap = true);
-void set_texture(gui::texture* texture, const vec2i& size, int nchannels,
+void set_texture(gui::ogl_texture* texture, const vec2i& size, int nchannels,
     const float* img, bool as_float = false, bool linear = true,
     bool mipmap = true);
 
 // check if texture is initialized
-bool is_initialized(gui::texture* texture);
+bool is_initialized(gui::ogl_texture* texture);
 
 // clear texture
-void clear_texture(gui::texture* texture);
+void clear_texture(gui::ogl_texture* texture);
 
 // set texture
-void set_texture(gui::texture* texture, const img::image<vec4b>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<vec4b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(gui::texture* texture, const img::image<vec4f>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<vec4f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(gui::texture* texture, const img::image<vec3b>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<vec3b>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(gui::texture* texture, const img::image<vec3f>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<vec3f>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
-void set_texture(gui::texture* texture, const img::image<byte>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<byte>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
-void set_texture(gui::texture* texture, const img::image<float>& img,
+void set_texture(gui::ogl_texture* texture, const img::image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
 
 // Opengl array/element buffer
-struct arraybuffer {
+struct ogl_arraybuffer {
   // buffer data
   size_t size    = 0;
   int    esize   = 0;
@@ -128,58 +128,58 @@ struct arraybuffer {
 };
 
 // set buffer
-void set_arraybuffer(gui::arraybuffer* buffer, size_t size, int esize,
+void set_arraybuffer(gui::ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(gui::arraybuffer* buffer);
+bool is_initialized(gui::ogl_arraybuffer* buffer);
 
 // clear buffer
-void clear_arraybuffer(gui::arraybuffer* buffer);
+void clear_arraybuffer(gui::ogl_arraybuffer* buffer);
 
 // set buffer
-void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<float>& data,
+void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<float>& data,
     bool dynamic = false);
-void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec2f>& data,
+void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec2f>& data,
     bool dynamic = false);
-void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec3f>& data,
+void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec3f>& data,
     bool dynamic = false);
-void set_arraybuffer(gui::arraybuffer* buffer, const std::vector<vec4f>& data,
+void set_arraybuffer(gui::ogl_arraybuffer* buffer, const std::vector<vec4f>& data,
     bool dynamic = false);
 
 // Opengl draw elements
-enum struct element_type { points, lines, triangles };
+enum struct ogl_element_type { points, lines, triangles };
 
 // Opengl array/element buffer
-struct elementbuffer {
+struct ogl_elementbuffer {
   // buffer data
   size_t       size    = 0;
-  element_type element = element_type::points;
+  ogl_element_type element = ogl_element_type::points;
   bool         dynamic = false;
   // OpenGL state
   uint buffer_id = 0;
 };
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer, size_t size,
-    element_type element, const int* data, bool dynamic = false);
+void set_elementbuffer(gui::ogl_elementbuffer* buffer, size_t size,
+    ogl_element_type element, const int* data, bool dynamic = false);
 
 // check if buffer is initialized
-bool is_initialized(gui::elementbuffer* buffer);
+bool is_initialized(gui::ogl_elementbuffer* buffer);
 
 // clear buffer
-void clear_elementbuffer(gui::elementbuffer* buffer);
+void clear_elementbuffer(gui::ogl_elementbuffer* buffer);
 
 // set buffer
-void set_elementbuffer(gui::elementbuffer* buffer,
+void set_elementbuffer(gui::ogl_elementbuffer* buffer,
     const std::vector<int>& points, bool dynamic = false);
-void set_elementbuffer(gui::elementbuffer* buffer,
+void set_elementbuffer(gui::ogl_elementbuffer* buffer,
     const std::vector<vec2i>& lines, bool dynamic = false);
-void set_elementbuffer(gui::elementbuffer* buffer,
+void set_elementbuffer(gui::ogl_elementbuffer* buffer,
     const std::vector<vec3i>& triangles, bool dynamic = false);
 
 // Opengl program
-struct program {
+struct ogl_program {
   // program code
   std::string vertex_code;
   std::string fragment_code;
@@ -191,77 +191,77 @@ struct program {
 };
 
 // initialize program
-bool init_program(gui::program* program, const std::string& vertex,
+bool init_program(gui::ogl_program* program, const std::string& vertex,
     const std::string& fragment, std::string& error, std::string& errorlog);
-bool is_initialized(const gui::program* program);
+bool is_initialized(const gui::ogl_program* program);
 
 // clear program
-void clear_program(gui::program* program);
+void clear_program(gui::ogl_program* program);
 
 // bind program
-void bind_program(gui::program* program);
+void bind_program(gui::ogl_program* program);
 // unbind program
-void unbind_program(gui::program* program);
+void unbind_program(gui::ogl_program* program);
 // unbind program
 void unbind_program();
 
 // get uniform location
-int get_uniform_location(gui::program* program, const char* name);
+int get_uniform_location(gui::ogl_program* program, const char* name);
 
 // set uniforms
-void set_uniform(gui::program* program, int location, int value);
-void set_uniform(gui::program* program, int location, const vec2i& value);
-void set_uniform(gui::program* program, int location, const vec3i& value);
-void set_uniform(gui::program* program, int location, const vec4i& value);
-void set_uniform(gui::program* program, int location, float value);
-void set_uniform(gui::program* program, int location, const vec2f& value);
-void set_uniform(gui::program* program, int location, const vec3f& value);
-void set_uniform(gui::program* program, int location, const vec4f& value);
-void set_uniform(gui::program* program, int location, const mat2f& value);
-void set_uniform(gui::program* program, int location, const mat3f& value);
-void set_uniform(gui::program* program, int location, const mat4f& value);
-void set_uniform(gui::program* program, int location, const frame2f& value);
-void set_uniform(gui::program* program, int location, const frame3f& value);
+void set_uniform(gui::ogl_program* program, int location, int value);
+void set_uniform(gui::ogl_program* program, int location, const vec2i& value);
+void set_uniform(gui::ogl_program* program, int location, const vec3i& value);
+void set_uniform(gui::ogl_program* program, int location, const vec4i& value);
+void set_uniform(gui::ogl_program* program, int location, float value);
+void set_uniform(gui::ogl_program* program, int location, const vec2f& value);
+void set_uniform(gui::ogl_program* program, int location, const vec3f& value);
+void set_uniform(gui::ogl_program* program, int location, const vec4f& value);
+void set_uniform(gui::ogl_program* program, int location, const mat2f& value);
+void set_uniform(gui::ogl_program* program, int location, const mat3f& value);
+void set_uniform(gui::ogl_program* program, int location, const mat4f& value);
+void set_uniform(gui::ogl_program* program, int location, const frame2f& value);
+void set_uniform(gui::ogl_program* program, int location, const frame3f& value);
 template <typename T>
 inline void set_uniform(
-    gui::program* program, const char* name, const T& value) {
+    gui::ogl_program* program, const char* name, const T& value) {
   return set_uniform(program, get_uniform_location(program, name), value);
 }
 
 // set uniform texture
 void set_uniform(
-    gui::program* program, int location, const gui::texture* texture, int unit);
-void set_uniform(gui::program* program, const char* name,
-    const gui::texture* texture, int unit);
-void set_uniform(gui::program* program, int location, int location_on,
-    const gui::texture* texture, int unit);
-void set_uniform(gui::program* program, const char* name, const char* name_on,
-    const gui::texture* texture, int unit);
+    gui::ogl_program* program, int location, const gui::ogl_texture* texture, int unit);
+void set_uniform(gui::ogl_program* program, const char* name,
+    const gui::ogl_texture* texture, int unit);
+void set_uniform(gui::ogl_program* program, int location, int location_on,
+    const gui::ogl_texture* texture, int unit);
+void set_uniform(gui::ogl_program* program, const char* name, const char* name_on,
+    const gui::ogl_texture* texture, int unit);
 
 // get attribute location
-int get_attribute_location(gui::program* program, const char* name);
+int get_attribute_location(gui::ogl_program* program, const char* name);
 
 // set vertex attributes
 void set_attribute(
-    gui::program* program, int location, gui::arraybuffer* buffer);
+    gui::ogl_program* program, int location, gui::ogl_arraybuffer* buffer);
 void set_attribute(
-    gui::program* program, const char* name, gui::arraybuffer* buffer);
+    gui::ogl_program* program, const char* name, gui::ogl_arraybuffer* buffer);
 
 // set vertex attributes
-void set_attribute(gui::program* program, int location, float value);
-void set_attribute(gui::program* program, int location, const vec2f& value);
-void set_attribute(gui::program* program, int location, const vec3f& value);
-void set_attribute(gui::program* program, int location, const vec4f& value);
+void set_attribute(gui::ogl_program* program, int location, float value);
+void set_attribute(gui::ogl_program* program, int location, const vec2f& value);
+void set_attribute(gui::ogl_program* program, int location, const vec3f& value);
+void set_attribute(gui::ogl_program* program, int location, const vec4f& value);
 template <typename T>
 inline void set_attribute(
-    gui::program* program, const char* name, const T& value) {
+    gui::ogl_program* program, const char* name, const T& value) {
   return set_attribute(program, get_attribute_location(program, name), value);
 }
 
 // set vertex attributes
 template <typename T>
-inline void set_attribute(gui::program* program, int location,
-    gui::arraybuffer* buffer, const T& value) {
+inline void set_attribute(gui::ogl_program* program, int location,
+    gui::ogl_arraybuffer* buffer, const T& value) {
   if (buffer && is_initialized(buffer)) {
     return set_attribute(program, location, buffer);
   } else {
@@ -269,13 +269,13 @@ inline void set_attribute(gui::program* program, int location,
   }
 }
 template <typename T>
-inline void set_attribute(gui::program* program, const char* name,
-    gui::arraybuffer* buffer, const T& def) {
+inline void set_attribute(gui::ogl_program* program, const char* name,
+    gui::ogl_arraybuffer* buffer, const T& def) {
   set_attribute(program, get_attribute_location(program, name), buffer, def);
 }
 
 // draw elements
-void draw_elements(gui::elementbuffer* buffer);
+void draw_elements(gui::ogl_elementbuffer* buffer);
 
 }  // namespace yocto::gui
 
@@ -285,33 +285,33 @@ void draw_elements(gui::elementbuffer* buffer);
 namespace yocto::gui {
 
 // OpenGL image data
-struct image {
-  image() {}
-  image(const image&) = delete;
-  image& operator=(const image&) = delete;
-  ~image();
+struct ogl_image {
+  ogl_image() {}
+  ogl_image(const ogl_image&) = delete;
+  ogl_image& operator=(const ogl_image&) = delete;
+  ~ogl_image();
 
-  gui::program*       program   = new gui::program{};
-  gui::texture*       texture   = new gui::texture{};
-  gui::arraybuffer*   texcoords = new gui::arraybuffer{};
-  gui::elementbuffer* triangles = new gui::elementbuffer{};
+  gui::ogl_program*       program   = new gui::ogl_program{};
+  gui::ogl_texture*       texture   = new gui::ogl_texture{};
+  gui::ogl_arraybuffer*   texcoords = new gui::ogl_arraybuffer{};
+  gui::ogl_elementbuffer* triangles = new gui::ogl_elementbuffer{};
 };
 
 // create image drawing program
-bool init_image(gui::image* image);
-bool is_initialized(const gui::image* image);
+bool init_image(gui::ogl_image* image);
+bool is_initialized(const gui::ogl_image* image);
 
 // clear image
-void clear_image(gui::image* image);
+void clear_image(gui::ogl_image* image);
 
 // update image data
-void set_image(gui::image* image, const img::image<vec4f>& img,
+void set_image(gui::ogl_image* image, const img::image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_image(gui::image* image, const img::image<vec4b>& img,
+void set_image(gui::ogl_image* image, const img::image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
-struct image_params {
+struct ogl_image_params {
   vec2i window      = {512, 512};
   vec4i framebuffer = {0, 0, 512, 512};
   vec2f center      = {0, 0};
@@ -323,7 +323,7 @@ struct image_params {
 };
 
 // draw image
-void draw_image(gui::image* image, const image_params& params);
+void draw_image(gui::ogl_image* image, const ogl_image_params& params);
 
 }  // namespace yocto::gui
 
@@ -333,7 +333,7 @@ void draw_image(gui::image* image, const image_params& params);
 namespace yocto::gui {
 
 // Opengl caemra
-struct camera {
+struct ogl_camera {
   frame3f frame  = identity3x4f;
   float   lens   = 0.050;
   float   aspect = 1.000;
@@ -343,7 +343,7 @@ struct camera {
 };
 
 // Opengl material
-struct material {
+struct ogl_material {
   // material
   vec3f         emission      = {0, 0, 0};
   vec3f         color         = {0, 0, 0};
@@ -351,98 +351,98 @@ struct material {
   float         roughness     = 0;
   float         specular      = 0;
   float         opacity       = 1;
-  gui::texture* emission_tex  = nullptr;
-  gui::texture* color_tex     = nullptr;
-  gui::texture* metallic_tex  = nullptr;
-  gui::texture* roughness_tex = nullptr;
-  gui::texture* specular_tex  = nullptr;
-  gui::texture* opacity_tex   = nullptr;
-  gui::texture* normal_tex    = nullptr;
+  gui::ogl_texture* emission_tex  = nullptr;
+  gui::ogl_texture* color_tex     = nullptr;
+  gui::ogl_texture* metallic_tex  = nullptr;
+  gui::ogl_texture* roughness_tex = nullptr;
+  gui::ogl_texture* specular_tex  = nullptr;
+  gui::ogl_texture* opacity_tex   = nullptr;
+  gui::ogl_texture* normal_tex    = nullptr;
 };
 
 // Opengl shape
-struct shape {
+struct ogl_shape {
   // vertex buffers
-  gui::arraybuffer*   positions      = new gui::arraybuffer{};
-  gui::arraybuffer*   normals        = new gui::arraybuffer{};
-  gui::arraybuffer*   texcoords      = new gui::arraybuffer{};
-  gui::arraybuffer*   colors         = new gui::arraybuffer{};
-  gui::arraybuffer*   tangents       = new gui::arraybuffer{};
-  gui::elementbuffer* points         = new gui::elementbuffer{};
-  gui::elementbuffer* lines          = new gui::elementbuffer{};
-  gui::elementbuffer* triangles      = new gui::elementbuffer{};
-  gui::elementbuffer* quads          = new gui::elementbuffer{};
-  gui::elementbuffer* edges          = new gui::elementbuffer{};
+  gui::ogl_arraybuffer*   positions      = new gui::ogl_arraybuffer{};
+  gui::ogl_arraybuffer*   normals        = new gui::ogl_arraybuffer{};
+  gui::ogl_arraybuffer*   texcoords      = new gui::ogl_arraybuffer{};
+  gui::ogl_arraybuffer*   colors         = new gui::ogl_arraybuffer{};
+  gui::ogl_arraybuffer*   tangents       = new gui::ogl_arraybuffer{};
+  gui::ogl_elementbuffer* points         = new gui::ogl_elementbuffer{};
+  gui::ogl_elementbuffer* lines          = new gui::ogl_elementbuffer{};
+  gui::ogl_elementbuffer* triangles      = new gui::ogl_elementbuffer{};
+  gui::ogl_elementbuffer* quads          = new gui::ogl_elementbuffer{};
+  gui::ogl_elementbuffer* edges          = new gui::ogl_elementbuffer{};
   float               points_size    = 10;
   float               line_thickness = 4;
 
-  shape() {}
-  shape(const shape&) = delete;
-  shape& operator=(const shape&) = delete;
-  ~shape();
+  ogl_shape() {}
+  ogl_shape(const ogl_shape&) = delete;
+  ogl_shape& operator=(const ogl_shape&) = delete;
+  ~ogl_shape();
 };
 
 // Opengl instance
-struct instance {
+struct ogl_instance {
   std::vector<frame3f> frames = {};
 };
 
 // Opengl object
-struct object {
+struct ogl_object {
   // object properties
   frame3f        frame       = identity3x4f;
-  gui::shape*    shape       = nullptr;
-  gui::material* material    = nullptr;
-  gui::instance* instance    = nullptr;
+  gui::ogl_shape*    shape       = nullptr;
+  gui::ogl_material* material    = nullptr;
+  gui::ogl_instance* instance    = nullptr;
   bool           hidden      = false;
   bool           highlighted = false;
 };
 
 // Light type
-enum struct light_type { point = 0, directional };
+enum struct ogl_light_type { point = 0, directional };
 
 // Opengl light
-struct light {
+struct ogl_light {
   vec3f      position = {0, 0, 0};
   vec3f      emission = {0, 0, 0};
-  light_type type     = light_type::point;
+  ogl_light_type type     = ogl_light_type::point;
   bool       camera   = false;
 };
 
 // Opengl scene
-struct scene {
-  scene() {}
-  scene(const scene&) = delete;
-  scene& operator=(const scene&) = delete;
-  ~scene();
+struct ogl_scene {
+  ogl_scene() {}
+  ogl_scene(const ogl_scene&) = delete;
+  ogl_scene& operator=(const ogl_scene&) = delete;
+  ~ogl_scene();
 
   // scene objects
-  std::vector<gui::camera*>   cameras   = {};
-  std::vector<gui::object*>   objects   = {};
-  std::vector<gui::shape*>    shapes    = {};
-  std::vector<gui::material*> materials = {};
-  std::vector<gui::instance*> instances = {};
-  std::vector<gui::texture*>  textures  = {};
-  std::vector<gui::light*>    lights    = {};
+  std::vector<gui::ogl_camera*>   cameras   = {};
+  std::vector<gui::ogl_object*>   objects   = {};
+  std::vector<gui::ogl_shape*>    shapes    = {};
+  std::vector<gui::ogl_material*> materials = {};
+  std::vector<gui::ogl_instance*> instances = {};
+  std::vector<gui::ogl_texture*>  textures  = {};
+  std::vector<gui::ogl_light*>    lights    = {};
 
   // OpenGL state
-  gui::program* program = new gui::program{};
+  gui::ogl_program* program = new gui::ogl_program{};
 };
 
 // Shading type
-enum struct shading_type { lights, eyelight, camlights };
+enum struct ogl_shading_type { lights, eyelight, camlights };
 
 // Shading name
-const auto shading_names = std::vector<std::string>{
+const auto ogl_shading_names = std::vector<std::string>{
     "lights", "eyelight", "camlights"};
 
 // Draw options
-struct scene_params {
+struct ogl_scene_params {
   int          resolution       = 1280;
   bool         wireframe        = false;
   bool         edges            = false;
   float        edge_offset      = 0.01f;
-  shading_type shading          = shading_type::camlights;
+  ogl_shading_type shading          = ogl_shading_type::camlights;
   float        exposure         = 0;
   float        gamma            = 2.2f;
   vec3f        ambient          = {0, 0, 0};
@@ -454,77 +454,77 @@ struct scene_params {
 };
 
 // Initialize an OpenGL scene
-void init_scene(gui::scene* scene);
-bool is_initialized(const gui::scene* scene);
+void init_scene(gui::ogl_scene* scene);
+bool is_initialized(const gui::ogl_scene* scene);
 
 // Clear an OpenGL scene
-void clear_scene(gui::scene* scene);
+void clear_scene(gui::ogl_scene* scene);
 
 // add scene elements
-gui::camera*   add_camera(gui::scene* scene);
-gui::texture*  add_texture(gui::scene* scene);
-gui::material* add_material(gui::scene* scene);
-gui::shape*    add_shape(gui::scene* scene);
-gui::instance* add_instance(gui::scene* scene);
-gui::object*   add_object(gui::scene* scene);
-gui::light*    add_light(gui::scene* scene);
+gui::ogl_camera*   add_camera(gui::ogl_scene* scene);
+gui::ogl_texture*  add_texture(gui::ogl_scene* scene);
+gui::ogl_material* add_material(gui::ogl_scene* scene);
+gui::ogl_shape*    add_shape(gui::ogl_scene* scene);
+gui::ogl_instance* add_instance(gui::ogl_scene* scene);
+gui::ogl_object*   add_object(gui::ogl_scene* scene);
+gui::ogl_light*    add_light(gui::ogl_scene* scene);
 
 // camera properties
-void set_frame(gui::camera* camera, const frame3f& frame);
-void set_lens(gui::camera* camera, float lens, float aspect, float film);
-void set_nearfar(gui::camera* camera, float near, float far);
+void set_frame(gui::ogl_camera* camera, const frame3f& frame);
+void set_lens(gui::ogl_camera* camera, float lens, float aspect, float film);
+void set_nearfar(gui::ogl_camera* camera, float near, float far);
 
 // material properties
-void set_emission(gui::material* material, const vec3f& emission,
-    gui::texture* emission_tex = nullptr);
-void set_color(gui::material* material, const vec3f& color,
-    gui::texture* color_tex = nullptr);
-void set_metallic(gui::material* material, float metallic,
-    gui::texture* metallic_tex = nullptr);
-void set_roughness(gui::material* material, float roughness,
-    gui::texture* roughness_tex = nullptr);
-void set_specular(gui::material* material, float specular,
-    gui::texture* specular_tex = nullptr);
-void set_opacity(gui::material* material, float opacity,
-    gui::texture* opacity_tex = nullptr);
-void set_normalmap(gui::material* material, gui::texture* normal_tex);
+void set_emission(gui::ogl_material* material, const vec3f& emission,
+    gui::ogl_texture* emission_tex = nullptr);
+void set_color(gui::ogl_material* material, const vec3f& color,
+    gui::ogl_texture* color_tex = nullptr);
+void set_metallic(gui::ogl_material* material, float metallic,
+    gui::ogl_texture* metallic_tex = nullptr);
+void set_roughness(gui::ogl_material* material, float roughness,
+    gui::ogl_texture* roughness_tex = nullptr);
+void set_specular(gui::ogl_material* material, float specular,
+    gui::ogl_texture* specular_tex = nullptr);
+void set_opacity(gui::ogl_material* material, float opacity,
+    gui::ogl_texture* opacity_tex = nullptr);
+void set_normalmap(gui::ogl_material* material, gui::ogl_texture* normal_tex);
 
 // shape properties
-void set_points(gui::shape* shape, const std::vector<int>& points);
-void set_lines(gui::shape* shape, const std::vector<vec2i>& lines);
-void set_triangles(gui::shape* shape, const std::vector<vec3i>& triangles);
-void set_quads(gui::shape* shape, const std::vector<vec4i>& quads);
-void set_edges(gui::shape* shape, const std::vector<vec3i>& triangles,
+void set_points(gui::ogl_shape* shape, const std::vector<int>& points);
+void set_lines(gui::ogl_shape* shape, const std::vector<vec2i>& lines);
+void set_triangles(gui::ogl_shape* shape, const std::vector<vec3i>& triangles);
+void set_quads(gui::ogl_shape* shape, const std::vector<vec4i>& quads);
+void set_edges(gui::ogl_shape* shape, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads);
-void set_positions(gui::shape* shape, const std::vector<vec3f>& positions);
-void set_normals(gui::shape* shape, const std::vector<vec3f>& normals);
-void set_texcoords(gui::shape* shape, const std::vector<vec2f>& texcoords);
-void set_colors(gui::shape* shape, const std::vector<vec3f>& colors);
-void set_tangents(gui::shape* shape, const std::vector<vec4f>& tangents);
+void set_positions(gui::ogl_shape* shape, const std::vector<vec3f>& positions);
+void set_normals(gui::ogl_shape* shape, const std::vector<vec3f>& normals);
+void set_texcoords(gui::ogl_shape* shape, const std::vector<vec2f>& texcoords);
+void set_colors(gui::ogl_shape* shape, const std::vector<vec3f>& colors);
+void set_tangents(gui::ogl_shape* shape, const std::vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(gui::instance* instance, const std::vector<frame3f>& frames);
+void set_frames(gui::ogl_instance* instance, const std::vector<frame3f>& frames);
 
 // object properties
-void set_frame(gui::object* object, const frame3f& frame);
-void set_shape(gui::object* object, gui::shape* shape);
-void set_material(gui::object* object, gui::material* material);
-void set_instance(gui::object* object, gui::instance* instance);
-void set_hidden(gui::object* object, bool hidden);
-void set_highlighted(gui::object* object, bool highlighted);
+void set_frame(gui::ogl_object* object, const frame3f& frame);
+void set_shape(gui::ogl_object* object, gui::ogl_shape* shape);
+void set_material(gui::ogl_object* object, gui::ogl_material* material);
+void set_instance(gui::ogl_object* object, gui::ogl_instance* instance);
+void set_hidden(gui::ogl_object* object, bool hidden);
+void set_highlighted(gui::ogl_object* object, bool highlighted);
 
 // light properties
-void add_default_lights(gui::scene* scene);
-void set_light(gui::light* light, const vec3f& position, const vec3f& emission,
-    light_type type, bool camera);
+void add_default_lights(gui::ogl_scene* scene);
+void set_light(gui::ogl_light* light, const vec3f& position, const vec3f& emission,
+    ogl_light_type type, bool camera);
 
 // light size
-void clear_lights(gui::scene* scene);
-bool has_max_lights(gui::scene* scene);
+void clear_lights(gui::ogl_scene* scene);
+bool has_max_lights(gui::ogl_scene* scene);
 
 // Draw an OpenGL scene
-void draw_scene(gui::scene* scene, gui::camera* camera, const vec4i& viewport,
-    const scene_params& params);
+void draw_scene(gui::ogl_scene* scene, gui::ogl_camera* camera, const vec4i& viewport,
+    const ogl_scene_params& params);
 
 }  // namespace yocto::gui
 
