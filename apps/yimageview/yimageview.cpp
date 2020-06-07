@@ -31,7 +31,6 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 namespace gui = yocto::gui;
 
 #include <atomic>
@@ -308,7 +307,7 @@ int main(int argc, const char* argv[]) {
   auto filenames  = std::vector<std::string>{};
 
   // command line options
-  auto cli = cli::make_cli("yimgview", "view images");
+  auto cli = make_cli("yimgview", "view images");
   add_option(cli, "images", filenames, "image filenames", true);
   parse_cli(cli, argc, argv);
 

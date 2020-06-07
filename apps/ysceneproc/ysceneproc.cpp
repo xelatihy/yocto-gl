@@ -30,8 +30,8 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
+using namespace yocto;
 namespace sio = yocto::sceneio;
-namespace cli = yocto::commonio;
 
 #include <memory>
 using std::string;
@@ -58,7 +58,7 @@ void make_dir(const std::string& dirname) {
   try {
     sfs::create_directories(dirname);
   } catch (...) {
-    cli::print_fatal("cannot create directory " + dirname);
+    print_fatal("cannot create directory " + dirname);
   }
 }
 
@@ -71,7 +71,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "scene.json"s;
 
   // parse command line
-  auto cli = cli::make_cli("yscnproc", "Process scene");
+  auto cli = make_cli("yscnproc", "Process scene");
   add_option(cli, "--info,-i", info, "print scene info");
   add_option(cli, "--copyright,-c", copyright, "copyright string");
   add_option(cli, "--validate/--no-validate", validate, "Validate scene");
@@ -86,12 +86,12 @@ int main(int argc, const char* argv[]) {
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (ext == ".ypreset") {
-    cli::print_progress("make preset", 0, 1);
-    if (!make_preset(scene, basename, ioerror)) cli::print_fatal(ioerror);
-    cli::print_progress("make preset", 1, 1);
+    print_progress("make preset", 0, 1);
+    if (!make_preset(scene, basename, ioerror)) print_fatal(ioerror);
+    print_progress("make preset", 1, 1);
   } else {
-    if (!load_scene(filename, scene, ioerror, cli::print_progress))
-      cli::print_fatal(ioerror);
+    if (!load_scene(filename, scene, ioerror, print_progress))
+      print_fatal(ioerror);
   }
 
   // copyright
@@ -102,13 +102,13 @@ int main(int argc, const char* argv[]) {
   // validate scene
   if (validate) {
     for (auto& error : scene_validation(scene))
-      cli::print_info("error: " + error);
+      print_info("error: " + error);
   }
 
   // print info
   if (info) {
-    cli::print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) cli::print_info(stat);
+    print_info("scene stats ------------");
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
   // tesselate if needed
@@ -130,8 +130,8 @@ int main(int argc, const char* argv[]) {
     make_dir(sfs::path(output).parent_path() / "instances");
 
   // save scene
-  if (!save_scene(output, scene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!save_scene(output, scene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // done
   return 0;

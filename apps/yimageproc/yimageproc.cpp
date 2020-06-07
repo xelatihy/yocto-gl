@@ -31,7 +31,6 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 
 using namespace std::string_literals;
 
@@ -258,7 +257,7 @@ int main(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = cli::make_cli("yimgproc", "Transform images");
+  auto cli = make_cli("yimgproc", "Transform images");
   add_option(cli, "--tonemap/--no-tonemap", tonemap_on, "Tonemap image");
   add_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
   add_option(
@@ -292,16 +291,16 @@ int main(int argc, const char* argv[]) {
   auto ioerror  = ""s;
   auto img      = img::image<vec4f>{};
   if (ext == ".ypreset") {
-    if (!make_image_preset(basename, img, ioerror)) cli::print_fatal(ioerror);
+    if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
   } else {
-    if (!load_image(filename, img, ioerror)) cli::print_fatal(ioerror);
+    if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
   }
 
   // set alpha
   if (alpha_filename != "") {
     auto alpha = img::image<vec4f>{};
-    if (!load_image(alpha_filename, alpha, ioerror)) cli::print_fatal(ioerror);
-    if (img.size() != alpha.size()) cli::print_fatal("bad image size");
+    if (!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
@@ -310,8 +309,8 @@ int main(int argc, const char* argv[]) {
   if (coloralpha_filename != "") {
     auto alpha = img::image<vec4f>{};
     if (!load_image(coloralpha_filename, alpha, ioerror))
-      cli::print_fatal(ioerror);
-    if (img.size() != alpha.size()) cli::print_fatal("bad image size");
+      print_fatal(ioerror);
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -325,9 +324,9 @@ int main(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = img::image<vec4f>{};
-    if (!load_image(diff_filename, diff, ioerror)) cli::print_fatal(ioerror);
+    if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
     if (img.size() != diff.size())
-      cli::print_fatal("image sizes are different");
+      print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -348,13 +347,13 @@ int main(int argc, const char* argv[]) {
 
   // save
   if (!save_image(output, logo ? add_logo(img) : img, ioerror))
-    cli::print_fatal(ioerror);
+    print_fatal(ioerror);
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
       if (max(xyz(c)) > diff_threshold)
-        cli::print_fatal("image content differs");
+        print_fatal("image content differs");
     }
   }
 

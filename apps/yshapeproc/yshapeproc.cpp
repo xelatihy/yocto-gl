@@ -31,7 +31,6 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 namespace shp = yocto::shape;
-namespace cli = yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
@@ -293,7 +292,7 @@ int main(int argc, const char* argv[]) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = cli::make_cli("ymshproc", "Applies operations on a triangle mesh");
+  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_option(cli, "--facevarying", facevarying, "Preserve facevarying");
   add_option(cli, "--positiononly", positiononly, "Remove all but positions");
   add_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
@@ -338,18 +337,18 @@ int main(int argc, const char* argv[]) {
 
   // load mesh
   auto ioerror = ""s;
-  cli::print_progress("load shape", 0, 1);
+  print_progress("load shape", 0, 1);
   if (!facevarying) {
     auto ext      = sfs::path(filename).extension().string();
     auto basename = sfs::path(filename).stem().string();
     if (ext == ".ypreset") {
       if (!make_shape_preset(points, lines, triangles, quads, positions,
               normals, texcoords, colors, radius, basename, ioerror))
-        cli::print_fatal(ioerror);
+        print_fatal(ioerror);
     } else {
       if (!shp::load_shape(filename, points, lines, triangles, quads, positions,
               normals, texcoords, colors, radius, ioerror))
-        cli::print_fatal(ioerror);
+        print_fatal(ioerror);
     }
   } else {
     auto ext      = sfs::path(filename).extension().string();
@@ -357,14 +356,14 @@ int main(int argc, const char* argv[]) {
     if (ext == ".ypreset") {
       if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
               normals, texcoords, basename, ioerror))
-        cli::print_fatal(ioerror);
+        print_fatal(ioerror);
     } else {
       if (!shp::load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
               positions, normals, texcoords, ioerror))
-        cli::print_fatal(ioerror);
+        print_fatal(ioerror);
     }
   }
-  cli::print_progress("load shape", 1, 1);
+  print_progress("load shape", 1, 1);
 
   // remove data
   if (positiononly) {
@@ -389,17 +388,17 @@ int main(int argc, const char* argv[]) {
 
   // print info
   if (info) {
-    cli::print_info("shape stats ------------");
+    print_info("shape stats ------------");
     auto stats = shp::shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) cli::print_info(stat);
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    cli::print_progress("transform shape", 0, 1);
+    print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -407,12 +406,12 @@ int main(int argc, const char* argv[]) {
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    cli::print_progress("transform shape", 1, 1);
+    print_progress("transform shape", 1, 1);
   }
 
   // compute normals
   if (smooth) {
-    cli::print_progress("smooth shape", 0, 1);
+    print_progress("smooth shape", 0, 1);
     if (!points.empty()) {
       normals = std::vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
@@ -425,20 +424,20 @@ int main(int argc, const char* argv[]) {
       normals = shp::compute_normals(quadspos, positions);
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
-    cli::print_progress("smooth shape", 1, 1);
+    print_progress("smooth shape", 1, 1);
   }
 
   // remove normals
   if (faceted) {
-    cli::print_progress("facet shape", 0, 1);
+    print_progress("facet shape", 0, 1);
     normals   = {};
     quadsnorm = {};
-    cli::print_progress("facet shape", 1, 1);
+    print_progress("facet shape", 1, 1);
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    cli::print_progress("compute geodesic", 0, 1);
+    print_progress("compute geodesic", 0, 1);
     auto adjacencies = shp::face_adjacencies(triangles);
     auto solver  = shp::make_geodesic_solver(triangles, adjacencies, positions);
     auto sources = std::vector<int>();
@@ -463,11 +462,11 @@ int main(int argc, const char* argv[]) {
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }
-    cli::print_progress("compute geodesic", 1, 1);
+    print_progress("compute geodesic", 1, 1);
   }
 
   if (p0 != -1) {
-    cli::print_progress("cut mesh", 0, 1);
+    print_progress("cut mesh", 0, 1);
     auto tags        = std::vector<int>(triangles.size(), 0);
     auto adjacencies = shp::face_adjacencies(triangles);
     auto solver = shp::make_geodesic_solver(triangles, adjacencies, positions);
@@ -511,29 +510,29 @@ int main(int argc, const char* argv[]) {
     texcoords = {};
     colors    = {};
     radius    = {};
-    cli::print_progress("cut mesh", 1, 1);
+    print_progress("cut mesh", 1, 1);
   }
 
   if (info) {
-    cli::print_info("shape stats ------------");
+    print_info("shape stats ------------");
     auto stats = shp::shape_stats(points, lines, triangles, quads, quadspos,
         quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
         radius);
-    for (auto& stat : stats) cli::print_info(stat);
+    for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
-  cli::print_progress("save shape", 0, 1);
+  print_progress("save shape", 0, 1);
   if (!quadspos.empty()) {
     if (!shp::save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
             positions, normals, texcoords, ioerror))
-      cli::print_fatal(ioerror);
+      print_fatal(ioerror);
   } else {
     if (!shp::save_shape(output, points, lines, triangles, quads, positions,
             normals, texcoords, colors, radius, ioerror))
-      cli::print_fatal(ioerror);
+      print_fatal(ioerror);
   }
-  cli::print_progress("save shape", 1, 1);
+  print_progress("save shape", 1, 1);
 
   // done
   return 0;

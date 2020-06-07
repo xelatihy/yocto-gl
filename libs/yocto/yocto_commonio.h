@@ -99,7 +99,7 @@
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Print a message to the console
 inline void print_info(const std::string& msg);
@@ -124,12 +124,12 @@ inline std::string format_duration(int64_t duration);
 // Format a large integer number in human readable form
 inline std::string format_num(uint64_t num);
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Initialize a command line parser.
 struct cli_state;
@@ -170,12 +170,12 @@ inline void add_option(cli_state& cli, const std::string& name,
     std::vector<std::string>& value, const std::string& usage,
     bool req = false);
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // These utilities are here only for backward compatibility. They should be
 // considered deprecated.
@@ -204,12 +204,12 @@ inline std::string replace_extension(
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const std::string& filename);
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Load/save a text file
 inline bool load_text(
@@ -226,7 +226,7 @@ inline bool load_binary(
 inline bool save_binary(const std::string& filename,
     const std::vector<byte>& data, std::string& error);
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 //
@@ -239,19 +239,19 @@ inline bool save_binary(const std::string& filename,
 // -----------------------------------------------------------------------------
 // FORMATTING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // This is a very crude replacement for `std::format()` that will be used when
 // available on all platforms.
 template <typename... Args>
 inline std::string format(const std::string& fmt, Args&&... args);
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Print a message to the console
 inline void print_info(const std::string& msg) { printf("%s\n", msg.c_str()); }
@@ -332,12 +332,12 @@ inline void print_progress(const std::string& message, int current, int total) {
   fflush(stdout);
 }
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Utility to normalize a path
 inline std::string normalize_path(const std::string& filename_) {
@@ -414,12 +414,12 @@ inline bool exists_file(const std::string& filename) {
   }
 }
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Load a text file
 inline bool load_text(
@@ -495,12 +495,12 @@ inline bool save_binary(const std::string& filename,
   return true;
 }
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMMAND-LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::commonio {
+namespace yocto {
 
 // Command line parser data. All data should be considered private.
 enum struct cli_type {
@@ -813,6 +813,6 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
   }
 }
 
-}  // namespace yocto::commonio
+}  // namespace yocto
 
 #endif

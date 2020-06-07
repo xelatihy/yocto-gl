@@ -34,7 +34,6 @@
 using namespace yocto;
 namespace sio = yocto::sceneio;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
 namespace gui = yocto::gui;
 
@@ -594,7 +593,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
       }
       continue_line(win);
       if (draw_button(win, "print stats")) {
-        for (auto stat : scene_stats(app->ioscene)) cli::print_info(stat);
+        for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
@@ -814,7 +813,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("yscnitrace", "progressive path tracing");
+  auto cli = make_cli("yscnitrace", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");

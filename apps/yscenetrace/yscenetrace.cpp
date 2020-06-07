@@ -34,7 +34,6 @@
 using namespace yocto;
 namespace sio = yocto::sceneio;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
 
 #include <map>
@@ -179,7 +178,7 @@ int main(int argc, const char* argv[]) {
   auto filename    = "scene.json"s;
 
   // parse command line
-  auto cli = cli::make_cli("yscntrace", "Offline path tracing");
+  auto cli = make_cli("yscntrace", "Offline path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
@@ -203,8 +202,8 @@ int main(int argc, const char* argv[]) {
   auto ioscene_guard = std::make_unique<sio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(filename, ioscene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!load_scene(filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // add sky
   if (add_skyenv) add_sky(ioscene);
@@ -216,25 +215,25 @@ int main(int argc, const char* argv[]) {
   auto scene_guard = std::make_unique<trc::scene>();
   auto scene       = scene_guard.get();
   auto camera      = (trc::camera*)nullptr;
-  init_scene(scene, ioscene, camera, iocamera, cli::print_progress);
+  init_scene(scene, ioscene, camera, iocamera, print_progress);
 
   // cleanup
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(scene, params, cli::print_progress);
+  init_bvh(scene, params, print_progress);
 
   // init renderer
-  init_lights(scene, cli::print_progress);
+  init_lights(scene, print_progress);
 
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
-    cli::print_info("no lights presents, switching to eyelight shader");
+    print_info("no lights presents, switching to eyelight shader");
     params.sampler = trc::sampler_type::eyelight;
   }
 
   // render
-  auto render = trc::trace_image(scene, camera, params, cli::print_progress,
+  auto render = trc::trace_image(scene, camera, params, print_progress,
       [save_batch, imfilename](
           const img::image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
@@ -243,15 +242,15 @@ int main(int argc, const char* argv[]) {
         auto outfilename =
             sfs::path(imfilename).replace_extension(ext).string();
         auto ioerror = ""s;
-        cli::print_progress("save image", sample, samples);
+        print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror))
-          cli::print_fatal(ioerror);
+          print_fatal(ioerror);
       });
 
   // save image
-  cli::print_progress("save image", 0, 1);
-  if (!save_image(imfilename, render, ioerror)) cli::print_fatal(ioerror);
-  cli::print_progress("save image", 1, 1);
+  print_progress("save image", 0, 1);
+  if (!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
+  print_progress("save image", 1, 1);
 
   // done
   return 0;

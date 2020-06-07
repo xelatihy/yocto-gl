@@ -33,7 +33,6 @@
 using namespace yocto;
 namespace shp = yocto::shape;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
@@ -55,7 +54,7 @@ int main(int argc, const char* argv[]) {
   auto filename  = "heightfield.png"s;
 
   // parse command line
-  auto cli = cli::make_cli(
+  auto cli = make_cli(
       "yheightfieldproc", "Makes a mesh from a heightfield");
   add_option(cli, "--height,-h", height, "Height scale");
   add_option(cli, "--smooth", smooth, "Compute smooth normals");
@@ -85,17 +84,17 @@ int main(int argc, const char* argv[]) {
 
   // load mesh
   auto ioerror = ""s;
-  cli::print_progress("load image", 0, 1);
+  print_progress("load image", 0, 1);
   if (img::is_hdr_filename(filename)) {
     if (!img::load_image(filename, heightfield, ioerror))
-      cli::print_fatal(ioerror);
+      print_fatal(ioerror);
   } else {
     auto heightfield16 = img::image<ushort>{};
     if (!img::load_image(filename, heightfield16, ioerror))
-      cli::print_fatal(ioerror);
+      print_fatal(ioerror);
     heightfield = img::ushort_to_float(heightfield16);
   }
-  cli::print_progress("load shape", 1, 1);
+  print_progress("load shape", 1, 1);
 
   // adjust height
   if (height != 1) {
@@ -109,16 +108,16 @@ int main(int argc, const char* argv[]) {
 
   // print info
   if (info) {
-    cli::print_info("shape stats ------------");
+    print_info("shape stats ------------");
     auto stats = shp::shape_stats(
         {}, {}, {}, quads, {}, {}, {}, positions, normals, texcoords, {}, {});
-    for (auto& stat : stats) cli::print_info(stat);
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    cli::print_progress("transform shape", 0, 1);
+    print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -126,15 +125,15 @@ int main(int argc, const char* argv[]) {
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    cli::print_progress("transform shape", 1, 1);
+    print_progress("transform shape", 1, 1);
   }
 
   // save mesh
-  cli::print_progress("save shape", 0, 1);
+  print_progress("save shape", 0, 1);
   if (!shp::save_shape(output, {}, {}, {}, quads, positions, normals, texcoords,
           {}, {}, ioerror))
-    cli::print_fatal(ioerror);
-  cli::print_progress("save shape", 1, 1);
+    print_fatal(ioerror);
+  print_progress("save shape", 1, 1);
 
   // done
   return 0;

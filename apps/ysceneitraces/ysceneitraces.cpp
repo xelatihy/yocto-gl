@@ -34,7 +34,6 @@
 using namespace yocto;
 namespace sio = yocto::sceneio;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 namespace trc = yocto::trace;
 namespace gui = yocto::gui;
 
@@ -259,7 +258,7 @@ int main(int argc, const char* argv[]) {
   auto add_skyenv  = false;
 
   // parse command line
-  auto cli = cli::make_cli("yscnitraces", "progressive path tracing");
+  auto cli = make_cli("yscnitraces", "progressive path tracing");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(
       cli, "--resolution,-r", app->params.resolution, "Image resolution.");
@@ -285,8 +284,8 @@ int main(int argc, const char* argv[]) {
   auto ioscene_guard = std::make_unique<sio::model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
-  if (!load_scene(app->filename, ioscene, ioerror, cli::print_progress))
-    cli::print_fatal(ioerror);
+  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
+    print_fatal(ioerror);
 
   // add sky
   if (add_skyenv) add_sky(ioscene);
@@ -295,7 +294,7 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // conversion
-  init_scene(app->scene, ioscene, app->camera, iocamera, cli::print_progress);
+  init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 
   // camera names
   init_camera_names(app->camera_names, ioscene->cameras);
@@ -304,14 +303,14 @@ int main(int argc, const char* argv[]) {
   if (ioscene_guard) ioscene_guard.reset();
 
   // build bvh
-  init_bvh(app->scene, app->params, cli::print_progress);
+  init_bvh(app->scene, app->params, print_progress);
 
   // init renderer
-  init_lights(app->scene, cli::print_progress);
+  init_lights(app->scene, print_progress);
 
   // fix renderer type if no lights
   if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-    cli::print_info("no lights presents, switching to eyelight shader");
+    print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trc::sampler_type::eyelight;
   }
 

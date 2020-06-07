@@ -31,7 +31,6 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
 namespace img = yocto::image;
-namespace cli = yocto::commonio;
 namespace gui = yocto::gui;
 
 #include <future>
@@ -77,7 +76,7 @@ int main(int argc, const char* argv[]) {
   auto filenames = std::vector<std::string>{};
 
   // command line options
-  auto cli = cli::make_cli("yimgviews", "view images");
+  auto cli = make_cli("yimgviews", "view images");
   add_option(cli, "--output,-o", app->outname, "image output");
   add_option(cli, "image", app->filename, "image filename", true);
   parse_cli(cli, argc, argv);
@@ -85,7 +84,7 @@ int main(int argc, const char* argv[]) {
   // load image
   auto ioerror = ""s;
   if (!load_image(app->filename, app->source, ioerror)) {
-    cli::print_fatal(ioerror);
+    print_fatal(ioerror);
     return 1;
   }
 

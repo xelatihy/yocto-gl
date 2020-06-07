@@ -33,7 +33,6 @@
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
 namespace sio = yocto::sceneio;
-namespace cli = yocto::commonio;
 namespace gui = yocto::gui;
 
 #include <atomic>
@@ -535,7 +534,7 @@ void draw_widgets(gui::window* win, app_states* apps, const gui::input& input) {
     }
     continue_line(win);
     if (draw_button(win, "print stats")) {
-      for (auto stat : scene_stats(app->ioscene)) cli::print_info(stat);
+      for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
     end_header(win);
   }
@@ -713,7 +712,7 @@ int main(int argc, const char* argv[]) {
   auto camera_name = ""s;
 
   // parse command line
-  auto cli = cli::make_cli("ysceneview", "views scenes inteactively");
+  auto cli = make_cli("ysceneview", "views scenes inteactively");
   add_option(cli, "--camera", camera_name, "Camera name.");
   add_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
       "Image resolution.");
