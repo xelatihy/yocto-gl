@@ -59,6 +59,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::function;
 
 }  // namespace yocto
 
@@ -261,7 +262,7 @@ namespace yocto {
 
 // Progress callback called when loading.
 using progress_callback =
-    std::function<void(const string& message, int current, int total)>;
+    function<void(const string& message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.

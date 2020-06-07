@@ -34,11 +34,20 @@
 #include <future>
 #include <memory>
 #include <mutex>
-using namespace std::string_literals;
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using namespace std::string_literals;
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION

@@ -84,6 +84,9 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::function;
+using std::atomic;
+using std::future;
 
 }  // namespace yocto
 
@@ -410,10 +413,10 @@ const auto bvh_names              = vector<string>{
 
 // Progress report callback
 using progress_callback =
-    std::function<void(const string& message, int current, int total)>;
+    function<void(const string& message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback =
-    std::function<void(const image<vec4f>& render, int current, int total)>;
+    function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
 void init_lights(trace_scene* scene, progress_callback progress_cb = {});
@@ -454,7 +457,7 @@ struct trace_state {
 };
 
 // [experimental] Callback used to report partially computed image
-using async_callback = std::function<void(
+using async_callback = function<void(
     const image<vec4f>& render, int current, int total, const vec2i& ij)>;
 
 // [experimental] Asynchronous interface

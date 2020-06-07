@@ -52,6 +52,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::function;
 
 }  // namespace yocto
 
@@ -556,36 +557,36 @@ struct gui_input {
 };
 
 // Init callback called after the window has opened
-using init_callback = std::function<void(gui_window*, const gui_input& input)>;
+using init_callback = function<void(gui_window*, const gui_input& input)>;
 // Clear callback called after the window is cloased
-using clear_callback = std::function<void(gui_window*, const gui_input& input)>;
+using clear_callback = function<void(gui_window*, const gui_input& input)>;
 // Draw callback called every frame and when resizing
-using draw_callback = std::function<void(gui_window*, const gui_input& input)>;
+using draw_callback = function<void(gui_window*, const gui_input& input)>;
 // Draw callback for drawing widgets
 using widgets_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+    function<void(gui_window*, const gui_input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_callback = std::function<void(
+using drop_callback = function<void(
     gui_window*, const vector<string>&, const gui_input& input)>;
 // Key callback that returns key codes, pressed/released flag and modifier keys
-using key_callback = std::function<void(
+using key_callback = function<void(
     gui_window*, int key, bool pressed, const gui_input& input)>;
 // Char callback that returns ASCII key
 using char_callback =
-    std::function<void(gui_window*, unsigned int key, const gui_input& input)>;
+    function<void(gui_window*, unsigned int key, const gui_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_callback = std::function<void(
+using click_callback = function<void(
     gui_window*, bool left, bool pressed, const gui_input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_callback =
-    std::function<void(gui_window*, float amount, const gui_input& input)>;
+    function<void(gui_window*, float amount, const gui_input& input)>;
 // Update functions called every frame
 using uiupdate_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+    function<void(gui_window*, const gui_input& input)>;
 // Update functions called every frame
 using update_callback =
-    std::function<void(gui_window*, const gui_input& input)>;
+    function<void(gui_window*, const gui_input& input)>;
 
 // User interface callcaks
 struct gui_callbacks {
@@ -727,7 +728,7 @@ bool draw_combobox(
 bool draw_combobox(gui_window* win, const char* lbl, string& value,
     const vector<string>& labels);
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
-    const std::function<string(int)>& labels, bool include_null = false);
+    const function<string(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_combobox(gui_window* win, const char* lbl, T*& value,

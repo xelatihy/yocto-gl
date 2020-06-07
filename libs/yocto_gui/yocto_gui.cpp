@@ -36,7 +36,6 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-using namespace std::string_literals;
 
 #include "ext/glad/glad.h"
 
@@ -2262,7 +2261,7 @@ bool draw_combobox(gui_window* win, const char* lbl, string& value,
 }
 
 bool draw_combobox(gui_window* win, const char* lbl, int& idx, int num,
-    const std::function<string(int)>& labels, bool include_null) {
+    const function<string(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx).c_str() : "<none>"))
     return false;
