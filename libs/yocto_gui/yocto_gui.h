@@ -45,19 +45,9 @@
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
-// ALIASES
-// -----------------------------------------------------------------------------
-namespace yocto::gui {
-
-// Namespace aliases
-namespace gui = yocto::gui;
-
-}  // namespace yocto::gui
-
-// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // Commands to setup the opengl context and issue gpu operations.
 bool init_ogl(std::string& error);
@@ -276,12 +266,12 @@ inline void set_attribute(ogl_program* program, const char* name,
 // draw elements
 void draw_elements(ogl_elementbuffer* buffer);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // OpenGL image data
 struct ogl_image {
@@ -324,12 +314,12 @@ struct ogl_image_params {
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // Opengl caemra
 struct ogl_camera {
@@ -526,12 +516,12 @@ bool has_max_lights(ogl_scene* scene);
 void draw_scene(ogl_scene* scene, ogl_camera* camera,
     const vec4i& viewport, const ogl_scene_params& params);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI APPLICATION
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // Forward declaration of OpenGL window
 struct gui_window;
@@ -611,12 +601,12 @@ void run_ui(const vec2i& size, const std::string& title,
     const gui_callbacks& callbaks, int widgets_width = 320,
     bool widgets_left = true);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // OpenGL window wrapper
 struct gui_window {
@@ -664,12 +654,12 @@ void set_update_callback(gui_window* win, update_callback cb);
 void run_ui(gui_window* win);
 void set_close(gui_window* win, bool close);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
@@ -793,6 +783,6 @@ void log_error(gui_window* win, const std::string& msg);
 void clear_log(gui_window* win);
 void draw_log(gui_window* win);
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 #endif

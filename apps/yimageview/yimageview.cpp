@@ -30,7 +30,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace gui = yocto::gui;
 
 #include <atomic>
 #include <deque>
@@ -67,8 +66,8 @@ struct app_state {
   bool                   colorgrade = false;
 
   // viewing properties
-  gui::ogl_image*       glimage   = new gui::ogl_image{};
-  gui::ogl_image_params glparams  = {};
+  ogl_image*       glimage   = new ogl_image{};
+  ogl_image_params glparams  = {};
   bool              glupdated = true;
 
   // loading status
@@ -159,7 +158,7 @@ void load_image_async(app_states* apps, const std::string& filename) {
   if (!apps->selected) apps->selected = apps->states.front();
 }
 
-void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
+void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
@@ -262,7 +261,7 @@ void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& 
   }
 }
 
-void draw(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
+void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -277,7 +276,7 @@ void draw(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
   draw_image(app->glimage, app->glparams);
 }
 
-void update(gui::gui_window* win, app_states* apps) {
+void update(gui_window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -314,20 +313,20 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // callbacks
-  auto callbacks     = gui::gui_callbacks{};
-  callbacks.clear_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
     for (auto app : apps->states) clear_image(app->glimage);
   };
-  callbacks.update_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
     update(win, apps);
   };
-  callbacks.draw_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
     draw(win, apps, input);
   };
-  callbacks.widgets_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.uiupdate_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
     // handle mouse
@@ -339,9 +338,9 @@ int main(int argc, const char* argv[]) {
           2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
     }
   };
-  callbacks.drop_cb = [apps](gui::gui_window*                 win,
+  callbacks.drop_cb = [apps](gui_window*                 win,
                           const std::vector<std::string>& paths,
-                          const gui::gui_input&               input) {
+                          const gui_input&               input) {
     for (auto path : paths) load_image_async(apps, path);
   };
 

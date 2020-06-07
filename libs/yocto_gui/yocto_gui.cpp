@@ -61,7 +61,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL HELPERS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 bool init_ogl(std::string& error) {
   if (!gladLoadGL()) {
@@ -486,12 +486,12 @@ void unbind_program(ogl_program* program) { glUseProgram(0); }
 // unbind program
 void unbind_program() { glUseProgram(0); }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
@@ -531,12 +531,12 @@ void update_glbuffer(
   assert_ogl_error();
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 auto glimage_vertex =
     R"(
@@ -825,12 +825,12 @@ void draw_elements(ogl_elementbuffer* buffer) {
       elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -1512,12 +1512,12 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   if (params.wireframe) set_ogl_wireframe(false);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI APPLICATION
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 // run the user interface with the give callbacks
 void run_ui(const vec2i& size, const std::string& title,
@@ -1546,12 +1546,12 @@ void run_ui(const vec2i& size, const std::string& title,
   clear_window(win);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // UI WINDOW
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 static void draw_window(gui_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
@@ -1803,12 +1803,12 @@ void set_close(gui_window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
-namespace yocto::gui {
+namespace yocto {
 
 void init_glwidgets(gui_window* win, int width, bool left) {
   // init widgets
@@ -2422,4 +2422,4 @@ void draw_log(gui_window* win) {
   _log_mutex.unlock();
 }
 
-}  // namespace yocto::gui
+}  // namespace yocto

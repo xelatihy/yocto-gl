@@ -32,7 +32,6 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace gui = yocto::gui;
 
 #include <atomic>
 #include <deque>
@@ -69,8 +68,8 @@ struct app_state {
   float             exposure = 0;
 
   // view scene
-  gui::ogl_image*       glimage  = new gui::ogl_image{};
-  gui::ogl_image_params glparams = {};
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
 
   // editing
   scene_camera*      selected_camera      = nullptr;
@@ -321,7 +320,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
+    gui_window* win, scene_model* ioscene, scene_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -347,7 +346,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
+    gui_window* win, scene_model* ioscene, scene_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
@@ -368,7 +367,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
+    gui_window* win, scene_model* ioscene, scene_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -415,7 +414,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui::gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
+bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -433,7 +432,7 @@ bool draw_widgets(gui::gui_window* win, scene_model* ioscene, scene_shape* iosha
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_instance* ioinstance) {
+    gui_window* win, scene_model* ioscene, scene_instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -442,7 +441,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_object* ioobject) {
+    gui_window* win, scene_model* ioscene, scene_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -459,7 +458,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_subdiv* iosubdiv) {
+    gui_window* win, scene_model* ioscene, scene_subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -474,7 +473,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
+    gui_window* win, scene_model* ioscene, scene_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -498,7 +497,7 @@ T1* get_element(T* ioelement, const std::vector<T*>& ioelements,
   throw std::runtime_error("element not found");
 }
 
-void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
+void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   static std::string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.yaml;*.obj;*.pbrt")) {
@@ -765,7 +764,7 @@ void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& 
   }
 }
 
-void draw(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
+void draw(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected || !apps->selected->ok) return;
   auto app                  = apps->selected;
   app->glparams.window      = input.window_size;
@@ -779,7 +778,7 @@ void draw(gui::gui_window* win, app_states* apps, const gui::gui_input& input) {
   if (app->render_counter > 10) app->render_counter = 0;
 }
 
-void update(gui::gui_window* win, app_states* apps) {
+void update(gui_window* win, app_states* apps) {
   auto is_ready = [](const std::future<void>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
@@ -836,25 +835,25 @@ int main(int argc, const char* argv[]) {
     load_scene_async(apps, filename, camera_name, add_skyenv);
 
   // callbacks
-  auto callbacks     = gui::gui_callbacks{};
-  callbacks.clear_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [apps](gui_window* win, const gui_input& input) {
     for (auto app : apps->states) clear_image(app->glimage);
   };
-  callbacks.draw_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.draw_cb = [apps](gui_window* win, const gui_input& input) {
     draw(win, apps, input);
   };
-  callbacks.widgets_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.widgets_cb = [apps](gui_window* win, const gui_input& input) {
     draw_widgets(win, apps, input);
   };
-  callbacks.drop_cb = [apps](gui::gui_window*                 win,
+  callbacks.drop_cb = [apps](gui_window*                 win,
                           const std::vector<std::string>& paths,
-                          const gui::gui_input&               input) {
+                          const gui_input&               input) {
     for (auto& path : paths) load_scene_async(apps, path);
   };
-  callbacks.update_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.update_cb = [apps](gui_window* win, const gui_input& input) {
     update(win, apps);
   };
-  callbacks.uiupdate_cb = [apps](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.uiupdate_cb = [apps](gui_window* win, const gui_input& input) {
     if (!apps->selected) return;
     auto app = apps->selected;
 

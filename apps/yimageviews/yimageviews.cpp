@@ -30,7 +30,6 @@
 #include <yocto/yocto_image.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace gui = yocto::gui;
 
 #include <future>
 using namespace std::string_literals;
@@ -51,8 +50,8 @@ struct app_state {
   bool                   colorgrade = false;
 
   // viewing properties
-  gui::ogl_image*       glimage  = new gui::ogl_image{};
-  gui::ogl_image_params glparams = {};
+  ogl_image*       glimage  = new ogl_image{};
+  ogl_image_params glparams = {};
 
   ~app_state() {
     if (glimage) delete glimage;
@@ -91,11 +90,11 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // callbacks
-  auto callbacks     = gui::gui_callbacks{};
-  callbacks.clear_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
+  auto callbacks     = gui_callbacks{};
+  callbacks.clear_cb = [app](gui_window* win, const gui_input& input) {
     clear_image(app->glimage);
   };
-  callbacks.draw_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     if (!is_initialized(app->glimage)) {
@@ -106,7 +105,7 @@ int main(int argc, const char* argv[]) {
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
   };
-  callbacks.widgets_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
     auto edited = 0;
     if (begin_header(win, "tonemap")) {
       edited += draw_slider(win, "exposure", app->exposure, -5, 5);
@@ -157,7 +156,7 @@ int main(int argc, const char* argv[]) {
       set_image(app->glimage, app->display, false, false);
     }
   };
-  callbacks.uiupdate_cb = [app](gui::gui_window* win, const gui::gui_input& input) {
+  callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {
     // handle mouse
     if (input.mouse_left && !input.widgets_active) {
       app->glparams.center += input.mouse_pos - input.mouse_last;
