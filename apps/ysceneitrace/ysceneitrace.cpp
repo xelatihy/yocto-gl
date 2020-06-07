@@ -45,7 +45,7 @@ using namespace std::string_literals;
 namespace sfs = ghc::filesystem;
 
 namespace yocto::sceneio {
-void print_obj_camera(sio::camera* camera);
+void print_obj_camera(sio::scene_camera* camera);
 };  // namespace yocto::sceneio
 
 // Application scene
@@ -57,9 +57,9 @@ struct app_state {
   std::string name      = "";
 
   // scene
-  sio::model*  ioscene  = new sio::model{};
+  sio::scene_model*  ioscene  = new sio::scene_model{};
   trc::scene*  scene    = new trc::scene{};
-  sio::camera* iocamera = nullptr;
+  sio::scene_camera* iocamera = nullptr;
   trc::camera* camera   = nullptr;
 
   // options
@@ -75,14 +75,14 @@ struct app_state {
   gui::ogl_image_params glparams = {};
 
   // editing
-  sio::camera*      selected_camera      = nullptr;
-  sio::object*      selected_object      = nullptr;
-  sio::instance*    selected_instance    = nullptr;
-  sio::shape*       selected_shape       = nullptr;
-  sio::subdiv*      selected_subdiv      = nullptr;
-  sio::material*    selected_material    = nullptr;
-  sio::environment* selected_environment = nullptr;
-  sio::texture*     selected_texture     = nullptr;
+  sio::scene_camera*      selected_camera      = nullptr;
+  sio::scene_object*      selected_object      = nullptr;
+  sio::scene_instance*    selected_instance    = nullptr;
+  sio::scene_shape*       selected_shape       = nullptr;
+  sio::scene_subdiv*      selected_subdiv      = nullptr;
+  sio::scene_material*    selected_material    = nullptr;
+  sio::scene_environment* selected_environment = nullptr;
+  sio::scene_texture*     selected_texture     = nullptr;
 
   // computation
   int         render_sample  = 0;
@@ -127,8 +127,8 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
-    sio::camera* iocamera, sio::progress_callback progress_cb = {}) {
+void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& camera,
+    sio::scene_camera* iocamera, sio::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -136,7 +136,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<sio::scene_camera*, trc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -149,7 +149,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<sio::scene_texture*, trc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -167,7 +167,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = std::unordered_map<sio::scene_material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -203,7 +203,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<sio::scene_shape*, trc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -221,7 +221,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<sio::scene_instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -323,7 +323,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::camera* iocamera) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_camera* iocamera) {
   if (!iocamera) return false;
   auto edited = 0;
   draw_label(win, "name", iocamera->name);
@@ -349,7 +349,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::texture* iotexture) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_texture* iotexture) {
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
@@ -370,7 +370,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::material* iomaterial) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_material* iomaterial) {
   if (!iomaterial) return false;
   auto edited = 0;
   draw_label(win, "name", iomaterial->name);
@@ -417,7 +417,7 @@ bool draw_widgets(
   return edited;
 }
 
-bool draw_widgets(gui::gui_window* win, sio::model* ioscene, sio::shape* ioshape) {
+bool draw_widgets(gui::gui_window* win, sio::scene_model* ioscene, sio::scene_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
   draw_label(win, "name", ioshape->name);
@@ -435,7 +435,7 @@ bool draw_widgets(gui::gui_window* win, sio::model* ioscene, sio::shape* ioshape
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::instance* ioinstance) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_instance* ioinstance) {
   if (!ioinstance) return false;
   auto edited = 0;
   draw_label(win, "name", ioinstance->name);
@@ -444,7 +444,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::object* ioobject) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -461,7 +461,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::subdiv* iosubdiv) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_subdiv* iosubdiv) {
   if (!iosubdiv) return false;
   auto edited = 0;
   draw_label(win, "name", iosubdiv->name);
@@ -476,7 +476,7 @@ bool draw_widgets(
 }
 
 bool draw_widgets(
-    gui::gui_window* win, sio::model* ioscene, sio::environment* ioenvironment) {
+    gui::gui_window* win, sio::scene_model* ioscene, sio::scene_environment* ioenvironment) {
   if (!ioenvironment) return false;
   auto edited = 0;
   draw_label(win, "name", ioenvironment->name);
@@ -607,7 +607,7 @@ void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& 
     }
     end_header(win);
   }
-  auto get_texture = [app](sio::texture* iotexture) {
+  auto get_texture = [app](sio::scene_texture* iotexture) {
     return get_element(iotexture, app->ioscene->textures, app->scene->textures);
   };
   if (!app->ioscene->cameras.empty() && begin_header(win, "cameras")) {

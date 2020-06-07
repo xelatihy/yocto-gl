@@ -79,7 +79,7 @@ namespace yocto::sceneio {
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct camera {
+struct scene_camera {
   std::string name         = "";
   frame3f     frame        = identity3x4f;
   bool        orthographic = false;
@@ -92,7 +92,7 @@ struct camera {
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct texture {
+struct scene_texture {
   std::string       name    = "";
   image<vec3f> colorf  = {};
   image<vec3b> colorb  = {};
@@ -104,7 +104,7 @@ struct texture {
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct material {
+struct scene_material {
   // material data
   std::string name = "";
 
@@ -127,19 +127,19 @@ struct material {
   bool  thin         = true;
 
   // textures
-  scn::texture* emission_tex     = nullptr;
-  scn::texture* color_tex        = nullptr;
-  scn::texture* specular_tex     = nullptr;
-  scn::texture* metallic_tex     = nullptr;
-  scn::texture* roughness_tex    = nullptr;
-  scn::texture* transmission_tex = nullptr;
-  scn::texture* translucency_tex = nullptr;
-  scn::texture* spectint_tex     = nullptr;
-  scn::texture* scattering_tex   = nullptr;
-  scn::texture* coat_tex         = nullptr;
-  scn::texture* opacity_tex      = nullptr;
-  scn::texture* normal_tex       = nullptr;
-  scn::texture* displacement_tex = nullptr;
+  scn::scene_texture* emission_tex     = nullptr;
+  scn::scene_texture* color_tex        = nullptr;
+  scn::scene_texture* specular_tex     = nullptr;
+  scn::scene_texture* metallic_tex     = nullptr;
+  scn::scene_texture* roughness_tex    = nullptr;
+  scn::scene_texture* transmission_tex = nullptr;
+  scn::scene_texture* translucency_tex = nullptr;
+  scn::scene_texture* spectint_tex     = nullptr;
+  scn::scene_texture* scattering_tex   = nullptr;
+  scn::scene_texture* coat_tex         = nullptr;
+  scn::scene_texture* opacity_tex      = nullptr;
+  scn::scene_texture* normal_tex       = nullptr;
+  scn::scene_texture* displacement_tex = nullptr;
 
   // [experimental] properties to drive subdiv and displacement
   int  subdivisions = 2;
@@ -150,7 +150,7 @@ struct material {
 // May contain either points, lines, triangles and quads.
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
-struct shape {
+struct scene_shape {
   // shape data
   std::string name = "";
 
@@ -172,7 +172,7 @@ struct shape {
 // Subdiv data represented as indexed meshes of elements.
 // May contain points, lines, triangles, quads or
 // face-varying quads.
-struct subdiv {
+struct scene_subdiv {
   // shape data
   std::string name = "";
 
@@ -188,29 +188,29 @@ struct subdiv {
 };
 
 // Instance data.
-struct instance {
+struct scene_instance {
   // instance data
   std::string          name   = "";
   std::vector<frame3f> frames = {};
 };
 
 // Object.
-struct object {
+struct scene_object {
   // object data
   std::string    name     = "";
   frame3f        frame    = identity3x4f;
-  scn::shape*    shape    = nullptr;
-  scn::material* material = nullptr;
-  scn::instance* instance = nullptr;
-  scn::subdiv*   subdiv   = nullptr;
+  scn::scene_shape*    shape    = nullptr;
+  scn::scene_material* material = nullptr;
+  scn::scene_instance* instance = nullptr;
+  scn::scene_subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
-struct environment {
+struct scene_environment {
   std::string   name         = "";
   frame3f       frame        = identity3x4f;
   vec3f         emission     = {0, 0, 0};
-  scn::texture* emission_tex = nullptr;
+  scn::scene_texture* emission_tex = nullptr;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -220,37 +220,37 @@ struct environment {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct model {
+struct scene_model {
   // scene elements
-  std::vector<scn::camera*>      cameras      = {};
-  std::vector<scn::object*>      objects      = {};
-  std::vector<scn::environment*> environments = {};
-  std::vector<scn::shape*>       shapes       = {};
-  std::vector<scn::subdiv*>      subdivs      = {};
-  std::vector<scn::texture*>     textures     = {};
-  std::vector<scn::material*>    materials    = {};
-  std::vector<scn::instance*>    instances    = {};
+  std::vector<scn::scene_camera*>      cameras      = {};
+  std::vector<scn::scene_object*>      objects      = {};
+  std::vector<scn::scene_environment*> environments = {};
+  std::vector<scn::scene_shape*>       shapes       = {};
+  std::vector<scn::scene_subdiv*>      subdivs      = {};
+  std::vector<scn::scene_texture*>     textures     = {};
+  std::vector<scn::scene_material*>    materials    = {};
+  std::vector<scn::scene_instance*>    instances    = {};
 
   // additional information
   std::string name      = "";
   std::string copyright = "";
 
   // cleanup
-  ~model();
+  ~scene_model();
 };
 
 // add element to a scene
-scn::camera*      add_camera(scn::model* scene, const std::string& name = "");
-scn::environment* add_environment(
-    scn::model* scene, const std::string& name = "");
-scn::object*   add_object(scn::model* scene, const std::string& name = "");
-scn::instance* add_instance(scn::model* scene, const std::string& name = "");
-scn::material* add_material(scn::model* scene, const std::string& name = "");
-scn::shape*    add_shape(scn::model* scene, const std::string& name = "");
-scn::subdiv*   add_subdiv(scn::model* scene, const std::string& name = "");
-scn::texture*  add_texture(scn::model* scene, const std::string& name = "");
-scn::object*   add_complete_object(
-      scn::model* scene, const std::string& name = "");
+scn::scene_camera*      add_camera(scn::scene_model* scene, const std::string& name = "");
+scn::scene_environment* add_environment(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_object*   add_object(scn::scene_model* scene, const std::string& name = "");
+scn::scene_instance* add_instance(scn::scene_model* scene, const std::string& name = "");
+scn::scene_material* add_material(scn::scene_model* scene, const std::string& name = "");
+scn::scene_shape*    add_shape(scn::scene_model* scene, const std::string& name = "");
+scn::scene_subdiv*   add_subdiv(scn::scene_model* scene, const std::string& name = "");
+scn::scene_texture*  add_texture(scn::scene_model* scene, const std::string& name = "");
+scn::scene_object*   add_complete_object(
+      scn::scene_model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -266,18 +266,18 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const std::string& filename, scn::model* scene,
+bool load_scene(const std::string& filename, scn::scene_model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
-bool save_scene(const std::string& filename, const scn::model* scene,
+bool save_scene(const std::string& filename, const scn::scene_model* scene,
     std::string& error, progress_callback progress_cb = {},
     bool noparallel = false);
 
 // get named camera or default if name is empty
-scn::camera* get_camera(const scn::model* scene, const std::string& name = "");
+scn::scene_camera* get_camera(const scn::scene_model* scene, const std::string& name = "");
 
 // add a sky environment
-void add_sky(scn::model* scene, float sun_angle = pif / 4);
+void add_sky(scn::scene_model* scene, float sun_angle = pif / 4);
 
 }  // namespace yocto::sceneio
 
@@ -287,7 +287,7 @@ void add_sky(scn::model* scene, float sun_angle = pif / 4);
 namespace yocto::sceneio {
 
 // Make Cornell Box scene
-void make_cornellbox(scn::model* scene);
+void make_cornellbox(scn::scene_model* scene);
 
 }  // namespace yocto::sceneio
 
@@ -298,13 +298,13 @@ namespace yocto::sceneio {
 
 // Return scene statistics as list of strings.
 std::vector<std::string> scene_stats(
-    const scn::model* scene, bool verbose = false);
+    const scn::scene_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 std::vector<std::string> scene_validation(
-    const scn::model* scene, bool notextures = false);
+    const scn::scene_model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const scn::model* scene);
+bbox3f compute_bounds(const scn::scene_model* scene);
 
 }  // namespace yocto::sceneio
 
@@ -314,8 +314,8 @@ bbox3f compute_bounds(const scn::model* scene);
 namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(scn::model* scene, progress_callback progress_cb = {});
-void tesselate_subdiv(scn::model* scene, scn::subdiv* subdiv);
+void tesselate_subdivs(scn::scene_model* scene, progress_callback progress_cb = {});
+void tesselate_subdiv(scn::scene_model* scene, scn::scene_subdiv* subdiv);
 
 }  // namespace yocto::sceneio
 

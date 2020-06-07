@@ -43,8 +43,8 @@ using namespace std::string_literals;
 namespace sfs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
-    sio::camera* iocamera, sio::progress_callback progress_cb = {}) {
+void init_scene(trc::scene* scene, sio::scene_model* ioscene, trc::camera*& camera,
+    sio::scene_camera* iocamera, sio::progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
@@ -52,7 +52,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<sio::camera*, trc::camera*>{};
+  auto camera_map     = std::unordered_map<sio::scene_camera*, trc::camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -64,7 +64,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<sio::texture*, trc::texture*>{};
+  auto texture_map     = std::unordered_map<sio::scene_texture*, trc::texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -81,7 +81,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<sio::material*, trc::material*>{};
+  auto material_map     = std::unordered_map<sio::scene_material*, trc::material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -115,7 +115,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<sio::shape*, trc::shape*>{};
+  auto shape_map     = std::unordered_map<sio::scene_shape*, trc::shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -133,7 +133,7 @@ void init_scene(trc::scene* scene, sio::model* ioscene, trc::camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<sio::instance*, trc::instance*>{};
+  auto instance_map     = std::unordered_map<sio::scene_instance*, trc::instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -198,7 +198,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<sio::model>();
+  auto ioscene_guard = std::make_unique<sio::scene_model>();
   auto ioscene       = ioscene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(filename, ioscene, ioerror, print_progress))
