@@ -39,19 +39,12 @@
 namespace sfs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
-// ALIASES
+// PBRT PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::pbrt {
+namespace yocto {
 
 // string literals
 using namespace std::string_literals;
-
-}  // namespace yocto::pbrt
-
-// -----------------------------------------------------------------------------
-// PBRT PARSING
-// -----------------------------------------------------------------------------
-namespace yocto::pbrt {
 
 // utilities
 inline bool is_newline(char c) { return c == '\r' || c == '\n'; }

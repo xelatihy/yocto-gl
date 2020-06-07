@@ -45,7 +45,7 @@
 // -----------------------------------------------------------------------------
 // PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::pbrt {
+namespace yocto {
 
 // Pbrt camera
 struct pbrt_camera {
@@ -149,6 +149,6 @@ pbrt_material*    add_material(pbrt_model* pbrt);
 pbrt_environment* add_environment(pbrt_model* pbrt);
 pbrt_light*       add_light(pbrt_model* pbrt);
 
-}  // namespace yocto::pbrt
+}  // namespace yocto
 
 #endif
