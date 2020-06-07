@@ -79,7 +79,7 @@
 // -----------------------------------------------------------------------------
 // TRACE SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -332,12 +332,12 @@ void set_frame(trace_environment* environment, const frame3f& frame);
 void set_emission(trace_environment* environment, const vec3f& emission,
     trace_texture* emission_tex = nullptr);
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RENDERING API
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // Type of tracing algorithm
 enum struct trace_sampler_type {
@@ -460,12 +460,12 @@ void trace_start(trace_state* state, const trace_scene* scene,
     async_callback async_cb = {});
 void trace_stop(trace_state* state);
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // INTERSECTION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -488,6 +488,6 @@ trace_intersection intersect_instance_bvh(const trace_object* object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 #endif

@@ -43,7 +43,7 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SCENE EVALUATION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // constant values
 static const auto coat_ior       = 1.5f;
@@ -568,12 +568,12 @@ static vec3f eval_environment(const trace_scene* scene, const ray3f& ray) {
   return emission;
 }
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
@@ -1526,12 +1526,12 @@ trace_intersection intersect_instance_bvh(const trace_object* object, int instan
   return intersection;
 }
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // Set non-rigid frames as default
 static const bool non_rigid_frames = true;
@@ -2439,12 +2439,12 @@ void trace_stop(trace_state* state) {
   if (state->worker.valid()) state->worker.get();
 }
 
-}  // namespace yocto::trace
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE CREATION
 // -----------------------------------------------------------------------------
-namespace yocto::trace {
+namespace yocto {
 
 // cleanup
 trace_shape::~trace_shape() {
@@ -2661,4 +2661,4 @@ void set_emission(trace_environment* environment, const vec3f& emission,
   environment->emission_tex = emission_tex;
 }
 
-}  // namespace yocto::trace
+}  // namespace yocto

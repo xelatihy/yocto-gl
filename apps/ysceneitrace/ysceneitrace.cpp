@@ -32,7 +32,6 @@
 #include <yocto/yocto_trace.h>
 #include <yocto_gui/yocto_gui.h>
 using namespace yocto;
-namespace trc = yocto::trace;
 namespace gui = yocto::gui;
 
 #include <atomic>
@@ -57,12 +56,12 @@ struct app_state {
 
   // scene
   scene_model*  ioscene  = new scene_model{};
-  trc::trace_scene*  scene    = new trc::trace_scene{};
+  trace_scene*  scene    = new trace_scene{};
   scene_camera* iocamera = nullptr;
-  trc::trace_camera* camera   = nullptr;
+  trace_camera* camera   = nullptr;
 
   // options
-  trc::trace_params params = {};
+  trace_params params = {};
 
   // rendering state
   image<vec4f> render   = {};
@@ -86,7 +85,7 @@ struct app_state {
   // computation
   int         render_sample  = 0;
   int         render_counter = 0;
-  trc::trace_state* render_state   = new trc::trace_state{};
+  trace_state* render_state   = new trace_state{};
 
   // loading status
   std::atomic<bool> ok           = false;
@@ -99,7 +98,7 @@ struct app_state {
 
   ~app_state() {
     if (render_state) {
-      trc::trace_stop(render_state);
+      trace_stop(render_state);
       delete render_state;
     }
     if (scene) delete scene;
@@ -116,7 +115,7 @@ struct app_states {
   std::deque<app_state*>  loading  = {};
 
   // default options
-  trc::trace_params params     = {};
+  trace_params params     = {};
   bool              add_skyenv = false;
 
   // cleanup
@@ -126,7 +125,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera*& camera,
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -135,7 +134,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trc::trace_camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -148,7 +147,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trc::trace_texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -166,7 +165,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trc::trace_material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -202,7 +201,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trc::trace_shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -220,7 +219,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trc::trace_instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -258,17 +257,17 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
 
 void stop_display(app_state* app) {
   // stop render
-  trc::trace_stop(app->render_state);
+  trace_stop(app->render_state);
 }
 
 void reset_display(app_state* app) {
   // stop render
-  trc::trace_stop(app->render_state);
+  trace_stop(app->render_state);
 
   // start render
   app->status         = "render";
   app->render_counter = 0;
-  trc::trace_start(
+  trace_start(
       app->render_state, app->scene, app->camera, app->params,
       [app](const std::string& message, int sample, int nsamples) {
         app->current = sample;
@@ -314,7 +313,7 @@ void load_scene_async(app_states* apps, const std::string& filename,
         init_bvh(app->scene, app->params);
         init_lights(app->scene);
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-          app->params.sampler = trc::trace_sampler_type::eyelight;
+          app->params.sampler = trace_sampler_type::eyelight;
         }
       });
   apps->loading.push_back(app);
@@ -558,9 +557,9 @@ void draw_widgets(gui::gui_window* win, app_states* apps, const gui::gui_input& 
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
-        win, "tracer", (int&)tparams.sampler, trc::trace_sampler_names);
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
     edited += draw_combobox(
-        win, "false color", (int&)tparams.falsecolor, trc::trace_falsecolor_names);
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
     edited += draw_slider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_checkbox(win, "envhidden", tparams.envhidden);
     continue_line(win);
@@ -817,9 +816,9 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_option(cli, "--tracer,-t", apps->params.sampler, "Tracer type.",
-      trc::trace_sampler_names);
+      trace_sampler_names);
   add_option(cli, "--falsecolor,-F", apps->params.falsecolor,
-      "Tracer false color type.", trc::trace_falsecolor_names);
+      "Tracer false color type.", trace_falsecolor_names);
   add_option(
       cli, "--bounces,-b", apps->params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", apps->params.clamp, "Final pixel clamping.");
@@ -827,7 +826,7 @@ int main(int argc, const char* argv[]) {
       cli, "--filter/--no-filter", apps->params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", apps->params.envhidden,
       "Environments are hidden in renderer");
-  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", apps->params.bvh, "Bvh type", bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);

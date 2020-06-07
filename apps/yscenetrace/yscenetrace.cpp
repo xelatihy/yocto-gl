@@ -32,7 +32,6 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
 using namespace yocto;
-namespace trc = yocto::trace;
 
 #include <map>
 #include <memory>
@@ -42,7 +41,7 @@ using namespace std::string_literals;
 namespace sfs = ghc::filesystem;
 
 // construct a scene from io
-void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera*& camera,
+void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -51,7 +50,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
              (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
              (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
-  auto camera_map     = std::unordered_map<scene_camera*, trc::trace_camera*>{};
+  auto camera_map     = std::unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -63,7 +62,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = std::unordered_map<scene_texture*, trc::trace_texture*>{};
+  auto texture_map     = std::unordered_map<scene_texture*, trace_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb) progress_cb("convert texture", progress.x++, progress.y);
@@ -80,7 +79,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = std::unordered_map<scene_material*, trc::trace_material*>{};
+  auto material_map     = std::unordered_map<scene_material*, trace_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -114,7 +113,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  auto shape_map     = std::unordered_map<scene_shape*, trc::trace_shape*>{};
+  auto shape_map     = std::unordered_map<scene_shape*, trace_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
@@ -132,7 +131,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = std::unordered_map<scene_instance*, trc::trace_instance*>{};
+  auto instance_map     = std::unordered_map<scene_instance*, trace_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
@@ -168,7 +167,7 @@ void init_scene(trc::trace_scene* scene, scene_model* ioscene, trc::trace_camera
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params      = trc::trace_params{};
+  auto params      = trace_params{};
   auto save_batch  = false;
   auto add_skyenv  = false;
   auto camera_name = ""s;
@@ -181,16 +180,16 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--resolution,-r", params.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", params.samples, "Number of samples.");
   add_option(
-      cli, "--tracer,-t", params.sampler, "Trace type.", trc::trace_sampler_names);
+      cli, "--tracer,-t", params.sampler, "Trace type.", trace_sampler_names);
   add_option(cli, "--falsecolor,-F", params.falsecolor,
-      "Tracer false color type.", trc::trace_falsecolor_names);
+      "Tracer false color type.", trace_falsecolor_names);
   add_option(cli, "--bounces,-b", params.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
   add_option(cli, "--filter/--no-filter", params.tentfilter, "Filter image.");
   add_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_option(cli, "--bvh", params.bvh, "Bvh type", trc::bvh_names);
+  add_option(cli, "--bvh", params.bvh, "Bvh type", bvh_names);
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_option(cli, "scene", filename, "Scene filename", true);
@@ -210,9 +209,9 @@ int main(int argc, const char* argv[]) {
   auto iocamera = get_camera(ioscene, camera_name);
 
   // convert scene
-  auto scene_guard = std::make_unique<trc::trace_scene>();
+  auto scene_guard = std::make_unique<trace_scene>();
   auto scene       = scene_guard.get();
-  auto camera      = (trc::trace_camera*)nullptr;
+  auto camera      = (trace_camera*)nullptr;
   init_scene(scene, ioscene, camera, iocamera, print_progress);
 
   // cleanup
@@ -227,11 +226,11 @@ int main(int argc, const char* argv[]) {
   // fix renderer type if no lights
   if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
-    params.sampler = trc::trace_sampler_type::eyelight;
+    params.sampler = trace_sampler_type::eyelight;
   }
 
   // render
-  auto render = trc::trace_image(scene, camera, params, print_progress,
+  auto render = trace_image(scene, camera, params, print_progress,
       [save_batch, imfilename](
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
