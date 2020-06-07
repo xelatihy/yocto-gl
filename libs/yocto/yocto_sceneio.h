@@ -93,7 +93,7 @@ struct scene_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
-  std::string       name    = "";
+  std::string  name    = "";
   image<vec3f> colorf  = {};
   image<vec3b> colorb  = {};
   image<float> scalarf = {};
@@ -197,8 +197,8 @@ struct scene_instance {
 // Object.
 struct scene_object {
   // object data
-  std::string    name     = "";
-  frame3f        frame    = identity3x4f;
+  std::string          name     = "";
+  frame3f              frame    = identity3x4f;
   scn::scene_shape*    shape    = nullptr;
   scn::scene_material* material = nullptr;
   scn::scene_instance* instance = nullptr;
@@ -207,9 +207,9 @@ struct scene_object {
 
 // Environment map.
 struct scene_environment {
-  std::string   name         = "";
-  frame3f       frame        = identity3x4f;
-  vec3f         emission     = {0, 0, 0};
+  std::string         name         = "";
+  frame3f             frame        = identity3x4f;
+  vec3f               emission     = {0, 0, 0};
   scn::scene_texture* emission_tex = nullptr;
 };
 
@@ -240,17 +240,24 @@ struct scene_model {
 };
 
 // add element to a scene
-scn::scene_camera*      add_camera(scn::scene_model* scene, const std::string& name = "");
+scn::scene_camera* add_camera(
+    scn::scene_model* scene, const std::string& name = "");
 scn::scene_environment* add_environment(
     scn::scene_model* scene, const std::string& name = "");
-scn::scene_object*   add_object(scn::scene_model* scene, const std::string& name = "");
-scn::scene_instance* add_instance(scn::scene_model* scene, const std::string& name = "");
-scn::scene_material* add_material(scn::scene_model* scene, const std::string& name = "");
-scn::scene_shape*    add_shape(scn::scene_model* scene, const std::string& name = "");
-scn::scene_subdiv*   add_subdiv(scn::scene_model* scene, const std::string& name = "");
-scn::scene_texture*  add_texture(scn::scene_model* scene, const std::string& name = "");
-scn::scene_object*   add_complete_object(
-      scn::scene_model* scene, const std::string& name = "");
+scn::scene_object* add_object(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_instance* add_instance(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_material* add_material(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_shape* add_shape(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_subdiv* add_subdiv(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_texture* add_texture(
+    scn::scene_model* scene, const std::string& name = "");
+scn::scene_object* add_complete_object(
+    scn::scene_model* scene, const std::string& name = "");
 
 }  // namespace yocto::sceneio
 
@@ -274,7 +281,8 @@ bool save_scene(const std::string& filename, const scn::scene_model* scene,
     bool noparallel = false);
 
 // get named camera or default if name is empty
-scn::scene_camera* get_camera(const scn::scene_model* scene, const std::string& name = "");
+scn::scene_camera* get_camera(
+    const scn::scene_model* scene, const std::string& name = "");
 
 // add a sky environment
 void add_sky(scn::scene_model* scene, float sun_angle = pif / 4);
@@ -314,7 +322,8 @@ bbox3f compute_bounds(const scn::scene_model* scene);
 namespace yocto::sceneio {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(scn::scene_model* scene, progress_callback progress_cb = {});
+void tesselate_subdivs(
+    scn::scene_model* scene, progress_callback progress_cb = {});
 void tesselate_subdiv(scn::scene_model* scene, scn::scene_subdiv* subdiv);
 
 }  // namespace yocto::sceneio
