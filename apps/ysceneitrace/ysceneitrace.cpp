@@ -127,8 +127,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + 
-             (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->objects.size()};
 
   auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
   camera_map[nullptr] = nullptr;

@@ -242,7 +242,7 @@ static bool load_instance(
 }
 
 // save instances
-// static 
+// static
 bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
@@ -743,8 +743,22 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 
   // apply instances
   if (!instances.empty()) {
-    // TODO: implement this
-    throw std::runtime_error("implement this later");
+    for (auto& instance : instances) {
+      for (auto object : instance->objects) {
+        scene->objects.erase(
+            std::remove(scene->objects.begin(), scene->objects.end(), object),
+            scene->objects.end());
+        auto iid = 0;
+        for (auto& frame : instance->frames) {
+          auto nobject = add_object(
+              scene, object->name + "@" + std::to_string(++iid));
+          nobject->frame = frame * object->frame;
+          nobject->material = object->material;
+          nobject->shape = object->shape;
+        }
+        delete object;
+      }
+    }
   }
 
   // fix scene
@@ -1886,7 +1900,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 
   // convert shapes
   for (auto pshape : pbrt->shapes) {
-    auto shape = add_shape(scene);
+    auto shape       = add_shape(scene);
     shape->positions = pshape->positions;
     shape->normals   = pshape->normals;
     shape->texcoords = pshape->texcoords;
@@ -1894,15 +1908,15 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
     auto material = material_map.at(pshape->material);
     if (!pshape->instances.empty()) {
-      auto object   = add_object(scene);
-      object->frame = pshape->frame;
-      object->shape = shape;
+      auto object      = add_object(scene);
+      object->frame    = pshape->frame;
+      object->shape    = shape;
       object->material = material;
     } else {
-      for(auto frame : pshape->instances) {
-        auto object   = add_object(scene);
-        object->frame = frame * pshape->frame;
-        object->shape = shape;
+      for (auto frame : pshape->instances) {
+        auto object      = add_object(scene);
+        object->frame    = frame * pshape->frame;
+        object->shape    = shape;
         object->material = material;
       }
     }

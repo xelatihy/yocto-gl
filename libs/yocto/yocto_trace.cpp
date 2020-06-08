@@ -344,10 +344,10 @@ struct trace_point {
 static trace_point eval_point(const scene_model* scene,
     const scene_intersection& intersection, const ray3f& ray) {
   // get data
-  auto object   = scene->objects[intersection.object];
-  auto shape    = object->shape;
-  auto material = object->material;
-  auto frame = object->frame;
+  auto object           = scene->objects[intersection.object];
+  auto shape            = object->shape;
+  auto material         = object->material;
+  auto frame            = object->frame;
   auto element          = intersection.element;
   auto uv               = intersection.uv;
   auto non_rigid_frames = true;
@@ -520,9 +520,9 @@ static volume_point eval_volume(const scene_model* scene,
   auto& object   = scene->objects[intersection.object];
   auto& shape    = object->shape;
   auto& material = object->material;
-  auto  frame = object->frame;
-  auto  element = intersection.element;
-  auto  uv      = intersection.uv;
+  auto  frame    = object->frame;
+  auto  element  = intersection.element;
+  auto  uv       = intersection.uv;
 
   // initialize point
   auto point     = volume_point{};
@@ -918,7 +918,7 @@ static float sample_lights_pdf(
       auto  lpdf          = 0.0f;
       auto  next_position = position;
       auto& object        = light->object;
-      auto  frame = object->frame;
+      auto  frame         = object->frame;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_instance_bvh(
             light->object, {next_position, direction});
@@ -1337,15 +1337,13 @@ void init_bvh(scene_model* scene, const trace_params& params,
 }
 
 // Refit bvh data
-void update_bvh(scene_model*       scene,
-    const vector<scene_object*>&   updated_objects,
-    const vector<scene_shape*>&    updated_shapes,
-    const trace_params&            params) {
+void update_bvh(scene_model*     scene,
+    const vector<scene_object*>& updated_objects,
+    const vector<scene_shape*>& updated_shapes, const trace_params& params) {
   auto params_       = scene_bvh_params{};
   params_.bvh        = (scene_bvh_type)params.bvh;
   params_.noparallel = params.noparallel;
-  update_bvh(
-      scene, updated_objects, updated_shapes, params_);
+  update_bvh(scene, updated_objects, updated_shapes, params_);
 }
 
 // Forward declaration

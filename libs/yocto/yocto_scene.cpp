@@ -1444,10 +1444,10 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
   for (auto object : scene->objects) {
     auto& primitive = primitives.emplace_back();
-    primitive.bbox  = object->shape->bvh->nodes.empty()
-                         ? invalidb3f
-                         : transform_bbox(object->frame,
-                               object->shape->bvh->nodes[0].bbox);
+    primitive.bbox =
+        object->shape->bvh->nodes.empty()
+            ? invalidb3f
+            : transform_bbox(object->frame, object->shape->bvh->nodes[0].bbox);
     primitive.center    = center(primitive.bbox);
     primitive.primitive = object_id++;
   }
@@ -1508,16 +1508,15 @@ static void update_bvh(scene_shape* shape, const scene_bvh_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(scene_model*       scene,
-    const vector<scene_object*>&   updated_objects,
-    const vector<scene_shape*>&    updated_shapes,
-    const scene_bvh_params&        params) {
+void update_bvh(scene_model*     scene,
+    const vector<scene_object*>& updated_objects,
+    const vector<scene_shape*>&  updated_shapes,
+    const scene_bvh_params&      params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
   if (scene->embree_bvh) {
-    update_embree_bvh(
-        scene, updated_objects, updated_shapes, params);
+    update_embree_bvh(scene, updated_objects, updated_shapes, params);
   }
 #endif
 
@@ -1527,8 +1526,7 @@ void update_bvh(scene_model*       scene,
     auto instance = scene->bvh->primitives[idx];
     auto object   = scene->objects[instance];
     auto sbvh     = object->shape->bvh;
-    bboxes[idx]   = transform_bbox(object->frame,
-        sbvh->nodes[0].bbox);
+    bboxes[idx]   = transform_bbox(object->frame, sbvh->nodes[0].bbox);
   }
 
   // update nodes
@@ -1640,8 +1638,8 @@ static bool intersect_shape_bvh(scene_shape* shape, const ray3f& ray_,
 
 // Intersect ray with a bvh->
 static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
-    int& object, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+    int& object, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene->embree_bvh) {
@@ -1695,8 +1693,9 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto object_                  = scene->objects[scene->bvh->primitives[idx]];
-        auto inv_ray = transform_ray(inverse(object_->frame, non_rigid_frames), ray);
+        auto object_ = scene->objects[scene->bvh->primitives[idx]];
+        auto inv_ray = transform_ray(
+            inverse(object_->frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object_->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
@@ -1714,27 +1713,27 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_instance_bvh(const scene_object* object, 
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+static bool intersect_instance_bvh(const scene_object* object, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto inv_ray = transform_ray(inverse(object->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(object->shape, inv_ray, element, uv, distance, find_any);
+  return intersect_shape_bvh(
+      object->shape, inv_ray, element, uv, distance, find_any);
 }
 
 scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.object,
-      intersection.element, intersection.uv,
-      intersection.distance, find_any, non_rigid_frames);
+      intersection.element, intersection.uv, intersection.distance, find_any,
+      non_rigid_frames);
   return intersection;
 }
 scene_intersection intersect_instance_bvh(const scene_object* object,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
-  intersection.hit  = intersect_instance_bvh(object, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
+  intersection.hit  = intersect_instance_bvh(object, ray, intersection.element,
+      intersection.uv, intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
 

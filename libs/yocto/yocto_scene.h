@@ -254,7 +254,7 @@ struct scene_model {
   vector<scene_light*> lights = {};
   scene_bvh*           bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  RTCScene      embree_bvh       = nullptr;
+  RTCScene embree_bvh = nullptr;
 #endif
 
   // cleanup
@@ -275,7 +275,7 @@ scene_object*      add_object(scene_model* scene, const string& name = "");
 scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
-scene_object*      add_complete_object(scene_model* scene, const string& name = "");
+scene_object* add_complete_object(scene_model* scene, const string& name = "");
 
 // camera properties
 void set_frame(scene_camera* camera, const frame3f& frame);
@@ -387,10 +387,9 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene_model*       scene,
-    const vector<scene_object*>&   updated_objects,
-    const vector<scene_shape*>&    updated_shapes,
-    const scene_bvh_params&        params);
+void update_bvh(scene_model*     scene,
+    const vector<scene_object*>& updated_objects,
+    const vector<scene_shape*>& updated_shapes, const scene_bvh_params& params);
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -409,11 +408,9 @@ struct scene_intersection {
 scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_model* object,
-    const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_object* object,
-    const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
