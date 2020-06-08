@@ -23,11 +23,12 @@ See each header file for documentation.
 - `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
    tonemapping, color correction, image loading and saving,
    procedural images, procedural sun-sky, advanced color conversion utilities
+- `yocto/yocto_scene.{h,cpp}`: simple scene representation useful for rendering
+- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF 
+   and a custom and scalable Json format
 - `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
    area and environment illumination, microfacet GGX and subsurface scattering,
    multiple importance sampling
-- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF 
-   and a custom and scalable Json format
 - `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
 - `yocto/yocto_commonio.h`: printing utilities, file io utilities,
   command line parsing
