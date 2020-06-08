@@ -1913,7 +1913,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
     shape->triangles = pshape->triangles;
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
     auto material = material_map.at(pshape->material);
-    if (!pshape->instances.empty()) {
+    if (pshape->instances.empty()) {
       auto object      = add_object(scene);
       object->frame    = pshape->frame;
       object->shape    = shape;
