@@ -47,9 +47,8 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene*   scene        = new trace_scene{};
-  trace_camera*  camera       = nullptr;
-  vector<string> camera_names = {};
+  scene_model*  scene  = new scene_model{};
+  scene_camera* camera = nullptr;
 
   // rendering state
   image<vec4f> render   = {};
@@ -78,140 +77,6 @@ struct app_state {
     if (glimage) delete glimage;
   }
 };
-
-// construct a scene from io
-void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
-    scene_camera* iocamera, progress_callback print_progress = {}) {
-  // handle progress
-  auto progress = vec2i{
-      0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
-             (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
-             (int)ioscene->objects.size()};
-
-  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
-  camera_map[nullptr] = nullptr;
-  for (auto iocamera : ioscene->cameras) {
-    if (print_progress)
-      print_progress("convert camera", progress.x++, progress.y);
-    auto camera = add_camera(scene);
-    set_frame(camera, iocamera->frame);
-    set_lens(camera, iocamera->lens, iocamera->aspect, iocamera->film,
-        iocamera->orthographic);
-    set_focus(camera, iocamera->aperture, iocamera->focus);
-    camera_map[iocamera] = camera;
-  }
-
-  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
-  texture_map[nullptr] = nullptr;
-  for (auto iotexture : ioscene->textures) {
-    if (print_progress)
-      print_progress("convert texture", progress.x++, progress.y);
-    auto texture = add_texture(scene);
-    if (!iotexture->colorf.empty()) {
-      set_texture(texture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(texture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(texture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(texture, iotexture->scalarb);
-    }
-    texture_map[iotexture] = texture;
-  }
-
-  auto material_map     = unordered_map<scene_material*, trace_material*>{};
-  material_map[nullptr] = nullptr;
-  for (auto iomaterial : ioscene->materials) {
-    if (print_progress)
-      print_progress("convert material", progress.x++, progress.y);
-    auto material = add_material(scene);
-    set_emission(material, iomaterial->emission,
-        texture_map.at(iomaterial->emission_tex));
-    set_color(
-        material, iomaterial->color, texture_map.at(iomaterial->color_tex));
-    set_specular(material, iomaterial->specular,
-        texture_map.at(iomaterial->specular_tex));
-    set_ior(material, iomaterial->ior);
-    set_metallic(material, iomaterial->metallic,
-        texture_map.at(iomaterial->metallic_tex));
-    set_transmission(material, iomaterial->transmission, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
-    set_translucency(material, iomaterial->translucency, iomaterial->thin,
-        iomaterial->trdepth, texture_map.at(iomaterial->translucency_tex));
-    set_roughness(material, iomaterial->roughness,
-        texture_map.at(iomaterial->roughness_tex));
-    set_opacity(
-        material, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
-    set_thin(material, iomaterial->thin);
-    set_normalmap(material, texture_map.at(iomaterial->normal_tex));
-    set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
-        texture_map.at(iomaterial->scattering_tex));
-    material_map[iomaterial] = material;
-  }
-
-  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
-  shape_map[nullptr] = nullptr;
-  for (auto ioshape : ioscene->shapes) {
-    if (print_progress)
-      print_progress("convert shape", progress.x++, progress.y);
-    auto shape = add_shape(scene);
-    set_points(shape, ioshape->points);
-    set_lines(shape, ioshape->lines);
-    set_triangles(shape, ioshape->triangles);
-    set_quads(shape, ioshape->quads);
-    set_positions(shape, ioshape->positions);
-    set_normals(shape, ioshape->normals);
-    set_texcoords(shape, ioshape->texcoords);
-    set_colors(shape, ioshape->colors);
-    set_radius(shape, ioshape->radius);
-    set_tangents(shape, ioshape->tangents);
-    shape_map[ioshape] = shape;
-  }
-
-  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
-  instance_map[nullptr] = nullptr;
-  for (auto ioinstance : ioscene->instances) {
-    if (print_progress)
-      print_progress("convert instance", progress.x++, progress.y);
-    auto instance = add_instance(scene);
-    set_frames(instance, ioinstance->frames);
-    instance_map[ioinstance] = instance;
-  }
-
-  for (auto ioobject : ioscene->objects) {
-    if (print_progress)
-      print_progress("convert object", progress.x++, progress.y);
-    auto object = add_object(scene);
-    set_frame(object, ioobject->frame);
-    set_shape(object, shape_map.at(ioobject->shape));
-    set_material(object, material_map.at(ioobject->material));
-    set_instance(object, instance_map.at(ioobject->instance));
-  }
-
-  for (auto ioenvironment : ioscene->environments) {
-    if (print_progress)
-      print_progress("convert environment", progress.x++, progress.y);
-    auto environment = add_environment(scene);
-    set_frame(environment, ioenvironment->frame);
-    set_emission(environment, ioenvironment->emission,
-        texture_map.at(ioenvironment->emission_tex));
-  }
-
-  // done
-  if (print_progress) print_progress("convert done", progress.x++, progress.y);
-
-  // get camera
-  camera = camera_map.at(iocamera);
-}
-
-// init camera names
-void init_camera_names(
-    vector<string>& names, const vector<scene_camera*>& iocameras) {
-  for (auto iocamera : iocameras) {
-    names.push_back(iocamera->name);
-  }
-}
 
 void reset_display(app_state* app) {
   // stop render
@@ -270,29 +135,21 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene_guard = std::make_unique<scene_model>();
-  auto ioscene       = ioscene_guard.get();
-  auto ioerror       = ""s;
-  if (!load_scene(app->filename, ioscene, ioerror, print_progress))
+  auto ioerror = ""s;
+  if (!load_scene(app->filename, app->scene, ioerror, print_progress))
     print_fatal(ioerror);
 
   // add sky
-  if (add_skyenv) add_sky(ioscene);
+  if (add_skyenv) add_sky(app->scene);
 
   // get camera
-  auto iocamera = get_camera(ioscene, camera_name);
+  app->camera = get_camera(app->scene, camera_name);
 
   // tesselation
-  tesselate_shapes(ioscene, print_progress);
+  tesselate_shapes(app->scene, print_progress);
 
-  // conversion
-  init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
-
-  // camera names
-  init_camera_names(app->camera_names, ioscene->cameras);
-
-  // cleanup
-  if (ioscene_guard) ioscene_guard.reset();
+  // instances
+  add_instances(app->scene);
 
   // build bvh
   init_bvh(app->scene, app->params, print_progress);
@@ -330,8 +187,7 @@ int main(int argc, const char* argv[]) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
-    edited += draw_combobox(
-        win, "camera", app->camera, app->scene->cameras, app->camera_names);
+    edited += draw_combobox(win, "camera", app->camera, app->scene->cameras);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(
