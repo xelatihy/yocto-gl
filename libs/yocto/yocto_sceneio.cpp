@@ -482,13 +482,71 @@ static vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
 
 void tesselate_shape(scene_shape* shape) {
   if (shape->subdivisions) {
-    if (shape->catmullclark && !shape->quadspos.empty()) {
-      std::tie(shape->quadstexcoord, shape->texcoords) = subdivide_catmullclark(
-          shape->quadstexcoord, shape->texcoords, shape->subdivisions, true);
-      std::tie(shape->quadsnorm, shape->normals) = subdivide_catmullclark(
-          shape->quadsnorm, shape->normals, shape->subdivisions, true);
-      std::tie(shape->quadspos, shape->positions) = subdivide_catmullclark(
-          shape->quadspos, shape->positions, shape->subdivisions);
+    if (!shape->points.empty()) {
+      throw std::runtime_error("cannot subdivide points");
+    } else if (!shape->lines.empty()) {
+      std::tie(std::ignore, shape->texcoords) = subdivide_lines(
+          shape->lines, shape->texcoords, shape->subdivisions);
+      std::tie(std::ignore, shape->normals) = subdivide_lines(
+          shape->lines, shape->normals, shape->subdivisions);
+      std::tie(std::ignore, shape->colors) = subdivide_lines(
+          shape->lines, shape->colors, shape->subdivisions);
+      std::tie(std::ignore, shape->radius) = subdivide_lines(
+          shape->lines, shape->radius, shape->subdivisions);
+      std::tie(shape->lines, shape->positions) = subdivide_lines(
+          shape->lines, shape->positions, shape->subdivisions);
+    } else if (!shape->triangles.empty()) {
+      std::tie(std::ignore, shape->texcoords) = subdivide_triangles(
+          shape->triangles, shape->texcoords, shape->subdivisions);
+      std::tie(std::ignore, shape->normals) = subdivide_triangles(
+          shape->triangles, shape->normals, shape->subdivisions);
+      std::tie(std::ignore, shape->colors) = subdivide_triangles(
+          shape->triangles, shape->colors, shape->subdivisions);
+      std::tie(std::ignore, shape->radius) = subdivide_triangles(
+          shape->triangles, shape->radius, shape->subdivisions);
+      std::tie(shape->triangles, shape->positions) = subdivide_triangles(
+          shape->triangles, shape->positions, shape->subdivisions);
+    } else if (!shape->quads.empty()) {
+      if (shape->catmullclark) {
+        std::tie(std::ignore, shape->texcoords) = subdivide_catmullclark(
+            shape->quads, shape->texcoords, shape->subdivisions, true);
+        std::tie(std::ignore, shape->normals) = subdivide_catmullclark(
+            shape->quads, shape->normals, shape->subdivisions, true);
+        std::tie(std::ignore, shape->colors) = subdivide_catmullclark(
+            shape->quads, shape->colors, shape->subdivisions);
+        std::tie(std::ignore, shape->radius) = subdivide_catmullclark(
+            shape->quads, shape->radius, shape->subdivisions);
+        std::tie(std::ignore, shape->positions) = subdivide_catmullclark(
+            shape->quads, shape->positions, shape->subdivisions);
+      } else {
+        std::tie(std::ignore, shape->texcoords) = subdivide_quads(
+            shape->quads, shape->texcoords, shape->subdivisions);
+        std::tie(std::ignore, shape->normals) = subdivide_quads(
+            shape->quads, shape->normals, shape->subdivisions);
+        std::tie(std::ignore, shape->colors) = subdivide_quads(
+            shape->quads, shape->colors, shape->subdivisions);
+        std::tie(std::ignore, shape->radius) = subdivide_quads(
+            shape->quads, shape->radius, shape->subdivisions);
+        std::tie(shape->quads, shape->positions) = subdivide_quads(
+            shape->quads, shape->positions, shape->subdivisions);
+      }
+    } else if (!shape->quadspos.empty()) {
+      if (shape->catmullclark) {
+        std::tie(shape->quadstexcoord, shape->texcoords) =
+            subdivide_catmullclark(shape->quadstexcoord, shape->texcoords,
+                shape->subdivisions, true);
+        std::tie(shape->quadsnorm, shape->normals) = subdivide_catmullclark(
+            shape->quadsnorm, shape->normals, shape->subdivisions, true);
+        std::tie(shape->quadspos, shape->positions) = subdivide_catmullclark(
+            shape->quadspos, shape->positions, shape->subdivisions);
+      } else {
+        std::tie(shape->quadstexcoord, shape->texcoords) = subdivide_quads(
+            shape->quadstexcoord, shape->texcoords, shape->subdivisions);
+        std::tie(shape->quadsnorm, shape->normals) = subdivide_quads(
+            shape->quadsnorm, shape->normals, shape->subdivisions);
+        std::tie(shape->quadspos, shape->positions) = subdivide_quads(
+            shape->quadspos, shape->positions, shape->subdivisions);
+      }
       if (shape->smooth) {
         shape->normals   = compute_normals(shape->quadspos, shape->positions);
         shape->quadsnorm = shape->quadspos;
@@ -506,50 +564,68 @@ void tesselate_shape(scene_shape* shape) {
     if (shape->texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
-    if (shape->quadspos.empty()) {
-      throw std::runtime_error("not supported yet");
-    } else {
-      // facevarying case
-      auto offset = vector<float>(shape->positions.size(), 0);
-      auto count  = vector<int>(shape->positions.size(), 0);
-      for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
-        auto qpos = shape->quadspos[fid];
-        auto qtxt = shape->quadstexcoord[fid];
-        for (auto i = 0; i < 4; i++) {
-          auto disp = mean(eval_texture(
-              shape->displacement_tex, shape->texcoords[qtxt[i]], true));
-          if (!shape->displacement_tex->scalarb.empty() ||
-              !shape->displacement_tex->colorb.empty())
-            disp -= 0.5f;
-          offset[qpos[i]] += shape->displacement * disp;
-          count[qpos[i]] += 1;
-        }
+    if (!shape->triangles.empty() || !shape->quads.empty()) {
+      auto no_normals = shape->normals.empty();
+      if (shape->normals.empty())
+        shape->normals = shape->triangles.empty()
+                             ? compute_normals(
+                                   shape->triangles, shape->positions)
+                             : compute_normals(shape->quads, shape->positions);
+      for (auto idx = 0; idx < shape->positions.size(); idx++) {
+        auto disp = mean(
+            eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
+        if (!shape->displacement_tex->scalarb.empty() ||
+            !shape->displacement_tex->colorb.empty())
+          disp -= 0.5f;
+        shape->positions[idx] += shape->normals[idx] * shape->displacement *
+                                 disp;
       }
-      auto normals = compute_normals(shape->quadspos, shape->positions);
-      for (auto vid = 0; vid < shape->positions.size(); vid++) {
-        shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+      if (shape->smooth) {
+        shape->normals = compute_normals(shape->triangles, shape->positions);
+      } else if (no_normals) {
+        shape->normals = {};
       }
-      if (shape->smooth || !shape->normals.empty()) {
-        shape->quadsnorm = shape->quadspos;
-        shape->normals   = compute_normals(shape->quadspos, shape->positions);
+  } else if (!shape->quadspos.empty()) {
+    // facevarying case
+    auto offset = vector<float>(shape->positions.size(), 0);
+    auto count  = vector<int>(shape->positions.size(), 0);
+    for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
+      auto qpos = shape->quadspos[fid];
+      auto qtxt = shape->quadstexcoord[fid];
+      for (auto i = 0; i < 4; i++) {
+        auto disp = mean(eval_texture(
+            shape->displacement_tex, shape->texcoords[qtxt[i]], true));
+        if (!shape->displacement_tex->scalarb.empty() ||
+            !shape->displacement_tex->colorb.empty())
+          disp -= 0.5f;
+        offset[qpos[i]] += shape->displacement * disp;
+        count[qpos[i]] += 1;
       }
     }
+    auto normals = compute_normals(shape->quadspos, shape->positions);
+    for (auto vid = 0; vid < shape->positions.size(); vid++) {
+      shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+    }
+    if (shape->smooth || !shape->normals.empty()) {
+      shape->quadsnorm = shape->quadspos;
+      shape->normals   = compute_normals(shape->quadspos, shape->positions);
+    }
+  }
 
-    shape->displacement     = 0;
-    shape->displacement_tex = nullptr;
-  }
-  if (!shape->quadspos.empty()) {
-    std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
-        split_facevarying(shape->quadspos, shape->quadsnorm,
-            shape->quadstexcoord, shape->positions, shape->normals,
-            shape->texcoords);
-    shape->points    = {};
-    shape->lines     = {};
-    shape->triangles = {};
-    shape->colors    = {};
-    shape->radius    = {};
-  }
+  shape->displacement     = 0;
+  shape->displacement_tex = nullptr;
 }
+if (!shape->quadspos.empty()) {
+  std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
+      split_facevarying(shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
+          shape->positions, shape->normals, shape->texcoords);
+  shape->points    = {};
+  shape->lines     = {};
+  shape->triangles = {};
+  shape->colors    = {};
+  shape->radius    = {};
+}
+}  // namespace yocto
 
 void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {
   // handle progress
