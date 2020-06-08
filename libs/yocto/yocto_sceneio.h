@@ -51,6 +51,10 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
+#ifdef YOCTO_EMBREE
+#include <embree3/rtcore.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -67,6 +71,27 @@ using std::vector;
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
+struct scene_bvh_node {
+  bbox3f bbox;
+  int    start;
+  short  num;
+  bool   internal;
+  byte   axis;
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Application data is not stored explicitly.
+struct scene_bvh {
+  vector<scene_bvh_node> nodes      = {};
+  vector<vec2i>          primitives = {};
+};
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
@@ -177,6 +202,18 @@ struct scene_shape {
   // displacement data [experimental]
   float          displacement     = 0;
   scene_texture* displacement_tex = nullptr;
+
+  // computed properties
+  scene_bvh* bvh = nullptr;
+#ifdef YOCTO_EMBREE
+  RTCScene embree_bvh = nullptr;
+#endif
+
+  // element cdf for sampling
+  vector<float> elements_cdf = {};
+
+  // cleanup
+  ~scene_shape();
 };
 
 // Instance data.
@@ -204,6 +241,13 @@ struct scene_environment {
   scene_texture* emission_tex = nullptr;
 };
 
+// Scene lights used during rendering. These are created automatically.
+struct scene_light {
+  scene_object*      object      = nullptr;
+  int                instance    = -1;
+  scene_environment* environment = nullptr;
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -225,6 +269,14 @@ struct scene_model {
   string name      = "";
   string copyright = "";
 
+  // computed properties
+  vector<scene_light*> lights = {};
+  scene_bvh*           bvh    = nullptr;
+#ifdef YOCTO_EMBREE
+  RTCScene      embree_bvh       = nullptr;
+  vector<vec2i> embree_instances = {};
+#endif
+
   // cleanup
   ~scene_model();
 };
@@ -238,6 +290,61 @@ scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
 scene_object* add_complete_object(scene_model* scene, const string& name = "");
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// RAY-SCENE INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Strategy used to build the bvh
+enum struct scene_bvh_type {
+  default_,
+  highquality,
+  middle,
+  balanced,
+#ifdef YOCTO_EMBREE
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
+#endif
+};
+
+// Params for scene bvh build
+struct scene_bvh_params {
+  scene_bvh_type bvh        = scene_bvh_type::default_;
+  bool           noparallel = false;
+};
+
+// Progress callback called when loading.
+using progress_callback =
+    function<void(const string& message, int current, int total)>;
+
+// Build the bvh acceleration structure.
+void init_bvh(scene_model* scene, const scene_bvh_params& params,
+    progress_callback progress_cb = {});
+
+// Results of intersect functions that include hit flag, the instance id,
+// the shape element id, the shape element uv and intersection distance.
+// Results values are set only if hit is true.
+struct scene_intersection {
+  int   object   = -1;
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+scene_intersection intersect_scene_bvh(const scene_model* scene,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+scene_intersection intersect_instance_bvh(const scene_model* object,
+    int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
