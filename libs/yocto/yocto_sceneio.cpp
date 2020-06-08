@@ -567,7 +567,7 @@ void tesselate_shape(scene_shape* shape) {
     if (!shape->triangles.empty() || !shape->quads.empty()) {
       auto no_normals = shape->normals.empty();
       if (shape->normals.empty())
-        shape->normals = shape->triangles.empty()
+        shape->normals = !shape->triangles.empty()
                              ? compute_normals(
                                    shape->triangles, shape->positions)
                              : compute_normals(shape->quads, shape->positions);
@@ -581,7 +581,10 @@ void tesselate_shape(scene_shape* shape) {
                                  disp;
       }
       if (shape->smooth) {
-        shape->normals = compute_normals(shape->triangles, shape->positions);
+        shape->normals = !shape->triangles.empty()
+                             ? compute_normals(
+                                   shape->triangles, shape->positions)
+                             : compute_normals(shape->quads, shape->positions);
       } else if (no_normals) {
         shape->normals = {};
       }
