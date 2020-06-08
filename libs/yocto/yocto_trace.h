@@ -153,10 +153,7 @@ struct trace_shape {
   ~trace_shape();
 };
 
-// Instances.
-struct trace_instance {
-  vector<frame3f> frames = {};
-};
+using trace_instance = scene_instance;
 
 // Object.
 struct trace_object {

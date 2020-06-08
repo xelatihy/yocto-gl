@@ -2483,7 +2483,7 @@ trace_scene::~trace_scene() {
 }
 
 // Default instance
-static auto default_instance = trace_instance{{identity3x4f}};
+static auto default_instance = trace_instance{""s, {identity3x4f}};
 
 // Add element
 trace_camera* add_camera(trace_scene* scene) {
