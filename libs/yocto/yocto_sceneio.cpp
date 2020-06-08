@@ -744,7 +744,8 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 
   // apply instances
   if (!instances.empty()) {
-    if (progress_cb) progress_cb("flatten instances", progress.x++, progress.y++);
+    if (progress_cb)
+      progress_cb("flatten instances", progress.x++, progress.y++);
     auto objects = scene->objects;
     scene->objects.clear();
     for (auto object : objects) {
@@ -764,7 +765,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
         }
       }
     }
-    for(auto object : objects) delete object;
+    for (auto object : objects) delete object;
   }
 
   // fix scene
