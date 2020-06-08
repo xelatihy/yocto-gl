@@ -272,7 +272,7 @@ struct scene_model {
   ~scene_model();
 };
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE CREATION
@@ -408,7 +408,7 @@ void update_bvh(scene_model*       scene,
     const vector<scene_object*>&   updated_objects,
     const vector<scene_shape*>&    updated_shapes,
     const vector<scene_instance*>& updated_instances,
-    const scene_bvh_params&            params);
+    const scene_bvh_params&        params);
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
@@ -431,7 +431,7 @@ scene_intersection intersect_instance_bvh(const scene_model* object,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_object* object,
-    int instance, const ray3f& ray, bool find_any = false, 
+    int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
 }  // namespace yocto

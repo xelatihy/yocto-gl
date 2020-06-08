@@ -860,8 +860,8 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        auto ray = camera_ray(app->camera->frame, app->camera->lens, app->camera->lens,
-            app->camera->film,
+        auto ray = camera_ray(app->camera->frame, app->camera->lens,
+            app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {

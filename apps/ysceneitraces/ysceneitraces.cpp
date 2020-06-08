@@ -47,8 +47,8 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  scene_model*   scene        = new scene_model{};
-  scene_camera*  camera       = nullptr;
+  scene_model*  scene  = new scene_model{};
+  scene_camera* camera = nullptr;
 
   // rendering state
   image<vec4f> render   = {};
@@ -135,7 +135,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioerror       = ""s;
+  auto ioerror = ""s;
   if (!load_scene(app->filename, app->scene, ioerror, print_progress))
     print_fatal(ioerror);
 
@@ -187,8 +187,7 @@ int main(int argc, const char* argv[]) {
     auto  edited  = 0;
     auto& tparams = app->params;
     draw_progressbar(win, "render", app->current, app->total);
-    edited += draw_combobox(
-        win, "camera", app->camera, app->scene->cameras);
+    edited += draw_combobox(win, "camera", app->camera, app->scene->cameras);
     edited += draw_slider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_slider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_combobox(

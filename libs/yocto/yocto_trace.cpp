@@ -1345,7 +1345,8 @@ void update_bvh(scene_model*       scene,
   auto params_       = scene_bvh_params{};
   params_.bvh        = (scene_bvh_type)params.bvh;
   params_.noparallel = params.noparallel;
-  update_bvh(scene, updated_objects, updated_shapes, updated_instances, params_);
+  update_bvh(
+      scene, updated_objects, updated_shapes, updated_instances, params_);
 }
 
 // Forward declaration

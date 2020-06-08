@@ -69,8 +69,8 @@
 #include <future>
 #include <memory>
 
-#include "yocto_math.h"
 #include "yocto_image.h"
+#include "yocto_math.h"
 #include "yocto_scene.h"
 
 #ifdef YOCTO_EMBREE

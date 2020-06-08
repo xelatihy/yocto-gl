@@ -27,7 +27,6 @@
 //
 
 #include "yocto_scene.h"
-#include "yocto_shape.h"
 
 #include <atomic>
 #include <cassert>
@@ -37,6 +36,8 @@
 #include <deque>
 #include <future>
 #include <memory>
+
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -496,7 +497,7 @@ void add_instances(scene_model* scene) {
   for (auto& object : scene->objects) {
     if (object->instance) continue;
     if (!default_instance) {
-      default_instance        = add_instance(scene);
+      default_instance         = add_instance(scene);
       default_instance->frames = {identity3x4f};
     }
     object->instance = default_instance;
@@ -560,7 +561,7 @@ bbox3f compute_bounds(const scene_model* scene) {
 
 // Clone a scene
 void clone_scene(scene_model* dest, const scene_model* scene) {
-  dest->name = scene->name;
+  dest->name      = scene->name;
   dest->copyright = scene->copyright;
   throw std::runtime_error("not implemented yet");
 }
@@ -838,8 +839,8 @@ namespace yocto {
 
 #ifdef YOCTO_EMBREE
 // Get Embree device
-static atomic<ssize_t>  embree_memory = 0;
-static RTCDevice embree_device() {
+static atomic<ssize_t> embree_memory = 0;
+static RTCDevice       embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
@@ -875,7 +876,8 @@ static RTCDevice embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(scene_shape* shape, const scene_bvh_params& params) {
+static void init_embree_bvh(
+    scene_shape* shape, const scene_bvh_params& params) {
   auto edevice = embree_device();
   if (shape->embree_bvh) rtcReleaseScene(shape->embree_bvh);
   shape->embree_bvh = rtcNewScene(edevice);
@@ -964,7 +966,8 @@ static void init_embree_bvh(scene_shape* shape, const scene_bvh_params& params) 
   rtcCommitScene(escene);
 }
 
-static void init_embree_bvh(scene_model* scene, const scene_bvh_params& params) {
+static void init_embree_bvh(
+    scene_model* scene, const scene_bvh_params& params) {
   // scene bvh
   auto edevice = embree_device();
   if (scene->embree_bvh) rtcReleaseScene(scene->embree_bvh);
@@ -998,7 +1001,7 @@ static void update_embree_bvh(scene_model* scene,
     const vector<scene_object*>&           updated_objects,
     const vector<scene_shape*>&            updated_shapes,
     const vector<scene_instance*>&         updated_instances,
-    const scene_bvh_params&                    params) {
+    const scene_bvh_params&                params) {
   // scene bvh
   auto escene = scene->embree_bvh;
   for (auto& [object_id, instance_id] : scene->embree_instances) {
@@ -1555,7 +1558,7 @@ void update_bvh(scene_model*       scene,
     const vector<scene_object*>&   updated_objects,
     const vector<scene_shape*>&    updated_shapes,
     const vector<scene_instance*>& updated_instances,
-    const scene_bvh_params&            params) {
+    const scene_bvh_params&        params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1741,13 +1744,13 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto [object_id, instance_id] = scene->bvh->primitives[idx];
-        auto object_                   = scene->objects[object_id];
+        auto object_                  = scene->objects[object_id];
         auto frame   = object_->instance->frames[instance_id] * object_->frame;
         auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object_->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
-          object  = object_id;
+          object   = object_id;
           instance = instance_id;
           ray.tmax = distance;
         }
