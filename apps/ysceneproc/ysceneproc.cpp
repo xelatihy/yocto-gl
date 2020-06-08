@@ -117,8 +117,6 @@ int main(int argc, const char* argv[]) {
     make_dir(sfs::path(output).parent_path() / "shapes");
   if (!scene->textures.empty())
     make_dir(sfs::path(output).parent_path() / "textures");
-  if (!scene->instances.empty())
-    make_dir(sfs::path(output).parent_path() / "instances");
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

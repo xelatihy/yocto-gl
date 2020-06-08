@@ -78,7 +78,7 @@ struct scene_bvh_node {
 // Application data is not stored explicitly.
 struct scene_bvh {
   vector<scene_bvh_node> nodes      = {};
-  vector<vec2i>          primitives = {};
+  vector<int>            primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -204,13 +204,6 @@ struct scene_shape {
   ~scene_shape();
 };
 
-// Instance data.
-struct scene_instance {
-  // instance data
-  string          name   = "";
-  vector<frame3f> frames = {};
-};
-
 // Object.
 struct scene_object {
   // object data
@@ -218,7 +211,6 @@ struct scene_object {
   frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
-  scene_instance* instance = nullptr;
 };
 
 // Environment map.
@@ -235,7 +227,6 @@ struct scene_environment {
 // Scene lights used during rendering. These are created automatically.
 struct scene_light {
   scene_object*      object      = nullptr;
-  int                instance    = -1;
   scene_environment* environment = nullptr;
 };
 
@@ -254,7 +245,6 @@ struct scene_model {
   vector<scene_shape*>       shapes       = {};
   vector<scene_texture*>     textures     = {};
   vector<scene_material*>    materials    = {};
-  vector<scene_instance*>    instances    = {};
 
   // additional information
   string name      = "";
@@ -264,8 +254,7 @@ struct scene_model {
   vector<scene_light*> lights = {};
   scene_bvh*           bvh    = nullptr;
 #ifdef YOCTO_EMBREE
-  RTCScene      embree_bvh       = nullptr;
-  vector<vec2i> embree_instances = {};
+  RTCScene embree_bvh = nullptr;
 #endif
 
   // cleanup
@@ -283,7 +272,6 @@ namespace yocto {
 scene_camera*      add_camera(scene_model* scene, const string& name = "");
 scene_environment* add_environment(scene_model* scene, const string& name = "");
 scene_object*      add_object(scene_model* scene, const string& name = "");
-scene_instance*    add_instance(scene_model* scene, const string& name = "");
 scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
@@ -299,7 +287,6 @@ void set_focus(scene_camera* camera, float aperture, float focus);
 void set_frame(scene_object* object, const frame3f& frame);
 void set_material(scene_object* object, scene_material* material);
 void set_shape(scene_object* object, scene_shape* shape);
-void set_instance(scene_object* object, scene_instance* instance);
 
 // texture properties
 void set_texture(scene_texture* texture, const image<vec3b>& img);
@@ -342,9 +329,6 @@ void set_colors(scene_shape* shape, const vector<vec3f>& colors);
 void set_radius(scene_shape* shape, const vector<float>& radius);
 void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
 
-// instance properties
-void set_frames(scene_instance* instance, const vector<frame3f>& frames);
-
 // environment properties
 void set_frame(scene_environment* environment, const frame3f& frame);
 void set_emission(scene_environment* environment, const vec3f& emission,
@@ -354,7 +338,6 @@ void set_emission(scene_environment* environment, const vec3f& emission,
 void add_cameras(scene_model* scene);
 void add_radius(scene_model* scene, float radius = 0.001f);
 void add_materials(scene_model* scene);
-void add_instances(scene_model* scene);
 void add_sky(scene_model* scene, float sun_angle = pif / 4);
 
 // Trim all unused memory
@@ -404,18 +387,15 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene_model*       scene,
-    const vector<scene_object*>&   updated_objects,
-    const vector<scene_shape*>&    updated_shapes,
-    const vector<scene_instance*>& updated_instances,
-    const scene_bvh_params&        params);
+void update_bvh(scene_model*     scene,
+    const vector<scene_object*>& updated_objects,
+    const vector<scene_shape*>& updated_shapes, const scene_bvh_params& params);
 
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct scene_intersection {
   int   object   = -1;
-  int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
@@ -428,11 +408,9 @@ struct scene_intersection {
 scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_model* object,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_object* object,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 

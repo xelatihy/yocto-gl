@@ -71,7 +71,6 @@ struct app_state {
   // editing
   scene_camera*      selected_camera      = nullptr;
   scene_object*      selected_object      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -169,7 +168,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+             (int)ioscene->objects.size()};
 
   // create scene
   init_scene(glscene);
@@ -246,16 +245,6 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
     shape_map[ioshape] = glshape;
   }
 
-  // instances
-  auto instance_map     = unordered_map<scene_instance*, ogl_instance*>{};
-  instance_map[nullptr] = nullptr;
-  for (auto ioinstance : ioscene->instances) {
-    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto glinstance = add_instance(glscene);
-    set_frames(glinstance, ioinstance->frames);
-    instance_map[ioinstance] = glinstance;
-  }
-
   // shapes
   for (auto ioobject : ioscene->objects) {
     if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
@@ -263,7 +252,6 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
     set_material(globject, material_map.at(ioobject->material));
-    set_instance(globject, instance_map.at(ioobject->instance));
   }
 
   // done
@@ -387,16 +375,6 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_instance* ioinstance) {
-  if (!ioinstance) return false;
-  auto edited = 0;
-  draw_label(win, "name", ioinstance->name);
-  draw_label(win, "frames", std::to_string(ioinstance->frames.size()));
-  // TODO: load
-  return edited;
-}
-
-bool draw_widgets(
     gui_window* win, scene_model* ioscene, scene_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
@@ -408,9 +386,6 @@ bool draw_widgets(
   edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_combobox(
       win, "material", ioobject->material, ioscene->materials);
-  edited += draw_combobox(
-      win, "instance", ioobject->instance, ioscene->instances, true);
-  // TODO: load
   return edited;
 }
 
@@ -553,9 +528,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_material(
           globject, get_element(ioobject->material, app->ioscene->materials,
                         app->glscene->materials));
-      set_instance(
-          globject, get_element(ioobject->instance, app->ioscene->instances,
-                        app->glscene->instances));
     }
     end_header(win);
   }
@@ -598,17 +570,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_opacity(glmaterial, iomaterial->opacity,
           get_texture(iomaterial->opacity_tex));
       set_normalmap(glmaterial, get_texture(iomaterial->normal_tex));
-    }
-    end_header(win);
-  }
-  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
-    draw_combobox(
-        win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (!draw_widgets(win, app->ioscene, app->selected_instance)) {
-      auto ioinstance = app->selected_instance;
-      auto glinstance = get_element(
-          ioinstance, app->ioscene->instances, app->glscene->instances);
-      set_frames(glinstance, ioinstance->frames);
     }
     end_header(win);
   }
