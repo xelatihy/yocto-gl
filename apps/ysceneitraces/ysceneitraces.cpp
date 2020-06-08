@@ -285,6 +285,9 @@ int main(int argc, const char* argv[]) {
   // tesselation
   tesselate_shapes(ioscene, print_progress);
 
+  // instances
+  add_instances(ioscene);
+
   // conversion
   init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 

@@ -205,6 +205,9 @@ int main(int argc, const char* argv[]) {
   // tesselation
   tesselate_shapes(ioscene, print_progress);
 
+  // instances
+  add_instances(ioscene);
+
   // convert scene
   auto scene_guard = std::make_unique<trace_scene>();
   auto scene       = scene_guard.get();
