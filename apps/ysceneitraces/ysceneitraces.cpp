@@ -148,9 +148,6 @@ int main(int argc, const char* argv[]) {
   // tesselation
   tesselate_shapes(app->scene, print_progress);
 
-  // instances
-  add_instances(app->scene);
-
   // build bvh
   init_bvh(app->scene, app->params, print_progress);
 

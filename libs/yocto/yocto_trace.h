@@ -177,7 +177,6 @@ void init_bvh(scene_model* scene, const trace_params& params,
 void update_bvh(scene_model*       scene,
     const vector<scene_object*>&   updated_objects,
     const vector<scene_shape*>&    updated_shapes,
-    const vector<scene_instance*>& updated_instances,
     const trace_params&            params);
 
 // Progressively computes an image.

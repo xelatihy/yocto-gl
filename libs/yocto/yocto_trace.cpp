@@ -347,7 +347,7 @@ static trace_point eval_point(const scene_model* scene,
   auto object   = scene->objects[intersection.object];
   auto shape    = object->shape;
   auto material = object->material;
-  auto frame = object->instance->frames[intersection.instance] * object->frame;
+  auto frame = object->frame;
   auto element          = intersection.element;
   auto uv               = intersection.uv;
   auto non_rigid_frames = true;
@@ -520,7 +520,7 @@ static volume_point eval_volume(const scene_model* scene,
   auto& object   = scene->objects[intersection.object];
   auto& shape    = object->shape;
   auto& material = object->material;
-  auto  frame = object->instance->frames[intersection.instance] * object->frame;
+  auto  frame = object->frame;
   auto  element = intersection.element;
   auto  uv      = intersection.uv;
 
@@ -883,7 +883,7 @@ static vec3f sample_lights(const scene_model* scene, const vec3f& position,
   if (light->object) {
     auto& object    = light->object;
     auto  shape     = object->shape;
-    auto  frame     = object->instance->frames[light->instance] * object->frame;
+    auto  frame     = object->frame;
     auto  element   = sample_discrete_cdf(shape->elements_cdf, rel);
     auto  uv        = (!shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(
@@ -918,10 +918,10 @@ static float sample_lights_pdf(
       auto  lpdf          = 0.0f;
       auto  next_position = position;
       auto& object        = light->object;
-      auto  frame = object->instance->frames[light->instance] * object->frame;
+      auto  frame = object->frame;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_instance_bvh(
-            light->object, light->instance, {next_position, direction});
+            light->object, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = transform_point(
@@ -1340,13 +1340,12 @@ void init_bvh(scene_model* scene, const trace_params& params,
 void update_bvh(scene_model*       scene,
     const vector<scene_object*>&   updated_objects,
     const vector<scene_shape*>&    updated_shapes,
-    const vector<scene_instance*>& updated_instances,
     const trace_params&            params) {
   auto params_       = scene_bvh_params{};
   params_.bvh        = (scene_bvh_type)params.bvh;
   params_.noparallel = params.noparallel;
   update_bvh(
-      scene, updated_objects, updated_shapes, updated_instances, params_);
+      scene, updated_objects, updated_shapes, params_);
 }
 
 // Forward declaration
@@ -1387,12 +1386,9 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
         if (idx) shape->elements_cdf[idx] += shape->elements_cdf[idx - 1];
       }
     }
-    for (auto iidx = 0; iidx < object->instance->frames.size(); iidx++) {
-      auto light         = add_light(scene);
-      light->object      = object;
-      light->instance    = iidx;
-      light->environment = nullptr;
-    }
+    auto light         = add_light(scene);
+    light->object      = object;
+    light->environment = nullptr;
   }
   for (auto environment : scene->environments) {
     if (environment->emission == zero3f) continue;
@@ -1413,7 +1409,6 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
     }
     auto light         = add_light(scene);
     light->object      = nullptr;
-    light->instance    = -1;
     light->environment = environment;
   }
 
