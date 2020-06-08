@@ -202,6 +202,9 @@ int main(int argc, const char* argv[]) {
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
+  // tesselation
+  tesselate_shapes(ioscene, print_progress);
+
   // convert scene
   auto scene_guard = std::make_unique<trace_scene>();
   auto scene       = scene_guard.get();

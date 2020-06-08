@@ -282,6 +282,9 @@ int main(int argc, const char* argv[]) {
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
 
+  // tesselation
+  tesselate_shapes(ioscene, print_progress);
+
   // conversion
   init_scene(app->scene, ioscene, app->camera, iocamera, print_progress);
 

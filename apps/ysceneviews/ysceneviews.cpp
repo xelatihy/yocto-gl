@@ -259,6 +259,9 @@ int main(int argc, const char* argv[]) {
   // get camera
   app->iocamera = get_camera(app->ioscene, camera_name);
 
+  // tesselation
+  tesselate_shapes(app->ioscene, print_progress);
+
   // callbacks
   auto callbacks    = gui_callbacks{};
   callbacks.init_cb = [app](gui_window* win, const gui_input& input) {

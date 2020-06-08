@@ -126,6 +126,7 @@ void load_scene_async(
             app->filename, app->ioscene, app->loader_error, progress_cb))
       return;
     app->iocamera = get_camera(app->ioscene, camera_name);
+    tesselate_shapes(app->ioscene, progress_cb);
   });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
