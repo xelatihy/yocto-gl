@@ -558,6 +558,13 @@ bbox3f compute_bounds(const scene_model* scene) {
   return bbox;
 }
 
+// Clone a scene
+void clone_scene(scene_model* dest, const scene_model* scene) {
+  dest->name = scene->name;
+  dest->copyright = scene->copyright;
+  throw std::runtime_error("not implemented yet");
+}
+
 // Reduce memory usage
 void trim_memory(scene_model* scene) {
   for (auto shape : scene->shapes) {

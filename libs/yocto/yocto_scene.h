@@ -357,6 +357,12 @@ void add_materials(scene_model* scene);
 void add_instances(scene_model* scene);
 void add_sky(scene_model* scene, float sun_angle = pif / 4);
 
+// Trim all unused memory
+void trim_memory(scene_model* scene);
+
+// Clone a scene
+void clone_scene(scene_model* dest, const scene_model* scene);
+
 // compute scene bounds
 bbox3f compute_bounds(const scene_model* scene);
 
@@ -450,12 +456,6 @@ vector<string> scene_stats(const scene_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
     const scene_model* scene, bool notextures = false);
-
-// Return an approximate scene bounding box.
-bbox3f compute_bounds(const scene_model* scene);
-
-// Trim all unused memory
-void trim_memory(scene_model* scene);
 
 }  // namespace yocto
 
