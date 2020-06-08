@@ -1780,6 +1780,10 @@ inline void update_fpscam(
 inline ray3f camera_ray(
     const frame3f& frame, float lens, const vec2f& film, const vec2f& image_uv);
 
+// Generate a ray from a camera
+inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
+    float film, const vec2f& image_uv);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -5135,6 +5139,20 @@ inline void update_fpscam(
 // Generate a ray from a camera
 inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
     const vec2f& image_uv) {
+  auto e = zero3f;
+  auto q = vec3f{
+      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
+  auto q1  = -q;
+  auto d   = normalize(q1 - e);
+  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
+  return ray;
+}
+
+// Generate a ray from a camera
+inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
+    float film_, const vec2f& image_uv) {
+  auto film = aspect >= 1 ? vec2f{film_, film_ / aspect}
+                          : vec2f{film_ * aspect, film_};
   auto e = zero3f;
   auto q = vec3f{
       film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};

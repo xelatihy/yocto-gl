@@ -69,8 +69,9 @@
 #include <future>
 #include <memory>
 
-#include "yocto_image.h"
 #include "yocto_math.h"
+#include "yocto_image.h"
+#include "yocto_sceneio.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -116,26 +117,7 @@ struct trace_bvh {
   vector<vec2i>          primitives = {};
 };
 
-// Camera based on a simple lens model. The camera is placed using a frame.
-// Camera projection is described in photorgaphics terms. In particular,
-// we specify fil size (35mm by default), the lens' focal length, the focus
-// distance and the lens aperture. All values are in meters.
-// Here are some common aspect ratios used in video and still photography.
-// 3:2    on 35 mm:  0.036 x 0.024
-// 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
-// 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
-// 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
-// 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
-// To compute good apertures, one can use the F-stop number from phostography
-// and set the aperture to focal_leangth/f_stop.
-struct trace_camera {
-  frame3f frame        = identity3x4f;
-  bool    orthographic = false;
-  float   lens         = 0.050;
-  vec2f   film         = {0.036, 0.024};
-  float   focus        = 10000;
-  float   aperture     = 0;
-};
+using trace_camera = scene_camera;
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.

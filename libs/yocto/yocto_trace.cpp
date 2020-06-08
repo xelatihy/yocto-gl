@@ -216,8 +216,11 @@ static ray3f eval_perspective_camera(
   //   distance = camera->lens * camera->focus / (camera->focus - camera->lens);
   // }
   // point on the image plane
-  auto q = vec3f{camera->film.x * (0.5f - image_uv.x),
-      camera->film.y * (image_uv.y - 0.5f), camera->lens};
+  auto film = camera->aspect >= 1
+                  ? vec2f{camera->film, camera->film / camera->aspect}
+                  : vec2f{camera->film * camera->aspect, camera->film};
+  auto q = vec3f{
+      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), camera->lens};
   // ray direction through the lens center
   auto dc = -normalize(q);
   // point on the lens
@@ -250,9 +253,12 @@ static ray3f eval_perspective_camera(
 static ray3f eval_orthographic_camera(
     const trace_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
   // point on the image plane
+  auto film = camera->aspect >= 1
+                  ? vec2f{camera->film, camera->film / camera->aspect}
+                  : vec2f{camera->film * camera->aspect, camera->film};
   auto scale = 1 / camera->lens;
-  auto q     = vec3f{camera->film.x * (0.5f - image_uv.x) * scale,
-      camera->film.y * (image_uv.y - 0.5f) * scale, camera->lens};
+  auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
+      film.y * (image_uv.y - 0.5f) * scale, camera->lens};
   // point on the lens
   auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera->aperture / 2,
                                       lens_uv.y * camera->aperture / 2, 0};
@@ -2267,13 +2273,11 @@ vec4f trace_sample(trace_state* state, const trace_scene* scene,
 // Init a sequence of random number generators.
 void init_state(trace_state* state, const trace_scene* scene,
     const trace_camera* camera, const trace_params& params) {
-  auto image_size =
-      (camera->film.x > camera->film.y)
-          ? vec2i{params.resolution,
-                (int)round(params.resolution * camera->film.y / camera->film.x)}
-          : vec2i{
-                (int)round(params.resolution * camera->film.x / camera->film.y),
-                params.resolution};
+  auto image_size = (camera->aspect >= 1)
+                        ? vec2i{params.resolution,
+                              (int)round(params.resolution / camera->aspect)}
+                        : vec2i{(int)round(params.resolution * camera->aspect),
+                              params.resolution};
   state->pixels.assign(image_size, trace_pixel{});
   state->render.assign(image_size, zero4f);
   auto rng = make_rng(1301081);
@@ -2516,8 +2520,8 @@ void set_frame(trace_camera* camera, const frame3f& frame) {
 void set_lens(
     trace_camera* camera, float lens, float aspect, float film, bool ortho) {
   camera->lens = lens;
-  camera->film = aspect >= 1 ? vec2f{film, film / aspect}
-                             : vec2f{film * aspect, film};
+  camera->aspect = aspect;
+  camera->film = film;
   camera->orthographic = ortho;
 }
 void set_focus(trace_camera* camera, float aperture, float focus) {
