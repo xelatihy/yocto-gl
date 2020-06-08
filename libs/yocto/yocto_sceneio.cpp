@@ -545,13 +545,13 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 
   struct scene_instance {
     vector<frame3f>       frames  = {};
-    vector<scene_object*> objects = {};
   };
 
   // load json instance
   auto instances    = vector<unique_ptr<scene_instance>>{};
   auto instance_map = unordered_map<string, scene_instance*>{{"", nullptr}};
-  auto get_instance = [&instances, &instance_map, &get_value](const json& ejs,
+  auto object_instance = unordered_map<scene_object*, scene_instance*>{};
+  auto get_instance = [&instances, &instance_map, &object_instance, &get_value](const json& ejs,
                           const string& name, scene_object* object,
                           const string& dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
@@ -560,12 +560,12 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (path == "") return true;
     auto it = instance_map.find(path);
     if (it != instance_map.end()) {
-      it->second->objects.push_back(object);
+      object_instance[object] = it->second;
       return true;
     }
     auto instance      = instances.emplace_back(new scene_instance()).get();
     instance_map[path] = instance;
-    instance->objects.push_back(object);
+    object_instance[object] = instance;
     return true;
   };
 
@@ -743,20 +743,23 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 
   // apply instances
   if (!instances.empty()) {
-    for (auto& instance : instances) {
-      for (auto object : instance->objects) {
-        scene->objects.erase(
-            std::remove(scene->objects.begin(), scene->objects.end(), object),
-            scene->objects.end());
-        auto iid = 0;
-        for (auto& frame : instance->frames) {
-          auto nobject = add_object(
-              scene, object->name + "@" + std::to_string(++iid));
-          nobject->frame    = frame * object->frame;
+    auto objects = scene->objects;
+    scene->objects.clear();
+    for(auto object : objects) {
+      auto it = object_instance.find(object);
+      if(it == object_instance.end()) {
+        auto nobject = add_object(scene, object->name);
+        nobject->frame = object->frame;
+        nobject->shape = object->shape;
+        nobject->material = object->material;
+      } else {
+        auto instance = it->second;
+        for(auto& frame : instance->frames) {
+          auto nobject = add_object(scene, object->name);
+          nobject->frame = frame * object->frame;
+          nobject->shape = object->shape;
           nobject->material = object->material;
-          nobject->shape    = object->shape;
         }
-        delete object;
       }
     }
   }
