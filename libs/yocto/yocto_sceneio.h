@@ -284,6 +284,13 @@ struct scene_model {
   ~scene_model();
 };
 
+}
+
+// -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // add element to a scene
 scene_camera*      add_camera(scene_model* scene, const string& name = "");
 scene_environment* add_environment(scene_model* scene, const string& name = "");
@@ -293,6 +300,19 @@ scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
 scene_object* add_complete_object(scene_model* scene, const string& name = "");
+
+// add missing elements
+void add_cameras(scene_model* scene);
+void add_radius(scene_model* scene, float radius = 0.001f);
+void add_materials(scene_model* scene);
+void add_instances(scene_model* scene);
+void add_sky(scene_model* scene, float sun_angle = pif / 4);
+
+// compute scene bounds
+bbox3f compute_bounds(const scene_model* scene);
+
+// get named camera or default if name is empty
+scene_camera* get_camera(const scene_model* scene, const string& name = "");
 
 }  // namespace yocto
 
@@ -377,12 +397,6 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
 bool save_scene(const string& filename, const scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-
-// get named camera or default if name is empty
-scene_camera* get_camera(const scene_model* scene, const string& name = "");
-
-// add a sky environment
-void add_sky(scene_model* scene, float sun_angle = pif / 4);
 
 }  // namespace yocto
 

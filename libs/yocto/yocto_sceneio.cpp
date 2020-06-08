@@ -392,6 +392,19 @@ void add_materials(scene_model* scene) {
   }
 }
 
+// Add missing instances.
+void add_instances(scene_model* scene) {
+  auto default_instance = (scene_instance*)nullptr;
+  for (auto& object : scene->objects) {
+    if (object->instance) continue;
+    if (!default_instance) {
+      default_instance        = add_instance(scene);
+      default_instance->frames = {identity3x4f};
+    }
+    object->instance = default_instance;
+  }
+}
+
 // Add a sky environment
 void add_sky(scene_model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
