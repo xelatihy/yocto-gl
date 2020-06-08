@@ -47,8 +47,8 @@ struct app_state {
   trace_params params = {};
 
   // scene
-  trace_scene*   scene        = new trace_scene{};
-  trace_camera*  camera       = nullptr;
+  scene_model*   scene        = new scene_model{};
+  scene_camera*  camera       = nullptr;
 
   // rendering state
   image<vec4f> render   = {};

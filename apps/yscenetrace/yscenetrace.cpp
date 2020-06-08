@@ -70,7 +70,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto scene_guard = std::make_unique<trace_scene>();
+  auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror       = ""s;
   if (!load_scene(filename, scene, ioerror, print_progress))

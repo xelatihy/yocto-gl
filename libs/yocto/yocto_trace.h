@@ -92,24 +92,6 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// TRACE SCENE DATA
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using trace_bvh = scene_bvh;
-using trace_camera = scene_camera;
-using trace_texture = scene_texture;
-using trace_material = scene_material;
-using trace_shape = scene_shape;
-using trace_instance = scene_instance;
-using trace_object = scene_object;
-using trace_environment = scene_environment;
-using trace_light = scene_light;
-using trace_scene = scene_model;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // RENDERING API
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -185,21 +167,21 @@ using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;
 
 // Initialize lights.
-void init_lights(trace_scene* scene, progress_callback progress_cb = {});
+void init_lights(scene_model* scene, progress_callback progress_cb = {});
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_params& params,
+void init_bvh(scene_model* scene, const trace_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(trace_scene*       scene,
-    const vector<trace_object*>&   updated_objects,
-    const vector<trace_shape*>&    updated_shapes,
-    const vector<trace_instance*>& updated_instances,
+void update_bvh(scene_model*       scene,
+    const vector<scene_object*>&   updated_objects,
+    const vector<scene_shape*>&    updated_shapes,
+    const vector<scene_instance*>& updated_instances,
     const trace_params&            params);
 
 // Progressively computes an image.
-image<vec4f> trace_image(const trace_scene* scene, const trace_camera* camera,
+image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
     const trace_params& params, progress_callback progress_cb = {},
     image_callback image_cb = {});
 
@@ -228,8 +210,8 @@ using async_callback = function<void(
 
 // [experimental] Asynchronous interface
 struct trace_state;
-void trace_start(trace_state* state, const trace_scene* scene,
-    const trace_camera* camera, const trace_params& params,
+void trace_start(trace_state* state, const scene_model* scene,
+    const scene_camera* camera, const trace_params& params,
     progress_callback progress_cb = {}, image_callback image_cb = {},
     async_callback async_cb = {});
 void trace_stop(trace_state* state);
