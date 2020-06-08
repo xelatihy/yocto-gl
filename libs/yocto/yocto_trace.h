@@ -118,15 +118,7 @@ struct trace_bvh {
 };
 
 using trace_camera = scene_camera;
-
-// Texture containing either an LDR or HDR image. HdR images are encoded
-// in linear color space, while LDRs are encoded as sRGB.
-struct trace_texture {
-  image<vec3f> colorf  = {};
-  image<vec3b> colorb  = {};
-  image<float> scalarf = {};
-  image<byte>  scalarb = {};
-};
+using trace_texture = scene_texture;
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
