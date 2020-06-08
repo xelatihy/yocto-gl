@@ -396,7 +396,7 @@ vec3f eval_environment(
     const scene_model* scene, const vec3f& direction);
 
 
-// Material Bsdf
+// Material Bsdf parameters
 struct scene_bsdf {
   // brdf lobes
   vec3f diffuse      = {0, 0, 0};
@@ -427,6 +427,20 @@ vec3f eval_emission(const scene_object* object, int element,
 // Eval material to obatain emission, brdf and opacity.
 scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
+// check if a brdf is a delta
+bool is_delta(const scene_bsdf& bsdf);
+
+// Material volume parameters
+struct scene_vsdf {
+  vec3f density    = {0, 0, 0};
+  vec3f scatter    = {0, 0, 0};
+  float anisotropy = 0;
+};
+
+// check if we have a volume
+bool has_volume(const scene_object* object);
+// evaluate volume
+scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv);
 
 }  // namespace yocto
 

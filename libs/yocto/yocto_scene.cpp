@@ -1144,6 +1144,44 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
   return bsdf;
 }
 
+// check if a brdf is a delta
+bool is_delta(const scene_bsdf& bsdf) { return !bsdf.roughness; }
+
+// evaluate volume
+scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
+  auto material = object->material;
+  // initialize factors
+  auto texcoord = eval_texcoord(object, element, uv);
+  auto base     = material->color * eval_color(object, element, uv) *
+              eval_texture(material->color_tex, texcoord, false);
+  auto transmission = material->transmission *
+                      eval_texture(material->emission_tex, texcoord, true).x;
+  auto translucency =
+      material->translucency *
+      eval_texture(material->translucency_tex, texcoord, true).x;
+  auto thin = material->thin ||
+              (!material->transmission && !material->translucency);
+  auto scattering = material->scattering *
+                    eval_texture(material->scattering_tex, texcoord, false);
+  auto scanisotropy = material->scanisotropy;
+  auto trdepth      = material->trdepth;
+
+  // factors
+  auto vsdf    = scene_vsdf{};
+  vsdf.density = ((transmission || translucency) && !thin)
+                         ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
+                         : zero3f;
+  vsdf.scatter    = scattering;
+  vsdf.anisotropy = scanisotropy;
+
+  return vsdf;
+}
+
+// check if we have a volume
+bool has_volume(const scene_object* object) {
+  return !object->material->thin && object->material->transmission;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
