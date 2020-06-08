@@ -501,20 +501,6 @@ static bool has_volume(
          (object->material->transmission || object->material->translucency);
 }
 
-// Evaluate all environment color.
-static vec3f eval_environment(const scene_model* scene, const ray3f& ray) {
-  auto emission = zero3f;
-  for (auto environment : scene->environments) {
-    auto wl       = transform_direction(inverse(environment->frame), ray.d);
-    auto texcoord = vec2f{
-        atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-    if (texcoord.x < 0) texcoord.x += 1;
-    emission += environment->emission *
-                eval_texture(environment->emission_tex, texcoord);
-  }
-  return emission;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -908,7 +894,7 @@ static std::pair<vec3f, bool> trace_path(const scene_model* scene,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -1035,7 +1021,7 @@ static std::pair<vec3f, bool> trace_naive(const scene_model* scene,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -1093,7 +1079,7 @@ static std::pair<vec3f, bool> trace_eyelight(const scene_model* scene,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 

@@ -771,8 +771,7 @@ vec3f lookup_texture(
 
 // Evaluate a texture
 vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
-    bool ldr_as_linear, bool no_interpolation,
-    bool clamp_to_edge) {
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   // get texture
   if (!texture) return {1, 1, 1};
 
@@ -803,6 +802,26 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
          lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
          lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
+}
+
+// Evaluate environment color.
+vec3f eval_environment(
+    const scene_environment* environment, const vec3f& direction) {
+  auto wl       = transform_direction(inverse(environment->frame), direction);
+  auto texcoord = vec2f{
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+  if (texcoord.x < 0) texcoord.x += 1;
+  return environment->emission *
+         eval_texture(environment->emission_tex, texcoord);
+}
+
+// Evaluate all environment color.
+vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
+  auto emission = zero3f;
+  for (auto environment : scene->environments) {
+    emission += eval_environment(environment, direction);
+  }
+  return emission;
 }
 
 }  // namespace yocto
