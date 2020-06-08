@@ -54,9 +54,9 @@ struct app_state {
 
   // scene
   scene_model*  ioscene  = new scene_model{};
-  trace_scene*  scene    = new trace_scene{};
+  scene_model*  scene    = new scene_model{};
   scene_camera* iocamera = nullptr;
-  trace_camera* camera   = nullptr;
+  scene_camera* camera   = nullptr;
 
   // options
   trace_params params = {};
@@ -122,7 +122,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
+void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     scene_camera* iocamera, progress_callback progress_cb = {}) {
   // handle progress
   auto progress = vec2i{
@@ -131,7 +131,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
              (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
              (int)ioscene->objects.size()};
 
-  auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb)
@@ -144,7 +144,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     camera_map[iocamera] = camera;
   }
 
-  auto texture_map     = unordered_map<scene_texture*, trace_texture*>{};
+  auto texture_map     = unordered_map<scene_texture*, scene_texture*>{};
   texture_map[nullptr] = nullptr;
   for (auto iotexture : ioscene->textures) {
     if (progress_cb)
@@ -162,7 +162,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     texture_map[iotexture] = texture;
   }
 
-  auto material_map     = unordered_map<scene_material*, trace_material*>{};
+  auto material_map     = unordered_map<scene_material*, scene_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb)
@@ -192,7 +192,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     material_map[iomaterial] = material;
   }
 
-  auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
+  auto shape_map     = unordered_map<scene_shape*, scene_shape*>{};
   shape_map[nullptr] = nullptr;
   for (auto ioshape : ioscene->shapes) {
     if (progress_cb) progress_cb("converting shapes", progress.x++, progress.y);
@@ -210,7 +210,7 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<scene_instance*, trace_instance*>{};
+  auto instance_map     = unordered_map<scene_instance*, scene_instance*>{};
   instance_map[nullptr] = nullptr;
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
@@ -298,6 +298,7 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
+    add_instances(app->ioscene);
     tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
@@ -860,7 +861,7 @@ int main(int argc, const char* argv[]) {
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
-            app->camera->film,
+            app->camera->lens, app->camera->film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
