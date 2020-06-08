@@ -73,7 +73,6 @@ struct app_state {
   // editing
   scene_camera*      selected_camera      = nullptr;
   scene_object*      selected_object      = nullptr;
-  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -128,8 +127,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
-             (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->objects.size()};
 
   auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -210,16 +208,6 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  auto instance_map     = unordered_map<scene_instance*, scene_instance*>{};
-  instance_map[nullptr] = nullptr;
-  for (auto ioinstance : ioscene->instances) {
-    if (progress_cb)
-      progress_cb("converting instances", progress.x++, progress.y);
-    auto instance = add_instance(scene);
-    set_frames(instance, ioinstance->frames);
-    instance_map[ioinstance] = instance;
-  }
-
   for (auto ioobject : ioscene->objects) {
     if (progress_cb)
       progress_cb("converting objects", progress.x++, progress.y);
@@ -227,7 +215,6 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     set_frame(object, ioobject->frame);
     set_shape(object, shape_map.at(ioobject->shape));
     set_material(object, material_map.at(ioobject->material));
-    set_instance(object, instance_map.at(ioobject->instance));
   }
 
   for (auto ioenvironment : ioscene->environments) {
@@ -298,7 +285,6 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
-    add_instances(app->ioscene);
     tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
@@ -430,15 +416,6 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_instance* ioinstance) {
-  if (!ioinstance) return false;
-  auto edited = 0;
-  draw_label(win, "name", ioinstance->name);
-  draw_label(win, "frames", std::to_string(ioinstance->frames.size()));
-  return edited;
-}
-
-bool draw_widgets(
     gui_window* win, scene_model* ioscene, scene_object* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
@@ -450,8 +427,6 @@ bool draw_widgets(
   edited += draw_combobox(win, "shape", ioobject->shape, ioscene->shapes);
   edited += draw_combobox(
       win, "material", ioobject->material, ioscene->materials);
-  edited += draw_combobox(
-      win, "instance", ioobject->instance, ioscene->instances);
   return edited;
 }
 
@@ -636,9 +611,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
                             app->scene->shapes));
       set_material(object, get_element(ioobject->material,
                                app->ioscene->materials, app->scene->materials));
-      set_instance(object, get_element(ioobject->instance,
-                               app->ioscene->instances, app->scene->instances));
-      update_bvh(app->scene, {object}, {}, {}, app->params);
+      update_bvh(app->scene, {object}, {}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -661,7 +634,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       set_colors(shape, ioshape->colors);
       set_radius(shape, ioshape->radius);
       set_tangents(shape, ioshape->tangents);
-      update_bvh(app->scene, {}, {shape}, {}, app->params);
+      update_bvh(app->scene, {}, {shape}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -717,20 +690,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       } else if (!iotexture->scalarb.empty()) {
         set_texture(texture, iotexture->scalarb);
       }
-      reset_display(app);
-    }
-    end_header(win);
-  }
-  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
-    draw_combobox(win, "instance##2", app->selected_instance,
-        app->ioscene->instances, true);
-    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
-      stop_display(app);
-      auto ioinstance = app->selected_instance;
-      auto instance   = get_element(
-          ioinstance, app->ioscene->instances, app->scene->instances);
-      set_frames(instance, ioinstance->frames);
-      update_bvh(app->scene, {}, {}, {instance}, app->params);
       reset_display(app);
     }
     end_header(win);
