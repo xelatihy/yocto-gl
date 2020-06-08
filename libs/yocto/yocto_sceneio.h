@@ -125,7 +125,6 @@ struct scene_material {
   float scanisotropy = 0;
   float trdepth      = 0.01;
   float opacity      = 1;
-  float displacement = 0;
   bool  thin         = true;
 
   // textures
@@ -141,11 +140,6 @@ struct scene_material {
   scene_texture* coat_tex         = nullptr;
   scene_texture* opacity_tex      = nullptr;
   scene_texture* normal_tex       = nullptr;
-  scene_texture* displacement_tex = nullptr;
-
-  // [experimental] properties to drive subdiv and displacement
-  int  subdivisions = 2;
-  bool smooth       = true;
 };
 
 // Shape data represented as indexed meshes of elements.
@@ -162,22 +156,6 @@ struct scene_shape {
   vector<vec3i> triangles = {};
   vector<vec4i> quads     = {};
 
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
-};
-
-// Subdiv data represented as indexed meshes of elements.
-// May contain points, lines, triangles, quads or
-// face-varying quads.
-struct scene_subdiv {
-  // shape data
-  string name = "";
-
   // face-varying primitives
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
@@ -187,6 +165,18 @@ struct scene_subdiv {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
+  vector<vec3f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+
+  // subdivision data [experimental]
+  int  subdivisions = 0;
+  bool catmullclark = true;
+  bool smooth       = true;
+
+  // displacement data [experimental]
+  float          displacement     = 0;
+  scene_texture* displacement_tex = nullptr;
 };
 
 // Instance data.
@@ -204,7 +194,6 @@ struct scene_object {
   scene_shape*    shape    = nullptr;
   scene_material* material = nullptr;
   scene_instance* instance = nullptr;
-  scene_subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
@@ -228,7 +217,6 @@ struct scene_model {
   vector<scene_object*>      objects      = {};
   vector<scene_environment*> environments = {};
   vector<scene_shape*>       shapes       = {};
-  vector<scene_subdiv*>      subdivs      = {};
   vector<scene_texture*>     textures     = {};
   vector<scene_material*>    materials    = {};
   vector<scene_instance*>    instances    = {};
@@ -248,7 +236,6 @@ scene_object*      add_object(scene_model* scene, const string& name = "");
 scene_instance*    add_instance(scene_model* scene, const string& name = "");
 scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
-scene_subdiv*      add_subdiv(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
 scene_object* add_complete_object(scene_model* scene, const string& name = "");
 
@@ -311,8 +298,8 @@ bbox3f compute_bounds(const scene_model* scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdivs(scene_model* scene, progress_callback progress_cb = {});
-void tesselate_subdiv(scene_model* scene, scene_subdiv* subdiv);
+void tesselate_shapes(scene_model* scene, progress_callback progress_cb = {});
+void tesselate_shape(scene_shape* shape);
 
 }  // namespace yocto
 

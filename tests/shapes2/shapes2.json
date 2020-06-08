@@ -165,7 +165,8 @@
     },
     "cube-subdiv-uvgrid": {
       "shape": "cube-subdiv",
-      "subdiv": "cube-subdiv",
+      "subdivisions": 4,
+      "smooth": false,
       "frame": [
         1,
         0,
@@ -184,7 +185,8 @@
     },
     "suzanne-subdiv-plastic-sharp": {
       "shape": "suzanne-subdiv",
-      "subdiv": "suzanne-subdiv",
+      "subdivisions": 2,
+      "smooth": true,
       "frame": [
         1,
         0,
@@ -203,7 +205,10 @@
     },
     "sphere-displaced-matte": {
       "shape": "sphere-displaced",
-      "subdiv": "sphere-displaced",
+      "subdivisions": 0,
+      "smooth": true,
+      "displacement": 0.025,
+      "displacement_tex": "bumps-displacement",
       "frame": [
         1,
         0,
@@ -281,8 +286,6 @@
       ]
     },
     "cube-subdiv-uvgrid": {
-      "subdivisions": 4,
-      "smooth": false,
       "specular": 1,
       "color": [
         1,
@@ -293,8 +296,6 @@
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-sharp": {
-      "subdivisions": 2,
-      "smooth": true,
       "specular": 1,
       "color": [
         0.5,
@@ -304,10 +305,6 @@
       "roughness": 0.01
     },
     "sphere-displaced-matte": {
-      "subdivisions": 0,
-      "smooth": true,
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
       "color": [
         0.7,
         0.7,

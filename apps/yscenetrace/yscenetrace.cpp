@@ -46,8 +46,8 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
+             (int)ioscene->objects.size()};
 
   auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -105,11 +105,6 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
         texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
-  }
-
-  for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
-    tesselate_subdiv(ioscene, iosubdiv);
   }
 
   auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
@@ -206,6 +201,9 @@ int main(int argc, const char* argv[]) {
 
   // get camera
   auto iocamera = get_camera(ioscene, camera_name);
+
+  // tesselation
+  tesselate_shapes(ioscene, print_progress);
 
   // convert scene
   auto scene_guard = std::make_unique<trace_scene>();

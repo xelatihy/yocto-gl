@@ -74,7 +74,6 @@ struct app_state {
   scene_object*      selected_object      = nullptr;
   scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
-  scene_subdiv*      selected_subdiv      = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
   scene_texture*     selected_texture     = nullptr;
@@ -131,8 +130,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->subdivs.size() + (int)ioscene->instances.size() +
-             (int)ioscene->objects.size()};
+             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
   // create scene
   init_scene(glscene);
@@ -189,11 +187,6 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
         texture_map.at(iomaterial->opacity_tex));
     set_normalmap(glmaterial, texture_map.at(iomaterial->normal_tex));
     material_map[iomaterial] = glmaterial;
-  }
-
-  for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb) progress_cb("convert subdiv", progress.x++, progress.y);
-    tesselate_subdiv(ioscene, iosubdiv);
   }
 
   // shapes
@@ -264,6 +257,9 @@ int main(int argc, const char* argv[]) {
 
   // get camera
   app->iocamera = get_camera(app->ioscene, camera_name);
+
+  // tesselation
+  tesselate_shapes(app->ioscene, print_progress);
 
   // callbacks
   auto callbacks    = gui_callbacks{};
