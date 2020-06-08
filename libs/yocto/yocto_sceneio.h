@@ -239,6 +239,9 @@ struct scene_environment {
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   scene_texture* emission_tex = nullptr;
+
+  // computed properties
+  vector<float> texels_cdf = {};
 };
 
 // Scene lights used during rendering. These are created automatically.
@@ -325,6 +328,13 @@ using progress_callback =
 void init_bvh(scene_model* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
+// Refit bvh data
+void update_bvh(scene_model*       scene,
+    const vector<scene_object*>&   updated_objects,
+    const vector<scene_shape*>&    updated_shapes,
+    const vector<scene_instance*>& updated_instances,
+    const scene_bvh_params&            params);
+
 // Results of intersect functions that include hit flag, the instance id,
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
@@ -344,6 +354,9 @@ scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_model* object,
     int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
+scene_intersection intersect_instance_bvh(const scene_object* object,
+    int instance, const ray3f& ray, bool find_any = false, 
     bool non_rigid_frames = true);
 
 }  // namespace yocto
