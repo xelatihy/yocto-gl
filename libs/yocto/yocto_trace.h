@@ -119,43 +119,7 @@ struct trace_bvh {
 
 using trace_camera = scene_camera;
 using trace_texture = scene_texture;
-
-// Material for surfaces, lines and triangles.
-// For surfaces, uses a microfacet model with thin sheet transmission.
-// The model is based on OBJ, but contains glTF compatibility.
-// For the documentation on the values, please see the OBJ format.
-struct trace_material {
-  // material
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  float translucency = 0;
-  vec3f scattering   = {0, 0, 0};
-  float scanisotropy = 0;
-  float trdepth      = 0.01;
-  float opacity      = 1;
-  bool  thin         = false;
-
-  // textures
-  trace_texture* emission_tex     = nullptr;
-  trace_texture* color_tex        = nullptr;
-  trace_texture* specular_tex     = nullptr;
-  trace_texture* metallic_tex     = nullptr;
-  trace_texture* roughness_tex    = nullptr;
-  trace_texture* transmission_tex = nullptr;
-  trace_texture* translucency_tex = nullptr;
-  trace_texture* spectint_tex     = nullptr;
-  trace_texture* scattering_tex   = nullptr;
-  trace_texture* coat_tex         = nullptr;
-  trace_texture* opacity_tex      = nullptr;
-  trace_texture* normal_tex       = nullptr;
-};
+using trace_material = scene_material;
 
 // Shape data represented as an indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
