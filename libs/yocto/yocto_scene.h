@@ -355,6 +355,22 @@ scene_camera* get_camera(const scene_model* scene, const string& name = "");
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// EVALUATION OF SCENE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Texture
+vec2i texture_size(const scene_texture* texture);
+vec3f lookup_texture(
+    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
+vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // RAY-SCENE INTERSECTION
 // -----------------------------------------------------------------------------
 namespace yocto {

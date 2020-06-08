@@ -563,76 +563,6 @@ void trim_memory(scene_model* scene) {
   scene->environments.shrink_to_fit();
 }
 
-// Check texture size
-static vec2i texture_size(const scene_texture* texture) {
-  if (!texture->colorf.empty()) {
-    return texture->colorf.size();
-  } else if (!texture->colorb.empty()) {
-    return texture->colorb.size();
-  } else if (!texture->scalarf.empty()) {
-    return texture->scalarf.size();
-  } else if (!texture->scalarb.empty()) {
-    return texture->scalarb.size();
-  } else {
-    return zero2i;
-  }
-}
-
-// Evaluate a texture
-static vec3f lookup_texture(
-    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false) {
-  if (!texture->colorf.empty()) {
-    return texture->colorf[ij];
-  } else if (!texture->colorb.empty()) {
-    return ldr_as_linear ? byte_to_float(texture->colorb[ij])
-                         : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
-  } else if (!texture->scalarf.empty()) {
-    return vec3f{texture->scalarf[ij]};
-  } else if (!texture->scalarb.empty()) {
-    return ldr_as_linear
-               ? byte_to_float(vec3b{texture->scalarb[ij]})
-               : srgb_to_rgb(byte_to_float(vec3b{texture->scalarb[ij]}));
-  } else {
-    return {1, 1, 1};
-  }
-}
-
-// Evaluate a texture
-static vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
-    bool ldr_as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false) {
-  // get texture
-  if (!texture) return {1, 1, 1};
-
-  // get image width/height
-  auto size = texture_size(texture);
-
-  // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
-
-  if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
-
-  // handle interpolation
-  return lookup_texture(texture, {i, j}, ldr_as_linear) * (1 - u) * (1 - v) +
-         lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
-         lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
-         lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
-}
-
 void tesselate_shape(scene_shape* shape) {
   if (shape->subdivisions) {
     if (!shape->points.empty()) {
@@ -801,7 +731,84 @@ void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SHAPE/SCENE BVH
+// IMPLEMENTATION OF EVALUATION OF SCENE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check texture size
+vec2i texture_size(const scene_texture* texture) {
+  if (!texture->colorf.empty()) {
+    return texture->colorf.size();
+  } else if (!texture->colorb.empty()) {
+    return texture->colorb.size();
+  } else if (!texture->scalarf.empty()) {
+    return texture->scalarf.size();
+  } else if (!texture->scalarb.empty()) {
+    return texture->scalarb.size();
+  } else {
+    return zero2i;
+  }
+}
+
+// Evaluate a texture
+vec3f lookup_texture(
+    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear) {
+  if (!texture->colorf.empty()) {
+    return texture->colorf[ij];
+  } else if (!texture->colorb.empty()) {
+    return ldr_as_linear ? byte_to_float(texture->colorb[ij])
+                         : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
+  } else if (!texture->scalarf.empty()) {
+    return vec3f{texture->scalarf[ij]};
+  } else if (!texture->scalarb.empty()) {
+    return ldr_as_linear
+               ? byte_to_float(vec3b{texture->scalarb[ij]})
+               : srgb_to_rgb(byte_to_float(vec3b{texture->scalarb[ij]}));
+  } else {
+    return {1, 1, 1};
+  }
+}
+
+// Evaluate a texture
+vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+    bool ldr_as_linear, bool no_interpolation,
+    bool clamp_to_edge) {
+  // get texture
+  if (!texture) return {1, 1, 1};
+
+  // get image width/height
+  auto size = texture_size(texture);
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
+
+  // handle interpolation
+  return lookup_texture(texture, {i, j}, ldr_as_linear) * (1 - u) * (1 - v) +
+         lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
+         lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
+         lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF RAY-SCENE INTERSECTION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
