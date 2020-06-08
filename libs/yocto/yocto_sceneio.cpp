@@ -588,46 +588,47 @@ void tesselate_shape(scene_shape* shape) {
       } else if (no_normals) {
         shape->normals = {};
       }
-  } else if (!shape->quadspos.empty()) {
-    // facevarying case
-    auto offset = vector<float>(shape->positions.size(), 0);
-    auto count  = vector<int>(shape->positions.size(), 0);
-    for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
-      auto qpos = shape->quadspos[fid];
-      auto qtxt = shape->quadstexcoord[fid];
-      for (auto i = 0; i < 4; i++) {
-        auto disp = mean(eval_texture(
-            shape->displacement_tex, shape->texcoords[qtxt[i]], true));
-        if (!shape->displacement_tex->scalarb.empty() ||
-            !shape->displacement_tex->colorb.empty())
-          disp -= 0.5f;
-        offset[qpos[i]] += shape->displacement * disp;
-        count[qpos[i]] += 1;
+    } else if (!shape->quadspos.empty()) {
+      // facevarying case
+      auto offset = vector<float>(shape->positions.size(), 0);
+      auto count  = vector<int>(shape->positions.size(), 0);
+      for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
+        auto qpos = shape->quadspos[fid];
+        auto qtxt = shape->quadstexcoord[fid];
+        for (auto i = 0; i < 4; i++) {
+          auto disp = mean(eval_texture(
+              shape->displacement_tex, shape->texcoords[qtxt[i]], true));
+          if (!shape->displacement_tex->scalarb.empty() ||
+              !shape->displacement_tex->colorb.empty())
+            disp -= 0.5f;
+          offset[qpos[i]] += shape->displacement * disp;
+          count[qpos[i]] += 1;
+        }
+      }
+      auto normals = compute_normals(shape->quadspos, shape->positions);
+      for (auto vid = 0; vid < shape->positions.size(); vid++) {
+        shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+      }
+      if (shape->smooth || !shape->normals.empty()) {
+        shape->quadsnorm = shape->quadspos;
+        shape->normals   = compute_normals(shape->quadspos, shape->positions);
       }
     }
-    auto normals = compute_normals(shape->quadspos, shape->positions);
-    for (auto vid = 0; vid < shape->positions.size(); vid++) {
-      shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
-    }
-    if (shape->smooth || !shape->normals.empty()) {
-      shape->quadsnorm = shape->quadspos;
-      shape->normals   = compute_normals(shape->quadspos, shape->positions);
-    }
-  }
 
-  shape->displacement     = 0;
-  shape->displacement_tex = nullptr;
-}
-if (!shape->quadspos.empty()) {
-  std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
-      split_facevarying(shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
-          shape->positions, shape->normals, shape->texcoords);
-  shape->points    = {};
-  shape->lines     = {};
-  shape->triangles = {};
-  shape->colors    = {};
-  shape->radius    = {};
-}
+    shape->displacement     = 0;
+    shape->displacement_tex = nullptr;
+  }
+  if (!shape->quadspos.empty()) {
+    std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
+        split_facevarying(shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords);
+    shape->points    = {};
+    shape->lines     = {};
+    shape->triangles = {};
+    shape->colors    = {};
+    shape->radius    = {};
+  }
 }  // namespace yocto
 
 void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {

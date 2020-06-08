@@ -170,12 +170,12 @@ struct scene_shape {
   vector<vec4f> tangents  = {};
 
   // subdivision data [experimental]
-  int subdivisions = 0;
+  int  subdivisions = 0;
   bool catmullclark = true;
-  bool smooth = true;
+  bool smooth       = true;
 
   // displacement data [experimental]
-  float displacement = 0;
+  float          displacement     = 0;
   scene_texture* displacement_tex = nullptr;
 };
 

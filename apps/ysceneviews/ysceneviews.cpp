@@ -130,8 +130,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->instances.size() +
-             (int)ioscene->objects.size()};
+             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
 
   // create scene
   init_scene(glscene);

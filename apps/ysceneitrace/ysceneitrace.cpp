@@ -128,8 +128,8 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + 
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
+             (int)ioscene->objects.size()};
 
   auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -418,7 +418,8 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
   draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
   draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
   draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
-  draw_label(win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
+  draw_label(
+      win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
   edited += draw_slider(win, "subdivisions", ioshape->subdivisions, 0, 5);
   edited += draw_checkbox(win, "catmull-clark", ioshape->catmullclark);
   edited += draw_slider(win, "displacement", ioshape->displacement, 0, 1);
