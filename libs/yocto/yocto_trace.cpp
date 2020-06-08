@@ -1350,7 +1350,7 @@ void update_bvh(scene_model*       scene,
 }
 
 // Forward declaration
-scene_light* add_light(scene_model* scene) {
+static scene_light* add_light(scene_model* scene) {
   return scene->lights.emplace_back(new scene_light{});
 }
 
