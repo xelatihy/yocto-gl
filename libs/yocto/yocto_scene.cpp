@@ -804,6 +804,181 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
+// Generates a ray from a camera for yimg::image plane coordinate uv and
+// the lens coordinates luv.
+ray3f eval_camera(
+    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto film = camera->aspect >= 1
+                  ? vec2f{camera->film, camera->film / camera->aspect}
+                  : vec2f{camera->film * camera->aspect, camera->film};
+  if (!camera->orthographic) {
+    auto q = vec3f{film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f),
+        camera->lens};
+    // ray direction through the lens center
+    auto dc = -normalize(q);
+    // point on the lens
+    auto e = vec3f{
+        lens_uv.x * camera->aperture / 2, lens_uv.y * camera->aperture / 2, 0};
+    // point on the focus plane
+    auto p = dc * camera->focus / abs(dc.z);
+    // correct ray direction to account for camera focusing
+    auto d = normalize(p - e);
+    // done
+    return ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
+  } else {
+    auto scale = 1 / camera->lens;
+    auto q     = vec3f{film.x * (0.5f - image_uv.x) * scale,
+        film.y * (image_uv.y - 0.5f) * scale, camera->lens};
+    // point on the lens
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{lens_uv.x * camera->aperture / 2,
+                                        lens_uv.y * camera->aperture / 2, 0};
+    // point on the focus plane
+    auto p = vec3f{-q.x, -q.y, -camera->focus};
+    // correct ray direction to account for camera focusing
+    auto d = normalize(p - e);
+    // done
+    return ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
+  }
+}
+
+// Eval position
+vec3f eval_position(const scene_object* object, int element, const vec2f& uv) {
+  auto shape = object->shape;
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    return transform_point(
+        object->frame, interpolate_triangle(shape->positions[t.x],
+                           shape->positions[t.y], shape->positions[t.z], uv));
+  } else if (!shape->lines.empty()) {
+    auto l = shape->lines[element];
+    return transform_point(object->frame,
+        interpolate_line(shape->positions[l.x], shape->positions[l.y], uv.x));
+  } else if (!shape->points.empty()) {
+    return transform_point(
+        object->frame, shape->positions[shape->points[element]]);
+  } else {
+    return zero3f;
+  }
+}
+
+// Shape element normal.
+vec3f eval_element_normal(const scene_object* object, int element) {
+  auto shape = object->shape;
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    return transform_normal(
+        object->frame, triangle_normal(shape->positions[t.x],
+                           shape->positions[t.y], shape->positions[t.z]));
+  } else if (!shape->lines.empty()) {
+    auto l = shape->lines[element];
+    return transform_normal(object->frame,
+        line_tangent(shape->positions[l.x], shape->positions[l.y]));
+  } else if (!shape->points.empty()) {
+    return {0, 0, 1};
+  } else {
+    return {0, 0, 0};
+  }
+}
+
+// Eval normal
+vec3f eval_normal(const scene_object* object, int element, const vec2f& uv) {
+  auto shape = object->shape;
+  if (shape->normals.empty()) return eval_element_normal(object, element);
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    return transform_normal(
+        object->frame, normalize(interpolate_triangle(shape->normals[t.x],
+                           shape->normals[t.y], shape->normals[t.z], uv)));
+  } else if (!shape->lines.empty()) {
+    auto l = shape->lines[element];
+    return transform_normal(object->frame,
+        normalize(
+            interpolate_line(shape->normals[l.x], shape->normals[l.y], uv.x)));
+  } else if (!shape->points.empty()) {
+    return transform_normal(
+        object->frame, normalize(shape->normals[shape->points[element]]));
+  } else {
+    return zero3f;
+  }
+}
+
+// Eval texcoord
+vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv) {
+  auto shape = object->shape;
+  if (shape->texcoords.empty()) return uv;
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    return interpolate_triangle(shape->texcoords[t.x], shape->texcoords[t.y],
+        shape->texcoords[t.z], uv);
+  } else if (!shape->lines.empty()) {
+    auto l = shape->lines[element];
+    return interpolate_line(shape->texcoords[l.x], shape->texcoords[l.y], uv.x);
+  } else if (!shape->points.empty()) {
+    return shape->texcoords[shape->points[element]];
+  } else {
+    return zero2f;
+  }
+}
+
+// Shape element normal.
+std::pair<vec3f, vec3f> eval_element_tangents(
+    const scene_object* object, int element) {
+  auto shape = object->shape;
+  if (!shape->triangles.empty() && !shape->texcoords.empty()) {
+    auto t        = shape->triangles[element];
+    auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
+        shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
+        shape->texcoords[t.y], shape->texcoords[t.z]);
+    return {transform_direction(object->frame, tu),
+        transform_direction(object->frame, tv)};
+  } else {
+    return {};
+  }
+}
+
+vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
+  auto shape      = object->shape;
+  auto normal_tex = object->material->normal_tex;
+  // apply normal mapping
+  auto normal   = eval_normal(object, element, uv);
+  auto texcoord = eval_texcoord(object, element, uv);
+  if (normal_tex && !shape->triangles.empty()) {
+    auto normalmap = -1 + 2 * eval_texture(normal_tex, texcoord, true);
+    auto [tu, tv]  = eval_element_tangents(object, element);
+    auto frame     = frame3f{tu, tv, normal, zero3f};
+    frame.x        = orthonormalize(frame.x, frame.z);
+    frame.y        = normalize(cross(frame.z, frame.x));
+    auto flip_v    = dot(frame.y, tv) < 0;
+    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    normal = transform_normal(frame, normalmap);
+  }
+  return normal;
+}
+
+// Eval shading normal
+vec3f eval_shading_normal(const scene_object* object, int element,
+    const vec2f& uv, const vec3f& outgoing) {
+  auto shape    = object->shape;
+  auto material = object->material;
+  if (!shape->triangles.empty()) {
+    auto normal = eval_normal(object, element, uv);
+    if (material->normal_tex) {
+      normal = eval_normalmap(object, element, uv);
+    }
+    if (!material->thin) return normal;
+    return dot(normal, outgoing) >= 0 ? normal : -normal;
+  } else if (!shape->lines.empty()) {
+    auto normal = eval_normal(object, element, uv);
+    return orthonormalize(outgoing, normal);
+  } else if (!shape->points.empty()) {
+    return -outgoing;
+  } else {
+    return zero3f;
+  }
+}
+
 // Evaluate environment color.
 vec3f eval_environment(
     const scene_environment* environment, const vec3f& direction) {

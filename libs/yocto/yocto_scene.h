@@ -52,6 +52,7 @@ namespace yocto {
 using std::function;
 using std::string;
 using std::vector;
+using std::pair;
 
 }  // namespace yocto
 
@@ -359,13 +360,32 @@ scene_camera* get_camera(const scene_model* scene, const string& name = "");
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Texture
+// Generates a ray from a camera.
+ray3f eval_camera(
+    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+
+// Evaluates a texture
 vec2i texture_size(const scene_texture* texture);
 vec3f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
 vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
+
+// Evaluate object properties
+vec3f eval_position(
+    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_element_normal(const scene_object* object, int element);
+vec3f eval_normal(
+    const scene_object* object, int element, const vec2f& uv);
+vec2f eval_texcoord(
+    const scene_object* object, int element, const vec2f& uv);
+pair<vec3f, vec3f> eval_element_tangents(
+    const scene_object* object, int element);
+vec3f eval_normalmap(
+    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_object* object, int element,
+    const vec2f& uv, const vec3f& outgoing);
 
 // Environment
 vec3f eval_environment(
