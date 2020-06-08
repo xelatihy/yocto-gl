@@ -75,7 +75,6 @@ struct app_state {
   scene_object*      selected_object      = nullptr;
   scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
-  scene_subdiv*      selected_subdiv      = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
   scene_texture*     selected_texture     = nullptr;
@@ -129,8 +128,8 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->subdivs.size() +
-             (int)ioscene->instances.size() + (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size() +
+             (int)ioscene->objects.size()};
 
   auto camera_map     = unordered_map<scene_camera*, trace_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -191,12 +190,6 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     set_scattering(material, iomaterial->scattering, iomaterial->scanisotropy,
         texture_map.at(iomaterial->scattering_tex));
     material_map[iomaterial] = material;
-  }
-
-  for (auto iosubdiv : ioscene->subdivs) {
-    if (progress_cb)
-      progress_cb("converting subdivs", progress.x++, progress.y);
-    tesselate_subdiv(ioscene, iosubdiv);
   }
 
   auto shape_map     = unordered_map<scene_shape*, trace_shape*>{};
@@ -305,6 +298,7 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
+    tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
     init_bvh(app->scene, app->params);
@@ -405,10 +399,6 @@ bool draw_widgets(
       win, "spectint_tex", iomaterial->spectint_tex, ioscene->textures, true);
   edited += draw_combobox(
       win, "normal_tex", iomaterial->normal_tex, ioscene->textures, true);
-  edited += draw_combobox(win, "displacement_tex", iomaterial->displacement_tex,
-      ioscene->textures, true);
-  edited += draw_slider(win, "subdivisions", iomaterial->subdivisions, 0, 5);
-  edited += draw_checkbox(win, "smooth", iomaterial->smooth);
   return edited;
 }
 
@@ -426,6 +416,15 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
   draw_label(win, "colors", std::to_string(ioshape->colors.size()));
   draw_label(win, "radius", std::to_string(ioshape->radius.size()));
   draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
+  draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
+  draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
+  draw_label(
+      win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
+  edited += draw_slider(win, "subdivisions", ioshape->subdivisions, 0, 5);
+  edited += draw_checkbox(win, "catmull-clark", ioshape->catmullclark);
+  edited += draw_slider(win, "displacement", ioshape->displacement, 0, 1);
+  edited += draw_combobox(win, "displacement_tex", ioshape->displacement_tex,
+      ioscene->textures, true);
   return edited;
 }
 
@@ -452,21 +451,6 @@ bool draw_widgets(
       win, "material", ioobject->material, ioscene->materials);
   edited += draw_combobox(
       win, "instance", ioobject->instance, ioscene->instances);
-  return edited;
-}
-
-bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_subdiv* iosubdiv) {
-  if (!iosubdiv) return false;
-  auto edited = 0;
-  draw_label(win, "name", iosubdiv->name);
-  draw_label(win, "quads pos", std::to_string(iosubdiv->quadspos.size()));
-  draw_label(win, "quads norm", std::to_string(iosubdiv->quadsnorm.size()));
-  draw_label(
-      win, "quads texcoord", std::to_string(iosubdiv->quadstexcoord.size()));
-  draw_label(win, "pos", std::to_string(iosubdiv->positions.size()));
-  draw_label(win, "norm", std::to_string(iosubdiv->normals.size()));
-  draw_label(win, "texcoord", std::to_string(iosubdiv->texcoords.size()));
   return edited;
 }
 
@@ -746,16 +730,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           ioinstance, app->ioscene->instances, app->scene->instances);
       set_frames(instance, ioinstance->frames);
       update_bvh(app->scene, {}, {}, {instance}, app->params);
-      reset_display(app);
-    }
-    end_header(win);
-  }
-  if (!app->ioscene->subdivs.empty() && begin_header(win, "subdivs")) {
-    draw_combobox(
-        win, "selection##2", app->selected_subdiv, app->ioscene->subdivs, true);
-    if (draw_widgets(win, app->ioscene, app->selected_subdiv)) {
-      stop_display(app);
-      // TODO: subdiv not implemented yet
       reset_display(app);
     }
     end_header(win);

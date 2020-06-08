@@ -148,7 +148,6 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
   auto stats = vector<string>{};
   stats.push_back("cameras:      " + format(scene->cameras.size()));
   stats.push_back("shapes:       " + format(scene->shapes.size()));
-  stats.push_back("subdivs:      " + format(scene->subdivs.size()));
   stats.push_back("environments: " + format(scene->environments.size()));
   stats.push_back("textures:     " + format(scene->textures.size()));
   stats.push_back(
@@ -163,8 +162,8 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
   stats.push_back(
       "quads:        " + format(accumulate(scene->shapes,
                              [](auto shape) { return shape->quads.size(); })));
-  stats.push_back("sfvquads:     " +
-                  format(accumulate(scene->subdivs,
+  stats.push_back("fvquads:     " +
+                  format(accumulate(scene->shapes,
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels3b:     " + format(accumulate(scene->textures, [](auto texture) {
@@ -218,7 +217,6 @@ vector<string> scene_validation(const scene_model* scene, bool notextures) {
 
   check_names(scene->cameras, "camera");
   check_names(scene->shapes, "shape");
-  check_names(scene->subdivs, "subdiv");
   check_names(scene->shapes, "instance");
   check_names(scene->shapes, "object");
   check_names(scene->textures, "texture");
@@ -238,7 +236,6 @@ namespace yocto {
 scene_model::~scene_model() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
-  for (auto subdiv : subdivs) delete subdiv;
   for (auto material : materials) delete material;
   for (auto instance : instances) delete instance;
   for (auto object : objects) delete object;
@@ -264,9 +261,6 @@ scene_environment* add_environment(scene_model* scene, const string& name) {
 }
 scene_shape* add_shape(scene_model* scene, const string& name) {
   return add_element(scene->shapes, name, "shape");
-}
-scene_subdiv* add_subdiv(scene_model* scene, const string& name) {
-  return add_element(scene->subdivs, name, "subdiv");
 }
 scene_texture* add_texture(scene_model* scene, const string& name) {
   return add_element(scene->textures, name, "texture");
@@ -400,14 +394,9 @@ void trim_memory(scene_model* scene) {
     shape->colors.shrink_to_fit();
     shape->radius.shrink_to_fit();
     shape->tangents.shrink_to_fit();
-  }
-  for (auto subdiv : scene->subdivs) {
-    subdiv->quadspos.shrink_to_fit();
-    subdiv->quadsnorm.shrink_to_fit();
-    subdiv->quadstexcoord.shrink_to_fit();
-    subdiv->positions.shrink_to_fit();
-    subdiv->normals.shrink_to_fit();
-    subdiv->texcoords.shrink_to_fit();
+    shape->quadspos.shrink_to_fit();
+    shape->quadsnorm.shrink_to_fit();
+    shape->quadstexcoord.shrink_to_fit();
   }
   for (auto texture : scene->textures) {
     texture->colorf.shrink_to_fit();
@@ -491,107 +480,169 @@ static vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
          lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
-// Apply subdivision and displacement rules.
-std::unique_ptr<scene_subdiv> subdivide_subdiv(
-    scene_subdiv* shape, int subdivisions, bool smooth) {
-  auto tesselated = std::make_unique<scene_subdiv>(*shape);
-  if (!subdivisions) return tesselated;
-  std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
-      subdivide_catmullclark(
-          tesselated->quadstexcoord, tesselated->texcoords, subdivisions, true);
-  std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
-      tesselated->quadsnorm, tesselated->normals, subdivisions, true);
-  std::tie(tesselated->quadspos, tesselated->positions) =
-      subdivide_catmullclark(
-          tesselated->quadspos, tesselated->positions, subdivisions);
-  if (smooth) {
-    tesselated->normals = compute_normals(
-        tesselated->quadspos, tesselated->positions);
-    tesselated->quadsnorm = tesselated->quadspos;
-  } else {
-    tesselated->normals   = {};
-    tesselated->quadsnorm = {};
-  }
-  return tesselated;
-}
-// Apply displacement to a shape
-std::unique_ptr<scene_subdiv> displace_subdiv(scene_subdiv* subdiv,
-    float displacement, scene_texture* displacement_tex, bool smooth) {
-  auto displaced = std::make_unique<scene_subdiv>(*subdiv);
-
-  if (!displacement || !displacement_tex) return displaced;
-  if (subdiv->texcoords.empty())
-    throw std::runtime_error("missing texture coordinates");
-
-  // facevarying case
-  auto offset = vector<float>(subdiv->positions.size(), 0);
-  auto count  = vector<int>(subdiv->positions.size(), 0);
-  for (auto fid = 0; fid < subdiv->quadspos.size(); fid++) {
-    auto qpos = subdiv->quadspos[fid];
-    auto qtxt = subdiv->quadstexcoord[fid];
-    for (auto i = 0; i < 4; i++) {
-      auto disp = mean(
-          eval_texture(displacement_tex, subdiv->texcoords[qtxt[i]], true));
-      if (!displacement_tex->scalarb.empty() ||
-          !displacement_tex->colorb.empty())
-        disp -= 0.5f;
-      offset[qpos[i]] += displacement * disp;
-      count[qpos[i]] += 1;
+void tesselate_shape(scene_shape* shape) {
+  if (shape->subdivisions) {
+    if (!shape->points.empty()) {
+      throw std::runtime_error("cannot subdivide points");
+    } else if (!shape->lines.empty()) {
+      std::tie(std::ignore, shape->texcoords) = subdivide_lines(
+          shape->lines, shape->texcoords, shape->subdivisions);
+      std::tie(std::ignore, shape->normals) = subdivide_lines(
+          shape->lines, shape->normals, shape->subdivisions);
+      std::tie(std::ignore, shape->colors) = subdivide_lines(
+          shape->lines, shape->colors, shape->subdivisions);
+      std::tie(std::ignore, shape->radius) = subdivide_lines(
+          shape->lines, shape->radius, shape->subdivisions);
+      std::tie(shape->lines, shape->positions) = subdivide_lines(
+          shape->lines, shape->positions, shape->subdivisions);
+    } else if (!shape->triangles.empty()) {
+      std::tie(std::ignore, shape->texcoords) = subdivide_triangles(
+          shape->triangles, shape->texcoords, shape->subdivisions);
+      std::tie(std::ignore, shape->normals) = subdivide_triangles(
+          shape->triangles, shape->normals, shape->subdivisions);
+      std::tie(std::ignore, shape->colors) = subdivide_triangles(
+          shape->triangles, shape->colors, shape->subdivisions);
+      std::tie(std::ignore, shape->radius) = subdivide_triangles(
+          shape->triangles, shape->radius, shape->subdivisions);
+      std::tie(shape->triangles, shape->positions) = subdivide_triangles(
+          shape->triangles, shape->positions, shape->subdivisions);
+    } else if (!shape->quads.empty()) {
+      if (shape->catmullclark) {
+        std::tie(std::ignore, shape->texcoords) = subdivide_catmullclark(
+            shape->quads, shape->texcoords, shape->subdivisions, true);
+        std::tie(std::ignore, shape->normals) = subdivide_catmullclark(
+            shape->quads, shape->normals, shape->subdivisions, true);
+        std::tie(std::ignore, shape->colors) = subdivide_catmullclark(
+            shape->quads, shape->colors, shape->subdivisions);
+        std::tie(std::ignore, shape->radius) = subdivide_catmullclark(
+            shape->quads, shape->radius, shape->subdivisions);
+        std::tie(std::ignore, shape->positions) = subdivide_catmullclark(
+            shape->quads, shape->positions, shape->subdivisions);
+      } else {
+        std::tie(std::ignore, shape->texcoords) = subdivide_quads(
+            shape->quads, shape->texcoords, shape->subdivisions);
+        std::tie(std::ignore, shape->normals) = subdivide_quads(
+            shape->quads, shape->normals, shape->subdivisions);
+        std::tie(std::ignore, shape->colors) = subdivide_quads(
+            shape->quads, shape->colors, shape->subdivisions);
+        std::tie(std::ignore, shape->radius) = subdivide_quads(
+            shape->quads, shape->radius, shape->subdivisions);
+        std::tie(shape->quads, shape->positions) = subdivide_quads(
+            shape->quads, shape->positions, shape->subdivisions);
+      }
+    } else if (!shape->quadspos.empty()) {
+      if (shape->catmullclark) {
+        std::tie(shape->quadstexcoord, shape->texcoords) =
+            subdivide_catmullclark(shape->quadstexcoord, shape->texcoords,
+                shape->subdivisions, true);
+        std::tie(shape->quadsnorm, shape->normals) = subdivide_catmullclark(
+            shape->quadsnorm, shape->normals, shape->subdivisions, true);
+        std::tie(shape->quadspos, shape->positions) = subdivide_catmullclark(
+            shape->quadspos, shape->positions, shape->subdivisions);
+      } else {
+        std::tie(shape->quadstexcoord, shape->texcoords) = subdivide_quads(
+            shape->quadstexcoord, shape->texcoords, shape->subdivisions);
+        std::tie(shape->quadsnorm, shape->normals) = subdivide_quads(
+            shape->quadsnorm, shape->normals, shape->subdivisions);
+        std::tie(shape->quadspos, shape->positions) = subdivide_quads(
+            shape->quadspos, shape->positions, shape->subdivisions);
+      }
+      if (shape->smooth) {
+        shape->normals   = compute_normals(shape->quadspos, shape->positions);
+        shape->quadsnorm = shape->quadspos;
+      } else {
+        shape->normals   = {};
+        shape->quadsnorm = {};
+      }
+    } else {
+      throw std::runtime_error("not supported yet");
     }
-  }
-  auto normals = compute_normals(subdiv->quadspos, subdiv->positions);
-  for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
-    displaced->positions[vid] += normals[vid] * offset[vid] / count[vid];
-  }
-  if (smooth || !subdiv->normals.empty()) {
-    displaced->quadsnorm = subdiv->quadspos;
-    displaced->normals   = compute_normals(
-        displaced->quadspos, displaced->positions);
+    shape->subdivisions = 0;
   }
 
-  return displaced;
-}
+  if (shape->displacement && shape->displacement_tex) {
+    if (shape->texcoords.empty())
+      throw std::runtime_error("missing texture coordinates");
 
-void tesselate_subdiv(scene_model* scene, scene_subdiv* subdiv) {
-  auto material = (scene_material*)nullptr;
-  auto shape    = (scene_shape*)nullptr;
-  for (auto object : scene->objects) {
-    if (object->subdiv == subdiv) {
-      material = object->material;
-      shape    = object->shape;
-      break;
+    if (!shape->triangles.empty() || !shape->quads.empty()) {
+      auto no_normals = shape->normals.empty();
+      if (shape->normals.empty())
+        shape->normals = !shape->triangles.empty()
+                             ? compute_normals(
+                                   shape->triangles, shape->positions)
+                             : compute_normals(shape->quads, shape->positions);
+      for (auto idx = 0; idx < shape->positions.size(); idx++) {
+        auto disp = mean(
+            eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
+        if (!shape->displacement_tex->scalarb.empty() ||
+            !shape->displacement_tex->colorb.empty())
+          disp -= 0.5f;
+        shape->positions[idx] += shape->normals[idx] * shape->displacement *
+                                 disp;
+      }
+      if (shape->smooth) {
+        shape->normals = !shape->triangles.empty()
+                             ? compute_normals(
+                                   shape->triangles, shape->positions)
+                             : compute_normals(shape->quads, shape->positions);
+      } else if (no_normals) {
+        shape->normals = {};
+      }
+    } else if (!shape->quadspos.empty()) {
+      // facevarying case
+      auto offset = vector<float>(shape->positions.size(), 0);
+      auto count  = vector<int>(shape->positions.size(), 0);
+      for (auto fid = 0; fid < shape->quadspos.size(); fid++) {
+        auto qpos = shape->quadspos[fid];
+        auto qtxt = shape->quadstexcoord[fid];
+        for (auto i = 0; i < 4; i++) {
+          auto disp = mean(eval_texture(
+              shape->displacement_tex, shape->texcoords[qtxt[i]], true));
+          if (!shape->displacement_tex->scalarb.empty() ||
+              !shape->displacement_tex->colorb.empty())
+            disp -= 0.5f;
+          offset[qpos[i]] += shape->displacement * disp;
+          count[qpos[i]] += 1;
+        }
+      }
+      auto normals = compute_normals(shape->quadspos, shape->positions);
+      for (auto vid = 0; vid < shape->positions.size(); vid++) {
+        shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+      }
+      if (shape->smooth || !shape->normals.empty()) {
+        shape->quadsnorm = shape->quadspos;
+        shape->normals   = compute_normals(shape->quadspos, shape->positions);
+      }
     }
+
+    shape->displacement     = 0;
+    shape->displacement_tex = nullptr;
   }
+  if (!shape->quadspos.empty()) {
+    std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
+        split_facevarying(shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords);
+    shape->points    = {};
+    shape->lines     = {};
+    shape->triangles = {};
+    shape->colors    = {};
+    shape->radius    = {};
+  }
+}  // namespace yocto
 
-  auto tesselated = subdivide_subdiv(
-      subdiv, material->subdivisions, material->smooth);
-  auto displaced = displace_subdiv(tesselated.get(), material->displacement,
-      material->displacement_tex, material->smooth);
-  std::tie(shape->quads, shape->positions, shape->normals, shape->texcoords) =
-      split_facevarying(displaced->quadspos, displaced->quadsnorm,
-          displaced->quadstexcoord, displaced->positions, displaced->normals,
-          displaced->texcoords);
-  shape->points    = {};
-  shape->lines     = {};
-  shape->triangles = {};
-  shape->colors    = {};
-  shape->radius    = {};
-}
-
-void tesselate_subdivs(scene_model* scene, progress_callback progress_cb) {
-  if (scene->subdivs.empty()) return;
-
+void tesselate_shapes(scene_model* scene, progress_callback progress_cb) {
   // handle progress
-  auto progress = vec2i{0, (int)scene->subdivs.size()};
+  auto progress = vec2i{0, (int)scene->shapes.size()};
 
-  // tesselate subdivs
-  for (auto subdiv : scene->subdivs) {
-    if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
-    tesselate_subdiv(scene, subdiv);
+  // tesselate shapes
+  for (auto shape : scene->shapes) {
+    if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
+    tesselate_shape(shape);
   }
 
   // done
-  if (progress_cb) progress_cb("tesseleate subdiv", progress.x++, progress.y);
+  if (progress_cb) progress_cb("tesselate shape", progress.x++, progress.y);
 }
 
 }  // namespace yocto
@@ -724,6 +775,37 @@ static bool save_image(const string& filename, const image<float>& scalarf,
     return save_image(filename, scalarf, error);
   } else {
     return save_image(filename, scalarb, error);
+  }
+}
+
+// Loads/saves a  shape as either vertex-varying or face-varying.
+static bool load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<float>& radius, bool facevarying, string& error) {
+  if (!facevarying) {
+    return load_shape(filename, points, lines, triangles, quads, positions,
+        normals, texcoords, colors, radius, error);
+  } else {
+    return load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, error);
+  }
+}
+static bool save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<float>& radius, bool facevarying, string& error) {
+  if (!facevarying && quadspos.empty()) {
+    return save_shape(filename, points, lines, triangles, quads, positions,
+        normals, texcoords, colors, radius, error);
+  } else {
+    return save_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, error);
   }
 }
 
@@ -1049,26 +1131,6 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     return true;
   };
 
-  // parse json reference
-  auto subdiv_map = unordered_map<string, scene_subdiv*>{{"", nullptr}};
-  auto get_subdiv = [scene, &subdiv_map, &get_value](const json& ejs,
-                        const string& name, scene_subdiv*& value,
-                        const string& dirname = "subdivs/") -> bool {
-    if (!ejs.contains(name)) return true;
-    auto path = ""s;
-    if (!get_value(ejs, name, path)) return false;
-    if (path == "") return true;
-    auto it = subdiv_map.find(path);
-    if (it != subdiv_map.end()) {
-      value = it->second;
-      return true;
-    }
-    auto subdiv      = add_subdiv(scene, path);
-    subdiv_map[path] = subdiv;
-    value            = subdiv;
-    return true;
-  };
-
   // load json instance
   auto instance_map = unordered_map<string, scene_instance*>{{"", nullptr}};
   auto get_instance = [scene, &instance_map, &get_value](const json& ejs,
@@ -1156,7 +1218,6 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       if (!get_value(ejs, "scanisotropy", material->scanisotropy)) return false;
       if (!get_value(ejs, "opacity", material->opacity)) return false;
       if (!get_value(ejs, "coat", material->coat)) return false;
-      if (!get_value(ejs, "displacement", material->displacement)) return false;
       if (!get_ctexture(ejs, "emission_tex", material->emission_tex))
         return false;
       if (!get_ctexture(ejs, "color_tex", material->color_tex)) return false;
@@ -1175,12 +1236,6 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       if (!get_stexture(ejs, "opacity_tex", material->opacity_tex))
         return false;
       if (!get_ctexture(ejs, "normal_tex", material->normal_tex)) return false;
-      if (!get_stexture(ejs, "displacement_tex", material->displacement_tex))
-        return false;
-      if (!get_value(ejs, "subdivisions", material->subdivisions))
-        return false;  // hack fir subd
-      if (!get_value(ejs, "smooth", material->smooth))
-        return false;  // hack for subd
       material_map[material->name] = material;
     }
   }
@@ -1197,14 +1252,24 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       if (!get_ref(ejs, "material", object->material, material_map))
         return false;
       if (!get_shape(ejs, "shape", object->shape)) return false;
-      if (!get_subdiv(ejs, "subdiv", object->subdiv)) return false;
       if (!get_instance(ejs, "instance", object->instance)) return false;
+      if (object->shape) {
+        if (!get_value(ejs, "subdivisions", object->shape->subdivisions))
+          return false;
+        if (!get_value(ejs, "catmullcark", object->shape->catmullclark))
+          return false;
+        if (!get_value(ejs, "smooth", object->shape->smooth)) return false;
+        if (!get_value(ejs, "displacement", object->shape->displacement))
+          return false;
+        if (!get_stexture(
+                ejs, "displacement_tex", object->shape->displacement_tex))
+          return false;
+      }
     }
   }
 
   // handle progress
   progress.y += scene->shapes.size();
-  progress.y += scene->subdivs.size();
   progress.y += scene->textures.size();
   progress.y += scene->instances.size();
 
@@ -1226,18 +1291,10 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
     if (!load_shape(path, shape->points, shape->lines, shape->triangles,
-            shape->quads, shape->positions, shape->normals, shape->texcoords,
-            shape->colors, shape->radius, error))
-      return dependent_error();
-  }
-  // load subdivs
-  subdiv_map.erase("");
-  for (auto [name, subdiv] : subdiv_map) {
-    if (progress_cb) progress_cb("load subdiv", progress.x++, progress.y);
-    auto path = get_filename(name, "subdivs", {".obj"});
-    if (!load_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
-            subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
-            subdiv->texcoords, error))
+            shape->quads, shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius,
+            shape->catmullclark && shape->subdivisions, error))
       return dependent_error();
   }
   // load textures
@@ -1302,9 +1359,9 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   };
 
   // handle progress
-  auto progress = vec2i{
-      0, 2 + (int)scene->shapes.size() + (int)scene->subdivs.size() +
-             (int)scene->textures.size() + (int)scene->instances.size()};
+  auto progress = vec2i{0, 2 + (int)scene->shapes.size() +
+                               (int)scene->textures.size() +
+                               (int)scene->instances.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
   // save yaml file
@@ -1359,7 +1416,6 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     add_opt(
         ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
     add_opt(ejs, "opacity", material->opacity, def_material.opacity);
-    add_opt(ejs, "displacement", material->opacity, def_material.displacement);
     add_opt(ejs, "thin", material->thin, def_material.thin);
     add_tex(ejs, "emission_tex", material->emission_tex);
     add_tex(ejs, "color_tex", material->color_tex);
@@ -1372,23 +1428,27 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     add_tex(ejs, "coat_tex", material->coat_tex);
     add_tex(ejs, "opacity_tex", material->opacity_tex);
     add_tex(ejs, "normal_tex", material->normal_tex);
-    add_tex(ejs, "displacement_tex", material->displacement_tex);
-    add_opt(ejs, "subdivisions", material->subdivisions,
-        def_material.subdivisions);  // hack for subd
-    add_opt(
-        ejs, "smooth", material->smooth, def_material.smooth);  // hack for subd
   }
 
   auto def_object = scene_object{};
-  auto def_subdiv = scene_subdiv{};
+  auto def_shape  = scene_shape{};
   if (!scene->objects.empty()) js["objects"] = json::object();
   for (auto object : scene->objects) {
     auto& ejs = js["objects"][object->name];
     add_opt(ejs, "frame", object->frame, def_object.frame);
     add_ref(ejs, "shape", object->shape);
-    add_ref(ejs, "subdiv", object->subdiv);
     add_ref(ejs, "material", object->material);
     add_ref(ejs, "instance", object->instance);
+    if (object->shape) {
+      add_opt(ejs, "subdivisions", object->shape->subdivisions,
+          def_shape.subdivisions);
+      add_opt(ejs, "catmullclark", object->shape->catmullclark,
+          def_shape.catmullclark);
+      add_opt(ejs, "smooth", object->shape->smooth, def_shape.smooth);
+      add_opt(ejs, "displacement", object->shape->displacement,
+          def_shape.displacement);
+      add_tex(ejs, "displacement_tex", object->shape->displacement_tex);
+    }
   }
 
   // handle progress
@@ -1408,18 +1468,10 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = get_filename(shape->name, "shapes", ".ply");
     if (!save_shape(path, shape->points, shape->lines, shape->triangles,
-            shape->quads, shape->positions, shape->normals, shape->texcoords,
-            shape->colors, shape->radius, error))
-      return dependent_error();
-  }
-
-  // save subdivs
-  for (auto subdiv : scene->subdivs) {
-    if (progress_cb) progress_cb("save subdiv", progress.x++, progress.y);
-    auto path = get_filename(subdiv->name, "subdivs", ".obj");
-    if (!save_fvshape(path, subdiv->quadspos, subdiv->quadsnorm,
-            subdiv->quadstexcoord, subdiv->positions, subdiv->normals,
-            subdiv->texcoords, error))
+            shape->quads, shape->quadspos, shape->quadsnorm,
+            shape->quadstexcoord, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius,
+            shape->catmullclark && shape->subdivisions, error))
       return dependent_error();
   }
 

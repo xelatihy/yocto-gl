@@ -108,17 +108,13 @@ int main(int argc, const char* argv[]) {
 
   // tesselate if needed
   if (sfs::path(output).extension() != ".json") {
-    for (auto iosubdiv : scene->subdivs) {
-      tesselate_subdiv(scene, iosubdiv);
-    }
+    tesselate_shapes(scene, print_progress);
   }
 
   // make a directory if needed
   make_dir(sfs::path(output).parent_path());
   if (!scene->shapes.empty())
     make_dir(sfs::path(output).parent_path() / "shapes");
-  if (!scene->subdivs.empty())
-    make_dir(sfs::path(output).parent_path() / "subdivs");
   if (!scene->textures.empty())
     make_dir(sfs::path(output).parent_path() / "textures");
   if (!scene->instances.empty())

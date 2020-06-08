@@ -183,7 +183,8 @@
     },
     "suzanne-subdiv-plastic-rough": {
       "shape": "suzanne-subdiv",
-      "subdiv": "suzanne-subdiv",
+      "subdivisions": 2,
+      "smooth": true,
       "frame": [
         1,
         0,
@@ -220,7 +221,10 @@
     },
     "sphere-displaced-plastic-rough": {
       "shape": "sphere-displaced",
-      "subdiv": "sphere-displaced",
+      "displacement": 0.025,
+      "displacement_tex": "bumps-displacement",
+      "subdivisions": 0,
+      "smooth": true,
       "frame": [
         1,
         0,
@@ -309,8 +313,6 @@
       "color_tex": "uvgrid"
     },
     "suzanne-subdiv-plastic-rough": {
-      "subdivisions": 2,
-      "smooth": true,
       "color": [
         0.5,
         0.7,
@@ -329,10 +331,6 @@
       "roughness": 1
     },
     "sphere-displaced-plastic-rough": {
-      "displacement": 0.025,
-      "displacement_tex": "bumps-displacement",
-      "subdivisions": 0,
-      "smooth": true,
       "color": [
         0.5,
         0.7,
