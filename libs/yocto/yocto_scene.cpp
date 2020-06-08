@@ -851,6 +851,11 @@ vec3f eval_position(const scene_object* object, int element, const vec2f& uv) {
     return transform_point(
         object->frame, interpolate_triangle(shape->positions[t.x],
                            shape->positions[t.y], shape->positions[t.z], uv));
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    return transform_point(object->frame,
+        interpolate_quad(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w], uv));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     return transform_point(object->frame,
@@ -871,6 +876,11 @@ vec3f eval_element_normal(const scene_object* object, int element) {
     return transform_normal(
         object->frame, triangle_normal(shape->positions[t.x],
                            shape->positions[t.y], shape->positions[t.z]));
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    return transform_normal(
+        object->frame, quad_normal(shape->positions[q.x], shape->positions[q.y],
+                           shape->positions[q.z], shape->positions[q.w]));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     return transform_normal(object->frame,
@@ -891,6 +901,11 @@ vec3f eval_normal(const scene_object* object, int element, const vec2f& uv) {
     return transform_normal(
         object->frame, normalize(interpolate_triangle(shape->normals[t.x],
                            shape->normals[t.y], shape->normals[t.z], uv)));
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    return transform_normal(object->frame,
+        normalize(interpolate_quad(shape->normals[q.x], shape->normals[q.y],
+            shape->normals[q.z], shape->normals[q.w], uv)));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     return transform_normal(object->frame,
@@ -912,6 +927,10 @@ vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv) {
     auto t = shape->triangles[element];
     return interpolate_triangle(shape->texcoords[t.x], shape->texcoords[t.y],
         shape->texcoords[t.z], uv);
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    return interpolate_quad(shape->texcoords[q.x], shape->texcoords[q.y],
+        shape->texcoords[q.z], shape->texcoords[q.w], uv);
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     return interpolate_line(shape->texcoords[l.x], shape->texcoords[l.y], uv.x);
@@ -933,6 +952,14 @@ std::pair<vec3f, vec3f> eval_element_tangents(
         shape->texcoords[t.y], shape->texcoords[t.z]);
     return {transform_direction(object->frame, tu),
         transform_direction(object->frame, tv)};
+  } else if (!shape->quads.empty() && !shape->texcoords.empty()) {
+    auto q        = shape->quads[element];
+    auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
+        shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
+        shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
+        shape->texcoords[q.w], {0,0});
+    return {transform_direction(object->frame, tu),
+        transform_direction(object->frame, tv)};
   } else {
     return {};
   }
@@ -944,7 +971,7 @@ vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
   // apply normal mapping
   auto normal   = eval_normal(object, element, uv);
   auto texcoord = eval_texcoord(object, element, uv);
-  if (normal_tex && !shape->triangles.empty()) {
+  if (normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 + 2 * eval_texture(normal_tex, texcoord, true);
     auto [tu, tv]  = eval_element_tangents(object, element);
     auto frame     = frame3f{tu, tv, normal, zero3f};
@@ -962,7 +989,7 @@ vec3f eval_shading_normal(const scene_object* object, int element,
     const vec2f& uv, const vec3f& outgoing) {
   auto shape    = object->shape;
   auto material = object->material;
-  if (!shape->triangles.empty()) {
+  if (!shape->triangles.empty() || !shape->quads.empty()) {
     auto normal = eval_normal(object, element, uv);
     if (material->normal_tex) {
       normal = eval_normalmap(object, element, uv);
@@ -974,6 +1001,28 @@ vec3f eval_shading_normal(const scene_object* object, int element,
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
     return -outgoing;
+  } else {
+    return zero3f;
+  }
+}
+
+// Eval color
+vec3f eval_color(const scene_object* object, int element, const vec2f& uv) {
+  auto shape = object->shape;
+  if (shape->colors.empty()) return {1, 1, 1};
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    return interpolate_triangle(
+        shape->colors[t.x], shape->colors[t.y], shape->colors[t.z], uv);
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    return interpolate_quad(shape->colors[q.x], shape->colors[q.y],
+        shape->colors[q.z], shape->colors[q.w], uv);
+  } else if (!shape->lines.empty()) {
+    auto l = shape->lines[element];
+    return interpolate_line(shape->colors[l.x], shape->colors[l.y], uv.x);
+  } else if (!shape->points.empty()) {
+    return shape->colors[shape->points[element]];
   } else {
     return zero3f;
   }
@@ -997,6 +1046,102 @@ vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
     emission += eval_environment(environment, direction);
   }
   return emission;
+}
+
+// Eval material to obtain emission, brdf and opacity.
+vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing) {
+  auto material = object->material;
+  auto texcoord = eval_texcoord(object, element, uv);
+  return material->emission * eval_texture(material->emission_tex, texcoord);
+}
+
+// constant values
+static const auto coat_ior       = 1.5f;
+static const auto coat_roughness = 0.03f * 0.03f;
+
+// Evaluate point
+scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing) {
+  auto material = object->material;
+  auto texcoord = eval_texcoord(object, element, uv);
+  auto color    = material->color * eval_color(object, element, uv) *
+               eval_texture(material->color_tex, texcoord, false);
+  auto specular = material->specular *
+                  eval_texture(material->specular_tex, texcoord, true).x;
+  auto metallic = material->metallic *
+                  eval_texture(material->metallic_tex, texcoord, true).x;
+  auto roughness = material->roughness *
+                   eval_texture(material->roughness_tex, texcoord, true).x;
+  auto ior  = material->ior;
+  auto coat = material->coat *
+              eval_texture(material->coat_tex, texcoord, true).x;
+  auto transmission = material->transmission *
+                      eval_texture(material->emission_tex, texcoord, true).x;
+  auto translucency =
+      material->translucency *
+      eval_texture(material->translucency_tex, texcoord, true).x;
+  auto opacity = material->opacity *
+                 mean(eval_texture(material->opacity_tex, texcoord, true));
+  auto thin = material->thin || !material->transmission;
+
+  // factors
+  auto bsdf   = scene_bsdf{};
+  auto weight = vec3f{1, 1, 1};
+  bsdf.coat   = weight * coat;
+  weight *= 1 - bsdf.coat * fresnel_dielectric(coat_ior, outgoing, normal);
+  bsdf.metal = weight * metallic;
+  weight *= 1 - metallic;
+  bsdf.refraction = thin ? zero3f : (weight * transmission);
+  weight *= 1 - (thin ? 0 : transmission);
+  bsdf.specular = weight * specular;
+  weight *= 1 - specular * fresnel_dielectric(ior, outgoing, normal);
+  bsdf.transmission = thin ? (weight * transmission * color) : zero3f;
+  weight *= 1 - (thin ? transmission : 0);
+  bsdf.translucency = thin ? (weight * translucency * color)
+                           : (weight * translucency);
+  weight *= 1 - translucency;
+  bsdf.diffuse   = weight * color;
+  bsdf.meta      = reflectivity_to_eta(color);
+  bsdf.metak     = zero3f;
+  bsdf.roughness = roughness * roughness;
+  bsdf.ior       = ior;
+  bsdf.opacity   = opacity;
+
+  // textures
+  if (bsdf.diffuse != zero3f || bsdf.translucency != zero3f || bsdf.roughness) {
+    bsdf.roughness = clamp(bsdf.roughness, 0.03f * 0.03f, 1.0f);
+  }
+  if (bsdf.specular == zero3f && bsdf.metal == zero3f &&
+      bsdf.transmission == zero3f && bsdf.refraction == zero3f) {
+    bsdf.roughness = 1;
+  }
+  if (bsdf.opacity > 0.999f) bsdf.opacity = 1;
+
+  // weights
+  bsdf.diffuse_pdf  = max(bsdf.diffuse);
+  bsdf.specular_pdf = max(
+      bsdf.specular * fresnel_dielectric(bsdf.ior, normal, outgoing));
+  bsdf.metal_pdf = max(
+      bsdf.metal * fresnel_conductor(bsdf.meta, bsdf.metak, normal, outgoing));
+  bsdf.coat_pdf = max(
+      bsdf.coat * fresnel_dielectric(coat_ior, normal, outgoing));
+  bsdf.transmission_pdf = max(bsdf.transmission);
+  bsdf.translucency_pdf = max(bsdf.translucency);
+  bsdf.refraction_pdf   = max(bsdf.refraction);
+  auto pdf_sum = bsdf.diffuse_pdf + bsdf.specular_pdf + bsdf.metal_pdf +
+                 bsdf.coat_pdf + bsdf.transmission_pdf + bsdf.translucency_pdf +
+                 bsdf.refraction_pdf;
+  if (pdf_sum) {
+    bsdf.diffuse_pdf /= pdf_sum;
+    bsdf.specular_pdf /= pdf_sum;
+    bsdf.metal_pdf /= pdf_sum;
+    bsdf.coat_pdf /= pdf_sum;
+    bsdf.transmission_pdf /= pdf_sum;
+    bsdf.translucency_pdf /= pdf_sum;
+    bsdf.refraction_pdf /= pdf_sum;
+  }
+  return bsdf;
 }
 
 }  // namespace yocto
