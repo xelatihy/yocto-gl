@@ -301,6 +301,67 @@ scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
 scene_object* add_complete_object(scene_model* scene, const string& name = "");
 
+// camera properties
+void set_frame(scene_camera* camera, const frame3f& frame);
+void set_lens(scene_camera* camera, float lens, float aspect, float film,
+    bool ortho = false);
+void set_focus(scene_camera* camera, float aperture, float focus);
+
+// object properties
+void set_frame(scene_object* object, const frame3f& frame);
+void set_material(scene_object* object, scene_material* material);
+void set_shape(scene_object* object, scene_shape* shape);
+void set_instance(scene_object* object, scene_instance* instance);
+
+// texture properties
+void set_texture(scene_texture* texture, const image<vec3b>& img);
+void set_texture(scene_texture* texture, const image<vec3f>& img);
+void set_texture(scene_texture* texture, const image<byte>& img);
+void set_texture(scene_texture* texture, const image<float>& img);
+
+// material properties
+void set_emission(scene_material* material, const vec3f& emission,
+    scene_texture* emission_tex = nullptr);
+void set_color(scene_material* material, const vec3f& color,
+    scene_texture* color_tex = nullptr);
+void set_specular(scene_material* material, float specular = 1,
+    scene_texture* specular_tex = nullptr);
+void set_ior(scene_material* material, float ior);
+void set_metallic(scene_material* material, float metallic,
+    scene_texture* metallic_tex = nullptr);
+void set_transmission(scene_material* material, float transmission, bool thin,
+    float trdepth, scene_texture* transmission_tex = nullptr);
+void set_translucency(scene_material* material, float translucency, bool thin,
+    float trdepth, scene_texture* translucency_tex = nullptr);
+void set_roughness(scene_material* material, float roughness,
+    scene_texture* roughness_tex = nullptr);
+void set_opacity(scene_material* material, float opacity,
+    scene_texture* opacity_tex = nullptr);
+void set_thin(scene_material* material, bool thin);
+void set_scattering(scene_material* material, const vec3f& scattering,
+    float scanisotropy, scene_texture* scattering_tex = nullptr);
+void set_normalmap(scene_material* material, scene_texture* normal_tex);
+
+// shape properties
+void set_points(scene_shape* shape, const vector<int>& points);
+void set_lines(scene_shape* shape, const vector<vec2i>& lines);
+void set_triangles(scene_shape* shape, const vector<vec3i>& triangles);
+void set_quads(scene_shape* shape, const vector<vec4i>& quads);
+void set_positions(scene_shape* shape, const vector<vec3f>& positions);
+void set_normals(scene_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(scene_shape* shape, const vector<vec3f>& colors);
+void set_radius(scene_shape* shape, const vector<float>& radius);
+void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
+
+// instance properties
+void set_frames(scene_instance* instance, const vector<frame3f>& frames);
+
+// environment properties
+void set_frame(scene_environment* environment, const frame3f& frame);
+void set_emission(scene_environment* environment, const vec3f& emission,
+    scene_texture* emission_tex = nullptr);
+
 // add missing elements
 void add_cameras(scene_model* scene);
 void add_radius(scene_model* scene, float radius = 0.001f);

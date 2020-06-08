@@ -306,45 +306,164 @@ scene_object* add_complete_object(scene_model* scene, const string& name) {
   return object;
 }
 
-// get named camera or default if camera is empty
-scene_camera* get_camera(const scene_model* scene, const string& name) {
-  if (scene->cameras.empty()) return nullptr;
-  for (auto camera : scene->cameras) {
-    if (camera->name == name) return camera;
-  }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "default") return camera;
-  }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera") return camera;
-  }
-  for (auto camera : scene->cameras) {
-    if (camera->name == "camera1") return camera;
-  }
-  return scene->cameras.front();
+// Set cameras
+void set_frame(scene_camera* camera, const frame3f& frame) {
+  camera->frame = frame;
+}
+void set_lens(
+    scene_camera* camera, float lens, float aspect, float film, bool ortho) {
+  camera->lens         = lens;
+  camera->aspect       = aspect;
+  camera->film         = film;
+  camera->orthographic = ortho;
+}
+void set_focus(scene_camera* camera, float aperture, float focus) {
+  camera->aperture = aperture;
+  camera->focus    = focus;
 }
 
-// Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene_model* scene) {
-  auto shape_bbox = unordered_map<scene_shape*, bbox3f>{};
-  auto bbox       = invalidb3f;
-  for (auto shape : scene->shapes) {
-    auto sbvh = invalidb3f;
-    for (auto p : shape->positions) sbvh = merge(sbvh, p);
-    shape_bbox[shape] = sbvh;
-  }
-  for (auto object : scene->objects) {
-    if (object->instance) {
-      for (auto& frame : object->instance->frames) {
-        auto sbvh = shape_bbox[object->shape];
-        bbox      = merge(bbox, transform_bbox(frame * object->frame, sbvh));
-      }
-    } else {
-      auto sbvh = shape_bbox[object->shape];
-      bbox      = merge(bbox, transform_bbox(object->frame, sbvh));
-    }
-  }
-  return bbox;
+// Add texture
+void set_texture(scene_texture* texture, const image<vec3b>& img) {
+  texture->colorb  = img;
+  texture->colorf  = {};
+  texture->scalarb = {};
+  texture->scalarf = {};
+}
+void set_texture(scene_texture* texture, const image<vec3f>& img) {
+  texture->colorb  = {};
+  texture->colorf  = img;
+  texture->scalarb = {};
+  texture->scalarf = {};
+}
+void set_texture(scene_texture* texture, const image<byte>& img) {
+  texture->colorb  = {};
+  texture->colorf  = {};
+  texture->scalarb = img;
+  texture->scalarf = {};
+}
+void set_texture(scene_texture* texture, const image<float>& img) {
+  texture->colorb  = {};
+  texture->colorf  = {};
+  texture->scalarb = {};
+  texture->scalarf = img;
+}
+
+// Add shape
+void set_points(scene_shape* shape, const vector<int>& points) {
+  shape->points = points;
+}
+void set_lines(scene_shape* shape, const vector<vec2i>& lines) {
+  shape->lines = lines;
+}
+void set_triangles(scene_shape* shape, const vector<vec3i>& triangles) {
+  shape->triangles = triangles;
+}
+void set_quads(scene_shape* shape, const vector<vec4i>& quads) {
+  shape->quads = quads;
+}
+void set_positions(scene_shape* shape, const vector<vec3f>& positions) {
+  shape->positions = positions;
+}
+void set_normals(scene_shape* shape, const vector<vec3f>& normals) {
+  shape->normals = normals;
+}
+void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords) {
+  shape->texcoords = texcoords;
+}
+void set_colors(scene_shape* shape, const vector<vec3f>& colors) {
+  shape->colors = colors;
+}
+void set_radius(scene_shape* shape, const vector<float>& radius) {
+  shape->radius = radius;
+}
+void set_tangents(scene_shape* shape, const vector<vec4f>& tangents) {
+  shape->tangents = tangents;
+}
+
+// Add object
+void set_frame(scene_object* object, const frame3f& frame) {
+  object->frame = frame;
+}
+void set_shape(scene_object* object, scene_shape* shape) {
+  object->shape = shape;
+}
+void set_material(scene_object* object, scene_material* material) {
+  object->material = material;
+}
+void set_instance(scene_object* object, scene_instance* instance) {
+  object->instance = instance;
+}
+
+// Add instance
+void set_frames(scene_instance* instance, const vector<frame3f>& frames) {
+  instance->frames = frames;
+}
+
+// Add material
+void set_emission(scene_material* material, const vec3f& emission,
+    scene_texture* emission_tex) {
+  material->emission     = emission;
+  material->emission_tex = emission_tex;
+}
+void set_color(
+    scene_material* material, const vec3f& color, scene_texture* color_tex) {
+  material->color     = color;
+  material->color_tex = color_tex;
+}
+void set_specular(
+    scene_material* material, float specular, scene_texture* specular_tex) {
+  material->specular     = specular;
+  material->specular_tex = specular_tex;
+}
+void set_metallic(
+    scene_material* material, float metallic, scene_texture* metallic_tex) {
+  material->metallic     = metallic;
+  material->metallic_tex = metallic_tex;
+}
+void set_ior(scene_material* material, float ior) { material->ior = ior; }
+void set_transmission(scene_material* material, float transmission, bool thin,
+    float trdepth, scene_texture* transmission_tex) {
+  material->transmission     = transmission;
+  material->thin             = thin;
+  material->trdepth          = trdepth;
+  material->transmission_tex = transmission_tex;
+}
+void set_translucency(scene_material* material, float translucency, bool thin,
+    float trdepth, scene_texture* translucency_tex) {
+  material->translucency     = translucency;
+  material->thin             = thin;
+  material->trdepth          = trdepth;
+  material->translucency_tex = translucency_tex;
+}
+void set_thin(scene_material* material, bool thin) { material->thin = thin; }
+void set_roughness(
+    scene_material* material, float roughness, scene_texture* roughness_tex) {
+  material->roughness     = roughness;
+  material->roughness_tex = roughness_tex;
+}
+void set_opacity(
+    scene_material* material, float opacity, scene_texture* opacity_tex) {
+  material->opacity     = opacity;
+  material->opacity_tex = opacity_tex;
+}
+void set_scattering(scene_material* material, const vec3f& scattering,
+    float scanisotropy, scene_texture* scattering_tex) {
+  material->scattering     = scattering;
+  material->scanisotropy   = scanisotropy;
+  material->scattering_tex = scattering_tex;
+}
+void set_normalmap(scene_material* material, scene_texture* normal_tex) {
+  material->normal_tex = normal_tex;
+}
+
+// Add environment
+void set_frame(scene_environment* environment, const frame3f& frame) {
+  environment->frame = frame;
+}
+void set_emission(scene_environment* environment, const vec3f& emission,
+    scene_texture* emission_tex) {
+  environment->emission     = emission;
+  environment->emission_tex = emission_tex;
 }
 
 // Add missing cameras.
@@ -371,7 +490,7 @@ void add_cameras(scene_model* scene) {
 }
 
 // Add missing radius.
-void add_radius(scene_model* scene, float radius = 0.001f) {
+void add_radius(scene_model* scene, float radius) {
   for (auto shape : scene->shapes) {
     if (shape->points.empty() && shape->lines.empty()) continue;
     if (!shape->radius.empty()) continue;
@@ -417,6 +536,47 @@ void add_sky(scene_model* scene, float sun_angle) {
   auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
   environment->emission_tex = texture;
+}
+
+// get named camera or default if camera is empty
+scene_camera* get_camera(const scene_model* scene, const string& name) {
+  if (scene->cameras.empty()) return nullptr;
+  for (auto camera : scene->cameras) {
+    if (camera->name == name) return camera;
+  }
+  for (auto camera : scene->cameras) {
+    if (camera->name == "default") return camera;
+  }
+  for (auto camera : scene->cameras) {
+    if (camera->name == "camera") return camera;
+  }
+  for (auto camera : scene->cameras) {
+    if (camera->name == "camera1") return camera;
+  }
+  return scene->cameras.front();
+}
+
+// Updates the scene and scene's instances bounding boxes
+bbox3f compute_bounds(const scene_model* scene) {
+  auto shape_bbox = unordered_map<scene_shape*, bbox3f>{};
+  auto bbox       = invalidb3f;
+  for (auto shape : scene->shapes) {
+    auto sbvh = invalidb3f;
+    for (auto p : shape->positions) sbvh = merge(sbvh, p);
+    shape_bbox[shape] = sbvh;
+  }
+  for (auto object : scene->objects) {
+    if (object->instance) {
+      for (auto& frame : object->instance->frames) {
+        auto sbvh = shape_bbox[object->shape];
+        bbox      = merge(bbox, transform_bbox(frame * object->frame, sbvh));
+      }
+    } else {
+      auto sbvh = shape_bbox[object->shape];
+      bbox      = merge(bbox, transform_bbox(object->frame, sbvh));
+    }
+  }
+  return bbox;
 }
 
 // Reduce memory usage
