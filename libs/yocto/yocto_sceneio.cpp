@@ -752,9 +752,9 @@ static bool load_json_scene(const string& filename, scene_model* scene,
         for (auto& frame : instance->frames) {
           auto nobject = add_object(
               scene, object->name + "@" + std::to_string(++iid));
-          nobject->frame = frame * object->frame;
+          nobject->frame    = frame * object->frame;
           nobject->material = object->material;
-          nobject->shape = object->shape;
+          nobject->shape    = object->shape;
         }
         delete object;
       }
