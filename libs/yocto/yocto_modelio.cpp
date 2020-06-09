@@ -28,8 +28,6 @@
 
 #include "yocto_modelio.h"
 
-#include "yocto_color.h"
-
 #include <cstdio>
 #include <memory>
 #include <string_view>
@@ -37,6 +35,7 @@
 #include <unordered_set>
 
 #include "ext/filesystem.hpp"
+#include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

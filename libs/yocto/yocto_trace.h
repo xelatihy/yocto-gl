@@ -65,14 +65,14 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-#include "yocto_image.h"
-#include "yocto_scene.h"
-#include "yocto_sampling.h"
-
 #include <atomic>
 #include <future>
 #include <memory>
+
+#include "yocto_image.h"
+#include "yocto_math.h"
+#include "yocto_sampling.h"
+#include "yocto_scene.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -149,10 +149,11 @@ struct trace_params {
 const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = vector<string>{"position", "normal", "frontfacing",
-    "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "translucency", "refraction",
-    "roughness", "opacity", "ior", "object", "element", "highlight"};
+const auto trace_falsecolor_names = vector<string>{"position", "normal",
+    "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
+    "diffuse", "specular", "coat", "metal", "transmission", "translucency",
+    "refraction", "roughness", "opacity", "ior", "object", "element",
+    "highlight"};
 const auto bvh_names              = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE

@@ -1,7 +1,7 @@
 //
 // # Yocto/Geometry: Tiny library for geometry support in graphics applications.
 //
-// Yocto/Geometry provides basic math primitives for geometry computation in 
+// Yocto/Geometry provides basic math primitives for geometry computation in
 // graphics.
 //
 //

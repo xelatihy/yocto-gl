@@ -8,15 +8,15 @@
 
 #include "yocto_shape.h"
 
-#include "yocto_noise.h"
-#include "yocto_sampling.h"
-#include "yocto_geometry.h"
-#include "yocto_modelio.h"
-
 #include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
+
+#include "yocto_geometry.h"
+#include "yocto_modelio.h"
+#include "yocto_noise.h"
+#include "yocto_sampling.h"
 using namespace std::string_literals;
 
 // -----------------------------------------------------------------------------

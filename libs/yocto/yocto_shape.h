@@ -122,11 +122,11 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <memory>
 #include <tuple>
 #include <unordered_map>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

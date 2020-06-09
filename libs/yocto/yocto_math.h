@@ -2,7 +2,7 @@
 // # Yocto/Math: Tiny library for math support in graphics applications.
 //
 // Yocto/Math provides the basic math primitives used in graphics, including
-// small-sized vectors, matrices, frames, quaternions, rays, bounding boxes 
+// small-sized vectors, matrices, frames, quaternions, rays, bounding boxes
 // and their transforms.
 //
 //
@@ -1108,7 +1108,7 @@ inline ray3f camera_ray(
 // Generate a ray from a camera
 inline ray3f camera_ray(const frame3f& frame, float lens, float aspect,
     float film, const vec2f& image_uv);
-  
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -28,16 +28,16 @@
 
 #include "yocto_trace.h"
 
-#include "yocto_sampling.h"
-#include "yocto_shading.h"
-#include "yocto_geometry.h"
-
 #include <atomic>
 #include <cstring>
 #include <deque>
 #include <future>
 #include <memory>
 #include <mutex>
+
+#include "yocto_geometry.h"
+#include "yocto_sampling.h"
+#include "yocto_shading.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>

@@ -1,7 +1,7 @@
 //
 // # Yocto/Shading: Tiny library of shading functions for path tracing.
 //
-// Yocto/Shading provides shading and sampling functions useful to write path 
+// Yocto/Shading provides shading and sampling functions useful to write path
 // tracing shaders.
 //
 // 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the

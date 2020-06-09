@@ -36,8 +36,8 @@
 #include <functional>
 #include <memory>
 
-#include "yocto_math.h"
 #include "yocto_image.h"
+#include "yocto_math.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
