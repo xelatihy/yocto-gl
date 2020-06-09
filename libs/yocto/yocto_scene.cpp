@@ -941,6 +941,38 @@ vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv) {
   }
 }
 
+#if 0
+// Shape element normal.
+static std::pair<vec3f, vec3f> eval_tangents(
+    const scene_shape* shape, int element, const vec2f& uv) {
+  if (!shape->triangles.empty()) {
+    auto t = shape->triangles[element];
+    if (shape->texcoords.empty()) {
+      return triangle_tangents_fromuv(shape->positions[t.x],
+          shape->positions[t.y], shape->positions[t.z], {0, 0}, {1, 0}, {0, 1});
+    } else {
+      return triangle_tangents_fromuv(shape->positions[t.x],
+          shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
+          shape->texcoords[t.y], shape->texcoords[t.z]);
+    }
+  } else if (!shape->quads.empty()) {
+    auto q = shape->quads[element];
+    if (shape->texcoords.empty()) {
+      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
+          shape->positions[q.z], shape->positions[q.w], {0, 0}, {1, 0}, {0, 1},
+          {1, 1}, uv);
+    } else {
+      return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
+          shape->positions[q.z], shape->positions[q.w], shape->texcoords[q.x],
+          shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w],
+          uv);
+    }
+  } else {
+    return {zero3f, zero3f};
+  }
+}
+#endif
+
 // Shape element normal.
 std::pair<vec3f, vec3f> eval_element_tangents(
     const scene_object* object, int element) {
@@ -1110,7 +1142,7 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
 
   // textures
   if (bsdf.diffuse != zero3f || bsdf.translucency != zero3f || bsdf.roughness) {
-    bsdf.roughness = clamp(bsdf.roughness, 0.03f * 0.03f, 1.0f);
+    bsdf.roughness = clamp(bsdf.roughness, coat_roughness, 1.0f);
   }
   if (bsdf.specular == zero3f && bsdf.metal == zero3f &&
       bsdf.transmission == zero3f && bsdf.refraction == zero3f) {
