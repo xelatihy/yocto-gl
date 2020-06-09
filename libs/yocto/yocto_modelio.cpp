@@ -35,6 +35,7 @@
 #include <unordered_set>
 
 #include "ext/filesystem.hpp"
+#include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

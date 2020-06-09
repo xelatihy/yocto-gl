@@ -35,6 +35,10 @@
 #include <memory>
 #include <mutex>
 
+#include "yocto_geometry.h"
+#include "yocto_sampling.h"
+#include "yocto_shading.h"
+
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
@@ -112,9 +116,6 @@ static ray3f sample_camera(const scene_camera* camera, const vec2i& ij,
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Set non-rigid frames as default
-static const bool non_rigid_frames = true;
 
 // Evaluate emission
 static vec3f eval_emission(
@@ -761,6 +762,7 @@ static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
   };
 
   switch (params.falsecolor) {
+    case trace_falsecolor_type::position: return {position * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::normal: return {normal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::frontfacing:
       return {dot(normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
