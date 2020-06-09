@@ -50,6 +50,7 @@ namespace yocto {
 
 // using directives
 using std::function;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -351,6 +352,88 @@ bbox3f compute_bounds(const scene_model* scene);
 
 // get named camera or default if name is empty
 scene_camera* get_camera(const scene_model* scene, const string& name = "");
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EVALUATION OF SCENE PROPERTIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Generates a ray from a camera.
+ray3f eval_camera(
+    const scene_camera* camera, const vec2f& image_uv, const vec2f& lens_uv);
+
+// Evaluates a texture
+vec2i texture_size(const scene_texture* texture);
+vec3f lookup_texture(
+    const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
+vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+
+// Evaluate object properties
+vec3f eval_position(const scene_object* object, int element, const vec2f& uv);
+vec3f eval_element_normal(const scene_object* object, int element);
+vec3f eval_normal(const scene_object* object, int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv);
+pair<vec3f, vec3f> eval_element_tangents(
+    const scene_object* object, int element);
+vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_object* object, int element,
+    const vec2f& uv, const vec3f& outgoing);
+vec3f eval_color(const scene_object* object, int element, const vec2f& uv);
+
+// Environment
+vec3f eval_environment(
+    const scene_environment* environment, const vec3f& direction);
+vec3f eval_environment(const scene_model* scene, const vec3f& direction);
+
+// Material Bsdf parameters
+struct scene_bsdf {
+  // brdf lobes
+  vec3f diffuse      = {0, 0, 0};
+  vec3f specular     = {0, 0, 0};
+  vec3f metal        = {0, 0, 0};
+  vec3f coat         = {0, 0, 0};
+  vec3f transmission = {0, 0, 0};
+  vec3f translucency = {0, 0, 0};
+  vec3f refraction   = {0, 0, 0};
+  float roughness    = 0;
+  float opacity      = 1;
+  float ior          = 1;
+  vec3f meta         = {0, 0, 0};
+  vec3f metak        = {0, 0, 0};
+  // weights
+  float diffuse_pdf      = 0;
+  float specular_pdf     = 0;
+  float metal_pdf        = 0;
+  float coat_pdf         = 0;
+  float transmission_pdf = 0;
+  float translucency_pdf = 0;
+  float refraction_pdf   = 0;
+};
+
+// Eval material to obtain emission, brdf and opacity.
+vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing);
+// Eval material to obatain emission, brdf and opacity.
+scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing);
+// check if a brdf is a delta
+bool is_delta(const scene_bsdf& bsdf);
+
+// Material volume parameters
+struct scene_vsdf {
+  vec3f density    = {0, 0, 0};
+  vec3f scatter    = {0, 0, 0};
+  float anisotropy = 0;
+};
+
+// check if we have a volume
+bool has_volume(const scene_object* object);
+// evaluate volume
+scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv);
 
 }  // namespace yocto
 
