@@ -65,13 +65,14 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_math.h"
+#include "yocto_image.h"
+#include "yocto_scene.h"
+#include "yocto_sampling.h"
+
 #include <atomic>
 #include <future>
 #include <memory>
-
-#include "yocto_image.h"
-#include "yocto_math.h"
-#include "yocto_scene.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -106,9 +107,9 @@ enum struct trace_sampler_type {
 // Type of false color visualization
 enum struct trace_falsecolor_type {
   // clang-format off
-  normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, coat, metal, transmission, translucency, refraction, 
-  roughness, opacity, ior, object, element, highlight
+  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color, 
+  emission, diffuse, specular, coat, metal, transmission, translucency, 
+  refraction, roughness, opacity, ior, object, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -148,7 +149,7 @@ struct trace_params {
 const auto trace_sampler_names = vector<string>{
     "path", "naive", "eyelight", "falsecolor"};
 
-const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
+const auto trace_falsecolor_names = vector<string>{"position", "normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "coat", "metal", "transmission", "translucency", "refraction",
     "roughness", "opacity", "ior", "object", "element", "highlight"};

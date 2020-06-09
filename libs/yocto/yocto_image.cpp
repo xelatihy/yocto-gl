@@ -32,6 +32,9 @@
 
 #include "yocto_image.h"
 
+#include "yocto_color.h"
+#include "yocto_noise.h"
+
 #include <atomic>
 #include <future>
 #include <memory>

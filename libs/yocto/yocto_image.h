@@ -96,12 +96,12 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_math.h"
+
 #include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
-
-#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

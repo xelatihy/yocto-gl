@@ -28,6 +28,8 @@
 
 #include "yocto_modelio.h"
 
+#include "yocto_color.h"
+
 #include <cstdio>
 #include <memory>
 #include <string_view>

@@ -28,6 +28,11 @@
 
 #include "yocto_scene.h"
 
+#include "yocto_shape.h"
+#include "yocto_color.h"
+#include "yocto_geometry.h"
+#include "yocto_shading.h"
+
 #include <atomic>
 #include <cassert>
 #include <cctype>
@@ -36,8 +41,6 @@
 #include <deque>
 #include <future>
 #include <memory>
-
-#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

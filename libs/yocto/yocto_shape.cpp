@@ -8,13 +8,16 @@
 
 #include "yocto_shape.h"
 
+#include "yocto_noise.h"
+#include "yocto_sampling.h"
+#include "yocto_geometry.h"
+#include "yocto_modelio.h"
+
 #include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
 using namespace std::string_literals;
-
-#include "yocto_modelio.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
