@@ -50,9 +50,9 @@ namespace yocto {
 
 // using directives
 using std::function;
+using std::pair;
 using std::string;
 using std::vector;
-using std::pair;
 
 }  // namespace yocto
 
@@ -373,28 +373,21 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Evaluate object properties
-vec3f eval_position(
-    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_position(const scene_object* object, int element, const vec2f& uv);
 vec3f eval_element_normal(const scene_object* object, int element);
-vec3f eval_normal(
-    const scene_object* object, int element, const vec2f& uv);
-vec2f eval_texcoord(
-    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_normal(const scene_object* object, int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_object* object, int element);
-vec3f eval_normalmap(
-    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv);
 vec3f eval_shading_normal(const scene_object* object, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec3f eval_color(
-    const scene_object* object, int element, const vec2f& uv);
+vec3f eval_color(const scene_object* object, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
     const scene_environment* environment, const vec3f& direction);
-vec3f eval_environment(
-    const scene_model* scene, const vec3f& direction);
-
+vec3f eval_environment(const scene_model* scene, const vec3f& direction);
 
 // Material Bsdf parameters
 struct scene_bsdf {
@@ -422,8 +415,8 @@ struct scene_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_object* object, int element,
-    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
+vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
 scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);

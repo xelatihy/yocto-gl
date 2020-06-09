@@ -740,18 +740,18 @@ static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
     return {zero3f, false};
   }
 
-    // prepare shading point
-    auto outgoing = -ray.d;
-    auto object   = scene->objects[intersection.object];
-    auto element  = intersection.element;
-    auto uv       = intersection.uv;
-    auto position = eval_position(object, element, uv);
-    auto normal   = eval_shading_normal(object, element, uv, outgoing);
-    auto gnormal  = eval_element_normal(object, element);
-    auto texcoord = eval_texcoord(object, element, uv);
-    auto color    = eval_color(object, element, uv);
-    auto emission = eval_emission(object, element, uv, normal, outgoing);
-    auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
+  // prepare shading point
+  auto outgoing = -ray.d;
+  auto object   = scene->objects[intersection.object];
+  auto element  = intersection.element;
+  auto uv       = intersection.uv;
+  auto position = eval_position(object, element, uv);
+  auto normal   = eval_shading_normal(object, element, uv, outgoing);
+  auto gnormal  = eval_element_normal(object, element);
+  auto texcoord = eval_texcoord(object, element, uv);
+  auto color    = eval_color(object, element, uv);
+  auto emission = eval_emission(object, element, uv, normal, outgoing);
+  auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
 
   // hash color
   auto hashed_color = [](int id) {

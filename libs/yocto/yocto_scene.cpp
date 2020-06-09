@@ -989,7 +989,7 @@ std::pair<vec3f, vec3f> eval_element_tangents(
     auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
         shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
         shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
-        shape->texcoords[q.w], {0,0});
+        shape->texcoords[q.w], {0, 0});
     return {transform_direction(object->frame, tu),
         transform_direction(object->frame, tv)};
   } else {
@@ -1201,8 +1201,8 @@ scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
   // factors
   auto vsdf    = scene_vsdf{};
   vsdf.density = ((transmission || translucency) && !thin)
-                         ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
-                         : zero3f;
+                     ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
+                     : zero3f;
   vsdf.scatter    = scattering;
   vsdf.anisotropy = scanisotropy;
 
