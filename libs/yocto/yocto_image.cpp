@@ -41,6 +41,8 @@
 #include "ext/stb_image_resize.h"
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
+#include "yocto_color.h"
+#include "yocto_noise.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

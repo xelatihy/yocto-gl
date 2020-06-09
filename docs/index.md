@@ -11,8 +11,16 @@ Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
 
 - `yocto/yocto_math.{h}`: fixed-size vectors, matrices, rigid frames, rays,
-   bounding boxes, transforms, random number generation, color and geometry
+   bounding boxes, transforms
+- `yocto/yocto_geometry.{h}`: geometry functions, ray-primitive intersection,
+   point-primitive overlap
+- `yocto/yocto_color.{h}`: color conversion, color adjustment, tone mapping
    functions, Perlin noise, shading and integration utilities
+- `yocto/yocto_noise.{h}`: Perlin noise
+- `yocto/yocto_sampling.{h}`: random number generation, generation of points
+   and directions, Monte Carlo utilities
+- `yocto/yocto_shading.{h}`: evaluation and sampling of fresnel functions, 
+   bsdf lobes, transmittance lobes, phase functions
 - `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating
    triangle meshes, quads meshes and line sets, computation of normals and
    tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
