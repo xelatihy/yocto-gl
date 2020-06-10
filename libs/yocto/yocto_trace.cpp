@@ -479,13 +479,14 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
   auto ray           = ray_;
   auto volume_stack  = vector<scene_vsdf>{};
   auto max_roughness = 0.0f;
-  auto hit           = false;
+  auto hit           = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -613,13 +614,14 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
-  auto hit      = false;
+  auto hit      = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -682,13 +684,14 @@ static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
-  auto hit      = false;
+  auto hit      = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -832,13 +835,6 @@ void trace_sample(trace_state* state, const scene_model* scene,
   auto ray      = sample_camera(camera, ij, state->render.size(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
   auto radiance = sampler(scene, ray, state->rngs[ij], params);
-  if (!radiance.w) {
-    if (params.envhidden || scene->environments.empty()) {
-      radiance = zero4f;
-    } else {
-      radiance.w = 1;
-    }
-  }
   if (!isfinite(xyz(radiance))) xyz(radiance) = zero3f;
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
