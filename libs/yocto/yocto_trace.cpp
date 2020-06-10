@@ -471,7 +471,7 @@ static float sample_lights_pdf(
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_path(const scene_model* scene,
+static vec4f trace_path(const scene_model* scene,
     const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
@@ -603,11 +603,11 @@ static std::pair<vec3f, bool> trace_path(const scene_model* scene,
     }
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_naive(const scene_model* scene,
+static vec4f trace_naive(const scene_model* scene,
     const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -672,11 +672,11 @@ static std::pair<vec3f, bool> trace_naive(const scene_model* scene,
     ray = {position, incoming};
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // Eyelight for quick previewing.
-static std::pair<vec3f, bool> trace_eyelight(const scene_model* scene,
+static vec4f trace_eyelight(const scene_model* scene,
     const ray3f& ray_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
@@ -729,11 +729,11 @@ static std::pair<vec3f, bool> trace_eyelight(const scene_model* scene,
     ray = {position, incoming};
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // False color rendering
-static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
+static vec4f trace_falsecolor(const scene_model* scene,
     const ray3f& ray, rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_scene_bvh(scene, ray);
@@ -791,12 +791,12 @@ static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(-ray.d, normal)), 1};
     } break;
-    default: return {zero3f, false};
+    default: return {zero3f, 0};
   }
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = std::pair<vec3f, bool> (*)(const scene_model* scene,
+using sampler_func = vec4f (*)(const scene_model* scene,
     const ray3f& ray, rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -832,20 +832,19 @@ vec4f trace_sample(trace_state* state, const scene_model* scene,
   auto& pixel   = state->pixels[ij];
   auto  ray = sample_camera(camera, ij, state->pixels.size(), rand2f(pixel.rng),
       rand2f(pixel.rng), params.tentfilter);
-  auto [radiance, hit] = sampler(scene, ray, pixel.rng, params);
-  if (!hit) {
+  auto radiance = sampler(scene, ray, pixel.rng, params);
+  if (!radiance.w) {
     if (params.envhidden || scene->environments.empty()) {
-      radiance = zero3f;
-      hit      = false;
+      radiance = zero4f;
     } else {
-      hit = true;
+      radiance.w = 1;
     }
   }
-  if (!isfinite(radiance)) radiance = zero3f;
+  if (!isfinite(xyz(radiance))) xyz(radiance) = zero3f;
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
-  pixel.radiance += radiance;
-  pixel.hits += hit ? 1 : 0;
+  pixel.radiance += xyz(radiance);
+  pixel.hits += radiance.w ? 1 : 0;
   pixel.samples += 1;
   return {pixel.hits ? pixel.radiance / pixel.hits : zero3f,
       (float)pixel.hits / (float)pixel.samples};
