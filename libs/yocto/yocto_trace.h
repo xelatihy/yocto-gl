@@ -188,20 +188,14 @@ image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
 
-// State of a pixel during tracing
-struct trace_pixel {
-  vec3f     radiance = {0, 0, 0};
-  int       hits     = 0;
-  int       samples  = 0;
-  rng_state rng      = {};
-};
-
 // [experimental] Asynchronous state
 struct trace_state {
-  image<vec4f>       render = {};
-  image<trace_pixel> pixels = {};
-  future<void>       worker = {};  // async
-  atomic<bool>       stop   = {};  // async
+  image<vec4f>     render       = {};
+  image<vec4f>     accumulation = {};
+  image<int>       samples      = {};
+  image<rng_state> rngs         = {};
+  future<void>     worker       = {};  // async
+  atomic<bool>     stop         = {};  // async
 };
 
 // [experimental] Callback used to report partially computed image
