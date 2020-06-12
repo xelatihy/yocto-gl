@@ -176,9 +176,11 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
+void init_bvh(bvh_shape* bvh, bool embree = false);
 void init_bvh(bvh_scene* bvh, bool embree = false);
 
 // Refit bvh data
+void update_bvh(bvh_shape* bvh);
 void update_bvh(bvh_scene* bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes);
 
