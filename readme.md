@@ -25,7 +25,8 @@ See each header file for documentation.
 - `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating
    triangle meshes, quads meshes and line sets, computation of normals and
    tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
-   procedural shapes generation, ray intersection and closest point queries of
+   procedural shapes generation, ray intersection and closest point queries
+- `yocto/yocto_bvh.{h,cpp}`:  ray intersection and closest point queries of
    triangle meshes, quads meshes, line sets and instances scenes using a
    two-level bounding volume hierarchy
 - `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
