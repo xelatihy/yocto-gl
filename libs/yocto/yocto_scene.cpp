@@ -1083,6 +1083,43 @@ vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
   return emission;
 }
 
+// Evaluate point
+scene_material_sample eval_material(
+    const scene_material* material, const vec2f& texcoord) {
+  auto mat  = scene_material_sample{};
+  mat.color = material->color *
+              eval_texture(material->color_tex, texcoord, false);
+  mat.specular = material->specular *
+                 eval_texture(material->specular_tex, texcoord, true).x;
+  mat.metallic = material->metallic *
+                 eval_texture(material->metallic_tex, texcoord, true).x;
+  mat.roughness = material->roughness *
+                  eval_texture(material->roughness_tex, texcoord, true).x;
+  mat.ior  = material->ior;
+  mat.coat = material->coat *
+             eval_texture(material->coat_tex, texcoord, true).x;
+  mat.transmission = material->transmission *
+                     eval_texture(material->emission_tex, texcoord, true).x;
+  mat.translucency = material->translucency *
+                     eval_texture(material->translucency_tex, texcoord, true).x;
+  mat.opacity = material->opacity *
+                mean(eval_texture(material->opacity_tex, texcoord, true));
+  mat.thin       = material->thin || !material->transmission;
+  mat.scattering = material->scattering *
+                   eval_texture(material->scattering_tex, texcoord, false);
+  mat.scanisotropy = material->scanisotropy;
+  mat.trdepth      = material->trdepth;
+  mat.normalmap    = material->normal_tex
+                      ? -1 + 2 * eval_texture(
+                                     material->normal_tex, texcoord, true)
+                      : vec3f{0, 0, 1};
+  return mat;
+}
+
+// constant values
+static const auto coat_ior       = 1.5f;
+static const auto coat_roughness = 0.03f * 0.03f;
+
 // Eval material to obtain emission, brdf and opacity.
 vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
@@ -1091,11 +1128,18 @@ vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
   return material->emission * eval_texture(material->emission_tex, texcoord);
 }
 
-// constant values
-static const auto coat_ior       = 1.5f;
-static const auto coat_roughness = 0.03f * 0.03f;
+// Eval material to obtain emission, brdf and opacity.
+float eval_opacity(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing) {
+  auto material = object->material;
+  auto texcoord = eval_texcoord(object, element, uv);
+  auto opacity  = material->opacity *
+                 eval_texture(material->opacity_tex, texcoord, true).x;
+  if (opacity > 0.999f) opacity = 1;
+  return opacity;
+}
 
-// Evaluate point
+// Evaluate bsdf
 scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto material = object->material;
@@ -1116,8 +1160,6 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
   auto translucency =
       material->translucency *
       eval_texture(material->translucency_tex, texcoord, true).x;
-  auto opacity = material->opacity *
-                 mean(eval_texture(material->opacity_tex, texcoord, true));
   auto thin = material->thin || !material->transmission;
 
   // factors
@@ -1141,7 +1183,6 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
   bsdf.metak     = zero3f;
   bsdf.roughness = roughness * roughness;
   bsdf.ior       = ior;
-  bsdf.opacity   = opacity;
 
   // textures
   if (bsdf.diffuse != zero3f || bsdf.translucency != zero3f || bsdf.roughness) {
@@ -1151,7 +1192,6 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
       bsdf.transmission == zero3f && bsdf.refraction == zero3f) {
     bsdf.roughness = 1;
   }
-  if (bsdf.opacity > 0.999f) bsdf.opacity = 1;
 
   // weights
   bsdf.diffuse_pdf  = max(bsdf.diffuse);
