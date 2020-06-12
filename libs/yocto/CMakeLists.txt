@@ -3,6 +3,7 @@ add_library(yocto
   yocto_math.h yocto_color.h yocto_geometry.h
   yocto_noise.h yocto_sampling.h yocto_shading.h
   yocto_modelio.h yocto_modelio.cpp
+  yocto_bvh.h yocto_bvh.cpp 
   yocto_shape.h yocto_shape.cpp 
   yocto_image.h yocto_image.cpp
   yocto_trace.h yocto_trace.cpp
