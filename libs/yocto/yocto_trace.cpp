@@ -471,21 +471,22 @@ static float sample_lights_pdf(
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_path(const scene_model* scene,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
   auto volume_stack  = vector<scene_vsdf>{};
   auto max_roughness = 0.0f;
-  auto hit           = false;
+  auto hit           = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -603,23 +604,24 @@ static std::pair<vec3f, bool> trace_path(const scene_model* scene,
     }
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // Recursive path tracing.
-static std::pair<vec3f, bool> trace_naive(const scene_model* scene,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
-  auto hit      = false;
+  auto hit      = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -672,23 +674,24 @@ static std::pair<vec3f, bool> trace_naive(const scene_model* scene,
     ray = {position, incoming};
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // Eyelight for quick previewing.
-static std::pair<vec3f, bool> trace_eyelight(const scene_model* scene,
-    const ray3f& ray_, rng_state& rng, const trace_params& params) {
+static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
+    rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance = zero3f;
   auto weight   = vec3f{1, 1, 1};
   auto ray      = ray_;
-  auto hit      = false;
+  auto hit      = !params.envhidden && !scene->environments.empty();
 
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
+      if(bounce || !params.envhidden)
       radiance += weight * eval_environment(scene, ray.d);
       break;
     }
@@ -729,12 +732,12 @@ static std::pair<vec3f, bool> trace_eyelight(const scene_model* scene,
     ray = {position, incoming};
   }
 
-  return {radiance, hit};
+  return {radiance, hit ? 1.0f : 0.0f};
 }
 
 // False color rendering
-static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params) {
+static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
@@ -791,13 +794,13 @@ static std::pair<vec3f, bool> trace_falsecolor(const scene_model* scene,
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(-ray.d, normal)), 1};
     } break;
-    default: return {zero3f, false};
+    default: return {zero3f, 0};
   }
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using sampler_func = std::pair<vec3f, bool> (*)(const scene_model* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params);
+using sampler_func = vec4f (*)(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return trace_path;
@@ -826,29 +829,22 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(trace_state* state, const scene_model* scene,
+void trace_sample(trace_state* state, const scene_model* scene,
     const scene_camera* camera, const vec2i& ij, const trace_params& params) {
-  auto  sampler = get_trace_sampler_func(params);
-  auto& pixel   = state->pixels[ij];
-  auto  ray = sample_camera(camera, ij, state->pixels.size(), rand2f(pixel.rng),
-      rand2f(pixel.rng), params.tentfilter);
-  auto [radiance, hit] = sampler(scene, ray, pixel.rng, params);
-  if (!hit) {
-    if (params.envhidden || scene->environments.empty()) {
-      radiance = zero3f;
-      hit      = false;
-    } else {
-      hit = true;
-    }
-  }
-  if (!isfinite(radiance)) radiance = zero3f;
+  auto sampler  = get_trace_sampler_func(params);
+  auto ray      = sample_camera(camera, ij, state->render.size(),
+      rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
+  auto radiance = sampler(scene, ray, state->rngs[ij], params);
+  if (!isfinite(xyz(radiance))) xyz(radiance) = zero3f;
   if (max(radiance) > params.clamp)
     radiance = radiance * (params.clamp / max(radiance));
-  pixel.radiance += radiance;
-  pixel.hits += hit ? 1 : 0;
-  pixel.samples += 1;
-  return {pixel.hits ? pixel.radiance / pixel.hits : zero3f,
-      (float)pixel.hits / (float)pixel.samples};
+  state->accumulation[ij] += radiance;
+  state->samples[ij] += 1;
+  state->render[ij] = {
+      state->accumulation[ij].w
+          ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
+          : zero3f,
+      state->accumulation[ij].w / state->samples[ij]};
 }
 
 // Init a sequence of random number generators.
@@ -859,11 +855,13 @@ void init_state(trace_state* state, const scene_model* scene,
                               (int)round(params.resolution / camera->aspect)}
                         : vec2i{(int)round(params.resolution * camera->aspect),
                               params.resolution};
-  state->pixels.assign(image_size, trace_pixel{});
   state->render.assign(image_size, zero4f);
-  auto rng = make_rng(1301081);
-  for (auto& pixel : state->pixels) {
-    pixel.rng = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
+  state->accumulation.assign(image_size, zero4f);
+  state->samples.assign(image_size, 0);
+  state->rngs.assign(image_size, {});
+  auto rng_ = make_rng(1301081);
+  for (auto& rng : state->rngs) {
+    rng = make_rng(params.seed, rand1i(rng_, 1 << 31) / 2 + 1);
   }
 }
 
@@ -987,14 +985,13 @@ image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
     if (params.noparallel) {
       for (auto j = 0; j < state->render.size().y; j++) {
         for (auto i = 0; i < state->render.size().x; i++) {
-          state->render[{i, j}] = trace_sample(
-              state, scene, camera, {i, j}, params);
+          trace_sample(state, scene, camera, {i, j}, params);
         }
       }
     } else {
       parallel_for(state->render.size(),
           [state, scene, camera, &params](const vec2i& ij) {
-            state->render[ij] = trace_sample(state, scene, camera, ij, params);
+            trace_sample(state, scene, camera, ij, params);
           });
     }
     if (image_cb) image_cb(state->render, sample + 1, params.samples);
@@ -1035,7 +1032,7 @@ void trace_start(trace_state* state, const scene_model* scene,
       if (progress_cb) progress_cb("trace image", sample, params.samples);
       parallel_for(state->render.size(), [&](const vec2i& ij) {
         if (state->stop) return;
-        state->render[ij] = trace_sample(state, scene, camera, ij, params);
+        trace_sample(state, scene, camera, ij, params);
         if (async_cb) async_cb(state->render, sample, params.samples, ij);
       });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
