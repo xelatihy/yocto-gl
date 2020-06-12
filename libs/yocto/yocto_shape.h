@@ -209,7 +209,7 @@ vector<vec3f> align_vertices(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EDGEA AND ADJACENCIES
+// EDGES AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -293,7 +293,6 @@ struct bvh_tree {
 // set the instance id and element intersections do not set shape element id
 // and the instance id. Results values are set only if hit is true.
 struct bvh_intersection {
-  int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
@@ -357,72 +356,6 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<float>& radius, const vec3f& pos, float max_distance,
     bool find_any = false);
-
-// BVH data for whole shapes. This interface makes copies of all the data.
-struct bvh_shape {
-  // elements
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // vertices
-  vector<vec3f> positions = {};
-  vector<float> radius    = {};
-
-  // nodes
-  bvh_tree bvh = {};
-#ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
-#endif
-};
-
-// instance
-struct bvh_instance {
-  frame3f frame = identity3x4f;
-  int     shape = -1;
-};
-
-// BVH data for whole shapes. This interface makes copies of all the data.
-struct bvh_scene {
-  // instances and shapes
-  vector<bvh_instance> instances = {};
-  vector<bvh_shape>    shapes    = {};
-
-  // nodes
-  bvh_tree bvh = {};
-#ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
-#endif
-};
-
-// Build the bvh acceleration structure.
-void init_shape_bvh(bvh_shape& bvh, bool embree = false);
-void init_scene_bvh(bvh_scene& bvh, bool embree = false);
-
-// Refit bvh data
-void update_shape_bvh(bvh_shape& bvh);
-void update_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes);
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_shape_bvh(
-    const bvh_shape& bvh, const ray3f& ray, bool find_any = false);
-bvh_intersection intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray,
-    bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const bvh_scene& bvh, int instance,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-
-// Find a shape element that overlaps a point within a given distance
-// max distance, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance, the instance id, the shape element
-// index and the element barycentric coordinates.
-bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
-    float max_distance, bool find_any = false);
-bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
-    float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
