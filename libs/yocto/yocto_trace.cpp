@@ -486,8 +486,8 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if(bounce || !params.envhidden)
-      radiance += weight * eval_environment(scene, ray.d);
+      if (bounce || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -514,6 +514,7 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
       auto position = eval_position(object, element, uv);
       auto normal   = eval_shading_normal(object, element, uv, outgoing);
       auto emission = eval_emission(object, element, uv, normal, outgoing);
+      auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
       auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
 
       // correct roughness
@@ -523,7 +524,7 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
       }
 
       // handle opacity
-      if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+      if (opacity < 1 && rand1f(rng) >= opacity) {
         ray = {position + ray.d * 1e-2f, ray.d};
         bounce -= 1;
         continue;
@@ -621,8 +622,8 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if(bounce || !params.envhidden)
-      radiance += weight * eval_environment(scene, ray.d);
+      if (bounce || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -634,10 +635,11 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
     auto position = eval_position(object, element, uv);
     auto normal   = eval_shading_normal(object, element, uv, outgoing);
     auto emission = eval_emission(object, element, uv, normal, outgoing);
+    auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
     auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
 
     // handle opacity
-    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+    if (opacity < 1 && rand1f(rng) >= opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -691,8 +693,8 @@ static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      if(bounce || !params.envhidden)
-      radiance += weight * eval_environment(scene, ray.d);
+      if (bounce || !params.envhidden)
+        radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -704,10 +706,11 @@ static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
     auto position = eval_position(object, element, uv);
     auto normal   = eval_shading_normal(object, element, uv, outgoing);
     auto emission = eval_emission(object, element, uv, normal, outgoing);
+    auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
     auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
 
     // handle opacity
-    if (bsdf.opacity < 1 && rand1f(rng) >= bsdf.opacity) {
+    if (opacity < 1 && rand1f(rng) >= opacity) {
       ray = {position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
@@ -755,6 +758,7 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
   auto texcoord = eval_texcoord(object, element, uv);
   auto color    = eval_color(object, element, uv);
   auto emission = eval_emission(object, element, uv, normal, outgoing);
+  auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
   auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
 
   // hash color
@@ -784,7 +788,7 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
     case trace_falsecolor_type::translucency: return {bsdf.translucency, 1};
     case trace_falsecolor_type::refraction: return {bsdf.refraction, 1};
     case trace_falsecolor_type::roughness: return {vec3f{bsdf.roughness}, 1};
-    case trace_falsecolor_type::opacity: return {vec3f{bsdf.opacity}, 1};
+    case trace_falsecolor_type::opacity: return {vec3f{opacity}, 1};
     case trace_falsecolor_type::ior: return {vec3f{bsdf.ior}, 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};

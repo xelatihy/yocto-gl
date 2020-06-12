@@ -389,6 +389,30 @@ vec3f eval_environment(
     const scene_environment* environment, const vec3f& direction);
 vec3f eval_environment(const scene_model* scene, const vec3f& direction);
 
+// Material sample
+struct scene_material_sample {
+  vec3f emission     = {0, 0, 0};
+  vec3f color        = {0, 0, 0};
+  float specular     = 0;
+  float roughness    = 0;
+  float metallic     = 0;
+  float ior          = 1.5;
+  vec3f spectint     = {1, 1, 1};
+  float coat         = 0;
+  float transmission = 0;
+  float translucency = 0;
+  vec3f scattering   = {0, 0, 0};
+  float scanisotropy = 0;
+  float trdepth      = 0.01;
+  float opacity      = 1;
+  bool  thin         = true;
+  vec3f normalmap    = {0, 0, 1};
+};
+
+// Evaluates material and textures
+scene_material_sample eval_material(
+    const scene_material* material, const vec2f& texcoord);
+
 // Material Bsdf parameters
 struct scene_bsdf {
   // brdf lobes
@@ -400,7 +424,6 @@ struct scene_bsdf {
   vec3f translucency = {0, 0, 0};
   vec3f refraction   = {0, 0, 0};
   float roughness    = 0;
-  float opacity      = 1;
   float ior          = 1;
   vec3f meta         = {0, 0, 0};
   vec3f metak        = {0, 0, 0};
@@ -419,6 +442,8 @@ vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
 scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing);
+float eval_opacity(const scene_object* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const scene_bsdf& bsdf);
