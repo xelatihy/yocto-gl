@@ -89,6 +89,10 @@
 
 #include "yocto_math.h"
 
+#ifdef YOCTO_EMBREE
+#include <embree3/rtcore.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -146,8 +150,9 @@ struct bvh_shape {
   // nodes
   bvh_tree_ bvh = {};
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
+  RTCScene embree_bvh = nullptr;
 #endif
+  ~bvh_shape();
 };
 
 // instance
@@ -159,23 +164,22 @@ struct bvh_instance {
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
   // instances and shapes
-  vector<bvh_instance> instances = {};
-  vector<bvh_shape>    shapes    = {};
+  vector<bvh_instance*> instances = {};
+  vector<bvh_shape*>    shapes    = {};
 
   // nodes
   bvh_tree_ bvh = {};
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
+  RTCScene embree_bvh = nullptr;
 #endif
+  ~bvh_scene();
 };
 
 // Build the bvh acceleration structure.
-void init_shape_bvh(bvh_shape& bvh, bool embree = false);
-void init_scene_bvh(bvh_scene& bvh, bool embree = false);
+void init_bvh(bvh_scene* bvh, bool embree = false);
 
 // Refit bvh data
-void update_shape_bvh(bvh_shape& bvh);
-void update_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
+void update_bvh(bvh_scene* bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
@@ -207,10 +211,10 @@ struct bvh_scene_intersection {
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
 bvh_shape_intersection intersect_shape_bvh(
-    const bvh_shape& bvh, const ray3f& ray, bool find_any = false);
-bvh_scene_intersection intersect_scene_bvh(const bvh_scene& bvh,
+    const bvh_shape* bvh, const ray3f& ray, bool find_any = false);
+bvh_scene_intersection intersect_scene_bvh(const bvh_scene* bvh,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_shape_intersection intersect_instance_bvh(const bvh_scene& bvh,
+bvh_shape_intersection intersect_instance_bvh(const bvh_scene* bvh,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
@@ -218,9 +222,9 @@ bvh_shape_intersection intersect_instance_bvh(const bvh_scene& bvh,
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_shape_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
+bvh_shape_intersection overlap_shape_bvh(const bvh_shape* bvh, const vec3f& pos,
     float max_distance, bool find_any = false);
-bvh_scene_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+bvh_scene_intersection overlap_scene_bvh(const bvh_scene* bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
