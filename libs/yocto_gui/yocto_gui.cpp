@@ -1264,19 +1264,19 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
 }
 
 // add instance
-ogl_object* add_object(ogl_scene* scene) {
-  return scene->objects.emplace_back(new ogl_object{});
+ogl_instance* add_object(ogl_scene* scene) {
+  return scene->objects.emplace_back(new ogl_instance{});
 }
-void set_frame(ogl_object* object, const frame3f& frame) {
-  object->frame = frame;
+void set_frame(ogl_instance* instance, const frame3f& frame) {
+  instance->frame = frame;
 }
-void set_shape(ogl_object* object, ogl_shape* shape) { object->shape = shape; }
-void set_material(ogl_object* object, ogl_material* material) {
-  object->material = material;
+void set_shape(ogl_instance* instance, ogl_shape* shape) { instance->shape = shape; }
+void set_material(ogl_instance* instance, ogl_material* material) {
+  instance->material = material;
 }
-void set_hidden(ogl_object* object, bool hidden) { object->hidden = hidden; }
-void set_highlighted(ogl_object* object, bool highlighted) {
-  object->highlighted = highlighted;
+void set_hidden(ogl_instance* instance, bool hidden) { instance->hidden = hidden; }
+void set_highlighted(ogl_instance* instance, bool highlighted) {
+  instance->highlighted = highlighted;
 }
 
 // add material
@@ -1346,24 +1346,24 @@ void add_default_lights(ogl_scene* scene) {
 
 // Draw a shape
 void draw_object(
-    ogl_scene* scene, ogl_object* object, const ogl_scene_params& params) {
+    ogl_scene* scene, ogl_instance* instance, const ogl_scene_params& params) {
   static auto empty_instances = vector<frame3f>{identity3x4f};
 
-  if (object->hidden) return;
+  if (instance->hidden) return;
 
-  auto shape_xform     = mat4f(object->frame);
+  auto shape_xform     = mat4f(instance->frame);
   auto shape_inv_xform = transpose(
-      mat4f(inverse(object->frame, params.non_rigid_frames)));
+      mat4f(inverse(instance->frame, params.non_rigid_frames)));
   set_uniform(scene->program, "frame", shape_xform);
   set_uniform(scene->program, "frameit", shape_inv_xform);
   set_uniform(scene->program, "offset", 0.0f);
-  if (object->highlighted) {
+  if (instance->highlighted) {
     set_uniform(scene->program, "highlight", vec4f{1, 1, 0, 1});
   } else {
     set_uniform(scene->program, "highlight", vec4f{0, 0, 0, 0});
   }
 
-  auto material = object->material;
+  auto material = instance->material;
   auto mtype    = 2;
   set_uniform(scene->program, "mtype", mtype);
   set_uniform(scene->program, "emission", material->emission);
@@ -1385,7 +1385,7 @@ void draw_object(
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
 
-  auto shape = object->shape;
+  auto shape = instance->shape;
   set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
   set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0, 0});
   set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0, 1});
@@ -1483,8 +1483,8 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   }
 
   if (params.wireframe) set_ogl_wireframe(true);
-  for (auto object : scene->objects) {
-    draw_object(scene, object, params);
+  for (auto instance : scene->objects) {
+    draw_object(scene, instance, params);
   }
 
   unbind_program();
