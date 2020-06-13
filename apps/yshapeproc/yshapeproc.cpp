@@ -263,18 +263,18 @@ bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto facevarying          = false;
-  auto positiononly         = false;
-  auto trianglesonly        = false;
-  auto smooth               = false;
-  auto faceted              = false;
-  auto rotate               = zero3f;
-  auto scale                = vec3f{1};
-  auto uscale               = 1.0f;
-  auto translate            = zero3f;
-  auto info                 = false;
-  auto output               = "out.ply"s;
-  auto filename             = "mesh.ply"s;
+  auto facevarying   = false;
+  auto positiononly  = false;
+  auto trianglesonly = false;
+  auto smooth        = false;
+  auto faceted       = false;
+  auto rotate        = zero3f;
+  auto scale         = vec3f{1};
+  auto uscale        = 1.0f;
+  auto translate     = zero3f;
+  auto info          = false;
+  auto output        = "out.ply"s;
+  auto filename      = "mesh.ply"s;
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");

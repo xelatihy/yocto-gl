@@ -28,8 +28,8 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_math.h>
-#include <yocto/yocto_shape.h>
 #include <yocto/yocto_mesh.h>
+#include <yocto/yocto_shape.h>
 using namespace yocto;
 
 #include "ext/filesystem.hpp"
@@ -153,7 +153,7 @@ int main(int argc, const char* argv[]) {
   auto texcoords = vector<vec2f>{};
   auto colors    = vector<vec3f>{};
   auto triangles = vector<vec3i>{};
-  auto lines     = vector<vec2i>{}; // for line output
+  auto lines     = vector<vec2i>{};  // for line output
 
   // load mesh
   auto ioerror = ""s;
@@ -161,12 +161,12 @@ int main(int argc, const char* argv[]) {
   auto ext      = sfs::path(filename).extension().string();
   auto basename = sfs::path(filename).stem().string();
   if (ext == ".ypreset") {
-    if (!make_mesh_preset(triangles, positions, normals,
-            texcoords, colors, basename, ioerror))
+    if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
+            basename, ioerror))
       print_fatal(ioerror);
   } else {
-    if (!load_mesh(filename, triangles, positions,
-            normals, texcoords, colors, ioerror))
+    if (!load_mesh(filename, triangles, positions, normals, texcoords, colors,
+            ioerror))
       print_fatal(ioerror);
   }
   print_progress("load mesh", 1, 1);
@@ -195,14 +195,14 @@ int main(int argc, const char* argv[]) {
   // compute normals
   if (smooth) {
     print_progress("smooth shape", 0, 1);
-      normals = compute_normals(triangles, positions);
+    normals = compute_normals(triangles, positions);
     print_progress("smooth shape", 1, 1);
   }
 
   // remove normals
   if (faceted) {
     print_progress("facet shape", 0, 1);
-    normals   = {};
+    normals = {};
     print_progress("facet shape", 1, 1);
   }
 
@@ -288,19 +288,19 @@ int main(int argc, const char* argv[]) {
   }
 
   // save mesh
-  if(!triangles.empty()) {
-  print_progress("save mesh", 0, 1);
-  if (!save_mesh(output, triangles, positions, normals,
-          texcoords, colors, ioerror))
-    print_fatal(ioerror);
-  print_progress("save mesh", 1, 1);
+  if (!triangles.empty()) {
+    print_progress("save mesh", 0, 1);
+    if (!save_mesh(
+            output, triangles, positions, normals, texcoords, colors, ioerror))
+      print_fatal(ioerror);
+    print_progress("save mesh", 1, 1);
   }
-  if(!lines.empty()) {
-  print_progress("save lines", 0, 1);
-  if (!save_lines(output, lines, positions, normals,
-          texcoords, colors, ioerror))
-    print_fatal(ioerror);
-  print_progress("save lines", 1, 1);
+  if (!lines.empty()) {
+    print_progress("save lines", 0, 1);
+    if (!save_lines(
+            output, lines, positions, normals, texcoords, colors, ioerror))
+      print_fatal(ioerror);
+    print_progress("save lines", 1, 1);
   }
 
   // done

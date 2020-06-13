@@ -1021,8 +1021,7 @@ namespace yocto {
 
 vector<string> mesh_stats(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
-    bool verbose) {
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, bool verbose) {
   auto format = [](auto num) {
     auto str = std::to_string(num);
     while (str.size() < 13) str = " " + str;
