@@ -118,7 +118,7 @@
       ]
     }
   },
-  "objects": {
+  "instances": {
     "floor": {
       "shape": "floor",
       "material": "floor"

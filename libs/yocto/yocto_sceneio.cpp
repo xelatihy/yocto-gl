@@ -658,6 +658,34 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       material_map[material->name] = material;
     }
   }
+  if (js.contains("instances")) {
+    for (auto& [name, ejs] : js.at("instances").items()) {
+      auto instance  = add_instance(scene);
+      instance->name = name;
+      if (!get_value(ejs, "frame", instance->frame)) return false;
+      if (ejs.contains("lookat")) {
+        auto lookat = identity3x3f;
+        if (!get_value(ejs, "lookat", lookat)) return false;
+        instance->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+      }
+      if (!get_ref(ejs, "material", instance->material, material_map))
+        return false;
+      if (!get_shape(ejs, "shape", instance->shape)) return false;
+      if (!get_ply_instances(ejs, "instance", instance)) return false;
+      if (instance->shape) {
+        if (!get_value(ejs, "subdivisions", instance->shape->subdivisions))
+          return false;
+        if (!get_value(ejs, "catmullcark", instance->shape->catmullclark))
+          return false;
+        if (!get_value(ejs, "smooth", instance->shape->smooth)) return false;
+        if (!get_value(ejs, "displacement", instance->shape->displacement))
+          return false;
+        if (!get_stexture(
+                ejs, "displacement_tex", instance->shape->displacement_tex))
+          return false;
+      }
+    }
+  }
   if (js.contains("objects")) {
     for (auto& [name, ejs] : js.at("objects").items()) {
       auto instance  = add_instance(scene);

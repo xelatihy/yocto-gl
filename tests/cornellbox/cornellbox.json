@@ -90,7 +90,7 @@
       "displacement": 1.0
     }
   },
-  "objects": {
+  "instances": {
     "backwall": {
       "material": "backwall",
       "shape": "backwall"
