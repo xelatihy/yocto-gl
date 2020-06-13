@@ -566,7 +566,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     }
     auto ply_instance_ = ply_instances.emplace_back(new ply_instance()).get();
     ply_instance_map[path] = ply_instance_;
-    instance_ply[instance]   = ply_instance_;
+    instance_ply[instance] = ply_instance_;
     return true;
   };
 
@@ -1545,7 +1545,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       if (!gprim->attributes_count) continue;
       auto instance = add_instance(scene);
       mesh_map[gmesh].push_back(instance);
-      auto shape       = add_shape(scene);
+      auto shape         = add_shape(scene);
       instance->shape    = shape;
       instance->material = material_map.at(gprim->material);
       for (auto aid = 0; aid < gprim->attributes_count; aid++) {

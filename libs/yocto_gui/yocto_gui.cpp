@@ -1265,16 +1265,20 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
 
 // add instance
 ogl_instance* add_object(ogl_scene* scene) {
-  return scene->objects.emplace_back(new ogl_instance{});
+  return scene->instances.emplace_back(new ogl_instance{});
 }
 void set_frame(ogl_instance* instance, const frame3f& frame) {
   instance->frame = frame;
 }
-void set_shape(ogl_instance* instance, ogl_shape* shape) { instance->shape = shape; }
+void set_shape(ogl_instance* instance, ogl_shape* shape) {
+  instance->shape = shape;
+}
 void set_material(ogl_instance* instance, ogl_material* material) {
   instance->material = material;
 }
-void set_hidden(ogl_instance* instance, bool hidden) { instance->hidden = hidden; }
+void set_hidden(ogl_instance* instance, bool hidden) {
+  instance->hidden = hidden;
+}
 void set_highlighted(ogl_instance* instance, bool highlighted) {
   instance->highlighted = highlighted;
 }
@@ -1393,33 +1397,33 @@ void draw_object(
   set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
   set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
 
-    if (is_initialized(shape->points)) {
-      glPointSize(shape->points_size);
-      set_uniform(scene->program, "etype", 1);
-      draw_elements(shape->points);
-    }
-    if (is_initialized(shape->lines)) {
-      set_uniform(scene->program, "etype", 2);
-      draw_elements(shape->lines);
-    }
-    if (is_initialized(shape->triangles)) {
-      set_uniform(scene->program, "etype", 3);
-      draw_elements(shape->triangles);
-    }
-    if (is_initialized(shape->quads)) {
-      set_uniform(scene->program, "etype", 3);
-      draw_elements(shape->quads);
-    }
+  if (is_initialized(shape->points)) {
+    glPointSize(shape->points_size);
+    set_uniform(scene->program, "etype", 1);
+    draw_elements(shape->points);
+  }
+  if (is_initialized(shape->lines)) {
+    set_uniform(scene->program, "etype", 2);
+    draw_elements(shape->lines);
+  }
+  if (is_initialized(shape->triangles)) {
+    set_uniform(scene->program, "etype", 3);
+    draw_elements(shape->triangles);
+  }
+  if (is_initialized(shape->quads)) {
+    set_uniform(scene->program, "etype", 3);
+    draw_elements(shape->quads);
+  }
 
-    if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
-      set_uniform(scene->program, "mtype", mtype);
-      set_uniform(scene->program, "emission", vec3f{0, 0, 0});
-      set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
-      set_uniform(scene->program, "specular", vec3f{0, 0, 0});
-      set_uniform(scene->program, "roughness", 1);
-      set_uniform(scene->program, "etype", 2);
-      draw_elements(shape->edges);
-    }
+  if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
+    set_uniform(scene->program, "mtype", mtype);
+    set_uniform(scene->program, "emission", vec3f{0, 0, 0});
+    set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
+    set_uniform(scene->program, "specular", vec3f{0, 0, 0});
+    set_uniform(scene->program, "roughness", 1);
+    set_uniform(scene->program, "etype", 2);
+    draw_elements(shape->edges);
+  }
 }
 
 // Display a scene
@@ -1483,7 +1487,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   }
 
   if (params.wireframe) set_ogl_wireframe(true);
-  for (auto instance : scene->objects) {
+  for (auto instance : scene->instances) {
     draw_object(scene, instance, params);
   }
 

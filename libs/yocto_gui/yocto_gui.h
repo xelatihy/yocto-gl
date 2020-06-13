@@ -412,7 +412,7 @@ struct ogl_scene {
 
   // scene objects
   vector<ogl_camera*>   cameras   = {};
-  vector<ogl_instance*>   objects   = {};
+  vector<ogl_instance*> instances = {};
   vector<ogl_shape*>    shapes    = {};
   vector<ogl_material*> materials = {};
   vector<ogl_texture*>  textures  = {};
@@ -458,7 +458,7 @@ ogl_camera*   add_camera(ogl_scene* scene);
 ogl_texture*  add_texture(ogl_scene* scene);
 ogl_material* add_material(ogl_scene* scene);
 ogl_shape*    add_shape(ogl_scene* scene);
-ogl_instance*   add_object(ogl_scene* scene);
+ogl_instance* add_object(ogl_scene* scene);
 ogl_light*    add_light(ogl_scene* scene);
 
 // camera properties

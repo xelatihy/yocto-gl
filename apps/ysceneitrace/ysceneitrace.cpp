@@ -73,7 +73,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -600,8 +600,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (!app->ioscene->instances.empty() && begin_header(win, "objects")) {
-    draw_combobox(
-        win, "instance##2", app->selected_instance, app->ioscene->instances, true);
+    draw_combobox(win, "instance##2", app->selected_instance,
+        app->ioscene->instances, true);
     if (draw_widgets(win, app->ioscene, app->selected_instance)) {
       stop_display(app);
       auto ioinstance = app->selected_instance;
@@ -609,9 +609,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           ioinstance, app->ioscene->instances, app->scene->instances);
       set_frame(instance, ioinstance->frame);
       set_shape(instance, get_element(ioinstance->shape, app->ioscene->shapes,
-                            app->scene->shapes));
-      set_material(instance, get_element(ioinstance->material,
-                               app->ioscene->materials, app->scene->materials));
+                              app->scene->shapes));
+      set_material(
+          instance, get_element(ioinstance->material, app->ioscene->materials,
+                        app->scene->materials));
       update_bvh(app->scene, {instance}, {}, app->params);
       reset_display(app);
     }

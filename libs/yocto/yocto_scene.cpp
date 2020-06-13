@@ -853,7 +853,7 @@ vec3f eval_position(
     auto t = shape->triangles[element];
     return transform_point(
         instance->frame, interpolate_triangle(shape->positions[t.x],
-                           shape->positions[t.y], shape->positions[t.z], uv));
+                             shape->positions[t.y], shape->positions[t.z], uv));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
     return transform_point(instance->frame,
@@ -878,12 +878,12 @@ vec3f eval_element_normal(const scene_instance* instance, int element) {
     auto t = shape->triangles[element];
     return transform_normal(
         instance->frame, triangle_normal(shape->positions[t.x],
-                           shape->positions[t.y], shape->positions[t.z]));
+                             shape->positions[t.y], shape->positions[t.z]));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(
-        instance->frame, quad_normal(shape->positions[q.x], shape->positions[q.y],
-                           shape->positions[q.z], shape->positions[q.w]));
+    return transform_normal(instance->frame,
+        quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
     return transform_normal(instance->frame,
@@ -896,14 +896,15 @@ vec3f eval_element_normal(const scene_instance* instance, int element) {
 }
 
 // Eval normal
-vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv) {
+vec3f eval_normal(
+    const scene_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
   if (shape->normals.empty()) return eval_element_normal(instance, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
         instance->frame, normalize(interpolate_triangle(shape->normals[t.x],
-                           shape->normals[t.y], shape->normals[t.z], uv)));
+                             shape->normals[t.y], shape->normals[t.z], uv)));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
     return transform_normal(instance->frame,
@@ -1123,8 +1124,8 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
+vec3f eval_emission(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
   return material->emission * eval_texture(material->emission_tex, texcoord);
@@ -1142,8 +1143,8 @@ float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
 }
 
 // Evaluate bsdf
-scene_bsdf eval_bsdf(const scene_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
+scene_bsdf eval_bsdf(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
   auto color    = material->color * eval_color(instance, element, uv) *
@@ -1481,7 +1482,7 @@ static bool intersect_scene_embree_bvh(const scene_model* scene,
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1(scene->embree_bvh, &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  instance   = (int)embree_ray.hit.instID[0];
+  instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
   distance = embree_ray.ray.tfar;
@@ -1906,10 +1907,10 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
   for (auto instance : scene->instances) {
     auto& primitive = primitives.emplace_back();
-    primitive.bbox =
-        instance->shape->bvh->nodes.empty()
-            ? invalidb3f
-            : transform_bbox(instance->frame, instance->shape->bvh->nodes[0].bbox);
+    primitive.bbox  = instance->shape->bvh->nodes.empty()
+                         ? invalidb3f
+                         : transform_bbox(instance->frame,
+                               instance->shape->bvh->nodes[0].bbox);
     primitive.center    = center(primitive.bbox);
     primitive.primitive = object_id++;
   }
@@ -2160,7 +2161,7 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
         if (intersect_shape_bvh(
                 object_->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
-          instance   = scene->bvh->primitives[idx];
+          instance = scene->bvh->primitives[idx];
           ray.tmax = distance;
         }
       }
@@ -2193,7 +2194,7 @@ scene_intersection intersect_scene_bvh(const scene_model* scene,
 scene_intersection intersect_instance_bvh(const scene_instance* instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
-  intersection.hit  = intersect_instance_bvh(instance, ray, intersection.element,
+  intersection.hit = intersect_instance_bvh(instance, ray, intersection.element,
       intersection.uv, intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }

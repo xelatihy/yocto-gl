@@ -71,7 +71,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_instance      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -522,7 +522,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     if (!draw_widgets(win, app->ioscene, app->selected_instance)) {
       auto ioobject = app->selected_instance;
       auto globject = get_element(
-          ioobject, app->ioscene->instances, app->glscene->objects);
+          ioobject, app->ioscene->instances, app->glscene->instances);
       set_frame(globject, ioobject->frame);
       set_shape(globject, get_element(ioobject->shape, app->ioscene->shapes,
                               app->glscene->shapes));

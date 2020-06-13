@@ -395,9 +395,10 @@ static vec3f sample_lights(const scene_model* scene, const vec3f& position,
   auto light_id = sample_uniform(scene->lights.size(), rl);
   auto light    = scene->lights[light_id];
   if (light->instance) {
-    auto instance  = light->instance;
-    auto element = sample_discrete_cdf(instance->shape->elements_cdf, rel);
-    auto uv = (!instance->shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
+    auto instance = light->instance;
+    auto element  = sample_discrete_cdf(instance->shape->elements_cdf, rel);
+    auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
+                                                    : ruv;
     auto lposition = eval_position(light->instance, element, uv);
     return normalize(lposition - position);
   } else if (light->environment) {
@@ -509,7 +510,7 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto instance   = scene->instances[intersection.instance];
+      auto instance = scene->instances[intersection.instance];
       auto element  = intersection.element;
       auto uv       = intersection.uv;
       auto position = eval_position(instance, element, uv);
@@ -630,7 +631,7 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto instance   = scene->instances[intersection.instance];
+    auto instance = scene->instances[intersection.instance];
     auto element  = intersection.element;
     auto uv       = intersection.uv;
     auto position = eval_position(instance, element, uv);
@@ -750,7 +751,7 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto instance   = scene->instances[intersection.instance];
+  auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
   auto position = eval_position(instance, element, uv);

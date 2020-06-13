@@ -374,10 +374,12 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Evaluate instance properties
-vec3f eval_position(const scene_instance* instance, int element, const vec2f& uv);
+vec3f eval_position(
+    const scene_instance* instance, int element, const vec2f& uv);
 vec3f eval_element_normal(const scene_instance* instance, int element);
 vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_instance* instance, int element, const vec2f& uv);
+vec2f eval_texcoord(
+    const scene_instance* instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
     const scene_instance* instance, int element);
 vec3f eval_normalmap(
@@ -440,11 +442,11 @@ struct scene_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+vec3f eval_emission(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-scene_bsdf eval_bsdf(const scene_instance* instance, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing);
+scene_bsdf eval_bsdf(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
 float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
@@ -506,7 +508,7 @@ void update_bvh(scene_model*       scene,
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct scene_intersection {
-  int   instance   = -1;
+  int   instance = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
