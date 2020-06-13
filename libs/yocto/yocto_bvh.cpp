@@ -800,9 +800,10 @@ static bool intersect_instance_bvh(const bvh_scene* scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto& instance_ = scene->instances[instance];
-  auto inv_ray = transform_ray(inverse(instance_->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(
-      scene->shapes[instance_->shape], inv_ray, element, uv, distance, find_any);
+  auto  inv_ray   = transform_ray(
+      inverse(instance_->frame, non_rigid_frames), ray);
+  return intersect_shape_bvh(scene->shapes[instance_->shape], inv_ray, element,
+      uv, distance, find_any);
 }
 
 // Intersect ray with a bvh.

@@ -73,7 +73,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_object*      selected_object      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -128,7 +128,7 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->environments.size() +
              (int)ioscene->materials.size() + (int)ioscene->textures.size() +
-             (int)ioscene->shapes.size() + (int)ioscene->objects.size()};
+             (int)ioscene->shapes.size() + (int)ioscene->instances.size()};
 
   auto camera_map     = unordered_map<scene_camera*, scene_camera*>{};
   camera_map[nullptr] = nullptr;
@@ -209,13 +209,13 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  for (auto ioobject : ioscene->objects) {
+  for (auto ioobject : ioscene->instances) {
     if (progress_cb)
       progress_cb("converting objects", progress.x++, progress.y);
-    auto object = add_object(scene);
-    set_frame(object, ioobject->frame);
-    set_shape(object, shape_map.at(ioobject->shape));
-    set_material(object, material_map.at(ioobject->material));
+    auto instance = add_instance(scene);
+    set_frame(instance, ioobject->frame);
+    set_shape(instance, shape_map.at(ioobject->shape));
+    set_material(instance, material_map.at(ioobject->material));
   }
 
   for (auto ioenvironment : ioscene->environments) {
@@ -417,7 +417,7 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
 }
 
 bool draw_widgets(
-    gui_window* win, scene_model* ioscene, scene_object* ioobject) {
+    gui_window* win, scene_model* ioscene, scene_instance* ioobject) {
   if (!ioobject) return false;
   auto edited = 0;
   draw_label(win, "name", ioobject->name);
@@ -599,20 +599,21 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  if (!app->ioscene->objects.empty() && begin_header(win, "objects")) {
-    draw_combobox(
-        win, "object##2", app->selected_object, app->ioscene->objects, true);
-    if (draw_widgets(win, app->ioscene, app->selected_object)) {
+  if (!app->ioscene->instances.empty() && begin_header(win, "objects")) {
+    draw_combobox(win, "instance##2", app->selected_instance,
+        app->ioscene->instances, true);
+    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
       stop_display(app);
-      auto ioobject = app->selected_object;
-      auto object   = get_element(
-          ioobject, app->ioscene->objects, app->scene->objects);
-      set_frame(object, ioobject->frame);
-      set_shape(object, get_element(ioobject->shape, app->ioscene->shapes,
-                            app->scene->shapes));
-      set_material(object, get_element(ioobject->material,
-                               app->ioscene->materials, app->scene->materials));
-      update_bvh(app->scene, {object}, {}, app->params);
+      auto ioinstance = app->selected_instance;
+      auto instance   = get_element(
+          ioinstance, app->ioscene->instances, app->scene->instances);
+      set_frame(instance, ioinstance->frame);
+      set_shape(instance, get_element(ioinstance->shape, app->ioscene->shapes,
+                              app->scene->shapes));
+      set_material(
+          instance, get_element(ioinstance->material, app->ioscene->materials,
+                        app->scene->materials));
+      update_bvh(app->scene, {instance}, {}, app->params);
       reset_display(app);
     }
     end_header(win);
@@ -825,7 +826,7 @@ int main(int argc, const char* argv[]) {
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
-          app->selected_object = app->ioscene->objects[isec.object];
+          app->selected_instance = app->ioscene->instances[isec.instance];
         }
       }
     }

@@ -128,7 +128,7 @@
       "emission_tex": "sunsky"
     }
   },
-  "objects": {
+  "instances": {
     "floor": {
       "shape": "floor",
       "material": "floor"

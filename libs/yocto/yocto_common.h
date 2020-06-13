@@ -111,7 +111,8 @@ inline int64_t get_time();
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Python `range()` equivalent. Construct an object to iterate over a sequence.
+// Python `range()` equivalent. Construct an instance to iterate over a
+// sequence.
 inline auto range(int min, int max);
 inline auto range(int max);
 

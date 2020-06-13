@@ -128,7 +128,7 @@
       "emission_tex": "sky"
     }
   },
-  "objects": {
+  "instances": {
     "floor": {
       "shape": "floor",
       "material": "floor"

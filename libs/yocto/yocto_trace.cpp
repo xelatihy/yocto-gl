@@ -394,11 +394,12 @@ static vec3f sample_lights(const scene_model* scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
   auto light_id = sample_uniform(scene->lights.size(), rl);
   auto light    = scene->lights[light_id];
-  if (light->object) {
-    auto object  = light->object;
-    auto element = sample_discrete_cdf(object->shape->elements_cdf, rel);
-    auto uv = (!object->shape->triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto lposition = eval_position(light->object, element, uv);
+  if (light->instance) {
+    auto instance = light->instance;
+    auto element  = sample_discrete_cdf(instance->shape->elements_cdf, rel);
+    auto uv       = (!instance->shape->triangles.empty()) ? sample_triangle(ruv)
+                                                    : ruv;
+    auto lposition = eval_position(light->instance, element, uv);
     return normalize(lposition - position);
   } else if (light->environment) {
     auto environment = light->environment;
@@ -424,20 +425,21 @@ static float sample_lights_pdf(
     const scene_model* scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto light : scene->lights) {
-    if (light->object) {
+    if (light->instance) {
       // check all intersection
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto intersection = intersect_instance_bvh(
-            light->object, {next_position, direction});
+            light->instance, {next_position, direction});
         if (!intersection.hit) break;
         // accumulate pdf
         auto lposition = eval_position(
-            light->object, intersection.element, intersection.uv);
-        auto lnormal = eval_element_normal(light->object, intersection.element);
+            light->instance, intersection.element, intersection.uv);
+        auto lnormal = eval_element_normal(
+            light->instance, intersection.element);
         // prob triangle * area triangle = area triangle mesh
-        auto area = light->object->shape->elements_cdf.back();
+        auto area = light->instance->shape->elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
@@ -508,14 +510,14 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -ray.d;
-      auto object   = scene->objects[intersection.object];
+      auto instance = scene->instances[intersection.instance];
       auto element  = intersection.element;
       auto uv       = intersection.uv;
-      auto position = eval_position(object, element, uv);
-      auto normal   = eval_shading_normal(object, element, uv, outgoing);
-      auto emission = eval_emission(object, element, uv, normal, outgoing);
-      auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
-      auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
+      auto position = eval_position(instance, element, uv);
+      auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+      auto emission = eval_emission(instance, element, uv, normal, outgoing);
+      auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+      auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
       // correct roughness
       if (params.nocaustics) {
@@ -554,10 +556,10 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
       }
 
       // update volume stack
-      if (has_volume(object) &&
+      if (has_volume(instance) &&
           dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          auto vsdf = eval_vsdf(object, element, uv);
+          auto vsdf = eval_vsdf(instance, element, uv);
           volume_stack.push_back(vsdf);
         } else {
           volume_stack.pop_back();
@@ -629,14 +631,14 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto object   = scene->objects[intersection.object];
+    auto instance = scene->instances[intersection.instance];
     auto element  = intersection.element;
     auto uv       = intersection.uv;
-    auto position = eval_position(object, element, uv);
-    auto normal   = eval_shading_normal(object, element, uv, outgoing);
-    auto emission = eval_emission(object, element, uv, normal, outgoing);
-    auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
-    auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
+    auto position = eval_position(instance, element, uv);
+    auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+    auto emission = eval_emission(instance, element, uv, normal, outgoing);
+    auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
     // handle opacity
     if (opacity < 1 && rand1f(rng) >= opacity) {
@@ -700,14 +702,14 @@ static vec4f trace_eyelight(const scene_model* scene, const ray3f& ray_,
 
     // prepare shading point
     auto outgoing = -ray.d;
-    auto object   = scene->objects[intersection.object];
+    auto instance = scene->instances[intersection.instance];
     auto element  = intersection.element;
     auto uv       = intersection.uv;
-    auto position = eval_position(object, element, uv);
-    auto normal   = eval_shading_normal(object, element, uv, outgoing);
-    auto emission = eval_emission(object, element, uv, normal, outgoing);
-    auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
-    auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
+    auto position = eval_position(instance, element, uv);
+    auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+    auto emission = eval_emission(instance, element, uv, normal, outgoing);
+    auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+    auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
     // handle opacity
     if (opacity < 1 && rand1f(rng) >= opacity) {
@@ -749,17 +751,17 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
 
   // prepare shading point
   auto outgoing = -ray.d;
-  auto object   = scene->objects[intersection.object];
+  auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
-  auto position = eval_position(object, element, uv);
-  auto normal   = eval_shading_normal(object, element, uv, outgoing);
-  auto gnormal  = eval_element_normal(object, element);
-  auto texcoord = eval_texcoord(object, element, uv);
-  auto color    = eval_color(object, element, uv);
-  auto emission = eval_emission(object, element, uv, normal, outgoing);
-  auto opacity  = eval_opacity(object, element, uv, normal, outgoing);
-  auto bsdf     = eval_bsdf(object, element, uv, normal, outgoing);
+  auto position = eval_position(instance, element, uv);
+  auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+  auto gnormal  = eval_element_normal(instance, element);
+  auto texcoord = eval_texcoord(instance, element, uv);
+  auto color    = eval_color(instance, element, uv);
+  auto emission = eval_emission(instance, element, uv, normal, outgoing);
+  auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+  auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
   // hash color
   auto hashed_color = [](int id) {
@@ -792,8 +794,8 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
     case trace_falsecolor_type::ior: return {vec3f{bsdf.ior}, 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
-    case trace_falsecolor_type::object:
-      return {hashed_color(intersection.object), 1};
+    case trace_falsecolor_type::instance:
+      return {hashed_color(intersection.instance), 1};
     case trace_falsecolor_type::highlight: {
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(-ray.d, normal)), 1};
@@ -879,8 +881,8 @@ void init_bvh(scene_model* scene, const trace_params& params,
 }
 
 // Refit bvh data
-void update_bvh(scene_model*     scene,
-    const vector<scene_object*>& updated_objects,
+void update_bvh(scene_model*       scene,
+    const vector<scene_instance*>& updated_objects,
     const vector<scene_shape*>& updated_shapes, const trace_params& params) {
   auto params_       = scene_bvh_params{};
   params_.bvh        = (scene_bvh_type)params.bvh;
@@ -902,9 +904,9 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 
-  for (auto object : scene->objects) {
-    if (object->material->emission == zero3f) continue;
-    auto shape = object->shape;
+  for (auto instance : scene->instances) {
+    if (instance->material->emission == zero3f) continue;
+    auto shape = instance->shape;
     if (shape->triangles.empty() && shape->quads.empty()) continue;
     if (progress_cb) progress_cb("build light", progress.x++, ++progress.y);
     if (!shape->triangles.empty()) {
@@ -927,7 +929,7 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
       }
     }
     auto light         = add_light(scene);
-    light->object      = object;
+    light->instance    = instance;
     light->environment = nullptr;
   }
   for (auto environment : scene->environments) {
@@ -948,7 +950,7 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
       }
     }
     auto light         = add_light(scene);
-    light->object      = nullptr;
+    light->instance    = nullptr;
     light->environment = environment;
   }
 

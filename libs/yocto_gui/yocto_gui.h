@@ -384,16 +384,10 @@ struct ogl_shape {
 
 // Opengl instance
 struct ogl_instance {
-  vector<frame3f> frames = {};
-};
-
-// Opengl object
-struct ogl_object {
-  // object properties
+  // instance properties
   frame3f       frame       = identity3x4f;
   ogl_shape*    shape       = nullptr;
   ogl_material* material    = nullptr;
-  ogl_instance* instance    = nullptr;
   bool          hidden      = false;
   bool          highlighted = false;
 };
@@ -418,10 +412,9 @@ struct ogl_scene {
 
   // scene objects
   vector<ogl_camera*>   cameras   = {};
-  vector<ogl_object*>   objects   = {};
+  vector<ogl_instance*> instances = {};
   vector<ogl_shape*>    shapes    = {};
   vector<ogl_material*> materials = {};
-  vector<ogl_instance*> instances = {};
   vector<ogl_texture*>  textures  = {};
   vector<ogl_light*>    lights    = {};
 
@@ -465,8 +458,7 @@ ogl_camera*   add_camera(ogl_scene* scene);
 ogl_texture*  add_texture(ogl_scene* scene);
 ogl_material* add_material(ogl_scene* scene);
 ogl_shape*    add_shape(ogl_scene* scene);
-ogl_instance* add_instance(ogl_scene* scene);
-ogl_object*   add_object(ogl_scene* scene);
+ogl_instance* add_object(ogl_scene* scene);
 ogl_light*    add_light(ogl_scene* scene);
 
 // camera properties
@@ -503,15 +495,11 @@ void set_colors(ogl_shape* shape, const vector<vec3f>& colors);
 void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 // instance properties
-void set_frames(ogl_instance* instance, const vector<frame3f>& frames);
-
-// object properties
-void set_frame(ogl_object* object, const frame3f& frame);
-void set_shape(ogl_object* object, ogl_shape* shape);
-void set_material(ogl_object* object, ogl_material* material);
-void set_instance(ogl_object* object, ogl_instance* instance);
-void set_hidden(ogl_object* object, bool hidden);
-void set_highlighted(ogl_object* object, bool highlighted);
+void set_frame(ogl_instance* instance, const frame3f& frame);
+void set_shape(ogl_instance* instance, ogl_shape* shape);
+void set_material(ogl_instance* instance, ogl_material* material);
+void set_hidden(ogl_instance* instance, bool hidden);
+void set_highlighted(ogl_instance* instance, bool highlighted);
 
 // light properties
 void add_default_lights(ogl_scene* scene);
