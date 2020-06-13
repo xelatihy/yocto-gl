@@ -240,7 +240,7 @@ scene_model::~scene_model() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
-  for (auto object : objects) delete object;
+  for (auto object : instances) delete object;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
   for (auto light : lights) delete light;
@@ -272,14 +272,14 @@ scene_shape* add_shape(scene_model* scene, const string& name) {
 scene_texture* add_texture(scene_model* scene, const string& name) {
   return add_element(scene->textures, name, "texture");
 }
-scene_object* add_object(scene_model* scene, const string& name) {
-  return add_element(scene->objects, name, "object");
+scene_instance* add_instance(scene_model* scene, const string& name) {
+  return add_element(scene->instances, name, "object");
 }
 scene_material* add_material(scene_model* scene, const string& name) {
   return add_element(scene->materials, name, "material");
 }
-scene_object* add_complete_object(scene_model* scene, const string& name) {
-  auto object      = add_object(scene, name);
+scene_instance* add_complete_instance(scene_model* scene, const string& name) {
+  auto object      = add_instance(scene, name);
   object->shape    = add_shape(scene, name);
   object->material = add_material(scene, name);
   return object;
@@ -360,13 +360,13 @@ void set_tangents(scene_shape* shape, const vector<vec4f>& tangents) {
 }
 
 // Add object
-void set_frame(scene_object* object, const frame3f& frame) {
+void set_frame(scene_instance* object, const frame3f& frame) {
   object->frame = frame;
 }
-void set_shape(scene_object* object, scene_shape* shape) {
+void set_shape(scene_instance* object, scene_shape* shape) {
   object->shape = shape;
 }
-void set_material(scene_object* object, scene_material* material) {
+void set_material(scene_instance* object, scene_material* material) {
   object->material = material;
 }
 
@@ -472,7 +472,7 @@ void add_radius(scene_model* scene, float radius) {
 // Add missing materials.
 void add_materials(scene_model* scene) {
   auto default_material = (scene_material*)nullptr;
-  for (auto& object : scene->objects) {
+  for (auto& object : scene->instances) {
     if (object->material) continue;
     if (!default_material) {
       default_material        = add_material(scene);
@@ -523,7 +523,7 @@ bbox3f compute_bounds(const scene_model* scene) {
     for (auto p : shape->positions) sbvh = merge(sbvh, p);
     shape_bbox[shape] = sbvh;
   }
-  for (auto object : scene->objects) {
+  for (auto object : scene->instances) {
     auto sbvh = shape_bbox[object->shape];
     bbox      = merge(bbox, transform_bbox(object->frame, sbvh));
   }
@@ -847,7 +847,8 @@ ray3f eval_camera(
 }
 
 // Eval position
-vec3f eval_position(const scene_object* object, int element, const vec2f& uv) {
+vec3f eval_position(
+    const scene_instance* object, int element, const vec2f& uv) {
   auto shape = object->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -872,7 +873,7 @@ vec3f eval_position(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // Shape element normal.
-vec3f eval_element_normal(const scene_object* object, int element) {
+vec3f eval_element_normal(const scene_instance* object, int element) {
   auto shape = object->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -896,7 +897,7 @@ vec3f eval_element_normal(const scene_object* object, int element) {
 }
 
 // Eval normal
-vec3f eval_normal(const scene_object* object, int element, const vec2f& uv) {
+vec3f eval_normal(const scene_instance* object, int element, const vec2f& uv) {
   auto shape = object->shape;
   if (shape->normals.empty()) return eval_element_normal(object, element);
   if (!shape->triangles.empty()) {
@@ -923,7 +924,8 @@ vec3f eval_normal(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // Eval texcoord
-vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv) {
+vec2f eval_texcoord(
+    const scene_instance* object, int element, const vec2f& uv) {
   auto shape = object->shape;
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
@@ -978,7 +980,7 @@ static std::pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 std::pair<vec3f, vec3f> eval_element_tangents(
-    const scene_object* object, int element) {
+    const scene_instance* object, int element) {
   auto shape = object->shape;
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
@@ -1000,7 +1002,8 @@ std::pair<vec3f, vec3f> eval_element_tangents(
   }
 }
 
-vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
+vec3f eval_normalmap(
+    const scene_instance* object, int element, const vec2f& uv) {
   auto shape      = object->shape;
   auto normal_tex = object->material->normal_tex;
   // apply normal mapping
@@ -1020,7 +1023,7 @@ vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const scene_object* object, int element,
+vec3f eval_shading_normal(const scene_instance* object, int element,
     const vec2f& uv, const vec3f& outgoing) {
   auto shape    = object->shape;
   auto material = object->material;
@@ -1042,7 +1045,7 @@ vec3f eval_shading_normal(const scene_object* object, int element,
 }
 
 // Eval color
-vec3f eval_color(const scene_object* object, int element, const vec2f& uv) {
+vec3f eval_color(const scene_instance* object, int element, const vec2f& uv) {
   auto shape = object->shape;
   if (shape->colors.empty()) return {1, 1, 1};
   if (!shape->triangles.empty()) {
@@ -1121,7 +1124,7 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
+vec3f eval_emission(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto material = object->material;
   auto texcoord = eval_texcoord(object, element, uv);
@@ -1129,7 +1132,7 @@ vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_object* object, int element, const vec2f& uv,
+float eval_opacity(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto material = object->material;
   auto texcoord = eval_texcoord(object, element, uv);
@@ -1140,7 +1143,7 @@ float eval_opacity(const scene_object* object, int element, const vec2f& uv,
 }
 
 // Evaluate bsdf
-scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
+scene_bsdf eval_bsdf(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto material = object->material;
   auto texcoord = eval_texcoord(object, element, uv);
@@ -1223,7 +1226,8 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
 bool is_delta(const scene_bsdf& bsdf) { return !bsdf.roughness; }
 
 // evaluate volume
-scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
+scene_vsdf eval_vsdf(
+    const scene_instance* object, int element, const vec2f& uv) {
   auto material = object->material;
   // initialize factors
   auto texcoord = eval_texcoord(object, element, uv);
@@ -1253,7 +1257,7 @@ scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // check if we have a volume
-bool has_volume(const scene_object* object) {
+bool has_volume(const scene_instance* object) {
   return !object->material->thin && object->material->transmission;
 }
 
@@ -1405,7 +1409,7 @@ static void init_embree_bvh(
   if (params.bvh == scene_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   auto object_id = 0;
-  for (auto object : scene->objects) {
+  for (auto object : scene->instances) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, object->shape->embree_bvh);
     rtcSetGeometryTransform(
@@ -1417,7 +1421,7 @@ static void init_embree_bvh(
 }
 
 static void update_embree_bvh(scene_model* scene,
-    const vector<scene_object*>&           updated_objects,
+    const vector<scene_instance*>&         updated_objects,
     const vector<scene_shape*>&            updated_shapes,
     const scene_bvh_params&                params) {
   throw std::runtime_error("not implemented yet");
@@ -1901,7 +1905,7 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
   auto primitives            = vector<scene_bvh_primitive>{};
   auto object_id             = 0;
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
-  for (auto object : scene->objects) {
+  for (auto object : scene->instances) {
     auto& primitive = primitives.emplace_back();
     primitive.bbox =
         object->shape->bvh->nodes.empty()
@@ -1967,10 +1971,10 @@ static void update_bvh(scene_shape* shape, const scene_bvh_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(scene_model*     scene,
-    const vector<scene_object*>& updated_objects,
-    const vector<scene_shape*>&  updated_shapes,
-    const scene_bvh_params&      params) {
+void update_bvh(scene_model*       scene,
+    const vector<scene_instance*>& updated_objects,
+    const vector<scene_shape*>&    updated_shapes,
+    const scene_bvh_params&        params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1983,7 +1987,7 @@ void update_bvh(scene_model*     scene,
   auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto instance = scene->bvh->primitives[idx];
-    auto object   = scene->objects[instance];
+    auto object   = scene->instances[instance];
     auto sbvh     = object->shape->bvh;
     bboxes[idx]   = transform_bbox(object->frame, sbvh->nodes[0].bbox);
   }
@@ -2152,7 +2156,7 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto object_ = scene->objects[scene->bvh->primitives[idx]];
+        auto object_ = scene->instances[scene->bvh->primitives[idx]];
         auto inv_ray = transform_ray(
             inverse(object_->frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
@@ -2172,8 +2176,8 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_instance_bvh(const scene_object* object, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any,
+static bool intersect_instance_bvh(const scene_instance* object,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto inv_ray = transform_ray(inverse(object->frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
@@ -2188,7 +2192,7 @@ scene_intersection intersect_scene_bvh(const scene_model* scene,
       non_rigid_frames);
   return intersection;
 }
-scene_intersection intersect_instance_bvh(const scene_object* object,
+scene_intersection intersect_instance_bvh(const scene_instance* object,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
   intersection.hit  = intersect_instance_bvh(object, ray, intersection.element,
@@ -2212,29 +2216,29 @@ void make_cornellbox(scene_model* scene) {
   camera->focus              = 3.9;
   camera->film               = 0.024;
   camera->aspect             = 1;
-  auto floor                 = add_complete_object(scene, "floor");
+  auto floor                 = add_complete_instance(scene, "floor");
   floor->shape->positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
   floor->material->color     = {0.725, 0.71, 0.68};
-  auto ceiling               = add_complete_object(scene, "ceiling");
+  auto ceiling               = add_complete_instance(scene, "ceiling");
   ceiling->shape->positions  = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
   ceiling->material->color   = {0.725, 0.71, 0.68};
-  auto backwall              = add_complete_object(scene, "backwall");
+  auto backwall              = add_complete_instance(scene, "backwall");
   backwall->shape->positions = {
       {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
   backwall->material->color   = {0.725, 0.71, 0.68};
-  auto rightwall              = add_complete_object(scene, "rightwall");
+  auto rightwall              = add_complete_instance(scene, "rightwall");
   rightwall->shape->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   rightwall->material->color  = {0.14, 0.45, 0.091};
-  auto leftwall               = add_complete_object(scene, "leftwall");
+  auto leftwall               = add_complete_instance(scene, "leftwall");
   leftwall->shape->positions  = {
       {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   leftwall->material->color  = {0.63, 0.065, 0.05};
-  auto shortbox              = add_complete_object(scene, "shortbox");
+  auto shortbox              = add_complete_instance(scene, "shortbox");
   shortbox->shape->positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
@@ -2247,7 +2251,7 @@ void make_cornellbox(scene_model* scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   shortbox->material->color  = {0.725, 0.71, 0.68};
-  auto tallbox               = add_complete_object(scene, "tallbox");
+  auto tallbox               = add_complete_instance(scene, "tallbox");
   tallbox->shape->positions  = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
@@ -2261,7 +2265,7 @@ void make_cornellbox(scene_model* scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   tallbox->material->color   = {0.725, 0.71, 0.68};
-  auto light                 = add_complete_object(scene, "light");
+  auto light                 = add_complete_instance(scene, "light");
   light->shape->positions    = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};

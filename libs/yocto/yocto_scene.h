@@ -206,7 +206,7 @@ struct scene_shape {
 };
 
 // Object.
-struct scene_object {
+struct scene_instance {
   // object data
   string          name     = "";
   frame3f         frame    = identity3x4f;
@@ -227,7 +227,7 @@ struct scene_environment {
 
 // Scene lights used during rendering. These are created automatically.
 struct scene_light {
-  scene_object*      object      = nullptr;
+  scene_instance*    instance    = nullptr;
   scene_environment* environment = nullptr;
 };
 
@@ -241,7 +241,7 @@ struct scene_light {
 struct scene_model {
   // scene elements
   vector<scene_camera*>      cameras      = {};
-  vector<scene_object*>      objects      = {};
+  vector<scene_instance*>    instances    = {};
   vector<scene_environment*> environments = {};
   vector<scene_shape*>       shapes       = {};
   vector<scene_texture*>     textures     = {};
@@ -272,11 +272,12 @@ namespace yocto {
 // add element to a scene
 scene_camera*      add_camera(scene_model* scene, const string& name = "");
 scene_environment* add_environment(scene_model* scene, const string& name = "");
-scene_object*      add_object(scene_model* scene, const string& name = "");
+scene_instance*    add_instance(scene_model* scene, const string& name = "");
 scene_material*    add_material(scene_model* scene, const string& name = "");
 scene_shape*       add_shape(scene_model* scene, const string& name = "");
 scene_texture*     add_texture(scene_model* scene, const string& name = "");
-scene_object* add_complete_object(scene_model* scene, const string& name = "");
+scene_instance*    add_complete_instance(
+       scene_model* scene, const string& name = "");
 
 // camera properties
 void set_frame(scene_camera* camera, const frame3f& frame);
@@ -285,9 +286,9 @@ void set_lens(scene_camera* camera, float lens, float aspect, float film,
 void set_focus(scene_camera* camera, float aperture, float focus);
 
 // object properties
-void set_frame(scene_object* object, const frame3f& frame);
-void set_material(scene_object* object, scene_material* material);
-void set_shape(scene_object* object, scene_shape* shape);
+void set_frame(scene_instance* object, const frame3f& frame);
+void set_material(scene_instance* object, scene_material* material);
+void set_shape(scene_instance* object, scene_shape* shape);
 
 // texture properties
 void set_texture(scene_texture* texture, const image<vec3b>& img);
@@ -373,16 +374,17 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool clamp_to_edge = false);
 
 // Evaluate object properties
-vec3f eval_position(const scene_object* object, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_object* object, int element);
-vec3f eval_normal(const scene_object* object, int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv);
+vec3f eval_position(const scene_instance* object, int element, const vec2f& uv);
+vec3f eval_element_normal(const scene_instance* object, int element);
+vec3f eval_normal(const scene_instance* object, int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_instance* object, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_object* object, int element);
-vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_object* object, int element,
+    const scene_instance* object, int element);
+vec3f eval_normalmap(
+    const scene_instance* object, int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_instance* object, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec3f eval_color(const scene_object* object, int element, const vec2f& uv);
+vec3f eval_color(const scene_instance* object, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
@@ -438,12 +440,12 @@ struct scene_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
+vec3f eval_emission(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
+scene_bsdf eval_bsdf(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_object* object, int element, const vec2f& uv,
+float eval_opacity(const scene_instance* object, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const scene_bsdf& bsdf);
@@ -456,9 +458,10 @@ struct scene_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const scene_object* object);
+bool has_volume(const scene_instance* object);
 // evaluate volume
-scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv);
+scene_vsdf eval_vsdf(
+    const scene_instance* object, int element, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -495,8 +498,8 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
     progress_callback progress_cb = {});
 
 // Refit bvh data
-void update_bvh(scene_model*     scene,
-    const vector<scene_object*>& updated_objects,
+void update_bvh(scene_model*       scene,
+    const vector<scene_instance*>& updated_objects,
     const vector<scene_shape*>& updated_shapes, const scene_bvh_params& params);
 
 // Results of intersect functions that include hit flag, the instance id,
@@ -517,7 +520,7 @@ scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 scene_intersection intersect_instance_bvh(const scene_model* object,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-scene_intersection intersect_instance_bvh(const scene_object* object,
+scene_intersection intersect_instance_bvh(const scene_instance* object,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto

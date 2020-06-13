@@ -550,11 +550,11 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   // load json instance
   auto ply_instances     = vector<unique_ptr<ply_instance>>{};
   auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
-  auto instance_ply      = unordered_map<scene_object*, ply_instance*>{};
+  auto instance_ply      = unordered_map<scene_instance*, ply_instance*>{};
   auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
                                &get_value](const json& ejs, const string& name,
-                               scene_object* object,
-                               const string& dirname = "instances/") -> bool {
+                               scene_instance* object,
+                               const string&   dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
@@ -660,7 +660,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   }
   if (js.contains("objects")) {
     for (auto& [name, ejs] : js.at("objects").items()) {
-      auto object  = add_object(scene);
+      auto object  = add_instance(scene);
       object->name = name;
       if (!get_value(ejs, "frame", object->frame)) return false;
       if (ejs.contains("lookat")) {
@@ -746,19 +746,19 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   if (!ply_instances.empty()) {
     if (progress_cb)
       progress_cb("flatten instances", progress.x++, progress.y++);
-    auto objects = scene->objects;
-    scene->objects.clear();
+    auto objects = scene->instances;
+    scene->instances.clear();
     for (auto object : objects) {
       auto it = instance_ply.find(object);
       if (it == instance_ply.end()) {
-        auto nobject      = add_object(scene, object->name);
+        auto nobject      = add_instance(scene, object->name);
         nobject->frame    = object->frame;
         nobject->shape    = object->shape;
         nobject->material = object->material;
       } else {
         auto instance = it->second;
         for (auto& frame : instance->frames) {
-          auto nobject      = add_object(scene, object->name);
+          auto nobject      = add_instance(scene, object->name);
           nobject->frame    = frame * object->frame;
           nobject->shape    = object->shape;
           nobject->material = object->material;
@@ -874,10 +874,10 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     add_tex(ejs, "normal_tex", material->normal_tex);
   }
 
-  auto def_object = scene_object{};
+  auto def_object = scene_instance{};
   auto def_shape  = scene_shape{};
-  if (!scene->objects.empty()) js["objects"] = json::object();
-  for (auto object : scene->objects) {
+  if (!scene->instances.empty()) js["objects"] = json::object();
+  for (auto object : scene->instances) {
     auto& ejs = js["objects"][object->name];
     add_opt(ejs, "frame", object->frame, def_object.frame);
     add_ref(ejs, "shape", object->shape);
@@ -1067,12 +1067,12 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
         return shape_error();
       }
       if (oshape->instances.empty()) {
-        auto object      = add_object(scene);
+        auto object      = add_instance(scene);
         object->shape    = shape;
         object->material = material;
       } else {
         for (auto& frame : oshape->instances) {
-          auto object      = add_object(scene);
+          auto object      = add_instance(scene);
           object->frame    = frame;
           object->shape    = shape;
           object->material = material;
@@ -1196,7 +1196,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   }
 
   // convert objects
-  for (auto object : scene->objects) {
+  for (auto object : scene->instances) {
     auto shape     = object->shape;
     auto positions = shape->positions, normals = shape->normals;
     for (auto& p : positions) p = transform_point(object->frame, p);
@@ -1293,7 +1293,7 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
     return false;
 
   // create object
-  auto object   = add_object(scene);
+  auto object   = add_instance(scene);
   object->shape = shape;
 
   // fix scene
@@ -1508,14 +1508,14 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   }
 
   // convert meshes
-  auto mesh_map = unordered_map<cgltf_mesh*, vector<scene_object*>>{
+  auto mesh_map = unordered_map<cgltf_mesh*, vector<scene_instance*>>{
       {nullptr, {}}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh = &gltf->meshes[mid];
     for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
       auto gprim = &gmesh->primitives[sid];
       if (!gprim->attributes_count) continue;
-      auto object = add_object(scene);
+      auto object = add_instance(scene);
       mesh_map[gmesh].push_back(object);
       auto shape       = add_shape(scene);
       object->shape    = shape;
@@ -1676,11 +1676,11 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       for (auto object : mesh_map.at(gmsh)) object->frame = frames.front();
     } else {
       for (auto object : mesh_map.at(gmsh)) {
-        scene->objects.erase(
-            std::remove(scene->objects.begin(), scene->objects.end(), object),
-            scene->objects.end());
+        scene->instances.erase(std::remove(scene->instances.begin(),
+                                   scene->instances.end(), object),
+            scene->instances.end());
         for (auto fid = 0; fid < frames.size(); fid++) {
-          auto nobject = add_object(
+          auto nobject = add_instance(
               scene, object->name + "@" + std::to_string(fid));
           nobject->frame    = frames[fid];
           nobject->shape    = object->shape;
@@ -1915,13 +1915,13 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
     auto material = material_map.at(pshape->material);
     if (pshape->instances.empty()) {
-      auto object      = add_object(scene);
+      auto object      = add_instance(scene);
       object->frame    = pshape->frame;
       object->shape    = shape;
       object->material = material;
     } else {
       for (auto frame : pshape->instances) {
-        auto object      = add_object(scene);
+        auto object      = add_instance(scene);
         object->frame    = frame * pshape->frame;
         object->shape    = shape;
         object->material = material;
@@ -1939,7 +1939,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 
   // lights
   for (auto plight : pbrt->lights) {
-    auto object                = add_object(scene);
+    auto object                = add_instance(scene);
     object->shape              = add_shape(scene);
     object->frame              = plight->area_frame;
     object->shape->triangles   = plight->area_triangles;
@@ -2045,7 +2045,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   }
 
   // convert instances
-  for (auto object : scene->objects) {
+  for (auto object : scene->instances) {
     auto pshape = add_shape(pbrt);
     pshape->filename_ =
         sfs::path(object->shape->name).replace_extension(".ply");
