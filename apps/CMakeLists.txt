@@ -2,6 +2,7 @@ add_subdirectory(yscenetrace)
 add_subdirectory(ysceneproc)
 add_subdirectory(yimageproc)
 add_subdirectory(yshapeproc)
+add_subdirectory(ymeshproc)
 add_subdirectory(yheightfieldproc)
 
 if(YOCTO_OPENGL)

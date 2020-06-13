@@ -5,6 +5,7 @@ add_library(yocto
   yocto_modelio.h yocto_modelio.cpp
   yocto_bvh.h yocto_bvh.cpp 
   yocto_shape.h yocto_shape.cpp 
+  yocto_mesh.h yocto_mesh.cpp 
   yocto_image.h yocto_image.cpp
   yocto_trace.h yocto_trace.cpp
   yocto_scene.h yocto_scene.cpp
