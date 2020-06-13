@@ -109,7 +109,7 @@ enum struct trace_falsecolor_type {
   // clang-format off
   position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color, 
   emission, diffuse, specular, coat, metal, transmission, translucency, 
-  refraction, roughness, opacity, ior, object, element, highlight
+  refraction, roughness, opacity, ior, instance, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -152,7 +152,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
     "diffuse", "specular", "coat", "metal", "transmission", "translucency",
-    "refraction", "roughness", "opacity", "ior", "object", "element",
+    "refraction", "roughness", "opacity", "ior", "instance", "element",
     "highlight"};
 const auto bvh_names              = vector<string>{
     "default", "highquality", "middle", "balanced",

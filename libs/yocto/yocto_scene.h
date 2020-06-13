@@ -207,7 +207,7 @@ struct scene_shape {
 
 // Object.
 struct scene_instance {
-  // object data
+  // instance data
   string          name     = "";
   frame3f         frame    = identity3x4f;
   scene_shape*    shape    = nullptr;
@@ -285,10 +285,10 @@ void set_lens(scene_camera* camera, float lens, float aspect, float film,
     bool ortho = false);
 void set_focus(scene_camera* camera, float aperture, float focus);
 
-// object properties
-void set_frame(scene_instance* object, const frame3f& frame);
-void set_material(scene_instance* object, scene_material* material);
-void set_shape(scene_instance* object, scene_shape* shape);
+// instance properties
+void set_frame(scene_instance* instance, const frame3f& frame);
+void set_material(scene_instance* instance, scene_material* material);
+void set_shape(scene_instance* instance, scene_shape* shape);
 
 // texture properties
 void set_texture(scene_texture* texture, const image<vec3b>& img);
@@ -373,18 +373,18 @@ vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
-// Evaluate object properties
-vec3f eval_position(const scene_instance* object, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_instance* object, int element);
-vec3f eval_normal(const scene_instance* object, int element, const vec2f& uv);
-vec2f eval_texcoord(const scene_instance* object, int element, const vec2f& uv);
+// Evaluate instance properties
+vec3f eval_position(const scene_instance* instance, int element, const vec2f& uv);
+vec3f eval_element_normal(const scene_instance* instance, int element);
+vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
+vec2f eval_texcoord(const scene_instance* instance, int element, const vec2f& uv);
 pair<vec3f, vec3f> eval_element_tangents(
-    const scene_instance* object, int element);
+    const scene_instance* instance, int element);
 vec3f eval_normalmap(
-    const scene_instance* object, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_instance* object, int element,
+    const scene_instance* instance, int element, const vec2f& uv);
+vec3f eval_shading_normal(const scene_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec3f eval_color(const scene_instance* object, int element, const vec2f& uv);
+vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(
@@ -440,12 +440,12 @@ struct scene_bsdf {
 };
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* object, int element, const vec2f& uv,
+vec3f eval_emission(const scene_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // Eval material to obatain emission, brdf and opacity.
-scene_bsdf eval_bsdf(const scene_instance* object, int element, const vec2f& uv,
+scene_bsdf eval_bsdf(const scene_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_instance* object, int element, const vec2f& uv,
+float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing);
 // check if a brdf is a delta
 bool is_delta(const scene_bsdf& bsdf);
@@ -458,10 +458,10 @@ struct scene_vsdf {
 };
 
 // check if we have a volume
-bool has_volume(const scene_instance* object);
+bool has_volume(const scene_instance* instance);
 // evaluate volume
 scene_vsdf eval_vsdf(
-    const scene_instance* object, int element, const vec2f& uv);
+    const scene_instance* instance, int element, const vec2f& uv);
 
 }  // namespace yocto
 
@@ -506,7 +506,7 @@ void update_bvh(scene_model*       scene,
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct scene_intersection {
-  int   object   = -1;
+  int   instance   = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
@@ -518,9 +518,7 @@ struct scene_intersection {
 // the shape element index and the element barycentric coordinates.
 scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-scene_intersection intersect_instance_bvh(const scene_model* object,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-scene_intersection intersect_instance_bvh(const scene_instance* object,
+scene_intersection intersect_instance_bvh(const scene_instance* instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto

@@ -1264,7 +1264,7 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
   set_arraybuffer(shape->tangents, tangents);
 }
 
-// add object
+// add instance
 ogl_object* add_object(ogl_scene* scene) {
   return scene->objects.emplace_back(new ogl_object{});
 }

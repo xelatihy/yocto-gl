@@ -71,7 +71,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_object      = nullptr;
+  scene_instance*    selected_instance      = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -247,12 +247,12 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // shapes
-  for (auto ioobject : ioscene->instances) {
-    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
-    auto globject = add_instance(glscene);
-    set_frame(globject, ioobject->frame);
-    set_shape(globject, shape_map.at(ioobject->shape));
-    set_material(globject, material_map.at(ioobject->material));
+  for (auto ioinstance : ioscene->instances) {
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+    auto globject = add_object(glscene);
+    set_frame(globject, ioinstance->frame);
+    set_shape(globject, shape_map.at(ioinstance->shape));
+    set_material(globject, material_map.at(ioinstance->material));
   }
 
   // done
@@ -518,9 +518,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   if (!app->ioscene->instances.empty() && begin_header(win, "objects")) {
     draw_combobox(
-        win, "object##2", app->selected_object, app->ioscene->instances);
-    if (!draw_widgets(win, app->ioscene, app->selected_object)) {
-      auto ioobject = app->selected_object;
+        win, "object##2", app->selected_instance, app->ioscene->instances);
+    if (!draw_widgets(win, app->ioscene, app->selected_instance)) {
+      auto ioobject = app->selected_instance;
       auto globject = get_element(
           ioobject, app->ioscene->instances, app->glscene->objects);
       set_frame(globject, ioobject->frame);

@@ -72,7 +72,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_instance*    selected_object      = nullptr;
+  scene_instance*    selected_instance      = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -209,8 +209,8 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
 
   // shapes
   for (auto ioobject : ioscene->instances) {
-    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
-    auto globject = add_instance(glscene);
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
+    auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
     set_material(globject, material_map.at(ioobject->material));
