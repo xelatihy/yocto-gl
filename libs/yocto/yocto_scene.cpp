@@ -213,8 +213,7 @@ vector<string> scene_validation(const scene_model* scene, bool notextures) {
 
   check_names(scene->cameras, "camera");
   check_names(scene->shapes, "shape");
-  check_names(scene->shapes, "instance");
-  check_names(scene->shapes, "object");
+  check_names(scene->instances, "instance");
   check_names(scene->textures, "texture");
   check_names(scene->environments, "environment");
   if (!notextures) check_empty_textures(scene->textures);
@@ -240,7 +239,7 @@ scene_model::~scene_model() {
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
   for (auto material : materials) delete material;
-  for (auto object : objects) delete object;
+  for (auto instance : instances) delete instance;
   for (auto texture : textures) delete texture;
   for (auto environment : environments) delete environment;
   for (auto light : lights) delete light;
@@ -272,17 +271,17 @@ scene_shape* add_shape(scene_model* scene, const string& name) {
 scene_texture* add_texture(scene_model* scene, const string& name) {
   return add_element(scene->textures, name, "texture");
 }
-scene_object* add_object(scene_model* scene, const string& name) {
-  return add_element(scene->objects, name, "object");
+scene_instance* add_instance(scene_model* scene, const string& name) {
+  return add_element(scene->instances, name, "instance");
 }
 scene_material* add_material(scene_model* scene, const string& name) {
   return add_element(scene->materials, name, "material");
 }
-scene_object* add_complete_object(scene_model* scene, const string& name) {
-  auto object      = add_object(scene, name);
-  object->shape    = add_shape(scene, name);
-  object->material = add_material(scene, name);
-  return object;
+scene_instance* add_complete_instance(scene_model* scene, const string& name) {
+  auto instance      = add_instance(scene, name);
+  instance->shape    = add_shape(scene, name);
+  instance->material = add_material(scene, name);
+  return instance;
 }
 
 // Set cameras
@@ -359,15 +358,15 @@ void set_tangents(scene_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
 }
 
-// Add object
-void set_frame(scene_object* object, const frame3f& frame) {
-  object->frame = frame;
+// Add instance
+void set_frame(scene_instance* instance, const frame3f& frame) {
+  instance->frame = frame;
 }
-void set_shape(scene_object* object, scene_shape* shape) {
-  object->shape = shape;
+void set_shape(scene_instance* instance, scene_shape* shape) {
+  instance->shape = shape;
 }
-void set_material(scene_object* object, scene_material* material) {
-  object->material = material;
+void set_material(scene_instance* instance, scene_material* material) {
+  instance->material = material;
 }
 
 // Add material
@@ -472,13 +471,13 @@ void add_radius(scene_model* scene, float radius) {
 // Add missing materials.
 void add_materials(scene_model* scene) {
   auto default_material = (scene_material*)nullptr;
-  for (auto& object : scene->objects) {
-    if (object->material) continue;
+  for (auto& instance : scene->instances) {
+    if (instance->material) continue;
     if (!default_material) {
       default_material        = add_material(scene);
       default_material->color = {0.8, 0.8, 0.8};
     }
-    object->material = default_material;
+    instance->material = default_material;
   }
 }
 
@@ -523,9 +522,9 @@ bbox3f compute_bounds(const scene_model* scene) {
     for (auto p : shape->positions) sbvh = merge(sbvh, p);
     shape_bbox[shape] = sbvh;
   }
-  for (auto object : scene->objects) {
-    auto sbvh = shape_bbox[object->shape];
-    bbox      = merge(bbox, transform_bbox(object->frame, sbvh));
+  for (auto instance : scene->instances) {
+    auto sbvh = shape_bbox[instance->shape];
+    bbox      = merge(bbox, transform_bbox(instance->frame, sbvh));
   }
   return bbox;
 }
@@ -847,46 +846,47 @@ ray3f eval_camera(
 }
 
 // Eval position
-vec3f eval_position(const scene_object* object, int element, const vec2f& uv) {
-  auto shape = object->shape;
+vec3f eval_position(
+    const scene_instance* instance, int element, const vec2f& uv) {
+  auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_point(
-        object->frame, interpolate_triangle(shape->positions[t.x],
-                           shape->positions[t.y], shape->positions[t.z], uv));
+        instance->frame, interpolate_triangle(shape->positions[t.x],
+                             shape->positions[t.y], shape->positions[t.z], uv));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_point(object->frame,
+    return transform_point(instance->frame,
         interpolate_quad(shape->positions[q.x], shape->positions[q.y],
             shape->positions[q.z], shape->positions[q.w], uv));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_point(object->frame,
+    return transform_point(instance->frame,
         interpolate_line(shape->positions[l.x], shape->positions[l.y], uv.x));
   } else if (!shape->points.empty()) {
     return transform_point(
-        object->frame, shape->positions[shape->points[element]]);
+        instance->frame, shape->positions[shape->points[element]]);
   } else {
     return zero3f;
   }
 }
 
 // Shape element normal.
-vec3f eval_element_normal(const scene_object* object, int element) {
-  auto shape = object->shape;
+vec3f eval_element_normal(const scene_instance* instance, int element) {
+  auto shape = instance->shape;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        object->frame, triangle_normal(shape->positions[t.x],
-                           shape->positions[t.y], shape->positions[t.z]));
+        instance->frame, triangle_normal(shape->positions[t.x],
+                             shape->positions[t.y], shape->positions[t.z]));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(
-        object->frame, quad_normal(shape->positions[q.x], shape->positions[q.y],
-                           shape->positions[q.z], shape->positions[q.w]));
+    return transform_normal(instance->frame,
+        quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(object->frame,
+    return transform_normal(instance->frame,
         line_tangent(shape->positions[l.x], shape->positions[l.y]));
   } else if (!shape->points.empty()) {
     return {0, 0, 1};
@@ -896,35 +896,37 @@ vec3f eval_element_normal(const scene_object* object, int element) {
 }
 
 // Eval normal
-vec3f eval_normal(const scene_object* object, int element, const vec2f& uv) {
-  auto shape = object->shape;
-  if (shape->normals.empty()) return eval_element_normal(object, element);
+vec3f eval_normal(
+    const scene_instance* instance, int element, const vec2f& uv) {
+  auto shape = instance->shape;
+  if (shape->normals.empty()) return eval_element_normal(instance, element);
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return transform_normal(
-        object->frame, normalize(interpolate_triangle(shape->normals[t.x],
-                           shape->normals[t.y], shape->normals[t.z], uv)));
+        instance->frame, normalize(interpolate_triangle(shape->normals[t.x],
+                             shape->normals[t.y], shape->normals[t.z], uv)));
   } else if (!shape->quads.empty()) {
     auto q = shape->quads[element];
-    return transform_normal(object->frame,
+    return transform_normal(instance->frame,
         normalize(interpolate_quad(shape->normals[q.x], shape->normals[q.y],
             shape->normals[q.z], shape->normals[q.w], uv)));
   } else if (!shape->lines.empty()) {
     auto l = shape->lines[element];
-    return transform_normal(object->frame,
+    return transform_normal(instance->frame,
         normalize(
             interpolate_line(shape->normals[l.x], shape->normals[l.y], uv.x)));
   } else if (!shape->points.empty()) {
     return transform_normal(
-        object->frame, normalize(shape->normals[shape->points[element]]));
+        instance->frame, normalize(shape->normals[shape->points[element]]));
   } else {
     return zero3f;
   }
 }
 
 // Eval texcoord
-vec2f eval_texcoord(const scene_object* object, int element, const vec2f& uv) {
-  auto shape = object->shape;
+vec2f eval_texcoord(
+    const scene_instance* instance, int element, const vec2f& uv) {
+  auto shape = instance->shape;
   if (shape->texcoords.empty()) return uv;
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -978,37 +980,38 @@ static std::pair<vec3f, vec3f> eval_tangents(
 
 // Shape element normal.
 std::pair<vec3f, vec3f> eval_element_tangents(
-    const scene_object* object, int element) {
-  auto shape = object->shape;
+    const scene_instance* instance, int element) {
+  auto shape = instance->shape;
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
     auto t        = shape->triangles[element];
     auto [tu, tv] = triangle_tangents_fromuv(shape->positions[t.x],
         shape->positions[t.y], shape->positions[t.z], shape->texcoords[t.x],
         shape->texcoords[t.y], shape->texcoords[t.z]);
-    return {transform_direction(object->frame, tu),
-        transform_direction(object->frame, tv)};
+    return {transform_direction(instance->frame, tu),
+        transform_direction(instance->frame, tv)};
   } else if (!shape->quads.empty() && !shape->texcoords.empty()) {
     auto q        = shape->quads[element];
     auto [tu, tv] = quad_tangents_fromuv(shape->positions[q.x],
         shape->positions[q.y], shape->positions[q.z], shape->positions[q.w],
         shape->texcoords[q.x], shape->texcoords[q.y], shape->texcoords[q.z],
         shape->texcoords[q.w], {0, 0});
-    return {transform_direction(object->frame, tu),
-        transform_direction(object->frame, tv)};
+    return {transform_direction(instance->frame, tu),
+        transform_direction(instance->frame, tv)};
   } else {
     return {};
   }
 }
 
-vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
-  auto shape      = object->shape;
-  auto normal_tex = object->material->normal_tex;
+vec3f eval_normalmap(
+    const scene_instance* instance, int element, const vec2f& uv) {
+  auto shape      = instance->shape;
+  auto normal_tex = instance->material->normal_tex;
   // apply normal mapping
-  auto normal   = eval_normal(object, element, uv);
-  auto texcoord = eval_texcoord(object, element, uv);
+  auto normal   = eval_normal(instance, element, uv);
+  auto texcoord = eval_texcoord(instance, element, uv);
   if (normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
     auto normalmap = -1 + 2 * eval_texture(normal_tex, texcoord, true);
-    auto [tu, tv]  = eval_element_tangents(object, element);
+    auto [tu, tv]  = eval_element_tangents(instance, element);
     auto frame     = frame3f{tu, tv, normal, zero3f};
     frame.x        = orthonormalize(frame.x, frame.z);
     frame.y        = normalize(cross(frame.z, frame.x));
@@ -1020,19 +1023,19 @@ vec3f eval_normalmap(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // Eval shading normal
-vec3f eval_shading_normal(const scene_object* object, int element,
+vec3f eval_shading_normal(const scene_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing) {
-  auto shape    = object->shape;
-  auto material = object->material;
+  auto shape    = instance->shape;
+  auto material = instance->material;
   if (!shape->triangles.empty() || !shape->quads.empty()) {
-    auto normal = eval_normal(object, element, uv);
+    auto normal = eval_normal(instance, element, uv);
     if (material->normal_tex) {
-      normal = eval_normalmap(object, element, uv);
+      normal = eval_normalmap(instance, element, uv);
     }
     if (!material->thin) return normal;
     return dot(normal, outgoing) >= 0 ? normal : -normal;
   } else if (!shape->lines.empty()) {
-    auto normal = eval_normal(object, element, uv);
+    auto normal = eval_normal(instance, element, uv);
     return orthonormalize(outgoing, normal);
   } else if (!shape->points.empty()) {
     return -outgoing;
@@ -1042,8 +1045,8 @@ vec3f eval_shading_normal(const scene_object* object, int element,
 }
 
 // Eval color
-vec3f eval_color(const scene_object* object, int element, const vec2f& uv) {
-  auto shape = object->shape;
+vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
+  auto shape = instance->shape;
   if (shape->colors.empty()) return {1, 1, 1};
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -1121,18 +1124,18 @@ static const auto coat_ior       = 1.5f;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_object* object, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
-  auto material = object->material;
-  auto texcoord = eval_texcoord(object, element, uv);
+vec3f eval_emission(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+  auto material = instance->material;
+  auto texcoord = eval_texcoord(instance, element, uv);
   return material->emission * eval_texture(material->emission_tex, texcoord);
 }
 
 // Eval material to obtain emission, brdf and opacity.
-float eval_opacity(const scene_object* object, int element, const vec2f& uv,
+float eval_opacity(const scene_instance* instance, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
-  auto material = object->material;
-  auto texcoord = eval_texcoord(object, element, uv);
+  auto material = instance->material;
+  auto texcoord = eval_texcoord(instance, element, uv);
   auto opacity  = material->opacity *
                  eval_texture(material->opacity_tex, texcoord, true).x;
   if (opacity > 0.999f) opacity = 1;
@@ -1140,11 +1143,11 @@ float eval_opacity(const scene_object* object, int element, const vec2f& uv,
 }
 
 // Evaluate bsdf
-scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
-  auto material = object->material;
-  auto texcoord = eval_texcoord(object, element, uv);
-  auto color    = material->color * eval_color(object, element, uv) *
+scene_bsdf eval_bsdf(const scene_instance* instance, int element,
+    const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+  auto material = instance->material;
+  auto texcoord = eval_texcoord(instance, element, uv);
+  auto color    = material->color * eval_color(instance, element, uv) *
                eval_texture(material->color_tex, texcoord, false);
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord, true).x;
@@ -1223,11 +1226,12 @@ scene_bsdf eval_bsdf(const scene_object* object, int element, const vec2f& uv,
 bool is_delta(const scene_bsdf& bsdf) { return !bsdf.roughness; }
 
 // evaluate volume
-scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
-  auto material = object->material;
+scene_vsdf eval_vsdf(
+    const scene_instance* instance, int element, const vec2f& uv) {
+  auto material = instance->material;
   // initialize factors
-  auto texcoord = eval_texcoord(object, element, uv);
-  auto base     = material->color * eval_color(object, element, uv) *
+  auto texcoord = eval_texcoord(instance, element, uv);
+  auto base     = material->color * eval_color(instance, element, uv) *
               eval_texture(material->color_tex, texcoord, false);
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
@@ -1253,8 +1257,8 @@ scene_vsdf eval_vsdf(const scene_object* object, int element, const vec2f& uv) {
 }
 
 // check if we have a volume
-bool has_volume(const scene_object* object) {
-  return !object->material->thin && object->material->transmission;
+bool has_volume(const scene_instance* instance) {
+  return !instance->material->thin && instance->material->transmission;
 }
 
 }  // namespace yocto
@@ -1405,11 +1409,11 @@ static void init_embree_bvh(
   if (params.bvh == scene_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   auto object_id = 0;
-  for (auto object : scene->objects) {
+  for (auto instance : scene->instances) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, object->shape->embree_bvh);
+    rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
     rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &object->frame);
+        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance->frame);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, object_id++);
   }
@@ -1417,17 +1421,17 @@ static void init_embree_bvh(
 }
 
 static void update_embree_bvh(scene_model* scene,
-    const vector<scene_object*>&           updated_objects,
+    const vector<scene_instance*>&         updated_objects,
     const vector<scene_shape*>&            updated_shapes,
     const scene_bvh_params&                params) {
   throw std::runtime_error("not implemented yet");
   // // scene bvh
   // auto escene = scene->embree_bvh;
   // for (auto& [object_id, instance_id] : scene->embree_instances) {
-  //   auto object    = scene->objects[object_id];
-  //   auto frame     = scene->objects[instance_id]->frame * object->frame;
+  //   auto instance    = scene->objects[object_id];
+  //   auto frame     = scene->objects[instance_id]->frame * instance->frame;
   //   auto egeometry = rtcGetGeometry(escene, instance_id);
-  //   rtcSetGeometryInstancedScene(egeometry, object->shape->embree_bvh);
+  //   rtcSetGeometryInstancedScene(egeometry, instance->shape->embree_bvh);
   //   rtcSetGeometryTransform(
   //       egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
   //   rtcCommitGeometry(egeometry);
@@ -1460,7 +1464,7 @@ static bool intersect_shape_embree_bvh(scene_shape* shape, const ray3f& ray,
 }
 
 static bool intersect_scene_embree_bvh(const scene_model* scene,
-    const ray3f& ray, int& object, int& element, vec2f& uv, float& distance,
+    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -1478,7 +1482,7 @@ static bool intersect_scene_embree_bvh(const scene_model* scene,
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1(scene->embree_bvh, &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  object   = (int)embree_ray.hit.instID[0];
+  instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
   distance = embree_ray.ray.tfar;
@@ -1901,12 +1905,12 @@ void init_bvh(scene_model* scene, const scene_bvh_params& params,
   auto primitives            = vector<scene_bvh_primitive>{};
   auto object_id             = 0;
   auto empty_instance_frames = vector<frame3f>{identity3x4f};
-  for (auto object : scene->objects) {
+  for (auto instance : scene->instances) {
     auto& primitive = primitives.emplace_back();
-    primitive.bbox =
-        object->shape->bvh->nodes.empty()
-            ? invalidb3f
-            : transform_bbox(object->frame, object->shape->bvh->nodes[0].bbox);
+    primitive.bbox  = instance->shape->bvh->nodes.empty()
+                         ? invalidb3f
+                         : transform_bbox(instance->frame,
+                               instance->shape->bvh->nodes[0].bbox);
     primitive.center    = center(primitive.bbox);
     primitive.primitive = object_id++;
   }
@@ -1967,10 +1971,10 @@ static void update_bvh(scene_shape* shape, const scene_bvh_params& params) {
   update_bvh(shape->bvh, bboxes);
 }
 
-void update_bvh(scene_model*     scene,
-    const vector<scene_object*>& updated_objects,
-    const vector<scene_shape*>&  updated_shapes,
-    const scene_bvh_params&      params) {
+void update_bvh(scene_model*       scene,
+    const vector<scene_instance*>& updated_objects,
+    const vector<scene_shape*>&    updated_shapes,
+    const scene_bvh_params&        params) {
   for (auto shape : updated_shapes) update_bvh(shape, params);
 
 #ifdef YOCTO_EMBREE
@@ -1982,10 +1986,9 @@ void update_bvh(scene_model*     scene,
   // build primitives
   auto bboxes = vector<bbox3f>(scene->bvh->primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto instance = scene->bvh->primitives[idx];
-    auto object   = scene->objects[instance];
-    auto sbvh     = object->shape->bvh;
-    bboxes[idx]   = transform_bbox(object->frame, sbvh->nodes[0].bbox);
+    auto instance = scene->instances[scene->bvh->primitives[idx]];
+    auto sbvh     = instance->shape->bvh;
+    bboxes[idx]   = transform_bbox(instance->frame, sbvh->nodes[0].bbox);
   }
 
   // update nodes
@@ -2097,13 +2100,13 @@ static bool intersect_shape_bvh(scene_shape* shape, const ray3f& ray_,
 
 // Intersect ray with a bvh->
 static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
-    int& object, int& element, vec2f& uv, float& distance, bool find_any,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene->embree_bvh) {
     return intersect_scene_embree_bvh(
-        scene, ray_, object, element, uv, distance, find_any);
+        scene, ray_, instance, element, uv, distance, find_any);
   }
 #endif
 
@@ -2152,13 +2155,13 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto object_ = scene->objects[scene->bvh->primitives[idx]];
+        auto object_ = scene->instances[scene->bvh->primitives[idx]];
         auto inv_ray = transform_ray(
             inverse(object_->frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(
                 object_->shape, inv_ray, element, uv, distance, find_any)) {
           hit      = true;
-          object   = scene->bvh->primitives[idx];
+          instance = scene->bvh->primitives[idx];
           ray.tmax = distance;
         }
       }
@@ -2172,26 +2175,26 @@ static bool intersect_scene_bvh(const scene_model* scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh->
-static bool intersect_instance_bvh(const scene_object* object, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any,
+static bool intersect_instance_bvh(const scene_instance* instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-  auto inv_ray = transform_ray(inverse(object->frame, non_rigid_frames), ray);
+  auto inv_ray = transform_ray(inverse(instance->frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
-      object->shape, inv_ray, element, uv, distance, find_any);
+      instance->shape, inv_ray, element, uv, distance, find_any);
 }
 
 scene_intersection intersect_scene_bvh(const scene_model* scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
-  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.object,
+  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
   return intersection;
 }
-scene_intersection intersect_instance_bvh(const scene_object* object,
+scene_intersection intersect_instance_bvh(const scene_instance* instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = scene_intersection{};
-  intersection.hit  = intersect_instance_bvh(object, ray, intersection.element,
+  intersection.hit = intersect_instance_bvh(instance, ray, intersection.element,
       intersection.uv, intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
@@ -2212,29 +2215,29 @@ void make_cornellbox(scene_model* scene) {
   camera->focus              = 3.9;
   camera->film               = 0.024;
   camera->aspect             = 1;
-  auto floor                 = add_complete_object(scene, "floor");
+  auto floor                 = add_complete_instance(scene, "floor");
   floor->shape->positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
   floor->material->color     = {0.725, 0.71, 0.68};
-  auto ceiling               = add_complete_object(scene, "ceiling");
+  auto ceiling               = add_complete_instance(scene, "ceiling");
   ceiling->shape->positions  = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
   ceiling->material->color   = {0.725, 0.71, 0.68};
-  auto backwall              = add_complete_object(scene, "backwall");
+  auto backwall              = add_complete_instance(scene, "backwall");
   backwall->shape->positions = {
       {-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall->shape->triangles  = {{0, 1, 2}, {2, 3, 0}};
   backwall->material->color   = {0.725, 0.71, 0.68};
-  auto rightwall              = add_complete_object(scene, "rightwall");
+  auto rightwall              = add_complete_instance(scene, "rightwall");
   rightwall->shape->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   rightwall->material->color  = {0.14, 0.45, 0.091};
-  auto leftwall               = add_complete_object(scene, "leftwall");
+  auto leftwall               = add_complete_instance(scene, "leftwall");
   leftwall->shape->positions  = {
       {-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall->shape->triangles = {{0, 1, 2}, {2, 3, 0}};
   leftwall->material->color  = {0.63, 0.065, 0.05};
-  auto shortbox              = add_complete_object(scene, "shortbox");
+  auto shortbox              = add_complete_instance(scene, "shortbox");
   shortbox->shape->positions = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
@@ -2247,7 +2250,7 @@ void make_cornellbox(scene_model* scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   shortbox->material->color  = {0.725, 0.71, 0.68};
-  auto tallbox               = add_complete_object(scene, "tallbox");
+  auto tallbox               = add_complete_instance(scene, "tallbox");
   tallbox->shape->positions  = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
@@ -2261,7 +2264,7 @@ void make_cornellbox(scene_model* scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   tallbox->material->color   = {0.725, 0.71, 0.68};
-  auto light                 = add_complete_object(scene, "light");
+  auto light                 = add_complete_instance(scene, "light");
   light->shape->positions    = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};

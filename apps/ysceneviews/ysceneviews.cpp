@@ -72,7 +72,7 @@ struct app_state {
 
   // editing
   scene_camera*      selected_camera      = nullptr;
-  scene_object*      selected_object      = nullptr;
+  scene_instance*    selected_instance    = nullptr;
   scene_shape*       selected_shape       = nullptr;
   scene_material*    selected_material    = nullptr;
   scene_environment* selected_environment = nullptr;
@@ -95,7 +95,7 @@ struct app_state {
 
 void update_lights(ogl_scene* glscene, scene_model* ioscene) {
   clear_lights(glscene);
-  for (auto ioobject : ioscene->objects) {
+  for (auto ioobject : ioscene->instances) {
     if (has_max_lights(glscene)) break;
     if (ioobject->material->emission == zero3f) continue;
     auto ioshape = ioobject->shape;
@@ -130,7 +130,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   auto progress = vec2i{
       0, (int)ioscene->cameras.size() + (int)ioscene->materials.size() +
              (int)ioscene->textures.size() + (int)ioscene->shapes.size() +
-             (int)ioscene->objects.size()};
+             (int)ioscene->instances.size()};
 
   // create scene
   init_scene(glscene);
@@ -208,8 +208,8 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // shapes
-  for (auto ioobject : ioscene->objects) {
-    if (progress_cb) progress_cb("convert object", progress.x++, progress.y);
+  for (auto ioobject : ioscene->instances) {
+    if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
     auto globject = add_object(glscene);
     set_frame(globject, ioobject->frame);
     set_shape(globject, shape_map.at(ioobject->shape));
