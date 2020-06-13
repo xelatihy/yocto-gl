@@ -543,30 +543,30 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     return true;
   };
 
-  struct scene_instance {
+  struct ply_instance {
     vector<frame3f> frames = {};
   };
 
   // load json instance
-  auto instances       = vector<unique_ptr<scene_instance>>{};
-  auto instance_map    = unordered_map<string, scene_instance*>{{"", nullptr}};
-  auto object_instance = unordered_map<scene_object*, scene_instance*>{};
-  auto get_instance = [&instances, &instance_map, &object_instance, &get_value](
-                          const json& ejs, const string& name,
-                          scene_object* object,
-                          const string& dirname = "instances/") -> bool {
+  auto ply_instances     = vector<unique_ptr<ply_instance>>{};
+  auto ply_instance_map  = unordered_map<string, ply_instance*>{{"", nullptr}};
+  auto instance_ply      = unordered_map<scene_object*, ply_instance*>{};
+  auto get_ply_instances = [&ply_instances, &ply_instance_map, &instance_ply,
+                               &get_value](const json& ejs, const string& name,
+                               scene_object* object,
+                               const string& dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
     auto path = ""s;
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
-    auto it = instance_map.find(path);
-    if (it != instance_map.end()) {
-      object_instance[object] = it->second;
+    auto it = ply_instance_map.find(path);
+    if (it != ply_instance_map.end()) {
+      instance_ply[object] = it->second;
       return true;
     }
-    auto instance      = instances.emplace_back(new scene_instance()).get();
-    instance_map[path] = instance;
-    object_instance[object] = instance;
+    auto instance = ply_instances.emplace_back(new ply_instance()).get();
+    ply_instance_map[path] = instance;
+    instance_ply[object]   = instance;
     return true;
   };
 
@@ -671,7 +671,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       if (!get_ref(ejs, "material", object->material, material_map))
         return false;
       if (!get_shape(ejs, "shape", object->shape)) return false;
-      if (!get_instance(ejs, "instance", object)) return false;
+      if (!get_ply_instances(ejs, "instance", object)) return false;
       if (object->shape) {
         if (!get_value(ejs, "subdivisions", object->shape->subdivisions))
           return false;
@@ -690,7 +690,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   // handle progress
   progress.y += scene->shapes.size();
   progress.y += scene->textures.size();
-  progress.y += instances.size();
+  progress.y += ply_instances.size();
 
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
@@ -735,22 +735,22 @@ static bool load_json_scene(const string& filename, scene_model* scene,
       return dependent_error();
   }
   // load instances
-  instance_map.erase("");
-  for (auto [name, instance] : instance_map) {
+  ply_instance_map.erase("");
+  for (auto [name, instance] : ply_instance_map) {
     if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
     auto path = get_filename(name, "instances", {".ply"});
     if (!load_instance(path, instance->frames, error)) return dependent_error();
   }
 
   // apply instances
-  if (!instances.empty()) {
+  if (!ply_instances.empty()) {
     if (progress_cb)
       progress_cb("flatten instances", progress.x++, progress.y++);
     auto objects = scene->objects;
     scene->objects.clear();
     for (auto object : objects) {
-      auto it = object_instance.find(object);
-      if (it == object_instance.end()) {
+      auto it = instance_ply.find(object);
+      if (it == instance_ply.end()) {
         auto nobject      = add_object(scene, object->name);
         nobject->frame    = object->frame;
         nobject->shape    = object->shape;
