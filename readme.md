@@ -42,7 +42,7 @@ See each header file for documentation.
    multiple importance sampling
 - `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
 - `yocto/yocto_commonio.h`: printing utilities, file io utilities,
-  command line parsing
+   command line parsing
 - `yocto/yocto_common.h`: container, iterators and concurrency utilities
 
 You can see Yocto/GL in action in the following applications written to
@@ -56,6 +56,8 @@ test the library:
 - `apps/yimageview.cpp`: Hdr/Ldr image viewer with tonemapping and color grading
 - `apps/yimageviews.cpp`: simpler version of `apps/yimageview.cpp` for demos
 - `apps/yimageproc.cpp`: command-line image manipulation
+- `apps/yimagedenoise.cpp`: command-line image denoiser that uses Intel Open Image
+   Denoise
 - `apps/ysceneview.cpp`: simple OpenGL viewer
 
 Here are some test images rendered with the path tracer. More images are
@@ -135,7 +137,15 @@ glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
 become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
 
+Furthermore, by defining the cmake option YOCTO_DENOISE, we support building
+an  app and a corresponding library that integrates Intel Open Image Denoise 
+(see `apps/yimagedenoise`, `libs/yocto_denoise`). The Intel Open Image Denoise
+library is provided as a git submodule in `libs/yocto_denoise/ext`, so, 
+when building with this option enabled, one must ensure that all the dependencies 
+of Intel Open Image Denoise are installed on the host machine. See the [OIDN compilation instructions](https://github.com/OpenImageDenoise/oidn/blob/master/README.md)
+for more information.
+
 Finally, we optionally support the use of Intel's Embree for ray casting.
-At this point, we rely pon prebuilt binaries distributed by Intel.
+At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.

@@ -103,6 +103,8 @@ enum struct trace_sampler_type {
   naive,       // naive path tracing
   eyelight,    // eyelight rendering
   falsecolor,  // false color rendering
+  albedo,      // renders the (approximate) albedo of objects for denoising
+  normal,      // renders the normals of objects for denoising
 };
 // Type of false color visualization
 enum struct trace_falsecolor_type {
@@ -146,8 +148,8 @@ struct trace_params {
   float                 exposure   = 0;
 };
 
-const auto trace_sampler_names = vector<string>{
-    "path", "naive", "eyelight", "falsecolor"};
+const auto trace_sampler_names = std::vector<std::string>{
+    "path", "naive", "eyelight", "falsecolor", "dalbedo", "dnormal"};
 
 const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "frontfacing", "gnormal", "gfrontfacing", "texcoord", "color", "emission",
