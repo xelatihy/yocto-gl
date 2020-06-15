@@ -13,3 +13,7 @@ add_subdirectory(ysceneitraces)
 add_subdirectory(yimageview)
 add_subdirectory(yimageviews)
 endif(YOCTO_OPENGL)
+
+if(YOCTO_DENOISE)
+add_subdirectory(yimagedenoise)
+endif(YOCTO_DENOISE)

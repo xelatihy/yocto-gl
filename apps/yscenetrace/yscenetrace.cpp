@@ -41,12 +41,13 @@ namespace sfs = ghc::filesystem;
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params      = trace_params{};
-  auto save_batch  = false;
-  auto add_skyenv  = false;
-  auto camera_name = ""s;
-  auto imfilename  = "out.hdr"s;
-  auto filename    = "scene.json"s;
+  auto params         = trace_params{};
+  auto save_batch     = false;
+  auto add_skyenv     = false;
+  auto camera_name    = ""s;
+  auto imfilename     = "out.hdr"s;
+  auto filename       = "scene.json"s;
+  auto feature_images = false;
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");
@@ -67,6 +68,8 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--skyenv/--no-skyenv", add_skyenv, "Add sky envmap");
   add_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_option(cli, "scene", filename, "Scene filename", true);
+  add_option(cli, "--denoise-features,-d", feature_images,
+      "Generate denoise feature images");
   parse_cli(cli, argc, argv);
 
   // scene loading
@@ -115,6 +118,46 @@ int main(int argc, const char* argv[]) {
   print_progress("save image", 0, 1);
   if (!save_image(imfilename, render, ioerror)) print_fatal(ioerror);
   print_progress("save image", 1, 1);
+
+  if (feature_images) {
+    const int   feature_bounces = 5;
+    const int   feature_samples = 8;
+    std::string feature_ext     = "exr"s;
+
+    auto imext = sfs::path(imfilename).extension();
+    if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
+
+    auto base_name =
+        sfs::path(imfilename).filename().replace_extension("").string();
+
+    auto fparams    = params;
+    fparams.bounces = feature_bounces;
+    fparams.samples = feature_samples;
+
+    // render denoise albedo
+    fparams.sampler      = trace_sampler_type::albedo;
+    auto albedo          = trace_image(scene, camera, fparams, print_progress);
+    auto albedo_filename = sfs::path(imfilename)
+                               .replace_filename(base_name + "-albedo")
+                               .replace_extension(feature_ext)
+                               .string();
+
+    print_progress("save albedo feature", 0, 1);
+    if (!save_image(albedo_filename, albedo, ioerror)) print_fatal(ioerror);
+    print_progress("save albedo feature", 1, 1);
+
+    // render denoise normals
+    fparams.sampler      = trace_sampler_type::normal;
+    auto normal          = trace_image(scene, camera, fparams, print_progress);
+    auto normal_filename = sfs::path(imfilename)
+                               .replace_filename(base_name + "-normal")
+                               .replace_extension(feature_ext)
+                               .string();
+
+    print_progress("save normal feature", 0, 1);
+    if (!save_image(normal_filename, normal, ioerror)) print_fatal(ioerror);
+    print_progress("save normal feature", 1, 1);
+  }
 
   // done
   return 0;
