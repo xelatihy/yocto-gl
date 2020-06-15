@@ -28,6 +28,8 @@
 
 #include "yocto_scene.h"
 
+#include <string.h>
+
 #include <atomic>
 #include <cassert>
 #include <cctype>

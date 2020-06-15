@@ -125,7 +125,7 @@ int main(int argc, const char* argv[]) {
     std::string feature_ext     = "exr"s;
 
     auto imext = sfs::path(imfilename).extension();
-    if (imext != "hdr" && img::is_hdr_filename(imext)) feature_ext = imext;
+    if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
 
     auto base_name =
         sfs::path(imfilename).filename().replace_extension("").string();
@@ -135,30 +135,28 @@ int main(int argc, const char* argv[]) {
     fparams.samples = feature_samples;
 
     // render denoise albedo
-    fparams.sampler = trc::sampler_type::albedo;
-    auto albedo = trc::trace_image(scene, camera, fparams, cli::print_progress);
+    fparams.sampler      = trace_sampler_type::albedo;
+    auto albedo          = trace_image(scene, camera, fparams, print_progress);
     auto albedo_filename = sfs::path(imfilename)
                                .replace_filename(base_name + "-albedo")
                                .replace_extension(feature_ext)
                                .string();
 
-    cli::print_progress("save albedo feature", 0, 1);
-    if (!save_image(albedo_filename, albedo, ioerror))
-      cli::print_fatal(ioerror);
-    cli::print_progress("save albedo feature", 1, 1);
+    print_progress("save albedo feature", 0, 1);
+    if (!save_image(albedo_filename, albedo, ioerror)) print_fatal(ioerror);
+    print_progress("save albedo feature", 1, 1);
 
     // render denoise normals
-    fparams.sampler = trc::sampler_type::normal;
-    auto normal = trc::trace_image(scene, camera, fparams, cli::print_progress);
+    fparams.sampler      = trace_sampler_type::normal;
+    auto normal          = trace_image(scene, camera, fparams, print_progress);
     auto normal_filename = sfs::path(imfilename)
                                .replace_filename(base_name + "-normal")
                                .replace_extension(feature_ext)
                                .string();
 
-    cli::print_progress("save normal feature", 0, 1);
-    if (!save_image(normal_filename, normal, ioerror))
-      cli::print_fatal(ioerror);
-    cli::print_progress("save normal feature", 1, 1);
+    print_progress("save normal feature", 0, 1);
+    if (!save_image(normal_filename, normal, ioerror)) print_fatal(ioerror);
+    print_progress("save normal feature", 1, 1);
   }
 
   // done

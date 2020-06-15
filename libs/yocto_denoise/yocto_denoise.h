@@ -35,13 +35,6 @@
 
 namespace yocto::denoise {
 
-// namespace aliases
-namespace img  = yocto::image;
-namespace math = yocto::math;
-
-using img::image;
-using math::vec3f;
-
 using progress_callback =
     std::function<void(const std::string &message, int current, int total)>;
 

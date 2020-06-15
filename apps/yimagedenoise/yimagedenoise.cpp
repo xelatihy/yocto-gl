@@ -32,10 +32,8 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
 #include <yocto_denoise/yocto_denoise.h>
-using namespace yocto::math;
-namespace img = yocto::image;
-namespace cli = yocto::commonio;
-namespace dns = yocto::denoise;
+using namespace yocto;
+using namespace yocto::denoise;
 
 using namespace std::string_literals;
 
@@ -51,7 +49,7 @@ int main(int argc, const char* argv[]) {
   auto normal_name = ""s;
 
   // parse cli arguments and assure their correctness
-  auto cli = cli::make_cli(
+  auto cli = make_cli(
       "yimagedenoise", "Denoise images using Intel Open Image Denoise");
   add_option(cli, "--alb,-a", albedo_name, "albedo feature image filename");
   add_option(cli, "--nrm,-n", normal_name, "normal feature image filename");
@@ -60,47 +58,44 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   if (normal_name != "" && albedo_name == "")
-    cli::print_fatal(
-        "cannot use normal feature image without specifying an albedo one");
-  if (normal_name != "" && !img::is_hdr_filename(normal_name))
-    cli::print_fatal(
-        "normal feature image must be provided in either pfm or exr format");
+    print_fatal("cannot use normal feature image without an albedo one");
+  if (normal_name != "" && !is_hdr_filename(normal_name))
+    print_fatal("normal feature image must be provided in pfm or exr format");
 
   // error string for yocto library functions
   auto error = ""s;
 
   // load all the provided images
-  auto              hdr = img::is_hdr_filename(filename);
-  img::image<vec3f> color, albedo, normal;
+  auto         hdr = is_hdr_filename(filename);
+  image<vec3f> color, albedo, normal;
 
-  if (!img::load_image(filename, color, error)) {
-    cli::print_fatal(error);
+  if (!load_image(filename, color, error)) {
+    print_fatal(error);
   }
-  if (albedo_name != "" && !img::load_image(albedo_name, albedo, error)) {
-    cli::print_fatal(error);
+  if (albedo_name != "" && !load_image(albedo_name, albedo, error)) {
+    print_fatal(error);
   }
-  if (normal_name != "" && !img::load_image(normal_name, normal, error)) {
-    cli::print_fatal(error);
+  if (normal_name != "" && !load_image(normal_name, normal, error)) {
+    print_fatal(error);
   }
 
   // call the denoiser passing in the noisy image and the provided feature
   // images
-  img::image<vec3f> out;
-  auto              progr = cli::print_progress;
-
+  image<vec3f> out;
   if (albedo_name == "") {
-    if (!dns::oidn_image_denoise(color, hdr, out, error, progr))
-      cli::print_fatal(error);
+    if (!oidn_image_denoise(color, hdr, out, error, print_progress))
+      print_fatal(error);
   } else if (normal_name != "") {
-    if (!dns::oidn_image_denoise(color, hdr, albedo, normal, out, error, progr))
-      cli::print_fatal(error);
+    if (!oidn_image_denoise(
+            color, hdr, albedo, normal, out, error, print_progress))
+      print_fatal(error);
   } else {
-    if (!dns::oidn_image_denoise(color, hdr, albedo, out, error, progr))
-      cli::print_fatal(error);
+    if (!oidn_image_denoise(color, hdr, albedo, out, error, print_progress))
+      print_fatal(error);
   }
 
   // finally save the result
-  cli::print_progress("save image", 0, 1);
-  if (!img::save_image(outname, out, error)) cli::print_fatal(error);
-  cli::print_progress("save image", 1, 1);
+  print_progress("save image", 0, 1);
+  if (!save_image(outname, out, error)) print_fatal(error);
+  print_progress("save image", 1, 1);
 }

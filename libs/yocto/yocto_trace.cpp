@@ -804,115 +804,123 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
   }
 }
 
-static std::pair<vec3f, bool> trace_albedo(const trc::scene* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
+static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params, int bounce) {
   auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
-    return {eval_environment(scene, ray), true};
+    return {eval_environment(scene, ray.d), 1};
   }
 
-  auto point    = eval_point(scene, intersection, ray);
-  auto object   = scene->objects[intersection.object];
-  auto shape    = object->shape;
-  auto material = object->material;
+  // prepare shading point
+  auto outgoing = -ray.d;
+  auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
+  auto material = scene->instances[intersection.instance]->material;
+  auto shape    = scene->instances[intersection.instance]->shape;
+  auto position = eval_position(instance, element, uv);
+  auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+  auto texcoord = eval_texcoord(instance, element, uv);
+  auto color    = eval_color(instance, element, uv);
+  auto emission = eval_emission(instance, element, uv, normal, outgoing);
+  auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+  auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
-  if (point.emission) {
-    return {point.emission, true};
+  if (emission) {
+    return {emission, 1};
   }
 
-  auto color  = eval_shape(shape, shape->colors, element, uv, vec3f{1});
   auto albedo = material->color * color *
-                eval_texture(material->color_tex, point.texcoord, false);
+                eval_texture(material->color_tex, texcoord, false);
 
   // handle opacity
-  if (point.opacity < 1.0f) {
-    auto [blend_albedo, h] = trace_albedo(scene,
-        ray3f{point.position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return {lerp(blend_albedo, albedo, point.opacity), true};
+  if (opacity < 1.0f) {
+    auto blend_albedo = trace_albedo(
+        scene, ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    return lerp(blend_albedo, vec4f{albedo, 1}, opacity);
   }
 
-  if (point.roughness < 0.1 && bounce < 5) {
-    if (point.transmission && material->thin) {
-      auto outgoing           = -ray.d;
-      auto incoming           = -outgoing;
-      auto [trans_albedo, h1] = trace_albedo(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+  if (bsdf.roughness < 0.05 && bounce < 5) {
+    if (bsdf.transmission && material->thin) {
+      auto incoming     = -outgoing;
+      auto trans_albedo = trace_albedo(
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
 
-      incoming               = reflect(outgoing, point.normal);
-      auto [spec_albedo, h2] = trace_albedo(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+      incoming         = reflect(outgoing, normal);
+      auto spec_albedo = trace_albedo(
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
 
-      auto fresnel = fresnel_dielectric(material->ior, outgoing, point.normal);
+      auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
-      return {dielectric_albedo * albedo, true};
-    } else if (point.metal) {
-      auto outgoing         = -ray.d;
-      auto incoming         = reflect(outgoing, point.normal);
-      auto [refl_albedo, h] = trace_albedo(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
-      return {refl_albedo * albedo, true};
+      return dielectric_albedo * vec4f{albedo, 1};
+    } else if (bsdf.metal) {
+      auto incoming    = reflect(outgoing, normal);
+      auto refl_albedo = trace_albedo(
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
+      return refl_albedo * vec4f{albedo, 1};
     }
   }
 
-  return {albedo, true};
+  return {albedo, 1};
 }
 
-static std::pair<vec3f, bool> trace_albedo(const trc::scene* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params) {
-  auto [albedo, hit] = trace_albedo(scene, ray, rng, params, 0);
-  return {clamp(albedo, 0.0, 1.0), hit};
+static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params) {
+  auto albedo = trace_albedo(scene, ray, rng, params, 0);
+  return clamp(albedo, 0.0, 1.0);
 }
 
-static std::pair<vec3f, bool> trace_normal(const trc::scene* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params, int bounce) {
+static vec4f trace_normal(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params, int bounce) {
   auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
-    return {zero3f, false};
+    return {zero3f, 1};
   }
 
-  auto point    = eval_point(scene, intersection, ray);
-  auto object   = scene->objects[intersection.object];
-  auto shape    = object->shape;
-  auto material = object->material;
+  // prepare shading point
+  auto outgoing = -ray.d;
+  auto instance = scene->instances[intersection.instance];
   auto element  = intersection.element;
   auto uv       = intersection.uv;
+  auto material = scene->instances[intersection.instance]->material;
+  auto shape    = scene->instances[intersection.instance]->shape;
+  auto position = eval_position(instance, element, uv);
+  auto normal   = eval_shading_normal(instance, element, uv, outgoing);
+  auto color    = eval_color(instance, element, uv);
+  auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
+  auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
   // handle opacity
-  if (point.opacity < 1.0f) {
-    auto [normal, h] = trace_normal(scene,
-        ray3f{point.position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
-    return {lerp(normal, point.normal, point.opacity), true};
+  if (opacity < 1.0f) {
+    auto normal = trace_normal(
+        scene, ray3f{position + ray.d * 1e-2f, ray.d}, rng, params, bounce);
+    return lerp(normal, normal, opacity);
   }
 
-  if (point.roughness < 0.05f && bounce < 5) {
-    if (point.transmission && material->thin) {
-      auto outgoing         = -ray.d;
-      auto incoming         = -outgoing;
-      auto [trans_norm, h1] = trace_normal(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+  if (bsdf.roughness < 0.05f && bounce < 5) {
+    if (bsdf.transmission && material->thin) {
+      auto incoming   = -outgoing;
+      auto trans_norm = trace_normal(
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
 
-      incoming             = reflect(outgoing, point.normal);
-      auto [spec_norm, h2] = trace_normal(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+      incoming       = reflect(outgoing, normal);
+      auto spec_norm = trace_normal(
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
 
-      auto fresnel = fresnel_dielectric(material->ior, outgoing, point.normal);
-      auto normal  = lerp(trans_norm, spec_norm, fresnel);
-      return {normal, true};
-    } else if (point.metal) {
-      auto outgoing = -ray.d;
-      auto incoming = reflect(outgoing, point.normal);
+      auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
+      return lerp(trans_norm, spec_norm, fresnel);
+    } else if (bsdf.metal) {
+      auto incoming = reflect(outgoing, normal);
       return trace_normal(
-          scene, ray3f{point.position, incoming}, rng, params, bounce + 1);
+          scene, ray3f{position, incoming}, rng, params, bounce + 1);
     }
   }
 
-  return {point.normal, true};
+  return {normal, 1};
 }
 
-static std::pair<vec3f, bool> trace_normal(const trc::scene* scene,
-    const ray3f& ray, rng_state& rng, const trace_params& params) {
+static vec4f trace_normal(const scene_model* scene, const ray3f& ray,
+    rng_state& rng, const trace_params& params) {
   return trace_normal(scene, ray, rng, params, 0);
 }
 
@@ -921,19 +929,12 @@ using sampler_func = vec4f (*)(const scene_model* scene, const ray3f& ray,
     rng_state& rng, const trace_params& params);
 static sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
-<<<<<<< HEAD
     case trace_sampler_type::path: return trace_path;
     case trace_sampler_type::naive: return trace_naive;
     case trace_sampler_type::eyelight: return trace_eyelight;
     case trace_sampler_type::falsecolor: return trace_falsecolor;
-=======
-    case sampler_type::path: return trace_path;
-    case sampler_type::naive: return trace_naive;
-    case sampler_type::eyelight: return trace_eyelight;
-    case sampler_type::falsecolor: return trace_falsecolor;
-    case sampler_type::albedo: return trace_albedo;
-    case sampler_type::normal: return trace_normal;
->>>>>>> 2b23571... Integrate OIDN in the form of a new app and library
+    case trace_sampler_type::albedo: return trace_albedo;
+    case trace_sampler_type::normal: return trace_normal;
     default: {
       throw std::runtime_error("sampler unknown");
       return nullptr;
@@ -944,12 +945,12 @@ static sampler_func get_trace_sampler_func(const trace_params& params) {
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params) {
   switch (params.sampler) {
-    case sampler_type::path: return true;
-    case sampler_type::naive: return true;
-    case sampler_type::eyelight: return false;
-    case sampler_type::falsecolor: return false;
-    case sampler_type::albedo: return false;
-    case sampler_type::normal: return false;
+    case trace_sampler_type::path: return true;
+    case trace_sampler_type::naive: return true;
+    case trace_sampler_type::eyelight: return false;
+    case trace_sampler_type::falsecolor: return false;
+    case trace_sampler_type::albedo: return false;
+    case trace_sampler_type::normal: return false;
     default: {
       throw std::runtime_error("sampler unknown");
       return false;

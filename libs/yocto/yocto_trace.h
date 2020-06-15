@@ -148,7 +148,7 @@ struct trace_params {
   float                 exposure   = 0;
 };
 
-const auto sampler_names = std::vector<std::string>{
+const auto trace_sampler_names = std::vector<std::string>{
     "path", "naive", "eyelight", "falsecolor", "dalbedo", "dnormal"};
 
 const auto trace_falsecolor_names = vector<string>{"position", "normal",
