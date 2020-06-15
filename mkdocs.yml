@@ -21,3 +21,16 @@ theme:
 nav:
   - About: index.md
   - Gallery: gallery.md
+  - Math Types: yocto/yocto_math.md
+  - Color Utilities: yocto/yocto_color.md
+  - Geometry Utilities: yocto/yocto_geometry.md
+  - Sampling Utilities: yocto/yocto_sampling.md
+  - Noise Functions: yocto/yocto_noise.md
+  - Shading Utilities: yocto/yocto_shading.md
+  - Image Processing: yocto/yocto_image.md
+  - Shape Processing: yocto/yocto_shape.md
+  - Mesh Processing: yocto/yocto_mesh.md
+  - Model IO: yocto/yocto_modelio.md
+  - Scene Representation: yocto/yocto_scene.md
+  - Scene IO: yocto/yocto_sceneio.md
+  - Scene Rendering: yocto/yocto_trace.md

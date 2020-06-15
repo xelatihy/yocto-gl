@@ -10,39 +10,42 @@ development and use.
 Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
 
-- `yocto/yocto_math.{h}`: fixed-size vectors, matrices, rigid frames, rays,
-   bounding boxes, transforms
-- `yocto/yocto_geometry.{h}`: geometry functions, ray-primitive intersection,
-   point-primitive overlap
-- `yocto/yocto_color.{h}`: color conversion, color adjustment, tone mapping
-   functions, Perlin noise, shading and integration utilities
-- `yocto/yocto_noise.{h}`: Perlin noise
-- `yocto/yocto_sampling.{h}`: random number generation, generation of points
-   and directions, Monte Carlo utilities
-- `yocto/yocto_shading.{h}`: evaluation and sampling of fresnel functions, 
-   bsdf lobes, transmittance lobes, phase functions
-- `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating
+- [Yocto/Math](yocto/yocto_math.md): fixed-size vectors, matrices, rigid frames, 
+   rays, bounding boxes, transforms
+- [Yocto/Geometry](yocto/yocto_geometry.md): geometry functions, ray-primitive 
+   intersection, point-primitive overlap
+- [Yocto/Color](yocto/yocto_color.md): color conversion, color adjustment, 
+   tone mapping functions, Perlin noise, shading and integration utilities
+- [Yocto/Noise](yocto/yocto_noise.md): Perlin noise
+- [Yocto/Sampling](yocto/yocto_sampling.md): random number generation, 
+   generation of points and directions, Monte Carlo utilities
+- [Yocto/Shading](yocto/yocto_shading.md): evaluation and sampling of fresnel 
+   functions, bsdf lobes, transmittance lobes, phase functions
+- [Yocto/Shape](yocto/yocto_shape.md):  various utilities for manipulating
    triangle meshes, quads meshes and line sets, computation of normals and
    tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
    procedural shapes generation, ray intersection and closest point queries
-- `yocto/yocto_mesh.{h,cpp}`:  computational geometry utilities for triangle
-   meshes, mesh geodesic, mesh cutting, mesh loading and saving
-- `yocto/yocto_bvh.{h,cpp}`:  ray intersection and closest point queries of
-   triangle meshes, quads meshes, line sets and instances scenes using a
+- [Yocto/Mesh](yocto/yocto_mesh.md):  computational geometry utilities for 
+   triangle meshes, mesh geodesic, mesh cutting, mesh loading and saving
+- [Yocto/Bvh](yocto/yocto_bvh.md):  ray intersection and closest point queries 
+   of triangle meshes, quads meshes, line sets and instances scenes using a
    two-level bounding volume hierarchy
-- `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
+- [Yocto/Image](yocto/yocto_image.md): simple image data type, image resizing,
    tonemapping, color correction, image loading and saving,
    procedural images, procedural sun-sky, advanced color conversion utilities
-- `yocto/yocto_scene.{h,cpp}`: simple scene representation useful for rendering
-- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF 
-   and a custom and scalable Json format
-- `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
-   area and environment illumination, microfacet GGX and subsurface scattering,
-   multiple importance sampling
-- `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt formats
-- `yocto/yocto_commonio.h`: printing utilities, file io utilities,
+- [Yocto/Scene](yocto/yocto_scene.md): simple scene representation useful for 
+   rendering
+- [Yocto/SceneIO](yocto/yocto_sceneio.md`: scene loading and saving of 
+   Ply/Obj/Pbrt/glTF and a custom and scalable Json format
+- [Yocto/Trace](yocto/yocto_trace.md): path tracing of surfaces and hairs 
+   supporting area and environment illumination, microfacet GGX and subsurface 
+   scattering, multiple importance sampling
+- [Yocto/ModelIO](yocto/yocto_modelio.md): parsing and writing for Ply/Obj/Pbrt 
+   formats
+- [Yocto/CommonIO](yocto/yocto_commonio.md): printing utilities, file io utilities,
   command line parsing
-- `yocto/yocto_common.h`: container, iterators and concurrency utilities
+- [Yocto/CommonIO](yocto/yocto_common.md): container, iterators and concurrency 
+  utilities
 
 ## Example Applications
 
@@ -187,3 +190,4 @@ defining the cmake option `YOCTO_EMBREE`.
 
 -->
 
+[yocto_math]: yocto/yocto_math.md
