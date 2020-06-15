@@ -28,13 +28,12 @@
 
 #include "yocto_scene.h"
 
-#include <string.h>
-
 #include <atomic>
 #include <cassert>
 #include <cctype>
 #include <climits>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <future>
 #include <memory>

@@ -8,9 +8,8 @@
 
 #include "yocto_bvh.h"
 
-#include <string.h>
-
 #include <atomic>
+#include <cstring>
 #include <deque>
 #include <memory>
 #include <string>
