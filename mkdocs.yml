@@ -17,6 +17,11 @@ theme:
   extra_css:
     - css/extra.css
 
+# Extensions
+markdown_extensions:
+  - codehilite
+  - admonition
+
 # Pages
 nav:
   - About: index.md
