@@ -1,8 +1,6 @@
-# Yocto/Shape: Shape operations for graphics applications
+# Yocto/Mesh: Mesh processing for graphics applications
 
-**WORK IN PROGRESS**
-
-Yocto/Shape is a collection of utilities for manipulating shapes in 3D
+Yocto/Mesh is a collection of utilities for manipulating shapes in 3D
 graphics, with a focus on triangle and quad meshes.
 
 ## Shape functions

@@ -1,4 +1,4 @@
-# Yocto/Image: Tiny imaging Library mostly for rendering and color support
+# Yocto/Image: Image operations for graphics applications
 
 Yocto/Image is a collection of image utilities useful when writing rendering
 algorithms. These include a simple image data structure, color conversion
@@ -9,13 +9,11 @@ This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h,
 tinyexr.h for the IO features. If thoese are not needed, it can be safely
 used without dependencies.
 
-
 ## Images
 
 Yocto/Math contains a simple image container that can be used to store
 generic images. The container is similar in spirit to `std::vector`.
 We provide only minimal image functions including lookup and sampling.
-
 
 ## Image Utilities
 
@@ -26,7 +24,6 @@ global illumination renderer, rather than the need of generic image editing.
 We support 4-channels float images (assumed to be in linear color) and
 4-channels byte images (assumed to be in sRGB).
 
-
 1. store images using the image<T> structure
 2. load and save images with `load_image()` and `save_image()`
 3. resize images with `resize()`
@@ -35,5 +32,3 @@ We support 4-channels float images (assumed to be in linear color) and
 5. make various image examples with the `make_proc_image()` functions
 6. create procedural sun-sky images with `make_sunsky()`
 7. many color conversion functions are available in the code below
-
-
