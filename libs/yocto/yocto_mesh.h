@@ -102,9 +102,15 @@ struct geodesic_solver {
 #endif
 };
 
-// Construct a a graph to compute geodesic distances
+// Construct a graph to compute geodesic distances
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
+
+// Construct a graph to compute geodesic distances with arcs arranged in
+// counterclockwise order by using the vertex-to-face adjacencies
+geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& vertex_to_faces);
 
 // Compute geodesic distances
 void update_geodesic_distances(vector<float>& distances,
@@ -115,8 +121,8 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
 
 // Compute all shortest paths from source vertices to any other vertex.
-// Paths are implicitly represented: each node is assignes its previous node in
-// the path. Graph search early exits when reching end_vertex.
+// Paths are implicitly represented: each node is assignes its previous node
+// in the path. Graph search early exits when reching end_vertex.
 vector<int> compute_geodesic_paths(const geodesic_solver& solver,
     const vector<int>& sources, int end_vertex = -1);
 

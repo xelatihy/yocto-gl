@@ -83,9 +83,9 @@ vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
 // Face adjacent to t and opposite to vertex vid
 int opposite_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, int t, int vid) {
-  vec3i tri = adjacencies[t];
+  auto triangle = adjacencies[t];
   for (int i = 0; i < 3; ++i) {
-    if (find_in_vec(triangles[tri[i]], vid) < 0) return tri[i];
+    if (find_in_vec(triangles[triangle[i]], vid) < 0) return triangle[i];
   }
   return -1;
 }
@@ -210,7 +210,14 @@ static inline void connect_nodes(
   solver.graph[b].push_back({a, length});
 }
 
-static inline float opposite_nodes_arc_length(geodesic_solver& solver,
+static inline int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
+  for (auto i = 0; i < 3; ++i) {
+    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
+  }
+  return -1;
+};
+
+static inline float opposite_nodes_arc_length(
     const vector<vec3f>& positions, int a, int c, const vec2i& edge) {
   // Triangles (a, b, d) and (b, d, c) are connected by (b, d) edge
   // Nodes a and c must be connected.
@@ -253,7 +260,7 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
   int v0 = opposite_vertex(tr0, edge);
   int v1 = opposite_vertex(tr1, edge);
   if (v0 == -1 || v1 == -1) return;
-  auto length = opposite_nodes_arc_length(solver, positions, v0, v1, edge);
+  auto length = opposite_nodes_arc_length(positions, v0, v1, edge);
   connect_nodes(solver, v0, v1, length);
 }
 
@@ -276,6 +283,35 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
         connect_opposite_nodes(
             solver, positions, triangles[face], triangles[neighbor], {a, b});
       }
+    }
+  }
+  return solver;
+}
+
+// Builds a graph-based geodesic solver with arcs arranged in counterclockwise
+// order by using the vertex-to-face adjacencies
+geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t) {
+  auto solver = geodesic_solver{};
+  solver.graph.resize(positions.size());
+  for (int i = 0; i < positions.size(); ++i) {
+    auto& star = v2t[i];
+    auto& vert = positions[i];
+    if (star.size() == 0) continue;
+    for (int j = 0; j < star.size(); ++j) {
+      auto tid    = star[j];
+      auto offset = find_in_vec(triangles[tid], i);
+      auto p      = triangles[tid][(offset + 1) % 3];
+      auto q      = triangles[tid][(offset + 2) % 3];
+      auto e      = positions[p] - vert;
+      solver.graph[i].push_back({p, length(e)});
+      auto opp = opposite_face(triangles, adjacencies, tid, i);
+      auto eid = vec2i{p, q};
+      auto a   = opposite_vertex(triangles[opp], eid);
+      auto l   = opposite_nodes_arc_length(positions, i, a, eid);
+      // non robusto se il quadrilatero è concavo
+      solver.graph[i].push_back({a, l});
     }
   }
   return solver;
