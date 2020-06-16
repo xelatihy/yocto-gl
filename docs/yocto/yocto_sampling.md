@@ -1,9 +1,8 @@
-# Yocto/Sampling: Tiny library for generating.
+# Yocto/Sampling: Basic sampling routines for graphics applications
 
 Yocto/Sampling provides many functions to generate points and directions
 useful in path tracing and procedural generation. We also include a random
 number generator suitable for ray tracing.
-
 
 ## Random Number Generation
 
@@ -16,14 +15,12 @@ that is a portable generator well suited for graphics applications.
 4. generate random floats and double in the [0,1) range with `rand1f()`,
    `rand2f()`, `rand3f()`, `rand1d()`
 
-
 ## Generating points and directions
 
 1. use `sample_XXX()` to warp random numbers in [0,1)^k domains to the
-  desired domain; in particular we support `sample_hemisphere()`,
-  `sample_sphere()`, `sample_hemisphere_cos()`,
-  `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
-  `sample_triangle()`, `sample_quad()`
+   desired domain; in particular we support `sample_hemisphere()`,
+   `sample_sphere()`, `sample_hemisphere_cos()`,
+   `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
+   `sample_triangle()`, `sample_quad()`
 2. use `sample_discrete()` to sample from a descreet distribution
 3. use `sample_XXX_pdf()` to compute the PDF of the sampling functions
-
