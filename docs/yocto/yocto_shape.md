@@ -1,4 +1,4 @@
-# Yocto/Shape: Shape operations for graphics applications
+# Yocto/Shape: Shape utilities
 
 **WORK IN PROGRESS**
 

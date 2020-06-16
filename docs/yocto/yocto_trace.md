@@ -1,3 +1,3 @@
-# Yocto/Trace: Simple path tracer
+# Yocto/Trace: Path tracing
 
 **WORK IN PROGRESS**

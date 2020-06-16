@@ -1,4 +1,4 @@
-# Yocto/Noise: Noise functions for graphics applications
+# Yocto/Noise: Noise functions
 
 Yocto/Noise provides a Perlin noise implementation.
 _This library should to be considered a placeholder since it will grow later

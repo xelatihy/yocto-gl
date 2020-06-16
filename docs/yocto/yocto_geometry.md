@@ -1,6 +1,6 @@
-# Yocto/Geometry: Geometry operations for graphics applications
+# Yocto/Geometry: Geometry operations
 
-Yocto/Geometry defines basic geometry operations used in graphics applications,
+Yocto/Geometry defines basic geometry operations,
 including computation of basic geometry quantities, ray-primitive intersection,
 point-primitive distance, primitive bounds, and several interpolation functions.
 Yocto/Geometry is implemented in `yocto_geometry.h`.

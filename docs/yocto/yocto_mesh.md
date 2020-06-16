@@ -1,4 +1,4 @@
-# Yocto/Mesh: Mesh processing for graphics applications
+# Yocto/Mesh: Mesh processing
 
 Yocto/Mesh is a collection of utilities for manipulating shapes in 3D
 graphics, with a focus on triangle and quad meshes.

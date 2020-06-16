@@ -32,8 +32,8 @@ nav:
   - Sampling routines: yocto/yocto_sampling.md
   - Noise functions: yocto/yocto_noise.md
   - Shading routines: yocto/yocto_shading.md
-  - Image processing: yocto/yocto_image.md
-  - Shape processing: yocto/yocto_shape.md
+  - Image utilities: yocto/yocto_image.md
+  - Shape utilities: yocto/yocto_shape.md
   - Mesh processing: yocto/yocto_mesh.md
   - Model serialization: yocto/yocto_modelio.md
   - Scene representation: yocto/yocto_scene.md

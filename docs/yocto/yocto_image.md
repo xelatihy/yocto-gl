@@ -1,13 +1,12 @@
-# Yocto/Image: Image operations for graphics applications
+# Yocto/Image: Image utilities
 
 Yocto/Image is a collection of image utilities useful when writing rendering
 algorithms. These include a simple image data structure, color conversion
-utilities and tone mapping. We provinde loading and saving functionality for
+utilities and tone mapping. We provide loading and saving functionality for
 images and support PNG, JPG, TGA, BMP, HDR, EXR formats.
-
-This library depends on stb_image.h, stb_image_write.h, stb_image_resize.h,
-tinyexr.h for the IO features. If thoese are not needed, it can be safely
-used without dependencies.
+Yocto/Image is implemented in `yocto_image.h` and `yocto_image.cpp`, and
+depends on stb_image.h, stb_image_write.h, stb_image_resize.h,
+tinyexr.h for the image serialization
 
 ## Images
 

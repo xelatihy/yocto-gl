@@ -1,4 +1,4 @@
-# Yocto/Math: Math types for graphics applications
+# Yocto/Math: Math types
 
 Yocto/Math defines the basic math primitives used in graphics, including
 small-sized vectors, matrices, frames, quaternions, rays, bounding boxes

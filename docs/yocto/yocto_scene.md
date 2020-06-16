@@ -1,3 +1,3 @@
-# Yocto/Scene: Simple scene representation
+# Yocto/Scene: Scene representation
 
 **WORK IN PROGRESS**

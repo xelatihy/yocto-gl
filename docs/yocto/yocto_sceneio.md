@@ -1,3 +1,3 @@
-# Yocto/SceneIO: Simple scene serialization
+# Yocto/SceneIO: Scene serialization
 
 **WORK IN PROGRESS**

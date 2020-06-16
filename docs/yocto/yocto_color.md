@@ -1,6 +1,6 @@
-# Yocto/Color: Color operations for graphics applications
+# Yocto/Color: Color operations
 
-Yocto/Color defines basic color manipulations for graphics applications,
+Yocto/Color defines basic color manipulations,
 including color color conversions, byte to float color conversions,
 tone mapping and tonal adjustment.
 Yocto/Color is implemented in `yocto_color.h`.

@@ -1,4 +1,4 @@
-# Yocto/Sampling: Sampling routines for graphics applications
+# Yocto/Sampling: Sampling routines
 
 Yocto/Sampling provides many functions to generate points and directions
 useful in path tracing and procedural generation. We also include a random
