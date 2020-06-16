@@ -63,6 +63,20 @@ auto of = inverse(f1);         // assume f is orthonormal
 auto gf = inverse(f1,true);    // treat f as a generic affine matrix
 ```
 
+## Quaternions
+
+Quaternions are represented as `quat4f`. Quaternions support is minimal and
+focuses on representing rotations, i.e. unit quaternions. Quaternions are
+initialized to a unit quaternion, that can also be set with the convenience
+constant `identityq4f`.
+
+Quaternions support addition, multiplication and scaling, together with
+`dot(q1,q2)`, `length(q)` and `normalize(q)`. For unit quaternions,
+Yocto/Math also defines the quaternion inverse `inverse(q)` and several
+interpolation function including linear interpolation, normalized linear
+interpolation and spherical interpolation, respectively with `lerp(a,bt)`,
+`nlerp(a,b,t)` and `slerp(a,b,t)`.
+
 ## Rays
 
 Yocto/Math defines rays in 2-3 dimensions as `ray2f` and `ray3f`.
@@ -94,16 +108,65 @@ for(auto point : points) bbox = merge(bbox, point);
 Yocto/Math uses linear algebra vectors for holding different geometric
 quantities, such as points, vectors, directions and normals. For this reason,
 we define different functions to transform these quantities, namely
-
-- `transform_point(f,p)` to transform points,
-- `transform_vector(f,v)` to transform vectors,
-- `transform_direction(f,d)` to transform directions intended as
-  normalized vectors,
-- `transform_normal(f,n)` to transform normals.
+`transform_point(f,p)` to transform points, `transform_vector(f,v)` to
+transform vectors, `transform_direction(f,d)` to transform directions
+intended as normalized vectors, and `transform_normal(f,n)` to transform
+normals.
 
 Yocto/Math provides overrides to transforms for both frames and matrices,
 but _the preferred transform representation in Yocto/GL are frames_.
-When transforming normals, the inverse transpose is used for matrices,
-while a
-while frames use a fast inverse or an affine inverse as
-and just
+When transforming normals by matrices, the inverse transform is computed on
+the fly for correctness. When transforming normals by frames, frames are
+assumed to be orthonormal and used as is, unless specifically requested as
+for inverses.
+
+For convenience, Yocto/Math provides several functions to construct transform
+frames and matrices. Translation, rotation and scaling frames are created with  
+`translation_frame(t)`, `rotation_frame(r)` and `scaling_frame(s)`. Rotation
+frames can be derived from axis-angle, quaternion and matrix representations.
+To define camera frames, one can use `lookat_frame(from,to,up)`.
+
+```cpp
+auto f = tranlation_frame({1,0,0}) * rotation_frame({0,1,0},pi/2); // transform
+auto lp = vec3f{1,2,3}, lv = vec3f{0,2,3}; // point and vector in local coords
+auto wp = transform_point(f, lp);          // point in world coords
+auto wv = transform_vector(f, lv);         // vector in world coords
+```
+
+For use in GPU programming, Yocto/Math also defines various projection
+matrices in the style of GLU/GLM, namely `frustum_mat(...)`,
+`ortho_mat(...)`, `ortho2d_mat(...)`, and `perspective_mat(...)`.
+
+## UI Helpers
+
+Yocto/Math provides a few utilities for writing user interfaces for 2D images
+and 3D environments. For images, we assume that image are scaled and than
+translated to be place oin screen. User interfaces can directly manipulate
+the translation and zoom without further helpers. Yocto/Math just provides
+convenience functions for centering an image and compute a mouse to image
+coordinate transformation.
+
+```cpp
+auto image_size = vec2i{512,512}, window_size = vec2i{1024,768};
+auto image_center = vec2f{100,100}; auto image_scale = float{1};
+// get image coordinates from mouse
+auto ij = get_image_coords(mouse_pos, image_center, image_scale, image_size);
+// center image by setting image_center and image_scale
+update_imview(image_center, image_scale, image_size, window_size, false);
+// center image and for to screen by setting image_center and image_scale
+update_imview(image_center, image_scale, image_size, window_size, true);
+```
+
+For 3D cameras, Yocto/Math supports a turntable interface, inspired by many 3D
+editors, with `update_turntable(...)`, and the camera's rays generation with
+`camera_ray(...)`.
+
+```cpp
+auto camera_frame = identity3x4f; auto camera_focus = float{10};
+// update camera position and focus
+update_turntable(camera_frame, camera_focus, rotate, dolly, pan);
+// turntable udpates works also for camera with explicit lookat parametrizations
+update_turntable(camera_from, camera_to, camera_up, rotate, dolly, pan);
+// generation of camera rays
+auto ray = camera_ray(camera_frame, lens, aspect, film, image_uv);
+```
