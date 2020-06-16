@@ -210,6 +210,15 @@ inline const auto zero4f = vec4f{0, 0, 0, 0};
 inline vec3f&       xyz(vec4f& a);
 inline const vec3f& xyz(const vec4f& a);
 
+// Vector sequence operations.
+inline int          size(const vec2f& a);
+inline const float* begin(const vec2f& a);
+inline const float* end(const vec2f& a);
+inline float*       begin(vec2f& a);
+inline float*       end(vec2f& a);
+inline const float* data(const vec2f& a);
+inline float*       data(vec2f& a);
+
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b);
 inline bool operator!=(const vec2f& a, const vec2f& b);
@@ -275,6 +284,15 @@ inline vec2f pow(const vec2f& a, float b);
 inline vec2f pow(const vec2f& a, const vec2f& b);
 inline vec2f gain(const vec2f& a, float b);
 inline void  swap(vec2f& a, vec2f& b);
+
+// Vector sequence operations.
+inline int          size(const vec3f& a);
+inline const float* begin(const vec3f& a);
+inline const float* end(const vec3f& a);
+inline float*       begin(vec3f& a);
+inline float*       end(vec3f& a);
+inline const float* data(const vec3f& a);
+inline float*       data(vec3f& a);
 
 // Vector comparison operations.
 inline bool operator==(const vec3f& a, const vec3f& b);
@@ -351,6 +369,15 @@ inline vec3f pow(const vec3f& a, const vec3f& b);
 inline vec3f gain(const vec3f& a, float b);
 inline bool  isfinite(const vec3f& a);
 inline void  swap(vec3f& a, vec3f& b);
+
+// Vector sequence operations.
+inline int          size(const vec4f& a);
+inline const float* begin(const vec4f& a);
+inline const float* end(const vec4f& a);
+inline float*       begin(vec4f& a);
+inline float*       end(vec4f& a);
+inline const float* data(const vec4f& a);
+inline float*       data(vec4f& a);
 
 // Vector comparison operations.
 inline bool operator==(const vec4f& a, const vec4f& b);
@@ -523,6 +550,15 @@ inline const vec3i& xyz(const vec4i& a);
 inline vec3b&       xyz(vec4b& a);
 inline const vec3b& xyz(const vec4b& a);
 
+// Vector sequence operations.
+inline int        size(const vec2i& a);
+inline const int* begin(const vec2i& a);
+inline const int* end(const vec2i& a);
+inline int*       begin(vec2i& a);
+inline int*       end(vec2i& a);
+inline const int* data(const vec2i& a);
+inline int*       data(vec2i& a);
+
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b);
 inline bool operator!=(const vec2i& a, const vec2i& b);
@@ -568,6 +604,15 @@ inline int sum(const vec2i& a);
 inline vec2i abs(const vec2i& a);
 inline void  swap(vec2i& a, vec2i& b);
 
+// Vector sequence operations.
+inline int        size(const vec3i& a);
+inline const int* begin(const vec3i& a);
+inline const int* end(const vec3i& a);
+inline int*       begin(vec3i& a);
+inline int*       end(vec3i& a);
+inline const int* data(const vec3i& a);
+inline int*       data(vec3i& a);
+
 // Vector comparison operations.
 inline bool operator==(const vec3i& a, const vec3i& b);
 inline bool operator!=(const vec3i& a, const vec3i& b);
@@ -612,6 +657,15 @@ inline int sum(const vec3i& a);
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a);
 inline void  swap(vec3i& a, vec3i& b);
+
+// Vector sequence operations.
+inline int        size(const vec4i& a);
+inline const int* begin(const vec4i& a);
+inline const int* end(const vec4i& a);
+inline int*       begin(vec4i& a);
+inline int*       end(vec4i& a);
+inline const int* data(const vec4i& a);
+inline int*       data(vec4i& a);
 
 // Vector comparison operations.
 inline bool operator==(const vec4i& a, const vec4i& b);
@@ -1217,6 +1271,15 @@ inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
 inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
 
+// Vector sequence operations.
+inline int          size(const vec2f& a) { return 2; }
+inline const float* begin(const vec2f& a) { return &a.x; }
+inline const float* end(const vec2f& a) { return &a.x + 2; }
+inline float*       begin(vec2f& a) { return &a.x; }
+inline float*       end(vec2f& a) { return &a.x + 2; }
+inline const float* data(const vec2f& a) { return &a.x; }
+inline float*       data(vec2f& a) { return &a.x; }
+
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
   return a.x == b.x && a.y == b.y;
@@ -1319,6 +1382,15 @@ inline vec2f gain(const vec2f& a, float b) {
   return {gain(a.x, b), gain(a.y, b)};
 };
 inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int          size(const vec3f& a) { return 3; }
+inline const float* begin(const vec3f& a) { return &a.x; }
+inline const float* end(const vec3f& a) { return &a.x + 3; }
+inline float*       begin(vec3f& a) { return &a.x; }
+inline float*       end(vec3f& a) { return &a.x + 3; }
+inline const float* data(const vec3f& a) { return &a.x; }
+inline float*       data(vec3f& a) { return &a.x; }
 
 // Vector comparison operations.
 inline bool operator==(const vec3f& a, const vec3f& b) {
@@ -1468,6 +1540,15 @@ inline bool isfinite(const vec3f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
 };
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int          size(const vec4f& a) { return 4; }
+inline const float* begin(const vec4f& a) { return &a.x; }
+inline const float* end(const vec4f& a) { return &a.x + 4; }
+inline float*       begin(vec4f& a) { return &a.x; }
+inline float*       end(vec4f& a) { return &a.x + 4; }
+inline const float* data(const vec4f& a) { return &a.x; }
+inline float*       data(vec4f& a) { return &a.x; }
 
 // Vector comparison operations.
 inline bool operator==(const vec4f& a, const vec4f& b) {
@@ -1700,6 +1781,15 @@ inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 inline vec3b&       xyz(vec4b& a) { return (vec3b&)a; }
 inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
 
+// Vector sequence operations.
+inline int        size(const vec2i& a) { return 2; }
+inline const int* begin(const vec2i& a) { return &a.x; }
+inline const int* end(const vec2i& a) { return &a.x + 2; }
+inline int*       begin(vec2i& a) { return &a.x; }
+inline int*       end(vec2i& a) { return &a.x + 2; }
+inline const int* data(const vec2i& a) { return &a.x; }
+inline int*       data(vec2i& a) { return &a.x; }
+
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b) {
   return a.x == b.x && a.y == b.y;
@@ -1762,6 +1852,15 @@ inline int sum(const vec2i& a) { return a.x + a.y; }
 // Functions applied to vector elements
 inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int        size(const vec3i& a) { return 3; }
+inline const int* begin(const vec3i& a) { return &a.x; }
+inline const int* end(const vec3i& a) { return &a.x + 3; }
+inline int*       begin(vec3i& a) { return &a.x; }
+inline int*       end(vec3i& a) { return &a.x + 3; }
+inline const int* data(const vec3i& a) { return &a.x; }
+inline int*       data(vec3i& a) { return &a.x; }
 
 // Vector comparison operations.
 inline bool operator==(const vec3i& a, const vec3i& b) {
@@ -1845,6 +1944,15 @@ inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 // Functions applied to vector elements
 inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
+
+// Vector sequence operations.
+inline int        size(const vec4i& a) { return 4; }
+inline const int* begin(const vec4i& a) { return &a.x; }
+inline const int* end(const vec4i& a) { return &a.x + 4; }
+inline int*       begin(vec4i& a) { return &a.x; }
+inline int*       end(vec4i& a) { return &a.x + 4; }
+inline const int* data(const vec4i& a) { return &a.x; }
+inline int*       data(vec4i& a) { return &a.x; }
 
 // Vector comparison operations.
 inline bool operator==(const vec4i& a, const vec4i& b) {
