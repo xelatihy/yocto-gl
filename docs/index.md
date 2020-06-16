@@ -77,7 +77,7 @@ Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
 Most objects is Yocto/GL have value semantic, while large data structures
-use reference semnatic with strict ownership. This means that everything
+use reference semantic with strict ownership. This means that everything
 can be trivially serialized and there is no need for memory management.
 
 We do this since this makes Yocto/GL easier to extend and quicker to learn,
@@ -90,23 +90,23 @@ object oriented one, favoring free functions to class methods. All functions
 and data are defined in sibling namespaces contained in the `yocto` namespace
 so libraries can call all others, but have to do so explicitly.
 
-The use of templates in Yocto was the reason for many refactorings, going
+The use of templates in Yocto was the reason for many refactoring, going
 from no template to heavy template use. At this point, Yocto uses some templates
 for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.
 
-We do not use exception for error repoting, but only to report "programmers"
+We do not use exception for error reporting, but only to report "programmers"
 errors. For example, IO operations use boolean flags and error strings for
 human readable errors, while exceptions are used when preconditions or
 postconditions are violatd in functions.
 
-The current version of the library (2.x) is a major refacting of the previous
+The current version of the library (2.x) is a major refactoring of the previous
 library versions (1.x) in three main aspects. First, we now allow the use of
-reference semantric via pointers and adopt it for all large objects, while
+reference semantic via pointers and adopt it for all large objects, while
 keeping value semantic for all others. We did this to avoid erroneous copies
 that cannot detected and avoided at compile time. Second, we had trouble
 interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better intergration with external code.
+reduce the use of exceptions, again for better integration with external code.
 
 ## Credits
 
@@ -188,5 +188,3 @@ defining the cmake option `YOCTO_EMBREE`.
 </div>
 
 -->
-
-[yocto_math]: yocto/yocto_math.md

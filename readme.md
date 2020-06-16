@@ -6,7 +6,7 @@
 
 Yocto/GL is a collection of small C++17 libraries for building
 physically-based graphics algorithms released under the MIT license.
-Yocto/GL is written in a deliberatly data-oriented style for ease of
+Yocto/GL is written in a deliberately data-oriented style for ease of
 development and use.
 Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.
@@ -32,7 +32,7 @@ See each header file for documentation.
   triangle meshes, quads meshes, line sets and instances scenes using a
   two-level bounding volume hierarchy
 - `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
-  tonemapping, color correction, image loading and saving,
+  tone mapping, color correction, image loading and saving,
   procedural images, procedural sun-sky, advanced color conversion utilities
 - `yocto/yocto_scene.{h,cpp}`: simple scene representation useful for rendering
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Ply/Obj/Pbrt/glTF
@@ -88,23 +88,23 @@ object oriented one, favoring free functions to class methods. All functions
 and data are defined in sibling namespaces contained in the `yocto` namespace
 so libraries can call all others, but have to do so explicitly.
 
-The use of templates in Yocto was the reason for many refactorings, going
+The use of templates in Yocto was the reason for many refactoring, going
 from no template to heavy template use. At this point, Yocto uses some templates
 for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.
 
-We do not use exception for error repoting, but only to report "programmers"
+We do not use exception for error reporting, but only to report "programmers"
 errors. For example, IO operations use boolean flags and error strings for
 human readable errors, while exceptions are used when preconditions or
-postconditions are violatd in functions.
+post conditions are violated in functions.
 
-The current version of the library (2.x) is a major refacting of the previous
+The current version of the library (2.x) is a major refactoring of the previous
 library versions (1.x) in three main aspects. First, we now allow the use of
-reference semantric via pointers and adopt it for all large objects, while
+reference semantic via pointers and adopt it for all large objects, while
 keeping value semantic for all others. We did this to avoid erroneous copies
 that cannot detected and avoided at compile time. Second, we had trouble
 interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better intergration with external code.
+reduce the use of exceptions, again for better integration with external code.
 
 ## Credits
 
