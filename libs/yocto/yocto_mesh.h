@@ -77,6 +77,12 @@ vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
 int opposite_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, int t, int vid);
 
+// Finds the opposite vertex of an edge
+int opposite_vertex(const vec3i& triangle, const vec2i& edge);
+
+// Finds common edge between triangles
+vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1);
+
 // Triangle fan starting from a face and going towards the k-th neighbor face.
 vector<int> triangle_fan(
     const vector<vec3i>& adjacencies, int face, int k, bool clockwise = false);

@@ -84,10 +84,28 @@ vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
 int opposite_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, int t, int vid) {
   auto triangle = adjacencies[t];
-  for (int i = 0; i < 3; ++i) {
+  for (auto i = 0; i < 3; ++i) {
     if (find_in_vec(triangles[triangle[i]], vid) < 0) return triangle[i];
   }
   return -1;
+}
+
+// Finds the opposite vertex of an edge
+int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
+  for (auto i = 0; i < 3; ++i) {
+    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
+  }
+  return -1;
+}
+
+// Finds common edge between triangles
+vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
+  for (auto i = 0; i < 3; i++)
+    for (auto k = 0; k < 3; k++)
+      if (triangle0[i] == triangle1[k] &&
+          triangle0[(i + 1) % 3] == triangle1[(k + 2) % 3])
+        return {triangle0[i], triangle0[(i + 1) % 3]};
+  return {-1, -1};
 }
 
 }  // namespace yocto
@@ -209,13 +227,6 @@ static inline void connect_nodes(
   solver.graph[a].push_back({b, length});
   solver.graph[b].push_back({a, length});
 }
-
-static inline int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
-  for (auto i = 0; i < 3; ++i) {
-    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
-  }
-  return -1;
-};
 
 static inline float opposite_nodes_arc_length(
     const vector<vec3f>& positions, int a, int c, const vec2i& edge) {
