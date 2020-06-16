@@ -38,7 +38,7 @@ average. For this pass an additional texture coordinate since internally we spli
 the triangle into two and we need to known where to do it.
 
 ```cpp
-auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3 = vec3f{0,1,0};
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
 auto ta = triangle_area(p0,p1,p2);   // triangle area
 auto qa = quad_area(p0,p1,p2,p3);    // quad area
 auto tn = triangle_normal(p0,p1,p2); // triangle normal
@@ -62,86 +62,105 @@ whose derivatives can be computed with
 `interpolate_bezier_derivative(p0,p1,p2,p3,u)`.
 
 ```cpp
-auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3 = vec3f{0,1,0};
-auto tp = interpolate_triangle(p0,p1,p2,{0.3,0.5});    // triangle point
-auto qp = interpolate_quad(p0,p1,p2,p3,{0.3,0.5});     // quad point
-auto lp = interpolate_line(p0,p1,0.3);                 // line point
-auto bp = interpolate_bezier(p0,p1,p2,p3,0.3);         // bezier point
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto tp = interpolate_triangle(p0,p1,p2,{0.3,0.5});  // triangle point
+auto qp = interpolate_quad(p0,p1,p2,p3,{0.3,0.5});   // quad point
+auto lp = interpolate_line(p0,p1,0.3);               // line point
+auto bp = interpolate_bezier(p0,p1,p2,p3,0.3);       // bezier point
 ```
 
-## Primitive bounds
+## Primitive bounding boxes
 
-// Primitive bounds.
-inline bbox3f point_bounds(const vec3f& p);
-inline bbox3f point_bounds(const vec3f& p, float r);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1);
-inline bbox3f line_bounds(const vec3f& p0, const vec3f& p1, float r0, float r1);
-inline bbox3f triangle_bounds(
-const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline bbox3f quad_bounds(
-const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+Yocto/Geometry provides functions to compute bounding boxes for all primitives
+types. For points and lines, vertices might have a thickness associate with them.
+Use `point_bounds(p0,r0)` for points, `line_bounds(p0,p1,r0,r1)` for lines,
+`triangle_bounds(p0,p1,p2)` for triangles, `quad_bounds(p0,p1,p2,p3)` for quads.
+
+```cpp
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto tb = triangle_bounds(p0,p1,p2);  // triangle bounding box
+auto qb = quad_bounds(p0,p1,p2,p3);   // quad bounding box
+auto r0 = 0.01, r1 = 0.01;
+auto lb = line_bounds(p0,p1,r0,r1);   // line bounding box
+auto pb = point_bounds(p0,r0);        // point bounding box
+```
 
 ## Ray-primitive intersections
 
-// -----------------------------------------------------------------------------
-// RAY-PRIMITIVE INTERSECTION FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
+Yocto/Geometry defines functions for ray-primitive intersection. Each function
+returns wether the primitive was hit and, if so, sets the primitive parameters
+and the intersection distance as output variables. Triangle intersection are
+computed using the Moller-Trombone intersection algorithm.
+Quad intersections are computed
+by treating quads as two triangles. Point intersections are compute
+approximately, by treating points as ray-oriented disks. Line intersections
+are computed approximately, by treating lines as ray-oriented ribbons.
+Use `intersect_point(ray,p0,r0,uv,d)` for points,
+`intersect_line(ray,p0,p1,r0,r1,uv,d)` for lines,
+`intersect_triangle(ray,p0,p1,p2,uv,d)` for triangles,
+`intersect_quad(ray,p0,p1,p2,p3,uv,d)` for quads.
 
-// Intersect a ray with a point (approximate)
-inline bool intersect_point(
-const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
+```cpp
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto r0 = 0.01, r1 = 0.01;
+auto ray = ray3f{{0,0,0.5},{0,0,-1}};                 // ray
+auto uv = vec2f{0,0}; auto dist = float{0};           // hit distance and uvs
+auto th = intersect_triangle(ray,p0,p1,p2,uv,dist));  // triangle intersection
+auto qh = intersect_quad(ray,p0,p1,p2,p3,uv,dist));   // quad intersection
+auto lh = intersect_line(ray,p0,p1,r0,r1,uv,dist));   // line intersection
+auto ph = intersect_point(ray,p0,r0,uv,dist));        // point intersection
+```
 
-// Intersect a ray with a line
-inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-float r0, float r1, vec2f& uv, float& dist);
+Yocto/Geometry defines two functions to test whether a ray hits a bounding box.
+In this case, we do not return the ray distance or hit, but just check for
+intersection, which is useful when defining BVH hierarchies.
+Use `intersect_bbox(ray,bbox)` as a simple alternative and
+`intersect_bbox(ray,ray_dinv,bbox)` for a faster one.
 
-// Intersect a ray with a triangle
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
-const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
+```cpp
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto bbox = quad_bounds(p0,p1,p2,p3);
+auto bh = intersect_bbox(ray, bbox);           // bbox intersection check
+auto ray_dinv = 1 / ray.d;                     // ray direction inverse
+auto bf = intersect_bbox(ray, ray_dinv, bbox); // fast bbox intersection
+```
 
-// Intersect a ray with a quad.
-inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
+## Point-primitive overlaps
 
-// Intersect a ray with a axis-aligned bounding box
-inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
+Yocto/Geometry defines functions for point-primitive distance and overlap.
+Each function returns wether the primitive was hit and, if so, sets
+the primitive parameters and the overlap distance as output variables.
+Each function takes a position and a maximum distance to test within,
+together with primitive vertices and thickness.
+Use `overlap_point(pt,md,p0,r0,uv,d)` for points,
+`overlap_line(pt,md,p0,p1,r0,r1,uv,d)` for lines,
+`overlap_triangle(pt,md,p0,p1,p2,r0,r1,r2,uv,d)` for triangles,
+`overlap_quad(pt,md,p0,p1,p2,p3,r0,r1,r2,r3,uv,d)` for quads.
 
-// Intersect a ray with a axis-aligned bounding box
-inline bool intersect_bbox(
-const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox);
+```cpp
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto r0 = 0.01, r1 = 0.01, r2 = 0.01, r3 = 0.01;
+auto pt = vec3f{0,0,0.5}; auto md = float{1};         // point and max dist
+auto uv = vec2f{0,0}; auto dist = float{0};           // hit distance and uv
+auto th = overlap_triangle(pt,md,p0,p1,p2,uv,dist));  // triangle overlap
+auto qh = overlap_quad(pt,md,p0,p1,p2,p3,uv,dist));   // quad overlap
+auto lh = overlap_line(pt,md,p0,p1,r0,r1,uv,dist));   // line overlap
+auto ph = overlap_point(pt,md,p0,r0,uv,dist));        // point overlap
+```
 
-## Point-primitive distances
+Yocto/Geometry defines a function to test whether a point is contained within a
+bounding bbox within a certain distance. Just like before, we do not return
+the ray distance or hit, but just check for overlap, which is useful when
+defining BVH hierarchies.
+Use `overlap_bbox(pt,md,bbox)` to test for overlap between a point and
+a bounding box and `overlap_bbox(bbox1,bbox2)` to test whether two bounding
+boxes overlap.
 
-// Check if a point overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
-float r, vec2f& uv, float& dist);
-
-// Compute the closest line uv to a give position pos.
-inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
-
-// Check if a line overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
-
-// Compute the closest triangle uv to a give position pos.
-inline vec2f closestuv_triangle(
-const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
-
-// Check if a triangle overlaps a position pos withint a maximum distance
-// dist_max.
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
-float& dist);
-
-// Check if a quad overlaps a position pos withint a maximum distance dist_max.
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-float r2, float r3, vec2f& uv, float& dist);
-
-// Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-inline bool distance_check_bbox(
-const vec3f& pos, float dist_max, const bbox3f& bbox);
-
-// Check if two bboxe overlap.
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+```cpp
+auto p0 = vec3f{0,0,0}, p1 = vec3f{1,0,0}, p2 = vec3f{1,1,0}, p3=vec3f{0,1,0};
+auto bbox = quad_bounds(p0,p1,p2,p3);
+auto bbox2 = bbox3f{{0,0,0}, {1,1,1}};
+auto pt = vec3f{0,0,0.5}; auto md = float{1};   // point and max dist
+auto bh  = overlap_bbox(pt, md, bbox);          // bbox overlap check
+auto bh2 = overlap_bbox(bbox, bbox2);           // bbox overlap check
+```
