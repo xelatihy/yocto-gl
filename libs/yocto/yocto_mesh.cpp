@@ -857,10 +857,10 @@ static string get_extension(const string& filename) {
 
 // Save ply mesh
 [[nodiscard]] bool save_mesh(const string& filename,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, string& error, bool ascii,
+    bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -969,10 +969,10 @@ static string get_extension(const string& filename) {
 
 // Save ply mesh
 [[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
-    bool ascii, bool flip_texcoord) {
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, string& error, bool ascii,
+    bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
