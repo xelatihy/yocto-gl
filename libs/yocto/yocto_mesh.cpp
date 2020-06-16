@@ -228,13 +228,6 @@ static inline void connect_nodes(
   solver.graph[b].push_back({a, length});
 }
 
-static inline int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
-  for (auto i = 0; i < 3; ++i) {
-    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
-  }
-  return -1;
-};
-
 static inline float opposite_nodes_arc_length(
     const vector<vec3f>& positions, int a, int c, const vec2i& edge) {
   // Triangles (a, b, d) and (b, d, c) are connected by (b, d) edge
