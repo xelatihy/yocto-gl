@@ -9,6 +9,7 @@
 #include "yocto_mesh.h"
 
 #include <atomic>
+#include <cassert>
 #include <deque>
 #include <memory>
 #include <string>
