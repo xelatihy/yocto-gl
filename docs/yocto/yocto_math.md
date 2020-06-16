@@ -24,7 +24,8 @@ For arithmetic operators, both vector and scalar operands are supported.
 Yocto/Math also overrides many common math function to work on vectors
 by component-wise evaluation, including trigonometric and exponentiation
 functions, and component-wise abs, max, min and clamp. Real vector types
-additionally support vector products and lengths.
+additionally support vector products and lengths. For 3D vectors, we also
+define reflection and refraction vectors following GLSL.
 
 ## Matrices
 
@@ -84,6 +85,7 @@ Rays are defined as an origin `o`, a direction `d` and minimum and maximum
 values for the distance along a ray, namely `tmin` and `tmax`.
 Besides construction, Yocto/Math does not specify other ray functionality
 which is instead use in other parts of Yocto/GL.
+See [Yocto/Geometry](yocto_geometry.md) for ray-primitive intersection.
 
 ## Bounding boxes
 
@@ -96,7 +98,8 @@ or they are constructed by specifying the min and max values directly.
 To build bounds for complex primitives, bounding boxes are very initialized to
 empty bounds, that can be done by using the constants like `invalidabXf`,
 and then grown to encompass either points or other bounding boxes with
-`merge(b,p)`.
+`merge(b,p)`. See [Yocto/Geometry](yocto_geometry.md) for building bounding
+boxes for geometric primitives.
 
 ```cpp
 auto bbox = invalidb3f;
@@ -137,7 +140,7 @@ For use in GPU programming, Yocto/Math also defines various projection
 matrices in the style of GLU/GLM, namely `frustum_mat(...)`,
 `ortho_mat(...)`, `ortho2d_mat(...)`, and `perspective_mat(...)`.
 
-## UI Helpers
+## User-Interface Transforms
 
 Yocto/Math provides a few utilities for writing user interfaces for 2D images
 and 3D environments. For images, we assume that image are scaled and than

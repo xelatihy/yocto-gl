@@ -1,8 +1,6 @@
-# Yocto/Geometry: Tiny library for geometry support in graphics applications.
+# Yocto/Geometry: Basic geometry support for graphics applications.
 
-Yocto/Geometry provides basic math primitives for geometry computation in
-graphics.
-
+Yocto/Geometry provides basic geometry operations used in graphics applications.
 
 ## Geometry functions
 
@@ -15,4 +13,3 @@ of the second triangle corrected as 1-u and 1-v to produce a quad
 parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
 represent triangles correctly, and this convention is used throught the
 library. This is equivalent to Intel's Embree.
-
