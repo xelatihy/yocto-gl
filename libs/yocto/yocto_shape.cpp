@@ -1056,7 +1056,7 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
     auto& node = bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
-    if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
+    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list

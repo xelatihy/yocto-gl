@@ -828,7 +828,7 @@ static bool overlap_shape_bvh(const bvh_shape* shape, const vec3f& pos,
     auto& node = shape->bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
-    if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
+    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
@@ -915,7 +915,7 @@ static bool overlap_scene_bvh(const bvh_scene* scene, const vec3f& pos,
     auto& node = scene->bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
-    if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
+    if (!overlap_bbox(pos, max_distance, node.bbox)) continue;
 
     // intersect node, switching based on node type
     // for each type, iterate over the the primitive list
