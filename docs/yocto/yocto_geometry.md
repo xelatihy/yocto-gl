@@ -1,4 +1,4 @@
-# Yocto/Geometry: Basic geometry operations for graphics applications
+# Yocto/Geometry: Geometry operations for graphics applications
 
 Yocto/Geometry defines basic geometry operations used in graphics applications,
 including computation of basic geometry quantities, ray-primitive intersection,
