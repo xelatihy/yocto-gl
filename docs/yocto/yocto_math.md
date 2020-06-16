@@ -83,9 +83,13 @@ interpolation and spherical interpolation, respectively with `lerp(a,bt)`,
 Yocto/Math defines rays in 2-3 dimensions as `ray2f` and `ray3f`.
 Rays are defined as an origin `o`, a direction `d` and minimum and maximum
 values for the distance along a ray, namely `tmin` and `tmax`.
-Besides construction, Yocto/Math does not specify other ray functionality
-which is instead use in other parts of Yocto/GL.
+To compute a point in a ray, use `ray_point(ray,t)`.
 See [Yocto/Geometry](yocto_geometry.md) for ray-primitive intersection.
+
+```cpp
+auto ray = ray3f{origin, direction};
+auto p = ray_point(ray, 0.5);
+```
 
 ## Bounding boxes
 

@@ -1012,6 +1012,10 @@ struct ray3f {
       float tmax = flt_max);
 };
 
+// Computes a point on a ray
+inline vec2f ray_point(const ray2f& ray, float t);
+inline vec3f ray_point(const ray3f& ray, float t);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -2392,6 +2396,10 @@ inline ray2f::ray2f(const vec2f& o, const vec2f& d, float tmin, float tmax)
 inline ray3f::ray3f() {}
 inline ray3f::ray3f(const vec3f& o, const vec3f& d, float tmin, float tmax)
     : o{o}, d{d}, tmin{tmin}, tmax{tmax} {}
+
+// Computes a point on a ray
+inline vec2f ray_point(const ray2f& ray, float t) { return ray.o + ray.d * t; }
+inline vec3f ray_point(const ray3f& ray, float t) { return ray.o + ray.d * t; }
 
 }  // namespace yocto
 
