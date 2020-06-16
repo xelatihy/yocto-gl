@@ -17,7 +17,25 @@ theme:
   extra_css:
     - css/extra.css
 
+# Extensions
+markdown_extensions:
+  - codehilite
+  - admonition
+
 # Pages
 nav:
   - About: index.md
   - Gallery: gallery.md
+  - Math types: yocto/yocto_math.md
+  - Color operations: yocto/yocto_color.md
+  - Geometry operations: yocto/yocto_geometry.md
+  - Sampling routines: yocto/yocto_sampling.md
+  - Noise functions: yocto/yocto_noise.md
+  - Shading routines: yocto/yocto_shading.md
+  - Image utilities: yocto/yocto_image.md
+  - Shape utilities: yocto/yocto_shape.md
+  - Mesh processing: yocto/yocto_mesh.md
+  - Model serialization: yocto/yocto_modelio.md
+  - Scene representation: yocto/yocto_scene.md
+  - Scene serialization: yocto/yocto_sceneio.md
+  - Path tracing: yocto/yocto_trace.md

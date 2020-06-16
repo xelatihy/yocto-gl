@@ -817,7 +817,6 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
   auto element  = intersection.element;
   auto uv       = intersection.uv;
   auto material = scene->instances[intersection.instance]->material;
-  auto shape    = scene->instances[intersection.instance]->shape;
   auto position = eval_position(instance, element, uv);
   auto normal   = eval_shading_normal(instance, element, uv, outgoing);
   auto texcoord = eval_texcoord(instance, element, uv);
@@ -883,10 +882,8 @@ static vec4f trace_normal(const scene_model* scene, const ray3f& ray,
   auto element  = intersection.element;
   auto uv       = intersection.uv;
   auto material = scene->instances[intersection.instance]->material;
-  auto shape    = scene->instances[intersection.instance]->shape;
   auto position = eval_position(instance, element, uv);
   auto normal   = eval_shading_normal(instance, element, uv, outgoing);
-  auto color    = eval_color(instance, element, uv);
   auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
   auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
