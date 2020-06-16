@@ -203,8 +203,7 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     float r2, float r3, vec2f& uv, float& dist);
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox);
+inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // Check if two bboxe overlap.
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
@@ -640,8 +639,7 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
 }
 
 // Check if a bbox overlaps a position pos withint a maximum distance dist_max.
-inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox) {
+inline bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
   // computing distance
   auto dd = 0.0f;
 

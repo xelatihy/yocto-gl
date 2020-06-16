@@ -80,66 +80,22 @@ struct rng_state {
   uint64_t state = 0x853c49e6748fea9bULL;
   uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-  rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
-  rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
+  rng_state();
+  rng_state(uint64_t state, uint64_t inc);
 };
 
-// Next random number, used internally only.
-inline uint32_t _advance_rng(rng_state& rng) {
-  uint64_t oldstate   = rng.state;
-  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
-  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-  uint32_t rot        = (uint32_t)(oldstate >> 59u);
-  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-}
-
 // Init a random number generator with a state state from the sequence seq.
-inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
-  auto rng  = rng_state();
-  rng.state = 0U;
-  rng.inc   = (seq << 1u) | 1u;
-  _advance_rng(rng);
-  rng.state += seed;
-  _advance_rng(rng);
-  return rng;
-}
+inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
-  union {
-    uint32_t u;
-    float    f;
-  } x;
-  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
-  return x.f - 1.0f;
-  // alternate implementation
-  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
-  // return advance_rng(rng) * scale;
-}
-inline vec2f rand2f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  return {x, y};
-}
-inline vec3f rand3f(rng_state& rng) {
-  // force order of evaluation by using separate assignments.
-  auto x = rand1f(rng);
-  auto y = rand1f(rng);
-  auto z = rand1f(rng);
-  return {x, y, z};
-}
+inline int   rand1i(rng_state& rng, int n);
+inline float rand1f(rng_state& rng);
+inline vec2f rand2f(rng_state& rng);
+inline vec3f rand3f(rng_state& rng);
 
 // Shuffles a sequence of elements
 template <typename T>
-inline void shuffle(vector<T>& vals, rng_state& rng) {
-  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
-  for (auto i = (int)vals.size() - 1; i > 0; i--) {
-    auto j = rand1i(rng, i + 1);
-    std::swap(vals[j], vals[i]);
-  }
-}
+inline void shuffle(vector<T>& vals, rng_state& rng);
 
 }  // namespace yocto
 
@@ -233,6 +189,76 @@ inline float sample_discrete_weights_pdf(
 //
 //
 // -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// PCG random numbers from http://www.pcg-random.org/
+inline rng_state::rng_state()
+    : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+inline rng_state::rng_state(uint64_t state, uint64_t inc)
+    : state{state}, inc{inc} {}
+
+// Next random number, used internally only.
+inline uint32_t _advance_rng(rng_state& rng) {
+  uint64_t oldstate   = rng.state;
+  rng.state           = oldstate * 6364136223846793005ULL + rng.inc;
+  uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+  uint32_t rot        = (uint32_t)(oldstate >> 59u);
+  return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+// Init a random number generator with a state state from the sequence seq.
+inline rng_state make_rng(uint64_t seed, uint64_t seq) {
+  auto rng  = rng_state();
+  rng.state = 0U;
+  rng.inc   = (seq << 1u) | 1u;
+  _advance_rng(rng);
+  rng.state += seed;
+  _advance_rng(rng);
+  return rng;
+}
+
+// Next random numbers: floats in [0,1), ints in [0,n).
+inline int   rand1i(rng_state& rng, int n) { return _advance_rng(rng) % n; }
+inline float rand1f(rng_state& rng) {
+  union {
+    uint32_t u;
+    float    f;
+  } x;
+  x.u = (_advance_rng(rng) >> 9) | 0x3f800000u;
+  return x.f - 1.0f;
+  // alternate implementation
+  // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
+  // return advance_rng(rng) * scale;
+}
+inline vec2f rand2f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  return {x, y};
+}
+inline vec3f rand3f(rng_state& rng) {
+  // force order of evaluation by using separate assignments.
+  auto x = rand1f(rng);
+  auto y = rand1f(rng);
+  auto z = rand1f(rng);
+  return {x, y, z};
+}
+
+// Shuffles a sequence of elements
+template <typename T>
+inline void shuffle(vector<T>& vals, rng_state& rng) {
+  // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
+  for (auto i = (int)vals.size() - 1; i > 0; i--) {
+    auto j = rand1i(rng, i + 1);
+    std::swap(vals[j], vals[i]);
+  }
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF MONETACARLO SAMPLING FUNCTIONS
