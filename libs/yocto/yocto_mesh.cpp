@@ -29,6 +29,70 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ADJACENCIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// find a value in a vector or vecs
+template <typename T>
+inline int find_in_vec(const T& vec, int x) {
+  for (int i = 0; i < size(vec); i++)
+    if (vec[i] == x) return i;
+  return -1;
+}
+
+// Triangle fan starting from a face and going towards the k-th neighbor face.
+vector<int> triangle_fan(
+    const vector<vec3i>& adjacencies, int face, int k, bool clockwise) {
+  auto result = vector<int>{};
+  result.push_back(face);
+  auto prev   = face;
+  auto node   = adjacencies[face][k];
+  auto offset = 2 - int(clockwise);
+  while (true) {
+    if (node == -1) break;
+    if (node == face) break;
+    result.push_back(node);
+    auto kk = find_in_vec(adjacencies[node], prev);
+    assert(kk != -1);
+    kk   = (kk + offset) % 3;
+    prev = node;
+    node = adjacencies[node][kk];
+  }
+  return result;
+}
+
+// returns the list of triangles incident at each vertex in CCW order
+vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
+  auto ntriangles = (int)triangles.size();
+  auto v2t        = vector<vector<int>>{positions.size(), vector<int>{}};
+  auto offset     = 0;
+  for (int i = 0; i < ntriangles; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      auto curr = triangles[i][j];
+      if (v2t[curr].size() == 0) {
+        offset    = find_in_vec(triangles[i], curr);
+        v2t[curr] = triangle_fan(adjacencies, i, (offset + 2) % 3);
+      }
+    }
+  }
+  return v2t;
+}
+
+// Face adjacent to t and opposite to vertex vid
+int opposite_face(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int t, int vid) {
+  vec3i tri = adjacencies[t];
+  for (int i = 0; i < 3; ++i) {
+    if (find_in_vec(triangles[tri[i]], vid) < 0) return tri[i];
+  }
+  return -1;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -220,9 +284,9 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
 // `update` is a function that is executed during expansion, every time a node
 // is put into queue. `exit` is a function that tells whether to expand the
 // current node or perform early exit.
-template <typename Update, typename Exit>
+template <typename Update, typename Stop, typename Exit>
 void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
-    const vector<int>& sources, Update&& update, Exit&& exit) {
+    const vector<int>& sources, Update&& update, Stop&& stop, Exit&& exit) {
   /*
      This algortithm uses the heuristic Small Label Fisrt and Large Label Last
      https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -241,16 +305,17 @@ void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
 
   auto in_queue = vector<bool>(solver.graph.size(), false);
 
+  // Cumulative weights of elements in queue. Used to keep track of the
+  // average weight of the queue.
+  double cumulative_weight = 0.0;
+
   // setup queue
   auto queue = deque<int>();
   for (auto source : sources) {
     in_queue[source] = true;
+    cumulative_weight += field[source];
     queue.push_back(source);
   }
-
-  // Cumulative weights of elements in queue. Used to keep track of the
-  // average weight of the queue.
-  double cumulative_weight = 0.0;
 
   while (!queue.empty()) {
     auto node           = queue.front();
@@ -270,7 +335,8 @@ void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
     cumulative_weight -= field[node];
 
     // Check early exit condition.
-    if (exit(node)) continue;
+    if (exit(node)) break;
+    if (stop(node)) continue;
 
     for (int i = 0; i < solver.graph[node].size(); i++) {
       // Distance of neighbor through this node
@@ -309,8 +375,9 @@ void update_geodesic_distances(vector<float>& distances,
     const geodesic_solver& solver, const vector<int>& sources,
     float max_distance) {
   auto update = [](int node, int neighbor, float new_distance) {};
-  auto exit   = [&](int node) { return distances[node] > max_distance; };
-  visit_geodesic_graph(distances, solver, sources, update, exit);
+  auto stop   = [&](int node) { return distances[node] > max_distance; };
+  auto exit   = [](int node) { return false; };
+  visit_geodesic_graph(distances, solver, sources, update, stop, exit);
 }
 
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
@@ -331,9 +398,10 @@ vector<int> compute_geodesic_paths(
   auto update    = [&parents](int node, int neighbor, float new_distance) {
     parents[neighbor] = node;
   };
-  auto exit = [end_vertex](int node) { return node == end_vertex; };
+  auto stop = [end_vertex](int node) { return node == end_vertex; };
+  auto exit = [](int node) { return false; };
   for (auto source : sources) distances[source] = 0.0f;
-  visit_geodesic_graph(distances, solver, sources, update, exit);
+  visit_geodesic_graph(distances, solver, sources, update, stop, exit);
   return parents;
 }
 

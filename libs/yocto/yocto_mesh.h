@@ -64,6 +64,26 @@ using std::vector;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// ADJACENCIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Returns the list of triangles incident at each vertex in CCW order.
+// Note: this works only if the mesh does not have a boundary.
+vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
+
+// Face adjacent to t and opposite to vertex vid
+int opposite_face(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int t, int vid);
+
+// Triangle fan starting from a face and going towards the k-th neighbor face.
+vector<int> triangle_fan(
+    const vector<vec3i>& adjacencies, int face, int k, bool clockwise = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
 namespace yocto {
