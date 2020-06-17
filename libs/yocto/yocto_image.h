@@ -63,31 +63,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//
-//
-//  LICENSE for blackbody code
-//
-// Copyright (c) 2015 Neil Bartlett
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//
-//
 
 #ifndef _YOCTO_IMAGE_H_
 #define _YOCTO_IMAGE_H_
@@ -183,13 +158,15 @@ namespace yocto {
 
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool no_interpolation, bool clamp_to_edge);
-vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge);
+    bool no_interpolation = false, bool clamp_to_edge = false);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
 vec3f eval_image(const image<vec3f>& img, const vec2f& uv,
-    bool no_interpolation, bool clamp_to_edge);
-vec3f eval_image(const image<vec3b>& img, const vec2f& uv, bool as_linear,
-    bool no_interpolation, bool clamp_to_edge);
+    bool no_interpolation = false, bool clamp_to_edge = false);
+vec3f eval_image(const image<vec3b>& img, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
 
 }  // namespace yocto
 
