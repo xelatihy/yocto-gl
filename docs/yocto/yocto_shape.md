@@ -185,7 +185,7 @@ positions[...] = {...};                           // update positions
 update_triangles_bvh(bvh, triangles, positions);  // update BVH
 ```
 
-## Nearest neighbors using a hash grid
+## Nearest neighbors
 
 Nearest neighbors queries are computed by building a sparse hash grid
 defined as `hash_grid`. The grid is created by specifying a cell size for the
@@ -200,11 +200,9 @@ nearest neighbors.
 ```cpp
 auto positions = vector<vec3f>{...};               // point positions
 auto grid = make_hash_grid(positions,cell_size);   // create hash grid
-
 auto pt = vec3f{...}; auto max_dist = float{...};  // query point and dist
 auto neighbors = vector<int>{};                    // neighbor buffer
 find_neighbors(grid, neighbors, pt, max_dist);     // find neighbors by pos
-
 find_neighbors(grid, neighbors, id, max_dist);     // find neighbors by id
 ```
 
@@ -221,111 +219,116 @@ auto quads = vector<vec4i>{...};
 auto triangles = quads_to_triangles(quads);  // convert quads to triangles
 ```
 
-// Convert face-varying data to single primitives. Returns the quads indices
-// and face ids and filled vectors for pos, norm, texcoord and colors.
-std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-const vector<vec3f>& normals, const vector<vec2f>& texcoords);
+Face-varying meshes are stored by having different face indices for each
+vertex propeerty. This way, every vertex property has its own topology.
+Use `split_facevarying(...)` to convert to an indexed mesh. During conversion
+vertices may be duplicated since the same topology is used for all vertex
+properties.
 
-// Split primitives per id
-vector<vector<vec2i>> ungroup_lines(
-const vector<vec2i>& lines, const vector<int>& ids);
-vector<vector<vec3i>> ungroup_triangles(
-const vector<vec3i>& triangles, const vector<int>& ids);
-vector<vector<vec4i>> ungroup_quads(
-const vector<vec4i>& quads, const vector<int>& ids);
+```cpp
+auto fvquadspos = vector<vec4i>{...};      // face-varying indices
+auto fvquadsnorm = vector<vec4i>{...};     // arrays have some length
+auto fvquadstexcoord = vector<vec4i>{...};
+auto fvpositions = vector<vec3f>{...};     // face-varying vertices
+auto fvnormals = vector<vec3f>{...};       // arrays may have different lengths
+auto fvtexcoords = vector<vec2f>{...};
+auto [quads, positions, normals, texcoords] = // convert to indexed mesh
+   split_facevarying(fvquadspos, fvquadsnorm, fvquadstexcoord,
+   fvpositions, fvnormals, fvtexcoords);
+```
 
-// Weld vertices within a threshold.
-std::pair<vector<vec3f>, vector<int>> weld_vertices(
-const vector<vec3f>& positions, float threshold);
-std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
-const vector<vec3i>& triangles, const vector<vec3f>& positions,
-float threshold);
-std::pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-const vector<vec3f>& positions, float threshold);
+Yocto/Shape supports eliminating duplicate vertices in triangle and quad meshes.
+All vertices within a threshold are merged in a greedy fashion, which works well
+when duplicated vertices are near other while other vertices are further away.
+Use `weld_triangles(triangles, positions, threshold)` to eliminate duplicated
+triangle vertices and `weld_quads(quads, positions, threshold)` to eliminate
+duplicated quad vertices. For lower-level algorithms, use
+`weld_vertices(positions, threshold)` to group vertices together.
 
-// Merge shape elements
-void merge_lines(
-vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
-void merge_triangles(vector<vec3i>& triangles,
-const vector<vec2i>& merge_triangles, int num_verts);
-void merge_quads(
-vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-vector<vec3f>& tangents, vector<vec2f>& texcoords, vector<float>& radius,
-const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-const vector<vec3f>& merge_tangents,
-const vector<vec2f>& merge_texturecoords,
-const vector<float>& merge_radius);
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
-const vector<vec3f>& merge_normals,
-const vector<vec2f>& merge_texturecoords);
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-const vector<vec3f>& merge_normals,
-const vector<vec2f>& merge_texturecoords);
+```cpp
+auto triangles = vector<vec3i>{...};  // mesh data
+auto positions = vector<vec3f>{...};
+auto tolerance = 0.1f;
+auto [mtriangles, mpositions] =       // remove duplicates
+   weld_triangles(triangles, positions, tolerance);
+```
 
-// Merge quads and triangles
-void merge_triangles_and_quads(
-vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles);
+Yocto/Shape supports splitting shapes that are tagged by ids. This is helpful
+for example when drawing meshes that have per-face materials using renders
+that do support one material per shape only. Use `ungroup_lines(lines,ids)`,
+`ungroud_triangles(triangles,ids)` and `ungroup_quads(quads,ids)` for lines,
+triangles and quads respectively.
+
+```cpp
+auto triangles = vector<vec3i>{...};  // tagged mesh with one id per face
+auto ids       = vector<int>{...};
+auto split = ungroup_triangles(triangles, ids); // returns list of meshes
+```
+
+Yocto/Shape supports merging shape elements. This is useful, for example, when
+building up shapes from parts. The merged shapes are just concatenation of
+the individual shape without vertex merging. Use `merge_lines(...)` for lines,
+`merge_triangles(...)` for triangles and `merge_quads(...)` for quads.
+
+```cpp
+auto triangles = vector<vec3i>{...};   // initial shape
+auto positions = vector<vec3f>{...};
+auto normals = vector<vec3f>{...};
+auto texcoords = vector<vec2f>{...};
+auto mtriangles = vector<vec3i>{...};   // shape to be merged
+auto mpositions = vector<vec3f>{...};
+auto mnormals = vector<vec3f>{...};
+auto mtexcoords = vector<vec2f>{...};
+// merge mtriangles into triangles in-placee
+merge_triangles(triangles, positions, normals, texcoords,
+  mtriangles, mpositions, mnormals, mtexcoords);
+```
+
+You can also merge triangles and quads together in other to have one
+primitive only. Use `merge_triangles_and_quads(triangles, quads, force_triangles)`
+to merge elements in-place. The algorithms will output quads if present or
+triangles if not unless `force_triangles` is used.
 
 ## Shape subdivision
 
-// Subdivide lines by splitting each line in half.
-std::pair<vector<vec2i>, vector<float>> subdivide_lines(
-const vector<vec2i>& lines, const vector<float>& vert, int level);
-std::pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-const vector<vec2i>& lines, const vector<vec2f>& vert, int level);
-std::pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
-std::pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
-// Subdivide triangle by splitting each triangle in four, creating new
-// vertices for each edge.
-std::pair<vector<vec3i>, vector<float>> subdivide_triangles(
-const vector<vec3i>& triangles, const vector<float>& vert, int level);
-std::pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-const vector<vec3i>& triangles, const vector<vec2f>& vert, int level);
-std::pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
-std::pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
-// Subdivide quads by splitting each quads in four, creating new
-// vertices for each edge and for each face.
-std::pair<vector<vec4i>, vector<float>> subdivide_quads(
-const vector<vec4i>& quads, const vector<float>& vert, int level);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-const vector<vec4i>& quads, const vector<vec2f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
-// Subdivide beziers by splitting each segment in two.
-std::pair<vector<vec4i>, vector<float>> subdivide_beziers(
-const vector<vec4i>& beziers, const vector<float>& vert, int level);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-const vector<vec4i>& beziers, const vector<vec2f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
-// Subdivide quads using Carmull-Clark subdivision rules.
-std::pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-const vector<vec4i>& quads, const vector<float>& vert, int level,
-bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
-bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
-bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
-bool lock_boundary = false);
+Yocto/Shape defines functions to subdivide shape elements linearly, in
+order to obtain higher shape resolution, for example before applying
+displacement mapping. All functions will split all shape elements,
+regardless of their size. This ensures that meshes have no cracks.
+Use `subdivide_lines(lines, vert, level)` for lines,
+`subdivide_triangles(triangles, vert, level)` for triangles,
+`subdivide_quads(quads, vert, level)` for quads, and
+`subdivide_bezier(beziers, vert, level)` for Bezier segments.
+In this subdivision, each line is split in two lines,
+each triangle in three triangles,
+each quad in four quads, and each Bezier segment in two segments.
+The functions apply the subdivision rules `level` number of times
+and act on a single vertex property at a time for maximum flexibility.
+
+```cpp
+auto triangles = vector<vec3i>{...};   // initial shape
+auto positions = vector<vec3f>{...};
+// subdivide the triangle mesh recursively two times
+auto [striangles, spositions] = subdivide_triangles(triangles, positions, 2);
+```
+
+Yocto/Shape also supports Catmull-Clark subdivision surfaces with
+`subdivide_catmullclark(quads, vert, level, creased)`. In this case,
+Catmull-Clark subdivision rules are used to smooth the mesh after
+linear subdivision. The boundary can be treated as creases with `creased`,
+which is necessary when subdividing texture coordinates.
+
+```cpp
+auto quads = vector<vec4i>{...};     // initial shape
+auto positions = vector<vec3f>{...};
+// subdivide the quad mesh recursively two times
+auto [squads, spositions] = subdivide_catmullclark(quads, positions, 2, false);
+
+auto tquads = vector<vec4i>{...};    // face-varying shape with texture coords
+auto texcoords = vector<vec2f>{...};
+// subdivide the triangle mesh recursively two times
+auto [stquads, stexcoords] = subdivide_catmullclark(tquads, texcoords, 2, true);
+```
 
 ## Shape sampling
 
