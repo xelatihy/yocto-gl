@@ -30,7 +30,7 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// ADJACENCIES
+// UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -40,113 +40,6 @@ inline int find_in_vec(const T& vec, int x) {
   for (int i = 0; i < size(vec); i++)
     if (vec[i] == x) return i;
   return -1;
-}
-
-// Triangle fan starting from a face and going towards the k-th neighbor face.
-vector<int> triangle_fan(
-    const vector<vec3i>& adjacencies, int face, int k, bool clockwise) {
-  auto result = vector<int>{};
-  result.push_back(face);
-  auto prev   = face;
-  auto node   = adjacencies[face][k];
-  auto offset = 2 - int(clockwise);
-  while (true) {
-    if (node == -1) break;
-    if (node == face) break;
-    result.push_back(node);
-    auto kk = find_in_vec(adjacencies[node], prev);
-    assert(kk != -1);
-    kk   = (kk + offset) % 3;
-    prev = node;
-    node = adjacencies[node][kk];
-  }
-  return result;
-}
-
-// returns the list of triangles incident at each vertex in CCW order
-vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
-  auto ntriangles = (int)triangles.size();
-  auto v2t        = vector<vector<int>>{positions.size(), vector<int>{}};
-  auto offset     = 0;
-  for (int i = 0; i < ntriangles; ++i) {
-    for (int j = 0; j < 3; ++j) {
-      auto curr = triangles[i][j];
-      if (v2t[curr].size() == 0) {
-        offset    = find_in_vec(triangles[i], curr);
-        v2t[curr] = triangle_fan(adjacencies, i, (offset + 2) % 3);
-      }
-    }
-  }
-  return v2t;
-}
-
-// Face adjacent to t and opposite to vertex vid
-int opposite_face(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacencies, int t, int vid) {
-  auto triangle = adjacencies[t];
-  for (auto i = 0; i < 3; ++i) {
-    if (find_in_vec(triangles[triangle[i]], vid) < 0) return triangle[i];
-  }
-  return -1;
-}
-
-// Finds the opposite vertex of an edge
-int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
-  for (auto i = 0; i < 3; ++i) {
-    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
-  }
-  return -1;
-}
-
-int opposite_vertex(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacencies, int face, int k) {
-  int neighbor = adjacencies[face][k];
-  int j        = find_in_vec(adjacencies[neighbor], face);
-  assert(j != -1);
-  auto tt = triangles[neighbor];
-  return tt[(j + 2) % 3];
-}
-
-// Finds common edge between triangles
-vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
-  for (auto i = 0; i < 3; i++)
-    for (auto k = 0; k < 3; k++)
-      if (triangle0[i] == triangle1[k] &&
-          triangle0[(i + 1) % 3] == triangle1[(k + 2) % 3])
-        return {triangle0[i], triangle0[(i + 1) % 3]};
-  return {-1, -1};
-}
-
-bool point_in_triangle(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const int tid, const vec3f& point,
-    vec2f& uv, const float tol) {
-  // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
-  // pag.48
-  auto b  = vec3f{0.0, 0.0, 0.0};
-  auto v0 = positions[triangles[tid].x];
-  auto v1 = positions[triangles[tid].y];
-  auto v2 = positions[triangles[tid].z];
-
-  auto u = v1 - v0, v = v2 - v0, w = point - v0;
-  auto d00 = dot(u, u), d01 = dot(u, v), d11 = dot(v, v), d20 = dot(w, u),
-       d21 = dot(w, v), d = d00 * d11 - d01 * d01;
-
-  if (d == 0) return false;
-
-  b[2] = (d00 * d21 - d01 * d20) / d;
-  assert(!isnan(b[2]));
-  b[1] = (d11 * d20 - d01 * d21) / d;
-  assert(!isnan(b[1]));
-  b[0] = 1.0 - b[1] - b[2];
-  assert(!isnan(b[0]));
-
-  for (int i = 0; i < 3; ++i) {
-    if (b[i] < -tol || b[i] > 1.0 + tol) return false;
-  }
-
-  uv = vec2f{b.x, b.y};
-  return true;
 }
 
 }  // namespace yocto
@@ -275,6 +168,191 @@ static float length_by_flattening(const vector<vec3i>& triangles,
     len += length(coords[0][(h + 1) % 3] - pos2d);
     return len;
   }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// ADJACENCIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Triangle fan starting from a face and going towards the k-th neighbor face.
+vector<int> triangle_fan(
+    const vector<vec3i>& adjacencies, int face, int k, bool clockwise) {
+  auto result = vector<int>{};
+  result.push_back(face);
+  auto prev   = face;
+  auto node   = adjacencies[face][k];
+  auto offset = 2 - int(clockwise);
+  while (true) {
+    if (node == -1) break;
+    if (node == face) break;
+    result.push_back(node);
+    auto kk = find_in_vec(adjacencies[node], prev);
+    assert(kk != -1);
+    kk   = (kk + offset) % 3;
+    prev = node;
+    node = adjacencies[node][kk];
+  }
+  return result;
+}
+
+// returns the list of triangles incident at each vertex in CCW order
+vector<vector<int>> vertex_to_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies) {
+  auto ntriangles = (int)triangles.size();
+  auto v2t        = vector<vector<int>>{positions.size(), vector<int>{}};
+  auto offset     = 0;
+  for (int i = 0; i < ntriangles; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      auto curr = triangles[i][j];
+      if (v2t[curr].size() == 0) {
+        offset    = find_in_vec(triangles[i], curr);
+        v2t[curr] = triangle_fan(adjacencies, i, (offset + 2) % 3);
+      }
+    }
+  }
+  return v2t;
+}
+
+// Face adjacent to t and opposite to vertex vid
+int opposite_face(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int t, int vid) {
+  auto triangle = adjacencies[t];
+  for (auto i = 0; i < 3; ++i) {
+    if (find_in_vec(triangles[triangle[i]], vid) < 0) return triangle[i];
+  }
+  return -1;
+}
+
+// Finds the opposite vertex of an edge
+int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
+  for (auto i = 0; i < 3; ++i) {
+    if (triangle[i] != edge.x && triangle[i] != edge.y) return triangle[i];
+  }
+  return -1;
+}
+
+int opposite_vertex(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int face, int k) {
+  int neighbor = adjacencies[face][k];
+  int j        = find_in_vec(adjacencies[neighbor], face);
+  assert(j != -1);
+  auto tt = triangles[neighbor];
+  return tt[(j + 2) % 3];
+}
+
+// Finds common edge between triangles
+vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
+  for (auto i = 0; i < 3; i++)
+    for (auto k = 0; k < 3; k++)
+      if (triangle0[i] == triangle1[k] &&
+          triangle0[(i + 1) % 3] == triangle1[(k + 2) % 3])
+        return {triangle0[i], triangle0[(i + 1) % 3]};
+  return {-1, -1};
+}
+
+bool point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const int tid, const vec3f& point,
+    vec2f& uv, const float tol) {
+  // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
+  // pag.48
+  auto b  = vec3f{0.0, 0.0, 0.0};
+  auto v0 = positions[triangles[tid].x];
+  auto v1 = positions[triangles[tid].y];
+  auto v2 = positions[triangles[tid].z];
+
+  auto u = v1 - v0, v = v2 - v0, w = point - v0;
+  auto d00 = dot(u, u), d01 = dot(u, v), d11 = dot(v, v), d20 = dot(w, u),
+       d21 = dot(w, v), d = d00 * d11 - d01 * d01;
+
+  if (d == 0) return false;
+
+  b[2] = (d00 * d21 - d01 * d20) / d;
+  assert(!isnan(b[2]));
+  b[1] = (d11 * d20 - d01 * d21) / d;
+  assert(!isnan(b[1]));
+  b[0] = 1.0 - b[1] - b[2];
+  assert(!isnan(b[0]));
+
+  for (int i = 0; i < 3; ++i) {
+    if (b[i] < -tol || b[i] > 1.0 + tol) return false;
+  }
+
+  uv = vec2f{b.x, b.y};
+  return true;
+}
+
+// compute angles in tangent space, if opposite is false we do not consider
+// opposite vertices
+vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, vector<float>& total_angles,
+    bool with_opposite) {
+  auto angles = vector<vector<float>>(positions.size());
+  total_angles.resize(positions.size());
+  for (auto i = 0; i < positions.size(); ++i) {
+    auto& star = v2t[i];
+    if (star.size() == 0) continue;
+    auto teta        = 0.0f;
+    auto curr_angles = vector<float>{};
+    auto tid         = 0;
+    auto tr2d        = Triangle2D{};
+    auto tr3d        = zero3i;
+    for (int j = 0; j < star.size(); ++j) {
+      tid  = star[j];
+      tr3d = triangles[tid];
+      if (with_opposite) {
+        int opp     = opposite_face(triangles, adjacencies, tid, i);
+        int k       = find_in_vec(adjacencies[tid], opp);
+        tr2d        = init_flat_triangle(positions, tr3d);
+        auto tr_opp = unfold_face(
+            triangles, positions, adjacencies, tr2d, tid, k);
+        int  h        = find_in_vec(adjacencies[opp], tid);
+        auto flat_opp = tr_opp[(h + 2) % 3];
+        auto w0       = tr2d[k] - tr2d[(k + 2) % 3];
+        auto w1       = tr2d[(k + 1) % 3] - tr2d[(k + 2) % 3];
+        auto v        = flat_opp - tr2d[(k + 2) % 3];
+
+        auto phi   = angle(w0, w1);
+        auto teta0 = angle(v, w0);
+        auto teta1 = angle(v, w1);
+
+        if (teta0 < phi && teta1 < phi) {
+          // no concave
+          curr_angles.push_back(teta0);
+          curr_angles.push_back(teta1);
+          teta += phi;
+        } else if (teta0 > teta1) {
+          curr_angles.push_back(phi);
+          curr_angles.push_back(phi);
+          teta += phi;
+        } else {
+          curr_angles.push_back(0);
+          curr_angles.push_back(phi);
+          teta += phi;
+        }
+      } else {
+        auto k   = find_in_vec(triangles[tid], i);
+        auto v   = positions[tr3d[(k + 1) % 3]] - positions[tr3d[k]];
+        auto w   = positions[tr3d[(k + 2) % 3]] - positions[tr3d[k]];
+        auto phi = angle(v, w);
+        teta += phi;
+      }
+    }
+
+    auto scale_factor = (float)(2 * M_PI / teta);
+    total_angles[i]   = teta;
+    angles[i].push_back(0);
+    teta = 0;
+    for (int j = 0; j < curr_angles.size() - 1; ++j) {
+      auto curr_angle = curr_angles[j] * scale_factor;
+      teta += curr_angle;
+      angles[i].push_back(teta);
+    }
+  }
+  return angles;
 }
 
 }  // namespace yocto

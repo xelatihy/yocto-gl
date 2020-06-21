@@ -95,6 +95,18 @@ bool point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
     const float tol = 1e-2);
 
+// Compute angles in tangent space of a
+// mesh(triangles,poisitions,adjacencies,v2t). For every vertex v, angles are
+// computed in CCW order starting from the first edge of v2t[v][0]. If
+// with_opposite==true, the construction is consistent with the connectivity of
+// the graph computed with make_geodesic_solver, otherwise only the vertices
+// adjacent to v are considered.
+// TODO: find a better name for this
+vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& vertex_to_faces, vector<float>& total_angles,
+    bool with_opposite);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
