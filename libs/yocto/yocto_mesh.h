@@ -80,6 +80,9 @@ int opposite_face(const vector<vec3i>& triangles,
 // Finds the opposite vertex of an edge
 int opposite_vertex(const vec3i& triangle, const vec2i& edge);
 
+int opposite_vertex(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int face, int k);
+
 // Finds common edge between triangles
 vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1);
 

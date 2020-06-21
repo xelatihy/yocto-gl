@@ -99,6 +99,15 @@ int opposite_vertex(const vec3i& triangle, const vec2i& edge) {
   return -1;
 }
 
+int opposite_vertex(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, int face, int k) {
+  int neighbor = adjacencies[face][k];
+  int j        = find_in_vec(adjacencies[neighbor], face);
+  assert(j != -1);
+  auto tt = triangles[neighbor];
+  return tt[(j + 2) % 3];
+}
+
 // Finds common edge between triangles
 vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
   for (auto i = 0; i < 3; i++)
@@ -331,12 +340,64 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+// "strip" must be such that strip.back()=p.face and strip[0] must share at
+// least one vertex with p.face.
+// Under this hypoteses, this function gives back the distance between the
+// opposite vertex to the edge between strip[0] and strip[1] and p handling
+// concave paths.
+// first_sample_pos is the position in the 2D-reference system defined in
+// "init_flat_tri" where the path intersect the edge between strip[0] and
+// strip[1].
+#if 0
+static float length_by_flattening(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const Point& p, vector<int>& strip, vec2f& first_sample_direction) {
+  auto opp_pid = strip[0];
+  auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
+  auto coords  = vector<Triangle2D>(strip.size());
+  coords[0]    = init_flat_tri(positions, triangles[opp_pid]);
+  for (auto i = 1; i < strip.size(); i++) {
+    auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
+    assert(k != -1);
+    auto tr = unfold_face(
+        triangles, positions, adjacencies, coords[i - 1], strip[i - 1], k);
+    coords[i] = tr;
+  }
+
+  auto last  = coords.back();
+  auto bary  = make_bary(p.uv);
+  auto pos2d = last.x * bary.x + last.y * bary.y + last.z * bary.z;
+  auto v     = pos2d - coords[0][(h + 2) % 3];
+  auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
+  auto w1    = coords[0][(h + 1) % 3] - coords[0][(h + 2) % 3];
+  auto phi   = angle(w0, w1);
+  auto teta0 = angle(v, w0);
+  auto teta1 = angle(v, w1);
+
+  if (teta0 < phi && teta1 < phi) {
+    first_sample_direction = pos2d;
+    return length(v);
+  } else if (teta1 > phi) {
+    first_sample_direction = coords[0][h];
+    float len              = length(w0);
+    len += length(coords[0][h] - pos2d);
+    return len;
+  } else {
+    first_sample_direction = coords[0][(h + 1) % 3];
+    float len              = length(w1);
+    len += length(coords[0][(h + 1) % 3] - pos2d);
+    return len;
+  }
+}
+#endif
+
 // Builds a graph-based geodesic solver with arcs arranged in counterclockwise
 // order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const vector<vector<int>>& v2t) {
   auto solver = geodesic_solver{};
+#if 0
   solver.graph.resize(positions.size());
   for (int i = 0; i < positions.size(); ++i) {
     auto& star = v2t[i];
@@ -349,14 +410,21 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto q      = triangles[tid][(offset + 2) % 3];
       auto e      = positions[p] - vert;
       solver.graph[i].push_back({p, length(e)});
-      auto opp = opposite_face(triangles, adjacencies, tid, i);
-      auto eid = vec2i{p, q};
-      auto a   = opposite_vertex(triangles[opp], eid);
-      auto l   = opposite_nodes_arc_length(positions, i, a, eid);
-      // non robusto se il quadrilatero è concavo
+      auto        opp = opposite_face(triangles, adjacencies, tid, i);
+      vector<int> strip{tid, opp};
+      auto k = find_in_vec(adjacencies[tid], opp);  // TODO: this is not needeed
+      assert(k != -1);
+      auto a       = opposite_vertex(triangles, adjacencies, tid, k);
+      offset       = find_in_vec(triangles[opp], a);
+      auto bary    = zero3f;
+      bary[offset] = 1;
+      auto pos     = zero2f;
+      auto l = length_by_flattening(triangles, positions, adjacencies, opp,
+          vec2f{bary.x, bary.y}, strip, pos);
       solver.graph[i].push_back({a, l});
     }
   }
+#endif
   return solver;
 }
 
@@ -468,8 +536,8 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
 }
 
 // Compute all shortest paths from source vertices to any other vertex.
-// Paths are implicitly represented: each node is assigned its previous node in
-// the path. Graph search early exits when reching end_vertex.
+// Paths are implicitly represented: each node is assigned its previous node
+// in the path. Graph search early exits when reching end_vertex.
 vector<int> compute_geodesic_paths(
     const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
   auto parents   = vector<int>(solver.graph.size(), -1);
@@ -510,8 +578,8 @@ vector<vector<float>> compute_voronoi_fields(
   auto fields = vector<vector<float>>(generators.size());
 
   // Find max distance from a generator to set an early exit condition for the
-  // following distance field computations. This optimization makes computation
-  // time weakly dependant on the number of generators.
+  // following distance field computations. This optimization makes
+  // computation time weakly dependant on the number of generators.
   auto total = compute_geodesic_distances(solver, generators);
   auto max   = *std::max_element(total.begin(), total.end());
   // @Speed: use parallel_for
