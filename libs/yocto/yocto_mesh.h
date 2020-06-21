@@ -87,6 +87,11 @@ vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1);
 vector<int> triangle_fan(
     const vector<vec3i>& adjacencies, int face, int k, bool clockwise = false);
 
+// Check if a point lies on a triangle. If true, return barycentric coords
+bool point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
+    const float tol = 1e-2);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

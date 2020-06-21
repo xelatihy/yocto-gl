@@ -109,6 +109,37 @@ vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
   return {-1, -1};
 }
 
+bool point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const int tid, const vec3f& point,
+    vec2f& uv, const float tol) {
+  // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
+  // pag.48
+  auto b  = vec3f{0.0, 0.0, 0.0};
+  auto v0 = positions[triangles[tid].x];
+  auto v1 = positions[triangles[tid].y];
+  auto v2 = positions[triangles[tid].z];
+
+  auto u = v1 - v0, v = v2 - v0, w = point - v0;
+  auto d00 = dot(u, u), d01 = dot(u, v), d11 = dot(v, v), d20 = dot(w, u),
+       d21 = dot(w, v), d = d00 * d11 - d01 * d01;
+
+  if (d == 0) return false;
+
+  b[2] = (d00 * d21 - d01 * d20) / d;
+  assert(!isnan(b[2]));
+  b[1] = (d11 * d20 - d01 * d21) / d;
+  assert(!isnan(b[1]));
+  b[0] = 1.0 - b[1] - b[2];
+  assert(!isnan(b[0]));
+
+  for (int i = 0; i < 3; ++i) {
+    if (b[i] < -tol || b[i] > 1.0 + tol) return false;
+  }
+
+  uv = vec2f{b.x, b.y};
+  return true;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
