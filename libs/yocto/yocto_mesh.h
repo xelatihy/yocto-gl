@@ -224,6 +224,10 @@ vector<int> fast_get_strip(const geodesic_solver& solver,
     const vector<vector<float>>& angles, const vector<float>& total_angles,
     mesh_point& source, mesh_point& target);
 
+float length_by_flattening(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

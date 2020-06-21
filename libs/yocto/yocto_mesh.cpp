@@ -126,7 +126,7 @@ inline Triangle2D unfold_face(const vector<vec3i>& triangles,
 // first_sample_pos is the position in the 2D-reference system defined in
 // "init_flat_triangle" where the path intersect the edge between strip[0] and
 // strip[1].
-static float length_by_flattening(const vector<vec3i>& triangles,
+float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction) {
   auto make_bary = [](const vec2f& bary) -> vec3f {
@@ -1872,6 +1872,97 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
   path.pop_back();  // we remove source from the list
   return path;
 }
+
+static vector<pair<int, float>> check_nodes(vector<pair<int, float>>& nodes) {
+  sort(nodes.begin(), nodes.end());
+  auto new_nodes = vector<pair<int, float>>{};
+  for (int i = 1; i < nodes.size(); ++i) {
+    auto prev = nodes[i - 1];
+    auto curr = nodes[i];
+    if (prev.first == curr.first) {
+      float d0 = prev.second;
+      float d1 = curr.second;
+      if (d0 <= d1)
+        new_nodes.push_back(prev);
+      else
+        new_nodes.push_back(curr);
+
+      ++i;
+    } else
+      new_nodes.push_back(prev);
+  }
+  nodes = new_nodes;
+  return nodes;
+}
+
+static vector<float> solve(const geodesic_solver& solver,
+    const vector<pair<int, float>>&               sources_and_dist) {
+  auto update = [](int node, int neighbor, float new_distance) {};
+  auto stop   = [](int node) { return false; };
+  auto exit   = [](int node) { return false; };
+
+  vector<float> distances;
+  distances.assign(solver.graph.size(), flt_max);
+  vector<int> sources_id(sources_and_dist.size());
+  for (int i = 0; i < sources_and_dist.size(); ++i) {
+    sources_id[i]                        = sources_and_dist[i].first;
+    distances[sources_and_dist[i].first] = sources_and_dist[i].second;
+  }
+  visit_geodesic_graph(distances, solver, sources_id, update, stop, exit);
+
+  return distances;
+}
+
+#if 0
+static vector<float> solve_with_parents(const geodesic_solver& solver,
+    const vector<pair<int, float>>&                     sources_and_dist,
+    const vector<pair<int, float>>& targets, vector<int>& parents,
+    bool with_parents = false) {
+  parents.assign(solver.graph.size(), -1);
+  auto update = [&parents](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+  };
+  auto stop = [](int node) { return false; };
+
+  vector<int> exit_verts(targets.size());
+  for (int i = 0; i < targets.size(); ++i) {
+    exit_verts[i] = targets[i].first;
+  }
+  auto exit = [&exit_verts](int node) {
+    auto it = find(exit_verts.begin(), exit_verts.end(), node);
+    if (it != exit_verts.end()) {
+      exit_verts.erase(it);
+    }
+    return exit_verts.empty();
+  };
+  vector<float> distances;
+  distances.assign(solver.graph.size(), flt_max);
+  vector<int> sources_id(sources_and_dist.size());
+  for (int i = 0; i < sources_and_dist.size(); ++i) {
+    sources_id[i]                        = sources_and_dist[i].first;
+    distances[sources_and_dist[i].first] = sources_and_dist[i].second;
+  }
+
+  visit_geodesic_graph(distances, solver, sources_id, update, stop, exit);
+
+  return distances;
+}
+#endif
+
+vector<float> compute_geodesic_distances(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const geodesic_solver& solver, const vector<mesh_point>& sources) {
+  auto source_nodes = vector<pair<int, float>>{};
+  for (int i = 0; i < sources.size(); ++i) {
+    auto curr_nodes = nodes_around_point(
+        triangles, positions, adjacencies, sources[i]);
+    source_nodes.insert(
+        source_nodes.end(), curr_nodes.begin(), curr_nodes.end());
+  }
+  if (source_nodes.size() > 1) check_nodes(source_nodes);
+  return solve(solver, source_nodes);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
