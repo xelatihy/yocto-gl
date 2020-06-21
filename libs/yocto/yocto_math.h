@@ -254,9 +254,11 @@ inline float dot(const vec2f& a, const vec2f& b);
 inline float cross(const vec2f& a, const vec2f& b);
 
 inline float length(const vec2f& a);
+inline float length_squared(const vec2f& a);
 inline vec2f normalize(const vec2f& a);
 inline float distance(const vec2f& a, const vec2f& b);
 inline float distance_squared(const vec2f& a, const vec2f& b);
+inline float angle(const vec2f& a, const vec2f& b);
 
 // Max element and clamp.
 inline vec2f max(const vec2f& a, float b);
@@ -329,10 +331,10 @@ inline float dot(const vec3f& a, const vec3f& b);
 inline vec3f cross(const vec3f& a, const vec3f& b);
 
 inline float length(const vec3f& a);
+inline float length_squared(const vec3f& a);
 inline vec3f normalize(const vec3f& a);
 inline float distance(const vec3f& a, const vec3f& b);
 inline float distance_squared(const vec3f& a, const vec3f& b);
-
 inline float angle(const vec3f& a, const vec3f& b);
 
 // Orthogonal vectors.
@@ -412,9 +414,11 @@ inline vec4f& operator/=(vec4f& a, float b);
 // Vector products and lengths.
 inline float dot(const vec4f& a, const vec4f& b);
 inline float length(const vec4f& a);
+inline float length_squared(const vec4f& a);
 inline vec4f normalize(const vec4f& a);
 inline float distance(const vec4f& a, const vec4f& b);
 inline float distance_squared(const vec4f& a, const vec4f& b);
+inline float angle(const vec4f& a, const vec4f& b);
 
 inline vec4f slerp(const vec4f& a, const vec4f& b, float u);
 
@@ -1331,6 +1335,7 @@ inline float cross(const vec2f& a, const vec2f& b) {
 }
 
 inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec2f& a) { return dot(a, a); }
 inline vec2f normalize(const vec2f& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
@@ -1338,6 +1343,9 @@ inline vec2f normalize(const vec2f& a) {
 inline float distance(const vec2f& a, const vec2f& b) { return length(a - b); }
 inline float distance_squared(const vec2f& a, const vec2f& b) {
   return dot(a - b, a - b);
+}
+inline float angle(const vec2f& a, const vec2f& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
 }
 
 // Max element and clamp.
@@ -1459,6 +1467,7 @@ inline vec3f cross(const vec3f& a, const vec3f& b) {
 }
 
 inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec3f& a) { return dot(a, a); }
 inline vec3f normalize(const vec3f& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
@@ -1467,7 +1476,6 @@ inline float distance(const vec3f& a, const vec3f& b) { return length(a - b); }
 inline float distance_squared(const vec3f& a, const vec3f& b) {
   return dot(a - b, a - b);
 }
-
 inline float angle(const vec3f& a, const vec3f& b) {
   return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
 }
@@ -1613,6 +1621,7 @@ inline float dot(const vec4f& a, const vec4f& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
+inline float length_squared(const vec4f& a) { return dot(a, a); }
 inline vec4f normalize(const vec4f& a) {
   auto l = length(a);
   return (l != 0) ? a / l : a;
@@ -1620,6 +1629,9 @@ inline vec4f normalize(const vec4f& a) {
 inline float distance(const vec4f& a, const vec4f& b) { return length(a - b); }
 inline float distance_squared(const vec4f& a, const vec4f& b) {
   return dot(a - b, a - b);
+}
+inline float angle(const vec4f& a, const vec4f& b) {
+  return acos(clamp(dot(normalize(a), normalize(b)), (float)-1, (float)1));
 }
 
 inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
