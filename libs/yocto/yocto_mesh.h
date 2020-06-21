@@ -79,12 +79,14 @@ int opposite_face(const vector<vec3i>& triangles,
 
 // Finds the opposite vertex of an edge
 int opposite_vertex(const vec3i& triangle, const vec2i& edge);
-
 int opposite_vertex(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, int face, int k);
+int common_vertex(const vector<vec3i>& triangles, int pid0, int pid1);
 
 // Finds common edge between triangles
 vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1);
+vec2i opposite_edge(const vec3i& t, int vid);
+vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1);
 
 // Triangle fan starting from a face and going towards the k-th neighbor face.
 vector<int> triangle_fan(
@@ -93,7 +95,7 @@ vector<int> triangle_fan(
 // Check if a point lies on a triangle. If true, return barycentric coords
 bool point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
-    const float tol = 1e-2);
+    const float tolerance = 1e-2);
 
 // Compute angles in tangent space of a
 // mesh(triangles,poisitions,adjacencies,v2t). For every vertex v, angles are
@@ -191,6 +193,36 @@ vector<vec3f> make_positions_from_path(
 
 vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
     const vector<float>& field);
+
+struct mesh_point {
+  int   face = -1;
+  vec2f uv   = {0, 0};
+};
+
+// compute geodesic distance from  a source Point to all the vertices of the
+// mesh(triangles,positions,adjacencies)
+vector<float> compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& sources);
+
+// given a mesh(triangles,positions,adjacencies), computes the list of parents
+// from Point target to Point source (discrete shortest path in the graph)
+vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& source,
+    const mesh_point& target);
+
+vector<int> get_strip(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<float>& total_angles,
+    mesh_point& source, mesh_point& target);
+
+vector<int> fast_get_strip(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<float>& total_angles,
+    mesh_point& source, mesh_point& target);
 
 }  // namespace yocto
 

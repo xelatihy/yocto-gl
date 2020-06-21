@@ -25,6 +25,7 @@ namespace yocto {
 // using directives
 using std::atomic;
 using std::deque;
+using std::pair;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -123,13 +124,13 @@ inline Triangle2D unfold_face(const vector<vec3i>& triangles,
 // opposite vertex to the edge between strip[0] and strip[1] and p handling
 // concave paths.
 // first_sample_pos is the position in the 2D-reference system defined in
-// "init_flat_tri" where the path intersect the edge between strip[0] and
+// "init_flat_triangle" where the path intersect the edge between strip[0] and
 // strip[1].
 static float length_by_flattening(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies, int tid,
-    const vec2f& uv, vector<int>& strip, vec2f& first_sample_direction) {
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction) {
   auto make_bary = [](const vec2f& bary) -> vec3f {
-    return vec3f(bary.x, bary.y, 1 - bary.x - bary.y);
+    return vec3f{bary.x, bary.y, 1 - bary.x - bary.y};
   };
 
   auto opp_pid = strip[0];
@@ -145,7 +146,7 @@ static float length_by_flattening(const vector<vec3i>& triangles,
   }
 
   auto last  = coords.back();
-  auto bary  = make_bary(uv);
+  auto bary  = make_bary(p.uv);
   auto pos2d = last.x * bary.x + last.y * bary.y + last.z * bary.z;
   auto v     = pos2d - coords[0][(h + 2) % 3];
   auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
@@ -251,6 +252,43 @@ vec2i common_edge(const vec3i& triangle0, const vec3i& triangle1) {
           triangle0[(i + 1) % 3] == triangle1[(k + 2) % 3])
         return {triangle0[i], triangle0[(i + 1) % 3]};
   return {-1, -1};
+}
+
+vec2i opposite_edge(const vec3i& t, const int vid) {
+  int offset = find_in_vec(t, vid);
+  int v0     = t[(offset + 1) % 3];
+  int v1     = t[(offset + 2) % 3];
+  return vec2i(v0, v1);
+}
+
+vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1) {
+  auto& poly0 = triangles[pid0];
+  auto& poly1 = triangles[pid1];
+  for (auto i = 0; i < 3; ++i) {
+    auto& vid    = poly0[i];
+    auto  offset = find_in_vec(poly1, vid);
+    if (offset < 0) {
+      offset = find_in_vec(poly0, vid);
+      int e0 = poly0[(offset + 1) % 3];
+      int e1 = poly0[(offset + 2) % 3];
+      if (find_in_vec(poly1, e0) != -1 && find_in_vec(poly1, e1) != -1)
+        return {e0, e1};
+      else
+        return {-1, -1};
+    }
+  }
+  return {-1, -1};
+}
+
+int common_vertex(const vector<vec3i>& triangles, int pid0, int pid1) {
+  auto& poly0 = triangles[pid0];
+  auto& poly1 = triangles[pid1];
+  for (auto i = 0; i < 3; ++i) {
+    auto& vid    = poly0[i];
+    auto  offset = find_in_vec(poly1, vid);
+    if (offset != -1) return vid;
+  }
+  return -1;
 }
 
 bool point_in_triangle(const vector<vec3i>& triangles,
@@ -573,8 +611,8 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto bary    = zero3f;
       bary[offset] = 1;
       auto pos     = zero2f;
-      auto l = length_by_flattening(triangles, positions, adjacencies, opp,
-          vec2f{bary.x, bary.y}, strip, pos);
+      auto l       = length_by_flattening(triangles, positions, adjacencies,
+          {opp, {bary.x, bary.y}}, strip, pos);
       solver.graph[i].push_back({a, l});
     }
   }
@@ -1142,6 +1180,698 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   return result;
 }
 
+// Utilities
+inline vec3f make_bary(const vec2f& bary) {
+  return vec3f(bary.x, bary.y, 1 - bary.x - bary.y);
+}
+
+inline bool is_vert(const mesh_point& p, int& offset, float tol = 1e-2) {
+  auto bary = make_bary(p.uv);
+  if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) {
+    offset = 0;
+    return true;
+  }
+  if (bary[1] > tol && bary[0] <= tol && bary[2] <= tol) {
+    offset = 1;
+    return true;
+  }
+  if (bary[2] > tol && bary[0] <= tol && bary[1] <= tol) {
+    offset = 2;
+    return true;
+  }
+  return false;
+}
+
+inline bool is_edge(const mesh_point& p, int& offset, float tol = 1e-2) {
+  auto bary = make_bary(p.uv);
+  if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) {
+    offset = 0;
+    return true;
+  }
+  if (bary[1] > tol && bary[2] > tol && bary[0] <= tol) {
+    offset = 1;
+    return true;
+  }
+  if (bary[2] > tol && bary[0] > tol && bary[1] <= tol) {
+    offset = 2;
+    return true;
+  }
+  return false;
+}
+
+template <typename T>
+inline T interpolate(const vec2f& uv, const T& a, const T& b, const T& c) {
+  return a * uv.x + b * uv.y + c * (1 - uv.x - uv.y);
+}
+
+inline vec3f eval_position(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& sample) {
+  auto [x, y, z] = triangles[sample.face];
+  return interpolate(sample.uv, positions[x], positions[y], positions[z]);
+}
+
+inline vec3f eval_normal(const vector<vec3i>& triangles,
+    const vector<vec3f>& normals, const mesh_point& point) {
+  auto [x, y, z] = triangles[point.face];
+  return normalize(interpolate(point.uv, normals[x], normals[y], normals[z]));
+}
+
+inline bool node_is_neighboor(
+    const geodesic_solver& solver, int vid, int node, int& entry) {
+  entry    = -1;
+  auto nbr = solver.graph[vid];
+  for (int i = 0; i < nbr.size(); ++i) {
+    if (nbr[i].node == node) {
+      entry = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+// particular case of "get strip" when one of the two point is the parent of the
+// other so the size of the strip is one or two
+static vector<int> short_strip(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, mesh_point& source, mesh_point& target) {
+  auto offset = 0;
+  if (is_vert(target, offset)) {
+    int  vid  = triangles[target.face][offset];
+    auto star = v2t[vid];
+    auto p    = eval_position(triangles, positions, source);
+    auto bary = zero2f;
+    for (auto i = 0; i < star.size(); ++i) {
+      int tid = star[i];
+      int opp = opposite_face(triangles, adjacencies, tid, vid);
+      if (point_in_triangle(triangles, positions, tid, p, bary)) {
+        source       = {tid, bary};
+        offset       = find_in_vec(triangles[tid], vid);
+        bary         = zero2f;
+        bary[offset] = 1;
+        target       = {tid, bary};
+        return {tid};
+      }
+      if (point_in_triangle(triangles, positions, opp, p, bary)) {
+        source       = {opp, bary};
+        offset       = find_in_vec(triangles[tid], vid);
+        bary         = zero2f;
+        bary[offset] = 1;
+        target       = {tid, bary};
+        return {tid, opp};
+      }
+      if (tid == star.back()) assert(false);
+    }
+    return {};  // TODO: is this right?
+  } else if (is_vert(source, offset)) {
+    int   vid  = triangles[source.face][offset];
+    auto  star = v2t[vid];
+    auto  p    = eval_position(triangles, positions, target);
+    vec2f bary;
+    for (int i = 0; i < star.size(); ++i) {
+      int tid = star[i];
+      int opp = opposite_face(triangles, adjacencies, tid, vid);
+      if (point_in_triangle(triangles, positions, tid, p, bary)) {
+        target       = {tid, bary};
+        offset       = find_in_vec(triangles[tid], vid);
+        bary         = zero2f;
+        bary[offset] = 1;
+        source       = {tid, bary};
+        return {tid};
+      }
+      if (point_in_triangle(triangles, positions, opp, p, bary)) {
+        target       = {opp, bary};
+        offset       = find_in_vec(triangles[tid], vid);
+        bary         = zero2f;
+        bary[offset] = 1;
+        source       = {tid, bary};
+        return {opp, tid};
+      }
+      if (tid == star.back()) assert(false);
+    }
+    return {};  // TODO: is this right?
+  } else {
+    assert(false);
+    return {};
+  }
+}
+
+static float get_angle(const geodesic_solver& solver,
+    const vector<vector<float>>& angles, int vid0, int vid1, int& entry) {
+  assert(node_is_neighboor(solver, vid0, vid1, entry));
+  return angles[vid0][entry];
+}
+
+// compute the polar angle of p in the reference system of vid
+// if p does not belong to v2t[vid], the additional faces are stored in
+// strip_to_p
+static float get_angle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, const geodesic_solver& solver,
+    const vector<vector<float>>& angles, const int vid, mesh_point& p,
+    vector<int>& strip_to_p, int& entry) {
+  strip_to_p.clear();
+  auto k0     = find_in_vec(triangles[p.face], vid);
+  auto k1     = -1;
+  auto offset = -1, adj = -1;
+  auto teta = 0.0f;
+  if (is_vert(p, offset)) {
+    assert(node_is_neighboor(solver, vid, triangles[p.face][offset], entry));
+    if (entry % 2) {
+      int tid_entry = (entry - 1) / 2;
+      int tid = opposite_face(triangles, adjacencies, v2t[vid][tid_entry], vid);
+      strip_to_p.push_back(tid);
+    }
+    return angles[vid][entry];
+  }
+  if (is_edge(p, offset)) {
+    adj = adjacencies[p.face][offset];
+    k1  = find_in_vec(triangles[adj], vid);
+  }
+
+  if (k0 != -1 || k1 != -1) {
+    auto pos  = eval_position(triangles, positions, p);
+    auto v    = normalize(pos - positions[vid]);
+    auto vid0 = (k0 != -1) ? triangles[p.face][(k0 + 1) % 3]
+                           : triangles[adj][(k1 + 1) % 3];
+    auto vid1 = (k0 != -1) ? triangles[p.face][(k0 + 2) % 3]
+                           : triangles[adj][(k1 + 2) % 3];
+
+    node_is_neighboor(solver, vid, vid0, entry);
+
+    auto s = angles.size();
+
+    auto v0    = positions[vid0] - positions[vid];
+    auto v1    = positions[vid1] - positions[vid];
+    auto teta0 = angles[vid][entry];
+    auto phi3D = angle(v0, v1);
+
+    auto phi2D = (entry + 2 == s) ? 2 * M_PI - teta0
+                                  : angles[vid][entry + 2] - teta0;
+    auto scale_factor = phi3D / phi2D;
+    teta              = angle(v0, v);
+    ++entry;
+    return teta0 + teta * scale_factor;
+  }
+
+  auto& star = v2t[vid];
+  for (int i = 0; i < star.size(); ++i) {
+    auto tid = star[i];
+    auto eid = common_edge(triangles[tid], triangles[p.face]);
+    if (eid.x != -1) {
+      strip_to_p.push_back(p.face);
+      auto k         = find_in_vec(adjacencies[tid], p.face);
+      auto tr2d      = init_flat_triangle(positions, triangles[tid]);
+      auto flat_face = unfold_face(
+          triangles, positions, adjacencies, tr2d, tid, k);
+      auto bary = make_bary(p.uv);
+      auto flat = bary.x * flat_face.x +
+                  bary.y * flat_face.y * flat_face.z * bary.z;
+
+      auto v     = flat - tr2d[(k + 2) % 3];
+      auto w     = tr2d[k] - tr2d[(k + 2) % 3];
+      auto u     = tr2d[(k + 1) % 3] - tr2d[(k + 2) % 3];
+      teta       = angle(v, w);
+      auto phi3D = angle(w, u);
+      auto vid0  = triangles[tid][k];
+      auto s     = angles[vid].size();
+      node_is_neighboor(solver, vid, vid0, entry);
+      auto teta0 = angles[vid][entry];
+      auto phi2D = (entry + 2 == s) ? 2 * (float)M_PI - teta0
+                                    : angles[vid][entry + 2] - teta0;
+      auto scale_factor = phi3D / phi2D;
+      ++entry;
+
+      return teta0 + teta * scale_factor;
+    }
+  }
+  assert(false);
+  return {};  // TODO: is this right?
+}
+
+inline bool set_ord(float teta_next, float teta_prev) {
+  if (teta_next > teta_prev) {
+    if (teta_next - teta_prev < M_PI)
+      return true;
+    else
+      return false;
+  } else {
+    if (teta_prev - teta_next > M_PI)
+      return true;
+    else
+      return false;
+  }
+}
+
+void add_tri_to_strip(const vector<vector<int>>& v2t, int vid, int prev_entry,
+    int next_entry, vector<int>& strip, bool CCW) {
+  auto star = v2t[vid];
+  int  s    = star.size();
+  if (CCW) {
+    int entry = (prev_entry % 2) ? (prev_entry - 1) / 2 : prev_entry / 2;
+    int last  = (next_entry % 2) ? (next_entry - 1) / 2
+                                : (s - 1 + next_entry / 2) % s;
+
+    if (strip.size() > 0 && strip.back() == star[entry])
+      entry = (entry + 1) % s;
+
+    if (entry > last) last += s;
+
+    for (int i = entry; i <= last; ++i) {
+      strip.push_back(star[i % s]);
+    }
+
+  } else {
+    int entry = (prev_entry % 2) ? (prev_entry - 1) / 2
+                                 : (s - 1 + prev_entry / 2) % s;
+    int last = (next_entry % 2) ? (next_entry - 1) / 2 : next_entry / 2;
+
+    if (strip.size() > 0 && strip.back() == star[entry])
+      entry = (s - 1 + entry) % s;
+
+    if (entry < last) entry += s;
+
+    for (int i = entry; i >= last; --i) {
+      strip.push_back(star[i % s]);
+    }
+  }
+}
+
+void check_source_and_target(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    vector<int>& strip, mesh_point& source, mesh_point& target) {
+  auto offset = 0, last = strip.back(), first = strip[0];
+  auto bary = zero2f;
+  if (last != source.face) {
+    if (is_vert(source, offset)) {
+      int vid = triangles[source.face][offset];
+      offset  = find_in_vec(triangles[last], vid);
+      assert(offset != -1);
+      bary[offset] = 1;
+      source       = {last, bary};
+    } else if (is_edge(source, offset)) {
+      auto pos = eval_position(triangles, positions, source);
+      assert(adjacencies[source.face][offset] == last);
+      point_in_triangle(triangles, positions, last, pos, bary);
+      source = {last, bary};
+    }
+  }
+  bary = zero2f;
+  if (first != target.face) {
+    if (is_vert(target, offset)) {
+      auto vid = triangles[target.face][offset];
+      offset   = find_in_vec(triangles[first], vid);
+      assert(offset != -1);
+      bary[offset] = 1;
+      target       = {first, bary};
+    } else if (is_edge(target, offset)) {
+      auto pos = eval_position(triangles, positions, target);
+      assert(adjacencies[target.face][offset] == first);
+      point_in_triangle(triangles, positions, first, pos, bary);
+      target = {first, bary};
+    }
+  }
+}
+
+vector<int> get_strip(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<float>& total_angles,
+    mesh_point& source, mesh_point& target) {
+  if (target.face == source.face) return {target.face};
+  vector<int> strip   = {};
+  auto        parents = point_to_point_geodesic_path(
+      solver, triangles, positions, adjacencies, source, target);
+  int          N = parents.size();
+  float        teta_prev, teta_next;
+  int          prev_entry, next_entry;
+  vector<int>  strip_to_point;
+  vector<bool> orders(parents.size());
+  if (N == 0)
+    return short_strip(triangles, positions, adjacencies, v2t, source, target);
+
+  if (N == 1) {
+    int v     = parents[0];
+    teta_prev = get_angle(triangles, positions, adjacencies, v2t, solver,
+        angles, v, target, strip, prev_entry);
+    teta_next = get_angle(triangles, positions, adjacencies, v2t, solver,
+        angles, v, source, strip_to_point, next_entry);
+    reverse(strip_to_point.begin(), strip_to_point.end());
+    bool CCW = set_ord(teta_next, teta_prev);
+    add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, CCW);
+    strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
+    check_source_and_target(
+        triangles, positions, adjacencies, strip, source, target);
+    return strip;
+  }
+
+  for (int i = 0; i < N; ++i) {
+    int v = parents[i];
+    if (i == 0) {
+      teta_prev = get_angle(triangles, positions, adjacencies, v2t, solver,
+          angles, v, target, strip, prev_entry);
+
+      teta_next = get_angle(solver, angles, v, parents[i + 1], next_entry);
+    } else if (i == N - 1) {
+      teta_next = get_angle(triangles, positions, adjacencies, v2t, solver,
+          angles, v, source, strip_to_point, next_entry);
+      reverse(strip_to_point.begin(), strip_to_point.end());
+
+      teta_prev = get_angle(solver, angles, v, parents[i - 1], prev_entry);
+    } else {
+      teta_prev = get_angle(solver, angles, v, parents[i - 1], prev_entry);
+      teta_next = get_angle(solver, angles, v, parents[i + 1], next_entry);
+    }
+    float diff    = yocto::abs(teta_next - teta_prev);
+    bool  pi_node = (std::abs(M_PI - diff) < 0.1);
+    bool  CCW     = set_ord(teta_next, teta_prev);
+    if (i > 0 && pi_node) {
+      add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, orders[i - 1]);
+      CCW = orders[i - 1];  // keep updated for clean strip;
+
+    } else {
+      add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, CCW);
+      orders[i] = CCW;
+    }
+  }
+  strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
+
+  check_source_and_target(
+      triangles, positions, adjacencies, strip, source, target);
+
+  return strip;
+}
+
+inline int get_entry(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const int vid, mesh_point& p, vector<int>& strip_to_p) {
+  strip_to_p.clear();
+  auto k0     = find_in_vec(triangles[p.face], vid);
+  auto k1     = -1;
+  auto offset = 0, adj = -1;
+  auto entry = 0;
+  if (is_vert(p, offset)) {
+    assert(node_is_neighboor(solver, vid, triangles[p.face][offset], entry));
+    if (entry % 2) {
+      auto tid_entry = (entry - 1) / 2;
+      auto tid       = opposite_face(
+          triangles, adjacencies, v2t[vid][tid_entry], vid);
+      strip_to_p.push_back(tid);
+    }
+    return entry;
+  }
+  if (is_edge(p, offset)) {
+    adj = adjacencies[p.face][offset];
+    k1  = find_in_vec(triangles[adj], vid);
+  }
+
+  if (k0 != -1 || k1 != -1) {
+    auto vid0 = (k0 != -1) ? triangles[p.face][(k0 + 1) % 3]
+                           : triangles[adj][(k1 + 1) % 3];
+    node_is_neighboor(solver, vid, vid0, entry);
+    return entry + 1;
+  }
+
+  auto& star = v2t[vid];
+  for (auto i = 0; i < star.size(); ++i) {
+    auto tid = star[i];
+    auto eid = common_edge(triangles[tid], triangles[p.face]);
+    if (eid.x != -1) {
+      strip_to_p.push_back(p.face);
+      auto k    = find_in_vec(adjacencies[tid], p.face);
+      auto vid0 = triangles[tid][k];
+      node_is_neighboor(solver, vid, vid0, entry);
+      return entry + 1;
+    }
+  }
+
+  assert(false);
+  return {};  // TODO: is this right?
+}
+
+void add_tri_to_strip(const vector<vector<int>>& v2t, const int vid,
+    int prev_entry, int next_entry, vector<int>& strip) {
+  auto star = v2t[vid];
+  int  s    = star.size();
+
+  int CCW_count, CW_count;
+  if (prev_entry < next_entry) {
+    CCW_count = next_entry - prev_entry;
+    CW_count  = prev_entry + 2 * s - next_entry;
+  } else {
+    CCW_count = 2 * s - prev_entry + next_entry;
+    CW_count  = prev_entry - next_entry;
+  }
+  if (CCW_count < CW_count) {
+    int entry = (prev_entry % 2) ? (prev_entry - 1) / 2 : prev_entry / 2;
+    int last  = (next_entry % 2) ? (next_entry - 1) / 2
+                                : (s - 1 + next_entry / 2) % s;
+    if (strip.size() > 0 && strip.back() == star[entry])
+      entry = (entry + 1) % s;
+
+    if (entry > last) last += s;
+
+    for (int i = entry; i <= last; ++i) {
+      strip.push_back(star[i % s]);
+    }
+
+  } else {
+    int entry = (prev_entry % 2) ? (prev_entry - 1) / 2
+                                 : (s - 1 + prev_entry / 2) % s;
+    int last = (next_entry % 2) ? (next_entry - 1) / 2 : next_entry / 2;
+
+    if (strip.size() > 0 && strip.back() == star[entry])
+      entry = (s - 1 + entry) % s;
+
+    if (entry < last) entry += s;
+
+    for (int i = entry; i >= last; --i) {
+      strip.push_back(star[i % s]);
+    }
+  }
+}
+
+vector<int> fast_get_strip(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
+    const vector<vector<float>>& angles, const vector<float>& total_angles,
+    mesh_point& source, mesh_point& target) {
+  if (target.face == source.face) return {target.face};
+  vector<int> strip = {};
+
+  auto parents = point_to_point_geodesic_path(
+      solver, triangles, positions, adjacencies, source, target);
+
+  int          N = parents.size();
+  int          prev_entry, next_entry;
+  vector<int>  strip_to_point;
+  vector<bool> orders(parents.size());
+  if (N == 0)
+    return short_strip(triangles, positions, adjacencies, v2t, source, target);
+
+  if (N == 1) {
+    int v      = parents[0];
+    prev_entry = get_entry(
+        solver, triangles, positions, adjacencies, v2t, v, target, strip);
+    next_entry = get_entry(solver, triangles, positions, adjacencies, v2t, v,
+        source, strip_to_point);
+    reverse(strip_to_point.begin(), strip_to_point.end());
+    add_tri_to_strip(v2t, v, prev_entry, next_entry, strip);
+    strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
+    check_source_and_target(
+        triangles, positions, adjacencies, strip, source, target);
+    return strip;
+  }
+
+  for (int i = 0; i < N; ++i) {
+    int v = parents[i];
+    if (i == 0) {
+      prev_entry = get_entry(
+          solver, triangles, positions, adjacencies, v2t, v, target, strip);
+      node_is_neighboor(solver, v, parents[i + 1], next_entry);
+    } else if (i == N - 1) {
+      next_entry = get_entry(solver, triangles, positions, adjacencies, v2t, v,
+          source, strip_to_point);
+      reverse(strip_to_point.begin(), strip_to_point.end());
+      node_is_neighboor(solver, v, parents[i - 1], prev_entry);
+    } else {
+      node_is_neighboor(solver, v, parents[i - 1], prev_entry);
+      node_is_neighboor(solver, v, parents[i + 1], next_entry);
+    }
+    add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, true);
+  }
+  strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
+  check_source_and_target(
+      triangles, positions, adjacencies, strip, source, target);
+
+  return strip;
+}
+
+// compute the distance between a point p and some vertices around him handling
+// concave path
+static vector<pair<int, float>> nodes_around_point(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& p) {
+  auto offset = 0;
+  auto nodes  = vector<pair<int, float>>{};
+  if (is_vert(p, offset)) {
+    auto vid = triangles[p.face][offset];
+    nodes.push_back({vid, 0});
+  } else {
+    auto pid = p.face;
+    auto pos = eval_position(triangles, positions, p);
+    for (int i = 0; i < 3; ++i) {
+      auto p0 = triangles[pid][i];
+      // auto p1 = triangles[pid][(i + 1) % 3];
+      auto d = length(positions[p0] - pos);
+      nodes.push_back({p0, d});
+
+      auto CW_pid = adjacencies[pid][i];
+      auto opp    = opposite_vertex(triangles, adjacencies, pid, i);
+      auto strip  = vector<int>{CW_pid, pid};
+      auto pos2d  = zero2f;
+      auto l      = length_by_flattening(
+          triangles, positions, adjacencies, p, strip, pos2d);
+
+      nodes.push_back({opp, l});
+    }
+  }
+
+  return nodes;
+}
+
+vector<float> solve_with_parents(const geodesic_solver& solver,
+    const vector<pair<int, float>>&                     sources_and_dist,
+    const vector<pair<int, float>>& targets, vector<int>& parents,
+    bool with_parents = false) {
+  parents.assign(solver.graph.size(), -1);
+  auto update = [&parents](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+  };
+  auto stop = [](int node) { return false; };
+
+  auto exit_verts = vector<int>(targets.size());
+  for (int i = 0; i < targets.size(); ++i) {
+    exit_verts[i] = targets[i].first;
+  }
+  auto exit = [&exit_verts](int node) {
+    auto it = find(exit_verts.begin(), exit_verts.end(), node);
+    if (it != exit_verts.end()) {
+      exit_verts.erase(it);
+    }
+    return exit_verts.empty();
+  };
+
+  auto distances  = vector<float>(solver.graph.size(), flt_max);
+  auto sources_id = vector<int>(sources_and_dist.size());
+  for (int i = 0; i < sources_and_dist.size(); ++i) {
+    sources_id[i]                        = sources_and_dist[i].first;
+    distances[sources_and_dist[i].first] = sources_and_dist[i].second;
+  }
+
+  visit_geodesic_graph(distances, solver, sources_id, update, stop, exit);
+  return distances;
+}
+
+// given a set of vertices and distances (nbr) computed with
+// "nodes_around_point" and a scalar field (f), returns the parent of the point
+// having nbr as neighborhood
+int set_target_parent(const vector<pair<int, float>>& nbr,
+    const vector<int>& parents, const vector<float>& f) {
+  auto vid    = -1;
+  auto lambda = flt_max;
+  if (nbr.size() == 1)
+    vid = parents[nbr[0].first];
+  else {
+    for (auto i = 0; i < nbr.size(); ++i) {
+      auto val = f[nbr[i].first] + nbr[i].second;
+      if (val < lambda) {
+        lambda = val;
+        vid    = nbr[i].first;
+      }
+    }
+  }
+  return vid;
+}
+
+// given a vector of parents(parents) and a starting vertex (target_parent),
+// return the vertex v such that parents[v]=-1; all the vertices visited during
+// the navigation are stored in "path"
+int set_source_child(
+    const vector<int>& parents, const int target_parent, vector<int>& path) {
+  auto stop          = false;
+  auto prev          = target_parent;
+  auto source_parent = parents[prev];
+  path               = {target_parent};
+  if (source_parent == -1) return target_parent;
+  while (!stop) {
+    prev = source_parent;
+    path.push_back(prev);
+    source_parent = parents[source_parent];
+    if (source_parent == -1) stop = true;
+  }
+  return prev;
+}
+
+// utilities:nodes_around_point-->length_by_flattening
+// returns the shortest path starting from target to source as a list of indices
+// of nodes of the graph(solver). note: the list does not contains source if it
+// is a vertex
+vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const mesh_point& source,
+    const mesh_point& target) {
+  auto source_nodes = nodes_around_point(
+      triangles, positions, adjacencies, source);
+  auto target_nodes = nodes_around_point(
+      triangles, positions, adjacencies, target);
+  auto parents   = vector<int>{};
+  auto distances = solve_with_parents(
+      solver, source_nodes, target_nodes, parents);
+  auto target_parent = -1, source_child = -1;
+  if (target_nodes.size() == 1)
+    target_parent = parents[target_nodes[0].first];
+  else
+    target_parent = set_target_parent(target_nodes, parents, distances);
+  auto path = vector<int>{};
+  if (target_parent == -1) return path;
+  source_child = set_source_child(parents, target_parent, path);
+  if (source_nodes.size() == 1)
+    path.pop_back();  // we remove "source" from the list of parents if it is
+                      // a vertex
+  return path;
+}
+
+// same function of "compute_geodesic_paths" of yocto_mesh.cpp that makes early
+// exit when reaching end_vertex, the name is changed because the input
+// parameters are the same
+vector<int> compute_pruned_geodesic_paths(
+    const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
+  auto parents   = vector<int>(solver.graph.size(), -1);
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  auto update    = [&parents](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+  };
+  auto stop = [](int node) { return false; };
+  auto exit = [end_vertex](int node) { return node == end_vertex; };
+  for (auto source : sources) distances[source] = 0.0f;
+  visit_geodesic_graph(distances, solver, sources, update, stop, exit);
+  return parents;
+}
+
+// returns the shortest path starting from target to source as a list of indices
+// of nodes of the graph(solver). note: the list does not contains source and
+// target.
+vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, int source, int target) {
+  vector<int> sources = {source};
+  vector<int> parents = compute_pruned_geodesic_paths(solver, sources, target);
+  vector<int> path    = {};
+  set_source_child(parents, target, path);
+  path.pop_back();  // we remove source from the list
+  return path;
+}
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
