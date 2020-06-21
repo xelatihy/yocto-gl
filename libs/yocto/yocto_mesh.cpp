@@ -152,6 +152,134 @@ bool point_in_triangle(const vector<vec3i>& triangles,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// STRIPS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct Triangle2D {
+  vec2f x, y, z = {0, 0};
+
+  inline vec2f&       operator[](int i) { return *(&x + i); }
+  inline const vec2f& operator[](int i) const { return *(&x + i); }
+};
+
+inline vec2f intersect_circles_core(
+    const vec2f& c2, float r2, const vec2f& c1, float r1) {
+  float R = length_squared(c2 - c1);
+  assert(R > 0);
+  auto result = (c1 + c2) / 2;
+  result += (c2 - c1) * ((r1 * r1 - r2 * r2) / (2 * R));
+  float A = 2 * (r1 * r1 + r2 * r2) / R;
+  float B = (r1 * r1 - r2 * r2) / R;
+  float s = A - B * B - 1;
+  assert(s >= 0);
+  result += vec2f(c2.y - c1.y, c1.x - c2.x) * (0.5 * sqrtf(s));
+  return result;
+}
+
+// Same function but expecting length squared for efficiency.
+inline vec2f intersect_circles_fast(
+    const vec2f& c2, float R2, const vec2f& c1, float R1) {
+  float R = length_squared(c2 - c1);
+  assert(R > 0);
+  auto result = (c1 + c2) / 2;
+  result += (c2 - c1) * ((R1 - R2) / (2 * R));
+  float A = 2 * (R1 + R2) / R;
+  float B = (R1 - R2) / R;
+  float s = A - B * B - 1;
+  assert(s >= 0);
+  result += vec2f(c2.y - c1.y, c1.x - c2.x) * (0.5 * sqrtf(s));
+  return result;
+}
+
+Triangle2D init_flat_triangle(const vector<vec3f>& positions, const vec3i tr) {
+  auto tr2d = Triangle2D{};
+  tr2d.x    = {0, 0};
+  tr2d.y    = {0, length(positions[tr.x] - positions[tr.y])};
+  auto rx   = length_squared(positions[tr.x] - positions[tr.z]);
+  auto ry   = length_squared(positions[tr.y] - positions[tr.z]);
+  tr2d.z    = intersect_circles_fast(tr2d.x, rx, tr2d.y, ry);
+  return tr2d;
+}
+
+inline Triangle2D unfold_face(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const Triangle2D& tr, int face, int k) {
+  int v = opposite_vertex(triangles, adjacencies, face, k);
+  assert(v != -1);
+
+  auto  a  = triangles[face][k];
+  auto  b  = triangles[face][(k + 1) % 3];
+  float r0 = length_squared(positions[v] - positions[a]);
+  float r1 = length_squared(positions[v] - positions[b]);
+
+  int neighbor = adjacencies[face][k];
+  int j        = find_in_vec(adjacencies[neighbor], face);
+  assert(j != -1);
+
+  Triangle2D res;
+  res[j]           = tr[(k + 1) % 3];
+  res[(j + 1) % 3] = tr[k];
+  res[(j + 2) % 3] = intersect_circles_fast(res[j], r1, res[(j + 1) % 3], r0);
+  return res;
+}
+
+// "strip" must be such that strip.back()=p.face and strip[0] must share at
+// least one vertex with p.face.
+// Under this hypoteses, this function gives back the distance between the
+// opposite vertex to the edge between strip[0] and strip[1] and p handling
+// concave paths.
+// first_sample_pos is the position in the 2D-reference system defined in
+// "init_flat_tri" where the path intersect the edge between strip[0] and
+// strip[1].
+static float length_by_flattening(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies, int tid,
+    const vec2f& uv, vector<int>& strip, vec2f& first_sample_direction) {
+  auto make_bary = [](const vec2f& bary) -> vec3f {
+    return vec3f(bary.x, bary.y, 1 - bary.x - bary.y);
+  };
+
+  auto opp_pid = strip[0];
+  auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
+  auto coords  = vector<Triangle2D>(strip.size());
+  coords[0]    = init_flat_triangle(positions, triangles[opp_pid]);
+  for (auto i = 1; i < strip.size(); i++) {
+    auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
+    assert(k != -1);
+    auto tr = unfold_face(
+        triangles, positions, adjacencies, coords[i - 1], strip[i - 1], k);
+    coords[i] = tr;
+  }
+
+  auto last  = coords.back();
+  auto bary  = make_bary(uv);
+  auto pos2d = last.x * bary.x + last.y * bary.y + last.z * bary.z;
+  auto v     = pos2d - coords[0][(h + 2) % 3];
+  auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
+  auto w1    = coords[0][(h + 1) % 3] - coords[0][(h + 2) % 3];
+  auto phi   = angle(w0, w1);
+  auto teta0 = angle(v, w0);
+  auto teta1 = angle(v, w1);
+
+  if (teta0 < phi && teta1 < phi) {
+    first_sample_direction = pos2d;
+    return length(v);
+  } else if (teta1 > phi) {
+    first_sample_direction = coords[0][h];
+    float len              = length(w0);
+    len += length(coords[0][h] - pos2d);
+    return len;
+  } else {
+    first_sample_direction = coords[0][(h + 1) % 3];
+    float len              = length(w1);
+    len += length(coords[0][(h + 1) % 3] - pos2d);
+    return len;
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PROCEDURAL MODELING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -340,64 +468,12 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
-// "strip" must be such that strip.back()=p.face and strip[0] must share at
-// least one vertex with p.face.
-// Under this hypoteses, this function gives back the distance between the
-// opposite vertex to the edge between strip[0] and strip[1] and p handling
-// concave paths.
-// first_sample_pos is the position in the 2D-reference system defined in
-// "init_flat_tri" where the path intersect the edge between strip[0] and
-// strip[1].
-#if 0
-static float length_by_flattening(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const Point& p, vector<int>& strip, vec2f& first_sample_direction) {
-  auto opp_pid = strip[0];
-  auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
-  auto coords  = vector<Triangle2D>(strip.size());
-  coords[0]    = init_flat_tri(positions, triangles[opp_pid]);
-  for (auto i = 1; i < strip.size(); i++) {
-    auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
-    assert(k != -1);
-    auto tr = unfold_face(
-        triangles, positions, adjacencies, coords[i - 1], strip[i - 1], k);
-    coords[i] = tr;
-  }
-
-  auto last  = coords.back();
-  auto bary  = make_bary(p.uv);
-  auto pos2d = last.x * bary.x + last.y * bary.y + last.z * bary.z;
-  auto v     = pos2d - coords[0][(h + 2) % 3];
-  auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
-  auto w1    = coords[0][(h + 1) % 3] - coords[0][(h + 2) % 3];
-  auto phi   = angle(w0, w1);
-  auto teta0 = angle(v, w0);
-  auto teta1 = angle(v, w1);
-
-  if (teta0 < phi && teta1 < phi) {
-    first_sample_direction = pos2d;
-    return length(v);
-  } else if (teta1 > phi) {
-    first_sample_direction = coords[0][h];
-    float len              = length(w0);
-    len += length(coords[0][h] - pos2d);
-    return len;
-  } else {
-    first_sample_direction = coords[0][(h + 1) % 3];
-    float len              = length(w1);
-    len += length(coords[0][(h + 1) % 3] - pos2d);
-    return len;
-  }
-}
-#endif
-
 // Builds a graph-based geodesic solver with arcs arranged in counterclockwise
 // order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const vector<vector<int>>& v2t) {
   auto solver = geodesic_solver{};
-#if 0
   solver.graph.resize(positions.size());
   for (int i = 0; i < positions.size(); ++i) {
     auto& star = v2t[i];
@@ -407,8 +483,8 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto tid    = star[j];
       auto offset = find_in_vec(triangles[tid], i);
       auto p      = triangles[tid][(offset + 1) % 3];
-      auto q      = triangles[tid][(offset + 2) % 3];
-      auto e      = positions[p] - vert;
+      // auto q = triangles[tid][(offset + 2) % 3]; // TODO: this is not needed
+      auto e = positions[p] - vert;
       solver.graph[i].push_back({p, length(e)});
       auto        opp = opposite_face(triangles, adjacencies, tid, i);
       vector<int> strip{tid, opp};
@@ -424,7 +500,6 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       solver.graph[i].push_back({a, l});
     }
   }
-#endif
   return solver;
 }
 
