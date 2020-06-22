@@ -1373,13 +1373,13 @@ inline float sum(const vec2f& a) { return a.x + a.y; }
 inline float mean(const vec2f& a) { return sum(a) / 2; }
 
 // Functions applied to vector elements
-inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; };
-inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; };
-inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; };
-inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; };
-inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; };
-inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; };
-inline bool isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); };
+inline vec2f abs(const vec2f& a) { return {abs(a.x), abs(a.y)}; }
+inline vec2f sqrt(const vec2f& a) { return {sqrt(a.x), sqrt(a.y)}; }
+inline vec2f exp(const vec2f& a) { return {exp(a.x), exp(a.y)}; }
+inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; }
+inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; }
+inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; }
+inline bool  isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); }
 inline vec2f pow(const vec2f& a, float b) {
   return {pow(a.x, b), pow(a.y, b)};
 };
