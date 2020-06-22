@@ -4,11 +4,12 @@ Yocto/ModelIO is a collection of utilities for loading and saving scenes
 and meshes in Ply, Obj and Pbrt formats.
 Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`.
 
-## Loading and saving Ply files
+## Ply models
 
 The Ply file format is a generic file format used to serialize meshes and point
 clouds. To use this library is helpful to understand the basic of the Ply
-file format for example from [this Wikipedia page](<https://en.wikipedia.org/wiki/PLY_(file_format)>).
+file format for example from the
+[Ply Wikipedia page](<https://en.wikipedia.org/wiki/PLY_(file_format)>).
 
 Yocto/ModelIO represents Ply data with the `ply_model` struct.
 The internal representation matches the structure of a Ply file and
@@ -177,7 +178,7 @@ auto error = string{};                  // error buffer
 save_ply(filename, ply, error);         // save ply
 ```
 
-Yocto/Shape defines convenience functions to add the most used properties
+Yocto/ModelIO defines convenience functions to add the most used properties
 of meshes, using standard element and property names.
 For vertex properties, use `add_positions(ply, positions)`,
 `add_normals(ply, normals)`, `add_texcoords(ply, texcoords, flipv)`,
@@ -216,54 +217,159 @@ auto error = string{};                  // error buffer
 save_ply(filename, ply, error);         // save ply
 ```
 
-## Obj IO
+## Obj models
 
-// Load and save obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
-bool geom_only = false, bool split_elements = true,
-bool split_materials = false);
-bool save_obj(const string& filename, obj_model* obj, string& error);
+The Obj file format is a file format used to serialize meshes and materials.
+To use this library is helpful to understand the basic of the Obj
+file format for example from the
+[Obj Wikipedia page](<https://en.wikipedia.org/wiki/OBJ_(file_format)>).
+Obj files come in pairs, `.obj` for shapes and `.mtl` for materials.
 
-// Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
-// to ensure that no duplication occurs, either use the facevarying interface,
-// or set `no_vertex_duplication`. In the latter case, the code will fallback
-// to position only if duplication occurs.
-void get_triangles(const obj_shape* shape, vector<vec3i>& triangles,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<obj_material*>& materials, vector<int>& ematerials,
-bool flip_texcoord = false);
-void get_quads(const obj_shape* shape, vector<vec4i>& quads,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<obj_material*>& materials, vector<int>& ematerials,
-bool flip_texcoord = false);
-void get_lines(const obj_shape* shape, vector<vec2i>& lines,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<obj_material*>& materials, vector<int>& ematerials,
-bool flip_texcoord = false);
-void get_points(const obj_shape* shape, vector<int>& points,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<obj_material*>& materials, vector<int>& ematerials,
-bool flip_texcoord = false);
-void get_fvquads(const obj_shape* shape, vector<vec4i>& quadspos,
-vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<obj_material*>& materials, vector<int>& ematerials,
-bool flip_texcoord = false);
-bool has_quads(obj_shape\* shape);
+Yocto/ModelIO represents Obj data with the `obj_model` struct.
+Obj models are defined as collections of shapes and materials.
+Obj shapes use a face-varying representation that has vertex positions,
+normals and texture coordinates, with their their own topology.
+In a shape, each face is tagged with a material used for that face.
+Yocto/ModelIO provides direct access to these tagged shapes by inspecting the
+`obj_shape` properties.
 
-// Get obj shape by extracting the elements beloing to only one material.
-void get_triangles(const obj_shape* shape, int material,
-vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-vector<vec2f>& texcoords, bool flip_texcoord = false);
-void get_quads(const obj_shape* shape, int material, vector<vec4i>& quads,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-bool flip_texcoord = false);
-void get_lines(const obj_shape* shape, int material, vector<vec2i>& lines,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-bool flip_texcoord = false);
-void get_points(const obj_shape* shape, int material, vector<int>& points,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-bool flip_texcoord = false);
+In Yocto/Obj, materials are represented by the `obj_material` struct.
+Each material is a collection of values and textures that specify the material
+lobes, like emission, diffuse, specular, reflection, etc. Each value
+has a corresponding texture stored by saving its filename and lookup properties
+in `obj_texture_info`. The meaning of these parameters often depend on the
+application since Obj was used in many different contexts by reinterpreting the
+material values.
+
+Yocto/ModelIO defines three extensions to the Obj file format. Materials have
+additional parameters that specify a PBR parametrization similar to glTF, which
+is common used in most engines today. Yocto/ModelIO adds another file,
+namely `.objx`, that stores cameras and environment maps, respectively as
+`obj_camera` and `obj_environment`. This addition makes the extended Obj format
+capable of storing full scenes.
+
+The Obj model is defined as an array of objects of the types defined above.
+Obj objects are pointers owned by the main `obj_model`.
+Objects properties can be read and written directly from the model data,
+and are documented in the header file for now.
+For shapes, Yocto/ModelIO provides several functions to read and write Obj
+shapes, with a simpler interface than accessing data directly.
+
+```cpp
+auto obj = new obj_model{...};             // obj model buffer
+for(auto shape : obj->shapes)              // access shapes
+  print_info(shape->name);                 // access shape properties
+for(auto material : obj->material)         // access materials
+  print_info(material->diffuse);           // access material properties
+for(auto material : obj->material)         // access materials
+  print_info(material->diffuse_tex);       // access material textures
+for(auto camera : obj->cameras)            // access cameras [extension]
+  print_info(camera->frame);               // access camera properties
+for(auto environment : obj->environments)  // access environments [extension]
+  print_info(environment->emission);       // access environment properties
+```
+
+Use `load_obj(filename, obj, error)` to load Obj files and
+`save_obj(filename, obj, error)` to save them.  
+Both loading and saving take a filename, a pointer to a Obj model,
+and returns whether or not the file was loaded successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user.
+
+```cpp
+auto obj = new obj_model{};             // obj model buffer
+auto error = string{};                  // error buffer
+if(!load_obj(filename, obj, error))     // load obj
+  print_error(error);                   // check and print error
+if(!save_obj(filename, obj, error))     // save obj
+  print_error(error);                   // check and print error
+```
+
+## Obj reading
+
+Obj is a face-varying format and that geometry representation is maintained
+in `obj_shape`. Yocto/ModelIO provides easier accessed to Obj shape data,
+both as indexed meshes and as face-varying meshes.
+
+To get data as a standard indexed meshes, use
+`get_triangles(obj,triangles,<vertex>,<materials>)`,
+`get_quads(obj,quads,<vertex>,<materials>)`,
+`get_lines(obj,lines,<vertex>,<materials>)`, and
+`get_points(obj,points,<vertex>,<materials>)`,
+to read triangles, quads, lines and points respectively.
+In these functions, vertex data is comprised of positions, normals and texture
+coordinated stored as separate arrays.
+Note that in these functions, vertices may end up being duplicated when
+going from the face-varying representation to an indexed mesh.
+Material data is comprised of a list of materials used in the shape and
+the per-element indices to the material arrays.
+Since Obj stored faces as polygons, these functions are performing a tesselation
+when necessary that for now work only for convex shapes. You can check whether
+a shape contains quads with `has_quads(shape)`.
+
+In some cases, it may be desireable to extract the shape elements corresponding
+to a single material, for example for use in renderers that support a single
+shader per shape. Yocto/ModelIO defines convenience functions for this case,
+that are overrides of the previous `get_XXX(...)` functions, but differ in that
+they take a material is as input, instead of returning materials tags.
+
+```cpp
+auto obj = new obj_model{};             // obj model buffer
+auto error = string{};                  // error buffer
+load_obj(filename, obj, error);         // load obj
+auto shape = obj->shapes.front();       // get shape
+
+auto triangles = vector<vec3i>{};       // element data
+auto quads     = vector<vec4i>{};
+auto positions = vector<vec3f>{};       // vertex properties
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto materials = vector<onj_material*>{}; // materials
+auto ematerials = vector<int>{};          // per-face material ids
+if(has_quads(shape)) {
+  get_triangles(shape, triangles,         // read as triangles
+    positions, normals, texcoords,
+    materials, ematerials, false);        // flip texcoords if desired
+else
+  get_quads(shape, quads,                 // read as quads
+    positions, normals, texcoords,
+    materials, ematerials, false);        // flip texcoords if desired
+
+auto material_id = 0;                     // material kd to extract to
+if(has_quads(shape)) {
+  get_triangles(shape, material_id,       // read as triangles for material id
+    triangles, positions,
+    normals, texcoords, false);           // flip texcoords if desired
+else
+  get_quads(shape, material_id,           // read as quads for material 0
+    quads, positions,
+    normals, texcoords, false);           // flip texcoords if desired
+```
+
+Yocto/ModelIO supports also reading Obj shapes as face-varying quads
+with `get_fvquads(...)`.
+
+```cpp
+auto obj = new obj_model{};             // obj model buffer
+auto error = string{};                  // error buffer
+load_obj(filename, obj, error);         // load obj
+auto shape = obj->shapes.front();       // get shape
+
+auto quadspos  = vector<vec4i>{};       // face-varying element data
+auto quadsnorm = vector<vec4i>{};
+auto quadsuv   = vector<vec4i>{};
+auto positions = vector<vec3f>{};       // vertex properties
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto materials = vector<onj_material*>{}; // materials
+auto ematerials = vector<int>{};          // per-face material ids
+get_fvquads(shape,                        // read as face-varying quads
+  quadspos, quadsnorm, quadsuv,
+  positions, normals, texcoords,
+  materials, ematerials, false);          // flip texcoords if desired
+```
+
+## Obj writing
 
 // Create OBJ
 obj_camera* add_camera(obj_model* obj);
@@ -296,7 +402,7 @@ bool flip_texcoord = false);
 void set_materials(obj_shape* shape, const vector<obj_material*>& materials);
 void set_instances(obj_shape* shape, const vector<frame3f>& instances);
 
-## Pbrt IO
+## Pbrt models
 
 // Load/save pbrt
 bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
@@ -309,7 +415,3 @@ pbrt_shape* add_shape(pbrt_model* pbrt);
 pbrt_material* add_material(pbrt_model* pbrt);
 pbrt_environment* add_environment(pbrt_model* pbrt);
 pbrt_light* add_light(pbrt_model* pbrt);
-
-```
-
-```
