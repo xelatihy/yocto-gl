@@ -443,14 +443,64 @@ save_obj(filename, obj, error);         // save obj
 
 ## Pbrt models
 
-// Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
-bool ply_meshes = false);
+The Pbrt file format is a scene representation suitable for realistic rendering
+and implemented by the Pbrt renderer.
+To use this library is helpful to understand the basic of the Pbrt
+file format for example from the
+[Pbrt format documentatioon](https://www.pbrt.org/fileformat-v3.html).
 
-// Create pbrt
-pbrt_camera* add_camera(pbrt_model* pbrt);
-pbrt_shape* add_shape(pbrt_model* pbrt);
-pbrt_material* add_material(pbrt_model* pbrt);
-pbrt_environment* add_environment(pbrt_model* pbrt);
-pbrt_light* add_light(pbrt_model* pbrt);
+The Pbrt file format is an extensible file format for a plugin-based system.
+Representing the format directly allows for best fidelity but pushed the burden
+of interpreting standard plugins to the use. Yocto/ModelIO takes a different
+approach and translates camera, shapes, materials, textures and lights from
+Pbrt plugins to a common representation that presents users a simpler and
+more uniform scene representation.
+
+Yocto/ModelIO represents Pbrt data with the `pbrt_model` struct.
+Pbrt models are defined as collections of cameras, instanced shapes, materials,
+texture and environments. Pbrt cameras are translate into a thin-len
+approximations. Pbrt materials are translated to a material representation
+similar to the Disney BSDF. Pbrt textures are either interpreted ion the fly or
+defined by a image file. Pbrt area lights are translated to either emissive
+materials and environments.
+
+The Pbrt model is defined as an array of objects of the types defined above.
+Pbrt objects are pointers owned by the main `pbrt_model`.
+Objects properties can be read and written directly from the model data,
+and are documented in the header file for now.
+Yocto/ModelIO does not currently provide functions to read and write Pbrt
+shapes with a simpler interface than accessing data directly.
+
+In general, Pbrt support is still experimental even if the library can
+parse most Pbrt files. The objects properties documentations are for now
+stored in the header file.
+
+```cpp
+auto pbrt = new pbrt_model{...};            // obj model buffer
+for(auto shape : pbrt->shapes)              // access shapes
+  print_info(shape->name);                  // access shape properties
+for(auto material : pbrt->material)         // access materials
+  print_info(material->diffuse);            // access material properties
+for(auto material : pbrt->material)         // access materials
+  print_info(material->color_tex);          // access material textures
+for(auto camera : pbrt->cameras)            // access cameras [extension]
+  print_info(camera->frame);                // access camera properties
+for(auto environment : pbrt->environments)  // access environments [extension]
+  print_info(environment->emission);        // access environment properties
+```
+
+Use `load_pbrt(filename, pbrt, error)` to load Pbrt files and
+`save_pbrt(filename, pbrt, error)` to save them.  
+Both loading and saving take a filename, a pointer to a Pbrt model,
+and returns whether or not the file was loaded successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user.
+
+```cpp
+auto pbrt = new pbrt_model{};           // obj model buffer
+auto error = string{};                  // error buffer
+if(!load_pbrt(filename, pbrt, error))   // load obj
+  print_error(error);                   // check and print error
+if(!save_pbrt(filename, pbrt, error))   // save obj
+  print_error(error);                   // check and print error
+```
