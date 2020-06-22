@@ -371,36 +371,75 @@ get_fvquads(shape,                        // read as face-varying quads
 
 ## Obj writing
 
-// Create OBJ
-obj_camera* add_camera(obj_model* obj);
-obj_material* add_material(obj_model* obj);
-obj_environment* add_environment(obj_model* obj);
-obj_shape* add_shape(obj_model* obj);
+To save an Obj, create a scene and add objects to it using
+`add_camera(obj)`, `add_material(obj)`, `add_environment(obj)`
+and `add_shape(obj)` for camera, materials, environments and shapes
+respectively. For all objects, set the objects' properties directly.
 
-// Add obj shape
-void set_triangles(obj_shape* shape, const vector<vec3i>& triangles,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
-bool flip_texcoord = false);
-void set_quads(obj_shape* shape, const vector<vec4i>& quads,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
-bool flip_texcoord = false);
-void set_lines(obj_shape* shape, const vector<vec2i>& lines,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
-bool flip_texcoord = false);
-void set_points(obj_shape* shape, const vector<int>& points,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
-bool flip_texcoord = false);
-void set_fvquads(obj_shape* shape, const vector<vec4i>& quadspos,
-const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
-bool flip_texcoord = false);
-void set_materials(obj_shape* shape, const vector<obj_material*>& materials);
-void set_instances(obj_shape* shape, const vector<frame3f>& instances);
+For shapes, Yocto/ModelIO defines convenience functions that take either
+indexed mesh or face-varying meshes as input and create the appropriate
+Obj shape elements. Use `set_triangles(shape,triangles,<vertex>,<materials>)`,
+`set_quads(shape,quads,<vertex>,<materials>)`,
+`set_lines(shape,lines,<vertex>,<materials>)`,
+`set_points(shape,points,<vertex>,<materials>)` to set shapes as an indexed
+mesh of triangles, quads, lines or points respectively.
+In these functions, vertex data is comprised of positions, normals and texture
+coordinated stored as separate arrays.
+Material data is only represented as tags and can be left
+empty if only one material is used. To set material points
+use `set_materials(shape,materials)`.
+
+```cpp
+auto obj = new obj_model{};             // obj model buffer
+
+auto camera = add_camera(obj);          // add camera
+camera->name = "camera";                // set camera name
+camera->frame = identity3x4f;           // set camera properties
+auto environment = add_environment(obj);// add environment
+environment->name = "environment";      // set environment name
+environment->emission = {1,1,1};        // set environment properties
+auto material = add_material(obj);      // add material
+material->name = "camera";              // set material name
+material->diffuse = {1,0,0};            // set material properties
+
+auto triangles = vector<vec3i>{...};    // element data
+auto positions = vector<vec3f>{...};    // vertex properties
+auto normals   = vector<vec3f>{...};
+auto texcoords = vector<vec2f>{...};
+
+auto shape = add_shape(obj);            // add shape
+shape->name = "shape";                  // set shape name
+set_triangles(shape, triangles,         // set shape geometry
+  positions, normals, texcoords);
+set_materials(shape, {material});       // set shape material;
+
+auto error = string{};                  // error buffer
+save_obj(filename, obj, error);         // save obj
+```
+
+Yocto/ModelIO supports also writing of face-varying shapes with
+`set_fvquads(...)` with an API similar to above.
+
+```cpp
+auto obj = new obj_model{};             // obj model buffer
+
+auto quadspos  = vector<vec4i>{...};    // face-varying element data
+auto quadsnorm = vector<vec4i>{...};
+auto quadsuv   = vector<vec4i>{...};
+auto positions = vector<vec3f>{...};    // vertex properties
+auto normals   = vector<vec3f>{...};
+auto texcoords = vector<vec2f>....{};
+
+auto shape = add_shape(obj);            // add shape
+shape->name = "shape";                  // set shape name
+set_fvquads(shape, quadspos,            // set shape geometry
+  quadsnorm, quadstexcoord,
+  positions, normals, texcoords);
+set_materials(shape, {material});       // set shape material;
+
+auto error = string{};                  // error buffer
+save_obj(filename, obj, error);         // save obj
+```
 
 ## Pbrt models
 
