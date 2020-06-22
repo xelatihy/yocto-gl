@@ -332,239 +332,255 @@ auto [stquads, stexcoords] = subdivide_catmullclark(tquads, texcoords, 2, true);
 
 ## Shape sampling
 
-// Pick a point in a point set uniformly.
-int sample_points(int npoints, float re);
-int sample_points(const vector<float>& cdf, float re);
-vector<float> sample_points_cdf(int npoints);
+Yocto/Shape supports sampling meshes uniformly. All sampling require to first
+compute the shape CDF and then use it to sample the shape. For each shape type,
+the sampling functions return the shape element id and the element barycentric
+coordinates. Use `sample_lines(cdf,re,rn)` to sample lines,
+`sample_triangles(cdf,re,rn)` to sample triangles,
+`sample_quads(cdf,re,rn)` to sample quads. The shape CDFs are computed using
+`sample_lines_dcf(lines,positions)`, `sample_triangles_dcf(triangles,positions)`,
+and `sample_quads_dcf(quads,positions)`.
 
-// Pick a point on lines uniformly.
-std::pair<int, float> sample_lines(
-const vector<float>& cdf, float re, float ru);
-vector<float> sample_lines_cdf(
-const vector<vec2i>& lines, const vector<vec3f>& positions);
+```cpp
+auto triangles = vector<vec3i>{...};   // initial shape
+auto positions = vector<vec3f>{...};
+auto cdf = sample_triangles_cdf(triangles, positions); // shape cdf
+for(auto sample : range(samples)) {
+   // sample the shape returning element id and uvs
+   auto [triangle_id, uv] = sample_triangles(cdf, rand1f(rng), rand2f(rng));
+}
+```
 
-// Pick a point on a triangle mesh uniformly.
-std::pair<int, vec2f> sample_triangles(
-const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_triangles_cdf(
-const vector<vec3i>& triangles, const vector<vec3f>& positions);
+For triangles and quads, Yocto/Shape defines convenience functions that
+generate a set of points on the shape surface. Use `sample_triangles(...)`
+and `sample_quads(...)` for triangles and quads respectively.
 
-// Pick a point on a quad mesh uniformly.
-std::pair<int, vec2f> sample_quads(
-const vector<float>& cdf, float re, const vec2f& ruv);
-std::pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
-const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float> sample_quads_cdf(
-const vector<vec4i>& quads, const vector<vec3f>& positions);
-
-// Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
-// norm and texcoord of the sampled points.
-void sample_triangles(vector<vec3f>& sampled_positions,
-vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-const vector<vec3i>& triangles, const vector<vec3f>& positions,
-const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-int seed = 7);
-void sample_quads(vector<vec3f>& sampled_positions,
-vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
-const vector<vec4i>& quads, const vector<vec3f>& positions,
-const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
-int seed = 7);
+```cpp
+auto triangles = vector<vec3i>{...};   // initial shape
+auto positions = vector<vec3f>{...};
+auto normals   = vector<vec3f>{...};
+auto texcoords = vector<vec2f>{...};
+auto sampled_positions = vector<vec3f>{...}; // sampled points
+auto sampled_normals   = vector<vec3f>{...};
+auto sampled_texcoords = vector<vec2f>{...};
+// sample a set of npoints on the mesh
+auto npoints = 100;
+sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
+                 triangles, positions, normals, texcoords, npoints);
+```
 
 ## Shape IO
 
-// Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
-vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-vector<vec3f>& colors, vector<float>& radius, string& error,
-bool flip_texcoords = true);
-[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
-const vector<vec2i>& lines, const vector<vec3i>& triangles,
-const vector<vec4i>& quads, const vector<vec3f>& positions,
-const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-const vector<vec3f>& colors, const vector<float>& radius, string& error,
-bool ascii = false, bool flip_texcoords = true);
+Shapes are loaded with `load_shape(filename,<shape data>,error)` and saved with
+`save_shape(filename,<shape data>,error)`. Both loading and saving take a filename,
+and buffers for shape elements and vertex data, and return whether or not the
+shape was loaded or saved successfully.
+In the case of an error, the IO functions set the `error` string with a
+message suitable for displaying to a user. Yocto/Shapes supports loading
+and saving to OBJ and PLY.
+Yocto/Shape supports loading and saving shapes that are composed of
+either points, lines, triangles and quads.
+The type of elements is determined during loading.
+Use `shape_stats(<shape data>)` to get statistics on the shape.
 
-// Load/save a facevarying shape
-[[nodiscard]] bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
-vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_fvshape(const string& filename,
-const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
-bool ascii = false, bool flip_texcoords = true);
+```cpp
+auto error = string{};
+auto points    = vector<int>{};     // shape elements buffers
+auto lines     = vector<vec2i>{};
+auto triangles = vector<vec3i>{};
+auto quads     = vector<vec4i>{};
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto colors    = vector<vec3f>{};
+auto radius    = vector<float>{};
+if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
+   texcoords, colors, radius, error))      // load shape
+   print_fatal(error);                     // check and print error
+auto stats = shape_stats(points, lines, triangles, quads, positions, normals,
+   texcoords, colors, radius);             // shape stats
+for(auto& stat : stats) print_info(stat);  // print stats
+if(!save_shape(filename, points, lines, triangles, quads, positions, normals,
+   texcoords, colors, radius, error))      // save shape
+   print_fatal(error);                     // check and print error
+```
 
-## Shape stats
+Face-varying shapes are loaded with `fvload_fvshape(filename,<shape data>,error)`
+and saved with `save_fvshape(filename,<shape data>,error)`. The function
+interfaces are modeled similarly to the ones above.
 
-// Get mesh statistics for printing
-vector<string> shape_stats(const vector<int>& points,
-const vector<vec2i>& lines, const vector<vec3i>& triangles,
-const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-const vector<vec3f>& positions, const vector<vec3f>& normals,
-const vector<vec2f>& texcoords, const vector<vec3f>& colors,
-const vector<float>& radius, bool verbose = false);
+```cpp
+auto quadspos      = vector<vec4i>{};  // face-varying shape elements buffers
+auto quadsnorm     = vector<vec4i>{};
+auto quadstexcoord = vector<vec4i>{};
+auto positions     = vector<vec3f>{};  // vertex data buffers
+auto normals       = vector<vec3f>{};
+auto texcoords     = vector<vec2f>{};
+if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
+   positions, normals, texcoords, error))   // load face-varyhing shape
+   print_fatal(error);                      // check and print error
+if(!save_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
+   positions, normals, texcoords, error))   // save face-varyhing shape
+   print_fatal(error);                      // check and print error
+```
 
 ## Procedural shapes
 
-// Make a plane.
-void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1});
-void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1}, float radius = 0.3);
-void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1});
-// Make a box.
-void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-const vec3f& uvscale = {1, 1, 1});
-void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
-// Make a quad stack
-void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-const vec3f& uvscale = {1, 1, 1});
-// Make a floor.
-void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
-const vec2f& uvscale = {10, 10});
-void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
-const vec2f& uvscale = {10, 10}, float bent = 0.5);
-// Make a sphere.
-void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-float scale = 1, float uvscale = 1);
-// Make a sphere.
-void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {32, 32}, float scale = 1,
-const vec2f& uvscale = {1, 1});
-// Make a sphere with slipped caps.
-void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {32, 32}, float scale = 1,
-const vec2f& uvscale = {1, 1}, float height = 0.3);
-// Make a disk
-void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-float scale = 1, float uvscale = 1);
-// Make a bulged disk
-void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-float scale = 1, float uvscale = 1, float height = 0.3);
-// Make a uv disk
-void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {32, 32}, float scale = 1,
-const vec2f& uvscale = {1, 1});
-// Make a uv cylinder
-void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
-const vec3f& uvscale = {1, 1, 1});
-// Make a rounded uv cylinder
-void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
-const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
-// Make a plane in the xz plane.
-void make_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1});
-void make_bulged_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1}, float radius = 0.3);
+Yocto/Shape defines several procedural shapes used for both testing and
+to quickly create shapes for procedural scenes. Procedural shapes as input the
+desired shape resolution, the shape scale, the uv scale, and additional
+parameters specific to the shape.
+Use `make_rect(...)` for a rectangle in the XY plane,
+`make_bulged_rect(...)` for a bulged rectangle,
+`make_recty(...)` for a rectangle in the XZ plane,
+`make_box(...)` for a box,
+`make_rounded_box(...)` for a rounded box,
+`make_floor(...)` for a floor in the XZ plane,
+`make_bent_floor(...)` for a bent floor,
+`make_sphere(...)` for a sphere obtained from a cube,
+`make_uvsphere(...)` for a sphere tessellated along its uvs,
+`make_capped_uvsphere(...)` for a sphere with flipped caps,
+`make_disk(...)` for a disk obtained from a quad,
+`make_bulged_disk(...)` for a bulged disk,
+`make_uvdisk(...)` for a disk tessellated along its uvs,
+`make_uvcylinder(...)` for a cylinder tessellated along its uvs,
+`make_rounded_uvcylinder(...)` for a rounded cylinder.
 
-// Make a facevarying rect
-void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-const vec2f& uvscale = {1, 1});
-// Make a facevarying box
-void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords,
-const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-const vec3f& uvscale = {1, 1, 1});
-void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-float scale = 1, float uvscale = 1);
+```cpp
+auto quads     = vector<vec4i>{};   // shape element buffer
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
 
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-int num = 65536, const vec2i& steps = {4, 65536},
-const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-const vec2f& rad = {0.001, 0.001});
+// make shapes with 32 steps in resolution and scale of 1
+make_rect(quads, positions, normals, texcoords, {32,32}, {1,1});
+make_bilged_rect(quads, positions, normals, texcoords, {32,32}, {1,1});
+make_recty(quads, positions, normals, texcoords, {32,32}, {1,1});
+make_box(quads, positions, normals, texcoords, {32,32,32}, {1,1,1});
+make_rounded_box(quads, positions, normals, texcoords, {32,32,32}, {1,1,1});
+make_floor(quads, positions, normals, texcoords, {32,32}, {10,10});
+make_bent_floor(quads, positions, normals, texcoords, {32,32}, {10,10});
+make_sphere(quads, positions, normals, texcoords, 32, 1);
+make_uvsphere(quads, positions, normals, texcoords, {32,32}, 1);
+make_capped_uvsphere(quads, positions, normals, texcoords, {32,32}, 1);
+make_disk(quads, positions, normals, texcoords, 32, 1);
+make_bulged_disk(quads, positions, normals, texcoords, 32, 1);
+make_uvdisk(quads, positions, normals, texcoords, {32,32}, 1);
+make_uvcylinder(quads, positions, normals, texcoords, {32,32,32}, {1,1});
+make_rounded_uvcylinder(quads, positions, normals, texcoords,{32,32,32},{1,1});
+```
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-void make_point(vector<int>& points, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-float point_radius);
-void make_points(vector<int>& points, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-int num = 65536, float uvscale = 1, float point_radius = 0.001);
-void make_random_points(vector<int>& points, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-int num = 65536, const vec3f& size = {1, 1, 1}, float uvscale = 1,
-float point_radius = 0.001, uint64_t seed = 17);
+Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
+to the above functions.
+Use `make_fvrect(...)` for a rectangle in the XY plane,
+`make_fvbox(...)` for a box,
+`make_fvsphere(...)` for a sphere obtained from a cube.
 
-// Predefined meshes
-void make_monkey(
-vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
-void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_geosphere(
-vector<vec3i>& triangles, vector<vec3f>& positions, float scale = 1);
+```cpp
+auto quadspos      = vector<vec4i>{};  // face-varying shape elements buffers
+auto quadsnorm     = vector<vec4i>{};
+auto quadstexcoord = vector<vec4i>{};
+auto positions     = vector<vec3f>{};  // vertex data buffers
+auto normals       = vector<vec3f>{};
+auto texcoords     = vector<vec2f>{};
 
-// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
-// length: minimum and maximum length
-// rad: minimum and maximum radius from base to tip
-// noise: noise added to hair (strength/scale)
-// clump: clump added to hair (strength/number)
-// rotation: rotation added to hair (angle/strength)
-void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-const vector<vec3i>& striangles, const vector<vec4i>& squads,
-const vector<vec3f>& spos, const vector<vec3f>& snorm,
-const vector<vec2f>& stexcoord, const vec2i& steps = {8, 65536},
-const vec2f& length = {0.1, 0.1}, const vec2f& rad = {0.001, 0.001},
-const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
-const vec2f& rotation = {0, 0}, int seed = 7);
+// make face-varying shapes with 32 steps in resolution and scale of 1
+make_fvrect(quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, {32,32}, {1,1});
+make_fvbox(quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, {32,32,32}, {1,1,1});
+make_fvsphere(quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords, 32, 1);
+```
 
-// Thickens a shape by copying the shape content, rescaling it and flipping its
-// normals. Note that this is very much not robust and only useful for trivial
-// cases.
-void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness);
+Yocto/Shape provides functions to create predefined shapes helpful in testing.
+These functions take only a scale and often provide only the positions as
+vertex data.
+Use `make_monkey(...)` for the Blender monkey,
+`make_quad(...)` for a simple quad,
+`make_quady(...)` for a simple quad in the XZ plane,
+`make_cube(...)` for a simple cube,
+`make_fvcube(...)` for a simple face-varying unit cube,
+`make_geosphere(...)` for a geodesic sphere.
 
-// Make a heightfield mesh.
-void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
-vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
-const vector<float>& height);
+```cpp
+auto quads     = vector<vec4i>{};   // shape element buffer
+auto triangles = vector<vec3i>{};   // shape element buffer
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+make_monkey(quads, positions, 1);
+make_quad(quads, positions, normals, texcoords, 1);
+make_quady(quads, positions, normals, texcoords, 1);
+make_cube(quads, positions, normals, texcoords, 1);
+make_geosphere(triangles, positions, 1);
+make_fvcube(quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords, 1);
+```
+
+Yocto/Shape supports the generation of points and lines sets.
+Use `make_lines(...)` to create a line set in the XY plane,
+`make_points(...)` for a collection of points at the origin,
+adn `make_random_points(...)` for a point set randomly placed in a box.
+
+```cpp
+auto points    = vector<int>{};     // points element buffer
+auto lines     = vector<vec2i>{};   // lines  element buffer
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto radius    = vector<float>{};
+
+make_lines(lines, positions, normals, texcoords, radius,
+  63536, {4, 65536}, // number of lines and line steps
+  {1, 1}, {1, 1},    // line set scale and uvscale
+  {0.001, 0.001});   // radius at the bottom and top
+make_points(points, positions, normals, texcoords, radius,
+  65536,        // number of points
+  1,            // uvscale
+  0.001);       // point radius
+make_random_points(points, positions, normals, texcoords, radius,
+  65536,        // number of points
+  {1, 1, 1}, 1, // line set scale and uvscale
+  0.001);       // point radius
+```
+
+Yocto/Shape also defines a simple function to generate randomized hairs
+on a triangle or quad mesh. Use `make_hair(...)` to create a hair shape
+from a mesh.
+
+```cpp
+auto quads     = vector<vec4i>{};   // lines element buffer
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto radius    = vector<float>{};
+auto squads     = vector<vec4i>{...};   // sampled surface data
+auto striangles = vector<vec4i>{...};   // sampled surface data
+auto spositions = vector<vec3f>{...};
+auto snormals   = vector<vec3f>{...};
+auto stexcoords = vector<vec2f>{...};
+// Make a hair ball around a shape
+make_hair(lines, positions, normals, texcoords, radius, // line buffers
+  striangles, squads,  spos, snorm, stexcoord,          // sampled surface
+  {8, 65536},     // steps: line steps and number of lines
+  {0.1, 0.1},     // length: minimum and maximum length
+  {0.001, 0.001}, // radius: minimum and maximum radius from base to tip
+  {0, 10},        // noise: noise added to hair (strength/scale)
+  {0, 128},       // clump: clump added to hair (strength/number)
+  {0, 0});        // rotation: rotation added to hair (angle/strength)
+```
+
+Finally, Yocto/Shape defines a function to create a quad mesh from a heighfield.
+Use `make_heightfield(...)` to create a heightfield meshes.
+
+```cpp
+auto quads     = vector<vec4i>{};   // shape element buffer
+auto positions = vector<vec3f>{};   // vertex data buffers
+auto normals   = vector<vec3f>{};
+auto texcoords = vector<vec2f>{};
+auto size      = vec2i{512, 512};   // heightfield size
+auto heightfield = vctor<float>{...};  // heightfield data
+make_heightfield(quads, positions, normals, texcoords,
+   size, heightfield);               // make heightfield mesh
+```
