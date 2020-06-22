@@ -146,7 +146,7 @@ auto diff = image_difference(a,b);                 // image difference
 auto display = image_difference(a,b, true);        // diff display
 ```
 
-## Image IO
+## Image loading and saving
 
 Images are loaded with `load_image(filename,img,error)` and saved with
 `save_image(filename, img, error)`. Both loading and saving take a filename,
@@ -181,17 +181,17 @@ linear RGB for saving to floating point file formats.
 auto error = string{};
 auto img4f = image<vec4f>{};            // define desired image format
 if(!load_image(filename, img4f, error)) // load image as 4-channel linear
-  print_fatal(error);                   // check and print error
+  print_error(error);                   // check and print error
 auto img4b = image<vec4b>{};            // define desired image format
 if(!load_image(filename, img4b, error)) // load image as 4-channel sRGB
-  print_fatal(error);                   // check and print error
+  print_error(error);                   // check and print error
 auto is_hdr = is_hdr_filename(filename);// check if hdr format
 if(is_hdr) ok = load_image(filename, img4f, error); // load as linear
 else       ok = load_image(filename, img4b, error); // or sRGB
 if(!save_image(filename, img4f, error)) // save image as 4-channel linear
-  print_fatal(error);                   // check and print error
+  print_error(error);                   // check and print error
 if(!save_image(filename, img4f, error)) // save image as 4-channel linear
-  print_fatal(error);                   // check and print error
+  print_error(error);                   // check and print error
 ```
 
 ## Procedural images

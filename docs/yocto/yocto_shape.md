@@ -369,7 +369,7 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
                  triangles, positions, normals, texcoords, npoints);
 ```
 
-## Shape IO
+## Shape loading and saving
 
 Shapes are loaded with `load_shape(filename,<shape data>,error)` and saved with
 `save_shape(filename,<shape data>,error)`. Both loading and saving take a filename,
@@ -396,13 +396,13 @@ auto colors    = vector<vec3f>{};
 auto radius    = vector<float>{};
 if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
    texcoords, colors, radius, error))      // load shape
-   print_fatal(error);                     // check and print error
+   print_error(error);                     // check and print error
 auto stats = shape_stats(points, lines, triangles, quads, positions, normals,
    texcoords, colors, radius);             // shape stats
 for(auto& stat : stats) print_info(stat);  // print stats
 if(!save_shape(filename, points, lines, triangles, quads, positions, normals,
    texcoords, colors, radius, error))      // save shape
-   print_fatal(error);                     // check and print error
+   print_error(error);                     // check and print error
 ```
 
 Face-varying shapes are loaded with `fvload_fvshape(filename,<shape data>,error)`
@@ -418,10 +418,10 @@ auto normals       = vector<vec3f>{};
 auto texcoords     = vector<vec2f>{};
 if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
    positions, normals, texcoords, error))   // load face-varyhing shape
-   print_fatal(error);                      // check and print error
+   print_error(error);                      // check and print error
 if(!save_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
    positions, normals, texcoords, error))   // save face-varyhing shape
-   print_fatal(error);                      // check and print error
+   print_error(error);                      // check and print error
 ```
 
 ## Procedural shapes
