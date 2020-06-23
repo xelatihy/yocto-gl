@@ -292,100 +292,54 @@ the texture representation.
 
 ```cpp
 auto scene = new scene_model{...};             // create a complete scene
-auto texture = scene->texture.front();         // get first texture
+auto texture = scene->textures.front();         // get first texture
 auto col = eval_texture(texture,{0.5,0.5});    // eval texture
 ```
 
-vec3f eval_position(
-const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_element_normal(const scene_instance* instance, int element);
-vec3f eval_normal(const scene_instance* instance, int element, const vec2f& uv);
-vec2f eval_texcoord(
-const scene_instance* instance, int element, const vec2f& uv);
-pair<vec3f, vec3f> eval_element_tangents(
-const scene_instance* instance, int element);
-vec3f eval_normalmap(
-const scene_instance* instance, int element, const vec2f& uv);
-vec3f eval_shading_normal(const scene_instance* instance, int element,
-const vec2f& uv, const vec3f& outgoing);
-vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv);
+Use `eval_material(material, texcoord)` to evaluate material textures and
+combine them with parameter values. The function returns a
+`scene_material_sample` that has the same parameters of a material but no
+textures defined.
 
-// Environment
-vec3f eval_environment(
-const scene_environment* environment, const vec3f& direction);
-vec3f eval_environment(const scene_model* scene, const vec3f& direction);
+```cpp
+auto scene = new scene_model{...};             // create a complete scene
+auto material = scene->materials.front();      // get first material
+auto mat = eval_texture(material,{0.5,0.5});   // eval material
+```
 
-// Material sample
-struct scene_material_sample {
-vec3f emission = {0, 0, 0};
-vec3f color = {0, 0, 0};
-float specular = 0;
-float roughness = 0;
-float metallic = 0;
-float ior = 1.5;
-vec3f spectint = {1, 1, 1};
-float coat = 0;
-float transmission = 0;
-float translucency = 0;
-vec3f scattering = {0, 0, 0};
-float scanisotropy = 0;
-float trdepth = 0.01;
-float opacity = 1;
-bool thin = true;
-vec3f normalmap = {0, 0, 1};
-};
+Several functions are defined to evaluate the geometric and material
+properties of points on instances, indicated by the shape element id
+and, when needed, the shape element barycentric coordinates.
+Use `eval_position(...)` to evaluate the point position,
+`eval_normal(...)` to evaluate the interpolate point normal,
+`eval_texcoord(...)` to evaluate the point texture coordinates,
+`eval_element_normal(...)` to evaluate the point geometric normal, and
+`eval_color(...)` to evaluate the interpolate point color.
+Use `eval_material(...)` as a convenience function to evaluate material properties of instance points.
 
-// Evaluates material and textures
-scene_material_sample eval_material(
-const scene_material\* material, const vec2f& texcoord);
+```cpp
+auto scene = new scene_model{...};             // create a complete scene
+auto instance = scene->instances.front();      // get first instance
+auto eid = 0; auto euv = vec3f{0.5,0.5};       // element id and uvs
+auto pos  = eval_position(instance, eid, euv); // eval point position
+auto norm = eval_normal(instance, eid, euv);   // eval point normal
+auto st   = eval_texcoord(instance, eid, euv); // eval point texture coords
+auto col  = eval_color(instance, eid, euv);    // eval point color
+auto gn   = eval_element_normal(instance, eid, euv); // eval geometric normal
+auto mat  = eval_material(instance, eid, euv); // eval point material
+```
 
-// Material Bsdf parameters
-struct scene_bsdf {
-// brdf lobes
-vec3f diffuse = {0, 0, 0};
-vec3f specular = {0, 0, 0};
-vec3f metal = {0, 0, 0};
-vec3f coat = {0, 0, 0};
-vec3f transmission = {0, 0, 0};
-vec3f translucency = {0, 0, 0};
-vec3f refraction = {0, 0, 0};
-float roughness = 0;
-float ior = 1;
-vec3f meta = {0, 0, 0};
-vec3f metak = {0, 0, 0};
-// weights
-float diffuse_pdf = 0;
-float specular_pdf = 0;
-float metal_pdf = 0;
-float coat_pdf = 0;
-float transmission_pdf = 0;
-float translucency_pdf = 0;
-float refraction_pdf = 0;
-};
+Use `eval_environment(environment, direction)` to evaluate an environment
+map emission along a specific direction `direction`. Use
+`eval_environment(scene, direction)` to accumulate the lighting for all
+environment maps.
 
-// Eval material to obtain emission, brdf and opacity.
-vec3f eval_emission(const scene_instance* instance, int element,
-const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-// Eval material to obatain emission, brdf and opacity.
-scene_bsdf eval_bsdf(const scene_instance* instance, int element,
-const vec2f& uv, const vec3f& normal, const vec3f& outgoing);
-float eval_opacity(const scene_instance\* instance, int element, const vec2f& uv,
-const vec3f& normal, const vec3f& outgoing);
-// check if a brdf is a delta
-bool is_delta(const scene_bsdf& bsdf);
-
-// Material volume parameters
-struct scene_vsdf {
-vec3f density = {0, 0, 0};
-vec3f scatter = {0, 0, 0};
-float anisotropy = 0;
-};
-
-// check if we have a volume
-bool has_volume(const scene_instance* instance);
-// evaluate volume
-scene_vsdf eval_vsdf(
-const scene_instance* instance, int element, const vec2f& uv);
+```cpp
+auto scene = new scene_model{...};               // create a complete scene
+auto enva = eval_environment(scene, dir);        // eval all environments
+auto environment = scene->environments.front();  // get first environment
+auto envi = eval_environment(environment, dir);  // eval environment
+```
 
 ## Ray-sene intersection
 
