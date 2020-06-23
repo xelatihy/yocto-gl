@@ -23,7 +23,7 @@ Frames are presented as affine 3x4 matrices and are intended to be
 rigid transforms, although most scene processing support frames with
 scaling.
 
-_Cameras_, represented by `scene_camera`, are based on a simple lens model.
+**Cameras**, represented by `scene_camera`, are based on a simple lens model.
 Cameras coordinate systems are defined by their frame.
 Cameras projections are described in photographic terms. In particular,
 we specify film size (35mm by default), film aspect ration,
@@ -40,11 +40,17 @@ Common aspect ratios used in video and still photography are
 To compute good apertures, one can use the F-stop number from photography
 and set the aperture to focal length over f-stop.
 
-_Textures_, represented as `scene_texture` contain either 8-bit LDR or
+**Textures**, represented as `scene_texture` contain either 8-bit LDR or
 32-bit float HDR images of either scalar or color (RGB) type.
 HDR images are encoded in linear color space, while LDRs are encoded in sRGB.
 
-_Materials_
+**Materials** are modeled similarly to the
+[Disney Principled BSDF](https://blog.selfshadow.com/publications/s2015-shading-course/#course_content) and the
+[Autodesk Standard Surface](https://autodesk.github.io/standard-surface/).
+Materials are defined using many parameters that control material emission,
+surface scattering and homogeneous volumetric scattering.
+Each material parameter has an associated texture, where texture values are
+multiplied by material parameters.
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
@@ -86,7 +92,7 @@ scene_texture* opacity_tex = nullptr;
 scene_texture* normal_tex = nullptr;
 };
 
-_Shapes_ are represented as indexed meshes of elements using the
+**Shapes** are represented as indexed meshes of elements using the
 `scene_shape` type. Shapes can contain only one type of element, either
 points, lines, triangles or quads. Shape elements are parametrized as in
 [Yocto/Geometry](yocto_geometry.md).
@@ -105,14 +111,14 @@ Subdivision and displacement are only specified in shapes, but not
 taken into account when evaluating shape properties. For this to happen,
 shapes have to be tessellated, as shown later.
 
-Shapes are placed in the scene by defining shape _instances_ that
+Shapes are placed in the scene by defining shape **instances** that
 take a coordinate frame, a shape pointer and a material pointer.
 Instances are represented by the `scene_instance` type.
 Instances are represented as `scene_instance` objects. Thought the
 use of instancing Yocto/Scene scales well to large environments without
 introducing more complex mechanisms.
 
-Scenes might be lit by background illumination defined by _environments_,
+Scenes might be lit by background illumination defined by **environments**,
 represented by the `scene_environment` type. Environments have a frame,
 to rotate illumination, an emission term and an optional emission texture.
 The emission texture is an HDR environment map stored in a LatLon
@@ -197,11 +203,13 @@ void set_scattering(scene_material* material, const vec3f& scattering,
 float scanisotropy, scene_texture* scattering_tex = nullptr);
 void set_normalmap(scene_material* material, scene_texture* normal_tex);
 
-For shapes, Yocto/Scene defines functions to set shape element indices and vertex properties. Use `set_points(shape, points)`,
+For shapes, Yocto/Scene defines functions to set shape element indices
+and vertex properties. Use `set_points(shape, points)`,
 `set_lines(shape, lines)`, `set_triangles(shape, triangles)`, and
 `set_quads(shape, quads)` to set indexed meshes indices as points, lines,
 triangles and quads respectively.
-Use `set_positions(shape, positions)`, `set_normals(shape, normals)`,`set_texcoords(shape, texcoords)`, `set_colors(shape, colors)`,
+Use `set_positions(shape, positions)`, `set_normals(shape, normals)`,
+`set_texcoords(shape, texcoords)`, `set_colors(shape, colors)`,
 `set_radius(shape, radius)`, and `set_tangents(shape, tangents)`
 to set positions, normals, texture coordinates, colors, radius and
 tangent spaces respectively.
@@ -244,17 +252,22 @@ auto tex = add_scene(scene, "sky");         // add hdr texture
 set_emission(environment, {1,1,1}, tex);    // add emission scale and texture
 ```
 
-// add missing elements
-void add_cameras(scene_model* scene);
-void add_radius(scene_model* scene, float radius = 0.001f);
-void add_materials(scene_model* scene);
-void add_sky(scene_model* scene, float sun_angle = pif / 4);
+For quickly creating scenes, Yocto/Scene provides convenience functions
+that add missing elements to construct full scenes.
+Use `add_cameras(scene)` to add a default camera, `add_materials(scene)`
+to add default materials for instances that miss it, `add_radius(scene)`
+to add points and lines thickness for rendering, and `add_sky(scene)` to
+add a procedural sky environment map.
 
-// Trim all unused memory
-void trim_memory(scene_model\* scene);
-
-// Clone a scene
-void clone_scene(scene_model* dest, const scene_model* scene);
+```cpp
+auto scene = new scene_model{};       // create a scene
+auto shape = add_shape(scene);        // add a shape
+auto instance = add_instance(scene);  // add a shape instance
+set_shape(instance,shape);
+add_cameras(scene);                   // add default camera
+add_materials(scene);                 // add default materials to instances
+add_sky(scene);                       // add environment and procedural sky
+```
 
 // compute scene bounds
 bbox3f compute_bounds(const scene_model\* scene);
@@ -376,11 +389,9 @@ default*,
 highquality,
 middle,
 balanced,
-#ifdef YOCTO_EMBREE
 embree_default,
 embree_highquality,
 embree_compact // only for copy interface
-#endif
 };
 
 // Params for scene bvh build
