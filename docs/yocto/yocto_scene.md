@@ -341,76 +341,80 @@ auto environment = scene->environments.front();  // get first environment
 auto envi = eval_environment(environment, dir);  // eval environment
 ```
 
-## Ray-sene intersection
+## Ray-scene intersection
 
-// Strategy used to build the bvh
-enum struct scene*bvh_type {
-default*,
-highquality,
-middle,
-balanced,
-embree_default,
-embree_highquality,
-embree_compact // only for copy interface
+Yocto/Scene supports ray-scene intersection queries accelerated by a two-level
+BVH. We provide both our implementation and an Embree wrapper. To perform
+ray intersection queries, first initialize the BVH with
+`init_bvh(scene, params, progress). The function takes a scene as input and builds a BVH that is stored internally. The BVH build strategy, and whether or not Embree is used` is determined by
+the `params` settings. The function takes also an optional progress callback
+that is called as the BVH is build to report build progress.
+After initialization, if scene shapes and instances are modified, the BVH
+can be updated with `update_bvh(...)`.
+
+```cpp
+auto scene = new scene_model{...};               // create a complete scene
+auto params = scene_bvh_params{};                // default params
+auto progress = [](const string& message,        // progress callback
+   int current, int total) {
+  print_info(message, current, total);
 };
+init_bvh(scene, params, progress);               // build bvh
+params.type = scene_bvh_type::embree_default;    // set build type as Embree
+init_bvh(scene, params);        // build Embree bvh with no progress report
+```
 
-// Params for scene bvh build
-struct scene*bvh_params {
-scene_bvh_type bvh = scene_bvh_type::default*;
-bool noparallel = false;
-};
+Use `intersect_scene_bvh(scene, ray)` to intersect a ray with a scene,
+and `intersect_instance_bvh(instance, ray)` to intersect a ray with an
+instance. Both functions return a `scene_intersection` that includes
+a hit flag, the instance id, the shape element id, the shape element uv
+and intersection distance.
 
-// Progress callback called when loading.
-using progress_callback =
-function<void(const string& message, int current, int total)>;
-
-// Build the bvh acceleration structure.
-void init_bvh(scene_model\* scene, const scene_bvh_params& params,
-progress_callback progress_cb = {});
-
-// Refit bvh data
-void update_bvh(scene_model* scene,
-const vector<scene_instance*>& updated_objects,
-const vector<scene_shape\*>& updated_shapes, const scene_bvh_params& params);
-
-// Results of intersect functions that include hit flag, the instance id,
-// the shape element id, the shape element uv and intersection distance.
-// Results values are set only if hit is true.
-struct scene_intersection {
-int instance = -1;
-int element = -1;
-vec2f uv = {0, 0};
-float distance = 0;
-bool hit = false;
-};
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-scene_intersection intersect_scene_bvh(const scene_model* scene,
-const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-scene_intersection intersect_instance_bvh(const scene_instance* instance,
-const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-
-## Example scenes
-
-// Make Cornell Box scene
-void make_cornellbox(scene_model\* scene);
-
-## Scene stats and validation
-
-// Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_model* scene, bool verbose = false);
-// Return validation errors as list of strings.
-vector<string> scene_validation(
-const scene_model* scene, bool notextures = false);
+```cpp
+auto scene = new scene_model{...};          // create a complete scene
+init_bvh(scene, {});                        // build default bvh
+auto ray = ray3f{...};                      // ray
+auto isec = intersect_scene_bvh(scene, ray);// ray-scene intersection
+if (isec.hit) print_info(isec);
+auto instance = scene->instances.first();   // get instance
+auto iisec = intersect_instance_bvh(instance, ray); // ray-instance int,
+if (iisec.hit) print_info(isec);
+```
 
 ## Scene tesselation
 
-// Apply subdivision and displacement rules.
-void tesselate_shapes(scene_model* scene, progress_callback progress_cb = {});
-void tesselate_shape(scene_shape* shape);
+The evaluation functions defined above and the ray intersection functions do
+not support subdivision surfaces or displaced shapes directly. Instead,
+shapes should be converted to indexed meshes using `tesselate_shape(shape)`
+for a specific shape, or `tesselate_shapes(scene, progress)` for the
+whole scene. Note that tesselations are destructive, meaning that the original
+shape data is lost. This is done to avoid copying whenever possible.
 
+```cpp
+auto scene = new scene_model{...};          // create a complete scene
+void tesselate_shapes(scene);               // tesselate shapes in the scene
 ```
 
+## Scene stats and validation
+
+Yocto/Scene has functions to compute scene stats and provide validation of
+scene data. Use `scene_stats(scene)` to get scene stats and
+`scene_validation(scene)` to validate scene objects.
+
+```cpp
+auto scene = new scene_model{...};          // create a complete scene
+auto stats = scene_stats(scene);            // get stats
+for(auto stat : stats) print_info(stat);    // print stats
+auto errors = validate_stats(scene);        // get validation errors
+for(auto error : errors) print_error(error);// print error
+```
+
+## Example scenes
+
+Yocto/Scene has a function to create a simple Cornell Box scene for testing.
+There are plans to increase support for more test scenes in the future.
+
+```cpp
+auto scene = new scene_model{...};          // create a complete scene
+make_cornellbox(scene);                     // make cornell box
 ```
