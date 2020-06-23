@@ -324,12 +324,18 @@ void set_points(scene_shape* shape, const vector<int>& points);
 void set_lines(scene_shape* shape, const vector<vec2i>& lines);
 void set_triangles(scene_shape* shape, const vector<vec3i>& triangles);
 void set_quads(scene_shape* shape, const vector<vec4i>& quads);
+void set_fvquads(scene_shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
 void set_positions(scene_shape* shape, const vector<vec3f>& positions);
 void set_normals(scene_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords);
 void set_colors(scene_shape* shape, const vector<vec3f>& colors);
 void set_radius(scene_shape* shape, const vector<float>& radius);
 void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
+void set_subdivision(scene_shape* shape, int subdivisions, bool catmullclark,
+    bool smooth = true);
+void set_displacement(
+    scene_shape* shape, float displacement, scene_texture* displacement_tex);
 
 // environment properties
 void set_frame(scene_environment* environment, const frame3f& frame);

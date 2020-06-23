@@ -120,32 +120,59 @@ parametrization.
 
 ## Scene Creation
 
-// add element to a scene
-scene_camera* add_camera(scene_model* scene, const string& name = "");
-scene_environment* add_environment(scene_model* scene, const string& name = "");
-scene_instance* add_instance(scene_model* scene, const string& name = "");
-scene_material* add_material(scene_model* scene, const string& name = "");
-scene_shape* add_shape(scene_model* scene, const string& name = "");
-scene_texture* add_texture(scene_model* scene, const string& name = "");
-scene_instance* add_complete_instance(
-scene_model* scene, const string& name = "");
+Objects are added to the scene via `add_XXX(scene,name)` functions,
+where `XXX` is the object type name. In these functions,
+the name is optional and, if left blank, a unique name will be generated
+automatically. For each object type, properties can be set directly.
+As a convenience, Yocto/Scene defines several functions to set objects
+properties.
 
-// camera properties
-void set_frame(scene_camera* camera, const frame3f& frame);
-void set_lens(scene_camera* camera, float lens, float aspect, float film,
-bool ortho = false);
-void set_focus(scene_camera\* camera, float aperture, float focus);
+For cameras, use `set_frame(camera,frame)` to set the local to world frame,
+`set_lens(camera,lens,aspect,film,ortho)` to set the camera projection using
+photographic lens parameters, and `set_focus(camera,aperture,focus)` to set
+the camera aperture and focus distance.
 
-// instance properties
-void set_frame(scene_instance* instance, const frame3f& frame);
-void set_material(scene_instance* instance, scene_material* material);
-void set_shape(scene_instance* instance, scene_shape\* shape);
+```cpp
+auto scene = new scene_model{};          // create a scene
+auto camera = add_camera(scene, "cam");  // create a camera named cam
+set_frame(camera,identity3x4f);          // set frame to identity
+set_lens(camera,0.050,3.0/2.0,0.036);    // set as 50mm lens 3:2 aspect on 35mm
+set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
+```
 
-// texture properties
-void set_texture(scene_texture* texture, const image<vec3b>& img);
-void set_texture(scene_texture* texture, const image<vec3f>& img);
-void set_texture(scene_texture* texture, const image<byte>& img);
-void set_texture(scene_texture* texture, const image<float>& img);
+For instances, use `set_frame(instance,frame)` to set the local to world frame,
+`set_shape(instance,shape)` and `set_material(instance,material)`
+to set the shape and material pointers. Since adding instances of single
+shapes is common in simpler scenes, the function
+`add_complete_instance(scene,name)` adds an instance with a new shape and
+material.
+
+```cpp
+auto scene = new scene_model{};             // create a scene
+auto instance = add_instance(scene, "ist"); // create an instance named ist
+set_frame(instance,identity3x4f);           // set frame to identity
+auto shape = add_shape(scene, "shp");
+set_shape(instance,shape);                  // set shape pointer
+auto material = add_material(scene, "mat");
+set_material(instance,material);            // set material pointer
+
+auto instance1 = add_complete_instance(scene, "obj");  // create an instance
+print_info(instance1->shape);                          // with a new shape
+print_info(instance1->material);                       // and  a new material
+```
+
+For textures, use `set_texture(texture, img)` to set the texture
+to the specified image. The function has overloads for images with
+one or three channels and with float or byte channel types.
+
+```cpp
+auto scene = new scene_model{};             // create a scene
+auto texture = add_texture(scene, "tex");   // create a texture named tex
+set_texture(texture,image<vec3f>{...});     // set as a color HDR texture
+set_texture(texture,image<vec3b>{...});     // set as a color LDR texture
+set_texture(texture,image<float>{...});     // set as a scalar HDR texture
+set_texture(texture,image<byte >{...});     // set as a scalar LDR texture
+```
 
 // material properties
 void set_emission(scene_material* material, const vec3f& emission,
@@ -170,22 +197,52 @@ void set_scattering(scene_material* material, const vec3f& scattering,
 float scanisotropy, scene_texture* scattering_tex = nullptr);
 void set_normalmap(scene_material* material, scene_texture* normal_tex);
 
-// shape properties
-void set_points(scene_shape* shape, const vector<int>& points);
-void set_lines(scene_shape* shape, const vector<vec2i>& lines);
-void set_triangles(scene_shape* shape, const vector<vec3i>& triangles);
-void set_quads(scene_shape* shape, const vector<vec4i>& quads);
-void set_positions(scene_shape* shape, const vector<vec3f>& positions);
-void set_normals(scene_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(scene_shape* shape, const vector<vec3f>& colors);
-void set_radius(scene_shape* shape, const vector<float>& radius);
-void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
+For shapes, Yocto/Scene defines functions to set shape element indices and vertex properties. Use `set_points(shape, points)`,
+`set_lines(shape, lines)`, `set_triangles(shape, triangles)`, and
+`set_quads(shape, quads)` to set indexed meshes indices as points, lines,
+triangles and quads respectively.
+Use `set_positions(shape, positions)`, `set_normals(shape, normals)`,`set_texcoords(shape, texcoords)`, `set_colors(shape, colors)`,
+`set_radius(shape, radius)`, and `set_tangents(shape, tangents)`
+to set positions, normals, texture coordinates, colors, radius and
+tangent spaces respectively.
 
-// environment properties
-void set_frame(scene_environment* environment, const frame3f& frame);
-void set_emission(scene_environment* environment, const vec3f& emission,
-scene_texture\* emission_tex = nullptr);
+```cpp
+auto scene = new scene_model{};             // create a scene
+auto shape = add_shape(scene, "shp");       // create a shape named shp
+set_triangles(shape, vector<vec3i>{...});   // set triangle indices
+set_positions(shape, vector<vec3f>{...});   // set positions
+set_normals(shape, vector<vec3f>{...});     // set normals
+set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
+```
+
+Use `set_fvquads(shape, quadspos, quadsnorm, quadsuv)` to set the shapes as
+a facce-varying quad mesh. Use `set_displacement(shape, disp, tex)` to
+set the displacement map and scale and `set_subdivision(shape, level, cc)`
+to set the subdivision level and whether to use Catmull-Clark or linear
+subdivision.
+
+```cpp
+auto scene = new scene_model{};             // create a scene
+auto shape = add_shape(scene, "shp");       // create a shape named shp
+set_fvquads(shape, vector<vec4i>{...},      // set face-varying indices
+  {}, vector<vec4i>{...});                  // for positions and textures
+set_positions(shape, vector<vec3f>{...});   // set positions
+set_texcoords(shape, vector<vec2f>{...});   // set texture coordinates
+set_subdivision(shape, 2, true);            // set Catmull-Clark subdivision
+set_displacement(shape, 1, tex);            // sete displacement map tex
+```
+
+For environments, use `set_frame(environment, frame)` to set the local to
+world frame, `set_emission(instance,emission,emission_tex)` to set the
+environment emission and emission texture.
+
+```cpp
+auto scene = new scene_model{};             // create a scene
+auto environment = add_environment(scene, "env"); // create an environment
+set_frame(environment, identity3x4f);       // set identity transform
+auto tex = add_scene(scene, "sky");         // add hdr texture
+set_emission(environment, {1,1,1}, tex);    // add emission scale and texture
+```
 
 // add missing elements
 void add_cameras(scene_model* scene);
@@ -382,3 +439,7 @@ const scene_model* scene, bool notextures = false);
 // Apply subdivision and displacement rules.
 void tesselate_shapes(scene_model* scene, progress_callback progress_cb = {});
 void tesselate_shape(scene_shape* shape);
+
+```
+
+```

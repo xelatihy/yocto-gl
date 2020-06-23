@@ -340,6 +340,12 @@ void set_triangles(scene_shape* shape, const vector<vec3i>& triangles) {
 void set_quads(scene_shape* shape, const vector<vec4i>& quads) {
   shape->quads = quads;
 }
+void set_fvquads(scene_shape* shape, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
+  shape->quadspos      = quadspos;
+  shape->quadsnorm     = quadsnorm;
+  shape->quadstexcoord = quadstexcoord;
+}
 void set_positions(scene_shape* shape, const vector<vec3f>& positions) {
   shape->positions = positions;
 }
@@ -357,6 +363,17 @@ void set_radius(scene_shape* shape, const vector<float>& radius) {
 }
 void set_tangents(scene_shape* shape, const vector<vec4f>& tangents) {
   shape->tangents = tangents;
+}
+void set_subdivision(
+    scene_shape* shape, int subdivisions, bool catmullclark, bool smooth) {
+  shape->subdivisions = subdivisions;
+  shape->catmullclark = catmullclark;
+  shape->smooth       = smooth;
+}
+void set_displacement(
+    scene_shape* shape, float displacement, scene_texture* displacement_tex) {
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
 }
 
 // Add instance
