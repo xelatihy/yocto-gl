@@ -50,7 +50,7 @@ HDR images are encoded in linear color space, while LDRs are encoded in sRGB.
 Materials are defined using many parameters that control material emission,
 surface scattering and homogeneous volumetric scattering.
 Each material parameter has an associated texture, where texture values are
-multiplied by material parameters.
+multiplied by parameter values.
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
