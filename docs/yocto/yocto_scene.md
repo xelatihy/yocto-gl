@@ -42,7 +42,8 @@ and set the aperture to focal length over f-stop.
 
 **Textures**, represented as `scene_texture` contain either 8-bit LDR or
 32-bit float HDR images of either scalar or color (RGB) type.
-HDR images are encoded in linear color space, while LDRs are encoded in sRGB.
+HDR images are encoded in linear color space, while LDR images
+are encoded in sRGB.
 
 **Materials** are modeled similarly to the
 [Disney Principled BSDF](https://blog.selfshadow.com/publications/s2015-shading-course/#course_content) and the
@@ -52,45 +53,28 @@ surface scattering and homogeneous volumetric scattering.
 Each material parameter has an associated texture, where texture values are
 multiplied by parameter values.
 
-// Material for surfaces, lines and triangles.
-// For surfaces, uses a microfacet model with thin sheet transmission.
-// The model is based on OBJ, but contains glTF compatibility.
-// For the documentation on the values, please see the OBJ format.
-struct scene_material {
-// material data
-string name = "";
+Materials specify a diffuse surface emission `emission` with HDR values
+that represent emitted radiance.
 
-// material
-vec3f emission = {0, 0, 0};
-vec3f color = {0, 0, 0};
-float specular = 0;
-float roughness = 0;
-float metallic = 0;
-float ior = 1.5;
-vec3f spectint = {1, 1, 1};
-float coat = 0;
-float transmission = 0;
-float translucency = 0;
-vec3f scattering = {0, 0, 0};
-float scanisotropy = 0;
-float trdepth = 0.01;
-float opacity = 1;
-bool thin = true;
+Surface scattering is modeled by defining the main surface
+color `color`, that represent the surface albedo.
+Specular reflection is modeled by default as a dielectric with index of
+refraction `ior`, roughness `roughness` and is scaled by a specular
+weight `specular`. By default, specular reflection is dielectric.
+Materials can reflect light as metals by setting the `metallic` parameter.
+In this case, a metallic specular reflection is defined by the surface color
+interpreted as metallic reflectivity, and surface roughness defined by
+the previous parameter. Surfaces are optionally covered by a coating layer
+defined by a `coat` parameter. By default surfaces are fully opaque, but
+can defined a `opacity` parameter and texture to define the surface coverage.
 
-// textures
-scene_texture* emission_tex = nullptr;
-scene_texture* color_tex = nullptr;
-scene_texture* specular_tex = nullptr;
-scene_texture* metallic_tex = nullptr;
-scene_texture* roughness_tex = nullptr;
-scene_texture* transmission_tex = nullptr;
-scene_texture* translucency_tex = nullptr;
-scene_texture* spectint_tex = nullptr;
-scene_texture* scattering_tex = nullptr;
-scene_texture* coat_tex = nullptr;
-scene_texture* opacity_tex = nullptr;
-scene_texture* normal_tex = nullptr;
-};
+Materials also define volumetric scattering properties by setting a
+`transmission` parameter that sets the transmitted surface color.
+Surfaces are be default considered as thin sheet, but can be modeled as
+isotropic volumes if the `thin` parameter is set to false. In that case,
+the surface transmission controls the volumetric parameters by defining the
+volume density, while the volume scattering albedo is defined by the
+`scattering` property.
 
 **Shapes** are represented as indexed meshes of elements using the
 `scene_shape` type. Shapes can contain only one type of element, either
