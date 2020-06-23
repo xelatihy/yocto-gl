@@ -117,24 +117,24 @@ automatically. For each object type, properties can be set directly.
 As a convenience, Yocto/Scene defines several functions to set objects
 properties.
 
-For cameras, use `set_frame(camera,frame)` to set the local to world frame,
-`set_lens(camera,lens,aspect,film,ortho)` to set the camera projection using
-photographic lens parameters, and `set_focus(camera,aperture,focus)` to set
+For cameras, use `set_frame(camera, frame)` to set the local to world frame,
+`set_lens(camera, lens, aspect, film, ortho)` to set the camera projection using
+photographic lens parameters, and `set_focus(camera, aperture, focus)` to set
 the camera aperture and focus distance.
 
 ```cpp
 auto scene = new scene_model{};          // create a scene
 auto camera = add_camera(scene, "cam");  // create a camera named cam
 set_frame(camera,identity3x4f);          // set frame to identity
-set_lens(camera,0.050,3.0/2.0,0.036);    // set as 50mm lens 3:2 aspect on 35mm
+set_lens(camera,0.050,1.5,0.036);     // set as 50mm lens 3:2 aspect on 35mm
 set_aperture(camera,0.01,10);            // set 10mm aperture focused at 10m
 ```
 
-For instances, use `set_frame(instance,frame)` to set the local to world frame,
-`set_shape(instance,shape)` and `set_material(instance,material)`
+For instances, use `set_frame(instance, frame)` to set the local to world frame,
+`set_shape(instance, shape)` and `set_material(instance, material)`
 to set the shape and material pointers. Since adding instances of single
 shapes is common in simpler scenes, the function
-`add_complete_instance(scene,name)` adds an instance with a new shape and
+`add_complete_instance(scene, name)` adds an instance with a new shape and
 material.
 
 ```cpp
@@ -164,28 +164,47 @@ set_texture(texture,image<float>{...});     // set as a scalar HDR texture
 set_texture(texture,image<byte >{...});     // set as a scalar LDR texture
 ```
 
-// material properties
-void set_emission(scene_material* material, const vec3f& emission,
-scene_texture* emission_tex = nullptr);
-void set_color(scene_material* material, const vec3f& color,
-scene_texture* color_tex = nullptr);
-void set_specular(scene_material* material, float specular = 1,
-scene_texture* specular_tex = nullptr);
-void set_ior(scene_material* material, float ior);
-void set_metallic(scene_material* material, float metallic,
-scene_texture* metallic_tex = nullptr);
-void set_transmission(scene_material* material, float transmission, bool thin,
-float trdepth, scene_texture* transmission_tex = nullptr);
-void set_translucency(scene_material* material, float translucency, bool thin,
-float trdepth, scene_texture* translucency_tex = nullptr);
-void set_roughness(scene_material* material, float roughness,
-scene_texture* roughness_tex = nullptr);
-void set_opacity(scene_material* material, float opacity,
-scene_texture* opacity_tex = nullptr);
-void set_thin(scene_material* material, bool thin);
-void set_scattering(scene_material* material, const vec3f& scattering,
-float scanisotropy, scene_texture* scattering_tex = nullptr);
-void set_normalmap(scene_material* material, scene_texture* normal_tex);
+For materials, Yocto/Scene defines functions to set each material property.
+Each functions take as input the parameter value and an optional texture.
+Use `set_emission(material, emission, tex)` to set material emission.
+Use `set_color(material, color, tex)` to set the surface color,
+`set_specular(material, specular, tex)`,
+`set_metallic(material, metallic, tex)`,
+`set_transmission(material, transmission, tex)`
+for specular, metallic and transmission weights,
+`set_ior(material, ior)`, `set_roughness(material, roughness, tex)`,
+`set_opacity(material, opacity, tex)` for surface ior, roughness and opacity,
+`set_scattering(material, scattering,tex)` for volumetric scattering and
+`set_thin(material, thin)` for the thin flag.
+
+```cpp
+auto scene = new scene_model{};               // create a scene
+auto matte = add_texture(scene, "matte");     // create a matte material
+set_color(matte, {1,0.5,0.5}, add_texture(scene)); // textured albedo
+auto plastic = add_texture(scene, "plastic"); // create a plastic material
+set_color(plastic, {0.5,1,0.5});              // constant color
+set_specular(plastic, 1);                     // constant specular
+set_roughness(plastic, 0.1, add_texture(scene)); // textured roughness
+auto metal = add_texture(scene, "metal");     // create a metal material
+set_color(metal, {0.5,0.5,1});                // constant color
+set_specular(metal, 1);                       // constant specular
+set_roughness(metal, 0.1);                    // constant roughness
+auto tglass = add_texture(scene, "tglass");   // create a thin glass material
+set_color(tglass, {1,1,1});                   // constant color
+set_specular(tglass, 1);                      // constant specular
+set_transmission(tglass, 1);                  // constant transmission
+auto glass = add_texture(scene, "glass");     // create a glass material
+set_color(glass, {1,1,1});                    // constant color
+set_specular(glass, 1);                       // constant specular
+set_transmission(glass, 1);                   // constant transmission
+set_thin(glass, false);                       // volumetric material
+auto subsurf = add_texture(scene, "subsurf"); // create a subsurface material
+set_color(subsurf, {1,1,1});                  // constant color
+set_specular(subsurf, 1);                     // constant specular
+set_transmission(subsurf, 1);                 // constant transmission
+set_thin(subsurf, false);                     // volumetric material
+set_scattering(subsurf, {0.5,1,0.5});         // volumetric scattering
+```
 
 For shapes, Yocto/Scene defines functions to set shape element indices
 and vertex properties. Use `set_points(shape, points)`,
@@ -225,7 +244,7 @@ set_displacement(shape, 1, tex);            // sete displacement map tex
 ```
 
 For environments, use `set_frame(environment, frame)` to set the local to
-world frame, `set_emission(instance,emission,emission_tex)` to set the
+world frame, `set_emission(instance, emission, emission_tex)` to set the
 environment emission and emission texture.
 
 ```cpp
@@ -253,27 +272,30 @@ add_materials(scene);                 // add default materials to instances
 add_sky(scene);                       // add environment and procedural sky
 ```
 
-// compute scene bounds
-bbox3f compute_bounds(const scene_model\* scene);
-
-// get named camera or default if name is empty
-scene_camera* get_camera(const scene_model* scene, const string& name = "");
-
 ## Evaluation of scene properties
 
-// Generates a ray from a camera.
-ray3f eval_camera(
-const scene_camera\* camera, const vec2f& image_uv, const vec2f& lens_uv);
+Yocto/Scene defines several function to evaluate scene properties.
+Use `compute_bounds(scene)` to compute the scene bounding boxes. Use `get_camera(scene, name)` to get a camera by name or the default camera is the name is not
+given. Use `eval_camera(camera, image_uv, lens_uv)` to get a camera ray
+from the normalized image coordinates `image_uv` and lens coordinates `lens_uv`.
 
-// Evaluates a texture
-vec2i texture_size(const scene_texture* texture);
-vec3f lookup_texture(
-const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec3f eval_texture(const scene_texture\* texture, const vec2f& uv,
-bool ldr_as_linear = false, bool no_interpolation = false,
-bool clamp_to_edge = false);
+```cpp
+auto scene = new scene_model{...};             // create a complete scene
+auto camera = get_camera(scene);               // get default camera
+auto ray = eval_camera(camera,{0.5,0.5},{0,0});// get ray though image center
+```
 
-// Evaluate instance properties
+Use `texture_size(texture)` to get the texture resolution, and
+`eval_texture(texture, uv)` to evaluate the texture at specific uvs.
+Textures evaluation returns a color in linear color space, regardless of
+the texture representation.
+
+```cpp
+auto scene = new scene_model{...};             // create a complete scene
+auto texture = scene->texture.front();         // get first texture
+auto col = eval_texture(texture,{0.5,0.5});    // eval texture
+```
+
 vec3f eval_position(
 const scene_instance* instance, int element, const vec2f& uv);
 vec3f eval_element_normal(const scene_instance* instance, int element);
