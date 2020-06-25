@@ -779,11 +779,13 @@ vec3f lookup_texture(
     return ldr_as_linear ? byte_to_float(texture->colorb[ij])
                          : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
   } else if (!texture->scalarf.empty()) {
-    return vec3f{texture->scalarf[ij]};
+    auto scalarf = texture->scalarf[ij];
+    return vec3f{scalarf, scalarf, scalarf};
   } else if (!texture->scalarb.empty()) {
+    auto scalarb = texture->scalarb[ij];
     return ldr_as_linear
-               ? byte_to_float(vec3b{texture->scalarb[ij]})
-               : srgb_to_rgb(byte_to_float(vec3b{texture->scalarb[ij]}));
+               ? byte_to_float(vec3b{scalarb, scalarb, scalarb})
+               : srgb_to_rgb(byte_to_float(vec3b{scalarb, scalarb, scalarb}));
   } else {
     return {1, 1, 1};
   }

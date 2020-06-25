@@ -123,8 +123,6 @@ struct vec2f {
 
   vec2f();
   vec2f(float x, float y);
-  explicit vec2f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -138,8 +136,6 @@ struct vec3f {
   vec3f();
   vec3f(float x, float y, float z);
   vec3f(const vec2f& v, float z);
-  explicit vec3f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -1204,8 +1200,6 @@ namespace yocto {
 // Vec2
 inline vec2f::vec2f() {}
 inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
-inline vec2f::vec2f(float v) : x{v}, y{v} {}
-inline vec2f::operator bool() const { return x || y; }
 
 inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
@@ -1214,8 +1208,6 @@ inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 inline vec3f::vec3f() {}
 inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
 inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
-inline vec3f::operator bool() const { return x || y || z; }
 
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }

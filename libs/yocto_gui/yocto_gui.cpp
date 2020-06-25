@@ -1338,14 +1338,14 @@ void clear_lights(ogl_scene* scene) {
 bool has_max_lights(ogl_scene* scene) { return scene->lights.size() >= 16; }
 void add_default_lights(ogl_scene* scene) {
   clear_lights(scene);
-  set_light(add_light(scene), normalize(vec3f{1, 1, 1}), vec3f{pif / 2},
-      ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{-1, 1, 1}), vec3f{pif / 2},
-      ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{-1, -1, 1}), vec3f{pif / 4},
-      ogl_light_type::directional, true);
-  set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}), vec3f{pif / 4},
-      ogl_light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{1, 1, 1}),
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, 1, 1}),
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{-1, -1, 1}),
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true);
+  set_light(add_light(scene), normalize(vec3f{0.1, 0.5, -1}),
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true);
 }
 
 // Draw a shape
@@ -1372,7 +1372,8 @@ void draw_object(
   set_uniform(scene->program, "mtype", mtype);
   set_uniform(scene->program, "emission", material->emission);
   set_uniform(scene->program, "diffuse", material->color);
-  set_uniform(scene->program, "specular", vec3f{material->metallic});
+  set_uniform(scene->program, "specular",
+      vec3f{material->metallic, material->metallic, material->metallic});
   set_uniform(scene->program, "roughness", material->roughness);
   set_uniform(scene->program, "opacity", material->opacity);
   set_uniform(scene->program, "double_sided", (int)params.double_sided);
@@ -1430,13 +1431,13 @@ void draw_object(
 void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
     const ogl_scene_params& params) {
   static auto camera_light0 = ogl_light{normalize(vec3f{1, 1, 1}),
-      vec3f{pif / 2}, ogl_light_type::directional, true};
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
   static auto camera_light1 = ogl_light{normalize(vec3f{-1, 1, 1}),
-      vec3f{pif / 2}, ogl_light_type::directional, true};
+      vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
   static auto camera_light2 = ogl_light{normalize(vec3f{-1, -1, 1}),
-      vec3f{pif / 4}, ogl_light_type::directional, true};
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
   static auto camera_light3 = ogl_light{normalize(vec3f{0.1, 0.5, -1}),
-      vec3f{pif / 4}, ogl_light_type::directional, true};
+      vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
   static auto camera_lights = vector<ogl_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;

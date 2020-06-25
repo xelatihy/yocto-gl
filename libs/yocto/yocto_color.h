@@ -98,7 +98,7 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
 inline vec3f contrast(const vec3f& rgb, float contrast);
 // Apply saturation.
 inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f});
+    const vec3f& weights = vec3f{0.333333, 0.333333, 0.333333});
 
 // Apply tone mapping
 inline vec3f tonemap(

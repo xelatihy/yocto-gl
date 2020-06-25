@@ -130,32 +130,32 @@ static vec3f eval_bsdfcos(const scene_bsdf& bsdf, const vec3f& normal,
 
   // accumulate the lobes
   auto brdfcos = zero3f;
-  if (bsdf.diffuse) {
+  if (bsdf.diffuse != zero3f) {
     brdfcos += bsdf.diffuse *
                eval_diffuse_reflection(normal, outgoing, incoming);
   }
-  if (bsdf.specular) {
+  if (bsdf.specular != zero3f) {
     brdfcos += bsdf.specular * eval_microfacet_reflection(bsdf.ior,
                                    bsdf.roughness, normal, outgoing, incoming);
   }
-  if (bsdf.metal) {
+  if (bsdf.metal != zero3f) {
     brdfcos += bsdf.metal * eval_microfacet_reflection(bsdf.meta, bsdf.metak,
                                 bsdf.roughness, normal, outgoing, incoming);
   }
-  if (bsdf.coat) {
+  if (bsdf.coat != zero3f) {
     brdfcos += bsdf.coat * eval_microfacet_reflection(coat_ior, coat_roughness,
                                normal, outgoing, incoming);
   }
-  if (bsdf.transmission) {
+  if (bsdf.transmission != zero3f) {
     brdfcos += bsdf.transmission * eval_microfacet_transmission(bsdf.ior,
                                        bsdf.roughness, normal, outgoing,
                                        incoming);
   }
-  if (bsdf.translucency) {
+  if (bsdf.translucency != zero3f) {
     brdfcos += bsdf.translucency *
                eval_diffuse_transmission(normal, outgoing, incoming);
   }
-  if (bsdf.refraction) {
+  if (bsdf.refraction != zero3f) {
     brdfcos += bsdf.refraction * eval_microfacet_refraction(bsdf.ior,
                                      bsdf.roughness, normal, outgoing,
                                      incoming);
@@ -169,23 +169,23 @@ static vec3f eval_delta(const scene_bsdf& bsdf, const vec3f& normal,
 
   auto brdfcos = zero3f;
 
-  if (bsdf.specular && !bsdf.refraction) {
+  if (bsdf.specular != zero3f && bsdf.refraction == zero3f) {
     brdfcos += bsdf.specular *
                eval_delta_reflection(bsdf.ior, normal, outgoing, incoming);
   }
-  if (bsdf.metal) {
+  if (bsdf.metal != zero3f) {
     brdfcos += bsdf.metal * eval_delta_reflection(bsdf.meta, bsdf.metak, normal,
                                 outgoing, incoming);
   }
-  if (bsdf.coat) {
+  if (bsdf.coat != zero3f) {
     brdfcos += bsdf.coat *
                eval_delta_reflection(coat_ior, normal, outgoing, incoming);
   }
-  if (bsdf.transmission) {
+  if (bsdf.transmission != zero3f) {
     brdfcos += bsdf.transmission *
                eval_delta_transmission(bsdf.ior, normal, outgoing, incoming);
   }
-  if (bsdf.refraction) {
+  if (bsdf.refraction != zero3f) {
     brdfcos += bsdf.refraction *
                eval_delta_refraction(bsdf.ior, normal, outgoing, incoming);
   }
@@ -789,9 +789,10 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
     case trace_falsecolor_type::transmission: return {bsdf.transmission, 1};
     case trace_falsecolor_type::translucency: return {bsdf.translucency, 1};
     case trace_falsecolor_type::refraction: return {bsdf.refraction, 1};
-    case trace_falsecolor_type::roughness: return {vec3f{bsdf.roughness}, 1};
-    case trace_falsecolor_type::opacity: return {vec3f{opacity}, 1};
-    case trace_falsecolor_type::ior: return {vec3f{bsdf.ior}, 1};
+    case trace_falsecolor_type::roughness:
+      return {bsdf.roughness, bsdf.roughness, bsdf.roughness, 1};
+    case trace_falsecolor_type::opacity: return {opacity, opacity, opacity, 1};
+    case trace_falsecolor_type::ior: return {bsdf.ior, bsdf.ior, bsdf.ior, 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case trace_falsecolor_type::instance:
@@ -825,7 +826,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
   auto opacity  = eval_opacity(instance, element, uv, normal, outgoing);
   auto bsdf     = eval_bsdf(instance, element, uv, normal, outgoing);
 
-  if (emission) {
+  if (emission != zero3f) {
     return {emission, 1};
   }
 
@@ -840,7 +841,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
   }
 
   if (bsdf.roughness < 0.05 && bounce < 5) {
-    if (bsdf.transmission && material->thin) {
+    if (bsdf.transmission != zero3f && material->thin) {
       auto incoming     = -outgoing;
       auto trans_albedo = trace_albedo(
           scene, ray3f{position, incoming}, rng, params, bounce + 1);
@@ -852,7 +853,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       auto dielectric_albedo = lerp(trans_albedo, spec_albedo, fresnel);
       return dielectric_albedo * vec4f{albedo, 1};
-    } else if (bsdf.metal) {
+    } else if (bsdf.metal != zero3f) {
       auto incoming    = reflect(outgoing, normal);
       auto refl_albedo = trace_albedo(
           scene, ray3f{position, incoming}, rng, params, bounce + 1);
@@ -895,7 +896,7 @@ static vec4f trace_normal(const scene_model* scene, const ray3f& ray,
   }
 
   if (bsdf.roughness < 0.05f && bounce < 5) {
-    if (bsdf.transmission && material->thin) {
+    if (bsdf.transmission != zero3f && material->thin) {
       auto incoming   = -outgoing;
       auto trans_norm = trace_normal(
           scene, ray3f{position, incoming}, rng, params, bounce + 1);
@@ -906,7 +907,7 @@ static vec4f trace_normal(const scene_model* scene, const ray3f& ray,
 
       auto fresnel = fresnel_dielectric(material->ior, outgoing, normal);
       return lerp(trans_norm, spec_norm, fresnel);
-    } else if (bsdf.metal) {
+    } else if (bsdf.metal != zero3f) {
       auto incoming = reflect(outgoing, normal);
       return trace_normal(
           scene, ray3f{position, incoming}, rng, params, bounce + 1);

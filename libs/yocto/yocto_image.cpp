@@ -449,7 +449,7 @@ vec3f lookup_image(const image<vec3b>& img, const vec2i& ij, bool as_linear) {
 template <typename T, typename R>
 inline R eval_image_generic(const image<T>& img, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (img.empty()) return R{0};
+  if (img.empty()) return R{};
 
   // get image width/height
   auto size = img.size();
@@ -952,7 +952,7 @@ void make_uvgrid(
     } else {
       hsv.y = 0.8f;
     }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z};
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z, hsv.z, hsv.z};
     return vec4f{rgb, 1};
   });
 }

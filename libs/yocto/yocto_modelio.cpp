@@ -2992,7 +2992,7 @@ struct pbrt_command {
     val = pbrt.value3f;
     return true;
   } else if (pbrt.type == pbrt_type::real) {
-    val = vec3f{pbrt.value1f};
+    val = vec3f{pbrt.value1f, pbrt.value1f, pbrt.value1f};
     return true;
   } else {
     return false;
@@ -3736,7 +3736,7 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
       return parse_error();
     return true;
   } else if (command.type == "constant") {
-    ptexture->constant = vec3f{1};
+    ptexture->constant = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "value", ptexture->constant))
       return parse_error();
     return true;
@@ -3767,7 +3767,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     ptexture->constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "mix") {
-    auto tex1 = std::pair{vec3f{0}, ""s}, tex2 = std::pair{vec3f{1}, ""s};
+    auto tex1 = std::pair{vec3f{0, 0, 0}, ""s},
+         tex2 = std::pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex2)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -3779,7 +3780,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     }
     return true;
   } else if (command.type == "scale") {
-    auto tex1 = std::pair{vec3f{1}, ""s}, tex2 = std::pair{vec3f{1}, ""s};
+    auto tex1 = std::pair{vec3f{1, 1, 1}, ""s},
+         tex2 = std::pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex1)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -3850,7 +3852,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
   auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
                         float& scalar, float def) -> bool {
-    auto textured = std::pair{vec3f{def}, ""s};
+    auto textured = std::pair{vec3f{def, def, def}, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       scalar = mean(textured.first);
@@ -3883,7 +3885,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
 
   auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
                            float def = 0.1) -> bool {
-    auto roughness_ = std::pair{vec3f{def}, ""s};
+    auto roughness_ = std::pair{vec3f{def, def, def}, ""s};
     if (!get_pbrt_value(values, "roughness", roughness_)) return parse_error();
     auto uroughness = roughness_, vroughness = roughness_;
     auto remaproughness = true;
@@ -3916,12 +3918,14 @@ inline bool convert_material(pbrt_material*     pmaterial,
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
     auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
-    if (!get_texture(command.values, "Kd", diffuse, diffuse_map, vec3f{0.25}))
+    if (!get_texture(command.values, "Kd", diffuse, diffuse_map,
+            vec3f{0.25, 0.25, 0.25}))
       return parse_error();
-    if (!get_texture(command.values, "Ks", specular, specular_map, vec3f{0.25}))
+    if (!get_texture(command.values, "Ks", specular, specular_map,
+            vec3f{0.25, 0.25, 0.25}))
       return parse_error();
-    if (!get_texture(
-            command.values, "Kt", transmission, transmission_map, vec3f{0}))
+    if (!get_texture(command.values, "Kt", transmission, transmission_map,
+            vec3f{0, 0, 0}))
       return parse_error();
     if (max(transmission) > 0.1) {
       pmaterial->color        = transmission;
@@ -3937,12 +3941,12 @@ inline bool convert_material(pbrt_material*     pmaterial,
       return parse_error();
     if (!get_scalar(command.values, "eta", pmaterial->ior, 1.5))
       return parse_error();
-    if (!get_roughness(command.values, pmaterial->roughness, 0.1f))
+    if (!get_roughness(command.values, pmaterial->roughness, 0.1))
       return parse_error();
     return true;
   } else if (command.type == "plastic") {
     if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.25}))
+            pmaterial->color_tex, vec3f{0.25, 0.25, 0.25}))
       return parse_error();
     if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.25))
       return parse_error();
@@ -3954,7 +3958,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
     return true;
   } else if (command.type == "translucent") {
     if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.25}))
+            pmaterial->color_tex, vec3f{0.25, 0.25, 0.25}))
       return parse_error();
     if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.25))
       return parse_error();
@@ -3965,12 +3969,12 @@ inline bool convert_material(pbrt_material*     pmaterial,
     return true;
   } else if (command.type == "matte") {
     if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5}))
+            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     return true;
   } else if (command.type == "mirror") {
     if (!get_texture(command.values, "Kr", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.9}))
+            pmaterial->color_tex, vec3f{0.9, 0.9, 0.9}))
       return parse_error();
     pmaterial->metallic  = 1;
     pmaterial->roughness = 0;
@@ -3993,7 +3997,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
     return true;
   } else if (command.type == "substrate") {
     if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5}))
+            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     if (!get_scalar(command.values, "Ks", pmaterial->specular, 0.5))
       return parse_error();
@@ -4021,21 +4025,21 @@ inline bool convert_material(pbrt_material*     pmaterial,
     return true;
   } else if (command.type == "hair") {
     if (!get_texture(command.values, "color", pmaterial->color,
-            pmaterial->color_tex, vec3f{0}))
+            pmaterial->color_tex, vec3f{0, 0, 0}))
       return parse_error();
     pmaterial->roughness = 1;
     if (verbose) printf("hair material not properly supported\n");
     return true;
   } else if (command.type == "disney") {
     if (!get_texture(command.values, "color", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5}))
+            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     pmaterial->roughness = 1;
     if (verbose) printf("disney material not properly supported\n");
     return true;
   } else if (command.type == "kdsubsurface") {
     if (!get_texture(command.values, "Kd", pmaterial->color,
-            pmaterial->color_tex, vec3f{0.5}))
+            pmaterial->color_tex, vec3f{0.5, 0.5, 0.5}))
       return parse_error();
     if (!get_scalar(command.values, "Kr", pmaterial->specular, 1))
       return parse_error();
@@ -4307,7 +4311,7 @@ inline bool convert_arealight(pbrt_arealight* parealight,
 
   parealight->name = command.name;
   if (command.type == "diffuse") {
-    auto l = vec3f{1}, scale = vec3f{1};
+    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     parealight->emission = l * scale;
@@ -4332,7 +4336,7 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
   plight->frame = command.frame;
   plight->frend = command.frend;
   if (command.type == "distant") {
-    auto l = vec3f{1}, scale = vec3f{1};
+    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     plight->emission = l * scale;
@@ -4360,7 +4364,7 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
     return true;
   } else if (command.type == "point" || command.type == "goniometric" ||
              command.type == "spot") {
-    auto i = vec3f{1}, scale = vec3f{1};
+    auto i = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "I", i)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     plight->emission = i * scale;
@@ -4398,7 +4402,7 @@ inline bool convert_environment(pbrt_environment* penvironment,
   penvironment->frend = penvironment->frend *
                         frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
   if (command.type == "infinite") {
-    auto l = vec3f{1}, scale = vec3f{1};
+    auto l = vec3f{1, 1, 1}, scale = vec3f{1, 1, 1};
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     penvironment->emission     = scale * l;
@@ -4990,16 +4994,17 @@ bool save_pbrt(
             make_pbrt_value("Kd", material->color_tex, pbrt_type::texture));
       }
       if (material->specular != 0) {
-        command.values.push_back(
-            make_pbrt_value("Ks", vec3f{material->specular}));
+        command.values.push_back(make_pbrt_value("Ks",
+            vec3f{material->specular, material->specular, material->specular}));
         command.values.push_back(
             make_pbrt_value("roughness", pow(material->roughness, 2)));
         command.values.push_back(make_pbrt_value("eta", material->ior));
         command.values.push_back(make_pbrt_value("remaproughness", false));
       }
       if (material->transmission != 0) {
-        command.values.push_back(
-            make_pbrt_value("Kt", vec3f{material->transmission}));
+        command.values.push_back(make_pbrt_value(
+            "Kt", vec3f{material->transmission, material->transmission,
+                      material->transmission}));
       }
       if (!material->opacity_tex.empty()) {
         command.values.push_back(make_pbrt_value(
