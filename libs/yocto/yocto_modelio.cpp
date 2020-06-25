@@ -4546,11 +4546,11 @@ struct pbrt_context {
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
       if (!parse_param(str, xf)) return parse_error();
-      set_transform(ctx.stack.back(), frame3f{xf});
+      set_transform(ctx.stack.back(), mat_to_frame(xf));
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
       if (!parse_param(str, xf)) return parse_error();
-      concat_transform(ctx.stack.back(), frame3f{xf});
+      concat_transform(ctx.stack.back(), mat_to_frame(xf));
     } else if (cmd == "Scale") {
       auto v = zero3f;
       if (!parse_param(str, v)) return parse_error();
@@ -4938,7 +4938,7 @@ bool save_pbrt(
       command.values.push_back(make_pbrt_value("I", light->emission));
     }
     if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", (mat4f)command.frame))
+    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
       return write_error();
     if (!format_pbrt_values(
             fs, "LightSource \"{}\" {}\n", command.type, command.values))
@@ -4954,7 +4954,7 @@ bool save_pbrt(
     command.values.push_back(
         make_pbrt_value("mapname", environment->emission_tex));
     if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", (mat4f)command.frame))
+    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
       return write_error();
     if (!format_pbrt_values(
             fs, "LightSource \"{}\" {}\n", command.type, command.values))
@@ -5053,7 +5053,7 @@ bool save_pbrt(
       if (!format_pbrt_values(fs, "ObjectBegin \"{}\"\n", object))
         return write_error();
     if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", (mat4f)shape->frame))
+    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
       return write_error();
     if (shape->material->emission != zero3f) {
       auto acommand = pbrt_command{};
@@ -5075,7 +5075,7 @@ bool save_pbrt(
       if (!format_pbrt_values(fs, "ObjectEnd\n")) return write_error();
     for (auto& iframe : shape->instances) {
       if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-      if (!format_pbrt_values(fs, "Transform {}\n", (mat4f)iframe))
+      if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(iframe)))
         return write_error();
       if (!format_pbrt_values(fs, "ObjectInstance \"{}\"\n", object))
         return write_error();

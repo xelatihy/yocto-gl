@@ -1355,9 +1355,9 @@ void draw_object(
 
   if (instance->hidden) return;
 
-  auto shape_xform     = mat4f(instance->frame);
+  auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
-      mat4f(inverse(instance->frame, params.non_rigid_frames)));
+      frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
   set_uniform(scene->program, "frame", shape_xform);
   set_uniform(scene->program, "frameit", shape_inv_xform);
   set_uniform(scene->program, "offset", 0.0f);
@@ -1445,7 +1445,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
       camera_aspect >= 0
           ? (2 * atan(camera->film / (camera_aspect * 2 * camera->lens)))
           : (2 * atan(camera->film / (2 * camera->lens)));
-  auto camera_view = mat4f(inverse(camera->frame));
+  auto camera_view = frame_to_mat(inverse(camera->frame));
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
