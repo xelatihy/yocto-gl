@@ -533,10 +533,15 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1}, float radius = 0.3);
+// Make a plane in the xz plane.
 void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
+void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1}, float radius = 0.3);
 // Make a box.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -597,15 +602,6 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
     const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
-// Make a plane in the xz plane.
-void make_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-void make_bulged_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, float radius = 0.3);
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
