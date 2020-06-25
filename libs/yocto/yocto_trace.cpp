@@ -607,7 +607,7 @@ static vec4f trace_path(const scene_model* scene, const ray3f& ray_,
     }
   }
 
-  return make_vec(radiance, hit ? 1.0f : 0.0f);
+  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
 }
 
 // Recursive path tracing.
@@ -678,7 +678,7 @@ static vec4f trace_naive(const scene_model* scene, const ray3f& ray_,
     ray = {position, incoming};
   }
 
-  return make_vec(radiance, hit ? 1.0f : 0.0f);
+  return {radiance.x, radiance.y, radiance.z, hit ? 1.0f : 0.0f};
 }
 
 // Eyelight for quick previewing.
@@ -770,6 +770,11 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
     return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
   };
 
+  // make vec4f
+  auto make_vec = [](const vec3f& xyz, float w) {
+    return vec4f{xyz.x, xyz.y, xyz.z, w};
+  };
+
   switch (params.falsecolor) {
     case trace_falsecolor_type::position:
       return make_vec(position * 0.5f + 0.5f, 1);
@@ -815,7 +820,8 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
     rng_state& rng, const trace_params& params, int bounce) {
   auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
-    return make_vec(eval_environment(scene, ray.d), 1);
+    auto radiance = eval_environment(scene, ray.d);
+    return {radiance.x, radiance.y, radiance.z, 1};
   }
 
   // prepare shading point
@@ -974,11 +980,11 @@ void trace_sample(trace_state* state, const scene_model* scene,
     radiance = radiance * (params.clamp / max(radiance));
   state->accumulation[ij] += radiance;
   state->samples[ij] += 1;
-  state->render[ij] = make_vec(
-      state->accumulation[ij].w
-          ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
-          : zero3f,
-      state->accumulation[ij].w / state->samples[ij]);
+  xyz(state->render[ij]) = state->accumulation[ij].w
+                               ? xyz(state->accumulation[ij]) /
+                                     state->accumulation[ij].w
+                               : zero3f;
+  state->render[ij].w = state->accumulation[ij].w / state->samples[ij];
 }
 
 // Init a sequence of random number generators.

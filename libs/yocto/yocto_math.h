@@ -163,9 +163,6 @@ inline const auto one2f = vec2f{1, 1};
 inline const auto one3f = vec3f{1, 1, 1};
 inline const auto one4f = vec4f{1, 1, 1, 1};
 
-// Make vector
-inline vec4f make_vec(const vec3f& xyz, float w);
-
 // Element access
 inline vec3f&       xyz(vec4f& a);
 inline const vec3f& xyz(const vec4f& a);
@@ -1208,11 +1205,6 @@ inline vec4f::vec4f(float x, float y, float z, float w)
 
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
-
-// Make vector
-inline vec4f make_vec(const vec3f& xyz, float w) {
-  return {xyz.x, xyz.y, xyz.z, w};
-}
 
 // Element access
 inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
