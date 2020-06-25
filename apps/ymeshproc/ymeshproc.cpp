@@ -106,7 +106,7 @@ int main(int argc, const char* argv[]) {
   auto smooth               = false;
   auto faceted              = false;
   auto rotate               = zero3f;
-  auto scale                = vec3f{1};
+  auto scale                = vec3f{1, 1, 1};
   auto uscale               = 1.0f;
   auto translate            = zero3f;
   auto info                 = false;
@@ -180,7 +180,7 @@ int main(int argc, const char* argv[]) {
 
   // transform
   if (uscale != 1) scale *= uscale;
-  if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
+  if (translate != zero3f || rotate != zero3f || scale != vec3f{1, 1, 1}) {
     print_progress("transform shape", 0, 1);
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
@@ -229,7 +229,8 @@ int main(int argc, const char* argv[]) {
     } else {
       colors = vector<vec3f>(positions.size());
       for (int i = 0; i < colors.size(); ++i) {
-        colors[i] = vec3f(sinf(geodesic_scale * field[i]));
+        auto c    = sinf(geodesic_scale * field[i]);
+        colors[i] = vec3f{c, c, c};
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }

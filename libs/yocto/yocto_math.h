@@ -123,8 +123,6 @@ struct vec2f {
 
   vec2f();
   vec2f(float x, float y);
-  explicit vec2f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -137,9 +135,6 @@ struct vec3f {
 
   vec3f();
   vec3f(float x, float y, float z);
-  vec3f(const vec2f& v, float z);
-  explicit vec3f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -153,9 +148,6 @@ struct vec4f {
 
   vec4f();
   vec4f(float x, float y, float z, float w);
-  vec4f(const vec3f& v, float w);
-  explicit vec4f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -165,6 +157,11 @@ struct vec4f {
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
+
+// One vector constants.
+inline const auto one2f = vec2f{1, 1};
+inline const auto one3f = vec3f{1, 1, 1};
+inline const auto one4f = vec4f{1, 1, 1, 1};
 
 // Element access
 inline vec3f&       xyz(vec4f& a);
@@ -429,9 +426,7 @@ struct vec2i {
 
   vec2i();
   vec2i(int x, int y);
-  explicit vec2i(int v);
   explicit operator vec2f() const;
-  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -444,10 +439,6 @@ struct vec3i {
 
   vec3i();
   vec3i(int x, int y, int z);
-  vec3i(const vec2i& v, int z);
-  explicit vec3i(int v);
-  explicit operator vec3f() const;
-  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -461,10 +452,6 @@ struct vec4i {
 
   vec4i();
   vec4i(int x, int y, int z, int w);
-  vec4i(const vec3i& v, int w);
-  explicit vec4i(int v);
-  explicit operator vec4f() const;
-  explicit operator bool() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -477,8 +464,6 @@ struct vec3b {
 
   vec3b();
   vec3b(byte x, byte y, byte z);
-  explicit vec3b(byte v);
-  explicit operator bool() const;
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -492,8 +477,6 @@ struct vec4b {
 
   vec4b();
   vec4b(byte x, byte y, byte z, byte w);
-  explicit vec4b(byte v);
-  explicit operator bool() const;
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -831,10 +814,6 @@ struct frame2f {
 
   frame2f();
   frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
-  explicit frame2f(const vec2f& o);
-  frame2f(const mat2f& m, const vec2f& t);
-  explicit frame2f(const mat3f& m);
-  operator mat3f() const;
 
   vec2f&       operator[](int i);
   const vec2f& operator[](int i) const;
@@ -849,10 +828,6 @@ struct frame3f {
 
   frame3f();
   frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
-  explicit frame3f(const vec3f& o);
-  frame3f(const mat3f& m, const vec3f& t);
-  explicit frame3f(const mat4f& m);
-  operator mat4f() const;
 
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
@@ -865,6 +840,14 @@ inline const auto identity3x4f = frame3f{
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a);
+inline const vec2f& translation(const frame2f& a);
+
+// Frame construction
+inline frame2f make_frame(const mat2f& m, const vec2f& t);
+
+// Conversion between frame and mat
+inline mat3f   frame_to_mat(const frame2f& a);
+inline frame2f mat_to_frame(const mat3f& a);
 
 // Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b);
@@ -879,6 +862,14 @@ inline frame2f inverse(const frame2f& a, bool non_rigid = false);
 
 // Frame properties
 inline const mat3f& rotation(const frame3f& a);
+inline const vec3f& translation(const frame3f& a);
+
+// Frame construction
+inline frame3f make_frame(const mat3f& m, const vec3f& t);
+
+// Conversion between frame and mat
+inline mat4f   frame_to_mat(const frame3f& a);
+inline frame3f mat_to_frame(const mat4f& a);
 
 // Frame comparisons.
 inline bool operator==(const frame3f& a, const frame3f& b);
@@ -1204,8 +1195,6 @@ namespace yocto {
 // Vec2
 inline vec2f::vec2f() {}
 inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
-inline vec2f::vec2f(float v) : x{v}, y{v} {}
-inline vec2f::operator bool() const { return x || y; }
 
 inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
@@ -1213,9 +1202,6 @@ inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 // Vec3
 inline vec3f::vec3f() {}
 inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3f::vec3f(float v) : x{v}, y{v}, z{v} {}
-inline vec3f::operator bool() const { return x || y || z; }
 
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
@@ -1224,9 +1210,6 @@ inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 inline vec4f::vec4f() {}
 inline vec4f::vec4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
-inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4f::operator bool() const { return x || y || z || w; }
 
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
@@ -1696,9 +1679,7 @@ namespace yocto {
 // Vector data types
 inline vec2i::vec2i() {}
 inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
-inline vec2i::vec2i(int v) : x{v}, y{v} {}
 inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
-inline vec2i::operator bool() const { return x || y; }
 
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
@@ -1706,10 +1687,6 @@ inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec3i::vec3i() {}
 inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
-inline vec3i::vec3i(int v) : x{v}, y{v}, z{v} {}
-inline vec3i::operator vec3f() const { return {(float)x, (float)y, (float)z}; }
-inline vec3i::operator bool() const { return x || y || z; }
 
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
@@ -1717,12 +1694,6 @@ inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec4i::vec4i() {}
 inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4i::vec4i(int v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4i::operator vec4f() const {
-  return {(float)x, (float)y, (float)z, (float)w};
-}
-inline vec4i::operator bool() const { return x || y || z || w; }
 
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
@@ -1730,8 +1701,6 @@ inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec3b::vec3b() {}
 inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
-inline vec3b::vec3b(byte v) : x{v}, y{v}, z{v} {}
-inline vec3b::operator bool() const { return x || y || z; }
 
 inline byte& vec3b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
@@ -1739,8 +1708,6 @@ inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec4b::vec4b() {}
 inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4b::vec4b(byte v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4b::operator bool() const { return x || y || z || w; }
 
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
@@ -2235,12 +2202,6 @@ namespace yocto {
 inline frame2f::frame2f() {}
 inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
     : x{x}, y{y}, o{o} {}
-inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
-inline frame2f::frame2f(const mat2f& m, const vec2f& t)
-    : x{m.x}, y{m.y}, o{t} {}
-inline frame2f::frame2f(const mat3f& m)
-    : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
 
 inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
@@ -2250,24 +2211,26 @@ inline frame3f::frame3f() {}
 inline frame3f::frame3f(
     const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
     : x{x}, y{y}, z{z}, o{o} {}
-inline frame3f::frame3f(const vec3f& o)
-    : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
-inline frame3f::frame3f(const mat3f& m, const vec3f& t)
-    : x{m.x}, y{m.y}, z{m.z}, o{t} {}
-inline frame3f::frame3f(const mat4f& m)
-    : x{m.x.x, m.x.y, m.x.z}
-    , y{m.y.x, m.y.y, m.y.z}
-    , z{m.z.x, m.z.y, m.z.z}
-    , o{m.w.x, m.w.y, m.w.z} {}
-inline frame3f::operator mat4f() const {
-  return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
-}
 
 inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
 inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
+inline const vec2f& translation(const frame2f& a) { return a.o; }
+
+// Frame construction
+inline frame2f make_frame(const mat2f& m, const vec2f& t) {
+  return {m.x, m.y, t};
+}
+
+// Frame/mat conversion
+inline frame2f mat_to_frame(const mat3f& m) {
+  return {{m.x.x, m.x.y}, {m.y.x, m.y.y}, {m.z.x, m.z.y}};
+}
+inline mat3f frame_to_mat(const frame2f& f) {
+  return {{f.x.x, f.x.y, 0}, {f.y.x, f.y.y, 0}, {f.o.x, f.o.y, 1}};
+}
 
 // Frame comparisons.
 inline bool operator==(const frame2f& a, const frame2f& b) {
@@ -2277,7 +2240,7 @@ inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame2f operator*(const frame2f& a, const frame2f& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
+  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
 inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 
@@ -2285,15 +2248,31 @@ inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 inline frame2f inverse(const frame2f& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   } else {
     auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   }
 }
 
 // Frame properties
 inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
+inline const vec3f& translation(const frame3f& a) { return a.o; }
+
+// Frame construction
+inline frame3f make_frame(const mat3f& m, const vec3f& t) {
+  return {m.x, m.y, m.z, t};
+}
+
+// frame/mat conversion
+inline frame3f mat_to_frame(const mat4f& m) {
+  return {{m.x.x, m.x.y, m.x.z}, {m.y.x, m.y.y, m.y.z}, {m.z.x, m.z.y, m.z.z},
+      {m.w.x, m.w.y, m.w.z}};
+}
+inline mat4f frame_to_mat(const frame3f& f) {
+  return {{f.x.x, f.x.y, f.x.z, 0}, {f.y.x, f.y.y, f.y.z, 0},
+      {f.z.x, f.z.y, f.z.z, 0}, {f.o.x, f.o.y, f.o.z, 1}};
+}
 
 // Frame comparisons.
 inline bool operator==(const frame3f& a, const frame3f& b) {
@@ -2303,7 +2282,7 @@ inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
+  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
 inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 
@@ -2311,10 +2290,10 @@ inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 inline frame3f inverse(const frame3f& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   } else {
     auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   }
 }
 
