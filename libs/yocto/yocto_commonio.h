@@ -1,59 +1,11 @@
 //
-// # Yocto/CommonIO: Tiny collection of utilities for writing command-line apps.
-//
+// # Yocto/CommonIO: Utilities for writing command-line apps
 //
 // Yocto/CommonIO is a collection of utilities used in writing command-line
-// apps. We support parsing command line arguments, simple path manipulation,
-// file lading/saving, and printing values, timers and progress bars.
-//
-//
-// ## Printing values
-//
-// Use `print_info()` to print a message, `print_fatal()` to print and exit.
-// To time a block of code use `print_timed()` to use an RIIA timer or
-// call `print_elapsed()` to print the elapsed time as needed.
-// Several overloads of `to_string()` are provided for both the basic types
-// and Yocto/Math types.
-//
-//
-// ## Command-Line Parsing
-//
-// We provide a simple, immediate-mode, command-line parser. The parser
-// works in an immediate-mode manner since it reads each value as you call each
-// function, rather than building a data structure and parsing offline. We
-// support option and position arguments, automatic help generation, and
-// error checking.
-//
-// 1. initialize the parser with `auto cli = make_cli(argc, argv, help)`
-// 2. add options with `add_option(cli, name, value, usage, req)`
-//    - if name starts with '--' or '-' then it is an option
-//    - otherwise it is a positional argument
-//    - options and arguments may be intermixed
-//    - the type of each option is determined by the passed reference `value`
-//    - `req` indicates whether an option or argument is required or not
-// 3. parse options with `parse_cli(cli, argc, argv)`
-//    - if an error occurrs, the parser prints a usage message and returns false
-//
-//
-// ## Path manipulation
-//
-// We define a few path manipulation utilities to split and join path
-// components.
-//
-// 1. Get paths components with `get_dirname()`, `get_filename()` and
-//   `get_extension()`
-// 2. Replace the extension with `replace_path_extension()`
-// 3. check if a file exists with `exists_file()`
-//
-//
-// ## File IO
-//
-// 1. load and save text files with `load_text()` and `save_text()`
-// 2. load and save binary files with `load_binary()` and `save_binary()`
-// 3. use `file` as a safe wrapper over C streams; use `open_file()`,
-//  `close_file()`, `read_line()`, `read_value()`, `write_text()` and
-//  `write_value()` to operate on the file.
-//
+// applications, including parsing command line arguments, simple path
+// manipulation, file lading and saving, and printing values, timers and
+// progress bars.
+
 //
 // LICENSE:
 //

@@ -1,15 +1,8 @@
 //
-// # Yocto/Mesh: Tiny Library for mesh operations for computational geometry
+// # Yocto/Mesh: Mesh processing
 //
-// Yocto/Mesh is a collection of computational geometry routines on triangle
-// meshes.
-//
-//
-// ## Mesh IO
-//
-// We support reading and writing shapes in OBJ and PLY.
-//
-// 1. load/save meshes with `load_mesh()`/`save_mesh()`
+// Yocto/Mesh is a collection of computational geometry functions on triangle
+// meshes. Yocto/Mesh is implemented in `yocto_mesh.h` and `yocto_mesh.cpp`.
 //
 
 //

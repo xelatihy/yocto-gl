@@ -1,12 +1,13 @@
 //
-// # Yocto/Noise: Tiny library of noise functions used in graphics applications.
+// # Yocto/Noise: Noise functions
 //
-// Yocto/Noise provides a Perlin noise implementation for now. This library will
-// grow as a collection of noise functions used in procedural modeling.
-//
-// 1. use `perlin_noise()` to generate Perlin noise with optional wrapping
-// 2. use `perlin_ridge()`, `perlin_fbm()` and `perlin_turbulence()` for fractal
-//    noises
+// Yocto/Noise provides a Perlin noise implementation.
+// _This library should to be considered a placeholder since it will grow later
+// as a collection of noise functions_ used in procedural modeling.
+// For now, the implementation used is the one
+// found in the [stb libraries](https://github.com/nothings/stb),
+// that are released in the public domain.
+// Yocto/Noise is implemented in `yocto_noise.h`.
 //
 
 //
