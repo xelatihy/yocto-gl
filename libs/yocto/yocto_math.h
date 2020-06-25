@@ -135,7 +135,6 @@ struct vec3f {
 
   vec3f();
   vec3f(float x, float y, float z);
-  vec3f(const vec2f& v, float z);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -1193,7 +1192,6 @@ inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 // Vec3
 inline vec3f::vec3f() {}
 inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-inline vec3f::vec3f(const vec2f& v, float z) : x{v.x}, y{v.y}, z{z} {}
 
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
@@ -2202,7 +2200,9 @@ inline frame2f::frame2f(const mat2f& m, const vec2f& t)
     : x{m.x}, y{m.y}, o{t} {}
 inline frame2f::frame2f(const mat3f& m)
     : x{m.x.x, m.x.y}, y{m.y.x, m.y.y}, o{m.z.x, m.z.y} {}
-inline frame2f::operator mat3f() const { return {{x, 0}, {y, 0}, {o, 1}}; }
+inline frame2f::operator mat3f() const {
+  return {{x.x, x.y, 0}, {y.x, y.y, 0}, {o.x, o.y, 1}};
+}
 
 inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
