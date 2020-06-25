@@ -426,7 +426,6 @@ struct vec2i {
 
   vec2i();
   vec2i(int x, int y);
-  explicit operator vec2f() const;
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -1679,7 +1678,6 @@ namespace yocto {
 // Vector data types
 inline vec2i::vec2i() {}
 inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
-inline vec2i::operator vec2f() const { return {(float)x, (float)y}; }
 
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
