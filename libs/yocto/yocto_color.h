@@ -1,5 +1,5 @@
 //
-// # Yocto/Color: Tiny library of color utilities for in graphics applications.
+// # Yocto/Color: Color operations
 //
 // Yocto/Color provides basic color utilities for writing graphics applications.
 // In particular, we support color conversion to/from linear rgb, srgb, hsv,
