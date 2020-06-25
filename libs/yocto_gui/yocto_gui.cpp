@@ -667,8 +667,10 @@ void draw_image(ogl_image* image, const ogl_image_params& params) {
   glEnable(GL_DEPTH_TEST);
   bind_program(image->program);
   set_uniform(image->program, "txt", image->texture, 0);
-  set_uniform(image->program, "window_size", (vec2f)params.window);
-  set_uniform(image->program, "image_size", (vec2f)image->texture->size);
+  set_uniform(image->program, "window_size",
+      vec2f{(float)params.window.x, (float)params.window.y});
+  set_uniform(image->program, "image_size",
+      vec2f{(float)image->texture->size.x, (float)image->texture->size.y});
   set_uniform(image->program, "image_center", params.center);
   set_uniform(image->program, "image_scale", params.scale);
   set_attribute(image->program, "texcoord", image->texcoords);
