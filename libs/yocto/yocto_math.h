@@ -842,6 +842,7 @@ inline const auto identity3x4f = frame3f{
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a);
+inline const vec2f& translation(const frame2f& a);
 
 // Conversion between frame and mat
 inline mat3f   frame_to_mat(const frame2f& a);
@@ -860,6 +861,7 @@ inline frame2f inverse(const frame2f& a, bool non_rigid = false);
 
 // Frame properties
 inline const mat3f& rotation(const frame3f& a);
+inline const vec3f& translation(const frame3f& a);
 
 // Conversion between frame and mat
 inline mat4f   frame_to_mat(const frame3f& a);
@@ -2215,6 +2217,7 @@ inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
+inline const vec2f& translation(const frame2f& a) { return a.o; }
 
 // Frame/mat conversion
 inline frame2f mat_to_frame(const mat3f& m) {
@@ -2249,6 +2252,7 @@ inline frame2f inverse(const frame2f& a, bool non_rigid) {
 
 // Frame properties
 inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
+inline const vec3f& translation(const frame3f& a) { return a.o; }
 
 // frame/mat conversion
 inline frame3f mat_to_frame(const mat4f& m) {
