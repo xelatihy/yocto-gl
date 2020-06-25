@@ -1,25 +1,8 @@
 //
-// # Yocto/Shading: Tiny library of shading functions for path tracing.
+// # Yocto/Shading: Shading routines
 //
-// Yocto/Shading provides shading and sampling functions useful to write path
-// tracing shaders.
-//
-// 1. use `fresnel_dielectric()` or `fresnel_conductor()` to evaluate the
-//    fresnel term for dielectrics or conductors; use `fresnel_schlick()` for
-//    the Schlick fresnel approximation
-// 2. use `eta_to_reflectivity()` and `reflective_to_eta()` to convert eta to
-//    reflectivity and vice-versa; use `eta_to_edgetint()` and
-//    `edgetint_to_eta()`
-// 3. use `microfacet_distribution()` and `microfacet_shadowing()` to evaluate
-//    a microfacet distribution and its associated shadowing term
-// 4. evaluate BRDF lobes with
-//    - `eval_diffuse_reflection()`: diffuse brdf
-//    - `eval_microfacet_reflection()`: specular brdf for dielectrics and metals
-//    - `eval_microfacet_transmission()`: transmission brdf for thin dielectrics
-//    - `eval_microfacet_refraction()`: refraction brdf for dielectrics
-// 5. sample BRDF lobes with `sample_XXX()` using the above lobe names
-// 6. compute the PDF for BRDF lobe sampling with `sample_XXX_pdf()` using the
-//    above lobe names
+// Yocto/Shading defines shading and sampling functions useful to write path
+// tracing algorithms. Yocto/Shading is implemented in `yocto_shading.h`.
 //
 
 //

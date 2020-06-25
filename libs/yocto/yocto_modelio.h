@@ -1,8 +1,9 @@
 //
-// # Yocto/ModelIO: Tiny library for parsing and writing Ply/Obj/Pbrt
+// # Yocto/ModelIO: Serialization for Obj, Ply and Pbrt models
 //
-// Yocto/ModelIO is a tiny library for loading and saving Ply, Obj and Pbrt
-// files.
+// Yocto/ModelIO is a collection of utilities for loading and saving scenes
+// and meshes in Ply, Obj and Pbrt formats.
+// Yocto/ModelIO is implemented in `yocto_modelio.h` and `yocto_modelio.cpp`.
 //
 
 //

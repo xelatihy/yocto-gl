@@ -1,34 +1,8 @@
 //
-// # Yocto/Trace: Tiny path tracer
+// # Yocto/Trace: Path tracing
 //
-//
-// Yocto/Trace is a simple path tracing library with support for microfacet
-// materials, area and environment lights, and advacned sampling.
-//
-//
-// ## Physically-based Path Tracing
-//
-// Yocto/Trace includes a tiny, but fully featured, path tracer with support for
-// textured mesh area lights, GGX materials, environment mapping. The algorithm
-// makes heavy use of MIS for fast convergence.
-// The interface supports progressive parallel execution both synchronously,
-// for CLI applications, and asynchronously for interactive viewing.
-//
-// Materials are represented as sums of an emission term, a diffuse term and
-// a specular microfacet term (GGX or Phong), and a transmission term for
-// this sheet glass.
-// Lights are defined as any shape with a material emission term. Additionally
-// one can also add environment maps. But even if you can, you might want to
-// add a large triangle mesh with inward normals instead. The latter is more
-// general (you can even more an arbitrary shape sun). For now only the first
-// environment is used.
-//
-// 1. prepare the ray-tracing acceleration structure with `build_bvh()`
-// 2. prepare lights for rendering with `init_trace_lights()`
-// 3. create the random number generators with `init_trace_state()`
-// 4. render blocks of samples with `trace_samples()`
-// 5. you can also start an asynchronous renderer with `trace_asynch_start()`
-//
+// Yocto/Trace is a simple path tracer written on the Yocto/Scene model.
+// Yocto/Trace is implemented in `yocto_trace.h` and `yocto_trace.cpp`.
 //
 
 //
