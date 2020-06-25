@@ -2233,15 +2233,15 @@ scene_intersection intersect_instance_bvh(const scene_instance* instance,
 namespace yocto {
 
 void make_cornellbox(scene_model* scene) {
-  scene->name                = "cornellbox";
-  auto camera                = add_camera(scene);
-  camera->frame              = frame3f{{0, 1, 3.9}};
-  camera->lens               = 0.035;
-  camera->aperture           = 0.0;
-  camera->focus              = 3.9;
-  camera->film               = 0.024;
-  camera->aspect             = 1;
-  auto floor                 = add_complete_instance(scene, "floor");
+  scene->name      = "cornellbox";
+  auto camera      = add_camera(scene);
+  camera->frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera->lens     = 0.035;
+  camera->aperture = 0.0;
+  camera->focus    = 3.9;
+  camera->film     = 0.024;
+  camera->aspect   = 1;
+  auto floor       = add_complete_instance(scene, "floor");
   floor->shape->positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
   floor->material->color     = {0.725, 0.71, 0.68};

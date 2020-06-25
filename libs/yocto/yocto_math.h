@@ -814,7 +814,6 @@ struct frame2f {
 
   frame2f();
   frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
-  explicit frame2f(const vec2f& o);
   frame2f(const mat2f& m, const vec2f& t);
   explicit frame2f(const mat3f& m);
   operator mat3f() const;
@@ -832,7 +831,6 @@ struct frame3f {
 
   frame3f();
   frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
-  explicit frame3f(const vec3f& o);
   frame3f(const mat3f& m, const vec3f& t);
   explicit frame3f(const mat4f& m);
   operator mat4f() const;
@@ -2194,7 +2192,6 @@ namespace yocto {
 inline frame2f::frame2f() {}
 inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
     : x{x}, y{y}, o{o} {}
-inline frame2f::frame2f(const vec2f& o) : x{1, 0}, y{0, 1}, o{o} {}
 inline frame2f::frame2f(const mat2f& m, const vec2f& t)
     : x{m.x}, y{m.y}, o{t} {}
 inline frame2f::frame2f(const mat3f& m)
@@ -2211,8 +2208,6 @@ inline frame3f::frame3f() {}
 inline frame3f::frame3f(
     const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
     : x{x}, y{y}, z{z}, o{o} {}
-inline frame3f::frame3f(const vec3f& o)
-    : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{o} {}
 inline frame3f::frame3f(const mat3f& m, const vec3f& t)
     : x{m.x}, y{m.y}, z{m.z}, o{t} {}
 inline frame3f::frame3f(const mat4f& m)
