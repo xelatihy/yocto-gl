@@ -814,7 +814,6 @@ struct frame2f {
 
   frame2f();
   frame2f(const vec2f& x, const vec2f& y, const vec2f& o);
-  frame2f(const mat2f& m, const vec2f& t);
 
   vec2f&       operator[](int i);
   const vec2f& operator[](int i) const;
@@ -829,7 +828,6 @@ struct frame3f {
 
   frame3f();
   frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o);
-  frame3f(const mat3f& m, const vec3f& t);
 
   vec3f&       operator[](int i);
   const vec3f& operator[](int i) const;
@@ -843,6 +841,9 @@ inline const auto identity3x4f = frame3f{
 // Frame properties
 inline const mat2f& rotation(const frame2f& a);
 inline const vec2f& translation(const frame2f& a);
+
+// Frame construction
+inline frame2f make_frame(const mat2f& m, const vec2f& t);
 
 // Conversion between frame and mat
 inline mat3f   frame_to_mat(const frame2f& a);
@@ -862,6 +863,9 @@ inline frame2f inverse(const frame2f& a, bool non_rigid = false);
 // Frame properties
 inline const mat3f& rotation(const frame3f& a);
 inline const vec3f& translation(const frame3f& a);
+
+// Frame construction
+inline frame3f make_frame(const mat3f& m, const vec3f& t);
 
 // Conversion between frame and mat
 inline mat4f   frame_to_mat(const frame3f& a);
@@ -2198,8 +2202,6 @@ namespace yocto {
 inline frame2f::frame2f() {}
 inline frame2f::frame2f(const vec2f& x, const vec2f& y, const vec2f& o)
     : x{x}, y{y}, o{o} {}
-inline frame2f::frame2f(const mat2f& m, const vec2f& t)
-    : x{m.x}, y{m.y}, o{t} {}
 
 inline vec2f& frame2f::operator[](int i) { return (&x)[i]; }
 inline const vec2f& frame2f::operator[](int i) const { return (&x)[i]; }
@@ -2209,8 +2211,6 @@ inline frame3f::frame3f() {}
 inline frame3f::frame3f(
     const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
     : x{x}, y{y}, z{z}, o{o} {}
-inline frame3f::frame3f(const mat3f& m, const vec3f& t)
-    : x{m.x}, y{m.y}, z{m.z}, o{t} {}
 
 inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }
 inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
@@ -2218,6 +2218,11 @@ inline const vec3f& frame3f::operator[](int i) const { return (&x)[i]; }
 // Frame properties
 inline const mat2f& rotation(const frame2f& a) { return (const mat2f&)a; }
 inline const vec2f& translation(const frame2f& a) { return a.o; }
+
+// Frame construction
+inline frame2f make_frame(const mat2f& m, const vec2f& t) {
+  return {m.x, m.y, t};
+}
 
 // Frame/mat conversion
 inline frame2f mat_to_frame(const mat3f& m) {
@@ -2235,7 +2240,7 @@ inline bool operator!=(const frame2f& a, const frame2f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame2f operator*(const frame2f& a, const frame2f& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
+  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
 inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 
@@ -2243,16 +2248,21 @@ inline frame2f& operator*=(frame2f& a, const frame2f& b) { return a = a * b; }
 inline frame2f inverse(const frame2f& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   } else {
     auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   }
 }
 
 // Frame properties
 inline const mat3f& rotation(const frame3f& a) { return (const mat3f&)a; }
 inline const vec3f& translation(const frame3f& a) { return a.o; }
+
+// Frame construction
+inline frame3f make_frame(const mat3f& m, const vec3f& t) {
+  return {m.x, m.y, m.z, t};
+}
 
 // frame/mat conversion
 inline frame3f mat_to_frame(const mat4f& m) {
@@ -2272,7 +2282,7 @@ inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
-  return {rotation(a) * rotation(b), rotation(a) * b.o + a.o};
+  return make_frame(rotation(a) * rotation(b), rotation(a) * b.o + a.o);
 }
 inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 
@@ -2280,10 +2290,10 @@ inline frame3f& operator*=(frame3f& a, const frame3f& b) { return a = a * b; }
 inline frame3f inverse(const frame3f& a, bool non_rigid) {
   if (non_rigid) {
     auto minv = inverse(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   } else {
     auto minv = transpose(rotation(a));
-    return {minv, -(minv * a.o)};
+    return make_frame(minv, -(minv * a.o));
   }
 }
 
