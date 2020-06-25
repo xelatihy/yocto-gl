@@ -442,7 +442,6 @@ struct vec3i {
 
   vec3i();
   vec3i(int x, int y, int z);
-  vec3i(const vec2i& v, int z);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -456,7 +455,6 @@ struct vec4i {
 
   vec4i();
   vec4i(int x, int y, int z, int w);
-  vec4i(const vec3i& v, int w);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -1689,7 +1687,6 @@ inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec3i::vec3i() {}
 inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-inline vec3i::vec3i(const vec2i& v, int z) : x{v.x}, y{v.y}, z{z} {}
 
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
@@ -1697,7 +1694,6 @@ inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
 // Vector data types
 inline vec4i::vec4i() {}
 inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-inline vec4i::vec4i(const vec3i& v, int w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
