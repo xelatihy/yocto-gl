@@ -53,8 +53,22 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <string>
+#include <unordered_map>
+
 #include "yocto_math.h"
 #include "yocto_sampling.h"
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// using directives
+using std::string;
+using std::unordered_map;
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SHADING FUNCTIONS
