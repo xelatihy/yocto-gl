@@ -2107,10 +2107,23 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
+// Make a quad.
 void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
+  for (auto& p : positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : normals) std::swap(n.y, n.z);
+}
+
+void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& scale, const vec2f& uvscale, float height) {
+  make_bulged_rect(
+      quads, positions, normals, texcoords, steps, scale, uvscale, height);
   for (auto& p : positions) {
     std::swap(p.y, p.z);
     p.z = -p.z;
@@ -2433,30 +2446,6 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
       }
     }
   }
-}
-
-// Make a quad.
-void make_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale) {
-  make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : normals) std::swap(n.y, n.z);
-}
-
-void make_bulged_yrect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale, float height) {
-  make_bulged_rect(
-      quads, positions, normals, texcoords, steps, scale, uvscale, height);
-  for (auto& p : positions) {
-    std::swap(p.y, p.z);
-    p.z = -p.z;
-  }
-  for (auto& n : normals) std::swap(n.y, n.z);
 }
 
 // Generate lines set along a quad.
@@ -3218,7 +3207,7 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
     const vector<float>& height) {
-  make_yrect(quads, positions, normals, texcoords, size - 1,
+  make_recty(quads, positions, normals, texcoords, size - 1,
       vec2f{(float)size.x, (float)size.y} / max(size));
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)

@@ -433,6 +433,7 @@ parameters specific to the shape.
 Use `make_rect(...)` for a rectangle in the XY plane,
 `make_bulged_rect(...)` for a bulged rectangle,
 `make_recty(...)` for a rectangle in the XZ plane,
+`make_bulged_recty(...)` for a bulged rectangle in the XZ plane,
 `make_box(...)` for a box,
 `make_rounded_box(...)` for a rounded box,
 `make_floor(...)` for a floor in the XZ plane,
