@@ -468,14 +468,14 @@ inline float sample_microfacet_pdf(float roughness, const vec3f& normal,
 inline vec3f eval_diffuse_reflection(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1} / pif * dot(normal, incoming);
+  return vec3f{1, 1, 1} / pif * dot(normal, incoming);
 }
 
 // Evaluate a translucent BRDF lobe.
 inline vec3f eval_diffuse_transmission(
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) return zero3f;
-  return vec3f{1} / pif * abs(dot(normal, incoming));
+  return vec3f{1, 1, 1} / pif * abs(dot(normal, incoming));
 }
 
 // Evaluate a specular BRDF lobe.
@@ -486,7 +486,7 @@ inline vec3f eval_microfacet_reflection(float ior, float roughness,
   auto F       = fresnel_dielectric(ior, halfway, incoming);
   auto D       = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(roughness, normal, halfway, outgoing, incoming);
-  return vec3f{1} * F * D * G /
+  return vec3f{1, 1, 1} * F * D * G /
          (4 * dot(normal, outgoing) * dot(normal, incoming)) *
          dot(normal, incoming);
 }
@@ -515,7 +515,7 @@ inline vec3f eval_microfacet_transmission(float ior, float roughness,
   auto D = microfacet_distribution(roughness, normal, halfway);
   auto G = microfacet_shadowing(
       roughness, normal, halfway, outgoing, reflected);
-  return vec3f{1} * D * G /
+  return vec3f{1, 1, 1} * D * G /
          (4 * dot(normal, outgoing) * dot(normal, reflected)) *
          (dot(normal, reflected));
 }
@@ -532,7 +532,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto D       = microfacet_distribution(roughness, up_normal, halfway);
     auto G       = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
-    return vec3f{1} * F * D * G /
+    return vec3f{1, 1, 1} * F * D * G /
            abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
            abs(dot(normal, incoming));
   } else {
@@ -543,7 +543,7 @@ inline vec3f eval_microfacet_refraction(float ior, float roughness,
     auto G = microfacet_shadowing(
         roughness, up_normal, halfway, outgoing, incoming);
     // [Walter 2007] equation 21
-    return vec3f{1} *
+    return vec3f{1, 1, 1} *
            abs((dot(outgoing, halfway) * dot(incoming, halfway)) /
                (dot(outgoing, normal) * dot(incoming, normal))) *
            (1 - F) * D * G /
@@ -685,7 +685,7 @@ inline float sample_microfacet_refraction_pdf(float ior, float roughness,
 inline vec3f eval_delta_reflection(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) <= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1} * fresnel_dielectric(ior, normal, outgoing);
+  return vec3f{1, 1, 1} * fresnel_dielectric(ior, normal, outgoing);
 }
 
 // Evaluate a delta metal BRDF lobe.
@@ -699,22 +699,22 @@ inline vec3f eval_delta_reflection(const vec3f& eta, const vec3f& etak,
 inline vec3f eval_delta_transmission(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (dot(normal, incoming) >= 0 || dot(normal, outgoing) <= 0) return zero3f;
-  return vec3f{1};
+  return vec3f{1, 1, 1};
 }
 
 // Evaluate a delta refraction BRDF lobe.
 inline vec3f eval_delta_refraction(float ior, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (abs(ior - 1) < 1e-3)
-    return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec3f{1}
-                                                              : vec3f{0};
+    return dot(normal, incoming) * dot(normal, outgoing) <= 0 ? vec3f{1, 1, 1}
+                                                              : vec3f{0, 0, 0};
   auto entering  = dot(normal, outgoing) >= 0;
   auto up_normal = entering ? normal : -normal;
   auto rel_ior   = entering ? ior : (1 / ior);
   if (dot(normal, incoming) * dot(normal, outgoing) >= 0) {
-    return vec3f{1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
+    return vec3f{1, 1, 1} * fresnel_dielectric(rel_ior, up_normal, outgoing);
   } else {
-    return vec3f{1} * (1 / (rel_ior * rel_ior)) *
+    return vec3f{1, 1, 1} * (1 / (rel_ior * rel_ior)) *
            (1 - fresnel_dielectric(rel_ior, up_normal, outgoing));
   }
 }

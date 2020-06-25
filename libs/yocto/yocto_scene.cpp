@@ -779,11 +779,13 @@ vec3f lookup_texture(
     return ldr_as_linear ? byte_to_float(texture->colorb[ij])
                          : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
   } else if (!texture->scalarf.empty()) {
-    return vec3f{texture->scalarf[ij]};
+    auto scalarf = texture->scalarf[ij];
+    return vec3f{scalarf, scalarf, scalarf};
   } else if (!texture->scalarb.empty()) {
+    auto scalarb = texture->scalarb[ij];
     return ldr_as_linear
-               ? byte_to_float(vec3b{texture->scalarb[ij]})
-               : srgb_to_rgb(byte_to_float(vec3b{texture->scalarb[ij]}));
+               ? byte_to_float(vec3b{scalarb, scalarb, scalarb})
+               : srgb_to_rgb(byte_to_float(vec3b{scalarb, scalarb, scalarb}));
   } else {
     return {1, 1, 1};
   }
@@ -1344,11 +1346,17 @@ static void init_embree_bvh(
     for (auto& l : shape->lines) {
       if (last_index == l.x) {
         elines.push_back((int)epositions.size() - 1);
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        auto& posy = shape->positions[l.y];
+        auto& rady = shape->radius[l.y];
+        epositions.push_back({posy.x, posy.y, posy.z, rady});
       } else {
         elines.push_back((int)epositions.size());
-        epositions.push_back({shape->positions[l.x], shape->radius[l.x]});
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        auto& posx = shape->positions[l.x];
+        auto& radx = shape->radius[l.x];
+        epositions.push_back({posx.x, posx.y, posx.z, radx});
+        auto& posy = shape->positions[l.y];
+        auto& rady = shape->radius[l.y];
+        epositions.push_back({posy.x, posy.y, posy.z, rady});
       }
       last_index = l.y;
     }
@@ -2225,15 +2233,15 @@ scene_intersection intersect_instance_bvh(const scene_instance* instance,
 namespace yocto {
 
 void make_cornellbox(scene_model* scene) {
-  scene->name                = "cornellbox";
-  auto camera                = add_camera(scene);
-  camera->frame              = frame3f{{0, 1, 3.9}};
-  camera->lens               = 0.035;
-  camera->aperture           = 0.0;
-  camera->focus              = 3.9;
-  camera->film               = 0.024;
-  camera->aspect             = 1;
-  auto floor                 = add_complete_instance(scene, "floor");
+  scene->name      = "cornellbox";
+  auto camera      = add_camera(scene);
+  camera->frame    = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 3.9}};
+  camera->lens     = 0.035;
+  camera->aperture = 0.0;
+  camera->focus    = 3.9;
+  camera->film     = 0.024;
+  camera->aspect   = 1;
+  auto floor       = add_complete_instance(scene, "floor");
   floor->shape->positions    = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor->shape->triangles    = {{0, 1, 2}, {2, 3, 0}};
   floor->material->color     = {0.725, 0.71, 0.68};

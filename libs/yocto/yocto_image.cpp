@@ -449,7 +449,7 @@ vec3f lookup_image(const image<vec3b>& img, const vec2i& ij, bool as_linear) {
 template <typename T, typename R>
 inline R eval_image_generic(const image<T>& img, const vec2f& uv,
     bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (img.empty()) return R{0};
+  if (img.empty()) return R{};
 
   // get image width/height
   auto size = img.size();
@@ -734,7 +734,8 @@ vec3f colorgrade(
 }
 vec4f colorgrade(
     const vec4f& rgba, bool linear, const colorgrade_params& params) {
-  return {colorgrade(xyz(rgba), linear, params), rgba.w};
+  auto graded = colorgrade(xyz(rgba), linear, params);
+  return {graded.x, graded.y, graded.z, rgba.w};
 }
 
 // Apply exposure and filmic tone mapping
@@ -952,8 +953,8 @@ void make_uvgrid(
     } else {
       hsv.y = 0.8f;
     }
-    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z};
-    return vec4f{rgb, 1};
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z, hsv.z, hsv.z};
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
   });
 }
 
@@ -962,7 +963,8 @@ void make_blackbodyramp(
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{yocto::blackbody_to_rgb(lerp(from, to, uv.x)), 1};
+    auto rgb = blackbody_to_rgb(lerp(from, to, uv.x));
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
   });
 }
 
@@ -1171,7 +1173,7 @@ void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
-      img[{i, j}] = {le, 1};
+      img[{i, j}] = {le.x, le.y, le.z, 1};
     }
   }
 }

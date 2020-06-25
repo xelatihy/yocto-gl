@@ -1442,7 +1442,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     cgltf_node_transform_world(gnde, &mat.x.x);
     auto gcam            = gnde->camera;
     auto camera          = add_camera(scene);
-    camera->frame        = (frame3f)mat;
+    camera->frame        = mat_to_frame(mat);
     camera->orthographic = gcam->type == cgltf_camera_type_orthographic;
     if (camera->orthographic) {
       auto ortho     = &gcam->data.orthographic;
@@ -1571,7 +1571,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
               cgltf_accessor_read_float(gacc, i, &shape->colors[i].x, 3);
           } else {
             for (auto i = 0; i < gacc->count; i++) {
-              auto color4 = vec4f{0};
+              auto color4 = vec4f{0, 0, 0, 0};
               cgltf_accessor_read_float(gacc, i, &color4.x, 4);
               shape->colors[i] = xyz(color4);
             }
@@ -1696,7 +1696,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (!gnde->mesh) continue;
     auto mat = mat4f{};
     cgltf_node_transform_world(gnde, &mat.x.x);
-    auto frame = (frame3f)mat;
+    auto frame = mat_to_frame(mat);
     instance_map[gnde->mesh].push_back(frame);
   }
   for (auto& [gmsh, frames] : instance_map) {
