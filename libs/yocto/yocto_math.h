@@ -148,7 +148,6 @@ struct vec4f {
 
   vec4f();
   vec4f(float x, float y, float z, float w);
-  vec4f(const vec3f& v, float w);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -158,6 +157,14 @@ struct vec4f {
 inline const auto zero2f = vec2f{0, 0};
 inline const auto zero3f = vec3f{0, 0, 0};
 inline const auto zero4f = vec4f{0, 0, 0, 0};
+
+// One vector constants.
+inline const auto one2f = vec2f{1, 1};
+inline const auto one3f = vec3f{1, 1, 1};
+inline const auto one4f = vec4f{1, 1, 1, 1};
+
+// Make vector
+inline vec4f make_vec(const vec3f& xyz, float w);
 
 // Element access
 inline vec3f&       xyz(vec4f& a);
@@ -1200,10 +1207,14 @@ inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 inline vec4f::vec4f() {}
 inline vec4f::vec4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
-inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
 
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
+
+// Make vector
+inline vec4f make_vec(const vec3f& xyz, float w) {
+  return {xyz.x, xyz.y, xyz.z, w};
+}
 
 // Element access
 inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
@@ -2222,7 +2233,8 @@ inline frame3f::frame3f(const mat4f& m)
     , z{m.z.x, m.z.y, m.z.z}
     , o{m.w.x, m.w.y, m.w.z} {}
 inline frame3f::operator mat4f() const {
-  return {{x, 0}, {y, 0}, {z, 0}, {o, 1}};
+  return {{x.x, x.y, x.z, 0}, {y.x, y.y, y.z, 0}, {z.x, z.y, z.z, 0},
+      {o.x, o.y, o.z, 1}};
 }
 
 inline vec3f& frame3f::operator[](int i) { return (&x)[i]; }

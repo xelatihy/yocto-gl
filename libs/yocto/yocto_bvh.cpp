@@ -89,11 +89,14 @@ void init_shape_embree_bvh(bvh_shape* shape) {
     for (auto& l : shape->lines) {
       if (last_index == l.x) {
         elines.push_back((int)epositions.size() - 1);
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        epositions.push_back(
+            make_vec(shape->positions[l.y], shape->radius[l.y]));
       } else {
         elines.push_back((int)epositions.size());
-        epositions.push_back({shape->positions[l.x], shape->radius[l.x]});
-        epositions.push_back({shape->positions[l.y], shape->radius[l.y]});
+        epositions.push_back(
+            make_vec(shape->positions[l.x], shape->radius[l.x]));
+        epositions.push_back(
+            make_vec(shape->positions[l.y], shape->radius[l.y]));
       }
       last_index = l.y;
     }

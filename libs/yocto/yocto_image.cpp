@@ -734,7 +734,7 @@ vec3f colorgrade(
 }
 vec4f colorgrade(
     const vec4f& rgba, bool linear, const colorgrade_params& params) {
-  return {colorgrade(xyz(rgba), linear, params), rgba.w};
+  return make_vec(colorgrade(xyz(rgba), linear, params), rgba.w);
 }
 
 // Apply exposure and filmic tone mapping
@@ -953,7 +953,7 @@ void make_uvgrid(
       hsv.y = 0.8f;
     }
     auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z, hsv.z, hsv.z};
-    return vec4f{rgb, 1};
+    return make_vec(rgb, 1);
   });
 }
 
@@ -962,7 +962,7 @@ void make_blackbodyramp(
   return make_image(img, size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-    return vec4f{yocto::blackbody_to_rgb(lerp(from, to, uv.x)), 1};
+    return make_vec(blackbody_to_rgb(lerp(from, to, uv.x)), 1);
   });
 }
 
@@ -1171,7 +1171,7 @@ void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
         inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
       }
-      img[{i, j}] = {le, 1};
+      img[{i, j}] = make_vec(le, 1);
     }
   }
 }

@@ -251,7 +251,8 @@ inline vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
   return rgb;
 }
 inline vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
-  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
+  auto ldr = tonemap(xyz(hdr), exposure, filmic, srgb);
+  return {ldr.x, ldr.y, ldr.z, hdr.w};
 }
 
 // Convert between CIE XYZ and RGB
