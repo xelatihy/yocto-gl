@@ -48,8 +48,9 @@ To represent transformations, most of the library facilities prefer the use
 coordinate frames, aka rigid transforms, represented as `frame2f` and
 `frame3f`. Frames are represented in column-major order, with columns
 defined as the axis of the coordinate frame followed by the origin.
-This is equivalent to representing rigid transformations as column-major affine
-matrices.
+This is equivalent to representing rigid transformations as column-major
+affine matrices. Use `mat_to_frame(mat)` and `frame_to_mat(frame)` to convert
+between these types.
 
 Frames support only multiplication operations with other frames, to chain
 transforms, the computation of their inverses, with `inverse(f)`, and the
