@@ -39,3 +39,5 @@ nav:
   - Scene representation: yocto/yocto_scene.md
   - Scene serialization: yocto/yocto_sceneio.md
   - Path tracing: yocto/yocto_trace.md
+  - Command-line utilities: yocto/yocto_commonio.md
+  - Generic utilities: yocto/yocto_common.md
