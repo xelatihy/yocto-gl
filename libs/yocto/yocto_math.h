@@ -150,8 +150,6 @@ struct vec4f {
   vec4f();
   vec4f(float x, float y, float z, float w);
   vec4f(const vec3f& v, float w);
-  explicit vec4f(float v);
-  explicit operator bool() const;
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -1217,8 +1215,6 @@ inline vec4f::vec4f() {}
 inline vec4f::vec4f(float x, float y, float z, float w)
     : x{x}, y{y}, z{z}, w{w} {}
 inline vec4f::vec4f(const vec3f& v, float w) : x{v.x}, y{v.y}, z{v.z}, w{w} {}
-inline vec4f::vec4f(float v) : x{v}, y{v}, z{v}, w{v} {}
-inline vec4f::operator bool() const { return x || y || z || w; }
 
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
