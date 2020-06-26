@@ -140,10 +140,10 @@ triangles, `make_quads_bvh(bvh,quads,positions)` for quads,
 `make_points_bvh(bvh,points,positions,radius)` for points.
 
 ```cpp
-auto triangles = vector<vec3i>{};              // mesh data
-auto positions = vector<vec3f>{};
+auto triangles = vector<vec3i>{...};           // mesh data
+auto positions = vector<vec3f>{...};
 auto bvh = bvh_tree{};
-make_triangles_bvh(bvh, triangles, positions;  // BVH construction
+make_triangles_bvh(bvh, triangles, positions); // BVH construction
 ```
 
 Intersect and overlap functions return a `bvh_intersection` that bundles
@@ -158,7 +158,8 @@ triangles, `intersect_quads_bvh(bvh,quads,positions)` for quads,
 
 ```cpp
 auto ray = ray3f{...};
-auto isec = intersect_triangles(bvh, triangles, positions, ray);// intersection
+// computes ray-triangles intersection
+auto isec = intersect_triangles(bvh, triangles, positions, ray);
 if(isec.hit) print_info(isec.element, isec.uv, isec.distance);
 else print_info("no hit");
 ```
@@ -166,24 +167,24 @@ else print_info("no hit");
 `overlap_XXX_bvh(...)` checks whether a shape overlaps a point within a
 given maximum distance and returns the distance, element and uv of the
 closest element.
-Use `overlap_triangles_bvh(bvh,triangles,positions, ray)` for
-triangles, `overlap_quads_bvh(bvh,quads,positions)` for quads,
-`overlap_lines_bvh(bvh,lines,positions,radius,ray)` for lines, and
-`overlap_points_bvh(bvh,points,positions,radius,ray)` for points.
+Use `overlap_triangles_bvh(bvh, triangles, positions, ray)` for
+triangles, `overlap_quads_bvh(bvh, quads, positions)` for quads,
+`overlap_lines_bvh(bvh, lines, positions, radius, ray)` for lines, and
+`overlap_points_bvh(bvh, points, positions, radius, ray)` for points.
 
 ```cpp
-// point overlaps
 auto pt = vec3f{...}; auto max_dist = float{...};
-auto ovr = overlap_triangles(bvh, triangles, positions, pt, mat_dist);// overlap
+// comnpute point-triangles overlap
+auto ovr = overlap_triangles(bvh, triangles, positions, pt, mat_dist);
 if(ovr.hit) print_info(ovrl.element, ovrl.uv, ovrl.distance);
 else print_info("no overlap");
 ```
 
 If vertices have moved little, BVHs can be updated instead of fully rebuild.
-Use `update_triangles_bvh(bvh,triangles,positions)` for
-triangles, `update_quads_bvh(bvh,quads,positions)` for quads,
-`update_lines_bvh(bvh,lines,positions,radius)` for lines, and
-`update_points_bvh(bvh,points,positions,radius)` for points.
+Use `update_triangles_bvh(bvh, triangles, positions)` for
+triangles, `update_quads_bvh(bvh, quads, positions)` for quads,
+`update_lines_bvh(bvh, lines, positions, radius)` for lines, and
+`update_points_bvh(bvh, points, positions, radius)` for points.
 
 ```cpp
 positions[...] = {...};                           // update positions
@@ -198,13 +199,13 @@ underlying volumetric grid. Each cell stores the list of point indices that
 are present in that cell. To save memory, the grid is represented sparsely,
 using a dictionary, so that only cells with at least one vertex are defined.
 
-Initialize a hash grid with `make_hash_grid(positions,size)`.
+Initialize a hash grid with `make_hash_grid(positions, size)`.
 Use `find_neighbors(grid, neighbors, position, max_radius)` to find
 nearest neighbors.
 
 ```cpp
 auto positions = vector<vec3f>{...};               // point positions
-auto grid = make_hash_grid(positions,cell_size);   // create hash grid
+auto grid = make_hash_grid(positions, cell_size);  // create hash grid
 auto pt = vec3f{...}; auto max_dist = float{...};  // query point and dist
 auto neighbors = vector<int>{};                    // neighbor buffer
 find_neighbors(grid, neighbors, pt, max_dist);     // find neighbors by pos
@@ -340,11 +341,12 @@ auto [stquads, stexcoords] = subdivide_catmullclark(tquads, texcoords, 2, true);
 Yocto/Shape supports sampling meshes uniformly. All sampling require to first
 compute the shape CDF and then use it to sample the shape. For each shape type,
 the sampling functions return the shape element id and the element barycentric
-coordinates. Use `sample_lines(cdf,re,rn)` to sample lines,
-`sample_triangles(cdf,re,rn)` to sample triangles,
-`sample_quads(cdf,re,rn)` to sample quads. The shape CDFs are computed using
-`sample_lines_dcf(lines,positions)`, `sample_triangles_dcf(triangles,positions)`,
-and `sample_quads_dcf(quads,positions)`.
+coordinates. Use `sample_lines(cdf, re, rn)` to sample lines,
+`sample_triangles(cdf, re, rn)` to sample triangles,
+`sample_quads(cdf, re, rn)` to sample quads. The shape CDFs are computed using
+`sample_lines_dcf(lines, positions)`,
+`sample_triangles_dcf(triangles, positions)`,
+and `sample_quads_dcf(quads, positions)`.
 
 ```cpp
 auto triangles = vector<vec3i>{...};   // initial shape
@@ -376,8 +378,8 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
 
 ## Shape loading and saving
 
-Shapes are loaded with `load_shape(filename,<shape data>,error)` and saved with
-`save_shape(filename,<shape data>,error)`. Both loading and saving take a filename,
+Shapes are loaded with `load_shape(filename, <shape data>, error)` and saved with
+`save_shape(filename, <shape data>, error)`. Both loading and saving take a filename,
 and buffers for shape elements and vertex data, and return whether or not the
 shape was loaded or saved successfully.
 In the case of an error, the IO functions set the `error` string with a
@@ -410,8 +412,8 @@ if(!save_shape(filename, points, lines, triangles, quads, positions, normals,
    print_error(error);                     // check and print error
 ```
 
-Face-varying shapes are loaded with `fvload_fvshape(filename,<shape data>,error)`
-and saved with `save_fvshape(filename,<shape data>,error)`. The function
+Face-varying shapes are loaded with `fvload_fvshape(filename, <shape data>, error)`
+and saved with `save_fvshape(filename, <shape data>, error)`. The function
 interfaces are modeled similarly to the ones above.
 
 ```cpp
