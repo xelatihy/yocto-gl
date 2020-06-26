@@ -17,15 +17,17 @@
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
+#define YOCTO_OLD_INTERPOLATION_CONVENTION 0
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // using directives
-using std::pair;
 using std::atomic;
 using std::deque;
+using std::pair;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -118,6 +120,23 @@ inline Triangle2D unfold_face(const vector<vec3i>& triangles,
   return res;
 }
 
+// Utilities
+inline vec3f make_bary(const vec2f& bary) {
+#if YOCTO_OLD_INTERPOLATION_CONVENTION
+  return vec3f{bary.x, bary.y, 1 - bary.x - bary.y};
+#else
+  return vec3f{1 - bary.x - bary.y, bary.x, bary.y};
+#endif
+}
+
+inline mesh_point make_point(const int tid, const vec3f bary) {
+#if YOCTO_OLD_INTERPOLATION_CONVENTION
+  return {tid, vec2f(bary.x, bary.y)};
+#else
+  return {tid, vec2f(bary.y, bary.z)};
+#endif
+}
+
 // "strip" must be such that strip.back()=p.face and strip[0] must share at
 // least one vertex with p.face.
 // Under this hypoteses, this function gives back the distance between the
@@ -129,10 +148,6 @@ inline Triangle2D unfold_face(const vector<vec3i>& triangles,
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
     const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction) {
-  auto make_bary = [](const vec2f& bary) -> vec3f {
-    return vec3f{bary.x, bary.y, 1 - bary.x - bary.y};
-  };
-
   auto opp_pid = strip[0];
   auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
   auto coords  = vector<Triangle2D>(strip.size());
@@ -318,7 +333,12 @@ bool point_in_triangle(const vector<vec3i>& triangles,
     if (b[i] < -tol || b[i] > 1.0 + tol) return false;
   }
 
+#if YOCTO_OLD_INTERPOLATION_CONVENTION
   uv = vec2f{b.x, b.y};
+#else
+  uv = vec2f{b.y, b.z};
+#endif
+
   return true;
 }
 
@@ -407,7 +427,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
   auto num_triangles = triangles.size();
 
   // Edgemap to keep track of the added vertex on each splitted edge.
-  // key: edge (ordered pair), value: vertex index
+  // key: edge (ordered std::pair), value: vertex index
   auto emap = unordered_map<vec2i, int>();
 
   // Helper procedures.
@@ -599,8 +619,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto tid    = star[j];
       auto offset = find_in_vec(triangles[tid], i);
       auto p      = triangles[tid][(offset + 1) % 3];
-      // auto q = triangles[tid][(offset + 2) % 3]; // TODO: this is not needed
-      auto e = positions[p] - vert;
+      auto e      = positions[p] - vert;
       solver.graph[i].push_back({p, length(e)});
       auto        opp = opposite_face(triangles, adjacencies, tid, i);
       vector<int> strip{tid, opp};
@@ -611,8 +630,8 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       auto bary    = zero3f;
       bary[offset] = 1;
       auto pos     = zero2f;
-      auto l       = length_by_flattening(triangles, positions, adjacencies,
-          {opp, {bary.x, bary.y}}, strip, pos);
+      auto l       = length_by_flattening(
+          triangles, positions, adjacencies, make_point(opp, bary), strip, pos);
       solver.graph[i].push_back({a, l});
     }
   }
@@ -866,7 +885,7 @@ static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
   auto dir               = transform * direction;
   return clamp(1 - dir.x / dir.y, 0.0f + epsilon, 1.0f - epsilon);
 }
-static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
+static std::pair<float, bool> step_from_edge_to_edge(const vec3f& point,
     const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction,
     float epsilon = 0.0001f) {
   //      b
@@ -1180,11 +1199,6 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   return result;
 }
 
-// Utilities
-inline vec3f make_bary(const vec2f& bary) {
-  return vec3f(bary.x, bary.y, 1 - bary.x - bary.y);
-}
-
 inline bool is_vert(const mesh_point& p, int& offset, float tol = 1e-2) {
   auto bary = make_bary(p.uv);
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) {
@@ -1220,20 +1234,24 @@ inline bool is_edge(const mesh_point& p, int& offset, float tol = 1e-2) {
 }
 
 template <typename T>
-inline T interpolate(const vec2f& uv, const T& a, const T& b, const T& c) {
+inline T lerp(const T& a, const T& b, const T& c, const vec2f& uv) {
+#if YOCTO_OLD_INTERPOLATION_CONVENTION
   return a * uv.x + b * uv.y + c * (1 - uv.x - uv.y);
+#else
+  return a * (1 - uv.x - uv.y) + b * uv.x + c * uv.y;
+#endif
 }
 
 inline vec3f eval_position(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& sample) {
   auto [x, y, z] = triangles[sample.face];
-  return interpolate(sample.uv, positions[x], positions[y], positions[z]);
+  return lerp(positions[x], positions[y], positions[z], sample.uv);
 }
 
 inline vec3f eval_normal(const vector<vec3i>& triangles,
     const vector<vec3f>& normals, const mesh_point& point) {
   auto [x, y, z] = triangles[point.face];
-  return normalize(interpolate(point.uv, normals[x], normals[y], normals[z]));
+  return normalize(lerp(normals[x], normals[y], normals[z], point.uv));
 }
 
 inline bool node_is_neighboor(
@@ -1358,7 +1376,7 @@ static float get_angle(const vector<vec3i>& triangles,
 
     node_is_neighboor(solver, vid, vid0, entry);
 
-    auto s = angles.size();
+    auto s = angles[vid].size();
 
     auto v0    = positions[vid0] - positions[vid];
     auto v1    = positions[vid1] - positions[vid];
@@ -1455,43 +1473,85 @@ void add_tri_to_strip(const vector<vector<int>>& v2t, int vid, int prev_entry,
     }
   }
 }
-
-void check_source_and_target(const vector<vec3i>& triangles,
+// note:start must belong to the first triangle of the strip and end bust belong
+// to the last one
+vector<int> cleaned_strip(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    vector<int>& strip, mesh_point& source, mesh_point& target) {
-  auto offset = 0, last = strip.back(), first = strip[0];
-  auto bary = zero2f;
-  if (last != source.face) {
-    if (is_vert(source, offset)) {
-      int vid = triangles[source.face][offset];
-      offset  = find_in_vec(triangles[last], vid);
-      assert(offset != -1);
-      bary[offset] = 1;
-      source       = {last, bary};
-    } else if (is_edge(source, offset)) {
-      auto pos = eval_position(triangles, positions, source);
-      assert(adjacencies[source.face][offset] == last);
-      point_in_triangle(triangles, positions, last, pos, bary);
-      source = {last, bary};
-    }
-  }
-  bary = zero2f;
-  if (first != target.face) {
-    if (is_vert(target, offset)) {
-      auto vid = triangles[target.face][offset];
-      offset   = find_in_vec(triangles[first], vid);
-      assert(offset != -1);
-      bary[offset] = 1;
-      target       = {first, bary};
-    } else if (is_edge(target, offset)) {
-      auto pos = eval_position(triangles, positions, target);
-      assert(adjacencies[target.face][offset] == first);
-      point_in_triangle(triangles, positions, first, pos, bary);
-      target = {first, bary};
-    }
-  }
-}
+    const vector<int> strip, mesh_point& start, mesh_point& end) {
+  vector<int> cleaned = strip;
 
+  auto k = -1, start_entry = 0, end_entry = (int)strip.size() - 1;
+  auto b2f = zero2f;
+  auto b3f = zero3f;
+  // Erasing from the bottom
+  if (is_vert(end, k)) {
+    auto vid      = triangles[end.face][k];
+    auto curr_tid = strip[end_entry - 1];
+    k             = find_in_vec(triangles[curr_tid], vid);
+    while (k != -1) {
+      cleaned.pop_back();
+      --end_entry;
+      if (end_entry == 1) break;
+      // see comment below
+      auto curr_tid = strip[end_entry - 1];
+      k             = find_in_vec(triangles[curr_tid], vid);
+    }
+    k = find_in_vec(triangles[cleaned.back()], vid);
+    assert(k != -1);
+    b3f[k] = 1;
+    end    = make_point(cleaned.back(), b3f);  // updating end
+
+  } else if (is_edge(end, k)) {
+    if (end.face != strip.back()) {
+      assert(adjacencies[end.face][k] == strip.back());
+      if (end.face == strip[end_entry - 1]) cleaned.pop_back();
+    } else if (adjacencies[end.face][k] == strip[end_entry - 1]) {
+      cleaned.pop_back();
+    }
+    assert(point_in_triangle(triangles, positions, cleaned.back(),
+        eval_position(triangles, positions, end), b2f));
+    end = {cleaned.back(), b2f};  // updating end
+  }
+
+  // Erasing from the top
+  if (is_vert(start, k)) {
+    auto vid      = triangles[start.face][k];
+    auto curr_tid = strip[start_entry + 1];
+    k             = find_in_vec(triangles[curr_tid], vid);
+    while (k != -1) {
+      cleaned.erase(cleaned.begin());
+      ++start_entry;
+      if (start_entry == end_entry - 1) break;
+      // size of the strip must be at least two(see
+      // handle_degenerate_case_for_tracing or get_strip)
+      auto curr_tid = strip[start_entry + 1];
+      k             = find_in_vec(triangles[curr_tid], vid);
+    }
+    k = find_in_vec(triangles[cleaned[0]], vid);
+    assert(k != -1);
+    b3f    = zero3f;
+    b3f[k] = 1;
+    start  = make_point(cleaned[0], b3f);  // udpdating start
+
+  } else if (is_edge(start, k)) {
+    if (start.face != strip[0]) {
+      assert(adjacencies[start.face][k] == strip[0]);
+      if (start.face == strip[1]) cleaned.erase(cleaned.begin());
+    } else if (adjacencies[start.face][k] == strip[1]) {
+      cleaned.erase(cleaned.begin());
+    }
+    b2f = zero2f;
+    assert(point_in_triangle(triangles, positions, cleaned[0],
+        eval_position(triangles, positions, start), b2f));
+    start = {cleaned[0], b2f};  // updating start
+  }
+
+  return cleaned;
+}
+// returns a strip of triangles such target belongs to the first one and source
+// to the last one
+//(TO DO:may be the names could change in order to get the call
+// more consistent with the output)
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
@@ -1519,9 +1579,9 @@ vector<int> get_strip(const geodesic_solver& solver,
     bool CCW = set_ord(teta_next, teta_prev);
     add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, CCW);
     strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
-    check_source_and_target(
-        triangles, positions, adjacencies, strip, source, target);
-    return strip;
+
+    return cleaned_strip(
+        triangles, positions, adjacencies, strip, target, source);
   }
 
   for (int i = 0; i < N; ++i) {
@@ -1546,7 +1606,6 @@ vector<int> get_strip(const geodesic_solver& solver,
     bool  CCW     = set_ord(teta_next, teta_prev);
     if (i > 0 && pi_node) {
       add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, orders[i - 1]);
-      CCW = orders[i - 1];  // keep updated for clean strip;
 
     } else {
       add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, CCW);
@@ -1555,10 +1614,8 @@ vector<int> get_strip(const geodesic_solver& solver,
   }
   strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
 
-  check_source_and_target(
-      triangles, positions, adjacencies, strip, source, target);
-
-  return strip;
+  return cleaned_strip(
+      triangles, positions, adjacencies, strip, target, source);
 }
 
 inline int get_entry(const geodesic_solver& solver,
@@ -1654,7 +1711,6 @@ void add_tri_to_strip(const vector<vector<int>>& v2t, const int vid,
 vector<int> fast_get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
-    const vector<vector<float>>& angles, const vector<float>& total_angles,
     mesh_point& source, mesh_point& target) {
   if (target.face == source.face) return {target.face};
   vector<int> strip = {};
@@ -1678,9 +1734,9 @@ vector<int> fast_get_strip(const geodesic_solver& solver,
     reverse(strip_to_point.begin(), strip_to_point.end());
     add_tri_to_strip(v2t, v, prev_entry, next_entry, strip);
     strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
-    check_source_and_target(
-        triangles, positions, adjacencies, strip, source, target);
-    return strip;
+
+    return cleaned_strip(
+        triangles, positions, adjacencies, strip, target, source);
   }
 
   for (int i = 0; i < N; ++i) {
@@ -1698,13 +1754,13 @@ vector<int> fast_get_strip(const geodesic_solver& solver,
       node_is_neighboor(solver, v, parents[i - 1], prev_entry);
       node_is_neighboor(solver, v, parents[i + 1], next_entry);
     }
-    add_tri_to_strip(v2t, v, prev_entry, next_entry, strip, true);
+    add_tri_to_strip(v2t, v, prev_entry, next_entry, strip);
   }
   strip.insert(strip.end(), strip_to_point.begin(), strip_to_point.end());
-  check_source_and_target(
-      triangles, positions, adjacencies, strip, source, target);
 
-  return strip;
+  // return strip;
+  return cleaned_strip(
+      triangles, positions, adjacencies, strip, target, source);
 }
 
 // compute the distance between a point p and some vertices around him handling
