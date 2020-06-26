@@ -309,7 +309,7 @@ int main(int argc, const char* argv[]) {
 
   // set color from alpha
   if (alpha_to_color) {
-    for (auto& c : img) xyz(c) = vec3f{c.w, c.w, c.w};
+    for (auto& c : img) c = vec4f{c.w, c.w, c.w, c.w};
   }
 
   // diff

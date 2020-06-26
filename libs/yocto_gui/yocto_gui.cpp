@@ -2194,15 +2194,19 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
   if (scale > 1) {
-    xyz(color) /= scale;
+    color.x /= scale;
+    color.y /= scale;
+    color.z /= scale;
     exposure = log2(scale);
   }
   auto edit_exposure = draw_slider(
       win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
   auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
-    xyz(value) = xyz(color) * exp2(exposure);
-    value.w    = color.w;
+    value.x = color.x * exp2(exposure);
+    value.y = color.y * exp2(exposure);
+    value.z = color.z * exp2(exposure);
+    value.w = color.w;
     return true;
   } else {
     return false;
