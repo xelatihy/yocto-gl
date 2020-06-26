@@ -342,6 +342,40 @@ bool point_in_triangle(const vector<vec3i>& triangles,
   return true;
 }
 
+pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const int tid, const vec3f& point,
+    const float tol) {
+  // http://www.r-5.org/files/books/computers/algo-list/realtime-3d/Christer_Ericson-Real-Time_Collision_Detection-EN.pdf
+  // pag.48
+  auto b  = vec3f{0.0, 0.0, 0.0};
+  auto v0 = positions[triangles[tid].x];
+  auto v1 = positions[triangles[tid].y];
+  auto v2 = positions[triangles[tid].z];
+
+  auto u = v1 - v0, v = v2 - v0, w = point - v0;
+  auto d00 = dot(u, u), d01 = dot(u, v), d11 = dot(v, v), d20 = dot(w, u),
+       d21 = dot(w, v), d = d00 * d11 - d01 * d01;
+
+  if (d == 0) return {false, zero2f};
+
+  b[2] = (d00 * d21 - d01 * d20) / d;
+  assert(!isnan(b[2]));
+  b[1] = (d11 * d20 - d01 * d21) / d;
+  assert(!isnan(b[1]));
+  b[0] = 1.0 - b[1] - b[2];
+  assert(!isnan(b[0]));
+
+  for (int i = 0; i < 3; ++i) {
+    if (b[i] < -tol || b[i] > 1.0 + tol) return {false, zero2f};
+  }
+
+#if YOCTO_OLD_INTERPOLATION_CONVENTION
+  return {true, vec2f{b.x, b.y}};
+#else
+  return {true, vec2f{b.y, b.z}};
+#endif
+}
+
 // compute angles in tangent space, if opposite is false we do not consider
 // opposite vertices
 vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
@@ -1481,7 +1515,6 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
   vector<int> cleaned = strip;
 
   auto k = -1, start_entry = 0, end_entry = (int)strip.size() - 1;
-  auto b2f = zero2f;
   auto b3f = zero3f;
   // Erasing from the bottom
   if (is_vert(end, k)) {
@@ -1508,8 +1541,8 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     } else if (adjacencies[end.face][k] == strip[end_entry - 1]) {
       cleaned.pop_back();
     }
-    auto ok = point_in_triangle(triangles, positions, cleaned.back(),
-        eval_position(triangles, positions, end), b2f);
+    auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned.back(),
+        eval_position(triangles, positions, end));
     assert(ok);
     end = {cleaned.back(), b2f};  // updating end
   }
@@ -1541,9 +1574,8 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     } else if (adjacencies[start.face][k] == strip[1]) {
       cleaned.erase(cleaned.begin());
     }
-    b2f     = zero2f;
-    auto ok = point_in_triangle(triangles, positions, cleaned[0],
-        eval_position(triangles, positions, start), b2f);
+    auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned[0],
+        eval_position(triangles, positions, start));
     assert(ok);
     start = {cleaned[0], b2f};  // updating start
   }

@@ -50,6 +50,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::pair;
 using std::string;
 using std::unordered_map;
 using std::vector;
@@ -88,6 +89,10 @@ vector<int> triangle_fan(
 // Check if a point lies on a triangle. If true, return barycentric coords
 bool point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
+    const float tolerance = 1e-2);
+// Check if a point lies on a triangle. If true, return barycentric coords
+pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, int tid, const vec3f& point,
     const float tolerance = 1e-2);
 
 // Compute angles in tangent space of a
