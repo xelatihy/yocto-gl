@@ -1,8 +1,8 @@
 //
-// # Yocto/Mesh: Mesh processing
+// # Yocto/Mesh: Tiny Library for mesh operations for computational geometry
 //
-// Yocto/Mesh is a collection of computational geometry functions on triangle
-// meshes. Yocto/Mesh is implemented in `yocto_mesh.h` and `yocto_mesh.cpp`.
+// Yocto/Mesh is a collection of computational geometry routines on triangle
+// meshes.
 //
 
 //
@@ -214,7 +214,6 @@ vector<int> get_strip(const geodesic_solver& solver,
 vector<int> fast_get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
-    const vector<vector<float>>& angles, const vector<float>& total_angles,
     mesh_point& source, mesh_point& target);
 
 float length_by_flattening(const vector<vec3i>& triangles,
