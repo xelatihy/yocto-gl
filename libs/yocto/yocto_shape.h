@@ -524,6 +524,64 @@ vector<string> shape_stats(const vector<int>& points,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+struct quads_shape {
+  vector<vec4i> quads     = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+};
+
+// Make a plane.
+quads_shape make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
+quads_shape make_bulged_rect(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
+    float radius = 0.3);
+// Make a plane in the xz plane.
+quads_shape make_recty(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
+quads_shape make_bulged_recty(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
+    float radius = 0.3);
+// Make a box.
+quads_shape make_box(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+quads_shape make_rounded_box(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1},
+    float radius = 0.3);
+// Make a quad stack
+quads_shape make_rect_stack(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec2f& uvscale = {1, 1});
+// Make a floor.
+quads_shape make_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
+quads_shape make_bent_floor(const vec2i& steps = {1, 1},
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10},
+    float bent = 0.5);
+// Make a sphere.
+quads_shape make_sphere(int steps = 32, float scale = 1, float uvscale = 1);
+// Make a sphere.
+quads_shape make_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+// Make a sphere with slipped caps.
+quads_shape make_capped_uvsphere(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1}, float height = 0.3);
+// Make a disk
+quads_shape make_disk(int steps = 32, float scale = 1, float uvscale = 1);
+// Make a bulged disk
+quads_shape make_bulged_disk(
+    int steps = 32, float scale = 1, float uvscale = 1, float height = 0.3);
+// Make a uv disk
+quads_shape make_uvdisk(const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+// Make a uv cylinder
+quads_shape make_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a rounded uv cylinder
+quads_shape make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
+    float radius = 0.3);
+
 // Make a plane.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -555,7 +613,7 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1});
+    const vec2f& uvscale = {1, 1});
 // Make a floor.
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
