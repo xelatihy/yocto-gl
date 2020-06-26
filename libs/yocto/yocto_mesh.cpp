@@ -1508,8 +1508,9 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     } else if (adjacencies[end.face][k] == strip[end_entry - 1]) {
       cleaned.pop_back();
     }
-    assert(point_in_triangle(triangles, positions, cleaned.back(),
-        eval_position(triangles, positions, end), b2f));
+    auto ok = point_in_triangle(triangles, positions, cleaned.back(),
+        eval_position(triangles, positions, end), b2f);
+    assert(ok);
     end = {cleaned.back(), b2f};  // updating end
   }
 
@@ -1540,9 +1541,10 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     } else if (adjacencies[start.face][k] == strip[1]) {
       cleaned.erase(cleaned.begin());
     }
-    b2f = zero2f;
-    assert(point_in_triangle(triangles, positions, cleaned[0],
-        eval_position(triangles, positions, start), b2f));
+    b2f     = zero2f;
+    auto ok = point_in_triangle(triangles, positions, cleaned[0],
+        eval_position(triangles, positions, start), b2f);
+    assert(ok);
     start = {cleaned[0], b2f};  // updating start
   }
 
