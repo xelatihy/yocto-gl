@@ -2588,6 +2588,15 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+lines_shape make_lines(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = lines_shape{};
+  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, scale, uvscale, rad);
+  return shape;
+}
+
 // Generate lines set along a quad.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -2682,6 +2691,32 @@ void make_bezier_circle(
   positions = circle_pos;
   beziers   = circle_beziers;
   for (auto& p : positions) p *= size;
+}
+
+// Make a facevarying rect
+fvquads_shape make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = fvquads_shape{};
+  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying box
+fvquads_shape make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = fvquads_shape{};
+  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying sphere
+fvquads_shape make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = fvquads_shape{};
+  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
 }
 
 // Make fvquad

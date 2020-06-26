@@ -524,6 +524,7 @@ vector<string> shape_stats(const vector<int>& points,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Data returns by the make_shape functions
 struct quads_shape {
   vector<vec4i> quads     = {};
   vector<vec3f> positions = {};
@@ -661,6 +662,25 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
     const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
 
+// Data returns by the make_fvshape functions
+struct fvquads_shape {
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+  vector<vec3f> positions     = {};
+  vector<vec3f> normals       = {};
+  vector<vec2f> texcoords     = {};
+};
+
+// Make a facevarying rect
+fvquads_shape make_fvrect(const vec2i& steps = {1, 1},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
+// Make a facevarying box
+fvquads_shape make_fvbox(const vec3i& steps = {1, 1, 1},
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a facevarying sphere
+fvquads_shape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
+
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
@@ -678,12 +698,41 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
     float scale = 1, float uvscale = 1);
 
+// Data returns by the make_lines functions
+struct lines_shape {
+  vector<vec2i> lines     = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<float> radius    = {};
+};
+
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+lines_shape make_lines(const vec2i& steps = {4, 65536},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& rad = {0.001, 0.001});
+
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num = 65536, const vec2i& steps = {4, 65536},
-    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    const vec2f& rad = {0.001, 0.001});
+    const vec2i& steps = {4, 65536}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1}, const vec2f& rad = {0.001, 0.001});
+
+// Data returns by the make_lines functions
+struct points_shape {
+  vector<int>   points    = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<float> radius    = {};
+};
+
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+points_shape make_point(float point_radiuspoint_radius = 0.001);
+points_shape make_points(
+    int num = 65536, float uvscale = 1, float point_radius = 0.001);
+points_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
+    float uvscale = 1, float point_radius = 0.001, uint64_t seed = 17);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_point(vector<int>& points, vector<vec3f>& positions,
