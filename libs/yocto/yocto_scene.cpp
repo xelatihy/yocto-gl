@@ -502,8 +502,7 @@ void add_materials(scene_model* scene) {
 // Add a sky environment
 void add_sky(scene_model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = image<vec4f>{{1024, 512}};
-  make_sunsky(sunsky, sunsky.size(), sun_angle);
+  auto sunsky  = make_sunsky({1024, 512}, sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
     for (auto i = 0; i < sunsky.size().x; i++)
