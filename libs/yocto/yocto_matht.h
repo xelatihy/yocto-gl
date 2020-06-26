@@ -948,7 +948,7 @@ inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near);
 
 // Rotation conversions.
 template <typename T>
-inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat);
+inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat);
 template <typename T, typename T1>
 inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle);
 template <typename T>
@@ -985,15 +985,15 @@ inline T quad_area(const vec<T, 3>& p0, const vec<T, 3>& p1,
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2);
+inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
+    const vec<T, 2>& uv1, const vec<T, 2>& uv2);
 
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
     const vec<T, 2>& uv3, const vec<T, 2>& current_uv);
@@ -1289,11 +1289,11 @@ inline vec<T, 3> eta_to_reflectivity(
     const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert eta to edge tint parametrization.
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+inline pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
     const vec<T, 3>& eta, const vec<T, 3>& etak);
 // Convert reflectivity and edge tint to eta.
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+inline pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
     const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint);
 
 // Evaluates the microfacet distribution.
@@ -3460,7 +3460,7 @@ inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
+inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
   return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T, typename T1>
@@ -3558,9 +3558,9 @@ inline T interpolate_bezier_derivative(
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2,
-    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+inline pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& p0,
+    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 2>& uv0,
+    const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
   // Follows the definition in http://www.terathon.com/code/tangent.html and
   // https://gist.github.com/aras-p/2843984
   // normal points up from texture space
@@ -3585,7 +3585,7 @@ inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
 
 // Quad tangent and bitangent from uv.
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
+inline pair<vec<T, 3>, vec<T, 3>> quad_tangents_fromuv(const vec<T, 3>& p0,
     const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3,
     const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2,
     const vec<T, 2>& uv3, const vec<T, 2>& current_uv) {
@@ -4684,7 +4684,7 @@ inline vec<T, 3> eta_to_reflectivity(
 }
 // Convert eta to edge tint parametrization
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
+inline pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
     const vec<T, 3>& eta, const vec<T, 3>& etak) {
   auto reflectivity = eta_to_reflectivity(eta, etak);
   auto numer        = (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity)) - eta;
@@ -4695,7 +4695,7 @@ inline std::pair<vec<T, 3>, vec<T, 3>> eta_to_edgetint(
 }
 // Convert reflectivity and edge tint to eta.
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
+inline pair<vec<T, 3>, vec<T, 3>> edgetint_to_eta(
     const vec<T, 3>& reflectivity, const vec<T, 3>& edgetint) {
   auto r = clamp(reflectivity, 0.0f, 0.99f);
   auto g = edgetint;

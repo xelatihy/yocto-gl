@@ -43,182 +43,177 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, vector<float>& radius, const string& type,
     string& error) {
+  auto set_quads = [&](quads_shape&& shape) {
+    quads     = shape.quads;
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+  };
+  auto set_triangles = [&](triangles_shape&& shape) {
+    triangles = shape.triangles;
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+  };
+  auto set_lines = [&](lines_shape&& shape) {
+    lines     = shape.lines;
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+    radius    = shape.radius;
+  };
+  auto set_points = [&](points_shape&& shape) {
+    points    = shape.points;
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+    radius    = shape.radius;
+  };
+  auto set_fvquads = [&](quads_fvshape&& shape) {
+    quadspos      = shape.quadspos;
+    quadsnorm     = shape.quadsnorm;
+    quadstexcoord = shape.quadstexcoord;
+    positions     = shape.positions;
+    normals       = shape.normals;
+    texcoords     = shape.texcoords;
+  };
+
   if (type == "default-quad") {
-    make_rect(quads, positions, normals, texcoords);
+    set_quads(make_rect());
   } else if (type == "default-quady") {
-    make_recty(quads, positions, normals, texcoords);
+    set_quads(make_recty());
   } else if (type == "default-cube") {
-    make_box(quads, positions, normals, texcoords);
+    set_quads(make_box());
   } else if (type == "default-cube-rounded") {
-    make_rounded_box(quads, positions, normals, texcoords);
+    set_quads(make_rounded_box());
   } else if (type == "default-sphere") {
-    make_sphere(quads, positions, normals, texcoords);
+    set_quads(make_sphere());
   } else if (type == "default-disk") {
-    make_disk(quads, positions, normals, texcoords);
+    set_quads(make_disk());
   } else if (type == "default-disk-bulged") {
-    make_bulged_disk(quads, positions, normals, texcoords);
+    set_quads(make_bulged_disk());
   } else if (type == "default-quad-bulged") {
-    make_bulged_rect(quads, positions, normals, texcoords);
+    set_quads(make_bulged_rect());
   } else if (type == "default-uvsphere") {
-    make_uvsphere(quads, positions, normals, texcoords);
+    set_quads(make_uvsphere());
   } else if (type == "default-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords);
+    set_quads(make_capped_uvsphere());
   } else if (type == "default-uvdisk") {
-    make_uvdisk(quads, positions, normals, texcoords);
+    set_quads(make_uvdisk());
   } else if (type == "default-uvcylinder") {
-    make_uvcylinder(quads, positions, normals, texcoords);
+    set_quads(make_uvcylinder());
   } else if (type == "default-uvcylinder-rounded") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
   } else if (type == "default-geosphere") {
-    make_geosphere(triangles, positions);
+    set_triangles(make_geosphere());
   } else if (type == "default-floor") {
-    make_floor(quads, positions, normals, texcoords);
+    set_quads(make_floor());
   } else if (type == "default-floor-bent") {
-    make_bent_floor(quads, positions, normals, texcoords);
+    set_quads(make_bent_floor());
   } else if (type == "default-matball") {
-    make_sphere(quads, positions, normals, texcoords);
+    set_quads(make_sphere());
   } else if (type == "default-hairball") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(
-        base_quads, base_positions, base_normals, base_texcoords, pow2(5), 0.8);
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.2, 0.2}, {0.002, 0.001});
+    auto base = make_sphere(pow2(5), 0.8);
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
   } else if (type == "default-hairball-interior") {
-    make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
+    set_quads(make_sphere(pow2(5), 0.8));
   } else if (type == "default-suzanne") {
-    make_monkey(quads, positions);
+    set_quads(make_monkey());
   } else if (type == "default-cube-facevarying") {
-    make_fvbox(
-        quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
+    set_fvquads(make_fvbox());
   } else if (type == "default-sphere-facevarying") {
-    make_fvsphere(
-        quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
+    set_fvquads(make_fvsphere());
   } else if (type == "default-quady-displaced") {
-    make_recty(quads, positions, normals, texcoords, {256, 256});
+    set_quads(make_recty({256, 256}));
   } else if (type == "default-sphere-displaced") {
-    make_sphere(quads, positions, normals, texcoords, 128);
+    set_quads(make_sphere(128));
   } else if (type == "test-cube") {
-    make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f);
+    set_quads(make_rounded_box(
+        {32, 32, 32}, {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere") {
-    make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
+    set_quads(make_uvsphere({32, 32}, 0.075));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075,
-        {1, 1}, 0.3 * 0.075);
+    set_quads(make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
+    set_quads(make_sphere(32, 0.075f, 1));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere-displaced") {
-    make_sphere(quads, positions, normals, texcoords, 128, 0.075f, 1);
+    set_quads(make_sphere(128, 0.075f, 1));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-disk") {
-    make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
+    set_quads(make_disk(32, 0.075f, 1));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
+    set_quads(make_rounded_uvcylinder(
+        {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
-    make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
+    set_quads(make_floor({1, 1}, {2, 2}, {20, 20}));
   } else if (type == "test-quad") {
-    make_rect(
-        quads, positions, normals, texcoords, {1, 1}, {0.075, 0.075}, {1, 1});
+    set_quads(make_rect({1, 1}, {0.075, 0.075}, {1, 1}));
   } else if (type == "test-quady") {
-    make_recty(
-        quads, positions, normals, texcoords, {1, 1}, {0.075, 0.075}, {1, 1});
+    set_quads(make_recty({1, 1}, {0.075, 0.075}, {1, 1}));
   } else if (type == "test-quad-displaced") {
-    make_rect(quads, positions, normals, texcoords, {256, 256}, {0.075, 0.075},
-        {1, 1});
+    set_quads(make_rect({256, 256}, {0.075, 0.075}, {1, 1}));
   } else if (type == "test-quady-displaced") {
-    make_recty(quads, positions, normals, texcoords, {256, 256}, {0.075, 0.075},
-        {1, 1});
+    set_quads(make_recty({256, 256}, {0.075, 0.075}, {1, 1}));
   } else if (type == "test-matball") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075);
+    set_quads(make_sphere(32, 0.075));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-hairball1") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
-        {0.03, 100});
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
   } else if (type == "test-hairball2") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
   } else if (type == "test-hairball3") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
-        {0.5, 128});
+    auto base = make_sphere(32, 0.075f * 0.8f, 1);
+    for (auto& p : base.positions) p += {0, 0.075, 0};
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
   } else if (type == "test-hairball-interior") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
+    set_quads(make_sphere(32, 0.075f * 0.8f, 1));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
-    make_monkey(quads, positions, 0.075f * 0.8f);
+    set_quads(make_monkey(0.075f * 0.8f));
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
-    // make_cube(quads, positions, normals, texcoords, 0.075f);
-    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, 0.075f);
+    // set_quads(make_cube( 0.075f);
+    set_fvquads(make_fvcube(0.075f));
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
     //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
   } else if (type == "test-arealight2") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
+    set_quads(make_rect({1, 1}, {0.2, 0.2}));
   } else if (type == "test-largearealight1") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
   } else if (type == "test-largearealight2") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
+    set_quads(make_rect({1, 1}, {0.4, 0.4}));
   } else if (type == "test-pointlight1") {
-    make_point(points, positions, normals, texcoords, radius, 0);
+    set_points(make_point(0));
   } else if (type == "test-pointlight2") {
-    make_point(points, positions, normals, texcoords, radius, 0);
+    set_points(make_point(0));
   } else if (type == "test-point") {
-    make_points(points, positions, normals, texcoords, radius, 1);
+    set_points(make_points(1));
   } else if (type == "test-points") {
-    make_points(points, positions, normals, texcoords, radius, 4096);
+    set_points(make_points(4096));
   } else if (type == "test-points-random") {
-    make_random_points(
-        points, positions, normals, texcoords, radius, 4096, {0.2, 0.2, 0.2});
+    set_points(make_random_points(4096, {0.2, 0.2, 0.2}));
   } else if (type == "test-particles") {
-    make_points(points, positions, normals, texcoords, radius, 4096);
+    set_points(make_points(4096));
   } else if (type == "test-cloth") {
-    make_rect(quads, positions, normals, texcoords, {64, 64}, {0.2, 0.2});
+    set_quads(make_rect({64, 64}, {0.2, 0.2}));
   } else if (type == "test-clothy") {
-    make_recty(quads, positions, normals, texcoords, {64, 64}, {0.2, 0.2});
+    set_quads(make_recty({64, 64}, {0.2, 0.2}));
   } else {
     error = "unknown preset";
     return false;

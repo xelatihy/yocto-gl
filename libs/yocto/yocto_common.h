@@ -204,7 +204,7 @@ struct enumerate_helper {
       return *this;
     }
     bool operator!=(const iterator& other) const { return pos != other.pos; }
-    std::pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
+    pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
   };
   T*       data = nullptr;
   int      size = 0;

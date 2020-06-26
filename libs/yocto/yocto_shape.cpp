@@ -170,7 +170,7 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-std::pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
@@ -194,7 +194,7 @@ std::pair<vector<vec3f>, vector<vec3f>> compute_skinning(
 }
 
 // Apply skinning as specified in Khronos glTF
-std::pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
@@ -576,7 +576,7 @@ namespace yocto {
 #endif
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static std::pair<int, int> split_sah(vector<int>& primitives,
+static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -640,7 +640,7 @@ static std::pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static std::pair<int, int> split_balanced(vector<int>& primitives,
+static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -679,7 +679,7 @@ static std::pair<int, int> split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static std::pair<int, int> split_middle(vector<int>& primitives,
+static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -1346,7 +1346,7 @@ vector<vector<vec4i>> ungroup_quads(
 }
 
 // Weld vertices within a threshold.
-std::pair<vector<vec3f>, vector<int>> weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
   auto indices   = vector<int>(positions.size());
   auto welded    = vector<vec3f>{};
@@ -1365,7 +1365,7 @@ std::pair<vector<vec3f>, vector<int>> weld_vertices(
   }
   return {welded, indices};
 }
-std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
@@ -1373,7 +1373,7 @@ std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
   for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
   return {wtriangles, wpositions};
 }
-std::pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wquads                = quads;
@@ -1505,9 +1505,9 @@ void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
+pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
     const vector<vec2i>& lines, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec2i>, vector<T>>{};
+  auto tess = pair<vector<vec2i>, vector<T>>{};
   subdivide_lines_impl(tess.first, tess.second, lines, vert, level);
   return tess;
 }
@@ -1556,9 +1556,9 @@ void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
+pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     const vector<vec3i>& triangles, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec3i>, vector<T>>{};
+  auto tess = pair<vector<vec3i>, vector<T>>{};
   subdivide_triangles_impl(tess.first, tess.second, triangles, vert, level);
   return tess;
 }
@@ -1627,9 +1627,9 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
+pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
     const vector<vec4i>& quads, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_quads_impl(tess.first, tess.second, quads, vert, level);
   return tess;
 }
@@ -1675,9 +1675,9 @@ void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
+pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     const vector<vec4i>& beziers, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_beziers_impl(tess.first, tess.second, beziers, vert, level);
   return tess;
 }
@@ -1813,99 +1813,99 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
+pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     const vector<vec4i>& quads, const vector<T>& vert, int level,
     bool lock_boundary) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_catmullclark_impl(
       tess.first, tess.second, quads, vert, level, lock_boundary);
   return tess;
 }
 
-std::pair<vector<vec2i>, vector<float>> subdivide_lines(
+pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>& lines, const vector<float>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec2f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 
-std::pair<vector<vec3i>, vector<float>> subdivide_triangles(
+pair<vector<vec3i>, vector<float>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<float>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec2f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_quads(
+pair<vector<vec4i>, vector<float>> subdivide_quads(
     const vector<vec4i>& quads, const vector<float>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_beziers(
+pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<float>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
@@ -1930,8 +1930,7 @@ vector<float> sample_points_cdf(int npoints) {
 }
 
 // Pick a point on lines uniformly.
-std::pair<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru) {
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
   return {sample_discrete_cdf(cdf, re), ru};
 }
 vector<float> sample_lines_cdf(
@@ -1946,7 +1945,7 @@ vector<float> sample_lines_cdf(
 }
 
 // Pick a point on a triangle mesh uniformly.
-std::pair<int, vec2f> sample_triangles(
+pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete_cdf(cdf, re), sample_triangle(ruv)};
 }
@@ -1962,11 +1961,11 @@ vector<float> sample_triangles_cdf(
 }
 
 // Pick a point on a quad mesh uniformly.
-std::pair<int, vec2f> sample_quads(
+pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete_cdf(cdf, re), ruv};
 }
-std::pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
+pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
   auto element = sample_discrete_cdf(cdf, re);
   if (quads[element].z == quads[element].w) {
@@ -2448,6 +2447,147 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
+// Make a plane.
+quads_shape make_rect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+quads_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a plane in the xz plane.
+quads_shape make_recty(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+quads_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_bulged_recty(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a box.
+quads_shape make_box(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = quads_shape{};
+  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+quads_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a quad stack
+quads_shape make_rect_stack(
+    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a floor.
+quads_shape make_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+quads_shape make_bent_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
+  auto shape = quads_shape{};
+  make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, bent);
+  return shape;
+}
+
+// Make a sphere.
+quads_shape make_sphere(int steps, float scale, float uvscale) {
+  auto shape = quads_shape{};
+  make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere.
+quads_shape make_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere with slipped caps.
+quads_shape make_capped_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = quads_shape{};
+  make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+// Make a disk
+quads_shape make_disk(int steps, float scale, float uvscale) {
+  auto shape = quads_shape{};
+  make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+
+// Make a bulged disk
+quads_shape make_bulged_disk(
+    int steps, float scale, float uvscale, float height) {
+  auto shape = quads_shape{};
+  make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a uv disk
+quads_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a uv cylinder
+quads_shape make_uvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a rounded uv cylinder
+quads_shape make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
 // Generate lines set along a quad.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -2490,6 +2630,15 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 }
 
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+lines_shape make_lines(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = lines_shape{};
+  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, scale, uvscale, rad);
+  return shape;
+}
+
 // Generate a point at the origin.
 void make_point(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -2527,6 +2676,29 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
   for (auto i = 0; i < positions.size(); i++) {
     positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
   }
+}
+
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+points_shape make_point(float radius) {
+  auto shape = points_shape{};
+  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, radius);
+  return shape;
+}
+
+points_shape make_points(int num, float uvscale, float radius) {
+  auto shape = points_shape{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+points_shape make_random_points(
+    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
+  auto shape = points_shape{};
+  make_random_points(shape.points, shape.positions, shape.normals,
+      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+  return shape;
 }
 
 // Make a bezier circle. Returns bezier, pos.
@@ -2572,6 +2744,32 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   quadsnorm = quadspos;
   normals   = positions;
   for (auto& n : normals) n = normalize(n);
+}
+
+// Make a facevarying rect
+quads_fvshape make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying box
+quads_fvshape make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying sphere
+quads_fvshape make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
 }
 
 // Predefined meshes
@@ -3117,6 +3315,42 @@ void make_geosphere(
   }
 }
 
+// Predefined meshes
+quads_shape make_monkey(float scale) {
+  auto shape = quads_shape{};
+  make_monkey(shape.quads, shape.positions, scale);
+  return shape;
+}
+quads_shape make_quad(float scale) {
+  auto shape = quads_shape{};
+  make_quad(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_shape make_quady(float scale) {
+  auto shape = quads_shape{};
+  make_quady(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_shape make_cube(float scale) {
+  auto shape = quads_shape{};
+  make_cube(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_fvshape make_fvcube(float scale) {
+  auto shape = quads_fvshape{};
+  make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+triangles_shape make_geosphere(float scale) {
+  auto shape = triangles_shape{};
+  make_geosphere(shape.triangles, shape.positions, scale);
+  return shape;
+}
+
 // Make a hair ball around a shape
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -3185,6 +3419,28 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 }
 
+// Make a hair ball around a shape
+lines_shape make_hair(const triangles_shape& base, const vec2i& steps,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
+  auto shape = lines_shape{};
+  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, base.triangles, {}, base.positions, base.normals,
+      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
+  return shape;
+}
+
+// Make a hair ball around a shape
+lines_shape make_hair(const quads_shape& base, const vec2i& steps,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
+  auto shape = lines_shape{};
+  make_hair(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, {}, base.quads, base.positions, base.normals,
+      base.texcoords, steps, len, rad, noise, clump, rotation, seed);
+  return shape;
+}
+
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping
 // its normals. Note that this is very much not robust and only useful for
 // trivial cases.
@@ -3208,7 +3464,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
     const vector<float>& height) {
   make_recty(quads, positions, normals, texcoords, size - 1,
-      vec2f{(float)size.x, (float)size.y} / max(size));
+      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];

@@ -502,8 +502,7 @@ void add_materials(scene_model* scene) {
 // Add a sky environment
 void add_sky(scene_model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
-  auto sunsky  = image<vec4f>{{1024, 512}};
-  make_sunsky(sunsky, sunsky.size(), sun_angle);
+  auto sunsky  = make_sunsky({1024, 512}, sun_angle);
   texture->colorf.resize(sunsky.size());
   for (auto j = 0; j < sunsky.size().y; j++)
     for (auto i = 0; i < sunsky.size().x; i++)
@@ -968,7 +967,7 @@ vec2f eval_texcoord(
 
 #if 0
 // Shape element normal.
-static std::pair<vec3f, vec3f> eval_tangents(
+static pair<vec3f, vec3f> eval_tangents(
     const scene_shape* shape, int element, const vec2f& uv) {
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
@@ -999,7 +998,7 @@ static std::pair<vec3f, vec3f> eval_tangents(
 #endif
 
 // Shape element normal.
-std::pair<vec3f, vec3f> eval_element_tangents(
+pair<vec3f, vec3f> eval_element_tangents(
     const scene_instance* instance, int element) {
   auto shape = instance->shape;
   if (!shape->triangles.empty() && !shape->texcoords.empty()) {
@@ -1524,7 +1523,7 @@ struct scene_bvh_primitive {
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static std::pair<int, int> split_sah(
+static pair<int, int> split_sah(
     vector<scene_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
@@ -1587,7 +1586,7 @@ static std::pair<int, int> split_sah(
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static std::pair<int, int> split_balanced(
+static pair<int, int> split_balanced(
     vector<scene_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
@@ -1623,7 +1622,7 @@ static std::pair<int, int> split_balanced(
 
 // Splits a BVH node using the middle heuristic. Returns split position and
 // axis.
-static std::pair<int, int> split_middle(
+static pair<int, int> split_middle(
     vector<scene_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
@@ -1657,7 +1656,7 @@ static std::pair<int, int> split_middle(
 }
 
 // Split bvh nodes according to a type
-static std::pair<int, int> split_nodes(vector<scene_bvh_primitive>& primitives,
+static pair<int, int> split_nodes(vector<scene_bvh_primitive>& primitives,
     int start, int end, scene_bvh_type type) {
   switch (type) {
     case scene_bvh_type::default_: return split_middle(primitives, start, end);

@@ -52,6 +52,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::pair;
 using std::vector;
 
 }  // namespace yocto
@@ -164,7 +165,6 @@ inline const auto one3f = vec3f{1, 1, 1};
 inline const auto one4f = vec4f{1, 1, 1, 1};
 
 // Element access
-inline vec3f&       xyz(vec4f& a);
 inline const vec3f& xyz(const vec4f& a);
 
 // Vector sequence operations.
@@ -489,11 +489,9 @@ inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Element access
-inline vec3i&       xyz(vec4i& a);
 inline const vec3i& xyz(const vec4i& a);
 
 // Element access
-inline vec3b&       xyz(vec4b& a);
 inline const vec3b& xyz(const vec4b& a);
 
 // Vector sequence operations.
@@ -1082,9 +1080,9 @@ inline mat4f perspective_mat(float fovy, float aspect, float near, float far);
 inline mat4f perspective_mat(float fovy, float aspect, float near);
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat);
-inline vec4f                   rotation_quat(const vec3f& axis, float angle);
-inline vec4f                   rotation_quat(const vec4f& axisangle);
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat);
+inline vec4f              rotation_quat(const vec3f& axis, float angle);
+inline vec4f              rotation_quat(const vec4f& axisangle);
 
 }  // namespace yocto
 
@@ -1214,7 +1212,6 @@ inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 
 // Element access
-inline vec3f&       xyz(vec4f& a) { return (vec3f&)a; }
 inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
 
 // Vector sequence operations.
@@ -1711,11 +1708,9 @@ inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
 // Element access
-inline vec3i&       xyz(vec4i& a) { return (vec3i&)a; }
 inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 
 // Element access
-inline vec3b&       xyz(vec4b& a) { return (vec3b&)a; }
 inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
 
 // Vector sequence operations.
@@ -2663,7 +2658,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {

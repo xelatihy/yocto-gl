@@ -7,8 +7,8 @@ Yocto/Shape is implemented in `yocto_shape.h` and `yocto_shape.cpp`.
 ## Shape representation
 
 Yocto/Shape supports shapes defined as collection of either points, lines,
-triangles and quads. All functions have overrides for all element types
-if appropriate.
+triangles and quads. Most functions have overrides for all element types
+when appropriate.
 
 Shapes are represented as indexed meshes, with arbitrary properties for
 each vertex. Each vertex property is stored as a separate array,
@@ -19,7 +19,7 @@ on a mesh data structure.
 
 Vertex data is stored as `vector<vecXf>`, while element indices are stored
 as `vector<vec3i>`, `vector<vec4i>`, `vector<vec2i>`, `vector<int>`
-for triangle meshes, quad meshes, line stets and point sets respectively.
+for triangle meshes, quad meshes, line sets and point sets respectively.
 
 ```cpp
 auto triangles = vector<vec3i>{...};   // triangle indices
@@ -38,6 +38,11 @@ auto positions = vector<vec3f>{...};       // vertex positions
 auto quadstexcoords = vector<vec4i>{...};  // quads indices for uvs
 auto texcoords = vector<vec2f>{...};       // vertex uvs
 ```
+
+Throughout the library, functions may either take index and vertex arrays
+directly as input and output, or may pack these array in struct if deemed
+appropriate. This design tries to balance readability and generality, without
+forcing a single convention that would not be appropriate everywhere.
 
 ## Vertex properties
 
@@ -74,7 +79,7 @@ positions to the main axes.
 ```cpp
 auto triangles = vector<vec3i>{...};   // triangle indices
 auto positions = vector<vec3f>{...};   // vertex positions
-auto positions = vector<vec3f>{...};   // vertex normals
+auto normals   = vector<vec3f>{...};   // vertex normals
 
 triangles = flip_triangles(triangles); // flip faces
 normals = flip_normals(normals);       // flip normals
@@ -135,10 +140,10 @@ triangles, `make_quads_bvh(bvh,quads,positions)` for quads,
 `make_points_bvh(bvh,points,positions,radius)` for points.
 
 ```cpp
-auto triangles = vector<vec3i>{};              // mesh data
-auto positions = vector<vec3f>{};
+auto triangles = vector<vec3i>{...};           // mesh data
+auto positions = vector<vec3f>{...};
 auto bvh = bvh_tree{};
-make_triangles_bvh(bvh, triangles, positions;  // BVH construction
+make_triangles_bvh(bvh, triangles, positions); // BVH construction
 ```
 
 Intersect and overlap functions return a `bvh_intersection` that bundles
@@ -153,7 +158,8 @@ triangles, `intersect_quads_bvh(bvh,quads,positions)` for quads,
 
 ```cpp
 auto ray = ray3f{...};
-auto isec = intersect_triangles(bvh, triangles, positions, ray);// intersection
+// computes ray-triangles intersection
+auto isec = intersect_triangles(bvh, triangles, positions, ray);
 if(isec.hit) print_info(isec.element, isec.uv, isec.distance);
 else print_info("no hit");
 ```
@@ -161,24 +167,24 @@ else print_info("no hit");
 `overlap_XXX_bvh(...)` checks whether a shape overlaps a point within a
 given maximum distance and returns the distance, element and uv of the
 closest element.
-Use `overlap_triangles_bvh(bvh,triangles,positions, ray)` for
-triangles, `overlap_quads_bvh(bvh,quads,positions)` for quads,
-`overlap_lines_bvh(bvh,lines,positions,radius,ray)` for lines, and
-`overlap_points_bvh(bvh,points,positions,radius,ray)` for points.
+Use `overlap_triangles_bvh(bvh, triangles, positions, ray)` for
+triangles, `overlap_quads_bvh(bvh, quads, positions)` for quads,
+`overlap_lines_bvh(bvh, lines, positions, radius, ray)` for lines, and
+`overlap_points_bvh(bvh, points, positions, radius, ray)` for points.
 
 ```cpp
-// point overlaps
 auto pt = vec3f{...}; auto max_dist = float{...};
-auto ovr = overlap_triangles(bvh, triangles, positions, pt, mat_dist);// overlap
+// comnpute point-triangles overlap
+auto ovr = overlap_triangles(bvh, triangles, positions, pt, mat_dist);
 if(ovr.hit) print_info(ovrl.element, ovrl.uv, ovrl.distance);
 else print_info("no overlap");
 ```
 
 If vertices have moved little, BVHs can be updated instead of fully rebuild.
-Use `update_triangles_bvh(bvh,triangles,positions)` for
-triangles, `update_quads_bvh(bvh,quads,positions)` for quads,
-`update_lines_bvh(bvh,lines,positions,radius)` for lines, and
-`update_points_bvh(bvh,points,positions,radius)` for points.
+Use `update_triangles_bvh(bvh, triangles, positions)` for
+triangles, `update_quads_bvh(bvh, quads, positions)` for quads,
+`update_lines_bvh(bvh, lines, positions, radius)` for lines, and
+`update_points_bvh(bvh, points, positions, radius)` for points.
 
 ```cpp
 positions[...] = {...};                           // update positions
@@ -193,13 +199,13 @@ underlying volumetric grid. Each cell stores the list of point indices that
 are present in that cell. To save memory, the grid is represented sparsely,
 using a dictionary, so that only cells with at least one vertex are defined.
 
-Initialize a hash grid with `make_hash_grid(positions,size)`.
+Initialize a hash grid with `make_hash_grid(positions, size)`.
 Use `find_neighbors(grid, neighbors, position, max_radius)` to find
 nearest neighbors.
 
 ```cpp
 auto positions = vector<vec3f>{...};               // point positions
-auto grid = make_hash_grid(positions,cell_size);   // create hash grid
+auto grid = make_hash_grid(positions, cell_size);  // create hash grid
 auto pt = vec3f{...}; auto max_dist = float{...};  // query point and dist
 auto neighbors = vector<int>{};                    // neighbor buffer
 find_neighbors(grid, neighbors, pt, max_dist);     // find neighbors by pos
@@ -335,11 +341,12 @@ auto [stquads, stexcoords] = subdivide_catmullclark(tquads, texcoords, 2, true);
 Yocto/Shape supports sampling meshes uniformly. All sampling require to first
 compute the shape CDF and then use it to sample the shape. For each shape type,
 the sampling functions return the shape element id and the element barycentric
-coordinates. Use `sample_lines(cdf,re,rn)` to sample lines,
-`sample_triangles(cdf,re,rn)` to sample triangles,
-`sample_quads(cdf,re,rn)` to sample quads. The shape CDFs are computed using
-`sample_lines_dcf(lines,positions)`, `sample_triangles_dcf(triangles,positions)`,
-and `sample_quads_dcf(quads,positions)`.
+coordinates. Use `sample_lines(cdf, re, rn)` to sample lines,
+`sample_triangles(cdf, re, rn)` to sample triangles,
+`sample_quads(cdf, re, rn)` to sample quads. The shape CDFs are computed using
+`sample_lines_dcf(lines, positions)`,
+`sample_triangles_dcf(triangles, positions)`,
+and `sample_quads_dcf(quads, positions)`.
 
 ```cpp
 auto triangles = vector<vec3i>{...};   // initial shape
@@ -371,8 +378,8 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
 
 ## Shape loading and saving
 
-Shapes are loaded with `load_shape(filename,<shape data>,error)` and saved with
-`save_shape(filename,<shape data>,error)`. Both loading and saving take a filename,
+Shapes are loaded with `load_shape(filename, <shape data>, error)` and saved with
+`save_shape(filename, <shape data>, error)`. Both loading and saving take a filename,
 and buffers for shape elements and vertex data, and return whether or not the
 shape was loaded or saved successfully.
 In the case of an error, the IO functions set the `error` string with a
@@ -405,8 +412,8 @@ if(!save_shape(filename, points, lines, triangles, quads, positions, normals,
    print_error(error);                     // check and print error
 ```
 
-Face-varying shapes are loaded with `fvload_fvshape(filename,<shape data>,error)`
-and saved with `save_fvshape(filename,<shape data>,error)`. The function
+Face-varying shapes are loaded with `fvload_fvshape(filename, <shape data>, error)`
+and saved with `save_fvshape(filename, <shape data>, error)`. The function
 interfaces are modeled similarly to the ones above.
 
 ```cpp
@@ -429,7 +436,9 @@ if(!save_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
 Yocto/Shape defines several procedural shapes used for both testing and
 to quickly create shapes for procedural scenes. Procedural shapes as input the
 desired shape resolution, the shape scale, the uv scale, and additional
-parameters specific to the shape.
+parameters specific to that procedural shape. Most procedural shapes are
+defined in terms of quads and return quads indices and vertex positions,
+normals and texture coordinates packed in a `quads_shape` struct.
 Use `make_rect(...)` for a rectangle in the XY plane,
 `make_bulged_rect(...)` for a bulged rectangle,
 `make_recty(...)` for a rectangle in the XZ plane,
@@ -448,122 +457,97 @@ Use `make_rect(...)` for a rectangle in the XY plane,
 `make_rounded_uvcylinder(...)` for a rounded cylinder.
 
 ```cpp
-auto quads     = vector<vec4i>{};   // shape element buffer
-auto positions = vector<vec3f>{};   // vertex data buffers
-auto normals   = vector<vec3f>{};
-auto texcoords = vector<vec2f>{};
-
+// most procedural shapes return quads, positions, normals, and texcoords
+auto [quads, positions, normals, texcoords] = make_rect({32,32}, {1,1});
 // make shapes with 32 steps in resolution and scale of 1
-make_rect(quads, positions, normals, texcoords, {32,32}, {1,1});
-make_bilged_rect(quads, positions, normals, texcoords, {32,32}, {1,1});
-make_recty(quads, positions, normals, texcoords, {32,32}, {1,1});
-make_box(quads, positions, normals, texcoords, {32,32,32}, {1,1,1});
-make_rounded_box(quads, positions, normals, texcoords, {32,32,32}, {1,1,1});
-make_floor(quads, positions, normals, texcoords, {32,32}, {10,10});
-make_bent_floor(quads, positions, normals, texcoords, {32,32}, {10,10});
-make_sphere(quads, positions, normals, texcoords, 32, 1);
-make_uvsphere(quads, positions, normals, texcoords, {32,32}, 1);
-make_capped_uvsphere(quads, positions, normals, texcoords, {32,32}, 1);
-make_disk(quads, positions, normals, texcoords, 32, 1);
-make_bulged_disk(quads, positions, normals, texcoords, 32, 1);
-make_uvdisk(quads, positions, normals, texcoords, {32,32}, 1);
-make_uvcylinder(quads, positions, normals, texcoords, {32,32,32}, {1,1});
-make_rounded_uvcylinder(quads, positions, normals, texcoords,{32,32,32},{1,1});
+auto shape_01 = make_rect({32,32}, {1,1});
+auto shape_02 = make_bilged_rect({32,32}, {1,1});
+auto shape_03 = make_recty({32,32}, {1,1});
+auto shape_04 = make_box({32,32,32}, {1,1,1});
+auto shape_05 = make_rounded_box({32,32,32}, {1,1,1});
+auto shape_06 = make_floor({32,32}, {10,10});
+auto shape_07 = make_bent_floor({32,32}, {10,10});
+auto shape_08 = make_sphere(32, 1);
+auto shape_09 = make_uvsphere({32,32}, 1);
+auto shape_10 = make_capped_uvsphere({32,32}, 1);
+auto shape_11 = make_disk(32, 1);
+auto shape_12 = make_bulged_disk(32, 1);
+auto shape_13 = ake_uvdiskm({32,32}, 1);
+auto shape_14 = make_uvcylinder({32,32,32}, {1,1});
+auto shape_15 = make_rounded_uvcylinder({32,32,32}, {1,1});
 ```
 
 Yocto/Shape defines a few procedural face-varying shapes with similar interfaces
-to the above functions.
+to the above functions. In this case, the functions return face indices and
+vertex data for positions, normals and texture coordinates packed in a
+`quads_fvshape` struct.
 Use `make_fvrect(...)` for a rectangle in the XY plane,
 `make_fvbox(...)` for a box,
 `make_fvsphere(...)` for a sphere obtained from a cube.
 
 ```cpp
-auto quadspos      = vector<vec4i>{};  // face-varying shape elements buffers
-auto quadsnorm     = vector<vec4i>{};
-auto quadstexcoord = vector<vec4i>{};
-auto positions     = vector<vec3f>{};  // vertex data buffers
-auto normals       = vector<vec3f>{};
-auto texcoords     = vector<vec2f>{};
-
+// procedural face-varying shapes return positions, normals, and texcoords
+auto [quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords] =
+   make_fvrect({32,32}, {1,1});
 // make face-varying shapes with 32 steps in resolution and scale of 1
-make_fvrect(quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords, {32,32}, {1,1});
-make_fvbox(quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords, {32,32,32}, {1,1,1});
-make_fvsphere(quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords, 32, 1);
+auto fvshape_01 = make_fvrect({32,32}, {1,1});
+auto fvshape_02 = make_fvbox({32,32,32}, {1,1,1});
+auto fvshape_03 = make_fvsphere(32, 1);
 ```
 
 Yocto/Shape provides functions to create predefined shapes helpful in testing.
 These functions take only a scale and often provide only the positions as
-vertex data.
-Use `make_monkey(...)` for the Blender monkey,
+vertex data. These functions return either triangles, quads, or
+face-varying quads.
+Use `make_monkey(...)` for the Blender monkey as quads and positions only,
 `make_quad(...)` for a simple quad,
 `make_quady(...)` for a simple quad in the XZ plane,
-`make_cube(...)` for a simple cube,
+`make_cube(...)` for a simple cube as quads and positions only,
 `make_fvcube(...)` for a simple face-varying unit cube,
-`make_geosphere(...)` for a geodesic sphere.
+`make_geosphere(...)` for a geodesic sphere as triangles and positions only.
 
 ```cpp
-auto quads     = vector<vec4i>{};   // shape element buffer
-auto triangles = vector<vec3i>{};   // shape element buffer
-auto positions = vector<vec3f>{};   // vertex data buffers
-auto normals   = vector<vec3f>{};
-auto texcoords = vector<vec2f>{};
-make_monkey(quads, positions, 1);
-make_quad(quads, positions, normals, texcoords, 1);
-make_quady(quads, positions, normals, texcoords, 1);
-make_cube(quads, positions, normals, texcoords, 1);
-make_geosphere(triangles, positions, 1);
-make_fvcube(quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords, 1);
+auto monkey = make_monkey(1);
+auto quad   = make_quad(1);
+auto quady  = make_quady(1);
+auto cube   = make_cube(1);
+auto geosph = make_geosphere(1);
+auto fvcube = make_fvcube(1);
 ```
 
 Yocto/Shape supports the generation of points and lines sets.
 Use `make_lines(...)` to create a line set in the XY plane,
 `make_points(...)` for a collection of points at the origin,
 adn `make_random_points(...)` for a point set randomly placed in a box.
+These functions return shapes that are defined in terms of lines or points
+and return lines or points indices, and vertex positions,
+normals, texture coordinates and radia, packed in a `lines_shape`
+or `points_shape` struct.
 
 ```cpp
-auto points    = vector<int>{};     // points element buffer
-auto lines     = vector<vec2i>{};   // lines  element buffer
-auto positions = vector<vec3f>{};   // vertex data buffers
-auto normals   = vector<vec3f>{};
-auto texcoords = vector<vec2f>{};
-auto radius    = vector<float>{};
-
-make_lines(lines, positions, normals, texcoords, radius,
-  63536, {4, 65536}, // number of lines and line steps
-  {1, 1}, {1, 1},    // line set scale and uvscale
-  {0.001, 0.001});   // radius at the bottom and top
-make_points(points, positions, normals, texcoords, radius,
-  65536,        // number of points
-  1,            // uvscale
-  0.001);       // point radius
-make_random_points(points, positions, normals, texcoords, radius,
-  65536,        // number of points
-  {1, 1, 1}, 1, // line set scale and uvscale
-  0.001);       // point radius
+// procedural lines return lines, positions, normals, texcoords, radia
+auto [lines, positions, normals, texcoords, radius] = make_lines({4, 65536});
+auto lines_01 = make_lines({4, 65536},      // line steps and number of lines
+                           {1, 1}, {1, 1},  // line set scale and uvscale
+                           {0.001, 0.001}); // radius at the bottom and top
+// procedural points return points, positions, normals, texcoords, radia
+auto [points, positions, normals, texcoords, radius] = make_points(65536);
+auto points_01 = make_points(65536,        // number of points
+                             1,            // uvscale
+                             0.001);       // point radius
+auto points_02 = make_random_points(65536, // number of points
+                             {1, 1, 1}, 1, // line set scale and uvscale
+                             0.001);       // point radius
 ```
 
 Yocto/Shape also defines a simple function to generate randomized hairs
 on a triangle or quad mesh. Use `make_hair(...)` to create a hair shape
-from a mesh.
+from a triangle and quad mesh, and return a line set.
 
 ```cpp
-auto quads     = vector<vec4i>{};   // lines element buffer
-auto positions = vector<vec3f>{};   // vertex data buffers
-auto normals   = vector<vec3f>{};
-auto texcoords = vector<vec2f>{};
-auto radius    = vector<float>{};
-auto squads     = vector<vec4i>{...};   // sampled surface data
-auto striangles = vector<vec4i>{...};   // sampled surface data
-auto spositions = vector<vec3f>{...};
-auto snormals   = vector<vec3f>{...};
-auto stexcoords = vector<vec2f>{...};
 // Make a hair ball around a shape
-make_hair(lines, positions, normals, texcoords, radius, // line buffers
-  striangles, squads,  spos, snorm, stexcoord,          // sampled surface
+auto [lines, positions, normals, texcoords, radius] =  make_hair(
+  make_sphere(),  // sampled surface
   {8, 65536},     // steps: line steps and number of lines
   {0.1, 0.1},     // length: minimum and maximum length
   {0.001, 0.001}, // radius: minimum and maximum radius from base to tip
