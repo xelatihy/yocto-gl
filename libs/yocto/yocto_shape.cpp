@@ -2063,147 +2063,6 @@ void sample_quads(vector<vec3f>& sampled_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make a plane.
-quads_shape make_rect(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
-      scale, uvscale);
-  return shape;
-}
-quads_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, float radius) {
-  auto shape = quads_shape{};
-  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale, radius);
-  return shape;
-}
-
-// Make a plane in the xz plane.
-quads_shape make_recty(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-quads_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, float radius) {
-  auto shape = quads_shape{};
-  make_bulged_recty(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, steps, scale, uvscale, radius);
-  return shape;
-}
-
-// Make a box.
-quads_shape make_box(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = quads_shape{};
-  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
-      scale, uvscale);
-  return shape;
-}
-quads_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
-    const vec3f& uvscale, float radius) {
-  auto shape = quads_shape{};
-  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale, radius);
-  return shape;
-}
-
-// Make a quad stack
-quads_shape make_rect_stack(
-    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a floor.
-quads_shape make_floor(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-quads_shape make_bent_floor(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
-  auto shape = quads_shape{};
-  make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale, bent);
-  return shape;
-}
-
-// Make a sphere.
-quads_shape make_sphere(int steps, float scale, float uvscale) {
-  auto shape = quads_shape{};
-  make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a sphere.
-quads_shape make_uvsphere(
-    const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a sphere with slipped caps.
-quads_shape make_capped_uvsphere(
-    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
-  auto shape = quads_shape{};
-  make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, steps, scale, uvscale, height);
-  return shape;
-}
-// Make a disk
-quads_shape make_disk(int steps, float scale, float uvscale) {
-  auto shape = quads_shape{};
-  make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
-      scale, uvscale);
-  return shape;
-}
-
-// Make a bulged disk
-quads_shape make_bulged_disk(
-    int steps, float scale, float uvscale, float height) {
-  auto shape = quads_shape{};
-  make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a uv disk
-quads_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
-  auto shape = quads_shape{};
-  make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a uv cylinder
-quads_shape make_uvcylinder(
-    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
-  auto shape = quads_shape{};
-  make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
-      steps, scale, uvscale);
-  return shape;
-}
-
-// Make a rounded uv cylinder
-quads_shape make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
-    const vec3f& uvscale, float radius) {
-  auto shape = quads_shape{};
-  make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
-      shape.texcoords, steps, scale, uvscale, radius);
-  return shape;
-}
-
 // Make a quad.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
@@ -2588,12 +2447,144 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-lines_shape make_lines(const vec2i& steps, const vec2f& scale,
-    const vec2f& uvscale, const vec2f& rad) {
-  auto shape = lines_shape{};
-  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, steps, scale, uvscale, rad);
+// Make a plane.
+quads_shape make_rect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+quads_shape make_bulged_rect(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_bulged_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a plane in the xz plane.
+quads_shape make_recty(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_recty(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+quads_shape make_bulged_recty(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_bulged_recty(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a box.
+quads_shape make_box(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = quads_shape{};
+  make_box(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+quads_shape make_rounded_box(const vec3i& steps, const vec3f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_rounded_box(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, radius);
+  return shape;
+}
+
+// Make a quad stack
+quads_shape make_rect_stack(
+    const vec3i& steps, const vec3f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_rect_stack(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a floor.
+quads_shape make_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+quads_shape make_bent_floor(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale, float bent) {
+  auto shape = quads_shape{};
+  make_bent_floor(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, bent);
+  return shape;
+}
+
+// Make a sphere.
+quads_shape make_sphere(int steps, float scale, float uvscale) {
+  auto shape = quads_shape{};
+  make_sphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere.
+quads_shape make_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvsphere(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a sphere with slipped caps.
+quads_shape make_capped_uvsphere(
+    const vec2i& steps, float scale, const vec2f& uvscale, float height) {
+  auto shape = quads_shape{};
+  make_capped_uvsphere(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, height);
+  return shape;
+}
+// Make a disk
+quads_shape make_disk(int steps, float scale, float uvscale) {
+  auto shape = quads_shape{};
+  make_disk(shape.quads, shape.positions, shape.normals, shape.texcoords, steps,
+      scale, uvscale);
+  return shape;
+}
+
+// Make a bulged disk
+quads_shape make_bulged_disk(
+    int steps, float scale, float uvscale, float height) {
+  auto shape = quads_shape{};
+  make_bulged_disk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale, height);
+  return shape;
+}
+
+// Make a uv disk
+quads_shape make_uvdisk(const vec2i& steps, float scale, const vec2f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvdisk(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a uv cylinder
+quads_shape make_uvcylinder(
+    const vec3i& steps, const vec2f& scale, const vec3f& uvscale) {
+  auto shape = quads_shape{};
+  make_uvcylinder(shape.quads, shape.positions, shape.normals, shape.texcoords,
+      steps, scale, uvscale);
+  return shape;
+}
+
+// Make a rounded uv cylinder
+quads_shape make_rounded_uvcylinder(const vec3i& steps, const vec2f& scale,
+    const vec3f& uvscale, float radius) {
+  auto shape = quads_shape{};
+  make_rounded_uvcylinder(shape.quads, shape.positions, shape.normals,
+      shape.texcoords, steps, scale, uvscale, radius);
   return shape;
 }
 
@@ -2639,26 +2630,12 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 }
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-points_shape make_point(float radius) {
-  auto shape = points_shape{};
-  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, radius);
-  return shape;
-}
-
-points_shape make_points(int num, float uvscale, float radius) {
-  auto shape = points_shape{};
-  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
-      shape.radius, num, uvscale, radius);
-  return shape;
-}
-
-points_shape make_random_points(
-    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
-  auto shape = points_shape{};
-  make_random_points(shape.points, shape.positions, shape.normals,
-      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+lines_shape make_lines(const vec2i& steps, const vec2f& scale,
+    const vec2f& uvscale, const vec2f& rad) {
+  auto shape = lines_shape{};
+  make_lines(shape.lines, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, steps, scale, uvscale, rad);
   return shape;
 }
 
@@ -2701,6 +2678,29 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
   }
 }
 
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+points_shape make_point(float radius) {
+  auto shape = points_shape{};
+  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, radius);
+  return shape;
+}
+
+points_shape make_points(int num, float uvscale, float radius) {
+  auto shape = points_shape{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+points_shape make_random_points(
+    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
+  auto shape = points_shape{};
+  make_random_points(shape.points, shape.positions, shape.normals,
+      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+  return shape;
+}
+
 // Make a bezier circle. Returns bezier, pos.
 void make_bezier_circle(
     vector<vec4i>& beziers, vector<vec3f>& positions, float size) {
@@ -2714,32 +2714,6 @@ void make_bezier_circle(
   positions = circle_pos;
   beziers   = circle_beziers;
   for (auto& p : positions) p *= size;
-}
-
-// Make a facevarying rect
-quads_fvshape make_fvrect(
-    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = quads_fvshape{};
-  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
-  return shape;
-}
-
-// Make a facevarying box
-quads_fvshape make_fvbox(
-    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = quads_fvshape{};
-  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
-  return shape;
-}
-
-// Make a facevarying sphere
-quads_fvshape make_fvsphere(int steps, float scale, float uvscale) {
-  auto shape = quads_fvshape{};
-  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
-  return shape;
 }
 
 // Make fvquad
@@ -2770,6 +2744,32 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   quadsnorm = quadspos;
   normals   = positions;
   for (auto& n : normals) n = normalize(n);
+}
+
+// Make a facevarying rect
+quads_fvshape make_fvrect(
+    const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying box
+quads_fvshape make_fvbox(
+    const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
+}
+
+// Make a facevarying sphere
+quads_fvshape make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = quads_fvshape{};
+  make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
+  return shape;
 }
 
 // Predefined meshes
@@ -3315,6 +3315,42 @@ void make_geosphere(
   }
 }
 
+// Predefined meshes
+quads_shape make_monkey(float scale) {
+  auto shape = quads_shape{};
+  make_monkey(shape.quads, shape.positions, scale);
+  return shape;
+}
+quads_shape make_quad(float scale) {
+  auto shape = quads_shape{};
+  make_quad(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_shape make_quady(float scale) {
+  auto shape = quads_shape{};
+  make_quady(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_shape make_cube(float scale) {
+  auto shape = quads_shape{};
+  make_cube(
+      shape.quads, shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+quads_fvshape make_fvcube(float scale) {
+  auto shape = quads_fvshape{};
+  make_fvcube(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, scale);
+  return shape;
+}
+triangles_shape make_geosphere(float scale) {
+  auto shape = triangles_shape{};
+  make_geosphere(shape.triangles, shape.positions, scale);
+  return shape;
+}
+
 // Make a hair ball around a shape
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -3406,7 +3442,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& size,
     const vector<float>& height) {
   make_recty(quads, positions, normals, texcoords, size - 1,
-      vec2f{(float)size.x, (float)size.y} / max(size));
+      vec2f{(float)size.x, (float)size.y} / max(size), {1, 1});
   for (auto j = 0; j < size.y; j++)
     for (auto i = 0; i < size.x; i++)
       positions[j * size.x + i].y = height[j * size.x + i];

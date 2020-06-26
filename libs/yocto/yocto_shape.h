@@ -532,6 +532,42 @@ struct quads_shape {
   vector<vec2f> texcoords = {};
 };
 
+// Data returns by the make_shape functions
+struct triangles_shape {
+  vector<vec3i> triangles = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+};
+
+// Data returns by the make_fvshape functions
+struct quads_fvshape {
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+  vector<vec3f> positions     = {};
+  vector<vec3f> normals       = {};
+  vector<vec2f> texcoords     = {};
+};
+
+// Data returns by the make_lines functions
+struct lines_shape {
+  vector<vec2i> lines     = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<float> radius    = {};
+};
+
+// Data returns by the make_lines functions
+struct points_shape {
+  vector<int>   points    = {};
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<float> radius    = {};
+};
+
 // Make a plane.
 quads_shape make_rect(const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
@@ -583,95 +619,6 @@ quads_shape make_rounded_uvcylinder(const vec3i& steps = {32, 32, 32},
     const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1},
     float radius = 0.3);
 
-// Make a plane.
-void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, float radius = 0.3);
-// Make a plane in the xz plane.
-void make_recty(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-void make_bulged_recty(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, float radius = 0.3);
-// Make a box.
-void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1});
-void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
-// Make a quad stack
-void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec2f& uvscale = {1, 1});
-// Make a floor.
-void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
-    const vec2f& uvscale = {10, 10});
-void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
-    const vec2f& uvscale = {10, 10}, float bent = 0.5);
-// Make a sphere.
-void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-    float scale = 1, float uvscale = 1);
-// Make a sphere.
-void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
-// Make a sphere with slipped caps.
-void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1}, float height = 0.3);
-// Make a disk
-void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-    float scale = 1, float uvscale = 1);
-// Make a bulged disk
-void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-    float scale = 1, float uvscale = 1, float height = 0.3);
-// Make a uv disk
-void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {32, 32}, float scale = 1,
-    const vec2f& uvscale = {1, 1});
-// Make a uv cylinder
-void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
-    const vec3f& uvscale = {1, 1, 1});
-// Make a rounded uv cylinder
-void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
-    const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
-
-// Data returns by the make_fvshape functions
-struct quads_fvshape {
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-  vector<vec3f> positions     = {};
-  vector<vec3f> normals       = {};
-  vector<vec2f> texcoords     = {};
-};
-
 // Make a facevarying rect
 quads_fvshape make_fvrect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
@@ -681,51 +628,10 @@ quads_fvshape make_fvbox(const vec3i& steps = {1, 1, 1},
 // Make a facevarying sphere
 quads_fvshape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
-// Make a facevarying rect
-void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1});
-// Make a facevarying box
-void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1});
-void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-    float scale = 1, float uvscale = 1);
-
-// Data returns by the make_lines functions
-struct lines_shape {
-  vector<vec2i> lines     = {};
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<float> radius    = {};
-};
-
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 lines_shape make_lines(const vec2i& steps = {4, 65536},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
     const vec2f& radius = {0.001, 0.001});
-
-// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    const vec2i& steps = {4, 65536}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, const vec2f& radius_ = {0.001, 0.001});
-
-// Data returns by the make_lines functions
-struct points_shape {
-  vector<int>   points    = {};
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<float> radius    = {};
-};
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 points_shape make_point(float radius = 0.001);
@@ -734,32 +640,13 @@ points_shape make_points(
 points_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
     float uvscale = 1, float radius = 0.001, uint64_t seed = 17);
 
-// Make point primitives. Returns points, pos, norm, texcoord, radius.
-void make_point(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    float point_radius);
-void make_points(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num = 65536, float uvscale = 1, float point_radius = 0.001);
-void make_random_points(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num = 65536, const vec3f& size = {1, 1, 1}, float uvscale = 1,
-    float point_radius = 0.001, uint64_t seed = 17);
-
 // Predefined meshes
-void make_monkey(
-    vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
-void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
-void make_geosphere(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float scale = 1);
+quads_shape     make_monkey(float scale = 1);
+quads_shape     make_quad(float scale = 1);
+quads_shape     make_quady(float scale = 1);
+quads_shape     make_cube(float scale = 1);
+quads_fvshape   make_fvcube(float scale = 1);
+triangles_shape make_geosphere(float scale = 1);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
