@@ -263,43 +263,43 @@ bool load_image(const string& filename, image<ushort>& img, string& error);
 namespace yocto {
 
 // Make a grid image.
-void make_grid(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_grid(const vec2i& size, float scale = 1,
     const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
     const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
 // Make a checker image.
-void make_checker(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_checker(const vec2i& size, float scale = 1,
     const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
     const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
 // Make a bump map.
-void make_bumps(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_bumps(const vec2i& size, float scale = 1,
     const vec4f& color0 = vec4f{0, 0, 0, 1},
     const vec4f& color1 = vec4f{1, 1, 1, 1});
 // Make a ramp
-void make_ramp(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_ramp(const vec2i& size, float scale = 1,
     const vec4f& color0 = vec4f{0, 0, 0, 1},
     const vec4f& color1 = vec4f{1, 1, 1, 1});
 // Make a gamma ramp.
-void make_gammaramp(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_gammaramp(const vec2i& size, float scale = 1,
     const vec4f& color0 = vec4f{0, 0, 0, 1},
     const vec4f& color1 = vec4f{1, 1, 1, 1});
 // Make a uv ramp
-void make_uvramp(image<vec4f>& img, const vec2i& size, float scale = 1);
+image<vec4f> make_uvramp(const vec2i& size, float scale = 1);
 // Make a uv grid
-void make_uvgrid(
-    image<vec4f>& img, const vec2i& size, float scale = 1, bool colored = true);
+image<vec4f> make_uvgrid(
+    const vec2i& size, float scale = 1, bool colored = true);
 // Make blackbody ramp.
-void make_blackbodyramp(image<vec4f>& img, const vec2i& size, float scale = 1,
-    float from = 1000, float to = 12000);
+image<vec4f> make_blackbodyramp(
+    const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
-void make_noisemap(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
     const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
-void make_fbmmap(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_fbmmap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
     const vec4f& color1 = {0, 0, 0, 1});
-void make_turbulencemap(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
     const vec4f& color1 = {0, 0, 0, 1});
-void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_ridgemap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
     const vec4f& color1 = {0, 0, 0, 1});
 
@@ -308,13 +308,13 @@ void make_ridgemap(image<vec4f>& img, const vec2i& size, float scale = 1,
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-void make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
+image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);

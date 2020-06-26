@@ -213,30 +213,30 @@ The latter three functions take as input the set of params that control
 fractal variations. See [Yocto/Noise](yocto_noise.md) for a description.
 
 ```cpp
-auto size = vec2i{512, 512};                    // image size
-auto scale = float{1};                          // pattern scale
-auto c0 = vec4f{0,0,0,1}, c1 = vec4f{0,0,0,1};  // colors
-auto img = image<vec4f>{};                      // image buffer
-make_grid(img, size, scale, c0, c1);            // grid image
-make_checker(img, size, scale, c0, c1);         // checker image
-make_bumps(img, size, scale, c0, c1);           // bumps image
-make_ramp(img, size, scale, c0, c1);            // ramp image
-make_gammaramp(img, size, scale, c0, c1);       // gamma ramp image
-make_uvramp(img, size, scale);                  // uv ramp image
-make_uvgrid(img, size, scale);                  // uv grid image
+auto size = vec2i{512, 512};                       // image size
+auto scale = float{1};                             // pattern scale
+auto c0 = vec4f{0,0,0,1}, c1 = vec4f{0,0,0,1};     // colors
+auto i1 = make_grid(size, scale, c0, c1);          // grid image
+auto i2 = make_checker(size, scale, c0, c1);       // checker image
+auto i3 = make_bumps(size, scale, c0, c1);         // bumps image
+auto i4 = make_ramp(size, scale, c0, c1);          // ramp image
+auto i5 = make_gammaramp(size, scale, c0, c1);     // gamma ramp image
+auto i6 = make_uvramp(size, scale);                // uv ramp image
+auto i7 = make_uvgrid(size, scale);                // uv grid image
 
-auto t0 = 1000, t1 = 12000;                     // blackbody temperatures
-make_blackbodyramp(img, size, scale, t0, t1);   // blackbody ramp image
+auto t0 = 1000, t1 = 12000;                        // blackbody temperatures
+auto b2 = make_blackbodyramp(size, scale, t0, t1); // blackbody ramp image
 
-auto noise = vec4f{2, 0.5, 8, 1};               // noise params
-make_noisemap(img, size, scale, noise, c0, c1);        // noise image
-make_fbmmap(img, size, scale, noise, c0, c1);          // fbm image
-make_turbulencemap(img, size, scale, noise, c0, c1);   // turbulence image
-make_ridgemap(img, size, scale, noise, c0, c1);        // ridge image
+auto noise = vec4f{2, 0.5, 8, 1};                    // noise params
+auto n1 = make_noisemap(size, scale, noise, c0, c1); // noise image
+auto n2 = make_fbmmap(size, scale, noise, c0, c1);   // fbm image
+auto n3 = make_turbulencemap(size, scale, noise, c0, c1);// turbulence image
+auto n4 = make_ridgemap(size, scale, noise, c0, c1); // ridge image
 ```
 
-Procedurals skies are generated with `make_sunsky(img,size,elevation,turbidity,sun)`.
-The function returns an HDR sky generated with the ... algorithm.
+Procedurals skies are generated with
+`make_sunsky(img, size, elevation, turbidity, sun)`.
+The function returns a procedural HDR sky.
 The sun position is controlled by its `elevation` that is an angle in `[0,pi/2\]`.
 The sky turbidity is controlled by the `turbidity` parameter that is defined in
 the range `[1.7,10]`. The `sun` flag determines whether the sun disk is present
@@ -244,18 +244,16 @@ in the image. The function support optional parameters to control sun size and
 intensity and ground albedo, mostly used for artistic effects.
 
 ```cpp
-auto img = image<vec4f>{};                         // image buffer
-auto sky = make_sunsky(img, {1024,512}, pi/2, 3);  // clear sky
-auto sun = make_sunsky(img, {1024,512}, pi/2, 3, true);  // clear sky with sun
-auto sky = make_sunsky(img, {1024,512}, pi/2, 10);  // sky with turbidity
+auto sky = make_sunsky({1024,512}, pi/2, 3);        // clear sky
+auto sun = make_sunsky({1024,512}, pi/2, 3, true);  // clear sky with sun
+auto tur = make_sunsky({1024,512}, pi/2, 10);       // sky with turbidity
 ```
 
 Use `bump_to_normal(bumps)` to convert a bump map to a normal map, with both
 images stored in a linear color spaces.
 
 ```cpp
-auto bumps = image<vec4f>{};          // image buffer
-make_bumps(bumps, {512,512});         // procedural bump map
+auto bumps = make_bumps({512,512});   // procedural bump map
 auto normal = bump_to_normal(bumps);  // convert bump map to normal map
 ```
 

@@ -41,62 +41,73 @@ using namespace std::string_literals;
 bool make_mesh_preset(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
     const string& type, string& error) {
-  auto quads = vector<vec4i>{};
+  auto set_quads = [&](quads_shape&& shape) {
+    triangles = quads_to_triangles(shape.quads);
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+  };
+  auto set_triangles = [&](triangles_shape&& shape) {
+    triangles = shape.triangles;
+    positions = shape.positions;
+    normals   = shape.normals;
+    texcoords = shape.texcoords;
+  };
+  auto set_fvquads = [&](quads_fvshape&& shape) {
+    triangles = quads_to_triangles(shape.quadspos);
+    positions = shape.positions;
+    normals   = (shape.quadspos == shape.quadsnorm) ? shape.normals
+                                                  : vector<vec3f>{};
+    texcoords = (shape.quadspos == shape.quadstexcoord) ? shape.texcoords
+                                                        : vector<vec2f>{};
+  };
+
   if (type == "mesh-quad") {
-    make_rect(quads, positions, normals, texcoords);
+    set_quads(make_rect());
   } else if (type == "mesh-quady") {
-    make_recty(quads, positions, normals, texcoords);
+    set_quads(make_recty());
   } else if (type == "mesh-cube") {
-    make_box(quads, positions, normals, texcoords);
+    set_quads(make_box());
   } else if (type == "mesh-cube-rounded") {
-    make_rounded_box(quads, positions, normals, texcoords);
+    set_quads(make_rounded_box());
   } else if (type == "mesh-sphere") {
-    make_sphere(quads, positions, normals, texcoords);
+    set_quads(make_sphere());
   } else if (type == "mesh-disk") {
-    make_disk(quads, positions, normals, texcoords);
+    set_quads(make_disk());
   } else if (type == "mesh-disk-bulged") {
-    make_bulged_disk(quads, positions, normals, texcoords);
+    set_quads(make_bulged_disk());
   } else if (type == "mesh-quad-bulged") {
-    make_bulged_rect(quads, positions, normals, texcoords);
+    set_quads(make_bulged_rect());
   } else if (type == "mesh-uvsphere") {
-    make_uvsphere(quads, positions, normals, texcoords);
+    set_quads(make_uvsphere());
   } else if (type == "mesh-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords);
+    set_quads(make_capped_uvsphere());
   } else if (type == "mesh-uvdisk") {
-    make_uvdisk(quads, positions, normals, texcoords);
+    set_quads(make_uvdisk());
   } else if (type == "mesh-uvcylinder") {
-    make_uvcylinder(quads, positions, normals, texcoords);
+    set_quads(make_uvcylinder());
   } else if (type == "mesh-uvcylinder-rounded") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
+    set_quads(make_rounded_uvcylinder({32, 32, 32}));
   } else if (type == "mesh-geosphere") {
-    make_geosphere(triangles, positions);
+    set_triangles(make_geosphere());
   } else if (type == "mesh-floor") {
-    make_floor(quads, positions, normals, texcoords);
+    set_quads(make_floor());
   } else if (type == "mesh-floor-bent") {
-    make_bent_floor(quads, positions, normals, texcoords);
+    set_quads(make_bent_floor());
   } else if (type == "mesh-matball") {
-    make_sphere(quads, positions, normals, texcoords);
+    set_quads(make_sphere());
   } else if (type == "mesh-hairball-interior") {
-    make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
+    set_quads(make_sphere(pow2(5), 0.8));
   } else if (type == "mesh-suzanne") {
-    make_monkey(quads, positions);
+    set_quads(make_monkey());
   } else if (type == "mesh-cube-facevarying") {
-    auto quadsnorm = vector<vec4i>{}, quadstexcoord = vector<vec4i>{};
-    make_fvbox(quads, quadsnorm, quadstexcoord, positions, normals, texcoords);
-    normals   = {};
-    texcoords = {};
+    set_fvquads(make_fvbox());
   } else if (type == "mesh-sphere-facevarying") {
-    auto quadsnorm = vector<vec4i>{}, quadstexcoord = vector<vec4i>{};
-    make_fvsphere(
-        quads, quadsnorm, quadstexcoord, positions, normals, texcoords);
-    texcoords = {};
+    set_fvquads(make_fvsphere());
   } else {
     error = "unknown preset";
     return false;
   }
-
-  // convert to triangles
-  if (!quads.empty()) triangles = quads_to_triangles(quads);
 
   return true;
 }

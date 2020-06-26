@@ -28,6 +28,7 @@ namespace yocto {
 // using directives
 using std::atomic;
 using std::deque;
+using std::pair;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -262,7 +263,7 @@ bvh_scene::~bvh_scene() {
 #endif
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static std::pair<int, int> split_sah(vector<int>& primitives,
+static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -326,7 +327,7 @@ static std::pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static std::pair<int, int> split_balanced(vector<int>& primitives,
+static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -365,7 +366,7 @@ static std::pair<int, int> split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static std::pair<int, int> split_middle(vector<int>& primitives,
+static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position

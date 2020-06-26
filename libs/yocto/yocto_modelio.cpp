@@ -3082,7 +3082,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, std::pair<float, string>& val) {
+    const pbrt_value& pbrt, pair<float, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = 0;
     return get_pbrt_value(pbrt, val.second);
@@ -3092,7 +3092,7 @@ struct pbrt_command {
   }
 }
 [[nodiscard]] inline bool get_pbrt_value(
-    const pbrt_value& pbrt, std::pair<vec3f, string>& val) {
+    const pbrt_value& pbrt, pair<vec3f, string>& val) {
   if (pbrt.type == pbrt_type::string || pbrt.type == pbrt_type::texture) {
     val.first = zero3f;
     return get_pbrt_value(pbrt, val.second);
@@ -3281,97 +3281,96 @@ template <typename T>
   return true;
 }
 
-inline std::pair<vec3f, vec3f> get_etak(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>> metal_ior_table =
-      {
-          {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
-                      {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
-          {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
-                     {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
-          {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
-                     {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
-          {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
-                       {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
-          {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
-                       {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
-          {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
-                     {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
-          {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
-                     {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
-          {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
-                     {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
-          {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
-                      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-          {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
-                     {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
-          {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
-                       {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
-          {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
-                      {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
-          {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
-                      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-          {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
-                     {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
-          {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
-                       {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
-          {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
-                     {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
-          {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
-                    {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
-          {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
-                     {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
-          {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
-                      {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
-          {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
-                     {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
-          {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
-                     {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
-          {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
-                     {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
-          {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
-                     {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
-          {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
-                     {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
-          {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
-                       {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
-          {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
-                     {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
-          {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
-                      {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
-          {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
-                       {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-          {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
-                     {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
-          {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
-                       {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
-          {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
-                     {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
-          {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
-                       {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-          {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
-                      {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
-          {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
-                      {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
-          {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
-                         {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
-          {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
-                       {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
-          {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
-                     {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
-          {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
-                     {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
-          {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
-                    {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
-          {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
-                    {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
-      };
+inline pair<vec3f, vec3f> get_etak(const string& name) {
+  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+      {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
+                  {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
+      {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
+                 {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
+      {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
+                 {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
+      {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
+                   {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
+      {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
+                   {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
+      {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
+                 {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
+      {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
+                 {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
+      {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
+                 {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
+      {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
+                  {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+      {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
+                 {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
+      {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
+                   {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
+      {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
+                  {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
+      {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
+                  {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+      {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
+                 {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
+      {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
+                   {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
+      {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
+                 {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
+      {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
+                {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
+      {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
+                 {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
+      {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
+                  {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
+      {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
+                 {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
+      {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
+                 {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
+      {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
+                 {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
+      {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
+                 {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
+      {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
+                 {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
+      {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
+                   {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
+      {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
+                 {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
+      {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
+                  {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
+      {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
+                   {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+      {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
+                 {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
+      {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
+                   {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
+      {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
+                 {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
+      {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
+                   {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+      {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
+                  {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
+      {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
+                  {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
+      {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
+                     {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
+      {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
+                   {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
+      {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
+                 {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
+      {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
+                 {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
+      {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
+                {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
+      {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
+                {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
+  };
   return metal_ior_table.at(name);
 }
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-inline std::pair<vec3f, vec3f> get_subsurface(const string& name) {
-  static const unordered_map<string, std::pair<vec3f, vec3f>> params = {
+inline pair<vec3f, vec3f> get_subsurface(const string& name) {
+  static const unordered_map<string, pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
@@ -3745,9 +3744,9 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     return true;
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
-    // std::pair{vec3f{1},
+    // pair{vec3f{1},
     // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
-    //  std::pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
+    //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
     // vec3f{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first :
     // vec3f{0.6f, 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type
@@ -3767,8 +3766,7 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     ptexture->constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "mix") {
-    auto tex1 = std::pair{vec3f{0, 0, 0}, ""s},
-         tex2 = std::pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{vec3f{0, 0, 0}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex2)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -3780,8 +3778,7 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     }
     return true;
   } else if (command.type == "scale") {
-    auto tex1 = std::pair{vec3f{1, 1, 1}, ""s},
-         tex2 = std::pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{vec3f{1, 1, 1}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex1)) return parse_error();
     if (!get_filename(tex1.second).empty()) {
@@ -3833,7 +3830,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
                          const vec3f& def) -> bool {
-    auto textured = std::pair{def, ""s};
+    auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color    = textured.first;
@@ -3852,7 +3849,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
   auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
                         float& scalar, float def) -> bool {
-    auto textured = std::pair{vec3f{def, def, def}, ""s};
+    auto textured = pair{vec3f{def, def, def}, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       scalar = mean(textured.first);
@@ -3868,7 +3865,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
   auto get_color = [&](const vector<pbrt_value>& values, const string& name,
                        vec3f& color, const vec3f& def) -> bool {
-    auto textured = std::pair{def, ""s};
+    auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color = textured.first;
@@ -3885,7 +3882,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
 
   auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
                            float def = 0.1) -> bool {
-    auto roughness_ = std::pair{vec3f{def, def, def}, ""s};
+    auto roughness_ = pair{vec3f{def, def, def}, ""s};
     if (!get_pbrt_value(values, "roughness", roughness_)) return parse_error();
     auto uroughness = roughness_, vroughness = roughness_;
     auto remaproughness = true;
@@ -4229,7 +4226,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   auto get_alpha = [&](const vector<pbrt_value>& values, const string& name,
                        string& filename) -> bool {
     auto def      = 1.0f;
-    auto textured = std::pair{def, ""s};
+    auto textured = pair{def, ""s};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       filename = "";

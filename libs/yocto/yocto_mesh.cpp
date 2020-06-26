@@ -23,9 +23,9 @@
 namespace yocto {
 
 // using directives
+using std::pair;
 using std::atomic;
 using std::deque;
-using std::pair;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -407,7 +407,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
   auto num_triangles = triangles.size();
 
   // Edgemap to keep track of the added vertex on each splitted edge.
-  // key: edge (ordered std::pair), value: vertex index
+  // key: edge (ordered pair), value: vertex index
   auto emap = unordered_map<vec2i, int>();
 
   // Helper procedures.
@@ -866,7 +866,7 @@ static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
   auto dir               = transform * direction;
   return clamp(1 - dir.x / dir.y, 0.0f + epsilon, 1.0f - epsilon);
 }
-static std::pair<float, bool> step_from_edge_to_edge(const vec3f& point,
+static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
     const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction,
     float epsilon = 0.0001f) {
   //      b

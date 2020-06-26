@@ -971,20 +971,20 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 void trace_sample(trace_state* state, const scene_model* scene,
     const scene_camera* camera, const vec2i& ij, const trace_params& params) {
-  auto sampler  = get_trace_sampler_func(params);
-  auto ray      = sample_camera(camera, ij, state->render.size(),
+  auto sampler = get_trace_sampler_func(params);
+  auto ray     = sample_camera(camera, ij, state->render.size(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
-  auto radiance = sampler(scene, ray, state->rngs[ij], params);
-  if (!isfinite(xyz(radiance))) xyz(radiance) = zero3f;
-  if (max(radiance) > params.clamp)
-    radiance = radiance * (params.clamp / max(radiance));
-  state->accumulation[ij] += radiance;
+  auto sample  = sampler(scene, ray, state->rngs[ij], params);
+  if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
+  if (max(sample) > params.clamp)
+    sample = sample * (params.clamp / max(sample));
+  state->accumulation[ij] += sample;
   state->samples[ij] += 1;
-  xyz(state->render[ij]) = state->accumulation[ij].w
-                               ? xyz(state->accumulation[ij]) /
-                                     state->accumulation[ij].w
-                               : zero3f;
-  state->render[ij].w = state->accumulation[ij].w / state->samples[ij];
+  auto radiance = state->accumulation[ij].w
+                      ? xyz(state->accumulation[ij]) / state->accumulation[ij].w
+                      : zero3f;
+  auto coverage     = state->accumulation[ij].w / state->samples[ij];
+  state->render[ij] = {radiance.x, radiance.y, radiance.z, coverage};
 }
 
 // Init a sequence of random number generators.

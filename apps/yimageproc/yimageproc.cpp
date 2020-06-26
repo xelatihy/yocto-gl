@@ -116,35 +116,34 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    make_grid(img, size);
+    img = make_grid(size);
   } else if (type == "checker") {
-    make_checker(img, size);
+    img = make_checker(size);
   } else if (type == "bumps") {
-    make_bumps(img, size);
+    img = make_bumps(size);
   } else if (type == "uvramp") {
-    make_uvramp(img, size);
+    img = make_uvramp(size);
   } else if (type == "gammaramp") {
-    make_gammaramp(img, size);
+    img = make_gammaramp(size);
   } else if (type == "blackbodyramp") {
-    make_blackbodyramp(img, size);
+    img = make_blackbodyramp(size);
   } else if (type == "uvgrid") {
-    make_uvgrid(img, size);
+    img = make_uvgrid(size);
   } else if (type == "sky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(
+        size, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
   } else if (type == "sunsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
   } else if (type == "noise") {
-    make_noisemap(img, size, 1);
+    img = make_noisemap(size, 1);
   } else if (type == "fbm") {
-    make_fbmmap(img, size, 1);
+    img = make_fbmmap(size, 1);
   } else if (type == "ridge") {
-    make_ridgemap(img, size, 1);
+    img = make_ridgemap(size, 1);
   } else if (type == "turbulence") {
-    make_turbulencemap(img, size, 1);
+    img = make_turbulencemap(size, 1);
   } else if (type == "bump-normal") {
-    make_bumps(img, size);
+    img = make_bumps(size);
     img = srgb_to_rgb(bump_to_normal(img, 0.05f));
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
@@ -182,45 +181,44 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
       pos += sub_img.size().x;
     }
   } else if (type == "test-floor") {
-    make_grid(img, size);
-    img = add_border(img, 0.0025f);
+    img = make_grid(size);
+    img = add_border(img, 0.0025);
   } else if (type == "test-grid") {
-    make_grid(img, size);
+    img = make_grid(size);
   } else if (type == "test-checker") {
-    make_checker(img, size);
+    img = make_checker(size);
   } else if (type == "test-bumps") {
-    make_bumps(img, size);
+    img = make_bumps(size);
   } else if (type == "test-uvramp") {
-    make_uvramp(img, size);
+    img = make_uvramp(size);
   } else if (type == "test-gammaramp") {
-    make_gammaramp(img, size);
+    img = make_gammaramp(size);
   } else if (type == "test-blackbodyramp") {
-    make_blackbodyramp(img, size);
+    img = make_blackbodyramp(size);
   } else if (type == "test-uvgrid") {
-    make_uvgrid(img, size);
+    img = make_uvgrid(size);
   } else if (type == "test-sky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(
+        size, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
   } else if (type == "test-sunsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0, true, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
   } else if (type == "test-noise") {
-    make_noisemap(img, size);
+    img = make_noisemap(size);
   } else if (type == "test-fbm") {
-    make_noisemap(img, size);
+    img = make_noisemap(size);
   } else if (type == "test-bumps-normal") {
-    make_bumps(img, size);
-    img = bump_to_normal(img, 0.05f);
+    img = make_bumps(size);
+    img = bump_to_normal(img, 0.05);
   } else if (type == "test-bumps-displacement") {
-    make_bumps(img, size);
+    img = make_bumps(size);
     img = srgb_to_rgb(img);
   } else if (type == "test-fbm-displacement") {
-    make_fbmmap(img, size);
+    img = make_fbmmap(size);
     img = srgb_to_rgb(img);
   } else if (type == "test-checker-opacity") {
-    make_checker(img, size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+    img = make_checker(size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else if (type == "test-grid-opacity") {
-    make_grid(img, size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
+    img = make_grid(size, 1, {1, 1, 1, 1}, {0, 0, 0, 0});
   } else {
     error = "unknown preset";
     img   = {};
@@ -311,7 +309,7 @@ int main(int argc, const char* argv[]) {
 
   // set color from alpha
   if (alpha_to_color) {
-    for (auto& c : img) xyz(c) = vec3f{c.w, c.w, c.w};
+    for (auto& c : img) c = vec4f{c.w, c.w, c.w, c.w};
   }
 
   // diff

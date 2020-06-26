@@ -1867,7 +1867,6 @@ bool draw_messages(gui_window* win) {
 static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
-
     if (c == '\\') c = '/';
   if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
     throw std::invalid_argument("absolute paths are not supported");
@@ -1893,13 +1892,13 @@ static string get_extension(const string& filename_) {
 }
 
 struct filedialog_state {
-  string                          dirname       = "";
-  string                          filename      = "";
-  vector<std::pair<string, bool>> entries       = {};
-  bool                            save          = false;
-  bool                            remove_hidden = true;
-  string                          filter        = "";
-  vector<string>                  extensions    = {};
+  string                     dirname       = "";
+  string                     filename      = "";
+  vector<pair<string, bool>> entries       = {};
+  bool                       save          = false;
+  bool                       remove_hidden = true;
+  string                     filter        = "";
+  vector<string>             extensions    = {};
 
   filedialog_state() {}
   filedialog_state(const string& dirname, const string& filename, bool save,
@@ -2195,15 +2194,19 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
   if (scale > 1) {
-    xyz(color) /= scale;
+    color.x /= scale;
+    color.y /= scale;
+    color.z /= scale;
     exposure = log2(scale);
   }
   auto edit_exposure = draw_slider(
       win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
   auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
   if (edit_exposure || edit_color) {
-    xyz(value) = xyz(color) * exp2(exposure);
-    value.w    = color.w;
+    value.x = color.x * exp2(exposure);
+    value.y = color.y * exp2(exposure);
+    value.z = color.z * exp2(exposure);
+    value.w = color.w;
     return true;
   } else {
     return false;
