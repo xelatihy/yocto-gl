@@ -1867,7 +1867,6 @@ bool draw_messages(gui_window* win) {
 static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
-
     if (c == '\\') c = '/';
   if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
     throw std::invalid_argument("absolute paths are not supported");
