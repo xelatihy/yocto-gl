@@ -2717,26 +2717,26 @@ void make_bezier_circle(
 }
 
 // Make a facevarying rect
-fvquads_shape make_fvrect(
+quads_fvshape make_fvrect(
     const vec2i& steps, const vec2f& scale, const vec2f& uvscale) {
-  auto shape = fvquads_shape{};
+  auto shape = quads_fvshape{};
   make_fvrect(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
   return shape;
 }
 
 // Make a facevarying box
-fvquads_shape make_fvbox(
+quads_fvshape make_fvbox(
     const vec3i& steps, const vec3f& scale, const vec3f& uvscale) {
-  auto shape = fvquads_shape{};
+  auto shape = quads_fvshape{};
   make_fvbox(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
   return shape;
 }
 
 // Make a facevarying sphere
-fvquads_shape make_fvsphere(int steps, float scale, float uvscale) {
-  auto shape = fvquads_shape{};
+quads_fvshape make_fvsphere(int steps, float scale, float uvscale) {
+  auto shape = quads_fvshape{};
   make_fvsphere(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, steps, scale, uvscale);
   return shape;

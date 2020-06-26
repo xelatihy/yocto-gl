@@ -663,7 +663,7 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
 
 // Data returns by the make_fvshape functions
-struct fvquads_shape {
+struct quads_fvshape {
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
   vector<vec4i> quadstexcoord = {};
@@ -673,13 +673,13 @@ struct fvquads_shape {
 };
 
 // Make a facevarying rect
-fvquads_shape make_fvrect(const vec2i& steps = {1, 1},
+quads_fvshape make_fvrect(const vec2i& steps = {1, 1},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
 // Make a facevarying box
-fvquads_shape make_fvbox(const vec3i& steps = {1, 1, 1},
+quads_fvshape make_fvbox(const vec3i& steps = {1, 1, 1},
     const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 // Make a facevarying sphere
-fvquads_shape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
+quads_fvshape make_fvsphere(int steps = 32, float scale = 1, float uvscale = 1);
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
