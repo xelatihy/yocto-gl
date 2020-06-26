@@ -710,13 +710,13 @@ struct lines_shape {
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 lines_shape make_lines(const vec2i& steps = {4, 65536},
     const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
-    const vec2f& rad = {0.001, 0.001});
+    const vec2f& radius = {0.001, 0.001});
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vec2i& steps = {4, 65536}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, const vec2f& rad = {0.001, 0.001});
+    const vec2f& uvscale = {1, 1}, const vec2f& radius_ = {0.001, 0.001});
 
 // Data returns by the make_lines functions
 struct points_shape {
@@ -728,11 +728,11 @@ struct points_shape {
 };
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-points_shape make_point(float point_radiuspoint_radius = 0.001);
+points_shape make_point(float radius = 0.001);
 points_shape make_points(
-    int num = 65536, float uvscale = 1, float point_radius = 0.001);
+    int num = 65536, float uvscale = 1, float radius = 0.001);
 points_shape make_random_points(int num = 65536, const vec3f& size = {1, 1, 1},
-    float uvscale = 1, float point_radius = 0.001, uint64_t seed = 17);
+    float uvscale = 1, float radius = 0.001, uint64_t seed = 17);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_point(vector<int>& points, vector<vec3f>& positions,

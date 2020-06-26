@@ -2639,6 +2639,29 @@ void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
   }
 }
 
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+points_shape make_point(float radius) {
+  auto shape = points_shape{};
+  make_point(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, radius);
+  return shape;
+}
+
+points_shape make_points(int num, float uvscale, float radius) {
+  auto shape = points_shape{};
+  make_points(shape.points, shape.positions, shape.normals, shape.texcoords,
+      shape.radius, num, uvscale, radius);
+  return shape;
+}
+
+points_shape make_random_points(
+    int num, const vec3f& size, float uvscale, float radius, uint64_t seed) {
+  auto shape = points_shape{};
+  make_random_points(shape.points, shape.positions, shape.normals,
+      shape.texcoords, shape.radius, num, size, uvscale, radius, seed);
+  return shape;
+}
+
 // Generate a point at the origin.
 void make_point(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
