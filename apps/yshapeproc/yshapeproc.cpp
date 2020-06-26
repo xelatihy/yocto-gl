@@ -114,9 +114,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     set_quads(make_sphere());
   } else if (type == "default-hairball") {
     auto base = make_sphere(pow2(5), 0.8);
-    make_hair(lines, positions, normals, texcoords, radius, {}, base.quads,
-        base.positions, base.normals, base.texcoords, {4, 65536}, {0.2, 0.2},
-        {0.002, 0.001});
+    set_lines(make_hair(base, {4, 65536}, {0.2, 0.2}, {0.002, 0.001}));
   } else if (type == "default-hairball-interior") {
     set_quads(make_sphere(pow2(5), 0.8));
   } else if (type == "default-suzanne") {
@@ -168,23 +166,18 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-hairball1") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
     for (auto& p : base.positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, {}, base.quads,
-        base.positions, base.normals, base.texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
-        {0.03, 100});
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100}));
   } else if (type == "test-hairball2") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
     for (auto& p : base.positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, {}, base.quads,
-        base.positions, base.normals, base.texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}));
   } else if (type == "test-hairball3") {
     auto base = make_sphere(32, 0.075f * 0.8f, 1);
     for (auto& p : base.positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, {}, base.quads,
-        base.positions, base.normals, base.texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
-        {0.5, 128});
+    set_lines(make_hair(base, {4, 65536}, {0.1f * 0.15f, 0.1f * 0.15f},
+        {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128}));
   } else if (type == "test-hairball-interior") {
     set_quads(make_sphere(32, 0.075f * 0.8f, 1));
     for (auto& p : positions) p += {0, 0.075, 0};
