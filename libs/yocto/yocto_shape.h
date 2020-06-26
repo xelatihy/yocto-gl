@@ -51,6 +51,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::pair;
 using std::string;
 using std::unordered_map;
 using std::vector;
@@ -87,12 +88,12 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
-std::pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-std::pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
@@ -330,12 +331,12 @@ vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
-std::pair<vector<vec3f>, vector<int>> weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
-std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold);
-std::pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
@@ -374,54 +375,54 @@ void merge_triangles_and_quads(
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-std::pair<vector<vec2i>, vector<float>> subdivide_lines(
+pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>& lines, const vector<float>& vert, int level);
-std::pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec2f>& vert, int level);
-std::pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
-std::pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-std::pair<vector<vec3i>, vector<float>> subdivide_triangles(
+pair<vector<vec3i>, vector<float>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<float>& vert, int level);
-std::pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec2f>& vert, int level);
-std::pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
-std::pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-std::pair<vector<vec4i>, vector<float>> subdivide_quads(
+pair<vector<vec4i>, vector<float>> subdivide_quads(
     const vector<vec4i>& quads, const vector<float>& vert, int level);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
 // Subdivide beziers by splitting each segment in two.
-std::pair<vector<vec4i>, vector<float>> subdivide_beziers(
+pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec2f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
-std::pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<float>& vert, int level,
     bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
     bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
     bool lock_boundary = false);
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary = false);
 
@@ -438,24 +439,23 @@ int           sample_points(const vector<float>& cdf, float re);
 vector<float> sample_points_cdf(int npoints);
 
 // Pick a point on lines uniformly.
-std::pair<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru);
-vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions);
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
+vector<float>    sample_lines_cdf(
+       const vector<vec2i>& lines, const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
-std::pair<int, vec2f> sample_triangles(
+pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 
 // Pick a point on a quad mesh uniformly.
-std::pair<int, vec2f> sample_quads(
+pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
-std::pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
+pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv);
-vector<float>         sample_quads_cdf(
-            const vector<vec4i>& quads, const vector<vec3f>& positions);
+vector<float>    sample_quads_cdf(
+       const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.

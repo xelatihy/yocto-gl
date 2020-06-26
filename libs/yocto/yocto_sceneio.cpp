@@ -1478,10 +1478,10 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   };
   // convert color opacity textures
   auto cotexture_map =
-      unordered_map<string, std::pair<scene_texture*, scene_texture*>>{
+      unordered_map<string, pair<scene_texture*, scene_texture*>>{
           {"", {nullptr, nullptr}}};
   auto get_cotexture = [&scene, &cotexture_map](const cgltf_texture_view& ginfo)
-      -> std::pair<scene_texture*, scene_texture*> {
+      -> pair<scene_texture*, scene_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};
@@ -1494,10 +1494,10 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   };
   // convert textures
   auto mrtexture_map =
-      unordered_map<string, std::pair<scene_texture*, scene_texture*>>{
+      unordered_map<string, pair<scene_texture*, scene_texture*>>{
           {"", {nullptr, nullptr}}};
   auto get_mrtexture = [&scene, &mrtexture_map](const cgltf_texture_view& ginfo)
-      -> std::pair<scene_texture*, scene_texture*> {
+      -> pair<scene_texture*, scene_texture*> {
     if (!ginfo.texture || !ginfo.texture->image) return {nullptr, nullptr};
     auto path = string{ginfo.texture->image->uri};
     if (path == "") return {nullptr, nullptr};

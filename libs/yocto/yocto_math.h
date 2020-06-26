@@ -52,6 +52,7 @@ namespace yocto {
 
 // using directives
 using std::array;
+using std::pair;
 using std::vector;
 
 }  // namespace yocto
@@ -1082,9 +1083,9 @@ inline mat4f perspective_mat(float fovy, float aspect, float near, float far);
 inline mat4f perspective_mat(float fovy, float aspect, float near);
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat);
-inline vec4f                   rotation_quat(const vec3f& axis, float angle);
-inline vec4f                   rotation_quat(const vec4f& axisangle);
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat);
+inline vec4f              rotation_quat(const vec3f& axis, float angle);
+inline vec4f              rotation_quat(const vec4f& axisangle);
 
 }  // namespace yocto
 
@@ -2663,7 +2664,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {

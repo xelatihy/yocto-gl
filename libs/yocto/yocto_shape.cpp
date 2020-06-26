@@ -170,7 +170,7 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-std::pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
@@ -194,7 +194,7 @@ std::pair<vector<vec3f>, vector<vec3f>> compute_skinning(
 }
 
 // Apply skinning as specified in Khronos glTF
-std::pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
@@ -576,7 +576,7 @@ namespace yocto {
 #endif
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static std::pair<int, int> split_sah(vector<int>& primitives,
+static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -640,7 +640,7 @@ static std::pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static std::pair<int, int> split_balanced(vector<int>& primitives,
+static pair<int, int> split_balanced(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -679,7 +679,7 @@ static std::pair<int, int> split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static std::pair<int, int> split_middle(vector<int>& primitives,
+static pair<int, int> split_middle(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end) {
   // initialize split axis and position
@@ -1346,7 +1346,7 @@ vector<vector<vec4i>> ungroup_quads(
 }
 
 // Weld vertices within a threshold.
-std::pair<vector<vec3f>, vector<int>> weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
   auto indices   = vector<int>(positions.size());
   auto welded    = vector<vec3f>{};
@@ -1365,7 +1365,7 @@ std::pair<vector<vec3f>, vector<int>> weld_vertices(
   }
   return {welded, indices};
 }
-std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
@@ -1373,7 +1373,7 @@ std::pair<vector<vec3i>, vector<vec3f>> weld_triangles(
   for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
   return {wtriangles, wpositions};
 }
-std::pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold) {
   auto [wpositions, indices] = weld_vertices(positions, threshold);
   auto wquads                = quads;
@@ -1505,9 +1505,9 @@ void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
+pair<vector<vec2i>, vector<T>> subdivide_lines_impl(
     const vector<vec2i>& lines, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec2i>, vector<T>>{};
+  auto tess = pair<vector<vec2i>, vector<T>>{};
   subdivide_lines_impl(tess.first, tess.second, lines, vert, level);
   return tess;
 }
@@ -1556,9 +1556,9 @@ void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
+pair<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     const vector<vec3i>& triangles, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec3i>, vector<T>>{};
+  auto tess = pair<vector<vec3i>, vector<T>>{};
   subdivide_triangles_impl(tess.first, tess.second, triangles, vert, level);
   return tess;
 }
@@ -1627,9 +1627,9 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
+pair<vector<vec4i>, vector<T>> subdivide_quads_impl(
     const vector<vec4i>& quads, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_quads_impl(tess.first, tess.second, quads, vert, level);
   return tess;
 }
@@ -1675,9 +1675,9 @@ void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
+pair<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     const vector<vec4i>& beziers, const vector<T>& vert, int level) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_beziers_impl(tess.first, tess.second, beziers, vert, level);
   return tess;
 }
@@ -1813,99 +1813,99 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
   }
 }
 template <typename T>
-std::pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
+pair<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     const vector<vec4i>& quads, const vector<T>& vert, int level,
     bool lock_boundary) {
-  auto tess = std::pair<vector<vec4i>, vector<T>>{};
+  auto tess = pair<vector<vec4i>, vector<T>>{};
   subdivide_catmullclark_impl(
       tess.first, tess.second, quads, vert, level, lock_boundary);
   return tess;
 }
 
-std::pair<vector<vec2i>, vector<float>> subdivide_lines(
+pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>& lines, const vector<float>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec2f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
-std::pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
+pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level) {
   return subdivide_lines_impl(lines, vert, level);
 }
 
-std::pair<vector<vec3i>, vector<float>> subdivide_triangles(
+pair<vector<vec3i>, vector<float>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<float>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec2f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
-std::pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level) {
   return subdivide_triangles_impl(triangles, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_quads(
+pair<vector<vec4i>, vector<float>> subdivide_quads(
     const vector<vec4i>& quads, const vector<float>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
+pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level) {
   return subdivide_quads_impl(quads, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_beziers(
+pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec2f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level) {
   return subdivide_beziers_impl(beziers, vert, level);
 }
 
-std::pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<float>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
 }
-std::pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary) {
   return subdivide_catmullclark_impl(quads, vert, level, lock_boundary);
@@ -1930,8 +1930,7 @@ vector<float> sample_points_cdf(int npoints) {
 }
 
 // Pick a point on lines uniformly.
-std::pair<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru) {
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
   return {sample_discrete_cdf(cdf, re), ru};
 }
 vector<float> sample_lines_cdf(
@@ -1946,7 +1945,7 @@ vector<float> sample_lines_cdf(
 }
 
 // Pick a point on a triangle mesh uniformly.
-std::pair<int, vec2f> sample_triangles(
+pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete_cdf(cdf, re), sample_triangle(ruv)};
 }
@@ -1962,11 +1961,11 @@ vector<float> sample_triangles_cdf(
 }
 
 // Pick a point on a quad mesh uniformly.
-std::pair<int, vec2f> sample_quads(
+pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
   return {sample_discrete_cdf(cdf, re), ruv};
 }
-std::pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
+pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
   auto element = sample_discrete_cdf(cdf, re);
   if (quads[element].z == quads[element].w) {

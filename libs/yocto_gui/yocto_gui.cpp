@@ -1892,13 +1892,13 @@ static string get_extension(const string& filename_) {
 }
 
 struct filedialog_state {
-  string                          dirname       = "";
-  string                          filename      = "";
-  vector<std::pair<string, bool>> entries       = {};
-  bool                            save          = false;
-  bool                            remove_hidden = true;
-  string                          filter        = "";
-  vector<string>                  extensions    = {};
+  string                     dirname       = "";
+  string                     filename      = "";
+  vector<pair<string, bool>> entries       = {};
+  bool                       save          = false;
+  bool                       remove_hidden = true;
+  string                     filter        = "";
+  vector<string>             extensions    = {};
 
   filedialog_state() {}
   filedialog_state(const string& dirname, const string& filename, bool save,
