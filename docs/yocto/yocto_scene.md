@@ -110,8 +110,8 @@ parametrization.
 
 ## Scene Creation
 
-Objects are added to the scene via `add_XXX(scene,name)` functions,
-where `XXX` is the object type name. In these functions,
+Objects are added to the scene via `add_<object>(scene,name)` functions,
+where `<object>` is the object type name. In these functions,
 the name is optional and, if left blank, a unique name will be generated
 automatically. For each object type, properties can be set directly.
 As a convenience, Yocto/Scene defines several functions to set objects
