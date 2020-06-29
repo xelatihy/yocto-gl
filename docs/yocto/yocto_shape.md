@@ -14,8 +14,6 @@ Shapes are represented as indexed meshes, with arbitrary properties for
 each vertex. Each vertex property is stored as a separate array,
 and shape elements are stored as arrays of indices to faces.
 For element parametrization, we follow [Yocto/Geometry](yocto_geometry.md).
-Most functions take vertex properties and elements explicitly, without relying
-on a mesh data structure.
 
 Vertex data is stored as `vector<vecXf>`, while element indices are stored
 as `vector<vec3i>`, `vector<vec4i>`, `vector<vec2i>`, `vector<int>`
@@ -40,7 +38,7 @@ auto texcoords = vector<vec2f>{...};       // vertex uvs
 ```
 
 Throughout the library, functions may either take index and vertex arrays
-directly as input and output, or may pack these array in struct if deemed
+directly as input and output, or may pack these array in structs if deemed
 appropriate. This design tries to balance readability and generality, without
 forcing a single convention that would not be appropriate everywhere.
 
@@ -380,7 +378,10 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
 Shapes are loaded with `load_shape(filename, <shape data>, error)` and saved with
 `save_shape(filename, <shape data>, error)`. Both loading and saving take a filename,
 and buffers for shape elements and vertex data, and return whether or not the
-shape was loaded or saved successfully.
+shape was loaded or saved successfully. The library has overrides for multiple
+shape representation, including using separate arrays for each property
+or using `generic_shape` and `generic_fvshape` structs that collect shape data
+for convenience.
 In the case of an error, the IO functions set the `error` string with a
 message suitable for displaying to a user. Yocto/Shapes supports loading
 and saving to OBJ and PLY.
@@ -391,15 +392,17 @@ Use `shape_stats(<shape data>)` to get statistics on the shape.
 
 ```cpp
 auto error = string{};
-auto points    = vector<int>{};     // shape elements buffers
-auto lines     = vector<vec2i>{};
-auto triangles = vector<vec3i>{};
-auto quads     = vector<vec4i>{};
-auto positions = vector<vec3f>{};   // vertex data buffers
-auto normals   = vector<vec3f>{};
-auto texcoords = vector<vec2f>{};
-auto colors    = vector<vec3f>{};
-auto radius    = vector<float>{};
+auto shape = generic_shape{};       // shape data
+// interface using shape buffers
+if(!load_shape(filename, shape, error))    // load shape
+   print_error(error);                     // check and print error
+auto stats = shape_stats(points, shape);   // shape stats
+for(auto& stat : stats) print_info(stat);  // print stats
+if(!save_shape(filename, shape, error))    // save shape
+   print_error(error);                     // check and print error
+// interface using explicit buffers
+auto& [points, lines, triangles, quads, positions, normals,
+   texcoords, colors, radius] = shape;
 if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
    texcoords, colors, radius, error))      // load shape
    print_error(error);                     // check and print error
@@ -416,12 +419,15 @@ and saved with `save_fvshape(filename, <shape data>, error)`. The function
 interfaces are modeled similarly to the ones above.
 
 ```cpp
-auto quadspos      = vector<vec4i>{};  // face-varying shape elements buffers
-auto quadsnorm     = vector<vec4i>{};
-auto quadstexcoord = vector<vec4i>{};
-auto positions     = vector<vec3f>{};  // vertex data buffers
-auto normals       = vector<vec3f>{};
-auto texcoords     = vector<vec2f>{};
+auto shape = generic_fvshape{};       // shape data
+// interface using shape buffers
+if(!load_fvshape(filename, shape, error))   // load face-varyhing shape
+   print_error(error);                      // check and print error
+if(!save_fvshape(filename, shape, error))   // save face-varyhing shape
+   print_error(error);                      // check and print error
+// interface using explicit buffers
+auto& [points, quadspos, quadsnorm, quadstexcoord, positions, normals,
+   texcoords] = shape;
 if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
    positions, normals, texcoords, error))   // load face-varyhing shape
    print_error(error);                      // check and print error
