@@ -42,8 +42,8 @@ Yocto/Sampling supports generating directions uniformly over the unit hemisphere
 and sphere, or cosine distributed over the hemisphere, using respectively
 `sample_hemisphere(ruv)`, `sample_sphere(ruv)`, `sample_hemisphere_cos(ruv)`
 `sample_hemisphere_cos(ruv)` and `sample_hemisphere_cos(ruv)`.
-For each of these functions, the corresponding `sample_XXX_pdf(dir)` computes
-the pdf that the given direction was chosen.
+For each of these functions, the corresponding `sample_<distribution>_pdf(dir)`
+computes the pdf that the given direction was chosen.
 
 ```cpp
 auto rng = make_rng(172784);               // seed the generator
@@ -65,8 +65,8 @@ random numbers from the unit square to
 and sphere, or cosine distributed over the hemisphere, using respectively
 `sample_hemisphere(ruv)`, `sample_sphere(ruv)`, `sample_hemisphere_cos(ruv)`
 `sample_hemisphere_cos(ruv)` and `sample_hemisphere_cos(ruv)`.
-For each of these functions, the corresponding `sample_XXX_pdf(dir)` computes
-the pdf that the given direction was chosen.
+For each of these functions, the corresponding `sample_<distribution>_pdf(dir)`
+computes the pdf that the given direction was chosen.
 
 ```cpp
 auto rng = make_rng(172784);               // seed the generator

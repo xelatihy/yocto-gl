@@ -802,7 +802,7 @@ static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
 }
 
 // Build shape bvh
-void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
+bvh_tree make_points_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
@@ -812,9 +812,11 @@ void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
   }
 
   // build nodes
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
+  return bvh;
 }
-void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
@@ -825,9 +827,11 @@ void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
   }
 
   // build nodes
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
+  return bvh;
 }
-void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
@@ -838,9 +842,11 @@ void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
   }
 
   // build nodes
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
+  return bvh;
 }
-void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+bvh_tree make_quads_bvh(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius) {
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
@@ -851,7 +857,9 @@ void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
   }
 
   // build nodes
+  auto bvh = bvh_tree{};
   build_bvh(bvh, bboxes);
+  return bvh;
 }
 
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,

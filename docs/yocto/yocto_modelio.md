@@ -310,8 +310,9 @@ a shape contains quads with `has_quads(shape)`.
 In some cases, it may be desireable to extract the shape elements corresponding
 to a single material, for example for use in renderers that support a single
 shader per shape. Yocto/ModelIO defines convenience functions for this case,
-that are overrides of the previous `get_XXX(...)` functions, but differ in that
-they take a material is as input, instead of returning materials tags.
+that are overrides of the previous `get_<element>(...)` functions,
+but differ in that they take a material is as input, instead of returning
+materials tags.
 
 ```cpp
 auto obj = new obj_model{};             // obj model buffer

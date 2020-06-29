@@ -217,13 +217,13 @@ struct bvh_intersection {
 };
 
 // Make shape bvh
-void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
+bvh_tree make_points_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius);
-void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+bvh_tree make_lines_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
-void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+bvh_tree make_triangles_bvh(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius);
-void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+bvh_tree make_quads_bvh(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius);
 
 // Updates shape bvh for changes in positions and radia

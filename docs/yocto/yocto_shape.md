@@ -140,17 +140,16 @@ triangles, `make_quads_bvh(bvh,quads,positions)` for quads,
 `make_points_bvh(bvh,points,positions,radius)` for points.
 
 ```cpp
-auto triangles = vector<vec3i>{...};           // mesh data
+auto triangles = vector<vec3i>{...};                 // mesh data
 auto positions = vector<vec3f>{...};
-auto bvh = bvh_tree{};
-make_triangles_bvh(bvh, triangles, positions); // BVH construction
+auto bvh = make_triangles_bvh(triangles, positions); // BVH construction
 ```
 
 Intersect and overlap functions return a `bvh_intersection` that bundles
 the intersection distance, the intersected element index and uvs,
 and a `hit` flag that signals whether an element was hit.
 
-`intersect_XXX_bvh(...)` computed intersections between rays and shapes.
+`intersect_<element>_bvh(...)` computed intersections between rays and shapes.
 Use `intersect_triangles_bvh(bvh,triangles,positions, ray)` for
 triangles, `intersect_quads_bvh(bvh,quads,positions)` for quads,
 `intersect_lines_bvh(bvh,lines,positions,radius,ray)` for lines, and
@@ -159,12 +158,12 @@ triangles, `intersect_quads_bvh(bvh,quads,positions)` for quads,
 ```cpp
 auto ray = ray3f{...};
 // computes ray-triangles intersection
-auto isec = intersect_triangles(bvh, triangles, positions, ray);
+auto isec = intersect_triangles_bvh(bvh, triangles, positions, ray);
 if(isec.hit) print_info(isec.element, isec.uv, isec.distance);
 else print_info("no hit");
 ```
 
-`overlap_XXX_bvh(...)` checks whether a shape overlaps a point within a
+`overlap_<element>_bvh(...)` checks whether a shape overlaps a point within a
 given maximum distance and returns the distance, element and uv of the
 closest element.
 Use `overlap_triangles_bvh(bvh, triangles, positions, ray)` for
@@ -175,7 +174,7 @@ triangles, `overlap_quads_bvh(bvh, quads, positions)` for quads,
 ```cpp
 auto pt = vec3f{...}; auto max_dist = float{...};
 // comnpute point-triangles overlap
-auto ovr = overlap_triangles(bvh, triangles, positions, pt, mat_dist);
+auto ovr = overlap_triangles_bvh(bvh, triangles, positions, pt, mat_dist);
 if(ovr.hit) print_info(ovrl.element, ovrl.uv, ovrl.distance);
 else print_info("no overlap");
 ```
