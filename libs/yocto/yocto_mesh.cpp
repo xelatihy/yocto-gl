@@ -52,12 +52,7 @@ inline int find_in_vec(const T& vec, int x) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-struct Triangle2D {
-  vec2f x, y, z = {0, 0};
-
-  inline vec2f&       operator[](int i) { return *(&x + i); }
-  inline const vec2f& operator[](int i) const { return *(&x + i); }
-};
+using Triangle2D = std::array<vec2f, 3>;
 
 inline vec2f intersect_circles_core(
     const vec2f& c2, float r2, const vec2f& c1, float r1) {
@@ -90,11 +85,11 @@ inline vec2f intersect_circles_fast(
 
 Triangle2D init_flat_triangle(const vector<vec3f>& positions, const vec3i tr) {
   auto tr2d = Triangle2D{};
-  tr2d.x    = {0, 0};
-  tr2d.y    = {0, length(positions[tr.x] - positions[tr.y])};
+  tr2d[0]   = {0, 0};
+  tr2d[1]   = {0, length(positions[tr.x] - positions[tr.y])};
   auto rx   = length_squared(positions[tr.x] - positions[tr.z]);
   auto ry   = length_squared(positions[tr.y] - positions[tr.z]);
-  tr2d.z    = intersect_circles_fast(tr2d.x, rx, tr2d.y, ry);
+  tr2d[2]   = intersect_circles_fast(tr2d[0], rx, tr2d[1], ry);
   return tr2d;
 }
 
@@ -162,7 +157,7 @@ float length_by_flattening(const vector<vec3i>& triangles,
 
   auto last  = coords.back();
   auto bary  = make_bary(p.uv);
-  auto pos2d = last.x * bary.x + last.y * bary.y + last.z * bary.z;
+  auto pos2d = last[0] * bary.x + last[1] * bary.y + last[2] * bary.z;
   auto v     = pos2d - coords[0][(h + 2) % 3];
   auto w0    = coords[0][h] - coords[0][(h + 2) % 3];
   auto w1    = coords[0][(h + 1) % 3] - coords[0][(h + 2) % 3];
@@ -1288,17 +1283,14 @@ inline vec3f eval_normal(const vector<vec3i>& triangles,
   return normalize(lerp(normals[x], normals[y], normals[z], point.uv));
 }
 
-inline bool node_is_neighboor(
-    const geodesic_solver& solver, int vid, int node, int& entry) {
-  entry    = -1;
+inline int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
   auto nbr = solver.graph[vid];
   for (int i = 0; i < nbr.size(); ++i) {
     if (nbr[i].node == node) {
-      entry = i;
-      return true;
+      return i;
     }
   }
-  return false;
+  return -1;
 }
 
 // particular case of "get strip" when one of the two point is the parent of the
@@ -1369,7 +1361,8 @@ static vector<int> short_strip(const vector<vec3i>& triangles,
 
 static float get_angle(const geodesic_solver& solver,
     const vector<vector<float>>& angles, int vid0, int vid1, int& entry) {
-  assert(node_is_neighboor(solver, vid0, vid1, entry));
+  entry = node_is_neighboor(solver, vid0, vid1);
+  assert(entry >= 0);
   return angles[vid0][entry];
 }
 
@@ -1387,7 +1380,8 @@ static float get_angle(const vector<vec3i>& triangles,
   auto offset = -1, adj = -1;
   auto teta = 0.0f;
   if (is_vert(p, offset)) {
-    assert(node_is_neighboor(solver, vid, triangles[p.face][offset], entry));
+    entry = node_is_neighboor(solver, vid, triangles[p.face][offset]);
+    assert(entry >= 0);
     if (entry % 2) {
       int tid_entry = (entry - 1) / 2;
       int tid = opposite_face(triangles, adjacencies, v2t[vid][tid_entry], vid);
@@ -1408,7 +1402,7 @@ static float get_angle(const vector<vec3i>& triangles,
     auto vid1 = (k0 != -1) ? triangles[p.face][(k0 + 2) % 3]
                            : triangles[adj][(k1 + 2) % 3];
 
-    node_is_neighboor(solver, vid, vid0, entry);
+    entry = node_is_neighboor(solver, vid, vid0);
 
     auto s = angles[vid].size();
 
@@ -1436,8 +1430,8 @@ static float get_angle(const vector<vec3i>& triangles,
       auto flat_face = unfold_face(
           triangles, positions, adjacencies, tr2d, tid, k);
       auto bary = make_bary(p.uv);
-      auto flat = bary.x * flat_face.x +
-                  bary.y * flat_face.y * flat_face.z * bary.z;
+      auto flat = bary.x * flat_face[0] + bary.y * flat_face[1] +
+                  bary.z * flat_face[2];
 
       auto v     = flat - tr2d[(k + 2) % 3];
       auto w     = tr2d[k] - tr2d[(k + 2) % 3];
@@ -1446,7 +1440,7 @@ static float get_angle(const vector<vec3i>& triangles,
       auto phi3D = angle(w, u);
       auto vid0  = triangles[tid][k];
       auto s     = angles[vid].size();
-      node_is_neighboor(solver, vid, vid0, entry);
+      entry      = node_is_neighboor(solver, vid, vid0);
       auto teta0 = angles[vid][entry];
       auto phi2D = (entry + 2 == s) ? 2 * (float)M_PI - teta0
                                     : angles[vid][entry + 2] - teta0;
@@ -1662,7 +1656,8 @@ inline int get_entry(const geodesic_solver& solver,
   auto offset = 0, adj = -1;
   auto entry = 0;
   if (is_vert(p, offset)) {
-    assert(node_is_neighboor(solver, vid, triangles[p.face][offset], entry));
+    entry = node_is_neighboor(solver, vid, triangles[p.face][offset]);
+    assert(entry >= 0);
     if (entry % 2) {
       auto tid_entry = (entry - 1) / 2;
       auto tid       = opposite_face(
@@ -1679,7 +1674,7 @@ inline int get_entry(const geodesic_solver& solver,
   if (k0 != -1 || k1 != -1) {
     auto vid0 = (k0 != -1) ? triangles[p.face][(k0 + 1) % 3]
                            : triangles[adj][(k1 + 1) % 3];
-    node_is_neighboor(solver, vid, vid0, entry);
+    entry = node_is_neighboor(solver, vid, vid0);
     return entry + 1;
   }
 
@@ -1691,7 +1686,7 @@ inline int get_entry(const geodesic_solver& solver,
       strip_to_p.push_back(p.face);
       auto k    = find_in_vec(adjacencies[tid], p.face);
       auto vid0 = triangles[tid][k];
-      node_is_neighboor(solver, vid, vid0, entry);
+      entry     = node_is_neighboor(solver, vid, vid0);
       return entry + 1;
     }
   }
@@ -1778,15 +1773,15 @@ vector<int> fast_get_strip(const geodesic_solver& solver,
     if (i == 0) {
       prev_entry = get_entry(
           solver, triangles, positions, adjacencies, v2t, v, target, strip);
-      node_is_neighboor(solver, v, parents[i + 1], next_entry);
+      next_entry = node_is_neighboor(solver, v, parents[i + 1]);
     } else if (i == N - 1) {
       next_entry = get_entry(solver, triangles, positions, adjacencies, v2t, v,
           source, strip_to_point);
       reverse(strip_to_point.begin(), strip_to_point.end());
-      node_is_neighboor(solver, v, parents[i - 1], prev_entry);
+      prev_entry = node_is_neighboor(solver, v, parents[i - 1]);
     } else {
-      node_is_neighboor(solver, v, parents[i - 1], prev_entry);
-      node_is_neighboor(solver, v, parents[i + 1], next_entry);
+      prev_entry = node_is_neighboor(solver, v, parents[i - 1]);
+      next_entry = node_is_neighboor(solver, v, parents[i + 1]);
     }
     add_tri_to_strip(v2t, v, prev_entry, next_entry, strip);
   }
