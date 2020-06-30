@@ -1,8 +1,10 @@
 # Yocto/Color: Color operations
 
-Yocto/Color defines basic color manipulations, including color color
-conversions, byte to float color conversions, tone mapping and tonal
-adjustments. Yocto/Color is implemented in `yocto_color.h`.
+Yocto/Color provides basic color utilities for writing graphics applications.
+In particular, we support color conversion to/from linear rgb, srgb, hsv,
+xyz, byte to float color conversions, colormaps, and a few color
+manipulations like contrast and saturation.
+Yocto/Color is implemented in `yocto_color.h`.
 
 ## Color Representation
 
@@ -26,8 +28,9 @@ auto red8 = float_to_byte(red);                 // 8bit conversion
 
 ## Color Conversions
 
-Like most 3D graphics libraries, Yocto/Color does not explicitly track color spaces. Instead, we use conventions between library facilities to carry out
-color operations. Most color operations are defined on linear RGB colors.
+Like most 3D graphics libraries, Yocto/Color does not explicitly track
+color spaces. Instead, we use conventions between library facilities to carry
+out color operations. Most color operations are defined on linear RGB colors.
 By default, Yocto/Color uses a linear color space with sRGB primaries, mostly
 since lots of freely available graphics data encodes colors in that manner.
 
@@ -71,4 +74,18 @@ auto exposure = 1; auto filomic = true;
 auto ldr = tonemap(hdr, exposure, filmic);        // HDR to LDR tone mapping
 ldr = contrast(saturate(ldr,0.7),0.7);            // contrast and saturation
 auto hdr2 = logcontrast(hdr * tint, 0.7, 0.18);   // contrast and tint in HDR
+```
+
+## Color map
+
+Yocto/Color defines functions to apply standard color maps.
+Use `colormap(t, type)` to apply a color map from a value in [0,1]
+and for different color map types. The library currently supports fitted
+Matplotlib colormaps from [here](https://www.shadertoy.com/view/WlfXRN).
+
+```cpp
+auto c0 = colormap(0.5, colormap_type::viridis);
+auto c1 = colormap(0.5, colormap_type::plasma);
+auto c2 = colormap(0.5, colormap_type::magma);
+auto c3 = colormap(0.5, colormap_type::inferno);
 ```

@@ -3,8 +3,8 @@
 //
 // Yocto/Color provides basic color utilities for writing graphics applications.
 // In particular, we support color conversion to/from linear rgb, srgb, hsv,
-// xyz, byte to float color conversions and a few color manipulations like
-// contrast and saturation.
+// xyz, byte to float color conversions, colormaps, and a few color
+// manipulations like contrast and saturation.
 //
 
 //
@@ -52,6 +52,18 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+//
+//
+// LICENSE for colormap code
+//
+// License CC0 (public domain)
+//
+// Code by Matt Zucker from https://www.shadertoy.com/view/WlfXRN
+// Data fitted from https://github.com/BIDS/colormap/blob/master/colormaps.py
+// (which is licensed CC0).
+// Magma, Inferno, Plasma, Viridis are released under CC0 by Nathaniel J. Smith,
+// Stefan van der Walt, and (in the case of Viridis) Eric Firing:
+// https://github.com/BIDS/colormap/blob/master/colormaps.py.
 //
 //
 
@@ -120,6 +132,12 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature);
+
+// Colormap type
+enum struct colormap_type { viridis, plasma, magma, inferno };
+
+// Colormaps from [0,1] to color
+inline vec3f colormap(float t, colormap_type type = colormap_type::viridis);
 
 }  // namespace yocto
 
@@ -390,6 +408,94 @@ inline vec3f blackbody_to_rgb(float temperature) {
   }
 
   return srgb_to_rgb(rgb / 255);
+}
+
+inline vec3f colormap_viridis(float t) {
+  // https://www.shadertoy.com/view/WlfXRN
+  static const auto c0 = vec3f(
+      0.2777273272234177, 0.005407344544966578, 0.3340998053353061);
+  static const auto c1 = vec3f(
+      0.1050930431085774, 1.404613529898575, 1.384590162594685);
+  static const auto c2 = vec3f(
+      -0.3308618287255563, 0.214847559468213, 0.09509516302823659);
+  static const auto c3 = vec3f(
+      -4.634230498983486, -5.799100973351585, -19.33244095627987);
+  static const auto c4 = vec3f(
+      6.228269936347081, 14.17993336680509, 56.69055260068105);
+  static const auto c5 = vec3f(
+      4.776384997670288, -13.74514537774601, -65.35303263337234);
+  static const auto c6 = vec3f(
+      -5.435455855934631, 4.645852612178535, 26.3124352495832);
+  return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+inline vec3f colormap_plasma(float t) {
+  // https://www.shadertoy.com/view/WlfXRN
+  static const auto c0 = vec3f(
+      0.05873234392399702, 0.02333670892565664, 0.5433401826748754);
+  static const auto c1 = vec3f(
+      2.176514634195958, 0.2383834171260182, 0.7539604599784036);
+  static const auto c2 = vec3f(
+      -2.689460476458034, -7.455851135738909, 3.110799939717086);
+  static const auto c3 = vec3f(
+      6.130348345893603, 42.3461881477227, -28.51885465332158);
+  static const auto c4 = vec3f(
+      -11.10743619062271, -82.66631109428045, 60.13984767418263);
+  static const auto c5 = vec3f(
+      10.02306557647065, 71.41361770095349, -54.07218655560067);
+  static const auto c6 = vec3f(
+      -3.658713842777788, -22.93153465461149, 18.19190778539828);
+  return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+inline vec3f colormap_magma(float t) {
+  // https://www.shadertoy.com/view/WlfXRN
+  static const auto c0 = vec3f(
+      -0.002136485053939582, -0.000749655052795221, -0.005386127855323933);
+  static const auto c1 = vec3f(
+      0.2516605407371642, 0.6775232436837668, 2.494026599312351);
+  static const auto c2 = vec3f(
+      8.353717279216625, -3.577719514958484, 0.3144679030132573);
+  static const auto c3 = vec3f(
+      -27.66873308576866, 14.26473078096533, -13.64921318813922);
+  static const auto c4 = vec3f(
+      52.17613981234068, -27.94360607168351, 12.94416944238394);
+  static const auto c5 = vec3f(
+      -50.76852536473588, 29.04658282127291, 4.23415299384598);
+  static const auto c6 = vec3f(
+      18.65570506591883, -11.48977351997711, -5.601961508734096);
+  return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+inline vec3f colormap_inferno(float t) {
+  // https://www.shadertoy.com/view/WlfXRN
+  static const auto c0 = vec3f(
+      0.0002189403691192265, 0.001651004631001012, -0.01948089843709184);
+  static const auto c1 = vec3f(
+      0.1065134194856116, 0.5639564367884091, 3.932712388889277);
+  static const auto c2 = vec3f(
+      11.60249308247187, -3.972853965665698, -15.9423941062914);
+  static const auto c3 = vec3f(
+      -41.70399613139459, 17.43639888205313, 44.35414519872813);
+  static const auto c4 = vec3f(
+      77.162935699427, -33.40235894210092, -81.80730925738993);
+  static const auto c5 = vec3f(
+      -71.31942824499214, 32.62606426397723, 73.20951985803202);
+  static const auto c6 = vec3f(
+      25.13112622477341, -12.24266895238567, -23.07032500287172);
+  return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+// Colormaps from {0,1] to color
+inline vec3f colormap(float t, colormap_type type) {
+  t = clamp(t, 0.0f, 1.0f);
+  switch (type) {
+    case colormap_type::viridis: return colormap_viridis(t);
+    case colormap_type::magma: return colormap_magma(t);
+    case colormap_type::inferno: return colormap_inferno(t);
+    case colormap_type::plasma: return colormap_plasma(t);
+    default: throw std::runtime_error{"unknown color map type"};
+  }
 }
 
 }  // namespace yocto

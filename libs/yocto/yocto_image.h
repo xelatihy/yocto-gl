@@ -290,6 +290,8 @@ image<vec4f> make_uvgrid(
 // Make blackbody ramp.
 image<vec4f> make_blackbodyramp(
     const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
+// Make color map ramp.
+image<vec4f> make_colormapramp(const vec2i& size, float scale = 1);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
 image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
     const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
