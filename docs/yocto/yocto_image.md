@@ -204,7 +204,8 @@ interpolate between. Use `make_grid(...)` for a grid image,
 `make_checker(...)` for a checker, `make_bumps(...)` for a bumpy test,
 `make_ramp(...)` for a linear ramp, `make_gammaramp(...)` for a ramp with
 different gamma settings, `make_uvramp(...)` and `make_uvgrid(...)`
-for test images for texture coordinates as either ramps or grids, and
+for test images for texture coordinates as either ramps or grids,
+`make_colormapramp(...)` for a ramp to test different color maps, and
 `make_blackbodyramp(...)` for a ramp with different blackbody temperatures.
 
 Perlin noise patterns can be generated with `make_noisemap(...)`,
@@ -223,6 +224,7 @@ auto i4 = make_ramp(size, scale, c0, c1);          // ramp image
 auto i5 = make_gammaramp(size, scale, c0, c1);     // gamma ramp image
 auto i6 = make_uvramp(size, scale);                // uv ramp image
 auto i7 = make_uvgrid(size, scale);                // uv grid image
+auto i8 = make_colormapramp(size, scale);          // color map image
 
 auto t0 = 1000, t1 = 12000;                        // blackbody temperatures
 auto b2 = make_blackbodyramp(size, scale, t0, t1); // blackbody ramp image

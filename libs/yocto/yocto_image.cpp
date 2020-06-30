@@ -968,6 +968,24 @@ image<vec4f> make_blackbodyramp(
   });
 }
 
+image<vec4f> make_colormapramp(const vec2i& size, float scale) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto rgb = zero3f;
+    if (uv.y < 0.25) {
+      rgb = colormap(uv.x, colormap_type::viridis);
+    } else if (uv.y < 0.50) {
+      rgb = colormap(uv.x, colormap_type::plasma);
+    } else if (uv.y < 0.75) {
+      rgb = colormap(uv.x, colormap_type::magma);
+    } else {
+      rgb = colormap(uv.x, colormap_type::inferno);
+    }
+    return vec4f{rgb.x, rgb.y, rgb.z, 1};
+  });
+}
+
 image<vec4f> make_noisemap(
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {

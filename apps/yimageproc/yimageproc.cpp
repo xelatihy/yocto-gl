@@ -129,6 +129,9 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
     img = make_blackbodyramp(size);
   } else if (type == "uvgrid") {
     img = make_uvgrid(size);
+  } else if (type == "colormap") {
+    img = make_colormapramp(size);
+    img = srgb_to_rgb(img);
   } else if (type == "sky") {
     img = make_sunsky(
         size, pif / 4, 3.0, false, 1.0, 1.0, vec3f{0.7, 0.7, 0.7});
@@ -195,6 +198,9 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
     img = make_gammaramp(size);
   } else if (type == "test-blackbodyramp") {
     img = make_blackbodyramp(size);
+  } else if (type == "test-colormapramp") {
+    img = make_colormapramp(size);
+    img = srgb_to_rgb(img);
   } else if (type == "test-uvgrid") {
     img = make_uvgrid(size);
   } else if (type == "test-sky") {
