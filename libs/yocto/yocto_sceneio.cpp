@@ -189,37 +189,6 @@ static bool save_image(const string& filename, const image<float>& scalarf,
   }
 }
 
-// Loads/saves a  shape as either vertex-varying or face-varying.
-static bool load_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
-    vector<float>& radius, bool facevarying, string& error) {
-  if (!facevarying) {
-    return load_shape(filename, points, lines, triangles, quads, positions,
-        normals, texcoords, colors, radius, error);
-  } else {
-    return load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, error);
-  }
-}
-static bool save_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
-    const vector<float>& radius, bool facevarying, string& error) {
-  if (!facevarying && quadspos.empty()) {
-    return save_shape(filename, points, lines, triangles, quads, positions,
-        normals, texcoords, colors, radius, error);
-  } else {
-    return save_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, error);
-  }
-}
-
 // load instances
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
@@ -740,8 +709,8 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (!load_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
-            shape->texcoords, shape->colors, shape->radius,
-            shape->catmullclark && shape->subdivisions, error))
+            shape->texcoords, shape->colors, shape->radius, error,
+            shape->catmullclark && shape->subdivisions))
       return dependent_error();
   }
   // load textures
@@ -941,8 +910,8 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     if (!save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
-            shape->texcoords, shape->colors, shape->radius,
-            shape->catmullclark && shape->subdivisions, error))
+            shape->texcoords, shape->colors, shape->radius, error,
+            shape->catmullclark && shape->subdivisions))
       return dependent_error();
   }
 
@@ -1316,8 +1285,9 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
   // load ply mesh
   auto shape = add_shape(scene);
   if (!load_shape(filename, shape->points, shape->lines, shape->triangles,
-          shape->quads, shape->positions, shape->normals, shape->texcoords,
-          shape->colors, shape->radius, error))
+          shape->quads, shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
+          shape->positions, shape->normals, shape->texcoords, shape->colors,
+          shape->radius, error))
     return false;
 
   // create instance
@@ -1346,8 +1316,9 @@ static bool save_ply_scene(const string& filename, const scene_model* scene,
   // save shape
   auto shape = scene->shapes.front();
   if (!save_shape(filename, shape->points, shape->lines, shape->triangles,
-          shape->quads, shape->positions, shape->normals, shape->texcoords,
-          shape->colors, shape->radius, error))
+          shape->quads, shape->quadspos, shape->quadsnorm, shape->quadstexcoord,
+          shape->positions, shape->normals, shape->texcoords, shape->colors,
+          shape->radius, error))
     return false;
 
   // done
