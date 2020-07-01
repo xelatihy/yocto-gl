@@ -3493,26 +3493,13 @@ static string get_extension(const string& filename) {
   return filename.substr(pos);
 }
 
-// Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
-    string& error, bool flip_texcoords) {
-  return load_shape(filename, shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius, error, flip_texcoords);
-}
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool ascii,
-    bool flip_texcoords) {
-  return save_shape(filename, shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius, error, ascii, flip_texcoords);
-}
-
 // Load ply mesh
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec3f>& colors, vector<float>& radius, string& error,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<float>& radius, string& error, bool facevarying,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
@@ -3523,15 +3510,18 @@ static string get_extension(const string& filename) {
     return false;
   };
 
-  points    = {};
-  lines     = {};
-  triangles = {};
-  quads     = {};
-  positions = {};
-  normals   = {};
-  texcoords = {};
-  colors    = {};
-  radius    = {};
+  points        = {};
+  lines         = {};
+  triangles     = {};
+  quads         = {};
+  quadspos      = {};
+  quadsnorm     = {};
+  quadstexcoord = {};
+  positions     = {};
+  normals       = {};
+  texcoords     = {};
+  colors        = {};
+  radius        = {};
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
@@ -3540,21 +3530,30 @@ static string get_extension(const string& filename) {
     auto ply       = ply_guard.get();
     if (!load_ply(filename, ply, error)) return false;
 
-    // gets vertex
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_colors(ply, colors);
-    get_radius(ply, radius);
+    if (!facevarying) {
+      // gets vertex
+      get_positions(ply, positions);
+      get_normals(ply, normals);
+      get_texcoords(ply, texcoords, flip_texcoord);
+      get_colors(ply, colors);
+      get_radius(ply, radius);
 
-    // get faces
-    if (has_quads(ply)) {
-      get_quads(ply, quads);
+      // get faces
+      if (has_quads(ply)) {
+        get_quads(ply, quads);
+      } else {
+        get_triangles(ply, triangles);
+      }
+      get_lines(ply, lines);
+      get_points(ply, points);
     } else {
-      get_triangles(ply, triangles);
+      get_positions(ply, positions);
+      get_normals(ply, normals);
+      get_texcoords(ply, texcoords, flip_texcoord);
+      get_quads(ply, quadspos);
+      if (!normals.empty()) quadsnorm = quadspos;
+      if (!texcoords.empty()) quadstexcoord = quadspos;
     }
-    get_lines(ply, lines);
-    get_points(ply, points);
 
     if (positions.empty()) return shape_error();
     return true;
@@ -3571,24 +3570,32 @@ static string get_extension(const string& filename) {
     if (shape->points.empty() && shape->lines.empty() && shape->faces.empty())
       return shape_error();
 
-    // decide what to do and get properties
-    auto materials  = vector<obj_material*>{};
-    auto ematerials = vector<int>{};
-    auto has_quads_ = has_quads(shape);
-    if (!shape->faces.empty() && !has_quads_) {
-      get_triangles(shape, triangles, positions, normals, texcoords, materials,
-          ematerials, flip_texcoord);
-    } else if (!shape->faces.empty() && has_quads_) {
-      get_quads(shape, quads, positions, normals, texcoords, materials,
-          ematerials, flip_texcoord);
-    } else if (!shape->lines.empty()) {
-      get_lines(shape, lines, positions, normals, texcoords, materials,
-          ematerials, flip_texcoord);
-    } else if (!shape->points.empty()) {
-      get_points(shape, points, positions, normals, texcoords, materials,
-          ematerials, flip_texcoord);
+    if (!facevarying) {
+      // decide what to do and get properties
+      auto materials  = vector<obj_material*>{};
+      auto ematerials = vector<int>{};
+      auto has_quads_ = has_quads(shape);
+      if (!shape->faces.empty() && !has_quads_) {
+        get_triangles(shape, triangles, positions, normals, texcoords,
+            materials, ematerials, flip_texcoord);
+      } else if (!shape->faces.empty() && has_quads_) {
+        get_quads(shape, quads, positions, normals, texcoords, materials,
+            ematerials, flip_texcoord);
+      } else if (!shape->lines.empty()) {
+        get_lines(shape, lines, positions, normals, texcoords, materials,
+            ematerials, flip_texcoord);
+      } else if (!shape->points.empty()) {
+        get_points(shape, points, positions, normals, texcoords, materials,
+            ematerials, flip_texcoord);
+      } else {
+        return shape_error();
+      }
     } else {
-      return shape_error();
+      if (shape->faces.empty()) return shape_error();
+      auto materials  = vector<obj_material*>{};
+      auto ematerials = vector<int>{};
+      get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
+          texcoords, materials, ematerials, flip_texcoord);
     }
 
     if (positions.empty()) return shape_error();
@@ -3601,10 +3608,12 @@ static string get_extension(const string& filename) {
 // Save ply mesh
 [[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, const vector<float>& radius, string& error,
-    bool ascii, bool flip_texcoord) {
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<float>& radius, string& error, bool facevarying,
+    bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3619,14 +3628,25 @@ static string get_extension(const string& filename) {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
     auto ply       = ply_guard.get();
-    add_positions(ply, positions);
-    add_normals(ply, normals);
-    add_texcoords(ply, texcoords, flip_texcoord);
-    add_colors(ply, colors);
-    add_radius(ply, radius);
-    add_faces(ply, triangles, quads);
-    add_lines(ply, lines);
-    add_points(ply, points);
+    if (quadspos.empty()) {
+      add_positions(ply, positions);
+      add_normals(ply, normals);
+      add_texcoords(ply, texcoords, flip_texcoord);
+      add_colors(ply, colors);
+      add_radius(ply, radius);
+      add_faces(ply, triangles, quads);
+      add_lines(ply, lines);
+      add_points(ply, points);
+    } else {
+      // split data
+      auto [split_quads, split_positions, split_normals, split_texcoords] =
+          split_facevarying(quadspos, quadsnorm, quadstexcoord, positions,
+              normals, texcoords);
+      add_positions(ply, split_positions);
+      add_normals(ply, split_normals);
+      add_texcoords(ply, split_texcoords, flip_texcoord);
+      add_faces(ply, {}, split_quads);
+    }
     if (!save_ply(filename, ply, error)) return false;
     return true;
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -3645,6 +3665,9 @@ static string get_extension(const string& filename) {
     } else if (!points.empty()) {
       set_points(
           oshape, points, positions, normals, texcoords, {}, flip_texcoord);
+    } else if (!quadspos.empty()) {
+      set_fvquads(oshape, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords, {}, flip_texcoord);
     } else {
       return shape_error();
     }
@@ -3657,122 +3680,20 @@ static string get_extension(const string& filename) {
 }
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_fvshape(const string& filename, generic_fvshape& shape,
-    string& error, bool flip_texcoords) {
-  return load_fvshape(filename, shape.quadspos, shape.quadsnorm,
-      shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-      error, flip_texcoords);
+[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords) {
+  return load_shape(filename, shape.points, shape.lines, shape.triangles,
+      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius, error, facevarying, flip_texcoords);
 }
-[[nodiscard]] bool save_fvshape(const string& filename,
-    const generic_fvshape& shape, string& error, bool ascii,
-    bool flip_texcoords) {
-  return save_fvshape(filename, shape.quadspos, shape.quadsnorm,
-      shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-      error, ascii, flip_texcoords);
-}
-
-// Load ply mesh
-[[nodiscard]] bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    string& error, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  quadspos      = {};
-  quadsnorm     = {};
-  quadstexcoord = {};
-  positions     = {};
-  normals       = {};
-  texcoords     = {};
-
-  auto ext = get_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    if (!load_ply(filename, ply, error)) return false;
-    get_positions(ply, positions);
-    get_normals(ply, normals);
-    get_texcoords(ply, texcoords, flip_texcoord);
-    get_quads(ply, quadspos);
-    if (!normals.empty()) quadsnorm = quadspos;
-    if (!texcoords.empty()) quadstexcoord = quadspos;
-    if (positions.empty()) return shape_error();
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    auto obj_guard = std::make_unique<obj_model>();
-    auto obj       = obj_guard.get();
-    if (!load_obj(filename, obj, error, true)) return false;
-    if (obj->shapes.empty()) return shape_error();
-    if (obj->shapes.size() > 1) return shape_error();
-    auto shape = obj->shapes.front();
-    if (shape->faces.empty()) return shape_error();
-    auto materials  = vector<obj_material*>{};
-    auto ematerials = vector<int>{};
-    get_fvquads(shape, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, materials, ematerials, flip_texcoord);
-    if (positions.empty()) return shape_error();
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Save ply mesh
-[[nodiscard]] bool save_fvshape(const string& filename,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
-    bool ascii, bool flip_texcoord) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
-    return false;
-  };
-
-  auto ext = get_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
-    // split data
-    auto [split_quads, split_positions, split_normals, split_texcoords] =
-        split_facevarying(
-            quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
-
-    // ply model
-    auto ply_guard = std::make_unique<ply_model>();
-    auto ply       = ply_guard.get();
-    add_positions(ply, split_positions);
-    add_normals(ply, split_normals);
-    add_texcoords(ply, split_texcoords, flip_texcoord);
-    add_faces(ply, {}, split_quads);
-
-    // save
-    if (!save_ply(filename, ply, error)) return false;
-    return true;
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    // Obj model
-    auto obj_guard = std::make_unique<obj_model>();
-    auto obj       = obj_guard.get();
-
-    // Add obj data
-    auto oshape = add_shape(obj);
-    set_fvquads(oshape, quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, {}, flip_texcoord);
-
-    // Save
-    if (!save_obj(filename, obj, error)) return false;
-    return true;
-  } else {
-    return format_error();
-  }
+[[nodiscard]] bool save_shape(const string& filename,
+    const generic_shape& shape, string& error, bool facevarying,
+    bool flip_texcoords, bool ascii) {
+  return save_shape(filename, shape.points, shape.lines, shape.triangles,
+      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius, error, facevarying, flip_texcoords, ascii);
 }
 
 }  // namespace yocto
@@ -3781,6 +3702,12 @@ static string get_extension(const string& filename) {
 // IMPLEMENTATION OF SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+vector<string> shape_stats(const generic_shape& shape, bool verbose) {
+  return shape_stats(shape.points, shape.lines, shape.triangles, shape.quads,
+      shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+      shape.normals, shape.texcoords, shape.colors, shape.radius, verbose);
+}
 
 vector<string> shape_stats(const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,

@@ -222,38 +222,12 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
-    vector<float>& radius, const string& type, string& error) {
-  auto quadspos      = vector<vec4i>{};
-  auto quadsnorm     = vector<vec4i>{};
-  auto quadstexcoord = vector<vec4i>{};
-  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-          quadstexcoord, positions, normals, texcoords, colors, radius, type,
-          error))
-    return false;
-  if (!quadspos.empty()) throw std::runtime_error("bad preset type");
-  return true;
-}
-
-// Shape presets used ofr testing.
-bool make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type,
-    string& error) {
-  auto points    = vector<int>{};
-  auto lines     = vector<vec2i>{};
-  auto triangles = vector<vec3i>{};
-  auto quads     = vector<vec4i>{};
-  auto colors    = vector<vec3f>{};
-  auto radius    = vector<float>{};
-  if (!make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-          quadstexcoord, positions, normals, texcoords, colors, radius, type,
-          error))
-    return false;
-  if (quadspos.empty()) throw std::runtime_error("bad preset type");
-  return true;
+bool make_shape_preset(
+    generic_shape& shape, const string& type, string& error) {
+  return make_shape_preset(shape.points, shape.lines, shape.triangles,
+      shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius, type, error);
 }
 
 int main(int argc, const char* argv[]) {
@@ -294,76 +268,46 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // mesh data
-  auto positions     = vector<vec3f>{};
-  auto normals       = vector<vec3f>{};
-  auto texcoords     = vector<vec2f>{};
-  auto colors        = vector<vec3f>{};
-  auto radius        = vector<float>{};
-  auto points        = vector<int>{};
-  auto lines         = vector<vec2i>{};
-  auto triangles     = vector<vec3i>{};
-  auto quads         = vector<vec4i>{};
-  auto quadspos      = vector<vec4i>{};
-  auto quadsnorm     = vector<vec4i>{};
-  auto quadstexcoord = vector<vec4i>{};
+  auto shape = generic_shape{};
 
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
-  if (!facevarying) {
-    auto ext      = sfs::path(filename).extension().string();
-    auto basename = sfs::path(filename).stem().string();
-    if (ext == ".ypreset") {
-      if (!make_shape_preset(points, lines, triangles, quads, positions,
-              normals, texcoords, colors, radius, basename, ioerror))
-        print_fatal(ioerror);
-    } else {
-      if (!load_shape(filename, points, lines, triangles, quads, positions,
-              normals, texcoords, colors, radius, ioerror))
-        print_fatal(ioerror);
-    }
+  auto ext      = sfs::path(filename).extension().string();
+  auto basename = sfs::path(filename).stem().string();
+  if (ext == ".ypreset") {
+    if (!make_shape_preset(shape, basename, ioerror)) print_fatal(ioerror);
   } else {
-    auto ext      = sfs::path(filename).extension().string();
-    auto basename = sfs::path(filename).stem().string();
-    if (ext == ".ypreset") {
-      if (!make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions,
-              normals, texcoords, basename, ioerror))
-        print_fatal(ioerror);
-    } else {
-      if (!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-              normals, texcoords, ioerror))
-        print_fatal(ioerror);
-    }
+    if (!load_shape(filename, shape, ioerror, facevarying))
+      print_fatal(ioerror);
   }
   print_progress("load shape", 1, 1);
 
   // remove data
   if (positiononly) {
-    normals       = {};
-    texcoords     = {};
-    colors        = {};
-    radius        = {};
-    quadsnorm     = {};
-    quadstexcoord = {};
-    if (!quadspos.empty()) swap(quads, quadspos);
+    shape.normals       = {};
+    shape.texcoords     = {};
+    shape.colors        = {};
+    shape.radius        = {};
+    shape.quadsnorm     = {};
+    shape.quadstexcoord = {};
+    if (!shape.quadspos.empty()) swap(shape.quads, shape.quadspos);
   }
 
   // convert data
   if (trianglesonly) {
-    if (!quadspos.empty())
+    if (!shape.quadspos.empty())
       throw std::runtime_error("cannot convert facevarying data to triangles");
-    if (!quads.empty()) {
-      triangles = quads_to_triangles(quads);
-      quads     = {};
+    if (!shape.quads.empty()) {
+      shape.triangles = quads_to_triangles(shape.quads);
+      shape.quads     = {};
     }
   }
 
   // print info
   if (info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
-        radius);
+    auto stats = shape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
@@ -375,8 +319,8 @@ int main(int argc, const char* argv[]) {
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
-    for (auto& p : positions) p = transform_point(xform, p);
-    for (auto& n : normals)
+    for (auto& p : shape.positions) p = transform_point(xform, p);
+    for (auto& n : shape.normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
     print_progress("transform shape", 1, 1);
   }
@@ -384,17 +328,17 @@ int main(int argc, const char* argv[]) {
   // compute normals
   if (smooth) {
     print_progress("smooth shape", 0, 1);
-    if (!points.empty()) {
-      normals = vector<vec3f>{positions.size(), {0, 0, 1}};
-    } else if (!lines.empty()) {
-      normals = compute_tangents(lines, positions);
-    } else if (!triangles.empty()) {
-      normals = compute_normals(triangles, positions);
-    } else if (!quads.empty()) {
-      normals = compute_normals(quads, positions);
-    } else if (!quadspos.empty()) {
-      normals = compute_normals(quadspos, positions);
-      if (!quadspos.empty()) quadsnorm = quadspos;
+    if (!shape.points.empty()) {
+      shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
+    } else if (!shape.lines.empty()) {
+      shape.normals = compute_tangents(shape.lines, shape.positions);
+    } else if (!shape.triangles.empty()) {
+      shape.normals = compute_normals(shape.triangles, shape.positions);
+    } else if (!shape.quads.empty()) {
+      shape.normals = compute_normals(shape.quads, shape.positions);
+    } else if (!shape.quadspos.empty()) {
+      shape.normals = compute_normals(shape.quadspos, shape.positions);
+      if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
     }
     print_progress("smooth shape", 1, 1);
   }
@@ -402,30 +346,20 @@ int main(int argc, const char* argv[]) {
   // remove normals
   if (faceted) {
     print_progress("facet shape", 0, 1);
-    normals   = {};
-    quadsnorm = {};
+    shape.normals   = {};
+    shape.quadsnorm = {};
     print_progress("facet shape", 1, 1);
   }
 
   if (info) {
     print_info("shape stats ------------");
-    auto stats = shape_stats(points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
-        radius);
+    auto stats = shape_stats(shape);
     for (auto& stat : stats) print_info(stat);
   }
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!quadspos.empty()) {
-    if (!save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords, ioerror))
-      print_fatal(ioerror);
-  } else {
-    if (!save_shape(output, points, lines, triangles, quads, positions, normals,
-            texcoords, colors, radius, ioerror))
-      print_fatal(ioerror);
-  }
+  if (!save_shape(output, shape, ioerror, facevarying)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done
