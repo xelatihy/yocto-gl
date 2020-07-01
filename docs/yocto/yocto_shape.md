@@ -375,19 +375,24 @@ sample_triangles(sampled_positions, sampled_normals, sampled_texcoords,
 
 ## Shape loading and saving
 
-Shapes are loaded with `load_shape(filename, <shape data>, error)` and saved with
-`save_shape(filename, <shape data>, error)`. Both loading and saving take a filename,
-and buffers for shape elements and vertex data, and return whether or not the
-shape was loaded or saved successfully. The library has overrides for multiple
-shape representation, including using separate arrays for each property
-or using `generic_shape` and `generic_fvshape` structs that collect shape data
-for convenience.
+Shapes are loaded with `load_shape(filename, <shape data>, error, facevarying, flipv)`
+and saved with `save_shape(filename, <shape data>, error, facevarying, flipv)`.
+Both loading and saving take a filename, and buffers for shape elements and
+vertex data, and return whether or not the shape was loaded or saved successfully.
 In the case of an error, the IO functions set the `error` string with a
-message suitable for displaying to a user. Yocto/Shapes supports loading
+message suitable for displaying to a user. Yocto/Shape supports loading
 and saving to OBJ and PLY.
+
+The library has overrides for using separate arrays for each property or using
+a `generic_shape` struct that collects shape data for convenience.
 Yocto/Shape supports loading and saving shapes that are composed of
-either points, lines, triangles and quads.
-The type of elements is determined during loading.
+either points, lines, triangles, quads or face-varying quads.
+For indexed meshes, the type of elements is determined during loading,
+while face-varying representations are requested by setting the `facevarying`
+flag in load and save functions. By default, texture coordinates are flipped
+vertically to match the convention of OpenGL texturing; this can be disabled
+by setting the `flipv` flag.
+
 Use `shape_stats(<shape data>)` to get statistics on the shape.
 
 ```cpp
@@ -396,44 +401,32 @@ auto shape = generic_shape{};       // shape data
 // interface using shape buffers
 if(!load_shape(filename, shape, error))    // load shape
    print_error(error);                     // check and print error
-auto stats = shape_stats(points, shape);   // shape stats
+auto stats = shape_stats(shape);           // shape stats
 for(auto& stat : stats) print_info(stat);  // print stats
 if(!save_shape(filename, shape, error))    // save shape
-   print_error(error);                     // check and print error
+  print_error(error);                      // check and print error
 // interface using explicit buffers
-auto& [points, lines, triangles, quads, positions, normals,
-   texcoords, colors, radius] = shape;
-if(!load_shape(filename, points, lines, triangles, quads, positions, normals,
-   texcoords, colors, radius, error))      // load shape
-   print_error(error);                     // check and print error
-auto stats = shape_stats(points, lines, triangles, quads, positions, normals,
-   texcoords, colors, radius);             // shape stats
+auto& [points, lines, triangles, quads, quadspos, quadsnorm, quadstexcoord,
+       positions, normals, texcoords, colors, radius] = shape;
+if(!load_shape(filename, points, lines, triangles, quads,  quadspos,
+               quadsnorm, quadstexcoord, positions, normals, texcoords,
+               colors, radius, error))     // load shape
+  print_error(error);                      // check and print error
+auto stats = shape_stats(points, lines, triangles, quads, quadspos,
+                         quadsnorm, quadstexcoord, positions, normals,
+                         texcoords, colors, radius); // stats
 for(auto& stat : stats) print_info(stat);  // print stats
-if(!save_shape(filename, points, lines, triangles, quads, positions, normals,
-   texcoords, colors, radius, error))      // save shape
-   print_error(error);                     // check and print error
-```
-
-Face-varying shapes are loaded with `fvload_fvshape(filename, <shape data>, error)`
-and saved with `save_fvshape(filename, <shape data>, error)`. The function
-interfaces are modeled similarly to the ones above.
-
-```cpp
-auto shape = generic_fvshape{};       // shape data
-// interface using shape buffers
-if(!load_fvshape(filename, shape, error))   // load face-varyhing shape
-   print_error(error);                      // check and print error
-if(!save_fvshape(filename, shape, error))   // save face-varyhing shape
-   print_error(error);                      // check and print error
-// interface using explicit buffers
-auto& [points, quadspos, quadsnorm, quadstexcoord, positions, normals,
-   texcoords] = shape;
-if(!load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
-   positions, normals, texcoords, error))   // load face-varyhing shape
-   print_error(error);                      // check and print error
-if(!save_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
-   positions, normals, texcoords, error))   // save face-varyhing shape
-   print_error(error);                      // check and print error
+if(!save_shape(filename, points, lines, triangles, quads,  quadspos,
+               quadsnorm, quadstexcoord, positions, normals, texcoords,
+               colors, radius, error))     // save shape
+  print_error(error);                      // check and print error
+// load using different conventions
+auto facevarying = true;
+if(!load_shape(filename, shape, error, facevarying)) // load face-varying shape
+   print_error(error);                               // check and print error
+auto flipv = false;
+if(!load_shape(filename, shape, error, false, flipv))// load flipping uvs
+   print_error(error);                               // check and print error
 ```
 
 ## Procedural shapes

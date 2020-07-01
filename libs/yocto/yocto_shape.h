@@ -479,64 +479,43 @@ namespace yocto {
 
 // Generic indexed shape usd for IO
 struct generic_shape {
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
-  vector<float> radius    = {};
-};
-
-// Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
-    string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool ascii = false,
-    bool flip_texcoords = true);
-
-// Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec3f>& colors, vector<float>& radius, string& error,
-    bool flip_texcoords = true);
-[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, const vector<float>& radius, string& error,
-    bool ascii = false, bool flip_texcoords = true);
-
-// Generic face0varying shape usd for IO
-struct generic_fvshape {
+  vector<int>   points        = {};
+  vector<vec2i> lines         = {};
+  vector<vec3i> triangles     = {};
+  vector<vec4i> quads         = {};
   vector<vec4i> quadspos      = {};
   vector<vec4i> quadsnorm     = {};
   vector<vec4i> quadstexcoord = {};
   vector<vec3f> positions     = {};
   vector<vec3f> normals       = {};
   vector<vec2f> texcoords     = {};
+  vector<vec3f> colors        = {};
+  vector<float> radius        = {};
 };
 
-// Load/save a facevarying shape
-[[nodiscard]] bool load_fvshape(const string& filename, generic_fvshape& shape,
-    string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_fvshape(const string& filename,
-    const generic_fvshape& shape, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+// Load/save a shape
+[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+    string& error, bool facevarying = false, bool flip_texcoords = true);
+[[nodiscard]] bool save_shape(const string& filename,
+    const generic_shape& shape, string& error, bool facevarying = false,
+    bool flip_texcoords = true, bool ascii = false);
 
-// Load/save a facevarying shape
-[[nodiscard]] bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_fvshape(const string& filename,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, string& error,
-    bool ascii = false, bool flip_texcoords = true);
+// Load/save a shape
+[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<float>& radius, string& error, bool facevarying = false,
+    bool flip_texcoords = true);
+[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<float>& radius, string& error, bool facevarying = false,
+    bool flip_texcoords = true, bool ascii = false);
 
 }  // namespace yocto
 
@@ -544,6 +523,9 @@ struct generic_fvshape {
 // SHAPE STATS AND VALIDATION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Get mesh statistics for printing
+vector<string> shape_stats(const generic_shape& shape, bool verbose = false);
 
 // Get mesh statistics for printing
 vector<string> shape_stats(const vector<int>& points,
