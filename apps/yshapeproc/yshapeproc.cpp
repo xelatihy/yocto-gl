@@ -359,7 +359,7 @@ int main(int argc, const char* argv[]) {
 
   // save mesh
   print_progress("save shape", 0, 1);
-  if (!save_shape(output, shape, ioerror)) print_fatal(ioerror);
+  if (!save_shape(output, shape, ioerror, facevarying)) print_fatal(ioerror);
   print_progress("save shape", 1, 1);
 
   // done

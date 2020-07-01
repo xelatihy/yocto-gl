@@ -3612,8 +3612,8 @@ static string get_extension(const string& filename) {
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec3f>& colors,
-    const vector<float>& radius, string& error, bool ascii,
-    bool flip_texcoord) {
+    const vector<float>& radius, string& error, bool facevarying,
+    bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -3688,12 +3688,12 @@ static string get_extension(const string& filename) {
       shape.radius, error, facevarying, flip_texcoords);
 }
 [[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool ascii,
-    bool flip_texcoords) {
+    const generic_shape& shape, string& error, bool facevarying,
+    bool flip_texcoords, bool ascii) {
   return save_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius, error, ascii, flip_texcoords);
+      shape.radius, error, facevarying, flip_texcoords, ascii);
 }
 
 }  // namespace yocto

@@ -497,8 +497,8 @@ struct generic_shape {
 [[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
     string& error, bool facevarying = false, bool flip_texcoords = true);
 [[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+    const generic_shape& shape, string& error, bool facevarying = false,
+    bool flip_texcoords = true, bool ascii = false);
 
 // Load/save a shape
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
@@ -514,8 +514,8 @@ struct generic_shape {
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec3f>& colors,
-    const vector<float>& radius, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+    const vector<float>& radius, string& error, bool facevarying = false,
+    bool flip_texcoords = true, bool ascii = false);
 
 }  // namespace yocto
 
