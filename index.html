@@ -266,6 +266,186 @@
   </li>
 
     
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="yocto/yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
   </ul>
 </nav>
                   </div>
@@ -351,36 +531,49 @@ development and use.</p>
 <p>Yocto/GL is split into small libraries to make code navigation easier.
 See each header file for documentation.</p>
 <ul>
-<li><code>yocto/yocto_math.{h}</code>: fixed-size vectors, matrices, rigid frames, rays,
-   bounding boxes, transforms, random number generation, color and geometry
-   functions, Perlin noise, shading and integration utilities</li>
-<li><code>yocto/yocto_shape.{h,cpp}</code>:  various utilities for manipulating
-   triangle meshes, quads meshes and line sets, computation of normals and
-   tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
-   procedural shapes generation, ray intersection and closest point queries of
-   triangle meshes, quads meshes, line sets and instances scenes using a
-   two-level bounding volume hierarchy</li>
-<li><code>yocto/yocto_image.{h,cpp}</code>: simple image data type, image resizing,
-   tonemapping, color correction, image loading and saving,
-   procedural images, procedural sun-sky, advanced color conversion utilities</li>
-<li><code>yocto/yocto_trace.{h,cpp}</code>: path tracing of surfaces and hairs supporting
-   area and environment illumination, microfacet GGX and subsurface scattering,
-   multiple importance sampling</li>
-<li><code>yocto/yocto_sceneio.{h,cpp}</code>: scene loading and saving of Ply/Obj/Pbrt/glTF 
-   and a custom and scalable Json format</li>
-<li><code>yocto/yocto_ply.h</code>: parsing and writing for Ply format</li>
-<li><code>yocto/yocto_obj.h</code>: parsing and writing for Obj format</li>
-<li><code>yocto/yocto_pbrt.h</code>: parsing and writing for Pbrt format</li>
-<li><code>yocto/yocto_commonio.h</code>: printing utilities, file io utilities,
+<li><a href="yocto/yocto_math/">Yocto/Math</a>: fixed-size vectors, matrices, rigid frames,
+  rays, bounding boxes, transforms</li>
+<li><a href="yocto/yocto_color/">Yocto/Color</a>: color conversion, color adjustment,
+  tone mapping functions, Perlin noise, shading and integration utilities</li>
+<li><a href="yocto/yocto_geometry/">Yocto/Geometry</a>: geometry functions, ray-primitive
+  intersection, point-primitive overlap</li>
+<li><a href="yocto/yocto_noise/">Yocto/Noise</a>: Perlin noise</li>
+<li><a href="yocto/yocto_sampling/">Yocto/Sampling</a>: random number generation,
+  generation of points and directions, Monte Carlo utilities</li>
+<li><a href="yocto/yocto_shading/">Yocto/Shading</a>: evaluation and sampling of fresnel
+  functions, bsdf lobes, transmittance lobes, phase functions</li>
+<li><a href="yocto/yocto_shape/">Yocto/Shape</a>: various utilities for manipulating
+  triangle meshes, quads meshes and line sets, computation of normals and
+  tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
+  procedural shapes generation, ray intersection and closest point queries</li>
+<li><a href="yocto/yocto_mesh/">Yocto/Mesh</a>: computational geometry utilities for
+  triangle meshes, mesh geodesic, mesh cutting, mesh loading and saving</li>
+<li><a href="yocto/yocto_bvh/">Yocto/Bvh</a>: ray intersection and closest point queries
+  of triangle meshes, quads meshes, line sets and instances scenes using a
+  two-level bounding volume hierarchy</li>
+<li><a href="yocto/yocto_image/">Yocto/Image</a>: simple image data type, image resizing,
+  tonemapping, color correction, image loading and saving,
+  procedural images, procedural sun-sky, advanced color conversion utilities</li>
+<li><a href="yocto/yocto_scene/">Yocto/Scene</a>: simple scene representation useful for
+  rendering</li>
+<li>[Yocto/SceneIO](yocto/yocto_sceneio.md`: scene loading and saving of
+  Ply/Obj/Pbrt/glTF and a custom and scalable Json format</li>
+<li><a href="yocto/yocto_trace/">Yocto/Trace</a>: path tracing of surfaces and hairs
+  supporting area and environment illumination, microfacet GGX and subsurface
+  scattering, multiple importance sampling</li>
+<li><a href="yocto/yocto_modelio/">Yocto/ModelIO</a>: parsing and writing for Ply/Obj/Pbrt
+  formats</li>
+<li><a href="yocto/yocto_commonio/">Yocto/CommonIO</a>: printing utilities, file io utilities,
   command line parsing</li>
-<li><code>yocto/yocto_common.h</code>: container, iterators and concurrency utilities</li>
+<li><a href="yocto/yocto_common/">Yocto/CommonIO</a>: container, iterators and concurrency
+  utilities</li>
 </ul>
 <h2 id="example-applications">Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
 test the library:</p>
 <ul>
-<li><code>apps/yscenetrace.cpp</code>:   command-line path-tracer</li>
-<li><code>apps/ysceneitrace.cpp</code>:  interactive path-tracer</li>
+<li><code>apps/yscenetrace.cpp</code>: command-line path-tracer</li>
+<li><code>apps/ysceneitrace.cpp</code>: interactive path-tracer</li>
 <li><code>apps/ysceneitraces.cpp</code>: simpler version of <code>apps/ysceneitrace.cpp</code> for demos</li>
 <li><code>apps/ysceneproc.cpp</code>: command-line scene manipulation and conversion</li>
 <li><code>apps/yshapeproc.cpp</code>: command-line mesh manipulation and conversion</li>
@@ -398,8 +591,8 @@ included in the <a href="https://xelatihy.github.io/yocto-gl/">project site</a>.
 <p>Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
-Most objects is Yocto/GL have value semantic, while large data structures 
-use reference semnatic with strict ownership. This means that everything 
+Most objects is Yocto/GL have value semantic, while large data structures
+use reference semantic with strict ownership. This means that everything
 can be trivially serialized and there is no need for memory management.</p>
 <p>We do this since this makes Yocto/GL easier to extend and quicker to learn,
 with a more explicit data flow that is easier when writing parallel code.
@@ -407,23 +600,23 @@ Since Yocto/GL is mainly used for research and teaching,
 explicit data is both more hackable and easier to understand.</p>
 <p>In terms of code style we prefer a functional approach rather than an
 object oriented one, favoring free functions to class methods. All functions
-and data are defined in sibling namespaces contained in the <code>yocto</code> namespace 
-so libraries can call all others, but have to do so explicitly. </p>
-<p>The use of templates in Yocto was the reason for many refactorings, going
-from no template to heavy template use. At this point, Yocto uses some templates 
-for readability. In the future, we will increase the use of templates in math 
+and data are defined in sibling namespaces contained in the <code>yocto</code> namespace
+so libraries can call all others, but have to do so explicitly.</p>
+<p>The use of templates in Yocto was the reason for many refactoring, going
+from no template to heavy template use. At this point, Yocto uses some templates
+for readability. In the future, we will increase the use of templates in math
 code, while keeping many APIs explicitly typed.</p>
-<p>We do not use exception for error repoting, but only to report "programmers"
+<p>We do not use exception for error reporting, but only to report "programmers"
 errors. For example, IO operations use boolean flags and error strings for
-human readable errors, while exceptions are used when preconditions or 
+human readable errors, while exceptions are used when preconditions or
 postconditions are violatd in functions.</p>
-<p>The current version of the library (2.x) is a major refacting of the previous 
-library versions (1.x) in three main aspects. First, we now allow the use of 
-reference semantric via pointers and adopt it for all large objects, while 
+<p>The current version of the library (2.x) is a major refactoring of the previous
+library versions (1.x) in three main aspects. First, we now allow the use of
+reference semantic via pointers and adopt it for all large objects, while
 keeping value semantic for all others. We did this to avoid erroneous copies
-that cannot detected and avoided at compile time. Second, we had trouble 
+that cannot detected and avoided at compile time. Second, we had trouble
 interacting with C libraries that mostly use reference semantic. Third, we
-reduce the use of exceptions, again for better intergration with external code.</p>
+reduce the use of exceptions, again for better integration with external code.</p>
 <h2 id="credits">Credits</h2>
 <p>Main contributors:</p>
 <ul>
@@ -433,16 +626,16 @@ reduce the use of exceptions, again for better intergration with external code.<
 </ul>
 <p>This library includes code from the <a href="http://www.pcg-random.org">PCG random number generator</a>,
 boost <code>hash_combine</code>, and public domain code from <code>github.com/sgorsten/linalg</code>,
-<code>gist.github.com/badboy/6267743</code> and <code>github.com/nothings/stb_perlin.h</code>.
+<code>gist.github.com/badboy/6267743</code>.
 Other external libraries are included with their own license.</p>
 <h2 id="compilation">Compilation</h2>
 <p>This library requires a C++17 compiler and is know to compiled on
 OsX (Xcode &gt;= 10), Windows (MSVC 2019) and Linux (gcc &gt;= 7, clang &gt;= 4).</p>
 <p>You can build the example applications using CMake with
-    <code>mkdir build; cd build; cmake ..; cmake --build</code></p>
+<code>mkdir build; cd build; cmake ..; cmake --build</code></p>
 <p>Yocto/GL depends on <code>stb_image.h</code>, <code>stb_image_write.h</code>, <code>stb_image_resize.h</code> and
-<code>tinyexr.h</code> for image loading, saving and resizing,  <code>cgltf.h</code> and <code>json.hpp</code>
-for glTF and JSON support, and <code>filesystem.hpp</code> to support C++17 filesystem API 
+<code>tinyexr.h</code> for image loading, saving and resizing, <code>cgltf.h</code> and <code>json.hpp</code>
+for glTF and JSON support, and <code>filesystem.hpp</code> to support C++17 filesystem API
 when missing. All dependencies are included in the distribution.</p>
 <p>We optionally support building OpenGL demos, which are handled by including
 glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually

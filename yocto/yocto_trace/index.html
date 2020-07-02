@@ -1,0 +1,731 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Path tracing - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctotrace-path-tracing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Path tracing
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Path tracing
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Path tracing" class="md-nav__link md-nav__link--active">
+      Path tracing
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-features" class="md-nav__link">
+    Rendering features
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-a-scene" class="md-nav__link">
+    Rendering a scene
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-options" class="md-nav__link">
+    Rendering options
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experimental-async-rendering" class="md-nav__link">
+    Experimental async rendering
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-features" class="md-nav__link">
+    Rendering features
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-a-scene" class="md-nav__link">
+    Rendering a scene
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rendering-options" class="md-nav__link">
+    Rendering options
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experimental-async-rendering" class="md-nav__link">
+    Experimental async rendering
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctotrace-path-tracing">Yocto/Trace: Path tracing</h1>
+<p>Yocto/Trace is a simple path tracer written on the Yocto/Scene model.
+Yocto/Trace is implemented in <code>yocto_trace.h</code> and <code>yocto_trace.cpp</code>.</p>
+<h2 id="rendering-features">Rendering features</h2>
+<p>Yocto/Trace uses the <a href="../yocto_scene/">Yocto/Scene</a> model to represent
+scene data. Consult the scene documentation for a detailed description
+of the scene data model. Yocto/Trace supports rendering of shapes
+represented as indexed meshes of points, lines, triangles and quads.
+The renderer use instancing throughout to gain scalability with large
+environment, while still remaining easy to use. Materials are modeled
+similarly to the Disney's BSDF with integrated subsurface scattering.
+Lights are not specified explicitly but derived by the renderer
+from emissive surface and environment maps in the scene.</p>
+<p>Yocto/Trace implements a fast but simple path tracer. The algorithm
+uses relatively advanced sampling features to reduce the numbers of
+rays used to render an image. At the same time, we focus on general
+solutions that work well in all cases, instead of tuning the algorithm
+to work well in some specific cases.</p>
+<p>Yocto/Trace is a progressively path tracer that computes images
+a few samples at a time. This is true for both offline and online
+rendering. This design allows for partial images to be used to
+give feedback before the render is finished. In the future, this
+might allow for more rendering features like adaptive rendering
+or stop-and-resume renders.</p>
+<h2 id="rendering-a-scene">Rendering a scene</h2>
+<p>To render a scene, first initialize the scene bvh and lights, with
+<code>init_bvh(scene, params, progress)</code> and
+<code>init_lights(scene, params, progress)</code> and then call
+<code>trace_image(scene, camera, params, progress, image_progress)</code>.
+In these functions, <code>params</code> are thee rendering options used to
+render the scene, <code>progress</code> is a callback function used to
+report rendering progress and <code>image_progress</code> is a callback
+function used to report partial images during rendering.
+Both callback functions are optional.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>        <span class="c1">// initialize scene</span>
+<span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
+<span class="k">auto</span> <span class="n">progress</span> <span class="o">=</span> <span class="p">[](</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">message</span><span class="p">,</span> <span class="c1">// progress callback</span>
+      <span class="kt">int</span> <span class="n">current</span><span class="p">,</span> <span class="kt">int</span> <span class="n">total</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">total</span><span class="p">);</span>
+<span class="p">};</span>
+<span class="n">init_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>        <span class="c1">// init bvh</span>
+<span class="n">init_lights</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>     <span class="c1">// init lights</span>
+<span class="n">trace_image</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>     <span class="c1">// render image</span>
+<span class="k">auto</span> <span class="n">improgress</span> <span class="o">=</span> <span class="p">[](</span><span class="k">const</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">render</span><span class="p">,</span> <span class="c1">// image progress</span>
+      <span class="kt">int</span> <span class="n">sample</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="n">sample</span> <span class="o">%</span> <span class="mi">16</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>                    <span class="c1">// every 16 samples</span>
+    <span class="n">save_image</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">render</span><span class="p">);</span>         <span class="c1">// save image</span>
+<span class="p">};</span>
+<span class="n">trace_image</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">,</span> <span class="n">improgress</span><span class="p">);</span> <span class="c1">// render image</span>
+</code></pre></div>
+
+
+<h2 id="rendering-options">Rendering options</h2>
+<p>The rendering process is configured with the <code>trace_params</code> settings.
+<code>sampler</code> determines the algorithm used for rendering: <code>path</code> is the default
+algorithm and probably the one you want to use, <code>naive</code> is a simpler path
+tracing that may be used for testing, <code>eyelight</code> produces quick previews
+of the screen geometry, <code>falsecolor</code> is a debug feature to view scenes
+according to the <code>falsecolor</code> setting, and <code>albedo</code> and <code>normal</code> are
+used to produce denoising buffers.</p>
+<p>THe image resolution is set by <code>resolution</code> and measures the resolution
+of the longest axis. <code>samples</code> is the number of per-pixel samples
+used while rendering and is the only parameter used to control the
+tradeoff between noise and speed. <code>bounces</code> is the maximum number of bounces
+and should be high for scenes with glass and volumes, but otherwise a low
+number would suffice.</p>
+<p>The remaining parameters are approximation used to reduce noise, at the
+expenses of bias. <code>clamp</code> remove high-energy fireflies. <code>nocaustics</code> removes
+certain path that cause caustics. <code>tentfilter</code> apply a linear filter to the
+image pixels. <code>envhidden</code> removes the environment map from the camera rays.</p>
+<p>Finally, the <code>bvh</code> parameter controls the heuristic used to build the Bvh
+and whether the Bvh uses Embree. Please see the description in Yocto/Scene.</p>
+<p><code>trace_sampler_names</code>, <code>trace_falsecolor_names</code> and <code>trace_bvh_names</code>
+define string names for various enum values that can used for UIs or CLIs.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// high quality rendering</span>
+<span class="k">auto</span> <span class="n">hq_params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
+<span class="n">hq_params</span><span class="p">.</span><span class="n">sampler</span>    <span class="o">=</span> <span class="n">trace_sampler_type</span><span class="o">::</span><span class="n">path</span><span class="p">;</span> <span class="c1">// path tracing</span>
+<span class="n">hq_params</span><span class="p">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="mi">1280</span><span class="p">;</span>                 <span class="c1">// high-res render</span>
+<span class="n">hq_params</span><span class="p">.</span><span class="n">samples</span>    <span class="o">=</span> <span class="mi">1024</span><span class="p">;</span>                 <span class="c1">// high-sample count</span>
+<span class="n">hq_params</span><span class="p">.</span><span class="n">bounce</span>     <span class="o">=</span> <span class="mi">64</span><span class="p">;</span>                   <span class="c1">// high max bounces</span>
+<span class="c1">// geometry previewing</span>
+<span class="k">auto</span> <span class="n">pp_params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
+<span class="n">pp_params</span><span class="p">.</span><span class="n">sampler</span>    <span class="o">=</span> <span class="n">trace_sampler_type</span><span class="o">::</span><span class="n">eyelight</span><span class="p">;</span> <span class="c1">// geometry preview</span>
+<span class="n">pp_params</span><span class="p">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="mi">720</span><span class="p">;</span>                  <span class="c1">// medium-res render</span>
+<span class="n">pp_params</span><span class="p">.</span><span class="n">samples</span>    <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>                   <span class="c1">// low-sample count</span>
+<span class="c1">// scene debug viewing</span>
+<span class="k">auto</span> <span class="n">db_params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
+<span class="n">db_params</span><span class="p">.</span><span class="n">sampler</span>    <span class="o">=</span> <span class="n">trace_sampler_type</span><span class="o">::</span><span class="n">falsecolor</span><span class="p">;</span> <span class="c1">// debug false colors</span>
+<span class="n">db_params</span><span class="p">.</span><span class="n">falsecolor</span> <span class="o">=</span> <span class="n">trace_falsecolor_type</span><span class="o">::</span><span class="n">normal</span><span class="p">;</span> <span class="c1">// normal viewing</span>
+<span class="n">db_params</span><span class="p">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="mi">720</span><span class="p">;</span>                  <span class="c1">// medium-res render</span>
+<span class="n">db_params</span><span class="p">.</span><span class="n">samples</span>    <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>                   <span class="c1">// low-sample count</span>
+</code></pre></div>
+
+
+<h2 id="experimental-async-rendering">Experimental async rendering</h2>
+<p>The render can run in asynchronous mode where the rendering process is
+lunched and runs until completion. This mode is useful when for interactive
+viewing or in modeling-while-rendering applications. The API is very minimal
+and only controls the rendering process. Use <code>trace_start(...)</code> to start
+the async renderer and <code>trace_stop(...)</code> to stop it. The renderer starts
+by rendering a low resolution preview and then proceeds progressively.</p>
+<p>The async renderer takes a <code>trace_state</code> struct that tracks the rendering
+process and contains all data needed by the async renderer. Rendering progress
+ifs given by three callbacks. The first two are the rendering callbacks
+defined for offline rendeirng, that return progress report and an image buffer
+for each sample. In async mode, a further callback is called after each
+pixel is rendered.</p>
+<p>During rendering, no scenes changes are allowed, and changes to bvh and lights
+are not tracked. This is on purpose since it allows for a simple API while
+retaining maximum speed. To changes the scene, first stop the render, than
+apply scene changes, than update lights and bvh if needed, and finally restart
+the renderer.
+To update the BVH, use <code>update_bvh(scene, instances, shapes, params)</code> where
+<code>instances</code> and <code>shapes</code> are the list of modified ids.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>        <span class="c1">// initialize scene</span>
+<span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">trace_params</span><span class="p">{};</span>             <span class="c1">// default params</span>
+<span class="n">init_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>        <span class="c1">// init bvh</span>
+<span class="n">init_lights</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>     <span class="c1">// init lights</span>
+<span class="k">auto</span> <span class="n">imgprogress</span> <span class="o">=</span> <span class="p">[](</span><span class="k">const</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">render</span><span class="p">,</span> <span class="c1">// image progress</span>
+      <span class="kt">int</span> <span class="n">sample</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">display_image</span><span class="p">(</span><span class="n">render</span><span class="p">);</span>                  <span class="c1">// display image</span>
+<span class="p">};</span>
+<span class="k">auto</span> <span class="n">pxlprogress</span> <span class="o">=</span> <span class="p">[](</span><span class="k">const</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">render</span><span class="p">,</span> <span class="c1">// pixel progress</span>
+      <span class="kt">int</span> <span class="n">sample</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">display_pixel</span><span class="p">(</span><span class="n">render</span><span class="p">,</span> <span class="n">ij</span><span class="p">);</span>              <span class="c1">// display pixel</span>
+<span class="p">};</span>
+<span class="k">auto</span> <span class="n">state</span> <span class="o">=</span> <span class="k">new</span> <span class="n">trace_state</span><span class="p">{};</span>           <span class="c1">// allocate state</span>
+<span class="n">trace_start</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="p">{},</span>     <span class="c1">// start async renderer</span>
+  <span class="n">imgprogress</span><span class="p">,</span> <span class="n">pxlprogress</span><span class="p">);</span>              <span class="c1">// function returns immediately</span>
+<span class="n">run_app</span><span class="p">(...);</span>                             <span class="c1">// application runs normally here</span>
+<span class="n">trace_stop</span><span class="p">(</span><span class="n">state</span><span class="p">);</span>                        <span class="c1">// stop async renderer</span>
+<span class="n">modify_scene</span><span class="p">(...);</span>                        <span class="c1">// make scene changes</span>
+<span class="n">trace_start</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="p">{},</span>     <span class="c1">// re-start async renderer</span>
+  <span class="n">imgprogress</span><span class="p">,</span> <span class="n">pxlprogress</span><span class="p">);</span>              <span class="c1">// function returns immediately</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_sceneio/" title="Scene serialization" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Scene serialization
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_commonio/" title="Command-line utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Command-line utilities
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

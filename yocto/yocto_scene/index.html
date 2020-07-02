@@ -1,0 +1,1016 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Scene representation - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctoscene-scene-representation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Scene representation
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Scene representation
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Scene representation" class="md-nav__link md-nav__link--active">
+      Scene representation
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scene-representation" class="md-nav__link">
+    Scene representation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-creation" class="md-nav__link">
+    Scene Creation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-of-scene-properties" class="md-nav__link">
+    Evaluation of scene properties
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ray-scene-intersection" class="md-nav__link">
+    Ray-scene intersection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-tesselation" class="md-nav__link">
+    Scene tesselation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-stats-and-validation" class="md-nav__link">
+    Scene stats and validation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-scenes" class="md-nav__link">
+    Example scenes
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scene-representation" class="md-nav__link">
+    Scene representation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-creation" class="md-nav__link">
+    Scene Creation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-of-scene-properties" class="md-nav__link">
+    Evaluation of scene properties
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ray-scene-intersection" class="md-nav__link">
+    Ray-scene intersection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-tesselation" class="md-nav__link">
+    Scene tesselation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scene-stats-and-validation" class="md-nav__link">
+    Scene stats and validation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-scenes" class="md-nav__link">
+    Example scenes
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctoscene-scene-representation">Yocto/Scene: Scene representation</h1>
+<p>Yocto/Scene define a simple scene representation, and related utilities,
+used to write other libraries in Yocto/GL.
+Yocto/Scene is implemented in <code>yocto_scene.h</code> and <code>yocto_scene.cpp</code>.</p>
+<h2 id="scene-representation">Scene representation</h2>
+<p>Scenes are stored in <code>scene_model</code> structs and are comprised of array
+of objects whose memory is owned by the scene.
+Scenes are comprised of camera, instances, shapes, materials, textures
+and environments. Animation is not currently supported.
+The scene representation is geared toward modeling physically-based environments. In Yocto/Scene, lights are not explicitly defined, but
+implicitly comprised of instances with emissive materials and environment maps.
+All scenes and objects properties are accessible directly.
+Some scene data, like lights and ray-acceleration structures,
+are computed when necessary and should not be accessed directly.</p>
+<p>All scenes objects have names that have to be unique and
+are used for both UI and serialization. Cameras, instances and environments
+have coordinate frames to define the local to world transformation.
+Frames are presented as affine 3x4 matrices and are intended to be
+rigid transforms, although most scene processing support frames with
+scaling.</p>
+<p><strong>Cameras</strong>, represented by <code>scene_camera</code>, are based on a simple lens model.
+Cameras coordinate systems are defined by their frame.
+Cameras projections are described in photographic terms. In particular,
+we specify film size (35mm by default), film aspect ration,
+the lens' focal length, the focus distance and the lens aperture.
+All values are in meters. We support both perspective and orthographic cameras,
+but prefer the former.</p>
+<p>Common aspect ratios used in video and still photography are
+3:2 on 35 mm (0.036 x 0.024),
+16:9 on 35 mm (0.036 x 0.02025 or 0.04267 x 0.024),
+2.35:1 on 35 mm (0.036 x 0.01532 or 0.05640 x 0.024),
+2.39:1 on 35 mm (0.036 x 0.01506 or 0.05736 x 0.024),
+2.40:1 on 35 mm (0.036 x 0.015 or 0.05760 x 0.024).
+To compute good apertures, one can use the F-stop number from photography
+and set the aperture to focal length over f-stop.</p>
+<p><strong>Textures</strong>, represented as <code>scene_texture</code> contain either 8-bit LDR or
+32-bit float HDR images of either scalar or color (RGB) type.
+HDR images are encoded in linear color space, while LDR images
+are encoded in sRGB.</p>
+<p><strong>Materials</strong> are modeled similarly to the
+<a href="https://blog.selfshadow.com/publications/s2015-shading-course/#course_content">Disney Principled BSDF</a> and the
+<a href="https://autodesk.github.io/standard-surface/">Autodesk Standard Surface</a>.
+Materials are defined using many parameters that control material emission,
+surface scattering and homogeneous volumetric scattering.
+Each material parameter has an associated texture, where texture values are
+multiplied by parameter values.</p>
+<p>Materials specify a diffuse surface emission <code>emission</code> with HDR values
+that represent emitted radiance.</p>
+<p>Surface scattering is modeled by defining the main surface
+color <code>color</code>, that represent the surface albedo.
+Specular reflection is modeled by default as a dielectric with index of
+refraction <code>ior</code>, roughness <code>roughness</code> and is scaled by a specular
+weight <code>specular</code>. By default, specular reflection is dielectric.
+Materials can reflect light as metals by setting the <code>metallic</code> parameter.
+In this case, a metallic specular reflection is defined by the surface color
+interpreted as metallic reflectivity, and surface roughness defined by
+the previous parameter. Surfaces are optionally covered by a coating layer
+defined by a <code>coat</code> parameter. By default surfaces are fully opaque, but
+can defined a <code>opacity</code> parameter and texture to define the surface coverage.</p>
+<p>Materials also define volumetric scattering properties by setting a
+<code>transmission</code> parameter that sets the transmitted surface color.
+Surfaces are be default considered as thin sheet, but can be modeled as
+isotropic volumes if the <code>thin</code> parameter is set to false. In that case,
+the surface transmission controls the volumetric parameters by defining the
+volume density, while the volume scattering albedo is defined by the
+<code>scattering</code> property.</p>
+<p><strong>Shapes</strong> are represented as indexed meshes of elements using the
+<code>scene_shape</code> type. Shapes can contain only one type of element, either
+points, lines, triangles or quads. Shape elements are parametrized as in
+<a href="../yocto_geometry/">Yocto/Geometry</a>.
+Vertex properties are defined as separate arrays and include
+positions, normals, texture coords, colors, radius and tangent spaces.
+Additionally, Yocto/Scenes supports face-varying primitives where
+each vertex data has its own topology.</p>
+<p>Shapes supports tesselation and displacement mapping. Shape specify a
+level of subdivision and can be subdivide elements either linearly
+or using Catmull-Clark subdivision. Shapes also support displacement
+by specifying both a displacement texture and a displacement amount.
+Differently from most systems, in Yocto/Scene displacement is specified
+in the shape and not the material, that only controls shading.
+Subdivision and displacement are only specified in shapes, but not
+taken into account when evaluating shape properties. For this to happen,
+shapes have to be tessellated, as shown later.</p>
+<p>Shapes are placed in the scene by defining shape <strong>instances</strong> that
+take a coordinate frame, a shape pointer and a material pointer.
+Instances are represented by the <code>scene_instance</code> type.
+Instances are represented as <code>scene_instance</code> objects. Thought the
+use of instancing Yocto/Scene scales well to large environments without
+introducing more complex mechanisms.</p>
+<p>Scenes might be lit by background illumination defined by <strong>environments</strong>,
+represented by the <code>scene_environment</code> type. Environments have a frame,
+to rotate illumination, an emission term and an optional emission texture.
+The emission texture is an HDR environment map stored in a LatLon
+parametrization.</p>
+<h2 id="scene-creation">Scene Creation</h2>
+<p>Objects are added to the scene via <code>add_&lt;object&gt;(scene,name)</code> functions,
+where <code>&lt;object&gt;</code> is the object type name. In these functions,
+the name is optional and, if left blank, a unique name will be generated
+automatically. For each object type, properties can be set directly.
+As a convenience, Yocto/Scene defines several functions to set objects
+properties.</p>
+<p>For cameras, use <code>set_frame(camera, frame)</code> to set the local to world frame,
+<code>set_lens(camera, lens, aspect, film, ortho)</code> to set the camera projection using
+photographic lens parameters, and <code>set_focus(camera, aperture, focus)</code> to set
+the camera aperture and focus distance.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>          <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">add_camera</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;cam&quot;</span><span class="p">);</span>  <span class="c1">// create a camera named cam</span>
+<span class="n">set_frame</span><span class="p">(</span><span class="n">camera</span><span class="p">,</span><span class="n">identity3x4f</span><span class="p">);</span>          <span class="c1">// set frame to identity</span>
+<span class="n">set_lens</span><span class="p">(</span><span class="n">camera</span><span class="p">,</span><span class="mf">0.050</span><span class="p">,</span><span class="mf">1.5</span><span class="p">,</span><span class="mf">0.036</span><span class="p">);</span>     <span class="c1">// set as 50mm lens 3:2 aspect on 35mm</span>
+<span class="n">set_aperture</span><span class="p">(</span><span class="n">camera</span><span class="p">,</span><span class="mf">0.01</span><span class="p">,</span><span class="mi">10</span><span class="p">);</span>            <span class="c1">// set 10mm aperture focused at 10m</span>
+</code></pre></div>
+
+
+<p>For instances, use <code>set_frame(instance, frame)</code> to set the local to world frame,
+<code>set_shape(instance, shape)</code> and <code>set_material(instance, material)</code>
+to set the shape and material pointers. Since adding instances of single
+shapes is common in simpler scenes, the function
+<code>add_complete_instance(scene, name)</code> adds an instance with a new shape and
+material.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;ist&quot;</span><span class="p">);</span> <span class="c1">// create an instance named ist</span>
+<span class="n">set_frame</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span><span class="n">identity3x4f</span><span class="p">);</span>           <span class="c1">// set frame to identity</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;shp&quot;</span><span class="p">);</span>
+<span class="n">set_shape</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span><span class="n">shape</span><span class="p">);</span>                  <span class="c1">// set shape pointer</span>
+<span class="k">auto</span> <span class="n">material</span> <span class="o">=</span> <span class="n">add_material</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;mat&quot;</span><span class="p">);</span>
+<span class="n">set_material</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span><span class="n">material</span><span class="p">);</span>            <span class="c1">// set material pointer</span>
+
+<span class="k">auto</span> <span class="n">instance1</span> <span class="o">=</span> <span class="n">add_complete_instance</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;obj&quot;</span><span class="p">);</span>  <span class="c1">// create an instance</span>
+<span class="n">print_info</span><span class="p">(</span><span class="n">instance1</span><span class="o">-&gt;</span><span class="n">shape</span><span class="p">);</span>                          <span class="c1">// with a new shape</span>
+<span class="n">print_info</span><span class="p">(</span><span class="n">instance1</span><span class="o">-&gt;</span><span class="n">material</span><span class="p">);</span>                       <span class="c1">// and  a new material</span>
+</code></pre></div>
+
+
+<p>For textures, use <code>set_texture(texture, img)</code> to set the texture
+to the specified image. The function has overloads for images with
+one or three channels and with float or byte channel types.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;tex&quot;</span><span class="p">);</span>   <span class="c1">// create a texture named tex</span>
+<span class="n">set_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="n">image</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...});</span>     <span class="c1">// set as a color HDR texture</span>
+<span class="n">set_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="n">image</span><span class="o">&lt;</span><span class="n">vec3b</span><span class="o">&gt;</span><span class="p">{...});</span>     <span class="c1">// set as a color LDR texture</span>
+<span class="n">set_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="n">image</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{...});</span>     <span class="c1">// set as a scalar HDR texture</span>
+<span class="n">set_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,</span><span class="n">image</span><span class="o">&lt;</span><span class="n">byte</span> <span class="o">&gt;</span><span class="p">{...});</span>     <span class="c1">// set as a scalar LDR texture</span>
+</code></pre></div>
+
+
+<p>For materials, Yocto/Scene defines functions to set each material property.
+Each functions take as input the parameter value and an optional texture.
+Use <code>set_emission(material, emission, tex)</code> to set material emission.
+Use <code>set_color(material, color, tex)</code> to set the surface color,
+<code>set_specular(material, specular, tex)</code>,
+<code>set_metallic(material, metallic, tex)</code>,
+<code>set_transmission(material, transmission, tex)</code>
+for specular, metallic and transmission weights,
+<code>set_ior(material, ior)</code>, <code>set_roughness(material, roughness, tex)</code>,
+<code>set_opacity(material, opacity, tex)</code> for surface ior, roughness and opacity,
+<code>set_scattering(material, scattering,tex)</code> for volumetric scattering and
+<code>set_thin(material, thin)</code> for the thin flag.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>               <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">matte</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;matte&quot;</span><span class="p">);</span>     <span class="c1">// create a matte material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">matte</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">));</span> <span class="c1">// textured albedo</span>
+<span class="k">auto</span> <span class="n">plastic</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;plastic&quot;</span><span class="p">);</span> <span class="c1">// create a plastic material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">plastic</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>              <span class="c1">// constant color</span>
+<span class="n">set_specular</span><span class="p">(</span><span class="n">plastic</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                     <span class="c1">// constant specular</span>
+<span class="n">set_roughness</span><span class="p">(</span><span class="n">plastic</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">));</span> <span class="c1">// textured roughness</span>
+<span class="k">auto</span> <span class="n">metal</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;metal&quot;</span><span class="p">);</span>     <span class="c1">// create a metal material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">metal</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>                <span class="c1">// constant color</span>
+<span class="n">set_specular</span><span class="p">(</span><span class="n">metal</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                       <span class="c1">// constant specular</span>
+<span class="n">set_roughness</span><span class="p">(</span><span class="n">metal</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">);</span>                    <span class="c1">// constant roughness</span>
+<span class="k">auto</span> <span class="n">tglass</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;tglass&quot;</span><span class="p">);</span>   <span class="c1">// create a thin glass material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">tglass</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>                   <span class="c1">// constant color</span>
+<span class="n">set_specular</span><span class="p">(</span><span class="n">tglass</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                      <span class="c1">// constant specular</span>
+<span class="n">set_transmission</span><span class="p">(</span><span class="n">tglass</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                  <span class="c1">// constant transmission</span>
+<span class="k">auto</span> <span class="n">glass</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;glass&quot;</span><span class="p">);</span>     <span class="c1">// create a glass material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">glass</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>                    <span class="c1">// constant color</span>
+<span class="n">set_specular</span><span class="p">(</span><span class="n">glass</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                       <span class="c1">// constant specular</span>
+<span class="n">set_transmission</span><span class="p">(</span><span class="n">glass</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                   <span class="c1">// constant transmission</span>
+<span class="n">set_thin</span><span class="p">(</span><span class="n">glass</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>                       <span class="c1">// volumetric material</span>
+<span class="k">auto</span> <span class="n">subsurf</span> <span class="o">=</span> <span class="n">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;subsurf&quot;</span><span class="p">);</span> <span class="c1">// create a subsurface material</span>
+<span class="n">set_color</span><span class="p">(</span><span class="n">subsurf</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">});</span>                  <span class="c1">// constant color</span>
+<span class="n">set_specular</span><span class="p">(</span><span class="n">subsurf</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                     <span class="c1">// constant specular</span>
+<span class="n">set_transmission</span><span class="p">(</span><span class="n">subsurf</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>                 <span class="c1">// constant transmission</span>
+<span class="n">set_thin</span><span class="p">(</span><span class="n">subsurf</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>                     <span class="c1">// volumetric material</span>
+<span class="n">set_scattering</span><span class="p">(</span><span class="n">subsurf</span><span class="p">,</span> <span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>         <span class="c1">// volumetric scattering</span>
+</code></pre></div>
+
+
+<p>For shapes, Yocto/Scene defines functions to set shape element indices
+and vertex properties. Use <code>set_points(shape, points)</code>,
+<code>set_lines(shape, lines)</code>, <code>set_triangles(shape, triangles)</code>, and
+<code>set_quads(shape, quads)</code> to set indexed meshes indices as points, lines,
+triangles and quads respectively.
+Use <code>set_positions(shape, positions)</code>, <code>set_normals(shape, normals)</code>,
+<code>set_texcoords(shape, texcoords)</code>, <code>set_colors(shape, colors)</code>,
+<code>set_radius(shape, radius)</code>, and <code>set_tangents(shape, tangents)</code>
+to set positions, normals, texture coordinates, colors, radius and
+tangent spaces respectively.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;shp&quot;</span><span class="p">);</span>       <span class="c1">// create a shape named shp</span>
+<span class="n">set_triangles</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">{...});</span>   <span class="c1">// set triangle indices</span>
+<span class="n">set_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...});</span>   <span class="c1">// set positions</span>
+<span class="n">set_normals</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...});</span>     <span class="c1">// set normals</span>
+<span class="n">set_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...});</span>   <span class="c1">// set texture coordinates</span>
+</code></pre></div>
+
+
+<p>Use <code>set_fvquads(shape, quadspos, quadsnorm, quadsuv)</code> to set the shapes as
+a facce-varying quad mesh. Use <code>set_displacement(shape, disp, tex)</code> to
+set the displacement map and scale and <code>set_subdivision(shape, level, cc)</code>
+to set the subdivision level and whether to use Catmull-Clark or linear
+subdivision.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;shp&quot;</span><span class="p">);</span>       <span class="c1">// create a shape named shp</span>
+<span class="n">set_fvquads</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...},</span>      <span class="c1">// set face-varying indices</span>
+  <span class="p">{},</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">{...});</span>                  <span class="c1">// for positions and textures</span>
+<span class="n">set_positions</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">{...});</span>   <span class="c1">// set positions</span>
+<span class="n">set_texcoords</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">{...});</span>   <span class="c1">// set texture coordinates</span>
+<span class="n">set_subdivision</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>            <span class="c1">// set Catmull-Clark subdivision</span>
+<span class="n">set_displacement</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tex</span><span class="p">);</span>            <span class="c1">// sete displacement map tex</span>
+</code></pre></div>
+
+
+<p>For environments, use <code>set_frame(environment, frame)</code> to set the local to
+world frame, <code>set_emission(instance, emission, emission_tex)</code> to set the
+environment emission and emission texture.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>             <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">add_environment</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;env&quot;</span><span class="p">);</span> <span class="c1">// create an environment</span>
+<span class="n">set_frame</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">identity3x4f</span><span class="p">);</span>       <span class="c1">// set identity transform</span>
+<span class="k">auto</span> <span class="n">tex</span> <span class="o">=</span> <span class="n">add_scene</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="s">&quot;sky&quot;</span><span class="p">);</span>         <span class="c1">// add hdr texture</span>
+<span class="n">set_emission</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">},</span> <span class="n">tex</span><span class="p">);</span>    <span class="c1">// add emission scale and texture</span>
+</code></pre></div>
+
+
+<p>For quickly creating scenes, Yocto/Scene provides convenience functions
+that add missing elements to construct full scenes.
+Use <code>add_cameras(scene)</code> to add a default camera, <code>add_materials(scene)</code>
+to add default materials for instances that miss it, <code>add_radius(scene)</code>
+to add points and lines thickness for rendering, and <code>add_sky(scene)</code> to
+add a procedural sky environment map.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{};</span>       <span class="c1">// create a scene</span>
+<span class="k">auto</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">add_shape</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>        <span class="c1">// add a shape</span>
+<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>  <span class="c1">// add a shape instance</span>
+<span class="n">set_shape</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span><span class="n">shape</span><span class="p">);</span>
+<span class="n">add_cameras</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>                   <span class="c1">// add default camera</span>
+<span class="n">add_materials</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>                 <span class="c1">// add default materials to instances</span>
+<span class="n">add_sky</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>                       <span class="c1">// add environment and procedural sky</span>
+</code></pre></div>
+
+
+<h2 id="evaluation-of-scene-properties">Evaluation of scene properties</h2>
+<p>Yocto/Scene defines several function to evaluate scene properties.
+Use <code>compute_bounds(scene)</code> to compute the scene bounding boxes. Use <code>get_camera(scene, name)</code> to get a camera by name or the default camera is the name is not
+given. Use <code>eval_camera(camera, image_uv, lens_uv)</code> to get a camera ray
+from the normalized image coordinates <code>image_uv</code> and lens coordinates <code>lens_uv</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>             <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">camera</span> <span class="o">=</span> <span class="n">get_camera</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>               <span class="c1">// get default camera</span>
+<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">eval_camera</span><span class="p">(</span><span class="n">camera</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">});</span><span class="c1">// get ray though image center</span>
+</code></pre></div>
+
+
+<p>Use <code>texture_size(texture)</code> to get the texture resolution, and
+<code>eval_texture(texture, uv)</code> to evaluate the texture at specific uvs.
+Textures evaluation returns a color in linear color space, regardless of
+the texture representation.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>             <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">textures</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>         <span class="c1">// get first texture</span>
+<span class="k">auto</span> <span class="n">col</span> <span class="o">=</span> <span class="n">eval_texture</span><span class="p">(</span><span class="n">texture</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>    <span class="c1">// eval texture</span>
+</code></pre></div>
+
+
+<p>Use <code>eval_material(material, texcoord)</code> to evaluate material textures and
+combine them with parameter values. The function returns a
+<code>scene_material_sample</code> that has the same parameters of a material but no
+textures defined.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>             <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">material</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">materials</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>      <span class="c1">// get first material</span>
+<span class="k">auto</span> <span class="n">mat</span> <span class="o">=</span> <span class="n">eval_texture</span><span class="p">(</span><span class="n">material</span><span class="p">,{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>   <span class="c1">// eval material</span>
+</code></pre></div>
+
+
+<p>Several functions are defined to evaluate the geometric and material
+properties of points on instances, indicated by the shape element id
+and, when needed, the shape element barycentric coordinates.
+Use <code>eval_position(...)</code> to evaluate the point position,
+<code>eval_normal(...)</code> to evaluate the interpolate point normal,
+<code>eval_texcoord(...)</code> to evaluate the point texture coordinates,
+<code>eval_element_normal(...)</code> to evaluate the point geometric normal, and
+<code>eval_color(...)</code> to evaluate the interpolate point color.
+Use <code>eval_material(...)</code> as a convenience function to evaluate material properties of instance points.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>             <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">instances</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>      <span class="c1">// get first instance</span>
+<span class="k">auto</span> <span class="n">eid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="k">auto</span> <span class="n">euv</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span>       <span class="c1">// element id and uvs</span>
+<span class="k">auto</span> <span class="n">pos</span>  <span class="o">=</span> <span class="n">eval_position</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval point position</span>
+<span class="k">auto</span> <span class="n">norm</span> <span class="o">=</span> <span class="n">eval_normal</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span>   <span class="c1">// eval point normal</span>
+<span class="k">auto</span> <span class="n">st</span>   <span class="o">=</span> <span class="n">eval_texcoord</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval point texture coords</span>
+<span class="k">auto</span> <span class="n">col</span>  <span class="o">=</span> <span class="n">eval_color</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span>    <span class="c1">// eval point color</span>
+<span class="k">auto</span> <span class="n">gn</span>   <span class="o">=</span> <span class="n">eval_element_normal</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval geometric normal</span>
+<span class="k">auto</span> <span class="n">mat</span>  <span class="o">=</span> <span class="n">eval_material</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">eid</span><span class="p">,</span> <span class="n">euv</span><span class="p">);</span> <span class="c1">// eval point material</span>
+</code></pre></div>
+
+
+<p>Use <code>eval_environment(environment, direction)</code> to evaluate an environment
+map emission along a specific direction <code>direction</code>. Use
+<code>eval_environment(scene, direction)</code> to accumulate the lighting for all
+environment maps.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>               <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">enva</span> <span class="o">=</span> <span class="n">eval_environment</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>        <span class="c1">// eval all environments</span>
+<span class="k">auto</span> <span class="n">environment</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">environments</span><span class="p">.</span><span class="n">front</span><span class="p">();</span>  <span class="c1">// get first environment</span>
+<span class="k">auto</span> <span class="n">envi</span> <span class="o">=</span> <span class="n">eval_environment</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>  <span class="c1">// eval environment</span>
+</code></pre></div>
+
+
+<h2 id="ray-scene-intersection">Ray-scene intersection</h2>
+<p>Yocto/Scene supports ray-scene intersection queries accelerated by a two-level
+BVH. We provide both our implementation and an Embree wrapper. To perform
+ray intersection queries, first initialize the BVH with
+<code>init_bvh(scene, params, progress). The function takes a scene as input and builds a BVH that is stored internally. The BVH build strategy, and whether or not Embree is used</code> is determined by
+the <code>params</code> settings. The function takes also an optional progress callback
+that is called as the BVH is build to report build progress.
+After initialization, if scene shapes and instances are modified, the BVH
+can be updated with <code>update_bvh(...)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>               <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">params</span> <span class="o">=</span> <span class="n">scene_bvh_params</span><span class="p">{};</span>                <span class="c1">// default params</span>
+<span class="k">auto</span> <span class="n">progress</span> <span class="o">=</span> <span class="p">[](</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">message</span><span class="p">,</span>        <span class="c1">// progress callback</span>
+   <span class="kt">int</span> <span class="n">current</span><span class="p">,</span> <span class="kt">int</span> <span class="n">total</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">print_info</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">total</span><span class="p">);</span>
+<span class="p">};</span>
+<span class="n">init_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">progress</span><span class="p">);</span>               <span class="c1">// build bvh</span>
+<span class="n">params</span><span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">scene_bvh_type</span><span class="o">::</span><span class="n">embree_default</span><span class="p">;</span>    <span class="c1">// set build type as Embree</span>
+<span class="n">init_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>        <span class="c1">// build Embree bvh with no progress report</span>
+</code></pre></div>
+
+
+<p>Use <code>intersect_scene_bvh(scene, ray)</code> to intersect a ray with a scene,
+and <code>intersect_instance_bvh(instance, ray)</code> to intersect a ray with an
+instance. Both functions return a <code>scene_intersection</code> that includes
+a hit flag, the instance id, the shape element id, the shape element uv
+and intersection distance.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>          <span class="c1">// create a complete scene</span>
+<span class="n">init_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="p">{});</span>                        <span class="c1">// build default bvh</span>
+<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{...};</span>                      <span class="c1">// ray</span>
+<span class="k">auto</span> <span class="n">isec</span> <span class="o">=</span> <span class="n">intersect_scene_bvh</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">ray</span><span class="p">);</span><span class="c1">// ray-scene intersection</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">isec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">isec</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">instance</span> <span class="o">=</span> <span class="n">scene</span><span class="o">-&gt;</span><span class="n">instances</span><span class="p">.</span><span class="n">first</span><span class="p">();</span>   <span class="c1">// get instance</span>
+<span class="k">auto</span> <span class="n">iisec</span> <span class="o">=</span> <span class="n">intersect_instance_bvh</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">ray</span><span class="p">);</span> <span class="c1">// ray-instance int,</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">iisec</span><span class="p">.</span><span class="n">hit</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">isec</span><span class="p">);</span>
+</code></pre></div>
+
+
+<h2 id="scene-tesselation">Scene tesselation</h2>
+<p>The evaluation functions defined above and the ray intersection functions do
+not support subdivision surfaces or displaced shapes directly. Instead,
+shapes should be converted to indexed meshes using <code>tesselate_shape(shape)</code>
+for a specific shape, or <code>tesselate_shapes(scene, progress)</code> for the
+whole scene. Note that tesselations are destructive, meaning that the original
+shape data is lost. This is done to avoid copying whenever possible.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>          <span class="c1">// create a complete scene</span>
+<span class="kt">void</span> <span class="nf">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>               <span class="c1">// tesselate shapes in the scene</span>
+</code></pre></div>
+
+
+<h2 id="scene-stats-and-validation">Scene stats and validation</h2>
+<p>Yocto/Scene has functions to compute scene stats and provide validation of
+scene data. Use <code>scene_stats(scene)</code> to get scene stats and
+<code>scene_validation(scene)</code> to validate scene objects.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>          <span class="c1">// create a complete scene</span>
+<span class="k">auto</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">scene_stats</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>            <span class="c1">// get stats</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">stat</span> <span class="p">:</span> <span class="n">stats</span><span class="p">)</span> <span class="n">print_info</span><span class="p">(</span><span class="n">stat</span><span class="p">);</span>    <span class="c1">// print stats</span>
+<span class="k">auto</span> <span class="n">errors</span> <span class="o">=</span> <span class="n">validate_stats</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>        <span class="c1">// get validation errors</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">error</span> <span class="p">:</span> <span class="n">errors</span><span class="p">)</span> <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span><span class="c1">// print error</span>
+</code></pre></div>
+
+
+<h2 id="example-scenes">Example scenes</h2>
+<p>Yocto/Scene has a function to create a simple Cornell Box scene for testing.
+There are plans to increase support for more test scenes in the future.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">scene</span> <span class="o">=</span> <span class="k">new</span> <span class="n">scene_model</span><span class="p">{...};</span>          <span class="c1">// create a complete scene</span>
+<span class="n">make_cornellbox</span><span class="p">(</span><span class="n">scene</span><span class="p">);</span>                     <span class="c1">// make cornell box</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_modelio/" title="Model serialization" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Model serialization
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_sceneio/" title="Scene serialization" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Scene serialization
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

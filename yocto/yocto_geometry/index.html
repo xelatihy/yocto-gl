@@ -1,0 +1,770 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Geometry operations - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctogeometry-geometry-operations" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Geometry operations
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Geometry operations
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Geometry operations" class="md-nav__link md-nav__link--active">
+      Geometry operations
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#primitive-parametrization" class="md-nav__link">
+    Primitive parametrization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geometric-properties" class="md-nav__link">
+    Geometric properties
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpolation-on-primitives" class="md-nav__link">
+    Interpolation on primitives
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#primitive-bounding-boxes" class="md-nav__link">
+    Primitive bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ray-primitive-intersections" class="md-nav__link">
+    Ray-primitive intersections
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#point-primitive-overlaps" class="md-nav__link">
+    Point-primitive overlaps
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#primitive-parametrization" class="md-nav__link">
+    Primitive parametrization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geometric-properties" class="md-nav__link">
+    Geometric properties
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpolation-on-primitives" class="md-nav__link">
+    Interpolation on primitives
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#primitive-bounding-boxes" class="md-nav__link">
+    Primitive bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ray-primitive-intersections" class="md-nav__link">
+    Ray-primitive intersections
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#point-primitive-overlaps" class="md-nav__link">
+    Point-primitive overlaps
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctogeometry-geometry-operations">Yocto/Geometry: Geometry operations</h1>
+<p>Yocto/Geometry defines basic geometry operations, including computation of
+basic geometry quantities, ray-primitive intersection, point-primitive
+distance, primitive bounds, and several interpolation functions.
+Yocto/Geometry is implemented in <code>yocto_geometry.h</code>.</p>
+<h2 id="primitive-parametrization">Primitive parametrization</h2>
+<p>Yocto/Geometry supports operations on lines, triangles, quads and beziers.
+In these functions, triangles are parameterized with barycentric coordinates
+<code>uv</code> written with respect to the <code>p1-p0</code> and <code>p2-p0</code> axes respectively.
+Quads are internally handled as pairs of triangles <code>p0,p1,p3</code> and <code>p2,p3,p1</code>,
+with the <code>uv</code> coordinates of the second triangle corrected as <code>1-u</code> and <code>1-v</code>
+to produce a quad parametrization where <code>u</code> and <code>v</code> go from 0 to 1.
+Degenerate quads with <code>p2==p3</code> represent triangles correctly.
+This parametrization is equivalent to Intel's Embree.</p>
+<h2 id="geometric-properties">Geometric properties</h2>
+<p>For lines, Yocto/Geometry supports the computation of line lengths,
+with <code>line_length(p0,p1)</code>, and line tangents, with <code>line_tangent(p0,p1)</code>.
+For triangles, Yocto/Geometry supports the computation of triangle areas,
+with <code>triangle_area(p0,p1,p2)</code>, and triangle normals,
+<code>triangle_normal(p0,p1,p2)</code>. Similarly for quads, use <code>quad_area(p0,p1,p2,p3)</code>,
+<code>quad_normal(p0,p1,p2,p3)</code> for areas and normals.</p>
+<p>For triangles and quads, Yocto/Geometry also supports computing tangents and
+bitangents from texture coordinates. This is helpful for applying normal or
+bump mapping during rendering.
+Use <code>triangle_tangents_fromuv(p0,p1,p2,uv0,uv1,uv2)</code> for triangles
+and <code>quad_tangents_fromuv(p0,p1,p2,p3,uv0,uv1,uv2,uv3,uv)</code> for quads.</p>
+<p>For triangles, tangents and bitangents are defined with respect to the first
+vertex as the origin.
+For quads, we define the vectors on the two triangles and do not compute the
+average. For this pass an additional texture coordinate since internally we split
+the triangle into two and we need to known where to do it.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">ta</span> <span class="o">=</span> <span class="n">triangle_area</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">);</span>   <span class="c1">// triangle area</span>
+<span class="k">auto</span> <span class="n">qa</span> <span class="o">=</span> <span class="n">quad_area</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">);</span>    <span class="c1">// quad area</span>
+<span class="k">auto</span> <span class="n">tn</span> <span class="o">=</span> <span class="n">triangle_normal</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">);</span> <span class="c1">// triangle normal</span>
+<span class="k">auto</span> <span class="n">qn</span> <span class="o">=</span> <span class="n">quad_normal</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">);</span>  <span class="c1">// quad normal</span>
+<span class="k">auto</span> <span class="n">uv0</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">uv1</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">uv2</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">},</span> <span class="n">uv3</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">};</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">tu</span><span class="p">,</span> <span class="n">tv</span><span class="p">]</span> <span class="o">=</span> <span class="n">triangle_tangents_fromuv</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">uv0</span><span class="p">,</span><span class="n">uv1</span><span class="p">,</span><span class="n">uv2</span><span class="p">);</span> <span class="c1">// tangents</span>
+</code></pre></div>
+
+
+<h2 id="interpolation-on-primitives">Interpolation on primitives</h2>
+<p>For all primitives, Yocto/Geometry defines interpolation functions that take
+values defined at the primitive vertices and compute the interpolate value
+at the parametrized point. Lines and beziers are parametrized with their natural
+parameter, while triangles and quads use barycentric interpolation as defined
+above.</p>
+<p>Use <code>interpolate_line(p0,p1,u)</code> for lines, <code>interpolate_triangle(p0,p1,p2,uv)</code>
+for triangles, <code>interpolate_quad(p0,p1,p2,p3,uv)</code> for quads and
+<code>interpolate_bezier(p0,p1,p2,p3,u)</code> for cubic Bezier segments,
+whose derivatives can be computed with
+<code>interpolate_bezier_derivative(p0,p1,p2,p3,u)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">tp</span> <span class="o">=</span> <span class="n">interpolate_triangle</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,{</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>  <span class="c1">// triangle point</span>
+<span class="k">auto</span> <span class="n">qp</span> <span class="o">=</span> <span class="n">interpolate_quad</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,{</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.5</span><span class="p">});</span>   <span class="c1">// quad point</span>
+<span class="k">auto</span> <span class="n">lp</span> <span class="o">=</span> <span class="n">interpolate_line</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="mf">0.3</span><span class="p">);</span>               <span class="c1">// line point</span>
+<span class="k">auto</span> <span class="n">bp</span> <span class="o">=</span> <span class="n">interpolate_bezier</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="mf">0.3</span><span class="p">);</span>       <span class="c1">// bezier point</span>
+</code></pre></div>
+
+
+<h2 id="primitive-bounding-boxes">Primitive bounding boxes</h2>
+<p>Yocto/Geometry provides functions to compute bounding boxes for all primitives
+types. For points and lines, vertices might have a thickness associate with them.
+Use <code>point_bounds(p0,r0)</code> for points, <code>line_bounds(p0,p1,r0,r1)</code> for lines,
+<code>triangle_bounds(p0,p1,p2)</code> for triangles, <code>quad_bounds(p0,p1,p2,p3)</code> for quads.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">tb</span> <span class="o">=</span> <span class="n">triangle_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">);</span>  <span class="c1">// triangle bounding box</span>
+<span class="k">auto</span> <span class="n">qb</span> <span class="o">=</span> <span class="n">quad_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">);</span>   <span class="c1">// quad bounding box</span>
+<span class="k">auto</span> <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">lb</span> <span class="o">=</span> <span class="n">line_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="p">);</span>   <span class="c1">// line bounding box</span>
+<span class="k">auto</span> <span class="n">pb</span> <span class="o">=</span> <span class="n">point_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">r0</span><span class="p">);</span>        <span class="c1">// point bounding box</span>
+</code></pre></div>
+
+
+<h2 id="ray-primitive-intersections">Ray-primitive intersections</h2>
+<p>Yocto/Geometry defines functions for ray-primitive intersection. Each function
+returns wether the primitive was hit and, if so, sets the primitive parameters
+and the intersection distance as output variables. Triangle intersection are
+computed using the Moller-Trombone intersection algorithm.
+Quad intersections are computed
+by treating quads as two triangles. Point intersections are compute
+approximately, by treating points as ray-oriented disks. Line intersections
+are computed approximately, by treating lines as ray-oriented ribbons.
+Use <code>intersect_point(ray,p0,r0,uv,d)</code> for points,
+<code>intersect_line(ray,p0,p1,r0,r1,uv,d)</code> for lines,
+<code>intersect_triangle(ray,p0,p1,p2,uv,d)</code> for triangles,
+<code>intersect_quad(ray,p0,p1,p2,p3,uv,d)</code> for quads.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">},{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">}};</span>                 <span class="c1">// ray</span>
+<span class="k">auto</span> <span class="n">uv</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span> <span class="k">auto</span> <span class="n">dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>           <span class="c1">// hit distance and uvs</span>
+<span class="k">auto</span> <span class="n">th</span> <span class="o">=</span> <span class="n">intersect_triangle</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>  <span class="c1">// triangle intersection</span>
+<span class="k">auto</span> <span class="n">qh</span> <span class="o">=</span> <span class="n">intersect_quad</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>   <span class="c1">// quad intersection</span>
+<span class="k">auto</span> <span class="n">lh</span> <span class="o">=</span> <span class="n">intersect_line</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>   <span class="c1">// line intersection</span>
+<span class="k">auto</span> <span class="n">ph</span> <span class="o">=</span> <span class="n">intersect_point</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>        <span class="c1">// point intersection</span>
+</code></pre></div>
+
+
+<p>Yocto/Geometry defines two functions to test whether a ray hits a bounding box.
+In this case, we do not return the ray distance or hit, but just check for
+intersection, which is useful when defining BVH hierarchies.
+Use <code>intersect_bbox(ray,bbox)</code> as a simple alternative and
+<code>intersect_bbox(ray,ray_dinv,bbox)</code> for a faster one.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">quad_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">bh</span> <span class="o">=</span> <span class="n">intersect_bbox</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="n">bbox</span><span class="p">);</span>           <span class="c1">// bbox intersection check</span>
+<span class="k">auto</span> <span class="n">ray_dinv</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">ray</span><span class="p">.</span><span class="n">d</span><span class="p">;</span>                     <span class="c1">// ray direction inverse</span>
+<span class="k">auto</span> <span class="n">bf</span> <span class="o">=</span> <span class="n">intersect_bbox</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="n">ray_dinv</span><span class="p">,</span> <span class="n">bbox</span><span class="p">);</span> <span class="c1">// fast bbox intersection</span>
+</code></pre></div>
+
+
+<h2 id="point-primitive-overlaps">Point-primitive overlaps</h2>
+<p>Yocto/Geometry defines functions for point-primitive distance and overlap.
+Each function returns wether the primitive was hit and, if so, sets
+the primitive parameters and the overlap distance as output variables.
+Each function takes a position and a maximum distance to test within,
+together with primitive vertices and thickness.
+Use <code>overlap_point(pt,md,p0,r0,uv,d)</code> for points,
+<code>overlap_line(pt,md,p0,p1,r0,r1,uv,d)</code> for lines,
+<code>overlap_triangle(pt,md,p0,p1,p2,r0,r1,r2,uv,d)</code> for triangles,
+<code>overlap_quad(pt,md,p0,p1,p2,p3,r0,r1,r2,r3,uv,d)</code> for quads.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">r0</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">r3</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">pt</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span> <span class="k">auto</span> <span class="n">md</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">1</span><span class="p">};</span>         <span class="c1">// point and max dist</span>
+<span class="k">auto</span> <span class="n">uv</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span> <span class="k">auto</span> <span class="n">dist</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>           <span class="c1">// hit distance and uv</span>
+<span class="k">auto</span> <span class="n">th</span> <span class="o">=</span> <span class="n">overlap_triangle</span><span class="p">(</span><span class="n">pt</span><span class="p">,</span><span class="n">md</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>  <span class="c1">// triangle overlap</span>
+<span class="k">auto</span> <span class="n">qh</span> <span class="o">=</span> <span class="n">overlap_quad</span><span class="p">(</span><span class="n">pt</span><span class="p">,</span><span class="n">md</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>   <span class="c1">// quad overlap</span>
+<span class="k">auto</span> <span class="n">lh</span> <span class="o">=</span> <span class="n">overlap_line</span><span class="p">(</span><span class="n">pt</span><span class="p">,</span><span class="n">md</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>   <span class="c1">// line overlap</span>
+<span class="k">auto</span> <span class="n">ph</span> <span class="o">=</span> <span class="n">overlap_point</span><span class="p">(</span><span class="n">pt</span><span class="p">,</span><span class="n">md</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">r0</span><span class="p">,</span><span class="n">uv</span><span class="p">,</span><span class="n">dist</span><span class="p">));</span>        <span class="c1">// point overlap</span>
+</code></pre></div>
+
+
+<p>Yocto/Geometry defines a function to test whether a point is contained within a
+bounding bbox within a certain distance. Just like before, we do not return
+the ray distance or hit, but just check for overlap, which is useful when
+defining BVH hierarchies.
+Use <code>overlap_bbox(pt,md,bbox)</code> to test for overlap between a point and
+a bounding box and <code>overlap_bbox(bbox1,bbox2)</code> to test whether two bounding
+boxes overlap.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">p0</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">p3</span><span class="o">=</span><span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">quad_bounds</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">bbox2</span> <span class="o">=</span> <span class="n">bbox3f</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">}};</span>
+<span class="k">auto</span> <span class="n">pt</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">};</span> <span class="k">auto</span> <span class="n">md</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">1</span><span class="p">};</span>   <span class="c1">// point and max dist</span>
+<span class="k">auto</span> <span class="n">bh</span>  <span class="o">=</span> <span class="n">overlap_bbox</span><span class="p">(</span><span class="n">pt</span><span class="p">,</span> <span class="n">md</span><span class="p">,</span> <span class="n">bbox</span><span class="p">);</span>          <span class="c1">// bbox overlap check</span>
+<span class="k">auto</span> <span class="n">bh2</span> <span class="o">=</span> <span class="n">overlap_bbox</span><span class="p">(</span><span class="n">bbox</span><span class="p">,</span> <span class="n">bbox2</span><span class="p">);</span>           <span class="c1">// bbox overlap check</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_color/" title="Color operations" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Color operations
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_sampling/" title="Sampling routines" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Sampling routines
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

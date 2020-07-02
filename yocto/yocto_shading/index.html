@@ -1,0 +1,730 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Shading routines - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctoshading-shading-routines" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Shading routines
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Shading routines
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Shading routines" class="md-nav__link md-nav__link--active">
+      Shading routines
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#shading-utilities" class="md-nav__link">
+    Shading utilities
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bsdf-lobes" class="md-nav__link">
+    Bsdf lobes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volumetric-lobes" class="md-nav__link">
+    Volumetric lobes
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#shading-utilities" class="md-nav__link">
+    Shading utilities
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bsdf-lobes" class="md-nav__link">
+    Bsdf lobes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volumetric-lobes" class="md-nav__link">
+    Volumetric lobes
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctoshading-shading-routines">Yocto/Shading: Shading routines</h1>
+<p>Yocto/Shading defines shading and sampling functions useful to write path
+tracing algorithms. Yocto/Shading is implemented in <code>yocto_shading.h</code>.</p>
+<h2 id="shading-utilities">Shading utilities</h2>
+<p>Yocto/Shading defines many functions to handle Fresnel effects, both
+approximate and correct ones.
+Use <code>fresnel_dielectric(eta, normal, outgoing)</code> or
+<code>fresnel_conductor(eta, etak, normal,outgoiong)</code>
+to evaluate the fresnel term for dielectrics and conductors,
+or use <code>fresnel_schlick(reflectivity, normal, outgoiong)</code>
+for the Schlick fresnel approximation.
+The Schlick approximation uses reflectivity while the other functions
+use the index of refraction. All these functions that the normal and
+outgoing, or incoming, direction as input.</p>
+<p>Use <code>eta_to_reflectivity(eta)</code> and <code>reflectivity_to_eta(reflectivity)</code>
+to convert the dielectric index of refraction to reflectivity and vice-versa.
+Use <code>eta_to_edgetint(eta, etak)</code> and <code>edgetint_to_eta(reflectivity, edgetint)</code>
+to convert between the conductor index of refraction and its
+artist-friendly parametrization.
+Use <code>conductor_eta(name)</code> to get tabulated index of refractions for
+conductors.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// approximate Fresnel for dielectric and conductors</span>
+<span class="k">auto</span> <span class="n">reflectivity1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">0.04</span><span class="p">,</span><span class="mf">0.04</span><span class="p">,</span><span class="mf">0.04</span><span class="p">};</span>  <span class="c1">// dielectric reflectivity</span>
+<span class="k">auto</span> <span class="n">reflectivity2</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">0.80</span><span class="p">,</span><span class="mf">0.70</span><span class="p">,</span><span class="mf">0.90</span><span class="p">};</span>  <span class="c1">// conductor reflectivity</span>
+<span class="k">auto</span> <span class="n">fs1</span> <span class="o">=</span> <span class="n">fresnel_schlick</span><span class="p">(</span><span class="n">reflectivity_d</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">fs1</span> <span class="o">=</span> <span class="n">fresnel_schlick</span><span class="p">(</span><span class="n">reflectivity_c</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="c1">// accurate Fresnel for dielectrics</span>
+<span class="k">auto</span> <span class="n">ior1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">1.5</span><span class="p">,</span><span class="mf">1.5</span><span class="p">,</span><span class="mf">1.5</span><span class="p">};</span>              <span class="c1">// dielectric ior</span>
+<span class="k">auto</span> <span class="n">fd1</span> <span class="o">=</span> <span class="n">fresnel_dielectric</span><span class="p">(</span><span class="n">ior_d</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">ior2</span> <span class="o">=</span> <span class="n">reflectivity_to_eta</span><span class="p">(</span><span class="n">reflectivity1</span><span class="p">);</span> <span class="c1">// reflectivity to ior</span>
+<span class="c1">// accurate Fresnel for conductors</span>
+          <span class="p">{</span><span class="s">&quot;Au&quot;</span><span class="p">,</span> <span class="p">{{</span><span class="mf">0.1431189557f</span><span class="p">,</span> <span class="mf">0.3749570432f</span><span class="p">,</span> <span class="mf">1.4424785571f</span><span class="p">},</span>
+                     <span class="p">{</span><span class="mf">3.9831604247f</span><span class="p">,</span> <span class="mf">2.3857207478f</span><span class="p">,</span> <span class="mf">1.6032152899f</span><span class="p">}}},</span>
+
+<span class="k">auto</span> <span class="n">eta1</span>  <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">0.143</span><span class="p">,</span> <span class="mf">0.375</span><span class="p">,</span> <span class="mf">1.442</span><span class="p">};</span>     <span class="c1">// conductor complex ior</span>
+<span class="k">auto</span> <span class="n">etak1</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">3.983</span><span class="p">,</span> <span class="mf">2.386</span><span class="p">,</span> <span class="mf">1.603</span><span class="p">};</span>     <span class="c1">// conductor complex ior</span>
+<span class="k">auto</span> <span class="n">fc1</span> <span class="o">=</span> <span class="n">fresnel_conductor</span><span class="p">(</span><span class="n">eta1</span><span class="p">,</span> <span class="n">etak1</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">eta2</span><span class="p">,</span> <span class="n">etak2</span><span class="p">]</span> <span class="o">=</span> <span class="n">edgetint_to_eta</span><span class="p">(</span><span class="n">reflectivity2</span><span class="p">,</span><span class="n">vec3f</span><span class="p">{...});</span> <span class="c1">// refl. to ior</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">eta3</span><span class="p">,</span> <span class="n">etak3</span><span class="p">]</span> <span class="o">=</span> <span class="n">conductor_eta</span><span class="p">(</span><span class="s">&quot;Au&quot;</span><span class="p">);</span>    <span class="c1">// get gold eta</span>
+</code></pre></div>
+
+
+<p>Most shaders today use some version of microfacet lobes for reflections and
+transmissions. Yocto/Shading has several functions to simplify writing
+those shaders.
+Use <code>microfacet_distribution(roughness, normal, halfway, ggx)</code> to
+evaluate the microfacet distribution and
+<code>microfacet_shadowing(roughness, normal, halfway, ggx)</code> to evaluate the
+shadow-masking term.
+Both functions take the surface roughness, the shading normal, the halfway
+vector and whether or not to use the GGX or Beckman distribution.</p>
+<p>Yocto/Shading also supports generating directions according to the microfacet
+distribution, both for GGX and Beckman.
+Use <code>sample_microfacet(roughness, normal, rn, ggx)</code> to generate halfway
+vector with distribution proportional to the microfacet distribution
+function and <code>sample_microfacet(roughness, normal, outgoing, rn, ggx)</code>
+to generate dictions using the distribution of visible normals.
+Use <code>sample_microfacet_pdf(roughness, normal, halfway, ggx)</code> or
+<code>sample_microfacet_pdf(roughness, normal, halfway, outgoing, ggx)</code> to
+compute the PDF for each sampling routine.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">normal</span>   <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span>                    <span class="c1">// shading normal</span>
+<span class="k">auto</span> <span class="n">incoming</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...}</span>                     <span class="c1">// incoming direction</span>
+<span class="k">auto</span> <span class="n">outgoing</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span>                    <span class="c1">// outgoing direction</span>
+<span class="k">auto</span> <span class="n">halfway</span> <span class="o">=</span> <span class="n">normalize</span><span class="p">(</span><span class="n">incoming</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>  <span class="c1">// halfway vector reflection</span>
+<span class="k">auto</span> <span class="n">D</span> <span class="o">=</span> <span class="n">microfacet_distribution</span><span class="p">(</span><span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">halfway</span><span class="p">);</span> <span class="c1">// distribution</span>
+<span class="k">auto</span> <span class="n">G</span> <span class="o">=</span> <span class="n">microfacet_shadowing</span><span class="p">(</span><span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">halfway</span><span class="p">);</span>    <span class="c1">// shadowing</span>
+<span class="k">auto</span> <span class="n">halfway1</span> <span class="o">=</span> <span class="n">sample_microfacet</span><span class="p">(</span><span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// sample</span>
+<span class="k">auto</span> <span class="n">pdf</span> <span class="o">=</span> <span class="n">sample_microfacet_pdf</span><span class="p">(</span><span class="n">roughness</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">halfway1</span><span class="p">);</span><span class="c1">// sample pdf</span>
+</code></pre></div>
+
+
+<h2 id="bsdf-lobes">Bsdf lobes</h2>
+<p>Most path tracing shaders are defined as sum of single BSDF lobes.
+Yocto/Shading provides and implementation for several common BSDF lobes.
+Three functions are implemented for each lobe. Use
+<code>eval_&lt;lobe&gt;(&lt;params&gt;, normal, outgoing, incoming)</code> to evaluates the
+lobe BSDF multiplied by the cosine,
+<code>sample_&lt;lobe&gt;(&lt;params&gt;, normal, outgoing, rn)</code> to sample an
+incoming direction, and
+<code>sample_&lt;lobe&gt;_pdf(&lt;params&gt;, normal, outgoing, incoming)</code> to compute
+the sampled direction pdf.
+Yocto/Shading supports the following lobes:</p>
+<ul>
+<li><code>diffuse_reflection</code>: diffuse brdf</li>
+<li><code>diffuse_transmission</code>: translucency brdf, as a flipped diffuse</li>
+<li><code>microfacet_reflection</code>: specular brdf for dielectrics and metals</li>
+<li><code>microfacet_transmission</code>: transmission brdf for thin dielectrics</li>
+<li><code>microfacet_refraction</code>: refraction brdf for dielectrics,
+  includes reflection and refraction</li>
+<li><code>delta_reflection</code>: delta specular for dielectrics and metals</li>
+<li><code>delta_transmission</code>: delta transmission for thin dielectrics</li>
+<li><code>delta_refraction</code>: delta refraction for dielectrics</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">normal</span>   <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span>            <span class="c1">// shading normal</span>
+<span class="k">auto</span> <span class="n">incoming</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...}</span>             <span class="c1">// incoming direction</span>
+<span class="k">auto</span> <span class="n">outgoing</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span>            <span class="c1">// outgoing direction</span>
+<span class="k">auto</span> <span class="n">rs</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mf">0.1</span><span class="p">};</span>                  <span class="c1">// roughness</span>
+<span class="k">auto</span> <span class="n">ior</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mf">1.5</span><span class="p">};</span>                 <span class="c1">// dielectric ior</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">eta</span><span class="p">,</span> <span class="n">etak</span><span class="p">]</span> <span class="o">=</span> <span class="n">conductor_eta</span><span class="p">(</span><span class="s">&quot;Au&quot;</span><span class="p">);</span><span class="c1">// conductor complex ior</span>
+<span class="c1">// evaluate smooth lobes</span>
+<span class="k">auto</span> <span class="n">b1</span> <span class="o">=</span> <span class="n">eval_diffuse_reflection</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b2</span> <span class="o">=</span> <span class="n">eval_diffuse_transmission</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b3</span> <span class="o">=</span> <span class="n">eval_microfacet_reflection</span><span class="p">(</span><span class="n">ior</span><span class="p">,</span> <span class="n">rs</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b4</span> <span class="o">=</span> <span class="n">eval_microfacet_reflection</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span><span class="n">etak</span><span class="p">,</span> <span class="n">rs</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b5</span> <span class="o">=</span> <span class="n">eval_microfacet_transmission</span><span class="p">(</span><span class="n">ior</span><span class="p">,</span> <span class="n">rs</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span>  <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b6</span> <span class="o">=</span> <span class="n">eval_microfacet_refraction</span><span class="p">(</span><span class="n">ior</span><span class="p">,</span> <span class="n">rs</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="c1">// sample smooth lobes</span>
+<span class="k">auto</span> <span class="n">incoming1</span> <span class="o">=</span> <span class="n">sample_diffuse_reflection</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>
+<span class="k">auto</span> <span class="n">pdf1</span> <span class="o">=</span> <span class="n">sample_diffuse_reflection_pdf</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">)</span>
+<span class="c1">// eval and sample delta lobes</span>
+<span class="k">auto</span> <span class="n">incoming2</span> <span class="o">=</span> <span class="n">sample_delta_reflection</span><span class="p">(</span><span class="n">ior</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">b7</span> <span class="o">=</span> <span class="n">eval_delta_reflection</span><span class="p">(</span><span class="n">ior</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+</code></pre></div>
+
+
+<h2 id="volumetric-lobes">Volumetric lobes</h2>
+<p>Yocto/Shading defines functions to simplify the implementation of volumetric
+effects. Use <code>eval_transmittance(density, distance)</code> to evaluate the
+transmittance of a homogeneous volume,
+<code>sample_transmittance(density, max_distance, rn)</code> to sample a distance inside
+an homogeneous medium,
+<code>sample_transmittance_pdf(density, distance, max_distance)</code>
+to compute the pdf of the sampled distance.
+The sampling function may return a distance equal to max distance, in which
+case the ray has exited the medium.
+Use <code>mfp_to_transmission(mfp, depth)</code> to convert mean-free-path to transmission
+at a specific depth.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">density</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.99</span><span class="p">,</span><span class="mf">0.99</span><span class="p">};</span> <span class="c1">// medium density</span>
+<span class="k">auto</span> <span class="n">max_distance</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">1</span><span class="p">};</span>         <span class="c1">// maximum distance inside the medium</span>
+<span class="k">auto</span> <span class="n">distance</span> <span class="o">=</span> <span class="n">sample_transmittance</span><span class="p">(</span><span class="n">density</span><span class="p">,</span> <span class="n">max_distance</span><span class="p">,</span> <span class="c1">// sample distance</span>
+  <span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">),</span><span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>
+<span class="k">auto</span> <span class="n">pdf</span> <span class="o">=</span> <span class="n">sample_transmittance_pdf</span><span class="p">(</span><span class="n">density</span><span class="p">,</span> <span class="n">distance</span><span class="p">,</span> <span class="n">max_distance</span><span class="p">)</span> <span class="c1">// pdf</span>
+<span class="k">auto</span> <span class="n">transmittance</span> <span class="o">=</span> <span class="n">eval_transmittance</span><span class="p">(</span><span class="n">density</span><span class="p">,</span> <span class="n">distance</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Use <code>eval_phasefunction(anisotropy, outgoing, incoming)</code> to evaluate the
+HG phase function,
+<code>sample_phasefunction(anisotropy, outgoing, rn)</code> to sample a direction
+according to the phse function,
+<code>sample_phasefunction_pdf(anisotropy, outgoing, incoming)</code>
+to compute the pdf of the sampled direction.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">outgoing</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{...};</span>           <span class="c1">// outgoing direction</span>
+<span class="k">auto</span> <span class="n">anisotropy</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>           <span class="c1">// isotropic phase function</span>
+<span class="k">auto</span> <span class="n">incoming</span> <span class="o">=</span> <span class="n">sample_phasefunction</span><span class="p">(</span><span class="n">anisotropy</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>
+<span class="k">auto</span> <span class="n">phasefunc</span> <span class="o">=</span> <span class="n">eval_phasefunction</span><span class="p">(</span><span class="n">anisotropy</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">pdf</span> <span class="o">=</span> <span class="n">sample_phasefunction_pdf</span><span class="p">(</span><span class="n">anisotropy</span><span class="p">,</span> <span class="n">outgoing</span><span class="p">,</span> <span class="n">incoming</span><span class="p">);</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_noise/" title="Noise functions" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Noise functions
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_image/" title="Image utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Image utilities
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

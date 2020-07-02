@@ -1,0 +1,803 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Math types - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctomath-math-types" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Math types
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Math types
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Math types" class="md-nav__link md-nav__link--active">
+      Math types
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#vectors" class="md-nav__link">
+    Vectors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrices" class="md-nav__link">
+    Matrices
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frames" class="md-nav__link">
+    Frames
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quaternions" class="md-nav__link">
+    Quaternions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rays" class="md-nav__link">
+    Rays
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bounding-boxes" class="md-nav__link">
+    Bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transforms" class="md-nav__link">
+    Transforms
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-interface-transforms" class="md-nav__link">
+    User-Interface Transforms
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#vectors" class="md-nav__link">
+    Vectors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrices" class="md-nav__link">
+    Matrices
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frames" class="md-nav__link">
+    Frames
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quaternions" class="md-nav__link">
+    Quaternions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rays" class="md-nav__link">
+    Rays
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bounding-boxes" class="md-nav__link">
+    Bounding boxes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transforms" class="md-nav__link">
+    Transforms
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-interface-transforms" class="md-nav__link">
+    User-Interface Transforms
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctomath-math-types">Yocto/Math: Math types</h1>
+<p>Yocto/Math defines the basic math primitives used in graphics, including
+small-sized vectors, matrices, frames, quaternions, rays, bounding boxes
+and their transforms. Yocto/Math is implemented in <code>yocto_math.h</code>.</p>
+<h2 id="vectors">Vectors</h2>
+<p>The most basic types defined in Yocto/Math are fixed-length vectors in
+1 to 4 dimensions with either <code>float</code> or <code>int</code> coordinates, namely <code>vec1f</code>,
+<code>vec2f</code>, <code>vec3f</code>, <code>vec4f</code>, <code>vec1i</code>, <code>vec2i</code>, <code>vec3i</code>, <code>vec4i</code>.
+One-dimensional vectors are defined for completeness.</p>
+<p>Vectors coordinates are default-initialized to zeros. Vectors are constructed
+by specifying all their coordinates. For convenience, Yocto/Math defines
+common constants, i.e. <code>zeroXX</code>, to initialize zero vectors.
+Vector coordinates are accessed by index, e.g. <code>v[0]</code>, or by name, using
+<code>v.x</code>, <code>v.y</code>, <code>v.z</code>, <code>v.w</code>. While in graphics it is common to use the latter,
+we suggest to instead use the former since it better generalizes to
+different cases.</p>
+<p>Vectors support component-wise arithmetic, equality and assignment operators.
+For arithmetic operators, both vector and scalar operands are supported.
+Yocto/Math also overrides many common math function to work on vectors
+by component-wise evaluation, including trigonometric and exponentiation
+functions, and component-wise abs, max, min and clamp. Real vector types
+additionally support vector products and lengths. For 3D vectors, we also
+define reflection and refraction vectors following GLSL.</p>
+<h2 id="matrices">Matrices</h2>
+<p>Yocto/Math supports 2-4 dimensional square matrices, namely <code>mat2f</code>, <code>mat3f</code>
+and <code>mat4f</code>. Matrices are stored on column-major order. Matrices are
+initialized to the identity matrix and constructed by passing matrix columns.
+Matrix columns are accessed using indexing, i.e. <code>mat[col]</code>.
+Yocto/Math defines convenience constants for common matrices, e.g.
+<code>indentity3x3f</code>, etc.</p>
+<p>Matrices support linear algebra summation and scaling operations,
+component-wise equality, matrix-matrix and matrix-vector products.
+All these operators use standard math notation.
+Matrices also support the computation of transpose, inverse and adjoint
+matrices, with <code>transpose(a)</code>, <code>inverse(a)</code> and <code>adjoint(a)</code>.</p>
+<h2 id="frames">Frames</h2>
+<p>To represent transformations, most of the library facilities prefer the use
+coordinate frames, aka rigid transforms, represented as <code>frame2f</code> and
+<code>frame3f</code>. Frames are represented in column-major order, with columns
+defined as the axis of the coordinate frame followed by the origin.
+This is equivalent to representing rigid transformations as column-major
+affine matrices. Use <code>mat_to_frame(mat)</code> and <code>frame_to_mat(frame)</code> to convert
+between these types.</p>
+<p>Frames support only multiplication operations with other frames, to chain
+transforms, the computation of their inverses, with <code>inverse(f)</code>, and the
+creation of frames aligned with one ot two axis, i.e. <code>frame_fromz(o,z)</code>
+and <code>frame_fromxz(o,z,x)</code>. For the inverse computation, the default is to
+assume that the frame is orthonormal to get a fast answer. This can be
+overridden as shown in the example.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">f1</span> <span class="o">=</span> <span class="n">frame3f</span><span class="p">{</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">o</span><span class="p">};</span> <span class="c1">// construct a frame from axes and origin</span>
+<span class="k">auto</span> <span class="n">of</span> <span class="o">=</span> <span class="n">inverse</span><span class="p">(</span><span class="n">f1</span><span class="p">);</span>         <span class="c1">// assume f is orthonormal</span>
+<span class="k">auto</span> <span class="n">gf</span> <span class="o">=</span> <span class="n">inverse</span><span class="p">(</span><span class="n">f1</span><span class="p">,</span><span class="nb">true</span><span class="p">);</span>    <span class="c1">// treat f as a generic affine matrix</span>
+</code></pre></div>
+
+
+<h2 id="quaternions">Quaternions</h2>
+<p>Quaternions are represented as <code>quat4f</code>. Quaternions support is minimal and
+focuses on representing rotations, i.e. unit quaternions. Quaternions are
+initialized to a unit quaternion, that can also be set with the convenience
+constant <code>identityq4f</code>.</p>
+<p>Quaternions support addition, multiplication and scaling, together with
+<code>dot(q1,q2)</code>, <code>length(q)</code> and <code>normalize(q)</code>. For unit quaternions,
+Yocto/Math also defines the quaternion inverse <code>inverse(q)</code> and several
+interpolation function including linear interpolation, normalized linear
+interpolation and spherical interpolation, respectively with <code>lerp(a,bt)</code>,
+<code>nlerp(a,b,t)</code> and <code>slerp(a,b,t)</code>.</p>
+<h2 id="rays">Rays</h2>
+<p>Yocto/Math defines rays in 2-3 dimensions as <code>ray2f</code> and <code>ray3f</code>.
+Rays are defined as an origin <code>o</code>, a direction <code>d</code> and minimum and maximum
+values for the distance along a ray, namely <code>tmin</code> and <code>tmax</code>.
+To compute a point in a ray, use <code>ray_point(ray,t)</code>.
+See <a href="../yocto_geometry/">Yocto/Geometry</a> for ray-primitive intersection.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">ray3f</span><span class="p">{</span><span class="n">origin</span><span class="p">,</span> <span class="n">direction</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">p</span> <span class="o">=</span> <span class="n">ray_point</span><span class="p">(</span><span class="n">ray</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">);</span>
+</code></pre></div>
+
+
+<h2 id="bounding-boxes">Bounding boxes</h2>
+<p>Yocto/Math defines axies-aligned bounding boxes in 2 to 3 dimensions as
+<code>bbox2f</code> and <code>bbox3f</code>. Bounding boxes store the minimum and maximum coordinate
+values, that can be accessed with <code>b.min</code> and <code>b.max</code>. Bounding boxes are
+default-initialized to an invalid state that contains no points,
+or they are constructed by specifying the min and max values directly.</p>
+<p>To build bounds for complex primitives, bounding boxes are very initialized to
+empty bounds, that can be done by using the constants like <code>invalidabXf</code>,
+and then grown to encompass either points or other bounding boxes with
+<code>merge(b,p)</code>. See <a href="../yocto_geometry/">Yocto/Geometry</a> for building bounding
+boxes for geometric primitives.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">invalidb3f</span><span class="p">;</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">point</span> <span class="p">:</span> <span class="n">points</span><span class="p">)</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">merge</span><span class="p">(</span><span class="n">bbox</span><span class="p">,</span> <span class="n">point</span><span class="p">);</span>
+</code></pre></div>
+
+
+<h2 id="transforms">Transforms</h2>
+<p>Yocto/Math uses linear algebra vectors for holding different geometric
+quantities, such as points, vectors, directions and normals. For this reason,
+we define different functions to transform these quantities, namely
+<code>transform_point(f,p)</code> to transform points, <code>transform_vector(f,v)</code> to
+transform vectors, <code>transform_direction(f,d)</code> to transform directions
+intended as normalized vectors, and <code>transform_normal(f,n)</code> to transform
+normals.</p>
+<p>Yocto/Math provides overrides to transforms for both frames and matrices,
+but <em>the preferred transform representation in Yocto/GL are frames</em>.
+When transforming normals by matrices, the inverse transform is computed on
+the fly for correctness. When transforming normals by frames, frames are
+assumed to be orthonormal and used as is, unless specifically requested as
+for inverses.</p>
+<p>For convenience, Yocto/Math provides several functions to construct transform
+frames and matrices. Translation, rotation and scaling frames are created with<br />
+<code>translation_frame(t)</code>, <code>rotation_frame(r)</code> and <code>scaling_frame(s)</code>. Rotation
+frames can be derived from axis-angle, quaternion and matrix representations.
+To define camera frames, one can use <code>lookat_frame(from,to,up)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">f</span> <span class="o">=</span> <span class="n">tranlation_frame</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">})</span> <span class="o">*</span> <span class="n">rotation_frame</span><span class="p">({</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">);</span> <span class="c1">// transform</span>
+<span class="k">auto</span> <span class="n">lp</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">},</span> <span class="n">lv</span> <span class="o">=</span> <span class="n">vec3f</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">};</span> <span class="c1">// point and vector in local coords</span>
+<span class="k">auto</span> <span class="n">wp</span> <span class="o">=</span> <span class="n">transform_point</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">lp</span><span class="p">);</span>          <span class="c1">// point in world coords</span>
+<span class="k">auto</span> <span class="n">wv</span> <span class="o">=</span> <span class="n">transform_vector</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">lv</span><span class="p">);</span>         <span class="c1">// vector in world coords</span>
+</code></pre></div>
+
+
+<p>For use in GPU programming, Yocto/Math also defines various projection
+matrices in the style of GLU/GLM, namely <code>frustum_mat(...)</code>,
+<code>ortho_mat(...)</code>, <code>ortho2d_mat(...)</code>, and <code>perspective_mat(...)</code>.</p>
+<h2 id="user-interface-transforms">User-Interface Transforms</h2>
+<p>Yocto/Math provides a few utilities for writing user interfaces for 2D images
+and 3D environments. For images, we assume that image are scaled and than
+translated to be place oin screen. User interfaces can directly manipulate
+the translation and zoom without further helpers. Yocto/Math just provides
+convenience functions for centering an image and compute a mouse to image
+coordinate transformation.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">image_size</span> <span class="o">=</span> <span class="n">vec2i</span><span class="p">{</span><span class="mi">512</span><span class="p">,</span><span class="mi">512</span><span class="p">},</span> <span class="n">window_size</span> <span class="o">=</span> <span class="n">vec2i</span><span class="p">{</span><span class="mi">1024</span><span class="p">,</span><span class="mi">768</span><span class="p">};</span>
+<span class="k">auto</span> <span class="n">image_center</span> <span class="o">=</span> <span class="n">vec2f</span><span class="p">{</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">};</span> <span class="k">auto</span> <span class="n">image_scale</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">1</span><span class="p">};</span>
+<span class="c1">// get image coordinates from mouse</span>
+<span class="k">auto</span> <span class="n">ij</span> <span class="o">=</span> <span class="n">get_image_coords</span><span class="p">(</span><span class="n">mouse_pos</span><span class="p">,</span> <span class="n">image_center</span><span class="p">,</span> <span class="n">image_scale</span><span class="p">,</span> <span class="n">image_size</span><span class="p">);</span>
+<span class="c1">// center image by setting image_center and image_scale</span>
+<span class="n">update_imview</span><span class="p">(</span><span class="n">image_center</span><span class="p">,</span> <span class="n">image_scale</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+<span class="c1">// center image and for to screen by setting image_center and image_scale</span>
+<span class="n">update_imview</span><span class="p">(</span><span class="n">image_center</span><span class="p">,</span> <span class="n">image_scale</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>For 3D cameras, Yocto/Math supports a turntable interface, inspired by many 3D
+editors, with <code>update_turntable(...)</code>, and the camera's rays generation with
+<code>camera_ray(...)</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">camera_frame</span> <span class="o">=</span> <span class="n">identity3x4f</span><span class="p">;</span> <span class="k">auto</span> <span class="n">camera_focus</span> <span class="o">=</span> <span class="kt">float</span><span class="p">{</span><span class="mi">10</span><span class="p">};</span>
+<span class="c1">// update camera position and focus</span>
+<span class="n">update_turntable</span><span class="p">(</span><span class="n">camera_frame</span><span class="p">,</span> <span class="n">camera_focus</span><span class="p">,</span> <span class="n">rotate</span><span class="p">,</span> <span class="n">dolly</span><span class="p">,</span> <span class="n">pan</span><span class="p">);</span>
+<span class="c1">// turntable udpates works also for camera with explicit lookat parametrizations</span>
+<span class="n">update_turntable</span><span class="p">(</span><span class="n">camera_from</span><span class="p">,</span> <span class="n">camera_to</span><span class="p">,</span> <span class="n">camera_up</span><span class="p">,</span> <span class="n">rotate</span><span class="p">,</span> <span class="n">dolly</span><span class="p">,</span> <span class="n">pan</span><span class="p">);</span>
+<span class="c1">// generation of camera rays</span>
+<span class="k">auto</span> <span class="n">ray</span> <span class="o">=</span> <span class="n">camera_ray</span><span class="p">(</span><span class="n">camera_frame</span><span class="p">,</span> <span class="n">lens</span><span class="p">,</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">film</span><span class="p">,</span> <span class="n">image_uv</span><span class="p">);</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../../gallery/" title="Gallery" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Gallery
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_color/" title="Color operations" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Color operations
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

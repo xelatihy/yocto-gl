@@ -1,0 +1,655 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Command-line utilities - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctocommonio-utilities-for-writing-command-line-apps" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Command-line utilities
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sampling/" title="Sampling routines" class="md-nav__link">
+      Sampling routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Command-line utilities
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Command-line utilities" class="md-nav__link md-nav__link--active">
+      Command-line utilities
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#printing-values" class="md-nav__link">
+    Printing values
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-parsing" class="md-nav__link">
+    Command-Line Parsing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-and-binary-serialization" class="md-nav__link">
+    Text and binary serialization
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#printing-values" class="md-nav__link">
+    Printing values
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-parsing" class="md-nav__link">
+    Command-Line Parsing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-and-binary-serialization" class="md-nav__link">
+    Text and binary serialization
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctocommonio-utilities-for-writing-command-line-apps">Yocto/CommonIO: Utilities for writing command-line apps</h1>
+<p>Yocto/CommonIO is a collection of utilities used in writing command-line
+applications, including parsing command line arguments, simple path
+manipulation, file lading and saving, and printing values, timers and
+progress bars.</p>
+<h2 id="printing-values">Printing values</h2>
+<p>Use <code>print_info(message)</code> to print a message, and <code>print_fatal(message)</code>
+to print and exit. To time a block of code use <code>print_timed(message)</code>
+to use an RIIA timer or call <code>print_elapsed(timer)</code> to print the elapsed
+time as needed. Use <code>print_progress(message, current, total)</code> to print
+a progress bar with a message for a given current and total number of tasks.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">print_info</span><span class="p">(</span><span class="s">&quot;Message&quot;</span><span class="p">);</span>                      <span class="c1">// print message</span>
+<span class="n">print_fatal</span><span class="p">(</span><span class="s">&quot;Error and exit&quot;</span><span class="p">);</span>              <span class="c1">// print error and exit</span>
+<span class="p">{</span> <span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span> <span class="p">...</span> <span class="p">}</span>  <span class="c1">// time a block of code</span>
+<span class="k">auto</span> <span class="n">timer</span> <span class="o">=</span> <span class="n">print_timed</span><span class="p">(</span><span class="s">&quot;Timer&quot;</span><span class="p">);</span>          <span class="c1">// start timer</span>
+<span class="n">print_elapsed</span><span class="p">(</span><span class="n">timer</span><span class="p">);</span>                       <span class="c1">// Print elapsed time</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">task</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>                  <span class="c1">// iterate over tasks</span>
+  <span class="n">print_progress</span><span class="p">(</span><span class="s">&quot;Progress bar&quot;</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">// print progress bar</span>
+</code></pre></div>
+
+
+<h2 id="command-line-parsing">Command-Line Parsing</h2>
+<p>Yocto/CommonIO includes a simple command-line parser that supports optional
+and positional arguments, automatic help generation, and error checking.</p>
+<p>The command-line parser is initialized with <code>make_cli(name, help)</code> that takes
+a program name and a help string. Then add command-line options with
+<code>add_option(cli, name, value, help, req)</code> where <code>name</code> is the option name,
+<code>value</code> is a reference to the variable that we want to set, <code>help</code> is a usage
+message and <code>req</code> is a flag that determines whether or not the argument is
+required. After adding all arguments, use <code>parse_cli(cli)</code> to parse the
+command-line. If an error occurs, the parser exists. A help flag is also
+handled in this function.</p>
+<p>The argument name determines the argument type. If the arguments name starts
+with '--' or '-' then it is an option, otherwise it is a positional argument.
+An argument may have multiple names separated by commas. Options and arguments
+may be intermixed. The type of each option is determined by the passed reference.
+The parser supports integers, floating point numbers, strings, bool options
+and arrays of strings. Boolean flags are indicated with a pair of names
+"--name/--no-name", so that we have both options available.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">samples</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="k">auto</span> <span class="n">flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>                <span class="c1">// state</span>
+<span class="k">auto</span> <span class="n">out</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="n">s</span><span class="p">;</span>
+<span class="k">auto</span> <span class="n">names</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;</span><span class="p">{};</span>
+<span class="k">auto</span> <span class="n">cli</span> <span class="o">=</span> <span class="n">make_cli</span><span class="p">(</span><span class="s">&quot;app&quot;</span><span class="p">,</span> <span class="s">&quot;testing cli&quot;</span><span class="p">);</span>           <span class="c1">// initialize cli</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;--out&quot;</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="s">&quot;out&quot;</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>          <span class="c1">// required argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;--samples,-s&quot;</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="s">&quot;samples&quot;</span><span class="p">);</span> <span class="c1">// optional argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;--flag/--no-flag&quot;</span><span class="p">,</span> <span class="n">flag</span><span class="p">,</span> <span class="s">&quot;flag&quot;</span><span class="p">);</span>   <span class="c1">// optional flag</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>         <span class="c1">// positional argument</span>
+<span class="n">add_option</span><span class="p">(</span><span class="n">cli</span><span class="p">,</span> <span class="s">&quot;names&quot;</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="s">&quot;names&quot;</span><span class="p">);</span>            <span class="c1">// positional arguments</span>
+<span class="n">parse_cli</span><span class="p">(</span><span class="n">cli</span><span class="p">);</span>
+</code></pre></div>
+
+
+<h2 id="text-and-binary-serialization">Text and binary serialization</h2>
+<p>Text files are loaded with <code>load_text(filename, text, error)</code> and saved with
+<code>save_text(filename, text, error)</code>.
+Binary files are loaded with <code>load_binary(filename, binary, error)</code> and saved
+with <code>save_binary(filename, binary, error)</code>.
+Both loading and saving take a filename, a text or binary buffer, and return
+whether or not the file was loaded successfully.
+In the case of an error, the IO functions set the <code>error</code> string with a
+message suitable for displaying to a user.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">error</span> <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// error buffer</span>
+<span class="k">auto</span> <span class="n">text</span>  <span class="o">=</span> <span class="n">string</span><span class="p">{};</span>                  <span class="c1">// text buffer</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_text</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>   <span class="c1">// load a text file</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_text</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>   <span class="c1">// save a text file</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<span class="k">auto</span> <span class="n">data</span>  <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">byte</span><span class="o">&gt;</span><span class="p">{};</span>            <span class="c1">// data buffer</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">load_binary</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// load a binary file</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">save_binary</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span> <span class="c1">// save a binary file</span>
+  <span class="n">print_error</span><span class="p">(</span><span class="n">error</span><span class="p">);</span>                   <span class="c1">// check and print error</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_trace/" title="Path tracing" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Path tracing
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_common/" title="Generic utilities" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Generic utilities
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,675 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <meta name="author" content="Fabio Pellacini">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.2.2">
+    
+    
+      
+        <title>Sampling routines - Yocto/GL</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a2408e81.min.css">
+      
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yoctosampling-sampling-routines" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="../.." title="Yocto/GL" class="md-header-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Yocto/GL
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Sampling routines
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Yocto/GL" class="md-nav__button md-logo" aria-label="Yocto/GL">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Yocto/GL
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/xelatihy/yocto-gl/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    xelatihy/yocto-gl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../gallery/" title="Gallery" class="md-nav__link">
+      Gallery
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_math/" title="Math types" class="md-nav__link">
+      Math types
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_color/" title="Color operations" class="md-nav__link">
+      Color operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_geometry/" title="Geometry operations" class="md-nav__link">
+      Geometry operations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Sampling routines
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="./" title="Sampling routines" class="md-nav__link md-nav__link--active">
+      Sampling routines
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#random-number-generation" class="md-nav__link">
+    Random number generation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-points-and-directions" class="md-nav__link">
+    Generating points and directions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-distributions" class="md-nav__link">
+    Sampling distributions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_noise/" title="Noise functions" class="md-nav__link">
+      Noise functions
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shading/" title="Shading routines" class="md-nav__link">
+      Shading routines
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_image/" title="Image utilities" class="md-nav__link">
+      Image utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_shape/" title="Shape utilities" class="md-nav__link">
+      Shape utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_mesh/" title="Mesh processing" class="md-nav__link">
+      Mesh processing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
+      Model serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_scene/" title="Scene representation" class="md-nav__link">
+      Scene representation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_sceneio/" title="Scene serialization" class="md-nav__link">
+      Scene serialization
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_trace/" title="Path tracing" class="md-nav__link">
+      Path tracing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_commonio/" title="Command-line utilities" class="md-nav__link">
+      Command-line utilities
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../yocto_common/" title="Generic utilities" class="md-nav__link">
+      Generic utilities
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#random-number-generation" class="md-nav__link">
+    Random number generation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-points-and-directions" class="md-nav__link">
+    Generating points and directions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-distributions" class="md-nav__link">
+    Sampling distributions
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="yoctosampling-sampling-routines">Yocto/Sampling: Sampling routines</h1>
+<p>Yocto/Sampling provides many functions to generate points and directions
+useful in path tracing and procedural generation. We also include a random
+number generator suitable for ray tracing.</p>
+<h2 id="random-number-generation">Random number generation</h2>
+<p>Yocto/Sampling includes an implementation of the <a href="https://www.pcg-random.org">PCG32</a>
+random number generator, that is a portable generator well suited for
+graphics applications. The state of the generator is stored in <code>rng_state</code>
+and uses only 16 bytes. The generator is default-initialized to be able to
+provide random numbers as is. You can use <code>make_rng(seed,seq)</code> to initialize
+a generator with a given seed and byt selecting a specific random sequence.
+See <a href="https://www.pcg-random.org">PCG32</a> for a discussion. If you do not need
+to select a sequence, just use the default value.</p>
+<p>Use <code>rand1f(rng)</code>, <code>rand2f(rng)</code>, <code>rand3f(rng)</code> and <code>rand4f(rng)</code> to
+generate random 1-4 dimensional float vectors with coordinates in [0,1).
+Use <code>rand1i(rng,n)</code> to generate a random integer in the [0,n) range.
+Use <code>shuffle(sequence, rng)</code> to randomly shuffle a sequence.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">make_rng</span><span class="p">(</span><span class="mi">172784</span><span class="p">);</span>                   <span class="c1">// seed the generator</span>
+<span class="k">auto</span> <span class="n">r1</span> <span class="o">=</span> <span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">);</span> <span class="k">auto</span> <span class="n">r2</span> <span class="o">=</span> <span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">);</span>  <span class="c1">// 1-2 dim. random numbers</span>
+<span class="k">auto</span> <span class="n">r3</span> <span class="o">=</span> <span class="n">rand3f</span><span class="p">(</span><span class="n">rng</span><span class="p">);</span> <span class="k">auto</span> <span class="n">r4</span> <span class="o">=</span> <span class="n">rand4f</span><span class="p">(</span><span class="n">rng</span><span class="p">);</span>  <span class="c1">// 3-4 dim. random numbers</span>
+<span class="k">auto</span> <span class="n">ri</span> <span class="o">=</span> <span class="n">rand1i</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span><span class="mi">10</span><span class="p">);</span>                      <span class="c1">// random int in [0,10)</span>
+<span class="k">auto</span> <span class="n">vec</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{...};</span>
+<span class="n">shuffle</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">rng</span><span class="p">);</span>                             <span class="c1">// random shuffle of a vector</span>
+</code></pre></div>
+
+
+<h2 id="generating-points-and-directions">Generating points and directions</h2>
+<p>Yocto/Sampling defines several functions to generate random points and
+directions. Each of these functions is a warp that takes random numbers in the
+[0,1) domain and warps them to the desired distributions. The functions
+are particularly useful in procedural modeling and path tracing. For each
+function, Yocto/Sampling provides both the warp as well as its pdf, that can
+be used in Monte Carlo integration.</p>
+<p>Yocto/Sampling supports generating directions uniformly over the unit hemisphere
+and sphere, or cosine distributed over the hemisphere, using respectively
+<code>sample_hemisphere(ruv)</code>, <code>sample_sphere(ruv)</code>, <code>sample_hemisphere_cos(ruv)</code>
+<code>sample_hemisphere_cos(ruv)</code> and <code>sample_hemisphere_cos(ruv)</code>.
+For each of these functions, the corresponding <code>sample_&lt;distribution&gt;_pdf(dir)</code>
+computes the pdf that the given direction was chosen.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">make_rng</span><span class="p">(</span><span class="mi">172784</span><span class="p">);</span>               <span class="c1">// seed the generator</span>
+<span class="k">auto</span> <span class="n">rhu</span> <span class="o">=</span> <span class="n">sample_hemisphere</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// random hemispherical direction</span>
+<span class="k">auto</span> <span class="n">phu</span> <span class="o">=</span> <span class="n">sample_hemisphere_pdf</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// direction pdf</span>
+<span class="k">auto</span> <span class="n">rhc</span> <span class="o">=</span> <span class="n">sample_hemisphere_cos</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// cos-distributed direction</span>
+<span class="k">auto</span> <span class="n">rsu</span> <span class="o">=</span> <span class="n">sample_sphere</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>     <span class="c1">// random spherical direction</span>
+<span class="k">auto</span> <span class="n">rhu2</span> <span class="o">=</span> <span class="n">sample_hemisphere</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>     <span class="c1">// oriented hemisphere</span>
+<span class="k">auto</span> <span class="n">rhc2</span> <span class="o">=</span> <span class="n">sample_hemisphere_cos</span><span class="p">(</span><span class="n">normal</span><span class="p">,</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// oriented hemisphere</span>
+</code></pre></div>
+
+
+<p>Yocto/Sampling supports generating points uniformly on geometric primitives.
+Use <code>sample_disk(uv)</code> to uniformly sample a disk and <code>sample_triangle(uv)</code>
+to uniformly sample a triangle. For triangles we also support direct
+sampling of triangle points with <code>sample_triangle(p0,p1,p2,ruv)</code>.
+by warping
+random numbers from the unit square to<br />
+ uniformly over the unit hemisphere
+and sphere, or cosine distributed over the hemisphere, using respectively
+<code>sample_hemisphere(ruv)</code>, <code>sample_sphere(ruv)</code>, <code>sample_hemisphere_cos(ruv)</code>
+<code>sample_hemisphere_cos(ruv)</code> and <code>sample_hemisphere_cos(ruv)</code>.
+For each of these functions, the corresponding <code>sample_&lt;distribution&gt;_pdf(dir)</code>
+computes the pdf that the given direction was chosen.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">make_rng</span><span class="p">(</span><span class="mi">172784</span><span class="p">);</span>               <span class="c1">// seed the generator</span>
+<span class="k">auto</span> <span class="n">sdu</span> <span class="o">=</span> <span class="n">sample_disk</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>       <span class="c1">// uniform uv on disk</span>
+<span class="k">auto</span> <span class="n">stu</span> <span class="o">=</span> <span class="n">sample_triangle</span><span class="p">(</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>   <span class="c1">// uniform uv on triangle</span>
+<span class="k">auto</span> <span class="n">stp</span> <span class="o">=</span> <span class="n">sample_triangle</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">rand2f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>   <span class="c1">// uniform triangle point</span>
+</code></pre></div>
+
+
+<h2 id="sampling-distributions">Sampling distributions</h2>
+<p>Yocto/Sampling defines several functions to sample distributions.
+Each of these functions is a warp that takes a random number in the
+[0,1) domain and warps it to the desired distribution. For each
+function, Yocto/Sampling provides both the warp as well as its pdf, that can
+be used in Monte Carlo integration.</p>
+<p>Use <code>sample_uniform(n,r)</code> to randomly pick an index in the <code>[0,n)</code> range,
+<code>sample_uniform(elems,r)</code> to randomly pick an element from a sequence,
+<code>sample_discrete_cdf(cdf,r)</code> to pick an index from a discrete distribution
+that has CDF <code>cdf</code> and <code>sample_discrete_weights(w,r)</code> to pick an index from a
+discrete distribution with probability equal to the weights array. For
+discrete distribution, <code>sample_discrete_cdf()</code> is significantly faster when
+computing many samples.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">auto</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">make_rng</span><span class="p">(</span><span class="mi">172784</span><span class="p">);</span>                 <span class="c1">// seed the generator</span>
+<span class="k">auto</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">sample_uniform</span><span class="p">(</span><span class="n">num</span><span class="p">,</span><span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>  <span class="c1">// uniform index</span>
+<span class="k">auto</span><span class="o">&amp;</span> <span class="n">elem</span> <span class="o">=</span> <span class="n">sample_uniform</span><span class="p">(</span><span class="n">elems</span><span class="p">,</span><span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span>  <span class="c1">// uniform element</span>
+<span class="k">auto</span> <span class="n">prob</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.4</span><span class="p">};</span>  <span class="c1">// probability distribution</span>
+<span class="k">auto</span> <span class="n">pidx</span> <span class="o">=</span> <span class="n">sample_discrete_weights</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span><span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// index with prob</span>
+<span class="k">auto</span> <span class="n">ppidx</span> <span class="o">=</span> <span class="n">sample_discrete_weights_pdf</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span><span class="n">pidx</span><span class="p">);</span>   <span class="c1">// index pdf</span>
+<span class="k">auto</span> <span class="n">cdf</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">{</span><span class="n">prob</span><span class="p">.</span><span class="n">size</span><span class="p">()};</span>
+<span class="k">for</span><span class="p">(</span><span class="k">auto</span> <span class="nl">i</span> <span class="p">:</span> <span class="n">range</span><span class="p">(</span><span class="n">prob</span><span class="p">.</span><span class="n">size</span><span class="p">())</span>               <span class="c1">// compute cdf</span>
+  <span class="n">cdf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">?</span> <span class="n">cdf</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">:</span> <span class="mi">0</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">cidx</span> <span class="o">=</span> <span class="n">sample_discrete_cdf</span><span class="p">(</span><span class="n">cdf</span><span class="p">,</span><span class="n">rand1f</span><span class="p">(</span><span class="n">rng</span><span class="p">));</span> <span class="c1">// index with cdf</span>
+<span class="k">auto</span> <span class="n">pcidx</span> <span class="o">=</span> <span class="n">sample_discrete_cdf_pdf</span><span class="p">(</span><span class="n">cdf</span><span class="p">,</span><span class="n">cidx</span><span class="p">);</span>   <span class="c1">// index pdf</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_geometry/" title="Geometry operations" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Geometry operations
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_noise/" title="Noise functions" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Noise functions
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2016 - 2020 Fabio Pellacini
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5f27aba8.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.27c6a5e6.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
