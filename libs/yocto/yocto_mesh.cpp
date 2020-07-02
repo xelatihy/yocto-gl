@@ -64,7 +64,7 @@ inline vec2f intersect_circles_core(
   float B = (r1 * r1 - r2 * r2) / R;
   float s = A - B * B - 1;
   assert(s >= 0);
-  result += vec2f(c2.y - c1.y, c1.x - c2.x) * (0.5 * sqrtf(s));
+  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5 * sqrtf(s));
   return result;
 }
 
@@ -79,7 +79,7 @@ inline vec2f intersect_circles_fast(
   float B = (R1 - R2) / R;
   float s = A - B * B - 1;
   assert(s >= 0);
-  result += vec2f(c2.y - c1.y, c1.x - c2.x) * (0.5 * sqrtf(s));
+  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5 * sqrtf(s));
   return result;
 }
 
@@ -126,9 +126,9 @@ inline vec3f make_bary(const vec2f& bary) {
 
 inline mesh_point make_point(const int tid, const vec3f bary) {
 #if YOCTO_OLD_INTERPOLATION_CONVENTION
-  return {tid, vec2f(bary.x, bary.y)};
+  return {tid, vec2f{bary.x, bary.y}};
 #else
-  return {tid, vec2f(bary.y, bary.z)};
+  return {tid, vec2f{bary.y, bary.z}};
 #endif
 }
 
@@ -268,7 +268,7 @@ vec2i opposite_edge(const vec3i& t, const int vid) {
   int offset = find_in_vec(t, vid);
   int v0     = t[(offset + 1) % 3];
   int v1     = t[(offset + 2) % 3];
-  return vec2i(v0, v1);
+  return vec2i{v0, v1};
 }
 
 vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1) {
