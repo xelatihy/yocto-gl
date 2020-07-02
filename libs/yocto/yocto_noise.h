@@ -171,23 +171,23 @@ inline float perlin_noise(float px, int wx) {
   return lerp(n0, n1, ux);
 }
 
-inline float perlin_noise(float px, float y, int wx, int wy) {
+inline float perlin_noise(float px, float py, int wx, int wy) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
-  auto grad = [](int hash, float px, float y) -> float {
-    int   h = hash & 7;        // Convert low 3 bits of hash code
-    float u = h < 4 ? px : y;  // into 8 simple gradient directions,
-    float v = h < 4 ? y : px;  // and compute the dot product with (px,y).
+  auto grad = [](int hash, float px, float py) -> float {
+    int   h = hash & 7;         // Convert low 3 bits of hash code
+    float u = h < 4 ? px : py;  // into 8 simple gradient directions,
+    float v = h < 4 ? py : px;  // and compute the dot product with (px,py).
     return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
   };
   auto hash = [](int ix, int iy) -> int { return p[p[ix] + iy]; };
 
   uint mx = (wx - 1) & 255, my = (wy - 1) & 255;
-  auto ix = ifloor(px), iy = ifloor(y);
-  auto fx = px - ix, fy = y - iy;
+  auto ix = ifloor(px), iy = ifloor(py);
+  auto fx = px - ix, fy = py - iy;
   auto lx = ix & mx, ly = iy & my;
   auto hx = (ix + 1) & mx, hy = (iy + 1) & my;
 
@@ -318,7 +318,7 @@ inline float perlin_noise(
 
 // noise
 inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
-  return perlin_noise(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
+  return perlin_noise(p.x, p.py, p.z, wrap.x, wrap.py, wrap.z);
 }
 
 // ridge
