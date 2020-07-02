@@ -44,7 +44,7 @@
 namespace yocto {
 
 // Compute the revised Perlin noise function. Wrap provides a wrapping noise
-// but must be power of two (wraps at 256 anyway).
+// but must be power of two (wraps at 256 anyway). 
 inline float perlin_noise(float p, int wrap = 0);
 inline float perlin_noise(const vec2f& p, const vec2i& wrap = {0, 0});
 inline float perlin_noise(const vec3f& p, const vec3i& wrap = {0, 0, 0});
