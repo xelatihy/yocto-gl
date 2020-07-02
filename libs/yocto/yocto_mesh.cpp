@@ -268,7 +268,7 @@ vec2i opposite_edge(const vec3i& t, const int vid) {
   int offset = find_in_vec(t, vid);
   int v0     = t[(offset + 1) % 3];
   int v1     = t[(offset + 2) % 3];
-  return vec2i(v0, v1);
+  return vec2i{v0, v1};
 }
 
 vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1) {

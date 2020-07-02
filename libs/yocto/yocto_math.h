@@ -415,9 +415,6 @@ struct vec2i {
   int x = 0;
   int y = 0;
 
-  vec2i();
-  vec2i(int x, int y);
-
   int&       operator[](int i);
   const int& operator[](int i) const;
 };
@@ -426,9 +423,6 @@ struct vec3i {
   int x = 0;
   int y = 0;
   int z = 0;
-
-  vec3i();
-  vec3i(int x, int y, int z);
 
   int&       operator[](int i);
   const int& operator[](int i) const;
@@ -440,9 +434,6 @@ struct vec4i {
   int z = 0;
   int w = 0;
 
-  vec4i();
-  vec4i(int x, int y, int z, int w);
-
   int&       operator[](int i);
   const int& operator[](int i) const;
 };
@@ -451,9 +442,6 @@ struct vec3b {
   byte x = 0;
   byte y = 0;
   byte z = 0;
-
-  vec3b();
-  vec3b(byte x, byte y, byte z);
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -464,9 +452,6 @@ struct vec4b {
   byte y = 0;
   byte z = 0;
   byte w = 0;
-
-  vec4b();
-  vec4b(byte x, byte y, byte z, byte w);
 
   byte&       operator[](int i);
   const byte& operator[](int i) const;
@@ -1654,37 +1639,22 @@ inline vec4f quat_inverse(const vec4f& a) {
 namespace yocto {
 
 // Vector data types
-inline vec2i::vec2i() {}
-inline vec2i::vec2i(int x, int y) : x{x}, y{y} {}
-
 inline int& vec2i::operator[](int i) { return (&x)[i]; }
 inline const int& vec2i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline vec3i::vec3i() {}
-inline vec3i::vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-
 inline int& vec3i::operator[](int i) { return (&x)[i]; }
 inline const int& vec3i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline vec4i::vec4i() {}
-inline vec4i::vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-
 inline int& vec4i::operator[](int i) { return (&x)[i]; }
 inline const int& vec4i::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline vec3b::vec3b() {}
-inline vec3b::vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
-
 inline byte& vec3b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 
 // Vector data types
-inline vec4b::vec4b() {}
-inline vec4b::vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
