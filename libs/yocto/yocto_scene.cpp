@@ -164,23 +164,23 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels3b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorb.size().x *
-               (size_t)texture->colorb.size().x;
+        return (size_t)texture->colorb.imsize().x *
+               (size_t)texture->colorb.imsize().x;
       })));
   stats.push_back(
       "texels3f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorf.size().x *
-               (size_t)texture->colorf.size().y;
+        return (size_t)texture->colorf.imsize().x *
+               (size_t)texture->colorf.imsize().y;
       })));
   stats.push_back(
       "texels1b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarb.size().x *
-               (size_t)texture->scalarb.size().x;
+        return (size_t)texture->scalarb.imsize().x *
+               (size_t)texture->scalarb.imsize().x;
       })));
   stats.push_back(
       "texels1f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarf.size().x *
-               (size_t)texture->scalarf.size().y;
+        return (size_t)texture->scalarf.imsize().x *
+               (size_t)texture->scalarf.imsize().y;
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
@@ -503,9 +503,9 @@ void add_materials(scene_model* scene) {
 void add_sky(scene_model* scene, float sun_angle) {
   auto texture = add_texture(scene, "sky");
   auto sunsky  = make_sunsky({1024, 512}, sun_angle);
-  texture->colorf.resize(sunsky.size());
-  for (auto j = 0; j < sunsky.size().y; j++)
-    for (auto i = 0; i < sunsky.size().x; i++)
+  texture->colorf.resize(sunsky.imsize());
+  for (auto j = 0; j < sunsky.imsize().y; j++)
+    for (auto i = 0; i < sunsky.imsize().x; i++)
       texture->colorf[{i, j}] = xyz(sunsky[{i, j}]);
   auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
@@ -757,13 +757,13 @@ namespace yocto {
 // Check texture size
 vec2i texture_size(const scene_texture* texture) {
   if (!texture->colorf.empty()) {
-    return texture->colorf.size();
+    return texture->colorf.imsize();
   } else if (!texture->colorb.empty()) {
-    return texture->colorb.size();
+    return texture->colorb.imsize();
   } else if (!texture->scalarf.empty()) {
-    return texture->scalarf.size();
+    return texture->scalarf.imsize();
   } else if (!texture->scalarb.empty()) {
-    return texture->scalarb.size();
+    return texture->scalarb.imsize();
   } else {
     return zero2i;
   }

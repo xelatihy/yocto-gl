@@ -452,7 +452,7 @@ inline R eval_image_generic(const image<T>& img, const vec2f& uv,
   if (img.empty()) return R{};
 
   // get image width/height
-  auto size = img.size();
+  auto size = img.imsize();
 
   // get coordinates normalized for tiling
   auto s = 0.0f, t = 0.0f;
@@ -514,8 +514,8 @@ namespace yocto {
 template <typename T>
 inline void set_region(
     image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
+  for (auto j = 0; j < region.imsize().y; j++) {
+    for (auto i = 0; i < region.imsize().x; i++) {
       if (!img.contains({i, j})) continue;
       img[vec2i{i, j} + offset] = region[{i, j}];
     }
@@ -555,49 +555,49 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
-  auto fl = image<vec4f>{bt.size()};
+  auto fl = image<vec4f>{bt.imsize()};
   for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
   return fl;
 }
 image<vec4b> float_to_byte(const image<vec4f>& fl) {
-  auto bt = image<vec4b>{fl.size()};
+  auto bt = image<vec4b>{fl.imsize()};
   for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
 image<vec3f> byte_to_float(const image<vec3b>& bt) {
-  auto fl = image<vec3f>{bt.size()};
+  auto fl = image<vec3f>{bt.imsize()};
   for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
   return fl;
 }
 image<vec3b> float_to_byte(const image<vec3f>& fl) {
-  auto bt = image<vec3b>{fl.size()};
+  auto bt = image<vec3b>{fl.imsize()};
   for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
-  auto fl = image<float>{bt.size()};
+  auto fl = image<float>{bt.imsize()};
   for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
-  auto bt = image<byte>{fl.size()};
+  auto bt = image<byte>{fl.imsize()};
   for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
 image<float> ushort_to_float(const image<ushort>& bt) {
-  auto fl = image<float>{bt.size()};
+  auto fl = image<float>{bt.imsize()};
   for (auto i = 0ull; i < fl.count(); i++)
     fl[i] = yocto::ushort_to_float(bt[i]);
   return fl;
 }
 image<ushort> float_to_ushort(const image<float>& fl) {
-  auto bt = image<ushort>{fl.size()};
+  auto bt = image<ushort>{fl.imsize()};
   for (auto i = 0ull; i < bt.count(); i++)
     bt[i] = yocto::float_to_ushort(fl[i]);
   return bt;
@@ -605,23 +605,23 @@ image<ushort> float_to_ushort(const image<float>& fl) {
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb) {
-  auto rgb = image<vec4f>{srgb.size()};
+  auto rgb = image<vec4f>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<vec4f> rgb_to_srgb(const image<vec4f>& rgb) {
-  auto srgb = image<vec4f>{rgb.size()};
+  auto srgb = image<vec4f>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb) {
-  auto rgb = image<vec4f>{srgb.size()};
+  auto rgb = image<vec4f>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
     rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
   return rgb;
 }
 image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
-  auto srgb = image<vec4b>{rgb.size()};
+  auto srgb = image<vec4b>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
     srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
   return srgb;
@@ -629,23 +629,23 @@ image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
 
 // Conversion between linear and gamma-encoded images.
 image<vec3f> srgb_to_rgb(const image<vec3f>& srgb) {
-  auto rgb = image<vec3f>{srgb.size()};
+  auto rgb = image<vec3f>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<vec3f> rgb_to_srgb(const image<vec3f>& rgb) {
-  auto srgb = image<vec3f>{rgb.size()};
+  auto srgb = image<vec3f>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<vec3f> srgb_to_rgb(const image<vec3b>& srgb) {
-  auto rgb = image<vec3f>{srgb.size()};
+  auto rgb = image<vec3f>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
     rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
   return rgb;
 }
 image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
-  auto srgb = image<vec3b>{rgb.size()};
+  auto srgb = image<vec3b>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
     srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
   return srgb;
@@ -653,25 +653,25 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
-  auto rgb = image<float>{srgb.size()};
+  auto rgb = image<float>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
     rgb[i] = yocto::srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
-  auto srgb = image<float>{rgb.size()};
+  auto srgb = image<float>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
     srgb[i] = yocto::rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
-  auto rgb = image<float>{srgb.size()};
+  auto rgb = image<float>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
     rgb[i] = yocto::srgb_to_rgb(yocto::byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
-  auto srgb = image<byte>{rgb.size()};
+  auto srgb = image<byte>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
     srgb[i] = yocto::float_to_byte(yocto::rgb_to_srgb(rgb[i]));
   return srgb;
@@ -680,14 +680,14 @@ image<byte> rgb_to_srgbb(const image<float>& rgb) {
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-  auto ldr = image<vec4f>{hdr.size()};
+  auto ldr = image<vec4f>{hdr.imsize()};
   for (auto i = 0ull; i < hdr.count(); i++)
     ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
   return ldr;
 }
 image<vec4b> tonemap_imageb(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-  auto ldr = image<vec4b>{hdr.size()};
+  auto ldr = image<vec4b>{hdr.imsize()};
   for (auto i = 0ull; i < hdr.count(); i++)
     ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
   return ldr;
@@ -695,7 +695,7 @@ image<vec4b> tonemap_imageb(
 
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.size(), [&](const vec2i& ij) {
+  parallel_for(hdr.imsize(), [&](const vec2i& ij) {
     ldr[ij] = tonemap(hdr[ij], exposure, filmic, srgb);
   });
 }
@@ -741,7 +741,7 @@ vec4f colorgrade(
 // Apply exposure and filmic tone mapping
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, bool linear, const colorgrade_params& params) {
-  auto corrected = image<vec4f>{img.size()};
+  auto corrected = image<vec4f>{img.imsize()};
   for (auto i = 0ull; i < img.count(); i++)
     corrected[i] = colorgrade(img[i], linear, params);
   return corrected;
@@ -750,7 +750,7 @@ image<vec4f> colorgrade_image(
 // Apply exposure and filmic tone mapping
 void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.size(), [&](const vec2i& ij) {
+  parallel_for(img.imsize(), [&](const vec2i& ij) {
     corrected[ij] = colorgrade(img[ij], linear, params);
   });
 }
@@ -777,29 +777,30 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
 }
 
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
-  auto size    = resize_size(img.size(), size_);
+  auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4f>{size};
-  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+  stbir_resize_float_generic((float*)img.data(), img.imsize().x, img.imsize().y,
+      sizeof(vec4f) * img.imsize().x, (float*)res_img.data(),
+      res_img.imsize().x, res_img.imsize().y,
+      sizeof(vec4f) * res_img.imsize().x, 4, 3, 0, STBIR_EDGE_CLAMP,
+      STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
-  auto size    = resize_size(img.size(), size_);
+  auto size    = resize_size(img.imsize(), size_);
   auto res_img = image<vec4b>{size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
+  stbir_resize_uint8_generic((byte*)img.data(), img.imsize().x, img.imsize().y,
+      sizeof(vec4b) * img.imsize().x, (byte*)res_img.data(), res_img.imsize().x,
+      res_img.imsize().y, sizeof(vec4b) * res_img.imsize().x, 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
 
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool display) {
-  if (a.size() != b.size())
+  if (a.imsize() != b.imsize())
     throw std::invalid_argument("image haev different sizes");
-  auto diff = image<vec4f>{a.size()};
+  auto diff = image<vec4f>{a.imsize()};
   for (auto i = 0llu; i < diff.count(); i++) diff[i] = abs(a[i] - b[i]);
   if (display) {
     for (auto i = 0llu; i < diff.count(); i++) {
@@ -819,11 +820,11 @@ namespace yocto {
 
 // Comvert a bump map to a normal map.
 void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
-  norm.resize(img.size());
-  auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
-  for (int j = 0; j < img.size().y; j++) {
-    for (int i = 0; i < img.size().x; i++) {
-      auto i1 = (i + 1) % img.size().x, j1 = (j + 1) % img.size().y;
+  norm.resize(img.imsize());
+  auto dx = 1.0f / img.imsize().x, dy = 1.0f / img.imsize().y;
+  for (int j = 0; j < img.imsize().y; j++) {
+    for (int i = 0; i < img.imsize().x; i++) {
+      auto i1 = (i + 1) % img.imsize().x, j1 = (j + 1) % img.imsize().y;
       auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
       auto g00    = (p00.x + p00.y + p00.z) / 3;
       auto g01    = (p01.x + p01.y + p01.z) / 3;
@@ -838,7 +839,7 @@ void bump_to_normal(image<vec4f>& norm, const image<vec4f>& img, float scale) {
   }
 }
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
-  auto norm = image<vec4f>{img.size()};
+  auto norm = image<vec4f>{img.imsize()};
   bump_to_normal(norm, img, scale);
   return norm;
 }
@@ -847,8 +848,8 @@ template <typename Shader>
 image<vec4f> make_image(const vec2i& size, Shader&& shader) {
   auto img   = image<vec4f>{size};
   auto scale = 1.0f / max(size);
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  for (auto j = 0; j < img.imsize().y; j++) {
+    for (auto i = 0; i < img.imsize().x; i++) {
       auto uv     = vec2f{i * scale, j * scale};
       img[{i, j}] = shader(uv);
     }
@@ -1031,12 +1032,13 @@ image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
 image<vec4f> add_border(
     const image<vec4f>& source, float width, const vec4f& color) {
   auto img   = source;
-  auto scale = 1.0f / max(img.size());
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  auto scale = 1.0f / max(img.imsize());
+  for (auto j = 0; j < img.imsize().y; j++) {
+    for (auto i = 0; i < img.imsize().x; i++) {
       auto uv = vec2f{i * scale, j * scale};
-      if (uv.x < width || uv.y < width || uv.x > img.size().x * scale - width ||
-          uv.y > img.size().y * scale - width) {
+      if (uv.x < width || uv.y < width ||
+          uv.x > img.imsize().x * scale - width ||
+          uv.y > img.imsize().y * scale - width) {
         img[{i, j}] = color;
       }
     }
@@ -1137,11 +1139,11 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
   // Make the sun sky image
   auto img          = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
-  for (auto j = 0; j < img.size().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.size().y);
+  for (auto j = 0; j < img.imsize().y / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.imsize().y);
     theta      = clamp(theta, 0.0f, pif / 2 - flt_eps);
-    for (int i = 0; i < img.size().x; i++) {
-      auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
+    for (int i = 0; i < img.imsize().x; i++) {
+      auto phi = 2 * pif * (float(i + 0.5f) / img.imsize().x);
       auto w = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
       auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
       auto sky_col = sky(theta, gamma, theta_sun);
@@ -1155,23 +1157,23 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 
   if (ground_albedo != zero3f) {
     auto ground = zero3f;
-    for (auto j = 0; j < img.size().y / 2; j++) {
-      auto theta = pif * ((j + 0.5f) / img.size().y);
-      for (int i = 0; i < img.size().x; i++) {
+    for (auto j = 0; j < img.imsize().y / 2; j++) {
+      auto theta = pif * ((j + 0.5f) / img.imsize().y);
+      for (int i = 0; i < img.imsize().x; i++) {
         auto pxl   = img[{i, j}];
         auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-        auto angle = sin(theta) * 4 * pif / (img.size().x * img.size().y);
+        auto angle = sin(theta) * 4 * pif / (img.imsize().x * img.imsize().y);
         ground += le * (ground_albedo / pif) * cos(theta) * angle;
       }
     }
-    for (auto j = img.size().y / 2; j < img.size().y; j++) {
-      for (int i = 0; i < img.size().x; i++) {
+    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
+      for (int i = 0; i < img.imsize().x; i++) {
         img[{i, j}] = {ground.x, ground.y, ground.z, 1};
       }
     }
   } else {
-    for (auto j = img.size().y / 2; j < img.size().y; j++) {
-      for (int i = 0; i < img.size().x; i++) {
+    for (auto j = img.imsize().y / 2; j < img.imsize().y; j++) {
+      for (int i = 0; i < img.imsize().x; i++) {
         img[{i, j}] = {0, 0, 0, 1};
       }
     }
@@ -1185,12 +1187,12 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
 image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
   auto img = image<vec4f>{size};
-  for (auto j = 0; j < img.size().y / 2; j++) {
-    auto theta = pif * ((j + 0.5f) / img.size().y);
+  for (auto j = 0; j < img.imsize().y / 2; j++) {
+    auto theta = pif * ((j + 0.5f) / img.imsize().y);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
     if (fabs(theta - langle) > lheight / 2) continue;
-    for (int i = 0; i < img.size().x; i++) {
-      auto phi     = 2 * pif * (float(i + 0.5f) / img.size().x);
+    for (int i = 0; i < img.imsize().x; i++) {
+      auto phi     = 2 * pif * (float(i + 0.5f) / img.imsize().x);
       auto inlight = false;
       for (auto l = 0; l < nlights; l++) {
         auto lphi = 2 * pif * (l + 0.5f) / nlights;
@@ -1293,7 +1295,7 @@ static const auto logo_small = vector<byte> {
 
 image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
   auto logo   = srgb_to_rgb(make_logo(type));
-  auto offset = img.size() - logo.size() - 8;
+  auto offset = img.imsize() - logo.imsize() - 8;
   auto wlogo  = img;
   set_region(wlogo, logo, offset);
   return wlogo;
@@ -1301,7 +1303,7 @@ image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
 
 image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   auto logo   = make_logo(type);
-  auto offset = img.size() - logo.size() - 8;
+  auto offset = img.imsize() - logo.imsize() - 8;
   auto wlogo  = img;
   set_region(wlogo, logo, offset);
   return wlogo;
@@ -1642,17 +1644,17 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 4,
             filename.c_str()) < 0)
       return write_error();
     return true;
@@ -1708,23 +1710,23 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4))
+    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
+            img.data(), img.imsize().x * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
+    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 4,
+            img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -1800,17 +1802,17 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 3,
+    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 3,
+    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 3,
+    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 3,
             filename.c_str()) < 0)
       return write_error();
     return true;
@@ -1866,23 +1868,23 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 3,
-            img.data(), img.size().x * 3))
+    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
+            img.data(), img.imsize().x * 3))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 3, img.data(), 75))
+    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 3,
+            img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 3, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 3, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -1957,24 +1959,24 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    auto npixels = (size_t)img.size().x * (size_t)img.size().y;
+    auto npixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
     auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
     for (auto idx = (size_t)0; idx < npixels; idx++) {
       cpixels[idx * 3 + 0] = *(img.begin() + idx);
       cpixels[idx * 3 + 1] = *(img.begin() + idx);
       cpixels[idx * 3 + 2] = *(img.begin() + idx);
     }
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 3,
+    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)cpixels.get()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 1,
+    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 1,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 1,
+    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 1,
             filename.c_str()) < 0)
       return write_error();
     return true;
@@ -2030,23 +2032,23 @@ bool is_hdr_filename(const string& filename) {
 
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 1,
-            img.data(), img.size().x * 1))
+    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
+            img.data(), img.imsize().x * 1))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 1, img.data(), 75))
+    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 1,
+            img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 1, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 1, img.data()))
+            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {

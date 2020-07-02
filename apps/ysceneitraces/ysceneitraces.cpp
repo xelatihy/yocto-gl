@@ -176,7 +176,7 @@ int main(int argc, const char* argv[]) {
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
     update_imview(app->glparams.center, app->glparams.scale,
-        app->display.size(), app->glparams.window, app->glparams.fit);
+        app->display.imsize(), app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;

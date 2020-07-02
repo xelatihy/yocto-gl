@@ -117,13 +117,13 @@ void compute_stats(
     stats.histogram[(int)(clamp(p.y / max_histo, 0.f, 1.f) * 255)].y += 1;
     stats.histogram[(int)(clamp(p.z / max_histo, 0.f, 1.f) * 255)].z += 1;
   }
-  auto num_pixels = (size_t)img.size().x * (size_t)img.size().y;
+  auto num_pixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
   for (auto& v : stats.histogram) v /= num_pixels;
   stats.average /= num_pixels;
 }
 
 void update_display(app_state* app) {
-  if (app->display.size() != app->source.size()) app->display = app->source;
+  if (app->display.imsize() != app->source.imsize()) app->display = app->source;
   if (app->colorgrade) {
     colorgrade_image_mt(app->display, app->source, true, app->params);
   } else {
@@ -234,16 +234,16 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "image",
-        std::to_string(app->source.size().x) + " x " +
-            std::to_string(app->source.size().y));
+        std::to_string(app->source.imsize().x) + " x " +
+            std::to_string(app->source.imsize().y));
     draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
     draw_checkbox(win, "fit", app->glparams.fit);
     auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
-        app->glparams.scale, app->source.size());
+        app->glparams.scale, app->source.imsize());
     draw_dragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < app->source.size().x && ij.y >= 0 &&
-        ij.y < app->source.size().y) {
+    if (ij.x >= 0 && ij.x < app->source.imsize().x && ij.y >= 0 &&
+        ij.y < app->source.imsize().y) {
       img_pixel     = app->source[{ij.x, ij.y}];
       display_pixel = app->display[{ij.x, ij.y}];
     }
@@ -271,8 +271,8 @@ void draw(gui_window* win, app_states* apps, const gui_input& input) {
     set_image(app->glimage, app->display, false, false);
     app->glupdated = false;
   }
-  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
-      app->glparams.window, app->glparams.fit);
+  update_imview(app->glparams.center, app->glparams.scale,
+      app->display.imsize(), app->glparams.window, app->glparams.fit);
   draw_image(app->glimage, app->glparams);
 }
 

@@ -972,7 +972,7 @@ bool is_sampler_lit(const trace_params& params) {
 void trace_sample(trace_state* state, const scene_model* scene,
     const scene_camera* camera, const vec2i& ij, const trace_params& params) {
   auto sampler = get_trace_sampler_func(params);
-  auto ray     = sample_camera(camera, ij, state->render.size(),
+  auto ray     = sample_camera(camera, ij, state->render.imsize(),
       rand2f(state->rngs[ij]), rand2f(state->rngs[ij]), params.tentfilter);
   auto sample  = sampler(scene, ray, state->rngs[ij], params);
   if (!isfinite(xyz(sample))) sample = {0, 0, 0, sample.w};
@@ -1123,13 +1123,13 @@ image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
   for (auto sample = 0; sample < params.samples; sample++) {
     if (progress_cb) progress_cb("trace image", sample, params.samples);
     if (params.noparallel) {
-      for (auto j = 0; j < state->render.size().y; j++) {
-        for (auto i = 0; i < state->render.size().x; i++) {
+      for (auto j = 0; j < state->render.imsize().y; j++) {
+        for (auto i = 0; i < state->render.imsize().x; i++) {
           trace_sample(state, scene, camera, {i, j}, params);
         }
       }
     } else {
-      parallel_for(state->render.size(),
+      parallel_for(state->render.imsize(),
           [state, scene, camera, &params](const vec2i& ij) {
             trace_sample(state, scene, camera, ij, params);
           });
@@ -1156,10 +1156,10 @@ void trace_start(trace_state* state, const scene_model* scene,
   pprms.resolution /= params.pratio;
   pprms.samples = 1;
   auto preview  = trace_image(scene, camera, pprms);
-  for (auto j = 0; j < state->render.size().y; j++) {
-    for (auto i = 0; i < state->render.size().x; i++) {
-      auto pi               = clamp(i / params.pratio, 0, preview.size().x - 1),
-           pj               = clamp(j / params.pratio, 0, preview.size().y - 1);
+  for (auto j = 0; j < state->render.imsize().y; j++) {
+    for (auto i = 0; i < state->render.imsize().x; i++) {
+      auto pi = clamp(i / params.pratio, 0, preview.imsize().x - 1),
+           pj = clamp(j / params.pratio, 0, preview.imsize().y - 1);
       state->render[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -1170,7 +1170,7 @@ void trace_start(trace_state* state, const scene_model* scene,
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(state->render.size(), [&](const vec2i& ij) {
+      parallel_for(state->render.imsize(), [&](const vec2i& ij) {
         if (state->stop) return;
         trace_sample(state, scene, camera, ij, params);
         if (async_cb) async_cb(state->render, sample, params.samples, ij);

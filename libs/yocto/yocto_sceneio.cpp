@@ -1713,11 +1713,11 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       return dependent_error();
     if (!color_opacityf.empty()) {
       auto [ctexture, otexture] = textures;
-      ctexture->colorf.resize(color_opacityf.size());
-      otexture->scalarf.resize(color_opacityf.size());
+      ctexture->colorf.resize(color_opacityf.imsize());
+      otexture->scalarf.resize(color_opacityf.imsize());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityf.size().y; j++) {
-        for (auto i = 0; i < color_opacityf.size().x; i++) {
+      for (auto j = 0; j < color_opacityf.imsize().y; j++) {
+        for (auto i = 0; i < color_opacityf.imsize().x; i++) {
           ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
           otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
           if (color_opacityb[{i, j}].w != 1) oempty = false;
@@ -1727,11 +1727,11 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     }
     if (!color_opacityb.empty()) {
       auto [ctexture, otexture] = textures;
-      ctexture->colorb.resize(color_opacityb.size());
-      otexture->scalarb.resize(color_opacityb.size());
+      ctexture->colorb.resize(color_opacityb.imsize());
+      otexture->scalarb.resize(color_opacityb.imsize());
       auto oempty = true;
-      for (auto j = 0; j < color_opacityb.size().y; j++) {
-        for (auto i = 0; i < color_opacityb.size().x; i++) {
+      for (auto j = 0; j < color_opacityb.imsize().y; j++) {
+        for (auto i = 0; i < color_opacityb.imsize().x; i++) {
           ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
           otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
           if (color_opacityb[{i, j}].w != 255) oempty = false;
@@ -1752,10 +1752,10 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
-      mtexture->scalarf.resize(metallic_roughnessf.size());
-      rtexture->scalarf.resize(metallic_roughnessf.size());
-      for (auto j = 0; j < metallic_roughnessf.size().y; j++) {
-        for (auto i = 0; i < metallic_roughnessf.size().x; i++) {
+      mtexture->scalarf.resize(metallic_roughnessf.imsize());
+      rtexture->scalarf.resize(metallic_roughnessf.imsize());
+      for (auto j = 0; j < metallic_roughnessf.imsize().y; j++) {
+        for (auto i = 0; i < metallic_roughnessf.imsize().x; i++) {
           mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
           rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
         }
@@ -1763,10 +1763,10 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     }
     if (!metallic_roughnessb.empty()) {
       auto [mtexture, rtexture] = textures;
-      mtexture->scalarb.resize(metallic_roughnessb.size());
-      rtexture->scalarb.resize(metallic_roughnessb.size());
-      for (auto j = 0; j < metallic_roughnessb.size().y; j++) {
-        for (auto i = 0; i < metallic_roughnessb.size().x; i++) {
+      mtexture->scalarb.resize(metallic_roughnessb.imsize());
+      rtexture->scalarb.resize(metallic_roughnessb.imsize());
+      for (auto j = 0; j < metallic_roughnessb.imsize().y; j++) {
+        for (auto i = 0; i < metallic_roughnessb.imsize().x; i++) {
           mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
           rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
         }

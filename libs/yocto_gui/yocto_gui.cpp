@@ -254,34 +254,34 @@ void clear_texture(ogl_texture* texture) {
 
 void set_texture(ogl_texture* texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(
-      texture, img.size(), 4, (const byte*)img.data(), as_srgb, linear, mipmap);
+  set_texture(texture, img.imsize(), 4, (const byte*)img.data(), as_srgb,
+      linear, mipmap);
 }
 void set_texture(ogl_texture* texture, const image<vec4f>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture, img.size(), 4, (const float*)img.data(), as_float,
+  set_texture(texture, img.imsize(), 4, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
 void set_texture(ogl_texture* texture, const image<vec3b>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(
-      texture, img.size(), 3, (const byte*)img.data(), as_srgb, linear, mipmap);
+  set_texture(texture, img.imsize(), 3, (const byte*)img.data(), as_srgb,
+      linear, mipmap);
 }
 void set_texture(ogl_texture* texture, const image<vec3f>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture, img.size(), 3, (const float*)img.data(), as_float,
+  set_texture(texture, img.imsize(), 3, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
 void set_texture(ogl_texture* texture, const image<byte>& img, bool as_srgb,
     bool linear, bool mipmap) {
-  set_texture(
-      texture, img.size(), 1, (const byte*)img.data(), as_srgb, linear, mipmap);
+  set_texture(texture, img.imsize(), 1, (const byte*)img.data(), as_srgb,
+      linear, mipmap);
 }
 void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
     bool linear, bool mipmap) {
-  set_texture(texture, img.size(), 1, (const float*)img.data(), as_float,
+  set_texture(texture, img.imsize(), 1, (const float*)img.data(), as_float,
       linear, mipmap);
 }
 
