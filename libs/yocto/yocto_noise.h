@@ -33,30 +33,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//
-// LICENCE OF INCLUDED SOFTWARE FOR PERLIN NOISE
-// https://github.com/nothings/stb/blob/master/stb_perlin.h
-//
-// -----------------------------------------------------------------------------
-// ALTERNATIVE B - Public Domain (www.unlicense.org)
-// This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute
-// this software, either in source code form or as a compiled binary, for any
-// purpose, commercial or non-commercial, and by any means. In jurisdictions
-// that recognize copyright laws, the author or authors of this software
-// dedicate any and all copyright interest in the software to the public domain.
-// We make this dedication for the benefit of the public at large and to the
-// detriment of our heirs and successors. We intend this dedication to be an
-// overt act of relinquishment in perpetuity of all present and future rights to
-// this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// -----------------------------------------------------------------------------
-//
 
 #ifndef _YOCTO_NOISE_H_
 #define _YOCTO_NOISE_H_
@@ -73,12 +49,17 @@
 namespace yocto {
 
 // Compute the revised Perlin noise function. Wrap provides a wrapping noise
-// but must be power of two (wraps at 256 anyway). For octave based noise,
-// good values are obtained with octaves=6 (numerber of noise calls),
-// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-// output), gain=0.5 (relative weighting applied to each successive octave),
+// but must be power of two (wraps at 256 anyway).
+inline float perlin_noise(float p, int wrap = 0);
+inline float perlin_noise(const vec2f& p, const vec2i& wrap = {0, 0});
+inline float perlin_noise(const vec3f& p, const vec3i& wrap = {0, 0, 0});
+inline float perlin_noise(const vec4f& p, const vec4i& wrap = {0, 0, 0, 0});
+
+// Fractal noise variations. Good values are obtained with
+// octaves=6 (numerber of noise calls),
+// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping),
+// gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
 inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, float offset = 1,
     const vec3i& wrap = zero3i);
@@ -102,44 +83,61 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Code to generate permutation tables
+// import random, textwrap
+// permutation = [i for i in range(256)]
+// random.seed(12876289)
+// random.shuffle(permutation)
+// print('inline const unsigned char __perlin_permutation[512] = {')
+// print('  // clang-format off')
+// out = ''
+// for i in permutation:
+//     out += str(i)+', '
+// out = textwrap.wrap(out, 78)
+// for line in out:
+//     print(' ', line)
+// print('  // repeat')
+// for line in out:
+//     print(' ', line)
+// print('  // clang-format on')
+// print('};')
+
 // not same permutation table as Perlin's reference to avoid copyright issues;
-// Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
-// @OPTIMIZE: should this be unsigned char instead of int for cache?
 inline const unsigned char __perlin_permutation[512] = {
     // clang-format off
-  23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-  152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-  175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-  8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-  225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-  94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-  165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-  65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-  26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-  250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-  132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-  91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-  38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-  131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-  27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-  61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
-  // and a second copy so we don't need an extra mask or static initializer
-  23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-  152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-  175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-  8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-  225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-  94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-  165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-  65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-  26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-  250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-  132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-  91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-  38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-  131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-  27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-  61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
+  124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
+  145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
+  178, 149, 152, 140, 190, 193, 234, 157, 6, 239, 249, 16, 155, 75, 162, 90,
+  114, 43, 55, 28, 232, 183, 31, 12, 177, 74, 148, 186, 169, 20, 116, 45, 103,
+  242, 135, 66, 163, 8, 221, 63, 102, 121, 39, 58, 201, 35, 217, 120, 144, 3,
+  47, 203, 153, 213, 105, 210, 197, 79, 160, 34, 76, 248, 187, 180, 89, 17, 181,
+  252, 60, 24, 21, 71, 164, 0, 138, 33, 188, 195, 223, 128, 65, 229, 247, 189,
+  129, 88, 204, 42, 54, 32, 165, 118, 80, 96, 150, 199, 130, 64, 141, 156, 94,
+  222, 255, 216, 194, 182, 25, 139, 111, 83, 108, 226, 227, 122, 220, 29, 52,
+  207, 5, 174, 77, 133, 191, 67, 200, 4, 192, 250, 161, 172, 59, 117, 127, 136,
+  225, 106, 251, 10, 154, 240, 171, 179, 126, 100, 19, 70, 2, 97, 159, 73, 104,
+  53, 184, 137, 101, 72, 22, 185, 211, 243, 49, 175, 170, 93, 57, 62, 30, 131,
+  115, 110, 46, 208, 11, 231, 13, 50, 254, 125, 237, 87, 206, 84, 86, 196, 167,
+  41, 1, 151, 212, 224, 99, 147, 23, 40, 134, 95, 253, 123, 85, 235, 107, 142,
+  44, 215, 146, 9, 48, 173, 168, 214, 68, 18, 15, 61, 202, 245, 36, 228, 109,
+  209, 166, 14,
+  // repeat
+  124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
+  145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
+  178, 149, 152, 140, 190, 193, 234, 157, 6, 239, 249, 16, 155, 75, 162, 90,
+  114, 43, 55, 28, 232, 183, 31, 12, 177, 74, 148, 186, 169, 20, 116, 45, 103,
+  242, 135, 66, 163, 8, 221, 63, 102, 121, 39, 58, 201, 35, 217, 120, 144, 3,
+  47, 203, 153, 213, 105, 210, 197, 79, 160, 34, 76, 248, 187, 180, 89, 17, 181,
+  252, 60, 24, 21, 71, 164, 0, 138, 33, 188, 195, 223, 128, 65, 229, 247, 189,
+  129, 88, 204, 42, 54, 32, 165, 118, 80, 96, 150, 199, 130, 64, 141, 156, 94,
+  222, 255, 216, 194, 182, 25, 139, 111, 83, 108, 226, 227, 122, 220, 29, 52,
+  207, 5, 174, 77, 133, 191, 67, 200, 4, 192, 250, 161, 172, 59, 117, 127, 136,
+  225, 106, 251, 10, 154, 240, 171, 179, 126, 100, 19, 70, 2, 97, 159, 73, 104,
+  53, 184, 137, 101, 72, 22, 185, 211, 243, 49, 175, 170, 93, 57, 62, 30, 131,
+  115, 110, 46, 208, 11, 231, 13, 50, 254, 125, 237, 87, 206, 84, 86, 196, 167,
+  41, 1, 151, 212, 224, 99, 147, 23, 40, 134, 95, 253, 123, 85, 235, 107, 142,
+  44, 215, 146, 9, 48, 173, 168, 214, 68, 18, 15, 61, 202, 245, 36, 228, 109,
+  209, 166, 14,
     // clang-format on
 };
 
