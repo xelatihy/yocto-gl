@@ -74,7 +74,7 @@ struct image {
 
   // size
   bool   empty() const;
-  vec2i  size() const;
+  vec2i  imsize() const;
   size_t count() const;
   bool   contains(const vec2i& ij) const;
   void   clear();
@@ -344,7 +344,7 @@ template <typename T>
 struct volume {
   // constructors
   volume();
-  volume(const vec3i& size, const T& value);
+  volume(const vec3i& size, const T& value = {});
   volume(const vec3i& size, const T* value);
 
   // size
@@ -485,7 +485,7 @@ inline bool image<T>::empty() const {
   return pixels.empty();
 }
 template <typename T>
-inline vec2i image<T>::size() const {
+inline vec2i image<T>::imsize() const {
   return extent;
 }
 template <typename T>
@@ -581,11 +581,11 @@ inline const vector<T>& image<T>::data_vector() const {
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
-  return a.size() == b.size() && a.pixels == b.pixels;
+  return a.imsize() == b.imsize() && a.pixels == b.pixels;
 }
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
-  return a.size() != b.size() || a.pixels != b.pixels;
+  return a.imsize() != b.imsize() || a.pixels != b.pixels;
 }
 
 // swap

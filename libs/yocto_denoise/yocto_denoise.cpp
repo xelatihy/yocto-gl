@@ -41,16 +41,16 @@ static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
         "cannot use normal feature image without specifying an albedo feature image."};
 
   // All feature images must be the same size as the color image
-  if (albedo && albedo->size() != color.size()) {
+  if (albedo && albedo->imsize() != color.imsize()) {
     error = "albedo image size doesn't match color image size";
     return false;
   }
-  if (normal && normal->size() != color.size()) {
+  if (normal && normal->imsize() != color.imsize()) {
     error = "normal image size doesn't match color image size";
     return false;
   }
 
-  auto [width, height] = color.size();
+  auto [width, height] = color.imsize();
   auto device          = oidn::newDevice();
   device.commit();
 
@@ -73,7 +73,7 @@ static bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
         "normal", (void *)normal->data(), oidn::Format::Float3, width, height);
 
   // initialize 'out' image to the correct size and set it as filter output
-  out.resize(color.size());
+  out.resize(color.imsize());
   filter.setImage(
       "output", (void *)out.data(), oidn::Format::Float3, width, height);
 

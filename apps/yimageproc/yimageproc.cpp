@@ -39,22 +39,22 @@ namespace yocto {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-  auto filtered     = image{img.size(), zero4f};
+  auto filtered     = image{img.imsize(), zero4f};
   auto filter_width = (int)ceil(2.57f * spatial_sigma);
   auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw           = 1 / (2.0f * range_sigma * range_sigma);
   auto fw           = vector<float>();
   for (auto feature_sigma : features_sigma)
     fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  for (auto j = 0; j < img.imsize().y; j++) {
+    for (auto i = 0; i < img.imsize().x; i++) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -filter_width; fj <= filter_width; fj++) {
         for (auto fi = -filter_width; fi <= filter_width; fi++) {
           auto ii = i + fi, jj = j + fj;
           if (ii < 0 || jj < 0) continue;
-          if (ii >= img.size().x || jj >= img.size().y) continue;
+          if (ii >= img.imsize().x || jj >= img.imsize().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{i, j}];
           auto w   = (float)exp(-dot(uv, uv) * sw) *
@@ -75,19 +75,19 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-  auto filtered = image{img.size(), zero4f};
+  auto filtered = image{img.imsize(), zero4f};
   auto fwidth   = (int)ceil(2.57f * spatial_sigma);
   auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
   auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
+  for (auto j = 0; j < img.imsize().y; j++) {
+    for (auto i = 0; i < img.imsize().x; i++) {
       auto av = zero4f;
       auto aw = 0.0f;
       for (auto fj = -fwidth; fj <= fwidth; fj++) {
         for (auto fi = -fwidth; fi <= fwidth; fi++) {
           auto ii = i + fi, jj = j + fj;
           if (ii < 0 || jj < 0) continue;
-          if (ii >= img.size().x || jj >= img.size().y) continue;
+          if (ii >= img.imsize().x || jj >= img.imsize().y) continue;
           auto uv  = vec2f{float(i - ii), float(j - jj)};
           auto rgb = img[{i, j}] - img[{ii, jj}];
           auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
@@ -104,8 +104,8 @@ image<vec4f> filter_bilateral(
 bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
-    for (auto j = 0; j < region.size().y; j++) {
-      for (auto i = 0; i < region.size().x; i++) {
+    for (auto j = 0; j < region.imsize().y; j++) {
+      for (auto i = 0; i < region.imsize().x; i++) {
         if (!img.contains({i, j})) continue;
         img[vec2i{i, j} + offset] = region[{i, j}];
       }
@@ -157,14 +157,14 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
+      montage_size.x += sub_img.imsize().x;
+      montage_size.y = max(montage_size.y, sub_img.imsize().y);
     }
     img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
+      pos += sub_img.imsize().x;
     }
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
@@ -174,14 +174,14 @@ bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
+      montage_size.x += sub_img.imsize().x;
+      montage_size.y = max(montage_size.y, sub_img.imsize().y);
     }
     img      = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
+      pos += sub_img.imsize().x;
     }
   } else if (type == "test-floor") {
     img = make_grid(size);
@@ -298,18 +298,18 @@ int main(int argc, const char* argv[]) {
   if (alpha_filename != "") {
     auto alpha = image<vec4f>{};
     if (!load_image(alpha_filename, alpha, ioerror)) print_fatal(ioerror);
-    if (img.size() != alpha.size()) print_fatal("bad image size");
-    for (auto j = 0; j < img.size().y; j++)
-      for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
+    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
+    for (auto j = 0; j < img.imsize().y; j++)
+      for (auto i = 0; i < img.imsize().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>{};
     if (!load_image(coloralpha_filename, alpha, ioerror)) print_fatal(ioerror);
-    if (img.size() != alpha.size()) print_fatal("bad image size");
-    for (auto j = 0; j < img.size().y; j++)
-      for (auto i = 0; i < img.size().x; i++)
+    if (img.imsize() != alpha.imsize()) print_fatal("bad image size");
+    for (auto j = 0; j < img.imsize().y; j++)
+      for (auto i = 0; i < img.imsize().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
   }
 
@@ -322,7 +322,7 @@ int main(int argc, const char* argv[]) {
   if (diff_filename != "") {
     auto diff = image<vec4f>{};
     if (!load_image(diff_filename, diff, ioerror)) print_fatal(ioerror);
-    if (img.size() != diff.size()) print_fatal("image sizes are different");
+    if (img.imsize() != diff.imsize()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
   }
 

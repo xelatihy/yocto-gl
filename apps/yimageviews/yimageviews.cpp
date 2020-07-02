@@ -58,7 +58,7 @@ struct app_state {
 };
 
 void update_display(app_state* app) {
-  if (app->display.size() != app->source.size()) app->display = app->source;
+  if (app->display.imsize() != app->source.imsize()) app->display = app->source;
   if (app->colorgrade) {
     colorgrade_image_mt(app->display, app->source, true, app->params);
   } else {
@@ -101,7 +101,7 @@ int main(int argc, const char* argv[]) {
       set_image(app->glimage, app->display, false, false);
     }
     update_imview(app->glparams.center, app->glparams.scale,
-        app->display.size(), app->glparams.window, app->glparams.fit);
+        app->display.imsize(), app->glparams.window, app->glparams.fit);
     draw_image(app->glimage, app->glparams);
   };
   callbacks.widgets_cb = [app](gui_window* win, const gui_input& input) {
@@ -137,11 +137,11 @@ int main(int argc, const char* argv[]) {
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "fit", app->glparams.fit);
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->source.size());
+          app->glparams.scale, app->source.imsize());
       draw_dragger(win, "mouse", ij);
       auto img_pixel = zero4f, display_pixel = zero4f;
-      if (ij.x >= 0 && ij.x < app->source.size().x && ij.y >= 0 &&
-          ij.y < app->source.size().y) {
+      if (ij.x >= 0 && ij.x < app->source.imsize().x && ij.y >= 0 &&
+          ij.y < app->source.imsize().y) {
         img_pixel     = app->source[{ij.x, ij.y}];
         display_pixel = app->display[{ij.x, ij.y}];
       }

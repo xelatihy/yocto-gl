@@ -294,17 +294,17 @@ bool draw_widgets(
   if (!iotexture) return false;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.size().x) + " x " +
-          std::to_string(iotexture->colorf.size().y));
+      std::to_string(iotexture->colorf.imsize().x) + " x " +
+          std::to_string(iotexture->colorf.imsize().y));
   draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.size().x) + " x " +
-          std::to_string(iotexture->colorb.size().y));
+      std::to_string(iotexture->colorb.imsize().x) + " x " +
+          std::to_string(iotexture->colorb.imsize().y));
   draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.size().x) + " x " +
-          std::to_string(iotexture->scalarf.size().y));
+      std::to_string(iotexture->scalarf.imsize().x) + " x " +
+          std::to_string(iotexture->scalarf.imsize().y));
   draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.size().x) + " x " +
-          std::to_string(iotexture->scalarb.size().y));
+      std::to_string(iotexture->scalarb.imsize().x) + " x " +
+          std::to_string(iotexture->scalarb.imsize().y));
   return false;
 }
 

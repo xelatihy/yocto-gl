@@ -331,17 +331,17 @@ bool draw_widgets(
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
   draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.size().x) + " x " +
-          std::to_string(iotexture->colorf.size().y));
+      std::to_string(iotexture->colorf.imsize().x) + " x " +
+          std::to_string(iotexture->colorf.imsize().y));
   draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.size().x) + " x " +
-          std::to_string(iotexture->colorb.size().y));
+      std::to_string(iotexture->colorb.imsize().x) + " x " +
+          std::to_string(iotexture->colorb.imsize().y));
   draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.size().x) + " x " +
-          std::to_string(iotexture->scalarf.size().y));
+      std::to_string(iotexture->scalarf.imsize().x) + " x " +
+          std::to_string(iotexture->scalarf.imsize().y));
   draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.size().x) + " x " +
-          std::to_string(iotexture->scalarb.size().y));
+      std::to_string(iotexture->scalarb.imsize().x) + " x " +
+          std::to_string(iotexture->scalarb.imsize().y));
   // TODO: load texture
   return edited;
 }
@@ -535,8 +535,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "imagename", app->imagename);
     if (app->ok) {
       draw_label(win, "image",
-          std::to_string(app->render.size().x) + " x " +
-              std::to_string(app->render.size().y) + " @ " +
+          std::to_string(app->render.imsize().x) + " x " +
+              std::to_string(app->render.imsize().y) + " @ " +
               std::to_string(app->render_sample));
       draw_slider(win, "zoom", app->glparams.scale, 0.1, 10);
       draw_checkbox(win, "zoom to fit", app->glparams.fit);
@@ -551,10 +551,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
         for (auto stat : scene_stats(app->ioscene)) print_info(stat);
       }
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->render.size());
+          app->glparams.scale, app->render.imsize());
       draw_dragger(win, "mouse", ij);
-      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-          ij.y < app->render.size().y) {
+      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
+          ij.y < app->render.imsize().y) {
         draw_coloredit(win, "pixel", app->render[{ij.x, ij.y}]);
       } else {
         auto zero4f_ = zero4f;
@@ -705,8 +705,8 @@ void draw(gui_window* win, app_states* apps, const gui_input& input) {
   app->glparams.framebuffer = input.framebuffer_viewport;
   if (!is_initialized(app->glimage)) init_image(app->glimage);
   if (!app->render_counter) set_image(app->glimage, app->display, false, false);
-  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
-      app->glparams.window, app->glparams.fit);
+  update_imview(app->glparams.center, app->glparams.scale,
+      app->display.imsize(), app->glparams.window, app->glparams.fit);
   draw_image(app->glimage, app->glparams);
   app->render_counter++;
   if (app->render_counter > 10) app->render_counter = 0;
@@ -818,13 +818,14 @@ int main(int argc, const char* argv[]) {
     if ((input.mouse_left || input.mouse_right) && input.modifier_alt &&
         !input.widgets_active) {
       auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
-          app->glparams.scale, app->render.size());
-      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-          ij.y < app->render.size().y) {
+          app->glparams.scale, app->render.imsize());
+      if (ij.x >= 0 && ij.x < app->render.imsize().x && ij.y >= 0 &&
+          ij.y < app->render.imsize().y) {
         auto ray = camera_ray(app->camera->frame, app->camera->lens,
             app->camera->lens, app->camera->film,
-            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
-                                                  (float)app->render.size().y});
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} /
+                vec2f{(float)app->render.imsize().x,
+                    (float)app->render.imsize().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selected_instance = app->ioscene->instances[isec.instance];
         }

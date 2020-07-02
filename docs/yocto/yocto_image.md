@@ -19,14 +19,14 @@ stored in 1D array in row-major order.
 
 Images are default-initialized to an empty container, or can be initialized
 with a size and either a constant value or a pointer to image data.
-Use `img.size()` to get the image width and height as a `vec2i`,
+Use `img.imsize()` to get the image width and height as a `vec2i`,
 `img.count()` to get the number of pixels, and `img.empty()` to check
 whether the image is empty. Images can be resized with `img.resize(size)`,
 re-initialized with `img.assign(size, value)` and cleared with `img.clear()`.
 
 ```cpp
 auto img = image<vec4f>{{512,512}, {1,0,0,1}}; // creates a 512x512 red image
-auto size = img.size();             // size == {512,512}
+auto size = img.imsize();           // size == {512,512}
 asset(!img.empty());                // check if empty
 img.resize({1024,512});             // resize to {1024,512}
 img.assign({1024,512}, {0,1,0,1});  // re-initialize as green

@@ -93,7 +93,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // create heightfield
-  make_heightfield(quads, positions, normals, texcoords, heightfield.size(),
+  make_heightfield(quads, positions, normals, texcoords, heightfield.imsize(),
       heightfield.data_vector());
   if (!smooth) normals.clear();
 
