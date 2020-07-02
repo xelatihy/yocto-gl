@@ -2,11 +2,6 @@
 // # Yocto/Noise: Noise functions
 //
 // Yocto/Noise provides a Perlin noise implementation.
-// _This library should to be considered a placeholder since it will grow later
-// as a collection of noise functions_ used in procedural modeling.
-// For now, the implementation used is the one
-// found in the [stb libraries](https://github.com/nothings/stb),
-// that are released in the public domain.
 // Yocto/Noise is implemented in `yocto_noise.h`.
 //
 
