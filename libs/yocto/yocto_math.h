@@ -122,9 +122,6 @@ struct vec2f {
   float x = 0;
   float y = 0;
 
-  vec2f();
-  vec2f(float x, float y);
-
   float&       operator[](int i);
   const float& operator[](int i) const;
 };
@@ -133,9 +130,6 @@ struct vec3f {
   float x = 0;
   float y = 0;
   float z = 0;
-
-  vec3f();
-  vec3f(float x, float y, float z);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -146,9 +140,6 @@ struct vec4f {
   float y = 0;
   float z = 0;
   float w = 0;
-
-  vec4f();
-  vec4f(float x, float y, float z, float w);
 
   float&       operator[](int i);
   const float& operator[](int i) const;
@@ -1190,24 +1181,14 @@ inline void swap(int& a, int& b) { std::swap(a, b); }
 namespace yocto {
 
 // Vec2
-inline vec2f::vec2f() {}
-inline vec2f::vec2f(float x, float y) : x{x}, y{y} {}
-
 inline float& vec2f::operator[](int i) { return (&x)[i]; }
 inline const float& vec2f::operator[](int i) const { return (&x)[i]; }
 
 // Vec3
-inline vec3f::vec3f() {}
-inline vec3f::vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-
 inline float& vec3f::operator[](int i) { return (&x)[i]; }
 inline const float& vec3f::operator[](int i) const { return (&x)[i]; }
 
 // Vec4
-inline vec4f::vec4f() {}
-inline vec4f::vec4f(float x, float y, float z, float w)
-    : x{x}, y{y}, z{z}, w{w} {}
-
 inline float& vec4f::operator[](int i) { return (&x)[i]; }
 inline const float& vec4f::operator[](int i) const { return (&x)[i]; }
 
