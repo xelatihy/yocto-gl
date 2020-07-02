@@ -35,6 +35,7 @@ nav:
   - Image utilities: yocto/yocto_image.md
   - Shape utilities: yocto/yocto_shape.md
   - Mesh processing: yocto/yocto_mesh.md
+  - Ray-scene intersection: yocto/yocto_bvh.md
   - Model serialization: yocto/yocto_modelio.md
   - Scene representation: yocto/yocto_scene.md
   - Scene serialization: yocto/yocto_sceneio.md
