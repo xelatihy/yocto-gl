@@ -134,15 +134,21 @@ Yocto/GL depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
 for glTF and JSON support, and `filesystem.hpp` to support C++17 filesystem API
 when missing. All dependencies are included in the distribution.
 
-We optionally support building OpenGL demos, which are handled by including
-glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
+Yocto/GL optionally supports building OpenGL demos, which are handled by including
+glad, GLFW, ImGui as dependencies in apps. OpenGL support might eventually
 become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option `YOCTO_OPENGL` and contained in the `yocto_gui` library.
 
-Finally, we optionally support the use of Intel's Embree for ray casting.
-At this point, we rely pon prebuilt binaries distributed by Intel.
+Yocto/GL optionally supports the use of Intel's Embree for ray casting.
+At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option `YOCTO_EMBREE`.
+
+Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising
+renders. At this point, we rely on prebuilt binaries distributed by Intel.
+See the main CMake file for how to link to it. Open Image Denoise support is enabled by
+defining the cmake option `YOCTO_DENOISE`. See `apps/yimagedenoise` for
+a demonstration.
 
 <!--
 

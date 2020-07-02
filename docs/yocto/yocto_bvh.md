@@ -6,6 +6,7 @@ Yocto/Bvh is implemented in `yocto_bvh.h` and `yocto_bvh.cpp`.
 
 **This library is experimental** and will be documented appropriately when
 the code reaches stability.
+For now, use the [Yocto/Scene](yocto_scene.md) support for this.
 
 <!--
 
