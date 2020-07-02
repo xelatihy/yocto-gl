@@ -380,6 +380,18 @@
 
 
   <li class="md-nav__item">
+    <a href="yocto/yocto_bvh/" title="Ray-scene intersection" class="md-nav__link">
+      Ray-scene intersection
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
     <a href="yocto/yocto_modelio/" title="Model serialization" class="md-nav__link">
       Model serialization
     </a>
@@ -637,14 +649,19 @@ OsX (Xcode &gt;= 10), Windows (MSVC 2019) and Linux (gcc &gt;= 7, clang &gt;= 4)
 <code>tinyexr.h</code> for image loading, saving and resizing, <code>cgltf.h</code> and <code>json.hpp</code>
 for glTF and JSON support, and <code>filesystem.hpp</code> to support C++17 filesystem API
 when missing. All dependencies are included in the distribution.</p>
-<p>We optionally support building OpenGL demos, which are handled by including
-glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
+<p>Yocto/GL optionally supports building OpenGL demos, which are handled by including
+glad, GLFW, ImGui as dependencies in apps. OpenGL support might eventually
 become part of the Yocto/GL libraries. OpenGL support is enabled by defining
 the cmake option <code>YOCTO_OPENGL</code> and contained in the <code>yocto_gui</code> library.</p>
-<p>Finally, we optionally support the use of Intel's Embree for ray casting.
-At this point, we rely pon prebuilt binaries distributed by Intel.
+<p>Yocto/GL optionally supports the use of Intel's Embree for ray casting.
+At this point, we rely on prebuilt binaries distributed by Intel.
 See the main CMake file for how to link to it. Embree support is enabled by
 defining the cmake option <code>YOCTO_EMBREE</code>.</p>
+<p>Yocto/GL optionally supports the use of Intel's Open Image Denoise for denoising
+renders. At this point, we rely on prebuilt binaries distributed by Intel.
+See the main CMake file for how to link to it. Open Image Denoise support is enabled by
+defining the cmake option <code>YOCTO_DENOISE</code>. See <code>apps/yimagedenoise</code> for
+a demonstration.</p>
 <!--
 
 <style type="text/css">

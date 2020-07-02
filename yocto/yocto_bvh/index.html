@@ -17,7 +17,7 @@
     
     
       
-        <title>Yocto/Bvh: Accelerated ray-intersection and point-overlap - Yocto/GL</title>
+        <title>Ray-scene intersection - Yocto/GL</title>
       
     
     
@@ -78,7 +78,7 @@
           </span>
           <span class="md-header-nav__topic md-ellipsis">
             
-              Yocto/Bvh: Accelerated ray-intersection and point-overlap
+              Ray-scene intersection
             
           </span>
         </div>
@@ -308,6 +308,27 @@
       
       
 
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+    <a href="./" title="Ray-scene intersection" class="md-nav__link md-nav__link--active">
+      Ray-scene intersection
+    </a>
+    
+  </li>
+
+    
+      
+      
+      
+
 
   <li class="md-nav__item">
     <a href="../yocto_modelio/" title="Model serialization" class="md-nav__link">
@@ -412,7 +433,8 @@
 by a two-level BVH using an internal or wrapping Embree.
 Yocto/Bvh is implemented in <code>yocto_bvh.h</code> and <code>yocto_bvh.cpp</code>.</p>
 <p><strong>This library is experimental</strong> and will be documented appropriately when
-the code reaches stability.</p>
+the code reaches stability.
+For now, use the <a href="../yocto_scene/">Yocto/Scene</a> support for this.</p>
 <!--
 
 ## Ray-Scene and Closest-Point Queries
@@ -473,6 +495,41 @@ description below yoi will see this dual API defined.
       
         
 <footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../yocto_mesh/" title="Mesh processing" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Mesh processing
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../yocto_modelio/" title="Model serialization" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Model serialization
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
