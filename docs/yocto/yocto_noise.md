@@ -6,6 +6,8 @@ Yocto/Noise is implemented in `yocto_noise.h`.
 ## Noise functions
 
 Use `perlin_noise(p, w)` to generate Perlin noise with optional wrapping.
+Returned values are in the range [0, 1] following the Renderman convention and
+to ensure that all noise functions return values in the same range.
 For fractal variations, use `perlin_ridge(p, l, g, o, f, w)`,
 `perlin_fbm(p, l, g, o, w)` and `perlin_turbulence(p, l, g, o, w)`.
 Each fractal version is defined by its lacunarity `l`, its gain `g`, the

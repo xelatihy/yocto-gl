@@ -43,8 +43,9 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Compute the revised Perlin noise function. Wrap provides a wrapping noise
-// but must be power of two (wraps at 256 anyway). 
+// Compute the revised Perlin noise function with returned values in the range
+// [0,1]. Wrap provides a wrapping noise but must be power of two (wraps at 256
+// anyway).
 inline float perlin_noise(float p, int wrap = 0);
 inline float perlin_noise(const vec2f& p, const vec2i& wrap = {0, 0});
 inline float perlin_noise(const vec3f& p, const vec3i& wrap = {0, 0, 0});
@@ -159,7 +160,7 @@ inline float perlin_noise(float p, int w) {
   auto n0 = grad(i + 0, f + 0);
   auto n1 = grad(i + 1, f - 1);
 
-  return lerp(n0, n1, u);
+  return lerp(n0, n1, u) * 0.5f + 0.5f;
 }
 
 inline float perlin_noise(const vec2f& p, const vec2i& w) {
@@ -190,7 +191,7 @@ inline float perlin_noise(const vec2f& p, const vec2i& w) {
   auto n0 = lerp(n00, n01, u.y);
   auto n1 = lerp(n10, n11, u.y);
 
-  return lerp(n0, n1, u.x);
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
 inline float perlin_noise(const vec3f& p, const vec3i& w) {
@@ -232,7 +233,7 @@ inline float perlin_noise(const vec3f& p, const vec3i& w) {
   auto n0 = lerp(n00, n01, u.y);
   auto n1 = lerp(n10, n11, u.y);
 
-  return lerp(n0, n1, u.x);
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
 inline float perlin_noise(const vec4f& p, const vec4i& w) {
@@ -309,7 +310,7 @@ inline float perlin_noise(const vec4f& p, const vec4i& w) {
   auto n0 = lerp(n00, n01, u.y);
   auto n1 = lerp(n10, n11, u.y);
 
-  return lerp(n0, n1, u.x);
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
 // ridge
@@ -320,7 +321,7 @@ inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
   auto amplitude = 0.5f;
   auto sum       = 0.0f;
   for (auto i = 0; i < octaves; i++) {
-    auto r = offset - abs(perlin_noise(p * frequency, wrap));
+    auto r = offset - abs(perlin_noise(p * frequency, wrap) * 2 - 1);
     r      = r * r;
     sum += r * amplitude * prev;
     prev = r;
@@ -351,7 +352,7 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
   auto amplitude = 1.0f;
   auto sum       = 0.0f;
   for (auto i = 0; i < octaves; i++) {
-    sum += abs(perlin_noise(p * frequency, wrap) * amplitude);
+    sum += abs(perlin_noise(p * frequency, wrap) * 2 - 1) * amplitude;
     frequency *= lacunarity;
     amplitude *= gain;
   }
