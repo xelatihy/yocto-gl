@@ -3413,11 +3413,15 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
               u * clump.x;
     }
     if (noise.x > 0) {
-      auto nx = perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
-      auto ny = perlin_noise(positions[i] * noise.y + vec3f{3, 7, 11}) *
-                noise.x;
-      auto nz = perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) *
-                noise.x;
+      auto nx =
+          (perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) * 2 - 1) *
+          noise.x;
+      auto ny =
+          (perlin_noise(positions[i] * noise.y + vec3f{3, 7, 11}) * 2 - 1) *
+          noise.x;
+      auto nz =
+          (perlin_noise(positions[i] * noise.y + vec3f{13, 17, 19}) * 2 - 1) *
+          noise.x;
       positions[i] += {nx, ny, nz};
     }
   }
