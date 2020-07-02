@@ -163,7 +163,7 @@ inline float perlin_noise(float p, int w) {
 
   auto u = ease(f);
 
-  auto n0 = grad(i, f);
+  auto n0 = grad(i + 0, f + 0);
   auto n1 = grad(i + 1, f - 1);
 
   return lerp(n0, n1, u);
@@ -189,9 +189,9 @@ inline float perlin_noise(const vec2f& p, const vec2i& w) {
   auto f = vec2f{p.x - i.x, p.y - i.y};
   auto u = vec2f{ease(f.x), ease(f.y)};
 
-  auto n00 = grad({i.x, i.y}, {f.x, f.y});
-  auto n01 = grad({i.x, i.y + 1}, {f.x, f.y - 1});
-  auto n10 = grad({i.x + 1, i.y}, {f.x - 1, f.y});
+  auto n00 = grad({i.x + 0, i.y + 0}, {f.x + 0, f.y + 0});
+  auto n01 = grad({i.x + 0, i.y + 1}, {f.x + 0, f.y - 1});
+  auto n10 = grad({i.x + 1, i.y + 0}, {f.x - 1, f.y + 0});
   auto n11 = grad({i.x + 1, i.y + 1}, {f.x - 1, f.y - 1});
 
   auto n0 = lerp(n00, n01, u.y);
@@ -222,13 +222,13 @@ inline float perlin_noise(const vec3f& p, const vec3i& w) {
   auto f = vec3f{p.x - i.x, p.y - i.y, p.z - i.z};
   auto u = vec3f{ease(f.x), ease(f.y), ease(f.z)};
 
-  auto n000 = grad({i.x, i.y, i.z}, {f.x, f.y, f.z});
-  auto n001 = grad({i.x, i.y, i.z + 1}, {f.x, f.y, f.z - 1});
-  auto n010 = grad({i.x, i.y + 1, i.z}, {f.x, f.y - 1, f.z});
-  auto n011 = grad({i.x, i.y + 1, i.z + 1}, {f.x, f.y - 1, f.z - 1});
-  auto n100 = grad({i.x + 1, i.y, i.z}, {f.x - 1, f.y, f.z});
-  auto n101 = grad({i.x + 1, i.y, i.z + 1}, {f.x - 1, f.y, f.z - 1});
-  auto n110 = grad({i.x + 1, i.y + 1, i.z}, {f.x - 1, f.y - 1, f.z});
+  auto n000 = grad({i.x + 0, i.y + 0, i.z + 0}, {f.x + 0, f.y + 0, f.z + 0});
+  auto n001 = grad({i.x + 0, i.y + 0, i.z + 1}, {f.x + 0, f.y + 0, f.z - 1});
+  auto n010 = grad({i.x + 0, i.y + 1, i.z + 0}, {f.x + 0, f.y - 1, f.z + 0});
+  auto n011 = grad({i.x + 0, i.y + 1, i.z + 1}, {f.x + 0, f.y - 1, f.z - 1});
+  auto n100 = grad({i.x + 1, i.y + 0, i.z + 0}, {f.x - 1, f.y + 0, f.z + 0});
+  auto n101 = grad({i.x + 1, i.y + 0, i.z + 1}, {f.x - 1, f.y + 0, f.z - 1});
+  auto n110 = grad({i.x + 1, i.y + 1, i.z + 0}, {f.x - 1, f.y - 1, f.z + 0});
   auto n111 = grad({i.x + 1, i.y + 1, i.z + 1}, {f.x - 1, f.y - 1, f.z - 1});
 
   auto n00 = lerp(n000, n001, u.z);
@@ -266,25 +266,36 @@ inline float perlin_noise(const vec4f& p, const vec4i& w) {
   auto f = vec4f{p.x - i.x, p.y - i.y, p.z - i.z, p.w - i.w};
   auto u = vec4f{ease(f.x), ease(f.y), ease(f.z), ease(f.z)};
 
-  auto n0000 = grad({i.x, i.y, i.z, i.w}, {f.x, f.y, f.z, f.z});
-  auto n0001 = grad({i.x, i.y, i.z, i.w + 1}, {f.x, f.y, f.z, f.z - 1});
-  auto n0010 = grad({i.x, i.y, i.z + 1, i.w}, {f.x, f.y, f.z - 1, f.z});
-  auto n0011 = grad({i.x, i.y, i.z + 1, i.w + 1}, {f.x, f.y, f.z - 1, f.z - 1});
-  auto n0100 = grad({i.x, i.y + 1, i.z, i.w}, {f.x, f.y - 1, f.z, f.z});
-  auto n0101 = grad({i.x, i.y + 1, i.z, i.w + 1}, {f.x, f.y - 1, f.z, f.z - 1});
-  auto n0110 = grad({i.x, i.y + 1, i.z + 1, i.w}, {f.x, f.y - 1, f.z - 1, f.z});
-  auto n0111 = grad(
-      {i.x, i.y + 1, i.z + 1, i.w + 1}, {f.x, f.y - 1, f.z - 1, f.z - 1});
-  auto n1000 = grad({i.x + 1, i.y, i.z, i.w}, {f.x - 1, f.y, f.z, f.z});
-  auto n1001 = grad({i.x + 1, i.y, i.z, i.w + 1}, {f.x - 1, f.y, f.z, f.z - 1});
-  auto n1010 = grad({i.x + 1, i.y, i.z + 1, i.w}, {f.x - 1, f.y, f.z - 1, f.z});
-  auto n1011 = grad(
-      {i.x + 1, i.y, i.z + 1, i.w + 1}, {f.x - 1, f.y, f.z - 1, f.z - 1});
-  auto n1100 = grad({i.x + 1, i.y + 1, i.z, i.w}, {f.x - 1, f.y - 1, f.z, f.z});
-  auto n1101 = grad(
-      {i.x + 1, i.y + 1, i.z, i.w + 1}, {f.x - 1, f.y - 1, f.z, f.z - 1});
-  auto n1110 = grad(
-      {i.x + 1, i.y + 1, i.z + 1, i.w}, {f.x - 1, f.y - 1, f.z - 1, f.z});
+  auto n0000 = grad({i.x + 0, i.y + 0, i.z + 0, i.w + 0},
+      {f.x + 0, f.y + 0, f.z + 0, f.z + 0});
+  auto n0001 = grad({i.x + 0, i.y + 0, i.z + 0, i.w + 1},
+      {f.x + 0, f.y + 0, f.z + 0, f.z - 1});
+  auto n0010 = grad({i.x + 0, i.y + 0, i.z + 1, i.w + 0},
+      {f.x + 0, f.y + 0, f.z - 1, f.z + 0});
+  auto n0011 = grad({i.x + 0, i.y + 0, i.z + 1, i.w + 1},
+      {f.x + 0, f.y + 0, f.z - 1, f.z - 1});
+  auto n0100 = grad({i.x + 0, i.y + 1, i.z + 0, i.w + 0},
+      {f.x + 0, f.y - 1, f.z + 0, f.z + 0});
+  auto n0101 = grad({i.x + 0, i.y + 1, i.z + 0, i.w + 1},
+      {f.x + 0, f.y - 1, f.z + 0, f.z - 1});
+  auto n0110 = grad({i.x + 0, i.y + 1, i.z + 1, i.w + 0},
+      {f.x + 0, f.y - 1, f.z - 1, f.z + 0});
+  auto n0111 = grad({i.x + 0, i.y + 1, i.z + 1, i.w + 1},
+      {f.x + 0, f.y - 1, f.z - 1, f.z - 1});
+  auto n1000 = grad({i.x + 1, i.y + 0, i.z + 0, i.w + 0},
+      {f.x - 1, f.y + 0, f.z + 0, f.z + 0});
+  auto n1001 = grad({i.x + 1, i.y + 0, i.z + 0, i.w + 1},
+      {f.x - 1, f.y + 0, f.z + 0, f.z - 1});
+  auto n1010 = grad({i.x + 1, i.y + 0, i.z + 1, i.w + 0},
+      {f.x - 1, f.y + 0, f.z - 1, f.z + 0});
+  auto n1011 = grad({i.x + 1, i.y + 0, i.z + 1, i.w + 1},
+      {f.x - 1, f.y + 0, f.z - 1, f.z - 1});
+  auto n1100 = grad({i.x + 1, i.y + 1, i.z + 0, i.w + 0},
+      {f.x - 1, f.y - 1, f.z + 0, f.z + 0});
+  auto n1101 = grad({i.x + 1, i.y + 1, i.z + 0, i.w + 1},
+      {f.x - 1, f.y - 1, f.z + 0, f.z - 1});
+  auto n1110 = grad({i.x + 1, i.y + 1, i.z + 1, i.w + 0},
+      {f.x - 1, f.y - 1, f.z - 1, f.z + 0});
   auto n1111 = grad({i.x + 1, i.y + 1, i.z + 1, i.w + 1},
       {f.x - 1, f.y - 1, f.z - 1, f.z - 1});
 
