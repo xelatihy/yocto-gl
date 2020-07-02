@@ -105,7 +105,7 @@ namespace yocto {
 // not same permutation table as Perlin's reference to avoid copyright issues;
 // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
 // @OPTIMIZE: should this be unsigned char instead of int for cache?
-inline const unsigned char p[512] = {
+inline const unsigned char __perlin_permutation[512] = {
     // clang-format off
   23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
   152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
@@ -143,60 +143,66 @@ inline const unsigned char p[512] = {
     // clang-format on
 };
 
-inline float perlin_noise(float px, int wx) {
+inline float perlin_noise(float p, int w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
-  auto grad = [](int hash, float px) -> float {
+  auto grad = [](int hash, float f) -> float {
     auto h    = hash & 15;
     auto grad = 1.0f + (h & 7);  // Gradient value 1.0, 2.0, ..., 8.0
     if (h & 8) grad = -grad;     // and a random sign for the gradient
-    return (grad * px);          // Multiply the gradient with the distance
+    return (grad * f);           // Multiply the gradient with the distance
   };
-  auto hash = [](int ix) -> int { return p[ix]; };
+  auto hash = [](int i) -> int {
+    auto& _p = __perlin_permutation;
+    return _p[i];
+  };
 
-  uint mx = (wx - 1) & 255;
-  auto ix = ifloor(px);
-  auto fx = px - ix;
-  auto lx = ix & mx;
-  auto hx = (ix + 1) & mx;
+  uint m = (w - 1) & 255;
+  auto i = ifloor(p);
+  auto f = p - i;
+  auto l = i & m;
+  auto h = (i + 1) & m;
 
-  auto ux = ease(fx);
+  auto u = ease(f);
 
-  auto n0 = grad(hash(lx), fx);
-  auto n1 = grad(hash(hx), fx - 1);
+  auto n0 = grad(hash(l), f);
+  auto n1 = grad(hash(h), f - 1);
 
-  return lerp(n0, n1, ux);
+  return lerp(n0, n1, u);
 }
 
-inline float perlin_noise(float px, float py, int wx, int wy) {
+inline float perlin_noise(const vec2f& p, const vec2i& w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
-  auto grad = [](int hash, float px, float py) -> float {
-    int   h = hash & 7;         // Convert low 3 bits of hash code
-    float u = h < 4 ? px : py;  // into 8 simple gradient directions,
-    float v = h < 4 ? py : px;  // and compute the dot product with (px,py).
+  auto grad = [](int hash, const vec2f& p) -> float {
+    int   h = hash & 7;           // Convert low 3 bits of hash code
+    float u = h < 4 ? p.x : p.y;  // into 8 simple gradient directions,
+    float v = h < 4 ? p.y : p.x;  // and compute the dot product with (p.x,p.y).
     return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
   };
-  auto hash = [](int ix, int iy) -> int { return p[p[ix] + iy]; };
+  auto hash = [](int ix, int iy) -> int {
+    auto& _p = __perlin_permutation;
+    return _p[_p[ix] + iy];
+  };
 
-  uint mx = (wx - 1) & 255, my = (wy - 1) & 255;
-  auto ix = ifloor(px), iy = ifloor(py);
-  auto fx = px - ix, fy = py - iy;
+  uint mx = (w.x - 1) & 255, my = (w.y - 1) & 255;
+  auto ix = ifloor(p.x), iy = ifloor(p.y);
+  auto fx = p.x - ix, fy = p.y - iy;
   auto lx = ix & mx, ly = iy & my;
   auto hx = (ix + 1) & mx, hy = (iy + 1) & my;
 
   auto ux = ease(fx), uy = ease(fy);
 
-  auto n00 = grad(hash(lx, ly), fx, fy);
-  auto n01 = grad(hash(lx, hy), fx, fy - 1);
-  auto n10 = grad(hash(hx, ly), fx - 1, fy);
-  auto n11 = grad(hash(hx, hy), fx - 1, fy - 1);
+  auto n00 = grad(hash(lx, ly), {fx, fy});
+  auto n01 = grad(hash(lx, hy), {fx, fy - 1});
+  auto n10 = grad(hash(hx, ly), {fx - 1, fy});
+  auto n11 = grad(hash(hx, hy), {fx - 1, fy - 1});
 
   auto n0 = lerp(n00, n01, uy);
   auto n1 = lerp(n10, n11, uy);
@@ -204,41 +210,42 @@ inline float perlin_noise(float px, float py, int wx, int wy) {
   return lerp(n0, n1, ux);
 }
 
-inline float perlin_noise(
-    float px, float py, float pz, int wx, int wy, int wz) {
+inline float perlin_noise(const vec3f& p, const vec3i& w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
-  auto grad = [](int hash, float px, float py, float pz) -> float {
-    auto h = hash & 15;        // Convert low 4 bits of hash code into 12 simple
-    auto u = h < 8 ? px : py;  // gradient directions, and compute dot product.
-    auto v = h < 4
-                 ? py
-                 : h == 12 || h == 14 ? px : pz;  // Fix repeats at h = 12 to 15
+  auto grad = [](int hash, const vec3f& p) -> float {
+    auto h = hash & 15;  // Convert low 4 bits of hash code into 12 simple
+    auto u = h < 8 ? p.x
+                   : p.y;  // gradient directions, and compute dot product.
+    auto v = h < 4 ? p.y
+                   : h == 12 || h == 14 ? p.x
+                                        : p.z;  // Fix repeats at h = 12 to 15
     return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
   };
   auto hash = [](int ix, int iy, int iz) -> int {
-    return p[p[p[ix] + iy] + iz];
+    auto& _p = __perlin_permutation;
+    return _p[_p[_p[ix] + iy] + iz];
   };
 
-  uint mx = (wx - 1) & 255, my = (wy - 1) & 255, mz = (wz - 1) & 255;
-  auto ix = ifloor(px), iy = ifloor(py), iz = ifloor(pz);
-  auto fx = px - ix, fy = py - iy, fz = pz - iz;
+  uint mx = (w.x - 1) & 255, my = (w.y - 1) & 255, mz = (w.z - 1) & 255;
+  auto ix = ifloor(p.x), iy = ifloor(p.y), iz = ifloor(p.z);
+  auto fx = p.x - ix, fy = p.y - iy, fz = p.z - iz;
   auto lx = ix & mx, ly = iy & my, lz = iz & mz;
   auto hx = (ix + 1) & mx, hy = (iy + 1) & my, hz = (iz + 1) & mz;
 
   auto ux = ease(fx), uy = ease(fy), uz = ease(fz);
 
-  auto n000 = grad(hash(lx, ly, lz), fx, fy, fz);
-  auto n001 = grad(hash(lx, ly, hz), fx, fy, fz - 1);
-  auto n010 = grad(hash(lx, hy, lz), fx, fy - 1, fz);
-  auto n011 = grad(hash(lx, hy, hz), fx, fy - 1, fz - 1);
-  auto n100 = grad(hash(hx, ly, lz), fx - 1, fy, fz);
-  auto n101 = grad(hash(hx, ly, hz), fx - 1, fy, fz - 1);
-  auto n110 = grad(hash(hx, hy, lz), fx - 1, fy - 1, fz);
-  auto n111 = grad(hash(hx, hy, hz), fx - 1, fy - 1, fz - 1);
+  auto n000 = grad(hash(lx, ly, lz), {fx, fy, fz});
+  auto n001 = grad(hash(lx, ly, hz), {fx, fy, fz - 1});
+  auto n010 = grad(hash(lx, hy, lz), {fx, fy - 1, fz});
+  auto n011 = grad(hash(lx, hy, hz), {fx, fy - 1, fz - 1});
+  auto n100 = grad(hash(hx, ly, lz), {fx - 1, fy, fz});
+  auto n101 = grad(hash(hx, ly, hz), {fx - 1, fy, fz - 1});
+  auto n110 = grad(hash(hx, hy, lz), {fx - 1, fy - 1, fz});
+  auto n111 = grad(hash(hx, hy, hz), {fx - 1, fy - 1, fz - 1});
 
   auto n00 = lerp(n000, n001, uz);
   auto n01 = lerp(n010, n011, uz);
@@ -251,50 +258,51 @@ inline float perlin_noise(
   return lerp(n0, n1, ux);
 }
 
-inline float perlin_noise(
-    float px, float py, float pz, float pw, int wx, int wy, int wz, int ww) {
+inline float perlin_noise(const vec4f& p, const vec4i& w) {
   auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
   auto ifloor = [](float a) -> int {
     int ai = (int)a;
     return (a < ai) ? ai - 1 : ai;
   };
-  auto grad = [](int hash, float px, float py, float pz, float pw) -> float {
+  auto grad = [](int hash, const vec4f& p) -> float {
     auto h = hash & 31;  // Convert low 5 bits of hash code into 32 simple
-    auto u = h < 24 ? px : py;  // gradient directions, and compute dot product.
-    auto v = h < 16 ? py : pz;
-    auto w = h < 8 ? pz : pw;
+    auto u = h < 24 ? p.x
+                    : p.y;  // gradient directions, and compute dot product.
+    auto v = h < 16 ? p.y : p.z;
+    auto w = h < 8 ? p.z : p.w;
     return ((h & 1) ? -u : u) + ((h & 2) ? -v : v) + ((h & 4) ? -w : w);
   };
   auto hash = [](int ix, int iy, int iz, int iw) -> int {
-    return p[p[p[p[ix] + iy] + iz] + iw];
+    auto& _p = __perlin_permutation;
+    return _p[_p[_p[_p[ix] + iy] + iz] + iw];
   };
 
-  uint mx = (wx - 1) & 255, my = (wy - 1) & 255, mz = (wz - 1) & 255,
-       mw = (ww - 1) & 255;
-  auto ix = ifloor(px), iy = ifloor(py), iz = ifloor(pz), iw = ifloor(pw);
-  auto fx = px - ix, fy = py - iy, fz = pz - iz, fw = pw - iw;
+  uint mx = (w.x - 1) & 255, my = (w.y - 1) & 255, mz = (w.z - 1) & 255,
+       mw = (w.w - 1) & 255;
+  auto ix = ifloor(p.x), iy = ifloor(p.y), iz = ifloor(p.z), iw = ifloor(p.w);
+  auto fx = p.x - ix, fy = p.y - iy, fz = p.z - iz, fw = p.w - iw;
   auto lx = ix & mx, ly = iy & my, lz = iz & mz, lw = iw & mw;
   auto hx = (ix + 1) & mx, hy = (iy + 1) & my, hz = (iz + 1) & mz,
        hw = (iw + 1) & mw;
 
   auto ux = ease(fx), uy = ease(fy), uz = ease(fz), uw = ease(fw);
 
-  auto n0000 = grad(hash(lx, ly, lz, lw), fx, fy, fz, fw);
-  auto n0001 = grad(hash(lx, ly, lz, hw), fx, fy, fz, fw - 1);
-  auto n0010 = grad(hash(lx, ly, hz, lw), fx, fy, fz - 1, fw);
-  auto n0011 = grad(hash(lx, ly, hz, hw), fx, fy, fz - 1, fw - 1);
-  auto n0100 = grad(hash(lx, hy, lz, lw), fx, fy - 1, fz, fw);
-  auto n0101 = grad(hash(lx, hy, lz, hw), fx, fy - 1, fz, fw - 1);
-  auto n0110 = grad(hash(lx, hy, hz, lw), fx, fy - 1, fz - 1, fw);
-  auto n0111 = grad(hash(lx, hy, hz, hw), fx, fy - 1, fz - 1, fw - 1);
-  auto n1000 = grad(hash(hx, ly, lz, lw), fx - 1, fy, fz, fw);
-  auto n1001 = grad(hash(hx, ly, lz, hw), fx - 1, fy, fz, fw - 1);
-  auto n1010 = grad(hash(hx, ly, hz, lw), fx - 1, fy, fz - 1, fw);
-  auto n1011 = grad(hash(hx, ly, hz, hw), fx - 1, fy, fz - 1, fw - 1);
-  auto n1100 = grad(hash(hx, hy, lz, lw), fx - 1, fy - 1, fz, fw);
-  auto n1101 = grad(hash(hx, hy, lz, hw), fx - 1, fy - 1, fz, fw - 1);
-  auto n1110 = grad(hash(hx, hy, hz, lw), fx - 1, fy - 1, fz - 1, fw);
-  auto n1111 = grad(hash(hx, hy, hz, hw), fx - 1, fy - 1, fz - 1, fw - 1);
+  auto n0000 = grad(hash(lx, ly, lz, lw), {fx, fy, fz, fw});
+  auto n0001 = grad(hash(lx, ly, lz, hw), {fx, fy, fz, fw - 1});
+  auto n0010 = grad(hash(lx, ly, hz, lw), {fx, fy, fz - 1, fw});
+  auto n0011 = grad(hash(lx, ly, hz, hw), {fx, fy, fz - 1, fw - 1});
+  auto n0100 = grad(hash(lx, hy, lz, lw), {fx, fy - 1, fz, fw});
+  auto n0101 = grad(hash(lx, hy, lz, hw), {fx, fy - 1, fz, fw - 1});
+  auto n0110 = grad(hash(lx, hy, hz, lw), {fx, fy - 1, fz - 1, fw});
+  auto n0111 = grad(hash(lx, hy, hz, hw), {fx, fy - 1, fz - 1, fw - 1});
+  auto n1000 = grad(hash(hx, ly, lz, lw), {fx - 1, fy, fz, fw});
+  auto n1001 = grad(hash(hx, ly, lz, hw), {fx - 1, fy, fz, fw - 1});
+  auto n1010 = grad(hash(hx, ly, hz, lw), {fx - 1, fy, fz - 1, fw});
+  auto n1011 = grad(hash(hx, ly, hz, hw), {fx - 1, fy, fz - 1, fw - 1});
+  auto n1100 = grad(hash(hx, hy, lz, lw), {fx - 1, fy - 1, fz, fw});
+  auto n1101 = grad(hash(hx, hy, lz, hw), {fx - 1, fy - 1, fz, fw - 1});
+  auto n1110 = grad(hash(hx, hy, hz, lw), {fx - 1, fy - 1, fz - 1, fw});
+  auto n1111 = grad(hash(hx, hy, hz, hw), {fx - 1, fy - 1, fz - 1, fw - 1});
 
   auto n000 = lerp(n0000, n0001, uw);
   auto n001 = lerp(n0010, n0011, uw);
@@ -314,11 +322,6 @@ inline float perlin_noise(
   auto n1 = lerp(n10, n11, uy);
 
   return lerp(n0, n1, ux);
-}
-
-// noise
-inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
-  return perlin_noise(p.x, p.py, p.z, wrap.x, wrap.py, wrap.z);
 }
 
 // ridge
