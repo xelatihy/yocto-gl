@@ -1012,7 +1012,7 @@ image<vec4f> make_turbulencemap(const vec2i& size, float scale,
     uv *= 8 * scale;
     auto v = perlin_turbulence(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    v = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
@@ -1023,7 +1023,7 @@ image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
     uv *= 8 * scale;
     auto v = perlin_ridge(
         {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    v = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
