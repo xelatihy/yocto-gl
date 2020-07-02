@@ -329,9 +329,7 @@ inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
   auto amplitude = 0.5f;
   auto sum       = 0.0f;
   for (auto i = 0; i < octaves; i++) {
-    auto r = perlin_noise(p * frequency, wrap);
-    r      = r < 0 ? -r : r;  // fabs()
-    r      = offset - r;
+    auto r = offset - abs(perlin_noise(p * frequency, wrap));
     r      = r * r;
     sum += r * amplitude * prev;
     prev = r;
@@ -362,9 +360,7 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
   auto amplitude = 1.0f;
   auto sum       = 0.0f;
   for (auto i = 0; i < octaves; i++) {
-    auto r = perlin_noise(p * frequency, wrap) * amplitude;
-    r      = r < 0 ? -r : r;  // fabs()
-    sum += r;
+    sum += abs(perlin_noise(p * frequency, wrap) * amplitude);
     frequency *= lacunarity;
     amplitude *= gain;
   }
