@@ -260,7 +260,6 @@ inline float _stb_perlin_noise3(
   auto         x0 = px & mx, x1 = (px + 1) & mx;
   auto         y0 = py & my, y1 = (py + 1) & my;
   auto         z0 = pz & mz, z1 = (pz + 1) & mz;
-  int          r0, r1, r00, r01, r10, r11;
 
   x -= px;
   auto u = ease(x);
@@ -269,13 +268,13 @@ inline float _stb_perlin_noise3(
   z -= pz;
   auto w = ease(z);
 
-  r0 = p[x0];
-  r1 = p[x1];
+  auto r0 = p[x0];
+  auto r1 = p[x1];
 
-  r00 = p[r0 + y0];
-  r01 = p[r0 + y1];
-  r10 = p[r1 + y0];
-  r11 = p[r1 + y1];
+  auto r00 = p[r0 + y0];
+  auto r01 = p[r0 + y1];
+  auto r10 = p[r1 + y0];
+  auto r11 = p[r1 + y1];
 
   auto n000 = _stb__perlin_grad(p[r00 + z0], x, y, z);
   auto n001 = _stb__perlin_grad(p[r00 + z1], x, y, z - 1);
