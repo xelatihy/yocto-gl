@@ -64,7 +64,7 @@ inline vec2f intersect_circles_core(
   float B = (r1 * r1 - r2 * r2) / R;
   float s = A - B * B - 1;
   assert(s >= 0);
-  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5 * sqrtf(s));
+  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5f * sqrt(s));
   return result;
 }
 
@@ -79,7 +79,7 @@ inline vec2f intersect_circles_fast(
   float B = (R1 - R2) / R;
   float s = A - B * B - 1;
   assert(s >= 0);
-  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5 * sqrtf(s));
+  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5f * sqrt(s));
   return result;
 }
 
@@ -425,6 +425,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
         auto v   = positions[tr3d[(k + 1) % 3]] - positions[tr3d[k]];
         auto w   = positions[tr3d[(k + 2) % 3]] - positions[tr3d[k]];
         auto phi = angle(v, w);
+        curr_angles.push_back(phi);
         teta += phi;
       }
     }
@@ -1537,8 +1538,7 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     }
     auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned.back(),
         eval_position(triangles, positions, end));
-    assert(ok);
-    end = {cleaned.back(), b2f};  // updating end
+    end            = {cleaned.back(), b2f};  // updating end
   }
 
   // Erasing from the top
@@ -1570,8 +1570,7 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
     }
     auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned[0],
         eval_position(triangles, positions, start));
-    assert(ok);
-    start = {cleaned[0], b2f};  // updating start
+    start          = {cleaned[0], b2f};  // updating start
   }
 
   return cleaned;
