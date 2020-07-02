@@ -990,8 +990,8 @@ image<vec4f> make_noisemap(
     const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_noise(vec3f{uv.x, uv.y, 0.5f});
-    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    auto v = perlin_noise(vec3f{uv.x, uv.y, 0});
+    v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
@@ -1000,8 +1000,8 @@ image<vec4f> make_fbmmap(const vec2i& size, float scale, const vec4f& noise,
     const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    auto v = perlin_fbm({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
@@ -1010,9 +1010,8 @@ image<vec4f> make_turbulencemap(const vec2i& size, float scale,
     const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_turbulence(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    auto v = perlin_turbulence({uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z);
+    v      = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
@@ -1022,8 +1021,8 @@ image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_ridge(
-        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+        {uv.x, uv.y, 0}, noise.x, noise.y, (int)noise.z, noise.w);
+    v = clamp(v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }

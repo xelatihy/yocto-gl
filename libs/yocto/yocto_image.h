@@ -294,16 +294,16 @@ image<vec4f> make_blackbodyramp(
 image<vec4f> make_colormapramp(const vec2i& size, float scale = 1);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
 image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
-    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {1, 1, 1, 1});
 image<vec4f> make_fbmmap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {0, 0, 0, 1});
+    const vec4f& color1 = {1, 1, 1, 1});
 image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {0, 0, 0, 1});
+    const vec4f& color1 = {1, 1, 1, 1});
 image<vec4f> make_ridgemap(const vec2i& size, float scale = 1,
     const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
-    const vec4f& color1 = {0, 0, 0, 1});
+    const vec4f& color1 = {1, 1, 1, 1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or

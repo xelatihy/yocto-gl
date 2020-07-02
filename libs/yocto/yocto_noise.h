@@ -2,11 +2,6 @@
 // # Yocto/Noise: Noise functions
 //
 // Yocto/Noise provides a Perlin noise implementation.
-// _This library should to be considered a placeholder since it will grow later
-// as a collection of noise functions_ used in procedural modeling.
-// For now, the implementation used is the one
-// found in the [stb libraries](https://github.com/nothings/stb),
-// that are released in the public domain.
 // Yocto/Noise is implemented in `yocto_noise.h`.
 //
 
@@ -33,30 +28,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//
-// LICENCE OF INCLUDED SOFTWARE FOR PERLIN NOISE
-// https://github.com/nothings/stb/blob/master/stb_perlin.h
-//
-// -----------------------------------------------------------------------------
-// ALTERNATIVE B - Public Domain (www.unlicense.org)
-// This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute
-// this software, either in source code form or as a compiled binary, for any
-// purpose, commercial or non-commercial, and by any means. In jurisdictions
-// that recognize copyright laws, the author or authors of this software
-// dedicate any and all copyright interest in the software to the public domain.
-// We make this dedication for the benefit of the public at large and to the
-// detriment of our heirs and successors. We intend this dedication to be an
-// overt act of relinquishment in perpetuity of all present and future rights to
-// this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// -----------------------------------------------------------------------------
-//
 
 #ifndef _YOCTO_NOISE_H_
 #define _YOCTO_NOISE_H_
@@ -72,13 +43,19 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Compute the revised Perlin noise function. Wrap provides a wrapping noise
-// but must be power of two (wraps at 256 anyway). For octave based noise,
-// good values are obtained with octaves=6 (numerber of noise calls),
-// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-// output), gain=0.5 (relative weighting applied to each successive octave),
+// Compute the revised Perlin noise function with returned values in the range
+// [0,1]. Wrap provides a wrapping noise but must be power of two (wraps at 256
+// anyway).
+inline float perlin_noise(float p, int wrap = 0);
+inline float perlin_noise(const vec2f& p, const vec2i& wrap = {0, 0});
+inline float perlin_noise(const vec3f& p, const vec3i& wrap = {0, 0, 0});
+inline float perlin_noise(const vec4f& p, const vec4i& wrap = {0, 0, 0, 0});
+
+// Fractal noise variations. Good values are obtained with
+// octaves=6 (numerber of noise calls),
+// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping),
+// gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
 inline float perlin_ridge(const vec3f& p, float lacunarity = 2,
     float gain = 0.5, int octaves = 6, float offset = 1,
     const vec3i& wrap = zero3i);
@@ -102,227 +79,284 @@ inline float perlin_turbulence(const vec3f& p, float lacunarity = 2,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// clang-format off
-inline float _stb__perlin_lerp(float a, float b, float t)
-{
-   return a + (b-a) * t;
+// Code to generate permutation tables
+// import random, textwrap
+// permutation = [i for i in range(256)]
+// random.seed(12876289)
+// random.shuffle(permutation)
+// print('inline const unsigned char __perlin_permutation[512] = {')
+// print('  // clang-format off')
+// out = ''
+// for i in permutation:
+//     out += str(i)+', '
+// out = textwrap.wrap(out, 78)
+// for line in out:
+//     print(' ', line)
+// print('  // repeat')
+// for line in out:
+//     print(' ', line)
+// print('  // clang-format on')
+// print('};')
+
+// not same permutation table as Perlin's reference to avoid copyright issues;
+inline const unsigned char __perlin_permutation[512] = {
+    // clang-format off
+  124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
+  145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
+  178, 149, 152, 140, 190, 193, 234, 157, 6, 239, 249, 16, 155, 75, 162, 90,
+  114, 43, 55, 28, 232, 183, 31, 12, 177, 74, 148, 186, 169, 20, 116, 45, 103,
+  242, 135, 66, 163, 8, 221, 63, 102, 121, 39, 58, 201, 35, 217, 120, 144, 3,
+  47, 203, 153, 213, 105, 210, 197, 79, 160, 34, 76, 248, 187, 180, 89, 17, 181,
+  252, 60, 24, 21, 71, 164, 0, 138, 33, 188, 195, 223, 128, 65, 229, 247, 189,
+  129, 88, 204, 42, 54, 32, 165, 118, 80, 96, 150, 199, 130, 64, 141, 156, 94,
+  222, 255, 216, 194, 182, 25, 139, 111, 83, 108, 226, 227, 122, 220, 29, 52,
+  207, 5, 174, 77, 133, 191, 67, 200, 4, 192, 250, 161, 172, 59, 117, 127, 136,
+  225, 106, 251, 10, 154, 240, 171, 179, 126, 100, 19, 70, 2, 97, 159, 73, 104,
+  53, 184, 137, 101, 72, 22, 185, 211, 243, 49, 175, 170, 93, 57, 62, 30, 131,
+  115, 110, 46, 208, 11, 231, 13, 50, 254, 125, 237, 87, 206, 84, 86, 196, 167,
+  41, 1, 151, 212, 224, 99, 147, 23, 40, 134, 95, 253, 123, 85, 235, 107, 142,
+  44, 215, 146, 9, 48, 173, 168, 214, 68, 18, 15, 61, 202, 245, 36, 228, 109,
+  209, 166, 14,
+  // repeat
+  124, 56, 113, 233, 69, 219, 244, 236, 246, 92, 26, 82, 218, 176, 78, 143, 238,
+  145, 119, 38, 132, 112, 51, 7, 27, 81, 158, 241, 98, 37, 91, 230, 198, 205,
+  178, 149, 152, 140, 190, 193, 234, 157, 6, 239, 249, 16, 155, 75, 162, 90,
+  114, 43, 55, 28, 232, 183, 31, 12, 177, 74, 148, 186, 169, 20, 116, 45, 103,
+  242, 135, 66, 163, 8, 221, 63, 102, 121, 39, 58, 201, 35, 217, 120, 144, 3,
+  47, 203, 153, 213, 105, 210, 197, 79, 160, 34, 76, 248, 187, 180, 89, 17, 181,
+  252, 60, 24, 21, 71, 164, 0, 138, 33, 188, 195, 223, 128, 65, 229, 247, 189,
+  129, 88, 204, 42, 54, 32, 165, 118, 80, 96, 150, 199, 130, 64, 141, 156, 94,
+  222, 255, 216, 194, 182, 25, 139, 111, 83, 108, 226, 227, 122, 220, 29, 52,
+  207, 5, 174, 77, 133, 191, 67, 200, 4, 192, 250, 161, 172, 59, 117, 127, 136,
+  225, 106, 251, 10, 154, 240, 171, 179, 126, 100, 19, 70, 2, 97, 159, 73, 104,
+  53, 184, 137, 101, 72, 22, 185, 211, 243, 49, 175, 170, 93, 57, 62, 30, 131,
+  115, 110, 46, 208, 11, 231, 13, 50, 254, 125, 237, 87, 206, 84, 86, 196, 167,
+  41, 1, 151, 212, 224, 99, 147, 23, 40, 134, 95, 253, 123, 85, 235, 107, 142,
+  44, 215, 146, 9, 48, 173, 168, 214, 68, 18, 15, 61, 202, 245, 36, 228, 109,
+  209, 166, 14,
+    // clang-format on
+};
+
+inline float perlin_noise(float p, int w) {
+  auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
+  auto ifloor = [](float a) -> int {
+    int ai = (int)a;
+    return (a < ai) ? ai - 1 : ai;
+  };
+  auto grad = [m = (w - 1) & 255](int i, float f) -> float {
+    auto& _p   = __perlin_permutation;
+    auto  hash = (int)_p[i & m];
+    auto  h    = hash & 15;
+    auto  grad = 1.0f + (h & 7);  // Gradient value 1.0, 2.0, ..., 8.0
+    if (h & 8) grad = -grad;      // and a random sign for the gradient
+    return (grad * f);            // Multiply the gradient with the distance
+  };
+
+  auto i = ifloor(p);
+  auto f = p - i;
+
+  auto u = ease(f);
+
+  auto n0 = grad(i + 0, f + 0);
+  auto n1 = grad(i + 1, f - 1);
+
+  return lerp(n0, n1, u) * 0.5f + 0.5f;
 }
 
-inline int _stb__perlin_fastfloor(float a)
-{
-    int ai = (int) a;
-    return (a < ai) ? ai-1 : ai;
+inline float perlin_noise(const vec2f& p, const vec2i& w) {
+  auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
+  auto ifloor = [](int a) -> int {
+    int ai = (int)a;
+    return (a < ai) ? ai - 1 : ai;
+  };
+  auto grad = [m = vec2i{(w.x - 1) & 255, (w.y - 1) & 255}](
+                  const vec2i& i, const vec2f& f) -> float {
+    auto& _p   = __perlin_permutation;
+    auto  hash = (int)_p[_p[i.x & m.x] + i.y & m.y];
+    auto  h    = hash & 7;           // Convert low 3 bits of hash code
+    float u    = h < 4 ? f.x : f.y;  // into 8 simple gradient directions,
+    float v = h < 4 ? f.y : f.x;  // and compute the dot product with (f.x,f.y).
+    return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+  };
+
+  auto i = vec2i{ifloor(p.x), ifloor(p.y)};
+  auto f = vec2f{p.x - i.x, p.y - i.y};
+  auto u = vec2f{ease(f.x), ease(f.y)};
+
+  auto n00 = grad({i.x + 0, i.y + 0}, {f.x + 0, f.y + 0});
+  auto n01 = grad({i.x + 0, i.y + 1}, {f.x + 0, f.y - 1});
+  auto n10 = grad({i.x + 1, i.y + 0}, {f.x - 1, f.y + 0});
+  auto n11 = grad({i.x + 1, i.y + 1}, {f.x - 1, f.y - 1});
+
+  auto n0 = lerp(n00, n01, u.y);
+  auto n1 = lerp(n10, n11, u.y);
+
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
-// different grad function from Perlin's, but easy to modify to match reference
-inline float _stb__perlin_grad(int hash, float x, float y, float z)
-{
-   static float basis[12][4] =
-   {
-      {  1, 1, 0 },
-      { -1, 1, 0 },
-      {  1,-1, 0 },
-      { -1,-1, 0 },
-      {  1, 0, 1 },
-      { -1, 0, 1 },
-      {  1, 0,-1 },
-      { -1, 0,-1 },
-      {  0, 1, 1 },
-      {  0,-1, 1 },
-      {  0, 1,-1 },
-      {  0,-1,-1 },
-   };
+inline float perlin_noise(const vec3f& p, const vec3i& w) {
+  auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
+  auto ifloor = [](float a) -> int {
+    int ai = (int)a;
+    return (a < ai) ? ai - 1 : ai;
+  };
+  auto grad = [m = vec3i{(w.x - 1) & 255, (w.y - 1) & 255, (w.z - 1) & 255}](
+                  const vec3i& i, const vec3f& f) -> float {
+    auto& _p   = __perlin_permutation;
+    auto  hash = (int)_p[_p[_p[i.x & m.x] + i.y & m.y] + i.z & m.z];
+    // Convert low 4 bits of hash code into 12 simple
+    // gradient directions, and compute dot product.
+    auto h = hash & 15;
+    auto u = h < 8 ? f.x : f.y;
+    auto v = h < 4 ? f.y : h == 12 || h == 14 ? f.x : f.z;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+  };
 
-   // perlin's gradient has 12 cases so some get used 1/16th of the time
-   // and some 2/16ths. We reduce bias by changing those fractions
-   // to 5/64ths and 6/64ths, and the same 4 cases get the extra weight.
-   static unsigned char indices[64] =
-   {
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,9,1,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-   };
+  auto i = vec3i{ifloor(p.x), ifloor(p.y), ifloor(p.z)};
+  auto f = vec3f{p.x - i.x, p.y - i.y, p.z - i.z};
+  auto u = vec3f{ease(f.x), ease(f.y), ease(f.z)};
 
-   // if you use reference permutation table, change 63 below to 15 to match reference
-   // (this is why the ordering of the table above is funky)
-   float *grad = basis[indices[hash & 63]];
-   return grad[0]*x + grad[1]*y + grad[2]*z;
+  auto n000 = grad({i.x + 0, i.y + 0, i.z + 0}, {f.x + 0, f.y + 0, f.z + 0});
+  auto n001 = grad({i.x + 0, i.y + 0, i.z + 1}, {f.x + 0, f.y + 0, f.z - 1});
+  auto n010 = grad({i.x + 0, i.y + 1, i.z + 0}, {f.x + 0, f.y - 1, f.z + 0});
+  auto n011 = grad({i.x + 0, i.y + 1, i.z + 1}, {f.x + 0, f.y - 1, f.z - 1});
+  auto n100 = grad({i.x + 1, i.y + 0, i.z + 0}, {f.x - 1, f.y + 0, f.z + 0});
+  auto n101 = grad({i.x + 1, i.y + 0, i.z + 1}, {f.x - 1, f.y + 0, f.z - 1});
+  auto n110 = grad({i.x + 1, i.y + 1, i.z + 0}, {f.x - 1, f.y - 1, f.z + 0});
+  auto n111 = grad({i.x + 1, i.y + 1, i.z + 1}, {f.x - 1, f.y - 1, f.z - 1});
+
+  auto n00 = lerp(n000, n001, u.z);
+  auto n01 = lerp(n010, n011, u.z);
+  auto n10 = lerp(n100, n101, u.z);
+  auto n11 = lerp(n110, n111, u.z);
+
+  auto n0 = lerp(n00, n01, u.y);
+  auto n1 = lerp(n10, n11, u.y);
+
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
-inline float _stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
-{
-    // not same permutation table as Perlin's reference to avoid copyright issues;
-    // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
-    // @OPTIMIZE: should this be unsigned char instead of int for cache?
-    static unsigned char _stb__perlin_randtab[512] =
-    {
-    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-    152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-    175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-    8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-    225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-    94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-    165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-    65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-    26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-    250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-    132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-    91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-    38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-    131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-    27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-    61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
+inline float perlin_noise(const vec4f& p, const vec4i& w) {
+  auto ease   = [](float a) { return ((a * 6 - 15) * a + 10) * a * a * a; };
+  auto ifloor = [](float a) -> int {
+    int ai = (int)a;
+    return (a < ai) ? ai - 1 : ai;
+  };
+  auto grad = [m = vec4i{(w.x - 1) & 255, (w.y - 1) & 255, (w.z - 1) & 255,
+                   (w.w - 1) & 255}](const vec4i& i, const vec4f& f) -> float {
+    auto& _p = __perlin_permutation;
+    auto  hash =
+        (int)_p[_p[_p[_p[i.x & m.x] + i.y & m.y] + i.z & m.y] + i.w & m.w];
+    // Convert low 5 bits of hash code into 32 simple
+    // gradient directions, and compute dot product.
+    auto h = hash & 31;
+    auto u = h < 24 ? f.x : f.y;
+    auto v = h < 16 ? f.y : f.z;
+    auto w = h < 8 ? f.z : f.w;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v) + ((h & 4) ? -w : w);
+  };
 
-    // and a second copy so we don't need an extra mask or static initializer
-    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-    152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-    175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-    8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-    225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-    94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-    165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-    65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-    26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-    250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-    132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-    91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-    38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-    131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-    27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-    61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
-    };
+  auto i = vec4i{ifloor(p.x), ifloor(p.y), ifloor(p.z), ifloor(p.w)};
+  auto f = vec4f{p.x - i.x, p.y - i.y, p.z - i.z, p.w - i.w};
+  auto u = vec4f{ease(f.x), ease(f.y), ease(f.z), ease(f.z)};
 
-   float u,v,w;
-   float n000,n001,n010,n011,n100,n101,n110,n111;
-   float n00,n01,n10,n11;
-   float n0,n1;
+  auto n0000 = grad({i.x + 0, i.y + 0, i.z + 0, i.w + 0},
+      {f.x + 0, f.y + 0, f.z + 0, f.z + 0});
+  auto n0001 = grad({i.x + 0, i.y + 0, i.z + 0, i.w + 1},
+      {f.x + 0, f.y + 0, f.z + 0, f.z - 1});
+  auto n0010 = grad({i.x + 0, i.y + 0, i.z + 1, i.w + 0},
+      {f.x + 0, f.y + 0, f.z - 1, f.z + 0});
+  auto n0011 = grad({i.x + 0, i.y + 0, i.z + 1, i.w + 1},
+      {f.x + 0, f.y + 0, f.z - 1, f.z - 1});
+  auto n0100 = grad({i.x + 0, i.y + 1, i.z + 0, i.w + 0},
+      {f.x + 0, f.y - 1, f.z + 0, f.z + 0});
+  auto n0101 = grad({i.x + 0, i.y + 1, i.z + 0, i.w + 1},
+      {f.x + 0, f.y - 1, f.z + 0, f.z - 1});
+  auto n0110 = grad({i.x + 0, i.y + 1, i.z + 1, i.w + 0},
+      {f.x + 0, f.y - 1, f.z - 1, f.z + 0});
+  auto n0111 = grad({i.x + 0, i.y + 1, i.z + 1, i.w + 1},
+      {f.x + 0, f.y - 1, f.z - 1, f.z - 1});
+  auto n1000 = grad({i.x + 1, i.y + 0, i.z + 0, i.w + 0},
+      {f.x - 1, f.y + 0, f.z + 0, f.z + 0});
+  auto n1001 = grad({i.x + 1, i.y + 0, i.z + 0, i.w + 1},
+      {f.x - 1, f.y + 0, f.z + 0, f.z - 1});
+  auto n1010 = grad({i.x + 1, i.y + 0, i.z + 1, i.w + 0},
+      {f.x - 1, f.y + 0, f.z - 1, f.z + 0});
+  auto n1011 = grad({i.x + 1, i.y + 0, i.z + 1, i.w + 1},
+      {f.x - 1, f.y + 0, f.z - 1, f.z - 1});
+  auto n1100 = grad({i.x + 1, i.y + 1, i.z + 0, i.w + 0},
+      {f.x - 1, f.y - 1, f.z + 0, f.z + 0});
+  auto n1101 = grad({i.x + 1, i.y + 1, i.z + 0, i.w + 1},
+      {f.x - 1, f.y - 1, f.z + 0, f.z - 1});
+  auto n1110 = grad({i.x + 1, i.y + 1, i.z + 1, i.w + 0},
+      {f.x - 1, f.y - 1, f.z - 1, f.z + 0});
+  auto n1111 = grad({i.x + 1, i.y + 1, i.z + 1, i.w + 1},
+      {f.x - 1, f.y - 1, f.z - 1, f.z - 1});
 
-   unsigned int x_mask = (x_wrap-1) & 255;
-   unsigned int y_mask = (y_wrap-1) & 255;
-   unsigned int z_mask = (z_wrap-1) & 255;
-   int px = _stb__perlin_fastfloor(x);
-   int py = _stb__perlin_fastfloor(y);
-   int pz = _stb__perlin_fastfloor(z);
-   int x0 = px & x_mask, x1 = (px+1) & x_mask;
-   int y0 = py & y_mask, y1 = (py+1) & y_mask;
-   int z0 = pz & z_mask, z1 = (pz+1) & z_mask;
-   int r0,r1, r00,r01,r10,r11;
+  auto n000 = lerp(n0000, n0001, u.w);
+  auto n001 = lerp(n0010, n0011, u.w);
+  auto n010 = lerp(n0100, n0101, u.w);
+  auto n011 = lerp(n0110, n0111, u.w);
+  auto n100 = lerp(n1000, n1001, u.w);
+  auto n101 = lerp(n1010, n1011, u.w);
+  auto n110 = lerp(n1100, n1101, u.w);
+  auto n111 = lerp(n1110, n1111, u.w);
 
-   #define _stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)
+  auto n00 = lerp(n000, n001, u.z);
+  auto n01 = lerp(n010, n011, u.z);
+  auto n10 = lerp(n100, n101, u.z);
+  auto n11 = lerp(n110, n111, u.z);
 
-   x -= px; u = _stb__perlin_ease(x);
-   y -= py; v = _stb__perlin_ease(y);
-   z -= pz; w = _stb__perlin_ease(z);
+  auto n0 = lerp(n00, n01, u.y);
+  auto n1 = lerp(n10, n11, u.y);
 
-   r0 = _stb__perlin_randtab[x0];
-   r1 = _stb__perlin_randtab[x1];
-
-   r00 = _stb__perlin_randtab[r0+y0];
-   r01 = _stb__perlin_randtab[r0+y1];
-   r10 = _stb__perlin_randtab[r1+y0];
-   r11 = _stb__perlin_randtab[r1+y1];
-
-   n000 = _stb__perlin_grad(_stb__perlin_randtab[r00+z0], x  , y  , z   );
-   n001 = _stb__perlin_grad(_stb__perlin_randtab[r00+z1], x  , y  , z-1 );
-   n010 = _stb__perlin_grad(_stb__perlin_randtab[r01+z0], x  , y-1, z   );
-   n011 = _stb__perlin_grad(_stb__perlin_randtab[r01+z1], x  , y-1, z-1 );
-   n100 = _stb__perlin_grad(_stb__perlin_randtab[r10+z0], x-1, y  , z   );
-   n101 = _stb__perlin_grad(_stb__perlin_randtab[r10+z1], x-1, y  , z-1 );
-   n110 = _stb__perlin_grad(_stb__perlin_randtab[r11+z0], x-1, y-1, z   );
-   n111 = _stb__perlin_grad(_stb__perlin_randtab[r11+z1], x-1, y-1, z-1 );
-
-   n00 = _stb__perlin_lerp(n000,n001,w);
-   n01 = _stb__perlin_lerp(n010,n011,w);
-   n10 = _stb__perlin_lerp(n100,n101,w);
-   n11 = _stb__perlin_lerp(n110,n111,w);
-
-   n0 = _stb__perlin_lerp(n00,n01,v);
-   n1 = _stb__perlin_lerp(n10,n11,v);
-
-   return _stb__perlin_lerp(n0,n1,u);
+  return lerp(n0, n1, u.x) * 0.5f + 0.5f;
 }
 
-inline float _stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float prev = 1.0f;
-   float amplitude = 0.5f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      float r = (float)(_stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
-      r = r<0 ? -r : r; // fabs()
-      r = offset - r;
-      r = r*r;
-      sum += r*amplitude*prev;
-      prev = r;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-
-inline float _stb_perlin_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float amplitude = 1.0f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      sum += _stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-
-inline float _stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float amplitude = 1.0f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      float r = _stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
-      r = r<0 ? -r : r; // fabs()
-      sum += r;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-// clang-format on
-
-// adapeted  stb_perlin.h
-inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
-  return _stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
-}
-
-// adapeted  stb_perlin.h
+// ridge
 inline float perlin_ridge(const vec3f& p, float lacunarity, float gain,
     int octaves, float offset, const vec3i& wrap) {
-  return _stb_perlin_ridge_noise3(
-      p.x, p.y, p.z, lacunarity, gain, offset, octaves, wrap.x, wrap.y, wrap.z);
+  auto frequency = 1.0f;
+  auto prev      = 1.0f;
+  auto amplitude = 0.5f;
+  auto sum       = 0.0f;
+  for (auto i = 0; i < octaves; i++) {
+    auto r = offset - abs(perlin_noise(p * frequency, wrap) * 2 - 1);
+    r      = r * r;
+    sum += r * amplitude * prev;
+    prev = r;
+    frequency *= lacunarity;
+    amplitude *= gain;
+  }
+  return sum;
 }
 
-// adapeted  stb_perlin.h
+// fmb
 inline float perlin_fbm(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
-  return _stb_perlin_fbm_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+  auto frequency = 1.0f;
+  auto amplitude = 1.0f;
+  auto sum       = 0.0f;
+  for (auto i = 0; i < octaves; i++) {
+    sum += perlin_noise(p * frequency, wrap) * amplitude;
+    frequency *= lacunarity;
+    amplitude *= gain;
+  }
+  return sum;
 }
 
-// adapeted  stb_perlin.h
+// turbulence
 inline float perlin_turbulence(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
-  return _stb_perlin_turbulence_noise3(
-      p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+  auto frequency = 1.0f;
+  auto amplitude = 1.0f;
+  auto sum       = 0.0f;
+  for (auto i = 0; i < octaves; i++) {
+    sum += abs(perlin_noise(p * frequency, wrap) * 2 - 1) * amplitude;
+    frequency *= lacunarity;
+    amplitude *= gain;
+  }
+  return sum;
 }
 
 }  // namespace yocto
