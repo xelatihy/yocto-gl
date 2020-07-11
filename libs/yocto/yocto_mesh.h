@@ -89,11 +89,11 @@ vector<int> triangle_fan(
 // Check if a point lies on a triangle. If true, return barycentric coords
 bool point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
-    const float tolerance = 1e-2);
+    const float tolerance = 5 * 1e-3);
 // Check if a point lies on a triangle. If true, return barycentric coords
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point,
-    const float tolerance = 1e-2);
+    const float tolerance = 5 * 1e-3);
 
 // Compute angles in tangent space of a
 // mesh(triangles,poisitions,adjacencies,v2t). For every vertex v, angles are
