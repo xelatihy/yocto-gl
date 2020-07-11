@@ -17,8 +17,6 @@
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
-#define YOCTO_OLD_INTERPOLATION_CONVENTION 0
-
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
@@ -52,24 +50,9 @@ inline int find_in_vec(const T& vec, int x) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using Triangle2D = std::array<vec2f, 3>;
+using unfold_triangle = std::array<vec2f, 3>;
 
-inline vec2f intersect_circles_core(
-    const vec2f& c2, float r2, const vec2f& c1, float r1) {
-  float R = length_squared(c2 - c1);
-  assert(R > 0);
-  auto result = (c1 + c2) / 2;
-  result += (c2 - c1) * ((r1 * r1 - r2 * r2) / (2 * R));
-  float A = 2 * (r1 * r1 + r2 * r2) / R;
-  float B = (r1 * r1 - r2 * r2) / R;
-  float s = A - B * B - 1;
-  assert(s >= 0);
-  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5f * sqrt(s));
-  return result;
-}
-
-// Same function but expecting length squared for efficiency.
-inline vec2f intersect_circles_fast(
+inline vec2f intersect_circles(
     const vec2f& c2, float R2, const vec2f& c1, float R1) {
   float R = length_squared(c2 - c1);
   assert(R > 0);
@@ -79,23 +62,24 @@ inline vec2f intersect_circles_fast(
   float B = (R1 - R2) / R;
   float s = A - B * B - 1;
   assert(s >= 0);
-  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5f * sqrt(s));
+  result += vec2f{c2.y - c1.y, c1.x - c2.x} * (0.5 * sqrtf(s));
   return result;
 }
 
-Triangle2D init_flat_triangle(const vector<vec3f>& positions, const vec3i tr) {
-  auto tr2d = Triangle2D{};
+unfold_triangle init_flat_triangle(
+    const vector<vec3f>& positions, const vec3i tr) {
+  auto tr2d = unfold_triangle{};
   tr2d[0]   = {0, 0};
   tr2d[1]   = {0, length(positions[tr.x] - positions[tr.y])};
   auto rx   = length_squared(positions[tr.x] - positions[tr.z]);
   auto ry   = length_squared(positions[tr.y] - positions[tr.z]);
-  tr2d[2]   = intersect_circles_fast(tr2d[0], rx, tr2d[1], ry);
+  tr2d[2]   = intersect_circles(tr2d[0], rx, tr2d[1], ry);
   return tr2d;
 }
 
-inline Triangle2D unfold_face(const vector<vec3i>& triangles,
+inline unfold_triangle unfold_face(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const Triangle2D& tr, int face, int k) {
+    const unfold_triangle& tr, int face, int k) {
   int v = opposite_vertex(triangles, adjacencies, face, k);
   assert(v != -1);
 
@@ -108,28 +92,20 @@ inline Triangle2D unfold_face(const vector<vec3i>& triangles,
   int j        = find_in_vec(adjacencies[neighbor], face);
   assert(j != -1);
 
-  Triangle2D res;
+  unfold_triangle res;
   res[j]           = tr[(k + 1) % 3];
   res[(j + 1) % 3] = tr[k];
-  res[(j + 2) % 3] = intersect_circles_fast(res[j], r1, res[(j + 1) % 3], r0);
+  res[(j + 2) % 3] = intersect_circles(res[j], r1, res[(j + 1) % 3], r0);
   return res;
 }
 
 // Utilities
 inline vec3f make_bary(const vec2f& bary) {
-#if YOCTO_OLD_INTERPOLATION_CONVENTION
-  return vec3f{bary.x, bary.y, 1 - bary.x - bary.y};
-#else
   return vec3f{1 - bary.x - bary.y, bary.x, bary.y};
-#endif
 }
 
 inline mesh_point make_point(const int tid, const vec3f bary) {
-#if YOCTO_OLD_INTERPOLATION_CONVENTION
-  return {tid, vec2f{bary.x, bary.y}};
-#else
   return {tid, vec2f{bary.y, bary.z}};
-#endif
 }
 
 // "strip" must be such that strip.back()=p.face and strip[0] must share at
@@ -145,7 +121,7 @@ float length_by_flattening(const vector<vec3i>& triangles,
     const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction) {
   auto opp_pid = strip[0];
   auto h       = find_in_vec(adjacencies[opp_pid], strip[1]);
-  auto coords  = vector<Triangle2D>(strip.size());
+  auto coords  = vector<unfold_triangle>(strip.size());
   coords[0]    = init_flat_triangle(positions, triangles[opp_pid]);
   for (auto i = 1; i < strip.size(); i++) {
     auto k = find_in_vec(adjacencies[strip[i - 1]], strip[i]);
@@ -328,11 +304,7 @@ bool point_in_triangle(const vector<vec3i>& triangles,
     if (b[i] < -tol || b[i] > 1.0 + tol) return false;
   }
 
-#if YOCTO_OLD_INTERPOLATION_CONVENTION
-  uv = vec2f{b.x, b.y};
-#else
   uv = vec2f{b.y, b.z};
-#endif
 
   return true;
 }
@@ -364,11 +336,7 @@ pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     if (b[i] < -tol || b[i] > 1.0 + tol) return {false, zero2f};
   }
 
-#if YOCTO_OLD_INTERPOLATION_CONVENTION
-  return {true, vec2f{b.x, b.y}};
-#else
   return {true, vec2f{b.y, b.z}};
-#endif
 }
 
 // compute angles in tangent space, if opposite is false we do not consider
@@ -385,7 +353,7 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
     auto teta        = 0.0f;
     auto curr_angles = vector<float>{};
     auto tid         = 0;
-    auto tr2d        = Triangle2D{};
+    auto tr2d        = unfold_triangle{};
     auto tr3d        = zero3i;
     for (int j = 0; j < star.size(); ++j) {
       tid  = star[j];
@@ -425,7 +393,6 @@ vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
         auto v   = positions[tr3d[(k + 1) % 3]] - positions[tr3d[k]];
         auto w   = positions[tr3d[(k + 2) % 3]] - positions[tr3d[k]];
         auto phi = angle(v, w);
-        curr_angles.push_back(phi);
         teta += phi;
       }
     }
@@ -1229,7 +1196,7 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
   return result;
 }
 
-inline bool is_vert(const mesh_point& p, int& offset, float tol = 1e-2) {
+inline bool is_vert(const mesh_point& p, int& offset, float tol = 5 * 1e-3) {
   auto bary = make_bary(p.uv);
   if (bary[0] > tol && bary[1] <= tol && bary[2] <= tol) {
     offset = 0;
@@ -1246,7 +1213,7 @@ inline bool is_vert(const mesh_point& p, int& offset, float tol = 1e-2) {
   return false;
 }
 
-inline bool is_edge(const mesh_point& p, int& offset, float tol = 1e-2) {
+inline bool is_edge(const mesh_point& p, int& offset, float tol = 5 * 1e-3) {
   auto bary = make_bary(p.uv);
   if (bary[0] > tol && bary[1] > tol && bary[2] <= tol) {
     offset = 0;
@@ -1263,25 +1230,18 @@ inline bool is_edge(const mesh_point& p, int& offset, float tol = 1e-2) {
   return false;
 }
 
-template <typename T>
-inline T lerp(const T& a, const T& b, const T& c, const vec2f& uv) {
-#if YOCTO_OLD_INTERPOLATION_CONVENTION
-  return a * uv.x + b * uv.y + c * (1 - uv.x - uv.y);
-#else
-  return a * (1 - uv.x - uv.y) + b * uv.x + c * uv.y;
-#endif
-}
-
 inline vec3f eval_position(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const mesh_point& sample) {
   auto [x, y, z] = triangles[sample.face];
-  return lerp(positions[x], positions[y], positions[z], sample.uv);
+  return interpolate_triangle(
+      positions[x], positions[y], positions[z], sample.uv);
 }
 
 inline vec3f eval_normal(const vector<vec3i>& triangles,
     const vector<vec3f>& normals, const mesh_point& point) {
   auto [x, y, z] = triangles[point.face];
-  return normalize(lerp(normals[x], normals[y], normals[z], point.uv));
+  return normalize(
+      interpolate_triangle(normals[x], normals[y], normals[z], point.uv));
 }
 
 inline int node_is_neighboor(const geodesic_solver& solver, int vid, int node) {
@@ -1309,19 +1269,19 @@ static vector<int> short_strip(const vector<vec3i>& triangles,
       int tid = star[i];
       int opp = opposite_face(triangles, adjacencies, tid, vid);
       if (point_in_triangle(triangles, positions, tid, p, bary)) {
-        source       = {tid, bary};
-        offset       = find_in_vec(triangles[tid], vid);
-        bary         = zero2f;
-        bary[offset] = 1;
-        target       = {tid, bary};
+        source    = {tid, bary};
+        offset    = find_in_vec(triangles[tid], vid);
+        auto b    = zero3f;
+        b[offset] = 1;
+        target    = make_point(tid, b);
         return {tid};
       }
       if (point_in_triangle(triangles, positions, opp, p, bary)) {
-        source       = {opp, bary};
-        offset       = find_in_vec(triangles[tid], vid);
-        bary         = zero2f;
-        bary[offset] = 1;
-        target       = {tid, bary};
+        source    = {opp, bary};
+        offset    = find_in_vec(triangles[tid], vid);
+        auto b    = zero3f;
+        b[offset] = 1;
+        target    = make_point(tid, b);
         return {tid, opp};
       }
       if (tid == star.back()) assert(false);
@@ -1336,19 +1296,19 @@ static vector<int> short_strip(const vector<vec3i>& triangles,
       int tid = star[i];
       int opp = opposite_face(triangles, adjacencies, tid, vid);
       if (point_in_triangle(triangles, positions, tid, p, bary)) {
-        target       = {tid, bary};
-        offset       = find_in_vec(triangles[tid], vid);
-        bary         = zero2f;
-        bary[offset] = 1;
-        source       = {tid, bary};
+        target    = {tid, bary};
+        offset    = find_in_vec(triangles[tid], vid);
+        auto b    = zero3f;
+        b[offset] = 1;
+        source    = make_point(tid, b);
         return {tid};
       }
       if (point_in_triangle(triangles, positions, opp, p, bary)) {
-        target       = {opp, bary};
-        offset       = find_in_vec(triangles[tid], vid);
-        bary         = zero2f;
-        bary[offset] = 1;
-        source       = {tid, bary};
+        target    = {opp, bary};
+        offset    = find_in_vec(triangles[tid], vid);
+        auto b    = zero3f;
+        b[offset] = 1;
+        source    = make_point(tid, b);
         return {opp, tid};
       }
       if (tid == star.back()) assert(false);
@@ -1512,14 +1472,14 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
   auto k = -1, start_entry = 0, end_entry = (int)strip.size() - 1;
   auto b3f = zero3f;
   // Erasing from the bottom
-  if (is_vert(end, k)) {
+  if (is_vert(end, k, 1e-2)) {
     auto vid      = triangles[end.face][k];
     auto curr_tid = strip[end_entry - 1];
     k             = find_in_vec(triangles[curr_tid], vid);
     while (k != -1) {
       cleaned.pop_back();
       --end_entry;
-      if (end_entry == 1) break;
+      if (end_entry == 0) break;
       // see comment below
       auto curr_tid = strip[end_entry - 1];
       k             = find_in_vec(triangles[curr_tid], vid);
@@ -1537,21 +1497,19 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
       cleaned.pop_back();
     }
     auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned.back(),
-        eval_position(triangles, positions, end));
-    end            = {cleaned.back(), b2f};  // updating end
+        eval_position(triangles, positions, end), 1e-2);
+    assert(ok);
+    end = {cleaned.back(), b2f};  // updating end
   }
 
   // Erasing from the top
-  if (is_vert(start, k)) {
+  if (is_vert(start, k, 1e-2)) {
     auto vid      = triangles[start.face][k];
     auto curr_tid = strip[start_entry + 1];
     k             = find_in_vec(triangles[curr_tid], vid);
-    while (k != -1) {
+    while (k != -1 && start_entry < end_entry - 1) {
       cleaned.erase(cleaned.begin());
       ++start_entry;
-      if (start_entry == end_entry - 1) break;
-      // size of the strip must be at least two(see
-      // handle_degenerate_case_for_tracing or get_strip)
       auto curr_tid = strip[start_entry + 1];
       k             = find_in_vec(triangles[curr_tid], vid);
     }
@@ -1566,11 +1524,12 @@ vector<int> cleaned_strip(const vector<vec3i>& triangles,
       assert(adjacencies[start.face][k] == strip[0]);
       if (start.face == strip[1]) cleaned.erase(cleaned.begin());
     } else if (adjacencies[start.face][k] == strip[1]) {
-      cleaned.erase(cleaned.begin());
+      if (cleaned.size() > 1) cleaned.erase(cleaned.begin());
     }
     auto [ok, b2f] = point_in_triangle(triangles, positions, cleaned[0],
-        eval_position(triangles, positions, start));
-    start          = {cleaned[0], b2f};  // updating start
+        eval_position(triangles, positions, start), 1e-2);
+    assert(ok);
+    start = {cleaned[0], b2f};  // updating start
   }
 
   return cleaned;
@@ -1584,6 +1543,7 @@ vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const vector<float>& total_angles,
     mesh_point& source, mesh_point& target) {
+  // profile_function();
   if (target.face == source.face) return {target.face};
   vector<int> strip   = {};
   auto        parents = point_to_point_geodesic_path(
@@ -1740,6 +1700,7 @@ vector<int> fast_get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     mesh_point& source, mesh_point& target) {
+  // profile_function();
   if (target.face == source.face) return {target.face};
   vector<int> strip = {};
 
