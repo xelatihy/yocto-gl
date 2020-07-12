@@ -7,124 +7,50 @@
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "front": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.75,
-        3,
-        0,
-        0.175,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
     },
     "back": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.5,
-        -3.25,
-        0,
-        -0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
     },
     "perspective-sharp": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "perspective-dof": {
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-sharp": {
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-dof": {
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     }
   },
   "environments": {
     "sky": {
-      "emission": [
-        0.5,
-        0.5,
-        0.5
-      ],
+      "emission": [0.5, 0.5, 0.5],
       "emission_tex": "sky"
     }
   },
@@ -135,244 +61,78 @@
     },
     "largearealight1": {
       "shape": "largearealight1",
-      "lookat": [
-        -0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight1"
     },
     "largearealight2": {
       "shape": "largearealight2",
-      "lookat": [
-        0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight2"
     },
     "sphere-glass-sharp": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "sphere-glass-sharp"
     },
     "sphere-glass-rough": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "sphere-glass-rough"
     },
     "sphere-transparent": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "sphere-transparent"
     },
     "sphere-thinglass-sharp": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-thinglass-sharp"
     },
     "sphere-thinglass-rough": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "sphere-thinglass-rough"
     },
     "bunny-glass-sharp": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4],
       "material": "bunny-glass-sharp"
     },
     "bunny-glass-rough": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4],
       "material": "bunny-glass-rough"
     },
     "bunny-transparent": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4],
       "material": "bunny-transparent"
     },
     "bunny-thinglass-sharp": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4],
       "material": "bunny-thinglass-sharp"
     },
     "bunny-thinglass-rough": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4],
       "material": "bunny-thinglass-rough"
     }
   },
   "materials": {
     "floor": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "largearealight2": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "sphere-glass-sharp": {
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "specular": 1,
       "transmission": 1,
       "roughness": 0,
@@ -380,52 +140,32 @@
     },
     "sphere-glass-rough": {
       "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
+      "color": [1, 0.7, 0.7],
       "transmission": 1,
       "roughness": 0.1,
       "thin": false
     },
     "sphere-transparent": {
-      "color": [
-        0.7,
-        0.5,
-        0.5
-      ],
+      "color": [0.7, 0.5, 0.5],
       "roughness": 1,
       "opacity": 0.2
     },
     "sphere-thinglass-sharp": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "transmission": 1,
       "roughness": 0,
       "thin": true
     },
     "sphere-thinglass-rough": {
       "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
+      "color": [1, 0.7, 0.7],
       "transmission": 1,
       "roughness": 0.05,
       "thin": true
     },
     "bunny-glass-sharp": {
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "specular": 1,
       "transmission": 1,
       "roughness": 0,
@@ -433,42 +173,26 @@
     },
     "bunny-glass-rough": {
       "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
+      "color": [1, 0.7, 0.7],
       "transmission": 1,
       "roughness": 0.1,
       "thin": false
     },
     "bunny-transparent": {
-      "color": [
-        0.7,
-        0.5,
-        0.5
-      ],
+      "color": [0.7, 0.5, 0.5],
       "roughness": 1,
       "opacity": 0.2
     },
     "bunny-thinglass-sharp": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "transmission": 1,
       "roughness": 0,
       "thin": true
     },
     "bunny-thinglass-rough": {
       "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
+      "color": [1, 0.7, 0.7],
       "transmission": 1,
       "roughness": 0.05,
       "thin": true

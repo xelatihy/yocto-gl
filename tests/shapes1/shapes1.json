@@ -7,124 +7,50 @@
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "front": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
-      "lookat": [
-        0,
-        0.575,
-        1.4,
-        0,
-        0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
     },
     "back": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        0.575,
-        -1.4,
-        0,
-        0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
     },
     "perspective-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "perspective-dof": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "orthographic-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "orthographic-dof": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     }
   },
   "environments": {
     "sky": {
-      "emission": [
-        0.5,
-        0.5,
-        0.5
-      ],
+      "emission": [0.5, 0.5, 0.5],
       "emission_tex": "sky"
     }
   },
@@ -135,195 +61,78 @@
     },
     "arealight1": {
       "shape": "arealight1",
-      "lookat": [
-        -0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight1"
     },
     "arealight2": {
       "shape": "arealight2",
-      "lookat": [
-        0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight2"
     },
     "sphere-uvgrid": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "sphere-uvgrid"
     },
     "uvsphere-flipcap-uvgrid": {
       "shape": "uvsphere-flipcap",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "uvsphere-flipcap-uvgrid"
     },
     "disk-uvgrid": {
       "shape": "disk",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "disk-uvgrid"
     },
     "uvcylinder-uvgrid": {
       "shape": "uvcylinder",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "uvcylinder-uvgrid"
     },
     "cube-uvgrid": {
       "shape": "cube",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "cube-uvgrid"
     }
   },
   "materials": {
     "floor": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "arealight1": {
-      "emission": [
-        20,
-        20,
-        20
-      ]
+      "emission": [20, 20, 20]
     },
     "arealight2": {
-      "emission": [
-        20,
-        20,
-        20
-      ]
+      "emission": [20, 20, 20]
     },
     "sphere-uvgrid": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvsphere-flipcap-uvgrid": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "disk-uvgrid": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "uvcylinder-uvgrid": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     },
     "cube-uvgrid": {
       "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
+      "color": [1, 1, 1],
       "roughness": 0.1,
       "color_tex": "uvgrid"
     }
