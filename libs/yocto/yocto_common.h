@@ -43,6 +43,7 @@
 #include <deque>
 #include <future>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <utility>

@@ -40,6 +40,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "yocto_scene.h"
 

@@ -28,6 +28,7 @@
 
 #include "yocto_sceneio.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cctype>
@@ -36,6 +37,9 @@
 #include <deque>
 #include <future>
 #include <memory>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "ext/cgltf.h"
 #include "ext/filesystem.hpp"

@@ -224,8 +224,8 @@ struct obj_texture {
   unordered_map<string, vector<float>> props;
 
   obj_texture() {}
-  obj_texture(const char* path) : path{path} {}
-  obj_texture(const string& path) : path{path} {}
+  explicit obj_texture(const char* path) : path{path} {}
+  explicit obj_texture(const string& path) : path{path} {}
 };
 
 // Obj element

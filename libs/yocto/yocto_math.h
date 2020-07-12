@@ -43,6 +43,7 @@
 #include <functional>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -1252,15 +1253,13 @@ inline vec2f log(const vec2f& a) { return {log(a.x), log(a.y)}; }
 inline vec2f exp2(const vec2f& a) { return {exp2(a.x), exp2(a.y)}; }
 inline vec2f log2(const vec2f& a) { return {log2(a.x), log2(a.y)}; }
 inline bool  isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.y); }
-inline vec2f pow(const vec2f& a, float b) {
-  return {pow(a.x, b), pow(a.y, b)};
-};
+inline vec2f pow(const vec2f& a, float b) { return {pow(a.x, b), pow(a.y, b)}; }
 inline vec2f pow(const vec2f& a, const vec2f& b) {
   return {pow(a.x, b.x), pow(a.y, b.y)};
-};
+}
 inline vec2f gain(const vec2f& a, float b) {
   return {gain(a.x, b), gain(a.y, b)};
-};
+}
 inline void swap(vec2f& a, vec2f& b) { std::swap(a, b); }
 
 // Vector sequence operations.
@@ -1401,24 +1400,24 @@ inline float sum(const vec3f& a) { return a.x + a.y + a.z; }
 inline float mean(const vec3f& a) { return sum(a) / 3; }
 
 // Functions applied to vector elements
-inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
-inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; };
-inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; };
-inline vec3f log(const vec3f& a) { return {log(a.x), log(a.y), log(a.z)}; };
-inline vec3f exp2(const vec3f& a) { return {exp2(a.x), exp2(a.y), exp2(a.z)}; };
-inline vec3f log2(const vec3f& a) { return {log2(a.x), log2(a.y), log2(a.z)}; };
+inline vec3f abs(const vec3f& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
+inline vec3f sqrt(const vec3f& a) { return {sqrt(a.x), sqrt(a.y), sqrt(a.z)}; }
+inline vec3f exp(const vec3f& a) { return {exp(a.x), exp(a.y), exp(a.z)}; }
+inline vec3f log(const vec3f& a) { return {log(a.x), log(a.y), log(a.z)}; }
+inline vec3f exp2(const vec3f& a) { return {exp2(a.x), exp2(a.y), exp2(a.z)}; }
+inline vec3f log2(const vec3f& a) { return {log2(a.x), log2(a.y), log2(a.z)}; }
 inline vec3f pow(const vec3f& a, float b) {
   return {pow(a.x, b), pow(a.y, b), pow(a.z, b)};
-};
+}
 inline vec3f pow(const vec3f& a, const vec3f& b) {
   return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z)};
-};
+}
 inline vec3f gain(const vec3f& a, float b) {
   return {gain(a.x, b), gain(a.y, b), gain(a.z, b)};
-};
+}
 inline bool isfinite(const vec3f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
-};
+}
 inline void swap(vec3f& a, vec3f& b) { std::swap(a, b); }
 
 // Vector sequence operations.
@@ -1552,34 +1551,34 @@ inline float mean(const vec4f& a) { return sum(a) / 4; }
 // Functions applied to vector elements
 inline vec4f abs(const vec4f& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
+}
 inline vec4f sqrt(const vec4f& a) {
   return {sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w)};
-};
+}
 inline vec4f exp(const vec4f& a) {
   return {exp(a.x), exp(a.y), exp(a.z), exp(a.w)};
-};
+}
 inline vec4f log(const vec4f& a) {
   return {log(a.x), log(a.y), log(a.z), log(a.w)};
-};
+}
 inline vec4f exp2(const vec4f& a) {
   return {exp2(a.x), exp2(a.y), exp2(a.z), exp2(a.w)};
-};
+}
 inline vec4f log2(const vec4f& a) {
   return {log2(a.x), log2(a.y), log2(a.z), log2(a.w)};
-};
+}
 inline vec4f pow(const vec4f& a, float b) {
   return {pow(a.x, b), pow(a.y, b), pow(a.z, b), pow(a.w, b)};
-};
+}
 inline vec4f pow(const vec4f& a, const vec4f& b) {
   return {pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w)};
-};
+}
 inline vec4f gain(const vec4f& a, float b) {
   return {gain(a.x, b), gain(a.y, b), gain(a.z, b), gain(a.w, b)};
-};
+}
 inline bool isfinite(const vec4f& a) {
   return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
-};
+}
 inline void swap(vec4f& a, vec4f& b) { std::swap(a, b); }
 
 // Quaternion operatons represented as xi + yj + zk + w
@@ -1700,7 +1699,7 @@ inline int min(const vec2i& a) { return min(a.x, a.y); }
 inline int sum(const vec2i& a) { return a.x + a.y; }
 
 // Functions applied to vector elements
-inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; };
+inline vec2i abs(const vec2i& a) { return {abs(a.x), abs(a.y)}; }
 inline void  swap(vec2i& a, vec2i& b) { std::swap(a, b); }
 
 // Vector sequence operations.
@@ -1792,7 +1791,7 @@ inline int min(const vec3i& a) { return min(min(a.x, a.y), a.z); }
 inline int sum(const vec3i& a) { return a.x + a.y + a.z; }
 
 // Functions applied to vector elements
-inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; };
+inline vec3i abs(const vec3i& a) { return {abs(a.x), abs(a.y), abs(a.z)}; }
 inline void  swap(vec3i& a, vec3i& b) { std::swap(a, b); }
 
 // Vector sequence operations.
@@ -1887,7 +1886,7 @@ inline int sum(const vec4i& a) { return a.x + a.y + a.z + a.w; }
 // Functions applied to vector elements
 inline vec4i abs(const vec4i& a) {
   return {abs(a.x), abs(a.y), abs(a.z), abs(a.w)};
-};
+}
 inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 }  // namespace yocto

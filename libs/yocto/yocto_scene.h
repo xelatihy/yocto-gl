@@ -39,6 +39,9 @@
 
 #include <functional>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "yocto_image.h"
 #include "yocto_math.h"

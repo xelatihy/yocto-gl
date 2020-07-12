@@ -28,6 +28,7 @@
 
 #include "yocto_scene.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cctype>
@@ -37,6 +38,7 @@
 #include <deque>
 #include <future>
 #include <memory>
+#include <unordered_map>
 
 #include "yocto_color.h"
 #include "yocto_geometry.h"
