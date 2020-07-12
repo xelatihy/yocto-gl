@@ -1,3 +1,0 @@
-[submodule "libs/yocto_denoise/ext/oidn"]
-	path = libs/yocto_denoise/ext/oidn
-	url = git@github.com:OpenImageDenoise/oidn.git
