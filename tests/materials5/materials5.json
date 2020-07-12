@@ -7,124 +7,50 @@
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "front": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.75,
-        3,
-        0,
-        0.175,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
     },
     "back": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.5,
-        -3.25,
-        0,
-        -0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
     },
     "perspective-sharp": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "perspective-dof": {
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-sharp": {
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-dof": {
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     }
   },
   "environments": {
     "sky": {
-      "emission": [
-        0.5,
-        0.5,
-        0.5
-      ],
+      "emission": [0.5, 0.5, 0.5],
       "emission_tex": "sky"
     }
   },
@@ -135,251 +61,81 @@
     },
     "largearealight1": {
       "shape": "largearealight1",
-      "lookat": [
-        -0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight1"
     },
     "largearealight2": {
       "shape": "largearealight2",
-      "lookat": [
-        0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight2"
     },
     "sphere-skin1a": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "skin1a"
     },
     "sphere-skin2a": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "skin2a"
     },
     "sphere-skins": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "skins"
     },
     "sphere-skin1b": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "skin1b"
     },
     "sphere-skin2b": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "skin2b"
     },
     "bunny-skin1a": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4],
       "material": "skin1a"
     },
     "bunny-skin2a": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4],
       "material": "skin2a"
     },
     "bunny-skins": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4],
       "material": "skins"
     },
     "bunny-skin1b": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4],
       "material": "skin1b"
     },
     "bunny-skin2b": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4],
       "material": "skin2b"
     }
   },
   "materials": {
     "floor": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "largearealight2": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "skin1a": {
       "transmission": 1,
       "roughness": 0.25,
-      "color": [
-        0.76,
-        0.48,
-        0.23
-      ],
-      "scattering": [
-        0.436, 
-        0.227, 
-        0.131
-      ],
+      "color": [0.76, 0.48, 0.23],
+      "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
       "trdepth": 0.001,
       "thin": false
@@ -388,16 +144,8 @@
       "specular": 1,
       "roughness": 0.25,
       "transmission": 1,
-      "color": [
-        0.82,
-        0.55,
-        0.40
-      ],
-      "scattering": [
-        0.623, 
-        0.433, 
-        0.343
-      ],
+      "color": [0.82, 0.55, 0.4],
+      "scattering": [0.623, 0.433, 0.343],
       "scanisotropy": -0.8,
       "trdepth": 0.001,
       "thin": false
@@ -406,16 +154,8 @@
       "specular": 1,
       "roughness": 0,
       "transmission": 1,
-      "color": [
-        0.76,
-        0.48,
-        0.23
-      ],
-      "scattering": [
-        0.436, 
-        0.227, 
-        0.131
-      ],
+      "color": [0.76, 0.48, 0.23],
+      "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
       "trdepth": 0.001,
       "thin": false
@@ -424,16 +164,8 @@
       "translucency": 1,
       "specular": 1,
       "roughness": 0.25,
-      "color": [
-        0.76,
-        0.48,
-        0.23
-      ],
-      "scattering": [
-        0.436, 
-        0.227, 
-        0.131
-      ],
+      "color": [0.76, 0.48, 0.23],
+      "scattering": [0.436, 0.227, 0.131],
       "scanisotropy": -0.8,
       "trdepth": 0.001,
       "thin": false
@@ -442,16 +174,8 @@
       "translucency": 1,
       "specular": 1,
       "roughness": 0.25,
-      "color": [
-        0.82,
-        0.55,
-        0.40
-      ],
-      "scattering": [
-        0.623, 
-        0.433, 
-        0.343
-      ],
+      "color": [0.82, 0.55, 0.4],
+      "scattering": [0.623, 0.433, 0.343],
       "scanisotropy": -0.8,
       "trdepth": 0.001,
       "thin": false

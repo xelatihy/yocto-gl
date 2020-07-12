@@ -39,8 +39,10 @@
 // -----------------------------------------------------------------------------
 
 #include <memory>
+#include <string>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 
 #include "yocto_math.h"
 

@@ -100,11 +100,18 @@
   },
   "json.schemas": [
     {
-      "fileMatch": [
-        "/*.json"
-      ],
+      "fileMatch": ["/*.json"],
       "url": "./scripts/scene.schema.json"
     }
   ],
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "cpplint.filters": [
+    "-runtime/references",
+    "-legal/copyright",
+    "-build/header_guard",
+    "-build/include_subdir",
+    "-whitespace/braces",
+    "-readability/casting",
+    "-build/c++11"
+  ]
 }

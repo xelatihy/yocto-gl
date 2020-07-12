@@ -7,124 +7,50 @@
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "front": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.75,
-        3,
-        0,
-        0.175,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
     },
     "back": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        1.5,
-        -3.25,
-        0,
-        -0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
     },
     "perspective-sharp": {
       "lens": 0.1,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "perspective-dof": {
       "lens": 0.1,
       "aperture": 0.05,
       "aspect": 2.4,
-      "lookat": [
-        -0.6,
-        1.5,
-        2.75,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-sharp": {
       "lens": 0.03,
       "aperture": 0.0,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     },
     "orthographic-dof": {
       "lens": 0.03,
       "aperture": 0.02,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.5,
-        1,
-        2,
-        -0.05,
-        0.15,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
     }
   },
   "environments": {
     "sky": {
-      "emission": [
-        0.5,
-        0.5,
-        0.5
-      ],
+      "emission": [0.5, 0.5, 0.5],
       "emission_tex": "sky"
     }
   },
@@ -135,333 +61,131 @@
     },
     "largearealight1": {
       "shape": "largearealight1",
-      "lookat": [
-        -0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight1"
     },
     "largearealight2": {
       "shape": "largearealight2",
-      "lookat": [
-        0.8,
-        1.6,
-        1.6,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0],
       "material": "largearealight2"
     },
     "sphere-plastic-sharp-bumped": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0],
       "material": "sphere-plastic-sharp-bumped"
     },
     "sphere-plastic-rough-coated": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "sphere-plastic-rough-coated"
     },
     "sphere-metal-sharp-bumped": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "sphere-metal-sharp-bumped"
     },
     "sphere-metal-rough-coated": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "sphere-metal-rough-coated"
     },
     "sphere-metal-rough": {
       "shape": "sphere",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "sphere-metal-rough"
     },
     "bunny-plastic-sharp-bumped": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4],
       "material": "bunny-plastic-sharp-bumped"
     },
     "bunny-plastic-rough-coated": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4],
       "material": "bunny-plastic-rough-coated"
     },
     "bunny-metal-sharp-bumped": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4],
       "material": "bunny-metal-sharp-bumped"
     },
     "bunny-metal-rough-coated": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4],
       "material": "bunny-metal-rough-coated"
     },
     "bunny-metal-rough": {
       "shape": "bunny",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        -0.4
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4],
       "material": "bunny-metal-rough"
     }
   },
   "materials": {
     "floor": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "largearealight1": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "largearealight2": {
-      "emission": [
-        10,
-        10,
-        10
-      ]
+      "emission": [10, 10, 10]
     },
     "sphere-plastic-sharp-bumped": {
       "specular": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.7
-      ],
+      "color": [0.5, 0.5, 0.7],
       "roughness": 0.01,
       "normal_tex": "bumps-normal"
     },
     "sphere-plastic-rough-coated": {
       "specular": 1,
       "coat": 1,
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
+      "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "sphere-metal-sharp-bumped": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "metallic": 1,
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "sphere-metal-rough-coated": {
       "coat": 1,
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
+      "color": [0.66, 0.45, 0.34],
       "metallic": 1,
       "roughness": 0.2
     },
     "sphere-metal-rough": {
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
+      "color": [0.66, 0.45, 0.34],
       "metallic": 1,
       "roughness": 0.2
     },
     "bunny-plastic-sharp-bumped": {
       "specular": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.7
-      ],
+      "color": [0.5, 0.5, 0.7],
       "roughness": 0.01,
       "normal_tex": "bumps-normal"
     },
     "bunny-plastic-rough-coated": {
       "specular": 1,
       "coat": 1,
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
+      "color": [0.5, 0.7, 0.5],
       "roughness": 0.2
     },
     "bunny-metal-sharp-bumped": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "metallic": 1,
       "roughness": 0,
       "normal_tex": "bumps-normal"
     },
     "bunny-metal-rough-coated": {
       "coat": 1,
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
+      "color": [0.66, 0.45, 0.34],
       "metallic": 1,
       "roughness": 0.2
     },
     "bunny-metal-rough": {
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
+      "color": [0.66, 0.45, 0.34],
       "metallic": 1,
       "roughness": 0.2
     }

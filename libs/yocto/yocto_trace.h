@@ -30,8 +30,6 @@
 //
 //
 
-// TODO: flatten state
-
 #ifndef _YOCTO_TRACE_H_
 #define _YOCTO_TRACE_H_
 
@@ -42,6 +40,8 @@
 #include <atomic>
 #include <future>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "yocto_image.h"
 #include "yocto_math.h"
@@ -83,8 +83,8 @@ enum struct trace_sampler_type {
 // Type of false color visualization
 enum struct trace_falsecolor_type {
   // clang-format off
-  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color, 
-  emission, diffuse, specular, coat, metal, transmission, translucency, 
+  position, normal, frontfacing, gnormal, gfrontfacing, texcoord, color,
+  emission, diffuse, specular, coat, metal, transmission, translucency,
   refraction, roughness, opacity, ior, instance, element, highlight
   // clang-format on
 };

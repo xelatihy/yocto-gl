@@ -7,124 +7,50 @@
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "front": {
       "lens": 0.05,
       "aspect": 3,
       "aperture": 0.0,
-      "lookat": [
-        0,
-        0.575,
-        1.4,
-        0,
-        0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
     },
     "back": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 3,
-      "lookat": [
-        0,
-        0.575,
-        -1.4,
-        0,
-        0.05,
-        0,
-        0,
-        1,
-        0
-      ]
+      "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
     },
     "perspective-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "perspective-dof": {
       "lens": 0.05,
       "aperture": 0.025,
       "aspect": 2.4,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "orthographic-sharp": {
       "lens": 0.05,
       "aperture": 0.0,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     },
     "orthographic-dof": {
       "lens": 0.05,
       "aperture": 0.02,
       "aspect": 2.4,
       "orthographic": true,
-      "lookat": [
-        -0.75,
-        0.4,
-        0.9,
-        -0.075,
-        0.05,
-        -0.05,
-        0,
-        1,
-        0
-      ]
+      "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
     }
   },
   "environments": {
     "sky": {
-      "emission": [
-        0.5,
-        0.5,
-        0.5
-      ],
+      "emission": [0.5, 0.5, 0.5],
       "emission_tex": "sky"
     }
   },
@@ -135,238 +61,87 @@
     },
     "arealight1": {
       "shape": "arealight1",
-      "lookat": [
-        -0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight1"
     },
     "arealight2": {
       "shape": "arealight2",
-      "lookat": [
-        0.4,
-        0.8,
-        0.8,
-        0,
-        0.1,
-        0,
-        0,
-        1,
-        0
-      ],
+      "lookat": [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0],
       "material": "arealight2"
     },
     "sphere-matte": {
       "shape": "sphere",
-      "frame": [
-        0.5,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.4,
-        0,
-        0
-      ],
+      "frame": [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0],
       "material": "sphere-matte"
     },
     "hairball1-hair": {
       "shape": "hairball1",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "hairball1-hair"
     },
     "hairball2-hair": {
       "shape": "hairball2",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "hairball2-hair"
     },
     "hairball3-hair": {
       "shape": "hairball3",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "hairball3-hair"
     },
     "hairballi1-hair": {
       "shape": "hairballi",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        -0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0],
       "material": "hairballi1-hair"
     },
     "hairballi2-hair": {
       "shape": "hairballi",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
       "material": "hairballi2-hair"
     },
     "hairballi3-hair": {
       "shape": "hairballi",
-      "frame": [
-        1,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        1,
-        0.2,
-        0,
-        0
-      ],
+      "frame": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0],
       "material": "hairballi3-hair"
     }
   },
   "materials": {
     "floor": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "color_tex": "floor"
     },
     "arealight1": {
-      "emission": [
-        20,
-        20,
-        20
-      ]
+      "emission": [20, 20, 20]
     },
     "arealight2": {
-      "emission": [
-        20,
-        20,
-        20
-      ]
+      "emission": [20, 20, 20]
     },
     "sphere-matte": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball1-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball2-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairball3-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi1-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi2-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     },
     "hairballi3-hair": {
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
+      "color": [0.7, 0.7, 0.7],
       "roughness": 1
     }
   }

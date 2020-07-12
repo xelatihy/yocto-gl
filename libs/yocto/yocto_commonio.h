@@ -235,7 +235,8 @@ inline string format_duration(int64_t duration) {
   auto secs  = (int)(elapsed / 1000);
   auto msecs = (int)(elapsed % 1000);
   char buffer[256];
-  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+  snprintf(
+      buffer, sizeof(buffer), "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
   return buffer;
 }
 
