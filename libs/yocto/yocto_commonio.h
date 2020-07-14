@@ -46,7 +46,6 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -58,7 +57,6 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
-using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 using namespace std::string_literals;
