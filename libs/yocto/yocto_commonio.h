@@ -46,6 +46,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::unordered_map;
+using std::unordered_set;
 using std::vector;
 using namespace std::string_literals;
 
@@ -68,7 +70,7 @@ namespace yocto {
 
 // Print a message to the console
 inline void print_info(const string& msg);
-// Prints a messgae to the console and exit with an error.
+// Prints a message to the console and exit with an error.
 inline void print_fatal(const string& msg);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
@@ -512,45 +514,75 @@ inline vector<string> split_cli_names(const string& name_) {
   return split;
 }
 
-inline void add_option(cli_state& cli, const string& name, cli_type type,
-    void* value, const string& usage, bool req, const vector<string>& choices) {
-  static auto type_name = unordered_map<cli_type, string>{
-      {cli_type::string_, "<string>"},
-      {cli_type::int_, "<int>"},
-      {cli_type::float_, "<float>"},
-      {cli_type::bool_, "<true/false>"},
-      {cli_type::flag_, ""},
-      {cli_type::string_vector_, "<[string]>"},
-      {cli_type::enum_, "<enum>"},
-  };
+template <typename T>
+struct cli_is_vector : std::false_type {};
+template <typename T>
+struct cli_is_vector<std::vector<T>> : std::true_type {};
+template <typename T, typename A>
+struct cli_is_vector<std::vector<T, A>> : std::true_type {};
+template <class T>
+inline constexpr bool cli_is_vector_v = cli_is_vector<T>::value;
+
+template <typename T>
+inline string cli_type_name() {
+  if constexpr (std::is_same_v<T, string>) return "<string>";
+  if constexpr (std::is_same_v<T, int>) return "<int>";
+  if constexpr (std::is_same_v<T, float>) return "<float>";
+  if constexpr (std::is_same_v<T, bool>) return "";
+  if constexpr (cli_is_vector_v<T>)
+    return "<[" + cli_type_name<typename T::value_type>() + "]>";
+  if constexpr (std::is_enum_v<T>) return "<enum>";
+}
+
+template <typename T>
+inline string cli_to_string(const T& value) {
+  if constexpr (std::is_same_v<T, string>) return value;
+  if constexpr (std::is_integral_v<T>) return std::to_string(value);
+  if constexpr (std::is_floating_point_v<T>) return std::to_string(value);
+  if constexpr (cli_is_vector_v<T>) {
+    auto def = string{"["};
+    for (auto i = 0; i < value.size(); i++)
+      def += (i ? "," : "") + cli_to_string(value[i]);
+    return def;
+  }
+}
+
+template <typename T>
+inline cli_type cli_get_type() {
+  if constexpr (std::is_same_v<T, string>) return cli_type::string_;
+  if constexpr (std::is_same_v<T, int>) return cli_type::int_;
+  if constexpr (std::is_same_v<T, float>) return cli_type::float_;
+  if constexpr (std::is_same_v<T, bool>) return cli_type::flag_;
+  if constexpr (std::is_same_v<T, string>) return cli_type::string_vector_;
+  if constexpr (std::is_enum_v<T>) return cli_type::enum_;
+  throw std::invalid_argument{"unsupported type"};
+}
+
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
+    const string& usage, bool req, const vector<string>& choices) {
+  // check for errors
+  auto used = unordered_set<string>{};
+  for (auto& option : cli.options) {
+    if (option.name.empty()) throw std::runtime_error("name cannot be empty");
+    auto names = split_cli_names(option.name);
+    if (names.empty()) throw std::runtime_error("name cannot be empty");
+    for (auto& name : names) {
+      if (used.find(name) != used.end())
+        throw std::runtime_error("option name " + name + " already in use");
+      used.insert(name);
+      if ((name[0] == '-') != (option.name[0] == '-'))
+        throw std::runtime_error("inconsistent option type for " + name);
+    }
+  }
+
   // help message
-  auto line = "  " + name + " " + type_name.at(type);
+  auto line = "  " + name + " " + cli_type_name<T>();
   while (line.size() < 32) line += " ";
   line += usage;
-  if (!req) {
-    line += " [";
-    switch (type) {
-      case cli_type::string_: line += *(string*)value; break;
-      case cli_type::int_: line += std::to_string(*(int*)value); break;
-      case cli_type::float_: line += std::to_string(*(float*)value); break;
-      case cli_type::bool_: line += *(bool*)value ? "true" : "false"; break;
-      case cli_type::flag_: line += *(bool*)value ? "true" : "false"; break;
-      case cli_type::enum_: line += choices.at(*(int*)value); break;
-      case cli_type::string_vector_: {
-        for (auto i = 0; i < (*(vector<string>*)value).size(); i++) {
-          if (i) line += ",";
-          line += (*(vector<string>*)value)[i];
-        }
-      } break;
-      default: throw std::runtime_error("unknown type");
-    }
-    line += "]";
-  } else {
-    line += " [required]";
-  }
-  line += "\n";
-  if (type == cli_type::enum_ && !choices.empty()) {
-    line += "    with <enum>: ";
+  line += !req ? " [" + cli_to_string(value) + "]\n" : " [required]\n";
+  if (!choices.empty()) {
+    line += "    with choices: ";
     auto len = 16;
     for (auto& choice : choices) {
       if (len + choice.size() + 2 > 78) {
@@ -569,38 +601,37 @@ inline void add_option(cli_state& cli, const string& name, cli_type type,
     cli.usage_arguments += line;
   }
   // add option
-  cli.options.push_back(
-      cmdline_option{name, usage, type, value, req, false, choices});
-}
+  cli.options.push_back(cmdline_option{
+      name, usage, cli_get_type<T>(), &value, req, false, choices});
+}  // namespace yocto
 
 inline void add_option(cli_state& cli, const string& name, string& value,
     const string& usage, bool req) {
-  return add_option(cli, name, cli_type::string_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name, int& value,
     const string& usage, bool req) {
-  return add_option(cli, name, cli_type::int_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name, float& value,
     const string& usage, bool req) {
-  return add_option(cli, name, cli_type::float_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name,
     vector<string>& value, const string& usage, bool req) {
-  return add_option(
-      cli, name, cli_type::string_vector_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_flag(cli_state& cli, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_option(cli, name, cli_type::flag_, &value, usage, req, {});
+  return add_option(cli, name, value, usage, req, {});
 }
 inline void add_option(cli_state& cli, const string& name, int& value,
     const string& usage, const vector<string>& choices, bool req) {
-  return add_option(cli, name, cli_type::enum_, &value, usage, req, choices);
+  return add_option(cli, name, value, usage, req, choices);
 }
 template <typename T, typename>
 inline void add_option(cli_state& cli, const string& name, T& value,
@@ -651,20 +682,6 @@ inline bool parse_cli(
     return false;
   };
 
-  // check for errors
-  auto used = unordered_map<string, int>{};
-  for (auto& option : cli.options) {
-    if (option.name.empty()) throw std::runtime_error("name cannot be empty");
-    auto names = split_cli_names(option.name);
-    if (names.empty()) throw std::runtime_error("name cannot be empty");
-    for (auto& name : names) {
-      if (used.find(name) != used.end())
-        throw std::runtime_error("option name " + name + " already in use");
-      used[name] = 1;
-      if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::runtime_error("inconsistent option type for " + name);
-    }
-  }
   // prepare args
   auto args = vector<string>{argv + 1, argv + argc};
   // parse options
