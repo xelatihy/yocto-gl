@@ -113,28 +113,24 @@ inline string get_usage(const cli_state& cli);
 // gets whether help was invoked
 inline bool get_help(const cli_state& cli);
 
-// Parse an int, float, string, and bool option or positional argument.
-// Options's names starts with "--" or "-", otherwise they are arguments.
-// The library support using many names for the same option/argument
-// separate by commas. Boolean flags are indicated with a pair of names
-// "--name/--no-name", so that we have both options available.
-inline void add_option(cli_state& cli, const string& name, string& value,
+// Parses an optional or positional argument. Optional arguments' names start
+// with "--" or "-", otherwise they are arguments. Supports strings, numbers,
+// boolean flags and enums.
+// Many names, separated by commas, can be used for each argument.
+// Boolean flags are indicated with a pair of names "--name/--no-name", so that
+// both options are explicitly specified.
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, float& value,
-    const string& usage, bool req = false);
-inline void add_option(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req = false);
-// Parse an enum
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, bool req = false);
-template <typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+// Parses an optional or positional argument where values can only be within a
+// set of choices. Supports strings, integers and enums.
+template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req = false);
-// Parse all arguments left on the command line.
-inline void add_option(cli_state& cli, const string& name,
-    vector<string>& value, const string& usage, bool req = false);
+// Parse all arguments left on the command line. Can only be used as argument.
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req = false);
 
 }  // namespace yocto
 
@@ -521,11 +517,11 @@ template <typename T>
 inline string cli_type_name() {
   if constexpr (std::is_same_v<T, string>) return "<string>";
   if constexpr (std::is_same_v<T, bool>) return "";
-  if constexpr (std::is_same_v<T, int>) return "<int>";
-  if constexpr (std::is_same_v<T, float>) return "<float>";
+  if constexpr (std::is_integral_v<T>) return "<integer>";
+  if constexpr (std::is_floating_point_v<T>) return "<number>";
+  if constexpr (std::is_enum_v<T>) return "<enum>";
   if constexpr (cli_is_vector_v<T>)
     return "<[" + cli_type_name<typename T::value_type>() + "]>";
-  if constexpr (std::is_enum_v<T>) return "<enum>";
   return "<value>";
 }
 
@@ -671,38 +667,31 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
       }});
 }
 
-inline void add_option(cli_state& cli, const string& name, string& value,
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
   return add_cli_option(cli, name, value, usage, req, {});
 }
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, bool req) {
-  return add_cli_option(cli, name, value, usage, req, {});
-}
-inline void add_option(cli_state& cli, const string& name, float& value,
-    const string& usage, bool req) {
-  return add_cli_option(cli, name, value, usage, req, {});
-}
-inline void add_option(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req) {
-  return add_cli_option(cli, name, value, usage, req, {});
-}
-inline void add_option(cli_state& cli, const string& name,
-    vector<string>& value, const string& usage, bool req) {
-  return add_cli_option(cli, name, value, usage, req, {});
-}
-inline void add_flag(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req) {
-  return add_cli_option(cli, name, value, usage, req, {});
-}
-inline void add_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, bool req) {
-  return add_cli_option(cli, name, value, usage, req, choices);
-}
-template <typename T, typename>
+template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
+  static_assert(
+      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
+      "unsupported type");
   return add_cli_option(cli, name, value, usage, req, choices);
+}
+template <typename T>
+inline void add_option(cli_state& cli, const string& name, vector<T>& value,
+    const string& usage, bool req) {
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
+                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
+                    std::is_enum_v<T>,
+      "unsupported type");
+  return add_cli_option(cli, name, value, usage, req, {});
 }
 
 inline bool get_help(const cli_state& cli) { return cli.help; }
