@@ -199,9 +199,9 @@ struct mesh_point {
 
 // compute geodesic distance from  a source Point to all the vertices of the
 // mesh(triangles,positions,adjacencies)
-vector<float> compute_geodesic_distances(const geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<mesh_point>& sources);
+vector<float> compute_geodesic_distances(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const geodesic_solver& solver, const vector<mesh_point>& sources);
 
 // given a mesh(triangles,positions,adjacencies), computes the list of parents
 // from Point target to Point source (discrete shortest path in the graph)
@@ -213,13 +213,8 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
-    const vector<vector<float>>& angles, const vector<float>& total_angles,
-    mesh_point& source, mesh_point& target);
-
-vector<int> fast_get_strip(const geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
-    mesh_point& source, mesh_point& target);
+    const vector<vector<float>>& angles, const mesh_point& source,
+    const mesh_point& target);
 
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
