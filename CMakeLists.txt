@@ -4,7 +4,7 @@ project (yocto_gl VERSION 2.0)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
 option(YOCTO_DENOISE "Build denoise app based on Intel OIDN" OFF)
-option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
+option(YOCTO_EMBREE "Use Intel's Embree raytracer" OFF)
 option(YOCTO_TESTING "Enable testing" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

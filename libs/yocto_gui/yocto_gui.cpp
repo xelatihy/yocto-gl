@@ -30,12 +30,14 @@
 #include "yocto_gui.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdarg>
 #include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "ext/glad/glad.h"
 
