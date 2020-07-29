@@ -86,27 +86,6 @@ vec2i common_edge(const vector<vec3i>& triangles, int pid0, int pid1);
 vector<int> triangle_fan(
     const vector<vec3i>& adjacencies, int face, int k, bool clockwise = false);
 
-// Check if a point lies on a triangle. If true, return barycentric coords
-bool point_in_triangle(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, int tid, const vec3f& point, vec2f& uv,
-    const float tolerance = 5 * 1e-3);
-// Check if a point lies on a triangle. If true, return barycentric coords
-pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, int tid, const vec3f& point,
-    const float tolerance = 5 * 1e-3);
-
-// Compute angles in tangent space of a
-// mesh(triangles,poisitions,adjacencies,v2t). For every vertex v, angles are
-// computed in CCW order starting from the first edge of v2t[v][0]. If
-// with_opposite==true, the construction is consistent with the connectivity of
-// the graph computed with make_geodesic_solver, otherwise only the vertices
-// adjacent to v are considered.
-// TODO: find a better name for this
-vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const vector<vector<int>>& vertex_to_faces, vector<float>& total_angles,
-    bool with_opposite);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -132,6 +111,11 @@ struct geodesic_solver {
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
 
+// Compute angles in tangent space and total angles of every vertex
+vector<vector<float>> compute_angles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<vector<int>>& v2t, vector<float>& total_angles,
+    bool with_opposite);
 // Construct a graph to compute geodesic distances with arcs arranged in
 // counterclockwise order by using the vertex-to-face adjacencies
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
@@ -199,9 +183,9 @@ struct mesh_point {
 
 // compute geodesic distance from  a source Point to all the vertices of the
 // mesh(triangles,positions,adjacencies)
-vector<float> compute_geodesic_distances(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const geodesic_solver& solver, const vector<mesh_point>& sources);
+vector<float> compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, const vector<mesh_point>& sources);
 
 // given a mesh(triangles,positions,adjacencies), computes the list of parents
 // from Point target to Point source (discrete shortest path in the graph)
@@ -210,15 +194,142 @@ vector<int> point_to_point_geodesic_path(const geodesic_solver& solver,
     const vector<vec3i>& adjacencies, const mesh_point& source,
     const mesh_point& target);
 
+// Dual geodesic graph
+struct dual_geodesic_solver {
+  struct edge {
+    int   node   = -1;
+    float length = flt_max;
+  };
+  vector<array<edge, 3>> graph = {};
+};
+
+// Construct a graph to compute geodesic distances
+dual_geodesic_solver make_dual_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// GEODESIC PATH
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct geodesic_path {
+  // surface data
+  mesh_point    start = {};
+  mesh_point    end   = {};
+  vector<int>   strip = {};
+  vector<float> lerps = {};
+};
+
+// compute the shortest path connecting two surface points
+// initial guess of the connecting strip must be given
+geodesic_path shortest_path(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& start, const mesh_point& end, const vector<int>& strip);
+
+// compute the straightest path given a surface point and tangent direction
+geodesic_path straightest_path(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const mesh_point& start, const vec2f& direction, float path_length);
+
+vector<vec3f> path_positions(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies);
+vector<float> path_parameters(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies);
+float path_length(const geodesic_path& path, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies);
+vector<float> path_parameters(const vector<vec3f>& positions);
+float         path_length(const vector<vec3f>& positions);
+
+mesh_point eval_path_point(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, float t);
+
+inline mesh_point eval_path_midpoint(const geodesic_path& path,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies) {
+  return eval_path_point(path, triangles, positions, adjacencies, 0.5);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// STRIPS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+vector<int> strip_on_dual_graph(const dual_geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, int start,
+    int end);
+
+vector<int> strip_ascending_distance_field(const geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, int start, int end);
+
+// returns a strip of triangles such target belongs to the first one and
+// source to the last one
+// TODO(fabio): the name should change in order to get the call
+// more consistent with the output)
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3i>& adjacencies, const vector<vector<int>>& v2t,
     const vector<vector<float>>& angles, const mesh_point& source,
     const mesh_point& target);
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using unfold_triangle = std::array<vec2f, 3>;
+
+vec3f eval_position(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& sample);
+vec3f eval_normal(const vector<vec3i>& triangles, const vector<vec3f>& normals,
+    const mesh_point& point);
+
+pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2);
+pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2);
+pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2);
+pair<bool, int>   point_is_edge(const mesh_point& p, float tol = 5 * 1e-3);
+pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, int tid, const vec3f& point,
+    float tol = 5 * 1e-3);
+
+std::array<vec2f, 3> init_flat_triangle(
+    const vector<vec3f>& positions, const vec3i& tr);
+
 float length_by_flattening(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
-    const mesh_point& p, vector<int>& strip, vec2f& first_sample_direction);
+    const mesh_point& p, const vector<int>& strip);
+
+// intersection of two circles with centers c1, c2 and radii squared R1, R2
+vec2f intersect_circles(const vec2f& c2, float R2, const vec2f& c1, float R1);
+
+// given the 2D coordinates in tanget space of a triangle, find the coordinates
+// of the k-th neighbor triangle
+unfold_triangle unfold_face(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const unfold_triangle& tr, int face, int k);
+
+// assign 2D coordinates to a strip of triangles. point start is at (0, 0)
+vector<unfold_triangle> unfold_strip(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacencies,
+    const vector<int>& strip, const mesh_point& start);
+
+// assign 2D coordinates to vertices of the triangle containing the mesh point,
+// putting the point at (0, 0)
+unfold_triangle triangle_coordinates(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const mesh_point& point);
+
+// generic utilities for paths
+vec2i get_edge(const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3i>& adjacencies, int f0, int f1);
 
 }  // namespace yocto
 
