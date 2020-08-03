@@ -115,42 +115,62 @@ scene_texture* add_texture(scene_model* scene, const string& name,
   }
   return texture;
 }
-scene_shape* add_shape(
-    scene_model* scene, const string& name, const quads_shape& shape_data) {
-  auto shape       = add_shape(scene, name);
-  shape->quads     = shape_data.quads;
-  shape->positions = shape_data.positions;
-  shape->normals   = shape_data.normals;
-  shape->texcoords = shape_data.texcoords;
+scene_shape* add_shape(scene_model* scene, const string& name,
+    const quads_shape& shape_data, int subdivisions = 0, float displacement = 0,
+    scene_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->quads            = shape_data.quads;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
   return shape;
 }
-scene_shape* add_shape(
-    scene_model* scene, const string& name, const triangles_shape& shape_data) {
-  auto shape       = add_shape(scene, name);
-  shape->triangles = shape_data.triangles;
-  shape->positions = shape_data.positions;
-  shape->normals   = shape_data.normals;
-  shape->texcoords = shape_data.texcoords;
+scene_shape* add_shape(scene_model* scene, const string& name,
+    const triangles_shape& shape_data, int subdivisions = 0,
+    float displacement = 0, scene_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->triangles        = shape_data.triangles;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
   return shape;
 }
-scene_shape* add_shape(
-    scene_model* scene, const string& name, const lines_shape& shape_data) {
-  auto shape       = add_shape(scene, name);
-  shape->lines     = shape_data.lines;
-  shape->positions = shape_data.positions;
-  shape->normals   = shape_data.normals;
-  shape->texcoords = shape_data.texcoords;
-  shape->radius    = shape_data.radius;
+scene_shape* add_shape(scene_model* scene, const string& name,
+    const lines_shape& shape_data, int subdivisions = 0, float displacement = 0,
+    scene_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->lines            = shape_data.lines;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->radius           = shape_data.radius;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
   return shape;
 }
-scene_shape* add_shape(
-    scene_model* scene, const string& name, const points_shape& shape_data) {
-  auto shape       = add_shape(scene, name);
-  shape->points    = shape_data.points;
-  shape->positions = shape_data.positions;
-  shape->normals   = shape_data.normals;
-  shape->texcoords = shape_data.texcoords;
-  shape->radius    = shape_data.radius;
+scene_shape* add_shape(scene_model* scene, const string& name,
+    const points_shape& shape_data, int subdivisions = 0,
+    float displacement = 0, scene_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->points           = shape_data.points;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->radius           = shape_data.radius;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
   return shape;
 }
 scene_material* add_emission_material(scene_model* scene, const string& name,
@@ -165,6 +185,7 @@ scene_material* add_matte_material(scene_model* scene, const string& name,
   auto material       = add_material(scene, name);
   material->color     = color;
   material->color_tex = color_tex;
+  material->roughness = 1;
   return material;
 }
 scene_material* add_specular_material(scene_model* scene, const string& name,
@@ -315,6 +336,7 @@ void make_test(scene_model* scene, const test_params& params) {
     } break;
   }
   auto shapes    = vector<scene_shape*>{};
+  auto shapesi   = vector<scene_shape*>{};
   auto materials = vector<scene_material*>{};
   switch (params.shapes) {
     case test_params::shapes_type::features1: {
@@ -323,15 +345,26 @@ void make_test(scene_model* scene, const test_params& params) {
       shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
     case test_params::shapes_type::features2: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
-      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
-      shapes      = {bunny, sphere, bunny, sphere, bunny};
+      shapes  = {add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "suzanne", make_monkey(0.075f * 0.8f), 2),
+          add_shape(scene, "hair",
+              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1), 0, 0.025,
+              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
+                  false, true)),
+          add_shape(scene, "cube",
+              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
+                  0.3 * 0.075f))};
+      shapesi = {nullptr, nullptr,
+          add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)), nullptr,
+          nullptr};
     } break;
   }
   switch (params.materials) {
     case test_params::materials_type::features1: {
       materials = {
-          // TODO(fabio): coated material
           add_coated_material(scene, "coated", {1, 1, 1},
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
           // TODO(fabio): radius 0.2
@@ -340,7 +373,6 @@ void make_test(scene_model* scene, const test_params& params) {
               nullptr, {0.3, 0.6, 0.3}),
           add_metallic_material(
               scene, "gold", {0.66, 0.45, 0.34}, nullptr, 0.2),
-          // TODO(fabio): normal "bumps-normal"
           add_bumped_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
               nullptr,
               add_texture(scene, "bumps-normal",
@@ -348,22 +380,12 @@ void make_test(scene_model* scene, const test_params& params) {
       };
     } break;
     case test_params::materials_type::features2: {
-      materials = {
-          // TODO(fabio): coated material
-          add_coated_material(scene, "coated", {1, 1, 1},
-              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
-          // TODO(fabio): radius 0.2
-          add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
-          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5}, nullptr, 0,
-              nullptr, {0.3, 0.6, 0.3}),
-          add_metallic_material(
-              scene, "gold", {0.66, 0.45, 0.34}, nullptr, 0.2),
-          // TODO(fabio): normal "bumps-normal"
-          add_bumped_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
-              nullptr,
-              add_texture(scene, "bumps-normal",
-                  bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
-      };
+      auto uvgrid  = add_specular_material(scene, "uvgrid", {1, 1, 1},
+          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
+      auto plastic = add_specular_material(
+          scene, "plastic", {0.5, 0.7, 0.5}, nullptr, 0.2);
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
+      materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
   }
   for (auto idx = 0; idx < 5; idx++) {
@@ -374,6 +396,11 @@ void make_test(scene_model* scene, const test_params& params) {
     add_instance(scene, name,
         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
         shapes[idx], materials[idx]);
+    if (!shapesi.empty() && shapesi[idx]) {
+      add_instance(scene, shapesi[idx]->name,
+          {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
+          shapesi[idx], materials[idx]);
+    }
   }
 }
 
@@ -387,6 +414,13 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
     params.shapes        = test_params::shapes_type::features1;
     params.materials     = test_params::materials_type::features1;
     params.instance_name = test_params::instance_name_type::material;
+    make_test(scene, params);
+    return true;
+  } else if (type == "features2") {
+    auto params          = test_params{};
+    params.shapes        = test_params::shapes_type::features2;
+    params.materials     = test_params::materials_type::features2;
+    params.instance_name = test_params::instance_name_type::shape;
     make_test(scene, params);
     return true;
   } else {
