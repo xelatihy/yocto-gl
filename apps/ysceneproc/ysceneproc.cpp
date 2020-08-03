@@ -37,7 +37,107 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace sfs = ghc::filesystem;
 
-// Shape presets used ofr testing.
+image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
+  auto rgb = image<vec3b>{rgba.imsize()};
+  for (auto i = 0; i < rgb.count(); i++)
+    rgb[i] = {rgba[i].x, rgba[i].y, rgba[i].z};
+  return rgb;
+}
+image<vec3f> rgba_to_rgb(const image<vec4f>& rgba) {
+  auto rgb = image<vec3f>{rgba.imsize()};
+  for (auto i = 0; i < rgb.count(); i++)
+    rgb[i] = {rgba[i].x, rgba[i].y, rgba[i].z};
+  return rgb;
+}
+image<byte> rgba_to_r(const image<vec4b>& rgba) {
+  auto r = image<byte>{rgba.imsize()};
+  for (auto i = 0; i < r.count(); i++) r[i] = rgba[i].x;
+  return r;
+}
+image<float> rgba_to_r(const image<vec4f>& rgba) {
+  auto r = image<float>{rgba.imsize()};
+  for (auto i = 0; i < r.count(); i++) r[i] = rgba[i].x;
+  return r;
+}
+
+scene_camera* add_camera(scene_model* scene, const string& name,
+    const vec3f& from, const vec3f& to, const vec3f& up, float lens,
+    float aspect, float aperture = 0, bool ortho = false, float film = 0.036) {
+  auto camera = add_camera(scene, name);
+  set_frame(camera, lookat_frame(from, to, up));
+  set_lens(camera, lens, aspect, film, ortho);
+  set_focus(camera, aperture, length(from - to));
+}
+scene_camera* add_camera(scene_model* scene, const string& name,
+    const frame3f& frame, float lens, float aspect, float aperture = 0,
+    float focus = 10, bool ortho = false, float film = 0.036) {
+  auto camera = add_camera(scene, name);
+  set_frame(camera, frame);
+  set_lens(camera, lens, aspect, film, ortho);
+  set_focus(camera, aperture, focus);
+  return camera;
+}
+scene_instance* add_instance(scene_model* scene, const string& name,
+    const frame3f& frame, scene_shape* shape, scene_material* material) {
+  auto instance = add_instance(scene, name);
+  set_frame(instance, frame);
+  set_shape(instance, shape);
+  set_material(instance, material);
+  return instance;
+}
+scene_environment* add_environment(scene_model* scene, const string& name,
+    const frame3f& frame, const vec3f& emission,
+    scene_texture* emission_tex = nullptr) {
+  auto environment = add_environment(scene, name);
+  set_frame(environment, frame);
+  set_emission(environment, emission, emission_tex);
+  return environment;
+}
+scene_texture* add_texture(scene_model* scene, const string& name,
+    const image<vec4f>& img, bool hdr = false, bool ldr_linear = false,
+    bool single_channel = false) {
+  auto texture = add_texture(scene, name);
+  if (hdr) {
+    if (single_channel) {
+      set_texture(texture, rgba_to_r(img));
+    } else {
+      set_texture(texture, rgba_to_rgb(img));
+    }
+  } else {
+    auto imgb = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
+    if (single_channel) {
+      set_texture(texture, rgba_to_r(imgb));
+    } else {
+      set_texture(texture, rgba_to_rgb(imgb));
+    }
+  }
+  return texture;
+}
+
+struct test_params {
+  bool sky        = true;
+  bool arealights = true;
+};
+
+// Scene test
+void make_test(scene_model* scene, const test_params& params) {
+  // cameras
+  add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+      {0, 1, 0}, 0.05, 2.4, 0);
+  // TODO(fabio): port other cameras
+  if (params.sky) {
+    add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
+        add_texture(scene, "sky", make_sunsky({2048, 1024}, pif / 2), true));
+  }
+  // TODO(fabio): port other environment
+  if (params.arealights) {
+    add_instance(scene, "arealight1",
+        lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
+        add_shape(scene, "arealight1"), add_material(scene, "arealight1"));
+  }
+}
+
+// Scene presets used ofr testing.
 bool make_preset(scene_model* scene, const string& type, string& error) {
   if (type == "cornellbox") {
     make_cornellbox(scene);
