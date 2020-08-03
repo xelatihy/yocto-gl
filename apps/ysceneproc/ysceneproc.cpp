@@ -255,16 +255,18 @@ scene_material* add_bumped_material(scene_model* scene, const string& name,
 }
 
 struct test_params {
-  enum struct shapes_type { features1 };
-  enum struct materials_type { features1 };
+  enum struct shapes_type { features1, features2 };
+  enum struct materials_type { features1, features2 };
   enum struct environments_type { none, sky, sunsky };
   enum struct arealights_type { none, area };
   enum struct floor_type { none, floor };
-  environments_type environments = environments_type::sky;
-  arealights_type   arealights   = arealights_type::area;
-  floor_type        floor        = floor_type::floor;
-  shapes_type       shapes       = shapes_type::features1;
-  materials_type    materials    = materials_type::features1;
+  enum struct instance_name_type { material, shape };
+  environments_type  environments  = environments_type::sky;
+  arealights_type    arealights    = arealights_type::area;
+  floor_type         floor         = floor_type::floor;
+  shapes_type        shapes        = shapes_type::features1;
+  materials_type     materials     = materials_type::features1;
+  instance_name_type instance_name = instance_name_type::material;
 };
 
 // Scene test
@@ -275,25 +277,24 @@ void make_test(scene_model* scene, const test_params& params) {
   // TODO(fabio): port other cameras
   switch (params.environments) {
     case test_params::environments_type::none: break;
-    case test_params::environments_type::sky:
+    case test_params::environments_type::sky: {
       add_environment(scene, "sky", identity3x4f, {0.5, 0.5, 0.5},
           add_texture(scene, "sky",
               make_sunsky(
                   {2048, 1024}, pif / 4, 3.0, false, 1.0, 1.0, {0.7, 0.7, 0.7}),
               true));
-      break;
-    case test_params::environments_type::sunsky:
-      // TODO(fabio): sunsky
+    } break;
+    case test_params::environments_type::sunsky: {
       add_environment(scene, "sunsky", identity3x4f, {0.5, 0.5, 0.5},
           add_texture(scene, "sky",
               make_sunsky(
                   {2048, 1024}, pif / 4, 3.0, true, 1.0, 1.0, {0.7, 0.7, 0.7}),
               true));
-      break;
+    } break;
   }
   switch (params.arealights) {
     case test_params::arealights_type::none: break;
-    case test_params::arealights_type::area:
+    case test_params::arealights_type::area: {
       add_instance(scene, "arealight1",
           lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
@@ -302,28 +303,33 @@ void make_test(scene_model* scene, const test_params& params) {
           lookat_frame({+0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
           add_emission_material(scene, "arealight2", {20, 20, 20}, nullptr));
-      break;
+    } break;
   }
   switch (params.floor) {
     case test_params::floor_type::none: break;
-    case test_params::floor_type::floor:
+    case test_params::floor_type::floor: {
       add_instance(scene, "floor", identity3x4f,
           add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
           add_matte_material(scene, "floor", {1, 1, 1},
               add_texture(scene, "floor", make_grid({1024, 1024}))));
-      break;
+    } break;
   }
   auto shapes    = vector<scene_shape*>{};
   auto materials = vector<scene_material*>{};
   switch (params.shapes) {
-    case test_params::shapes_type::features1:
+    case test_params::shapes_type::features1: {
       auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, sphere, bunny, sphere, bunny};
-      break;
+    } break;
+    case test_params::shapes_type::features2: {
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, sphere, bunny, sphere, bunny};
+    } break;
   }
   switch (params.materials) {
-    case test_params::materials_type::features1:
+    case test_params::materials_type::features1: {
       materials = {
           // TODO(fabio): coated material
           add_coated_material(scene, "coated", {1, 1, 1},
@@ -340,10 +346,32 @@ void make_test(scene_model* scene, const test_params& params) {
               add_texture(scene, "bumps-normal",
                   bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
       };
-      break;
+    } break;
+    case test_params::materials_type::features2: {
+      materials = {
+          // TODO(fabio): coated material
+          add_coated_material(scene, "coated", {1, 1, 1},
+              add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
+          // TODO(fabio): radius 0.2
+          add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
+          add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5}, nullptr, 0,
+              nullptr, {0.3, 0.6, 0.3}),
+          add_metallic_material(
+              scene, "gold", {0.66, 0.45, 0.34}, nullptr, 0.2),
+          // TODO(fabio): normal "bumps-normal"
+          add_bumped_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
+              nullptr,
+              add_texture(scene, "bumps-normal",
+                  bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
+      };
+    } break;
   }
   for (auto idx = 0; idx < 5; idx++) {
-    add_instance(scene, shapes[idx]->name + "-" + materials[idx]->name,
+    auto name = params.instance_name ==
+                        test_params::instance_name_type::material
+                    ? materials[idx]->name
+                    : shapes[idx]->name;
+    add_instance(scene, name,
         {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
         shapes[idx], materials[idx]);
   }
@@ -355,9 +383,10 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
     make_cornellbox(scene);
     return true;
   } else if (type == "features1") {
-    auto params      = test_params{};
-    params.shapes    = test_params::shapes_type::features1;
-    params.materials = test_params::materials_type::features1;
+    auto params          = test_params{};
+    params.shapes        = test_params::shapes_type::features1;
+    params.materials     = test_params::materials_type::features1;
+    params.instance_name = test_params::instance_name_type::material;
     make_test(scene, params);
     return true;
   } else {
