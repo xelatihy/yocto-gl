@@ -218,6 +218,41 @@ scene_material* add_volumetric_material(scene_model* scene, const string& name,
   material->thin             = false;
   return material;
 }
+scene_material* add_coated_material(scene_model* scene, const string& name,
+    const vec3f& color, scene_texture* color_tex, float roughness,
+    scene_texture* roughness_tex = nullptr, float ior = 1.5, float specular = 1,
+    scene_texture* specular_tex = nullptr, float coat = 1,
+    scene_texture* coat_tex = nullptr) {
+  auto material           = add_material(scene, name);
+  material->color         = color;
+  material->color_tex     = color_tex;
+  material->specular      = specular;
+  material->specular_tex  = specular_tex;
+  material->roughness     = roughness;
+  material->roughness_tex = roughness_tex;
+  material->coat          = coat;
+  material->coat_tex      = coat_tex;
+  material->ior           = ior;
+  return material;
+}
+scene_material* add_bumped_material(scene_model* scene, const string& name,
+    const vec3f& color, scene_texture* color_tex, float roughness,
+    scene_texture* roughness_tex = nullptr, scene_texture* normal_tex = nullptr,
+    float ior = 1.5, float specular = 1, scene_texture* specular_tex = nullptr,
+    const vec3f& spectint = {1, 1, 1}, scene_texture* spectint_tex = nullptr) {
+  auto material           = add_material(scene, name);
+  material->color         = color;
+  material->color_tex     = color_tex;
+  material->specular      = specular;
+  material->specular_tex  = specular_tex;
+  material->spectint      = spectint;
+  material->spectint_tex  = spectint_tex;
+  material->roughness     = roughness;
+  material->roughness_tex = roughness_tex;
+  material->ior           = ior;
+  material->normal_tex    = normal_tex;
+  return material;
+}
 
 struct test_params {
   enum struct shapes_type { features1 };
@@ -291,7 +326,7 @@ void make_test(scene_model* scene, const test_params& params) {
     case test_params::materials_type::features1:
       materials = {
           // TODO(fabio): coated material
-          add_specular_material(scene, "uvgrid-coated", {1, 1, 1},
+          add_coated_material(scene, "coated", {1, 1, 1},
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
           // TODO(fabio): radius 0.2
           add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
@@ -300,8 +335,10 @@ void make_test(scene_model* scene, const test_params& params) {
           add_metallic_material(
               scene, "gold", {0.66, 0.45, 0.34}, nullptr, 0.2),
           // TODO(fabio): normal "bumps-normal"
-          add_specular_material(
-              scene, "plastic-bumped", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_bumped_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
+              nullptr,
+              add_texture(scene, "bumps-normal",
+                  bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
       };
       break;
   }
