@@ -494,6 +494,11 @@ void make_test(scene_model* scene, const test_params& params) {
       auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
       materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
+    case test_materials_type::shapes: {
+      auto uvgrid = add_specular_material(scene, "uvgrid", {1, 1, 1},
+          add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
+      materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
+    } break;
     case test_materials_type::materials1: {
       materials = {
           add_specular_material(
