@@ -218,6 +218,24 @@ scene_material* add_metallic_material(scene_model* scene, const string& name,
   material->roughness_tex = roughness_tex;
   return material;
 }
+scene_material* add_transmission_material(scene_model* scene,
+    const string& name, const vec3f& color, scene_texture* color_tex,
+    float roughness, scene_texture* roughness_tex = nullptr, float ior = 1.5,
+    float specular = 1, scene_texture* specular_tex = nullptr,
+    float transmission = 1, scene_texture* transmission_tex = nullptr) {
+  auto material              = add_material(scene, name);
+  material->color            = color;
+  material->color_tex        = color_tex;
+  material->specular         = specular;
+  material->specular_tex     = specular_tex;
+  material->transmission     = transmission;
+  material->transmission_tex = transmission_tex;
+  material->roughness        = roughness;
+  material->roughness_tex    = roughness_tex;
+  material->ior              = ior;
+  material->thin             = true;
+  return material;
+}
 scene_material* add_volumetric_material(scene_model* scene, const string& name,
     const vec3f& color, scene_texture* color_tex, float roughness,
     scene_texture* roughness_tex = nullptr, const vec3f& scattering = {0, 0, 0},
@@ -274,14 +292,35 @@ scene_material* add_bumped_material(scene_model* scene, const string& name,
   material->normal_tex    = normal_tex;
   return material;
 }
+scene_material* add_transparent_material(scene_model* scene, const string& name,
+    const vec3f& color, scene_texture* color_tex, float opacity = 1) {
+  auto material       = add_material(scene, name);
+  material->color     = color;
+  material->color_tex = color_tex;
+  material->roughness = 1;
+  material->opacity   = opacity;
+  return material;
+}
 
 struct test_params {
-  enum struct shapes_type { features1, features2 };
-  enum struct materials_type { features1, features2 };
+  enum struct cameras_type { standard, wide };
   enum struct environments_type { none, sky, sunsky };
-  enum struct arealights_type { none, area };
+  enum struct arealights_type { none, area, large };
   enum struct floor_type { none, floor };
   enum struct instance_name_type { material, shape };
+  enum struct shapes_type {
+    // clang-format off
+    features1, features2, materials,
+    shapes1, shapes2, shapes3
+    // clang-format off
+  };
+  enum struct materials_type {
+    // clang-format off
+    features1, features2, shapes,
+    materials1, materials2, materials3, materials4, materials5,
+    // clang-format on
+  };
+  cameras_type       cameras       = cameras_type::standard;
   environments_type  environments  = environments_type::sky;
   arealights_type    arealights    = arealights_type::area;
   floor_type         floor         = floor_type::floor;
@@ -293,8 +332,16 @@ struct test_params {
 // Scene test
 void make_test(scene_model* scene, const test_params& params) {
   // cameras
-  add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
-      {0, 1, 0}, 0.05, 2.4, 0);
+  switch (params.cameras) {
+    case test_params::cameras_type::standard: {
+      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+          {0, 1, 0}, 0.05, 2.4, 0);
+    } break;
+    case test_params::cameras_type::wide: {
+      add_camera(scene, "default", {-0.75, 0.4, 0.9}, {-0.075, 0.05, -0.05},
+          {0, 1, 0}, 0.05, 2.4, 0);
+    } break;
+  }
   // TODO(fabio): port other cameras
   switch (params.environments) {
     case test_params::environments_type::none: break;
@@ -325,6 +372,18 @@ void make_test(scene_model* scene, const test_params& params) {
           add_shape(scene, "arealight2", make_rect({1, 1}, {0.2, 0.2})),
           add_emission_material(scene, "arealight2", {20, 20, 20}, nullptr));
     } break;
+    case test_params::arealights_type::large: {
+      add_instance(scene, "largearealight1",
+          lookat_frame({-0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+          add_shape(scene, "largearealight1", make_rect({1, 1}, {0.4, 0.4})),
+          add_emission_material(
+              scene, "largearealight1", {10, 10, 10}, nullptr));
+      add_instance(scene, "largearealight2",
+          lookat_frame({+0.8, 1.6, 1.6}, {0, 0.1, 0}, {0, 1, 0}, true),
+          add_shape(scene, "largearealight2", make_rect({1, 1}, {0.4, 0.4})),
+          add_emission_material(
+              scene, "largearealight2", {10, 10, 10}, nullptr));
+    } break;
   }
   switch (params.floor) {
     case test_params::floor_type::none: break;
@@ -335,8 +394,7 @@ void make_test(scene_model* scene, const test_params& params) {
               add_texture(scene, "floor", make_grid({1024, 1024}))));
     } break;
   }
-  auto shapes    = vector<scene_shape*>{};
-  auto shapesi   = vector<scene_shape*>{};
+  auto shapes = vector<scene_shape*>{}, shapesi = vector<scene_shape*>{};
   auto materials = vector<scene_material*>{};
   switch (params.shapes) {
     case test_params::shapes_type::features1: {
@@ -360,6 +418,12 @@ void make_test(scene_model* scene, const test_params& params) {
       shapesi = {nullptr, nullptr,
           add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)), nullptr,
           nullptr};
+    } break;
+    case test_params::shapes_type::materials: {
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
+          sphere, sphere};
     } break;
   }
   switch (params.materials) {
@@ -387,14 +451,75 @@ void make_test(scene_model* scene, const test_params& params) {
       auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
       materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
+    case test_params::materials_type::materials1: {
+      materials = {
+          add_specular_material(
+              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+          add_specular_material(
+              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+      };
+    } break;
+    case test_params::materials_type::materials2: {
+      materials = {
+          add_volumetric_material(scene, "glass1", {1, 1, 1}, nullptr, 0),
+          add_volumetric_material(scene, "glass2", {1, 0.7, 0.7}, nullptr, 0.1),
+          add_transparent_material(
+              scene, "transparent", {0.7, 0.5, 0.5}, nullptr, 0.2),
+          add_transmission_material(scene, "tglass1", {1, 1, 1}, nullptr, 0),
+          add_transmission_material(
+              scene, "tglass2", {1, 0.7, 0.7}, nullptr, 0.1),
+      };
+    } break;
+    case test_params::materials_type::materials3: {
+      materials = {
+          add_specular_material(
+              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+          add_specular_material(
+              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+      };
+    } break;
+    case test_params::materials_type::materials4: {
+      materials = {
+          add_specular_material(
+              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+          add_specular_material(
+              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+      };
+    } break;
+    case test_params::materials_type::materials5: {
+      materials = {
+          add_specular_material(
+              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+          add_specular_material(
+              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+      };
+    } break;
   }
-  for (auto idx = 0; idx < 5; idx++) {
+  for (auto idx = 0; idx < shapes.size(); idx++) {
     auto name = params.instance_name ==
                         test_params::instance_name_type::material
                     ? materials[idx]->name
                     : shapes[idx]->name;
     add_instance(scene, name,
-        {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.2f * (idx - 2), 0.075, 0}},
+        {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+            {0.2f * (idx % 5 - 2), 0.075,
+                (idx / 5) * 0.8f - (shapes.size() / 5) * 0.4f}},
         shapes[idx], materials[idx]);
     if (!shapesi.empty() && shapesi[idx]) {
       add_instance(scene, shapesi[idx]->name,
@@ -421,6 +546,15 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
     params.shapes        = test_params::shapes_type::features2;
     params.materials     = test_params::materials_type::features2;
     params.instance_name = test_params::instance_name_type::shape;
+    make_test(scene, params);
+    return true;
+  } else if (type == "materials1") {
+    auto params          = test_params{};
+    params.cameras       = test_params::cameras_type::wide;
+    params.arealights    = test_params::arealights_type::large;
+    params.shapes        = test_params::shapes_type::materials;
+    params.materials     = test_params::materials_type::materials1;
+    params.instance_name = test_params::instance_name_type::material;
     make_test(scene, params);
     return true;
   } else {
