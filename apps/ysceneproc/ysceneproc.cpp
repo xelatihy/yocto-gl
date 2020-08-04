@@ -130,6 +130,22 @@ scene_shape* add_shape(scene_model* scene, const string& name,
   return shape;
 }
 scene_shape* add_shape(scene_model* scene, const string& name,
+    const quads_fvshape& shape_data, int subdivisions = 0,
+    float displacement = 0, scene_texture* displacement_tex = nullptr) {
+  auto shape              = add_shape(scene, name);
+  shape->quadspos         = shape_data.quadspos;
+  shape->quadsnorm        = shape_data.quadsnorm;
+  shape->quadstexcoord    = shape_data.quadstexcoord;
+  shape->positions        = shape_data.positions;
+  shape->normals          = shape_data.normals;
+  shape->texcoords        = shape_data.texcoords;
+  shape->subdivisions     = subdivisions;
+  shape->smooth           = subdivisions > 0 || displacement_tex;
+  shape->displacement     = displacement;
+  shape->displacement_tex = displacement_tex;
+  return shape;
+}
+scene_shape* add_shape(scene_model* scene, const string& name,
     const triangles_shape& shape_data, int subdivisions = 0,
     float displacement = 0, scene_texture* displacement_tex = nullptr) {
   auto shape              = add_shape(scene, name);
@@ -350,13 +366,13 @@ enum struct test_floor_type { none, floor };
 enum struct test_instance_name_type { material, shape };
 enum struct test_shapes_type {
   // clang-format off
-  features1, features2, materials,
+  features1, features2, rows,
   shapes1, shapes2, shapes3
   // clang-format off
 };
 enum struct test_materials_type {
   // clang-format off
-  features1, features2, shapes,
+  features1, features2, uvgrid, hair,
   materials1, materials2, materials3, materials4, materials5,
   // clang-format on
 };
@@ -462,11 +478,54 @@ void make_test(scene_model* scene, const test_params& params) {
           add_shape(scene, "hairi", make_sphere(32, 0.075f * 0.8f, 1)), nullptr,
           nullptr};
     } break;
-    case test_shapes_type::materials: {
+    case test_shapes_type::rows: {
       auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
           sphere, sphere};
+    } break;
+    case test_shapes_type::shapes1: {
+      shapes = {
+          add_shape(scene, "sphere", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "uvsphere-flipcap",
+              make_capped_uvsphere({32, 32}, 0.075, {1, 1}, 0.3 * 0.075)),
+          add_shape(scene, "disk", make_disk(32, 0.075f, 1)),
+          add_shape(scene, "uvcylinder",
+              make_rounded_uvcylinder(
+                  {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075)),
+          add_shape(scene, "cube",
+              make_rounded_box({32, 32, 32}, {0.075, 0.075, 0.075}, {1, 1, 1},
+                  0.3 * 0.075f)),
+      };
+    } break;
+    case test_shapes_type::shapes2: {
+      shapes = {
+          add_shape(scene, "cube-subdiv", make_fvcube(0.075), 4),
+          add_shape(scene, "suzanne-subdiv", make_monkey(0.075), 2),
+          add_shape(scene, "displaced", make_sphere(128, 0.075f, 1), 0, 0.025,
+              add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
+                  false, true)),
+          add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
+      };
+    } break;
+    case test_shapes_type::shapes3: {
+      shapes = {
+          nullptr,
+          add_shape(scene, "hair1",
+              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0.03, 100})),
+          add_shape(scene, "hair2",
+              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f})),
+          add_shape(scene, "hair3",
+              make_hair(make_sphere(32, 0.075f * 0.8f, 1), {4, 65536},
+                  {0.1f * 0.15f, 0.1f * 0.15f},
+                  {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0}, {0.5, 128})),
+          nullptr,
+      };
     } break;
   }
   switch (params.materials) {
@@ -494,10 +553,14 @@ void make_test(scene_model* scene, const test_params& params) {
       auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
       materials = {uvgrid, plastic, hair, plastic, uvgrid};
     } break;
-    case test_materials_type::shapes: {
+    case test_materials_type::uvgrid: {
       auto uvgrid = add_specular_material(scene, "uvgrid", {1, 1, 1},
           add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2);
       materials   = {uvgrid, uvgrid, uvgrid, uvgrid, uvgrid};
+    } break;
+    case test_materials_type::hair: {
+      auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
+      materials = {hair, hair, hair, hair, hair};
     } break;
     case test_materials_type::materials1: {
       materials = {
@@ -572,6 +635,7 @@ void make_test(scene_model* scene, const test_params& params) {
     } break;
   }
   for (auto idx = 0; idx < shapes.size(); idx++) {
+    if (!shapes[idx]) continue;
     if (shapes.size() > 5) {
       add_instance(scene, shapes[idx]->name + "-" + materials[idx % 5]->name,
           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
@@ -616,54 +680,54 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
                    test_arealights_type::large, test_floor_type::floor,
-                   test_shapes_type::materials, test_materials_type::materials1,
+                   test_shapes_type::rows, test_materials_type::materials1,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials2") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
                    test_arealights_type::large, test_floor_type::floor,
-                   test_shapes_type::materials, test_materials_type::materials2,
+                   test_shapes_type::rows, test_materials_type::materials2,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials3") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
                    test_arealights_type::large, test_floor_type::floor,
-                   test_shapes_type::materials, test_materials_type::materials3,
+                   test_shapes_type::rows, test_materials_type::materials3,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials4") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
                    test_arealights_type::large, test_floor_type::floor,
-                   test_shapes_type::materials, test_materials_type::materials4,
+                   test_shapes_type::rows, test_materials_type::materials4,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials5") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
                    test_arealights_type::large, test_floor_type::floor,
-                   test_shapes_type::materials, test_materials_type::materials5,
+                   test_shapes_type::rows, test_materials_type::materials5,
                    test_instance_name_type::material});
     return true;
   } else if (type == "shapes1") {
-    make_test(scene, {test_cameras_type::wide, test_environments_type::sky,
+    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
                          test_arealights_type::large, test_floor_type::floor,
-                         test_shapes_type::shapes1, test_materials_type::shapes,
-                         test_instance_name_type::material});
+                         test_shapes_type::shapes1, test_materials_type::uvgrid,
+                         test_instance_name_type::shape});
     return true;
   } else if (type == "shapes2") {
-    make_test(scene, {test_cameras_type::wide, test_environments_type::sky,
+    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
                          test_arealights_type::large, test_floor_type::floor,
-                         test_shapes_type::shapes2, test_materials_type::shapes,
-                         test_instance_name_type::material});
+                         test_shapes_type::shapes2, test_materials_type::uvgrid,
+                         test_instance_name_type::shape});
     return true;
   } else if (type == "shapes3") {
-    make_test(scene, {test_cameras_type::wide, test_environments_type::sky,
+    make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
                          test_arealights_type::large, test_floor_type::floor,
-                         test_shapes_type::shapes3, test_materials_type::shapes,
-                         test_instance_name_type::material});
+                         test_shapes_type::shapes3, test_materials_type::hair,
+                         test_instance_name_type::shape});
     return true;
   } else {
     error = "unknown preset";
