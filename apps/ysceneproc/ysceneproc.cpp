@@ -361,18 +361,18 @@ scene_material* add_transparent_material(scene_model* scene, const string& name,
 
 enum struct test_cameras_type { standard, wide };
 enum struct test_environments_type { none, sky, sunsky };
-enum struct test_arealights_type { none, area, large };
-enum struct test_floor_type { none, floor };
+enum struct test_arealights_type { none, standard, large };
+enum struct test_floor_type { none, standard };
 enum struct test_instance_name_type { material, shape };
 enum struct test_shapes_type {
   // clang-format off
-  features1, features2, rows,
+  features1, features2, rows, bunny_sphere,
   shapes1, shapes2, shapes3
   // clang-format off
 };
 enum struct test_materials_type {
   // clang-format off
-  features1, features2, uvgrid, hair,
+  features1, features2, uvgrid, hair, plastic_metal,
   materials1, materials2, materials3, materials4, materials5,
   // clang-format on
 };
@@ -380,8 +380,8 @@ enum struct test_materials_type {
 struct test_params {
   test_cameras_type       cameras       = test_cameras_type::standard;
   test_environments_type  environments  = test_environments_type::sky;
-  test_arealights_type    arealights    = test_arealights_type::area;
-  test_floor_type         floor         = test_floor_type::floor;
+  test_arealights_type    arealights    = test_arealights_type::standard;
+  test_floor_type         floor         = test_floor_type::standard;
   test_shapes_type        shapes        = test_shapes_type::features1;
   test_materials_type     materials     = test_materials_type::features1;
   test_instance_name_type instance_name = test_instance_name_type::material;
@@ -421,7 +421,7 @@ void make_test(scene_model* scene, const test_params& params) {
   }
   switch (params.arealights) {
     case test_arealights_type::none: break;
-    case test_arealights_type::area: {
+    case test_arealights_type::standard: {
       add_instance(scene, "arealight1",
           lookat_frame({-0.4, 0.8, 0.8}, {0, 0.1, 0}, {0, 1, 0}, true),
           add_shape(scene, "arealight1", make_rect({1, 1}, {0.2, 0.2})),
@@ -446,7 +446,7 @@ void make_test(scene_model* scene, const test_params& params) {
   }
   switch (params.floor) {
     case test_floor_type::none: break;
-    case test_floor_type::floor: {
+    case test_floor_type::standard: {
       add_instance(scene, "floor", identity3x4f,
           add_shape(scene, "floor", make_floor({1, 1}, {2, 2}, {20, 20})),
           add_matte_material(scene, "floor", {1, 1, 1},
@@ -483,6 +483,11 @@ void make_test(scene_model* scene, const test_params& params) {
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
           sphere, sphere};
+    } break;
+    case test_shapes_type::bunny_sphere: {
+      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
+      shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
     case test_shapes_type::shapes1: {
       shapes = {
@@ -561,6 +566,18 @@ void make_test(scene_model* scene, const test_params& params) {
     case test_materials_type::hair: {
       auto hair = add_matte_material(scene, "hair", {0.7, 0.7, 0.7}, nullptr);
       materials = {hair, hair, hair, hair, hair};
+    } break;
+    case test_materials_type::plastic_metal: {
+      materials = {
+          add_specular_material(
+              scene, "plastic1", {0.5, 0.5, 0.7}, nullptr, 0.01),
+          add_specular_material(
+              scene, "plastic2", {0.5, 0.7, 0.5}, nullptr, 0.2),
+          add_matte_material(scene, "matte", {0.7, 0.7, 0.7}, nullptr),
+          add_metallic_material(scene, "metal1", {0.7, 0.7, 0.7}, nullptr, 0),
+          add_metallic_material(
+              scene, "metal2", {0.66, 0.45, 0.34}, nullptr, 0.2),
+      };
     } break;
     case test_materials_type::materials1: {
       materials = {
@@ -665,69 +682,90 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
   } else if (type == "features1") {
     make_test(
         scene, {test_cameras_type::standard, test_environments_type::sky,
-                   test_arealights_type::area, test_floor_type::floor,
+                   test_arealights_type::standard, test_floor_type::standard,
                    test_shapes_type::features1, test_materials_type::features1,
                    test_instance_name_type::material});
     return true;
   } else if (type == "features2") {
     make_test(
         scene, {test_cameras_type::standard, test_environments_type::sky,
-                   test_arealights_type::area, test_floor_type::floor,
+                   test_arealights_type::standard, test_floor_type::standard,
                    test_shapes_type::features2, test_materials_type::features2,
                    test_instance_name_type::shape});
     return true;
   } else if (type == "materials1") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::floor,
+                   test_arealights_type::large, test_floor_type::standard,
                    test_shapes_type::rows, test_materials_type::materials1,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials2") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::floor,
+                   test_arealights_type::large, test_floor_type::standard,
                    test_shapes_type::rows, test_materials_type::materials2,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials3") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::floor,
+                   test_arealights_type::large, test_floor_type::standard,
                    test_shapes_type::rows, test_materials_type::materials3,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials4") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::floor,
+                   test_arealights_type::large, test_floor_type::standard,
                    test_shapes_type::rows, test_materials_type::materials4,
                    test_instance_name_type::material});
     return true;
   } else if (type == "materials5") {
     make_test(
         scene, {test_cameras_type::wide, test_environments_type::sky,
-                   test_arealights_type::large, test_floor_type::floor,
+                   test_arealights_type::large, test_floor_type::standard,
                    test_shapes_type::rows, test_materials_type::materials5,
                    test_instance_name_type::material});
     return true;
   } else if (type == "shapes1") {
     make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::floor,
+                         test_arealights_type::large, test_floor_type::standard,
                          test_shapes_type::shapes1, test_materials_type::uvgrid,
                          test_instance_name_type::shape});
     return true;
   } else if (type == "shapes2") {
     make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::floor,
+                         test_arealights_type::large, test_floor_type::standard,
                          test_shapes_type::shapes2, test_materials_type::uvgrid,
                          test_instance_name_type::shape});
     return true;
   } else if (type == "shapes3") {
     make_test(scene, {test_cameras_type::standard, test_environments_type::sky,
-                         test_arealights_type::large, test_floor_type::floor,
+                         test_arealights_type::large, test_floor_type::standard,
                          test_shapes_type::shapes3, test_materials_type::hair,
                          test_instance_name_type::shape});
+    return true;
+  } else if (type == "environments1") {
+    make_test(scene,
+        {test_cameras_type::standard, test_environments_type::sky,
+            test_arealights_type::none, test_floor_type::standard,
+            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+            test_instance_name_type::material});
+    return true;
+  } else if (type == "environments2") {
+    make_test(scene,
+        {test_cameras_type::standard, test_environments_type::sunsky,
+            test_arealights_type::none, test_floor_type::standard,
+            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+            test_instance_name_type::material});
+    return true;
+  } else if (type == "arealights1") {
+    make_test(scene,
+        {test_cameras_type::standard, test_environments_type::none,
+            test_arealights_type::standard, test_floor_type::standard,
+            test_shapes_type::bunny_sphere, test_materials_type::plastic_metal,
+            test_instance_name_type::material});
     return true;
   } else {
     error = "unknown preset";
