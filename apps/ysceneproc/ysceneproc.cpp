@@ -563,16 +563,15 @@ void make_test(scene_model* scene, const test_params& params) {
       materials = {
           add_specular_coated_material(scene, "coated", {1, 1, 1},
               add_texture(scene, "uvgrid", make_uvgrid({1024, 1024})), 0.2),
-          // TODO(fabio): radius 0.2
           add_volumetric_material(scene, "glass", {1, 0.5, 0.5}, nullptr, 0),
           add_volumetric_material(scene, "jade", {0.5, 0.5, 0.5}, nullptr, 0,
               nullptr, {0.3, 0.6, 0.3}),
-          add_metallic_material(
-              scene, "metal", {0.66, 0.45, 0.34}, nullptr, 0.2),
           add_specular_material(scene, "bumped", {0.5, 0.7, 0.5}, nullptr, 0.2,
               nullptr,
               add_texture(scene, "bumps-normal",
                   bump_to_normal(make_bumps({1024, 1024}), 0.05), false, true)),
+          add_metallic_material(
+              scene, "metal", {0.66, 0.45, 0.34}, nullptr, 0.2),
       };
     } break;
     case test_materials_type::features2: {
