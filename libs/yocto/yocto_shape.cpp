@@ -3498,6 +3498,22 @@ static string get_extension(const string& filename) {
   return filename.substr(pos);
 }
 
+// Save a text file
+static bool save_text(
+    const string& filename, const string& str, string& error) {
+  auto fs = fopen(filename.c_str(), "wt");
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    error = filename + ": write error";
+    return false;
+  }
+  return true;
+}
+
 // Load ply mesh
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -3679,6 +3695,60 @@ static string get_extension(const string& filename) {
     auto err = ""s;
     if (!save_obj(filename, obj, error)) return false;
     return true;
+  } else if (ext == ".cpp" || ext == ".CPP") {
+    auto to_cpp = [](const string& name, const string& vname,
+                      const auto& values) -> string {
+      using T = typename std::remove_const_t<
+          std::remove_reference_t<decltype(values)>>::value_type;
+      if (values.empty()) return ""s;
+      auto str = "auto " + name + "_" + vname + " = ";
+      if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
+      if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
+      if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
+      if constexpr (std::is_same_v<vec2f, T>) str += "vector<vec2f>{\n";
+      if constexpr (std::is_same_v<vec3i, T>) str += "vector<vec3i>{\n";
+      if constexpr (std::is_same_v<vec3f, T>) str += "vector<vec3f>{\n";
+      if constexpr (std::is_same_v<vec4i, T>) str += "vector<vec4i>{\n";
+      if constexpr (std::is_same_v<vec4f, T>) str += "vector<vec4f>{\n";
+      for (auto& value : values) {
+        if constexpr (std::is_same_v<int, T> || std::is_same_v<float, T>) {
+          str += std::to_string(value) + ",\n";
+        } else if constexpr (std::is_same_v<vec2i, T> ||
+                             std::is_same_v<vec2f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "},\n";
+        } else if constexpr (std::is_same_v<vec3i, T> ||
+                             std::is_same_v<vec3f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "},\n";
+        } else if constexpr (std::is_same_v<vec4i, T> ||
+                             std::is_same_v<vec4f, T>) {
+          str += "{" + std::to_string(value.x) + "," + std::to_string(value.y) +
+                 "," + std::to_string(value.z) + "," + std::to_string(value.w) +
+                 "},\n";
+        } else {
+          throw std::invalid_argument{"cannot print this"};
+        }
+      }
+      str += "};\n\n";
+      return str;
+    };
+
+    auto name = string{"shape"};
+    auto str  = ""s;
+    str += to_cpp(name, "positions", positions);
+    str += to_cpp(name, "normals", normals);
+    str += to_cpp(name, "texcoords", texcoords);
+    str += to_cpp(name, "colors", colors);
+    str += to_cpp(name, "radius", radius);
+    str += to_cpp(name, "points", points);
+    str += to_cpp(name, "lines", lines);
+    str += to_cpp(name, "triangles", triangles);
+    str += to_cpp(name, "quads", quads);
+    str += to_cpp(name, "quadspos", quadspos);
+    str += to_cpp(name, "quadsnorm", quadsnorm);
+    str += to_cpp(name, "quadstexcoord", quadstexcoord);
+    return save_text(filename, str, error);
   } else {
     return format_error();
   }
