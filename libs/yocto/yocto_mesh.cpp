@@ -2326,7 +2326,7 @@ static vector<float> funnel(
 
   auto index = 1;
   for (auto i = 1; i < portals.size(); ++i) {
-    if ((portals[i].first == points[index].pos) or
+    if ((portals[i].first == points[index].pos) ||
         (portals[i].second == points[index].pos)) {
       points[index].face = i;
       index += 1;
