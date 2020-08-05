@@ -29,3 +29,7 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 
+extern vector<vec3f> bunny_positions;
+extern vector<vec3f> bunny_normals;
+extern vector<vec2f> bunny_texcoords;
+extern vector<vec3i> bunny_triangles;

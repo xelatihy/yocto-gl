@@ -27,6 +27,7 @@
 //
 
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 #include <yocto/yocto_sceneio.h>
@@ -59,6 +60,30 @@ image<float> rgba_to_r(const image<vec4f>& rgba) {
   auto r = image<float>{rgba.imsize()};
   for (auto i = 0; i < r.count(); i++) r[i] = rgba[i].x;
   return r;
+}
+
+#include "yshapedata.h"
+triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
+  auto shape      = triangles_shape{};
+  shape.triangles = bunny_triangles;
+  shape.positions = bunny_positions;
+  shape.normals   = bunny_normals;
+  shape.texcoords = bunny_texcoords;
+  // scale to height 1
+  auto bbox = invalidb3f;
+  for (auto& t : shape.triangles) {
+    bbox = merge(bbox, triangle_bounds(shape.positions[t.x],
+                           shape.positions[t.y], shape.positions[t.z]));
+  }
+  auto yscale = 2 / size(bbox).y;
+  for (auto& p : shape.positions) p *= yscale;
+  if (align_middle) {
+    for (auto& p : shape.positions) p.y -= 1;
+  }
+  if (scale != 1) {
+    for (auto& p : shape.positions) p *= scale;
+  }
+  return shape;
 }
 
 scene_camera* add_camera(scene_model* scene, const string& name,
@@ -457,7 +482,7 @@ void make_test(scene_model* scene, const test_params& params) {
   auto materials = vector<scene_material*>{};
   switch (params.shapes) {
     case test_shapes_type::features1: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
@@ -479,13 +504,13 @@ void make_test(scene_model* scene, const test_params& params) {
           nullptr};
     } break;
     case test_shapes_type::rows: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, bunny, bunny, bunny, bunny, sphere, sphere, sphere,
           sphere, sphere};
     } break;
     case test_shapes_type::bunny_sphere: {
-      auto bunny  = add_shape(scene, "bunny", make_sphere(32, 0.075, 1));
+      auto bunny  = add_shape(scene, "bunny", make_bunny(0.075));
       auto sphere = add_shape(scene, "sphere", make_sphere(32, 0.075, 1));
       shapes      = {bunny, sphere, bunny, sphere, bunny};
     } break;
@@ -510,7 +535,7 @@ void make_test(scene_model* scene, const test_params& params) {
           add_shape(scene, "displaced", make_sphere(128, 0.075f, 1), 0, 0.025,
               add_texture(scene, "bumps-displacement", make_bumps({1024, 1024}),
                   false, true)),
-          add_shape(scene, "bunny", make_sphere(32, 0.075, 1)),
+          add_shape(scene, "bunny", make_bunny(0.075)),
           add_shape(scene, "teapot", make_sphere(32, 0.075, 1)),
       };
     } break;
