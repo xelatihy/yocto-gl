@@ -566,6 +566,17 @@ inline bool parse_cli_value(
     if (args.size() != 1) return false;
     value = args[0];
     return true;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (args.size() != 1) return false;
+    if (args[0] == "true" || args[0] == "1") {
+      value = true;
+      return true;
+    } else if (args[0] == "false" || args[0] == "0") {
+      value = false;
+      return true;
+    } else {
+      return false;
+    }
   } else if constexpr (std::is_integral_v<T>) {
     if (args.size() != 1) return false;
     if (choices.empty()) {
@@ -587,17 +598,6 @@ inline bool parse_cli_value(
     auto end = (char*)nullptr;
     value    = strtod(args[0].c_str(), &end);
     return end != nullptr;
-  } else if constexpr (std::is_same_v<T, bool>) {
-    if (args.size() != 1) return false;
-    if (args[0] == "true" || args[0] == "1") {
-      value = true;
-      return true;
-    } else if (args[0] == "false" || args[0] == "0") {
-      value = false;
-      return true;
-    } else {
-      return false;
-    }
   } else if constexpr (std::is_enum_v<T>) {
     auto ivalue = 0;
     if (!parse_cli_value(args, ivalue, choices)) return false;

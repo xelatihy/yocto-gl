@@ -910,7 +910,8 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   // save shapes
   for (auto shape : scene->shapes) {
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
-    auto path = get_filename(shape->name, "shapes", ".ply");
+    auto path = get_filename(shape->name, "shapes",
+        (shape->catmullclark && shape->subdivisions) ? ".obj" : ".ply");
     if (!save_shape(path, shape->points, shape->lines, shape->triangles,
             shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,

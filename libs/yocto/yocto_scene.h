@@ -286,24 +286,24 @@ scene_texture*     add_texture(scene_model* scene, const string& name = "");
 scene_instance*    add_complete_instance(
        scene_model* scene, const string& name = "");
 
-// camera properties
+// set camera properties
 void set_frame(scene_camera* camera, const frame3f& frame);
 void set_lens(scene_camera* camera, float lens, float aspect, float film,
     bool ortho = false);
 void set_focus(scene_camera* camera, float aperture, float focus);
 
-// instance properties
+// set instance properties
 void set_frame(scene_instance* instance, const frame3f& frame);
 void set_material(scene_instance* instance, scene_material* material);
 void set_shape(scene_instance* instance, scene_shape* shape);
 
-// texture properties
+// set texture properties
 void set_texture(scene_texture* texture, const image<vec3b>& img);
 void set_texture(scene_texture* texture, const image<vec3f>& img);
 void set_texture(scene_texture* texture, const image<byte>& img);
 void set_texture(scene_texture* texture, const image<float>& img);
 
-// material properties
+// set material properties
 void set_emission(scene_material* material, const vec3f& emission,
     scene_texture* emission_tex = nullptr);
 void set_color(scene_material* material, const vec3f& color,
@@ -326,7 +326,7 @@ void set_scattering(scene_material* material, const vec3f& scattering,
     float scanisotropy, scene_texture* scattering_tex = nullptr);
 void set_normalmap(scene_material* material, scene_texture* normal_tex);
 
-// shape properties
+// set shape properties
 void set_points(scene_shape* shape, const vector<int>& points);
 void set_lines(scene_shape* shape, const vector<vec2i>& lines);
 void set_triangles(scene_shape* shape, const vector<vec3i>& triangles);
@@ -344,7 +344,7 @@ void set_subdivision(scene_shape* shape, int subdivisions, bool catmullclark,
 void set_displacement(
     scene_shape* shape, float displacement, scene_texture* displacement_tex);
 
-// environment properties
+// set environment properties
 void set_frame(scene_environment* environment, const frame3f& frame);
 void set_emission(scene_environment* environment, const vec3f& emission,
     scene_texture* emission_tex = nullptr);
