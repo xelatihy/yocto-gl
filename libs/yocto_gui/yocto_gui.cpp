@@ -1425,8 +1425,8 @@ void draw_object(
     set_uniform(scene->program, "emission", vec3f{0, 0, 0});
     set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
     set_uniform(scene->program, "specular", vec3f{0, 0, 0});
-    set_uniform(scene->program, "roughness", 1);
-    set_uniform(scene->program, "etype", 2);
+    set_uniform(scene->program, "roughness", 0);
+    set_uniform(scene->program, "etype", 3);
     draw_elements(shape->edges);
   }
 }

@@ -186,10 +186,9 @@ void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
+bool draw_widgets(gui_window* win, generic_shape* ioshape) {
   if (!ioshape) return false;
   auto edited = 0;
-  draw_label(win, "name", ioshape->name);
   draw_label(win, "points", std::to_string(ioshape->points.size()));
   draw_label(win, "lines", std::to_string(ioshape->lines.size()));
   draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
@@ -199,16 +198,10 @@ bool draw_widgets(gui_window* win, scene_model* ioscene, scene_shape* ioshape) {
   draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
   draw_label(win, "colors", std::to_string(ioshape->colors.size()));
   draw_label(win, "radius", std::to_string(ioshape->radius.size()));
-  draw_label(win, "tangents", std::to_string(ioshape->tangents.size()));
   draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
   draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
   draw_label(
       win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
-  edited += draw_slider(win, "subdivisions", ioshape->subdivisions, 0, 5);
-  edited += draw_checkbox(win, "catmull-clark", ioshape->catmullclark);
-  edited += draw_slider(win, "displacement", ioshape->displacement, 0, 1);
-  edited += draw_combobox(win, "displacement_tex", ioshape->displacement_tex,
-      ioscene->textures, true);
   return edited;
 }
 
@@ -272,6 +265,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
+    draw_widgets(win, app->ioshape);
     end_header(win);
   }
 }
