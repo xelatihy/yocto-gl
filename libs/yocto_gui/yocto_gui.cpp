@@ -819,15 +819,19 @@ void set_attribute(
 
 // set vertex attributes
 void set_attribute(ogl_program* program, int location, float value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib1f(location, value);
 }
 void set_attribute(ogl_program* program, int location, const vec2f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib2f(location, value.x, value.y);
 }
 void set_attribute(ogl_program* program, int location, const vec3f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib3f(location, value.x, value.y, value.z);
 }
 void set_attribute(ogl_program* program, int location, const vec4f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
 }
 
@@ -1359,6 +1363,7 @@ void draw_object(
 
   if (instance->hidden) return;
 
+  assert_ogl_error();
   auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
@@ -1370,6 +1375,7 @@ void draw_object(
   } else {
     set_uniform(scene->program, "highlight", vec4f{0, 0, 0, 0});
   }
+  assert_ogl_error();
 
   auto material = instance->material;
   auto mtype    = 2;
@@ -1393,6 +1399,7 @@ void draw_object(
       material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
+  assert_ogl_error();
 
   auto shape = instance->shape;
   set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
@@ -1401,6 +1408,7 @@ void draw_object(
   set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
   set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
   set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
+  assert_ogl_error();
 
   if (is_initialized(shape->points)) {
     glPointSize(shape->points_size);
@@ -1419,6 +1427,7 @@ void draw_object(
     set_uniform(scene->program, "etype", 3);
     draw_elements(shape->quads);
   }
+  assert_ogl_error();
 
   if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
     set_uniform(scene->program, "mtype", mtype);
@@ -1428,6 +1437,7 @@ void draw_object(
     set_uniform(scene->program, "roughness", 0);
     set_uniform(scene->program, "etype", 3);
     draw_elements(shape->edges);
+    assert_ogl_error();
   }
 }
 
@@ -1453,10 +1463,13 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
+  assert_ogl_error();
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
+  assert_ogl_error();
   bind_program(scene->program);
+  assert_ogl_error();
   set_uniform(scene->program, "eye", camera->frame.o);
   set_uniform(scene->program, "view", camera_view);
   set_uniform(scene->program, "projection", camera_proj);
@@ -1464,9 +1477,11 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
       params.shading == ogl_shading_type::eyelight ? 1 : 0);
   set_uniform(scene->program, "exposure", params.exposure);
   set_uniform(scene->program, "gamma", params.gamma);
+  assert_ogl_error();
 
   if (params.shading == ogl_shading_type::lights ||
       params.shading == ogl_shading_type::camlights) {
+    assert_ogl_error();
     auto& lights = params.shading == ogl_shading_type::lights ? scene->lights
                                                               : camera_lights;
     set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
@@ -1489,6 +1504,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
           scene->program, ("ltype[" + is + "]").c_str(), (int)light->type);
       lid++;
     }
+    assert_ogl_error();
   }
 
   if (params.wireframe) set_ogl_wireframe(true);

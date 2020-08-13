@@ -130,6 +130,23 @@ frame3f camera_frame(
   return lookat_frame(camera_dir * camera_dist + center, center, {0, 1, 0});
 }
 
+// TODO(fabio): move this function to shape
+vector<vec3f> compute_normals(const generic_shape& shape) {
+  if (!shape.points.empty()) {
+    return {};
+  } else if (!shape.lines.empty()) {
+    return compute_tangents(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    return compute_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return compute_normals(shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    return compute_normals(shape.quadspos, shape.positions);
+  } else {
+    return {};
+  }
+}
+
 void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
@@ -186,25 +203,6 @@ void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 }
 
-bool draw_widgets(gui_window* win, generic_shape* ioshape) {
-  if (!ioshape) return false;
-  auto edited = 0;
-  draw_label(win, "points", std::to_string(ioshape->points.size()));
-  draw_label(win, "lines", std::to_string(ioshape->lines.size()));
-  draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
-  draw_label(win, "quads", std::to_string(ioshape->quads.size()));
-  draw_label(win, "positions", std::to_string(ioshape->positions.size()));
-  draw_label(win, "normals", std::to_string(ioshape->normals.size()));
-  draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
-  draw_label(win, "colors", std::to_string(ioshape->colors.size()));
-  draw_label(win, "radius", std::to_string(ioshape->radius.size()));
-  draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
-  draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
-  draw_label(
-      win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
-  return edited;
-}
-
 // draw with shading
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
@@ -246,6 +244,19 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   if (!apps->selected->ok) return;
   auto app = apps->selected;
   if (begin_header(win, "view")) {
+    auto ioshape    = app->ioshape;
+    auto glshape    = app->glscene->shapes.front();
+    auto glmaterial = app->glscene->materials.front();
+    if (!is_initialized(glshape->normals)) {
+      if (draw_button(win, "smooth"))
+        set_normals(glshape, !ioshape->normals.empty()
+                                 ? ioshape->normals
+                                 : compute_normals(*ioshape));
+    } else {
+      if (draw_button(win, "facet"))
+          set_normals(glshape, {});
+    }
+    draw_coloredit(win, "color", glmaterial->color);
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
@@ -265,7 +276,20 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
-    draw_widgets(win, app->ioshape);
+    auto ioshape = app->ioshape;
+    draw_label(win, "points", std::to_string(ioshape->points.size()));
+    draw_label(win, "lines", std::to_string(ioshape->lines.size()));
+    draw_label(win, "triangles", std::to_string(ioshape->triangles.size()));
+    draw_label(win, "quads", std::to_string(ioshape->quads.size()));
+    draw_label(win, "positions", std::to_string(ioshape->positions.size()));
+    draw_label(win, "normals", std::to_string(ioshape->normals.size()));
+    draw_label(win, "texcoords", std::to_string(ioshape->texcoords.size()));
+    draw_label(win, "colors", std::to_string(ioshape->colors.size()));
+    draw_label(win, "radius", std::to_string(ioshape->radius.size()));
+    draw_label(win, "quads pos", std::to_string(ioshape->quadspos.size()));
+    draw_label(win, "quads norm", std::to_string(ioshape->quadsnorm.size()));
+    draw_label(
+        win, "quads texcoord", std::to_string(ioshape->quadstexcoord.size()));
     end_header(win);
   }
 }
