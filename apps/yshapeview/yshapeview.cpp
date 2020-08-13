@@ -256,7 +256,6 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
-    continue_line(win);
     draw_checkbox(win, "wireframe", params.wireframe);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
