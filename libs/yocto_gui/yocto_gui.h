@@ -334,12 +334,14 @@ namespace yocto {
 
 // Opengl caemra
 struct ogl_camera {
-  frame3f frame  = identity3x4f;
-  float   lens   = 0.050;
-  float   aspect = 1.000;
-  float   film   = 0.036;
-  float   near   = 0.001;
-  float   far    = 10000;
+  frame3f frame    = identity3x4f;
+  float   lens     = 0.050;
+  float   aspect   = 1.000;
+  float   film     = 0.036;
+  float   near     = 0.001;
+  float   far      = 10000;
+  float   aperture = 0;
+  float   focus    = 0;
 };
 
 // Opengl material

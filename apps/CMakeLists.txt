@@ -12,6 +12,7 @@ add_subdirectory(ysceneitrace)
 add_subdirectory(ysceneitraces)
 add_subdirectory(yimageview)
 add_subdirectory(yimageviews)
+add_subdirectory(yshapeview)
 endif(YOCTO_OPENGL)
 
 if(YOCTO_DENOISE)
