@@ -1571,32 +1571,25 @@ static inline bool save_pfm(
   return true;
 }
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename) {
-  auto ext = get_extension(filename);
+bool is_hdr_filename(const path& filename) {
+  auto ext = filename.extension();
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4f>& img, string& error) {
+    const path& filename, image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1632,17 +1625,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4f>& img, string& error) {
+    const path& filename, const image<vec4f>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             (float*)img.data()))
@@ -1667,17 +1660,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec4b>& img, string& error) {
+    const path& filename, image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1698,17 +1691,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec4b>& img, string& error) {
+    const path& filename, const image<vec4b>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             img.data(), img.imsize().x * 4))
@@ -1738,17 +1731,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3f>& img, string& error) {
+    const path& filename, image<vec3f>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1790,17 +1783,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3f>& img, string& error) {
+    const path& filename, const image<vec3f>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)img.data()))
@@ -1825,17 +1818,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<vec3b>& img, string& error) {
+    const path& filename, image<vec3b>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1856,17 +1849,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<vec3b>& img, string& error) {
+    const path& filename, const image<vec3b>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             img.data(), img.imsize().x * 3))
@@ -1896,17 +1889,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<float>& img, string& error) {
+    const path& filename, image<float>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1947,17 +1940,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<float>& img, string& error) {
+    const path& filename, const image<float>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".hdr" || ext == ".HDR") {
     auto npixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
     auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
@@ -1989,17 +1982,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<byte>& img, string& error) {
+    const path& filename, image<byte>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -2020,17 +2013,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
-    const string& filename, const image<byte>& img, string& error) {
+    const path& filename, const image<byte>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
             img.data(), img.imsize().x * 1))
@@ -2060,17 +2053,17 @@ bool is_hdr_filename(const string& filename) {
 
 // Loads a 16 bit image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<ushort>& img, string& error) {
+    const path& filename, image<ushort>& img, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -2087,6 +2080,89 @@ bool is_hdr_filename(const string& filename) {
   } else {
     return format_error();
   }
+}
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename) {
+  return is_hdr_filename(path(filename));
+}
+
+// Loads an hdr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec4f>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an hdr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec4f>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads an ldr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec4b>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an ldr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec4b>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads an hdr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec3f>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an hdr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec3f>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads an ldr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<vec3b>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an ldr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<vec3b>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads an hdr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<float>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an hdr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<float>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads an ldr image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<byte>& img, string& error) {
+  return load_image(path(filename), img, error);
+}
+
+// Saves an ldr image.
+[[nodiscard]] bool save_image(
+    const string& filename, const image<byte>& img, string& error) {
+  return save_image(path(filename), img, error);
+}
+
+// Loads a 16 bit image.
+[[nodiscard]] bool load_image(
+    const string& filename, image<ushort>& img, string& error) {
+  return load_image(path(filename), img, error);
 }
 
 }  // namespace yocto

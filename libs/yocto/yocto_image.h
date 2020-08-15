@@ -42,6 +42,7 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <utility>
@@ -57,6 +58,7 @@ namespace yocto {
 // using directives
 using std::string;
 using std::vector;
+using std::filesystem::path;
 
 }  // namespace yocto
 
@@ -233,28 +235,65 @@ image<vec4f> image_difference(
 namespace yocto {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename);
+bool is_hdr_filename(const path& filename);
 
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<vec4f>& img, string& error);
-bool save_image(const string& filename, const image<vec4f>& img, string& error);
-bool load_image(const string& filename, image<vec4b>& img, string& error);
-bool save_image(const string& filename, const image<vec4b>& img, string& error);
+bool load_image(const path& filename, image<vec4f>& img, string& error);
+bool save_image(const path& filename, const image<vec4f>& img, string& error);
+bool load_image(const path& filename, image<vec4b>& img, string& error);
+bool save_image(const path& filename, const image<vec4b>& img, string& error);
 
 // Loads/saves a 3 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<vec3f>& img, string& error);
-bool save_image(const string& filename, const image<vec3f>& img, string& error);
-bool load_image(const string& filename, image<vec3b>& img, string& error);
-bool save_image(const string& filename, const image<vec3b>& img, string& error);
+bool load_image(const path& filename, image<vec3f>& img, string& error);
+bool save_image(const path& filename, const image<vec3f>& img, string& error);
+bool load_image(const path& filename, image<vec3b>& img, string& error);
+bool save_image(const path& filename, const image<vec3b>& img, string& error);
 
 // Loads/saves a 1 channels float/byte image in linear/srgb color space.
-bool load_image(const string& filename, image<float>& img, string& error);
-bool save_image(const string& filename, const image<float>& img, string& error);
-bool load_image(const string& filename, image<byte>& img, string& error);
-bool save_image(const string& filename, const image<byte>& img, string& error);
+bool load_image(const path& filename, image<float>& img, string& error);
+bool save_image(const path& filename, const image<float>& img, string& error);
+bool load_image(const path& filename, image<byte>& img, string& error);
+bool save_image(const path& filename, const image<byte>& img, string& error);
 
 // Load/saves a 16 bit image in linear color space.
-bool load_image(const string& filename, image<ushort>& img, string& error);
+bool load_image(const path& filename, image<ushort>& img, string& error);
+
+// Check if an image is HDR based on filename.
+[[deprecated]] bool is_hdr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+[[deprecated]] bool load_image(
+    const string& filename, image<vec4f>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<vec4f>& img, string& error);
+[[deprecated]] bool load_image(
+    const string& filename, image<vec4b>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<vec4b>& img, string& error);
+
+// Loads/saves a 3 channels float/byte image in linear/srgb color space.
+[[deprecated]] bool load_image(
+    const string& filename, image<vec3f>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<vec3f>& img, string& error);
+[[deprecated]] bool load_image(
+    const string& filename, image<vec3b>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<vec3b>& img, string& error);
+
+// Loads/saves a 1 channels float/byte image in linear/srgb color space.
+[[deprecated]] bool load_image(
+    const string& filename, image<float>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<float>& img, string& error);
+[[deprecated]] bool load_image(
+    const string& filename, image<byte>& img, string& error);
+[[deprecated]] bool save_image(
+    const string& filename, const image<byte>& img, string& error);
+
+// Load/saves a 16 bit image in linear color space.
+[[deprecated]] bool load_image(
+    const string& filename, image<ushort>& img, string& error);
 
 }  // namespace yocto
 
