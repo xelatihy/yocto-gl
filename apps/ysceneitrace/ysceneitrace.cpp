@@ -266,8 +266,8 @@ void load_scene_async(app_states* apps, const string& filename,
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = path(filename).filename().string() + " [loading]";
   app->filename  = filename;
-  app->imagename = path(filename).replace_extension(".png");
-  app->outname   = path(filename).replace_extension(".edited.yaml");
+  app->imagename = path(filename).replace_extension(".png").string();
+  app->outname   = path(filename).replace_extension(".edited.yaml").string();
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name,
@@ -462,8 +462,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, path(save_path).parent_path(),
-          path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
+          "save", save_path, true, path(save_path).parent_path().string(),
+          path(save_path).filename().string(), "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -472,7 +472,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   continue_line(win);
   if (draw_filedialog_button(win, "save image",
           apps->selected && apps->selected->ok, "save image", save_path, true,
-          path(save_path).parent_path(), path(save_path).filename(),
+          path(save_path).parent_path().string(),
+          path(save_path).filename().string(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
@@ -526,7 +527,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", path(app->filename).filename());
+    draw_label(win, "scene", path(app->filename).filename()).string();
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);

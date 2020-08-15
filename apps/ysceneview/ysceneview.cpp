@@ -109,8 +109,8 @@ void load_scene_async(
     app_states* apps, const string& filename, const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
-  app->imagename   = path(filename).replace_extension(".png");
-  app->outname     = path(filename).replace_extension(".edited.yaml");
+  app->imagename   = path(filename).replace_extension(".png").string();
+  app->outname     = path(filename).replace_extension(".edited.yaml").string();
   app->name        = path(app->filename).filename();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";

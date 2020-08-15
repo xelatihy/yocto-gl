@@ -120,8 +120,8 @@ int main(int argc, const char* argv[]) {
     const int   feature_samples = 8;
     std::string feature_ext     = "exr"s;
 
-    auto imext = path(imfilename).extension();
-    if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
+    auto imext = path(imfilename).extension().string();
+    if (imext != "hdr" && is_hdr_filename(imext) feature_ext = imext;
 
     auto base_name = path(imfilename).filename().replace_extension("").string();
 
