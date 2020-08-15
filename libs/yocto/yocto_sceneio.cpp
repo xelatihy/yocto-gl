@@ -925,10 +925,10 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
     if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
+      if (!save_image(path.string(), texture->colorf, texture->colorb, error))
         return dependent_error();
     } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
+      if (!save_image(path.string(), texture->scalarf, texture->scalarb, error))
         return dependent_error();
     }
   }
@@ -1249,10 +1249,10 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
     if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
+      if (!save_image(path.string(), texture->colorf, texture->colorb, error))
         return dependent_error();
     } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
+      if (!save_image(path.string(), texture->scalarf, texture->scalarb, error))
         return dependent_error();
     }
   }
@@ -1700,8 +1700,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [tpath, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(path(filename).parent_path() / tpath, texture->colorf,
-            texture->colorb, error))
+    if (!load_image((path(filename).parent_path() / tpath).string(),
+            texture->colorf, texture->colorb, error))
       return dependent_error();
   }
 
@@ -1711,8 +1711,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = image<vec4f>{};
     auto color_opacityb = image<vec4b>{};
-    if (!load_image(path(filename).parent_path() / tpath, color_opacityf,
-            color_opacityb, error))
+    if (!load_image((path(filename).parent_path() / tpath).string(),
+            color_opacityf, color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
       auto [ctexture, otexture] = textures;
@@ -1750,8 +1750,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec3f>{};
     auto metallic_roughnessb = image<vec3b>{};
-    if (!load_image(path(filename).parent_path() / tpath, metallic_roughnessf,
-            metallic_roughnessb, error))
+    if (!load_image((path(filename).parent_path() / tpath).string(),
+            metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
@@ -1963,8 +1963,8 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            get_filename(name), texture->colorf, texture->colorb, error))
+    if (!load_image(get_filename(name).string(), texture->colorf,
+            texture->colorb, error))
       return dependent_error();
   }
 
@@ -1972,8 +1972,8 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            get_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(get_filename(name).string(), texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
   }
 
@@ -1981,8 +1981,8 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   atexture_map.erase("");
   for (auto [name, texture] : atexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            get_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(get_filename(name).string(), texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
     for (auto& c : texture->scalarf) c = (c < 0.01) ? 1 : 1;
     for (auto& c : texture->scalarb) c = (c < 2) ? 0 : 255;
@@ -2084,10 +2084,10 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
         (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
                                                                 : ".png");
     if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
+      if (!save_image(path.string(), texture->colorf, texture->colorb, error))
         return dependent_error();
     } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
+      if (!save_image(path.string(), texture->scalarf, texture->scalarb, error))
         return dependent_error();
     }
   }
