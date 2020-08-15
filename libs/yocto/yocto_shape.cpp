@@ -3522,7 +3522,7 @@ static bool save_text(
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
+[[nodiscard]] bool load_shape(const path& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
@@ -3530,11 +3530,11 @@ static bool save_text(
     vector<float>& radius, string& error, bool facevarying,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
@@ -3634,7 +3634,7 @@ static bool save_text(
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
+[[nodiscard]] bool save_shape(const path& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
@@ -3643,11 +3643,11 @@ static bool save_text(
     const vector<float>& radius, string& error, bool facevarying,
     bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
@@ -3762,22 +3762,59 @@ static bool save_text(
 }
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+[[nodiscard]] bool load_shape(const path& filename, generic_shape& shape,
     string& error, bool facevarying, bool flip_texcoords) {
   return load_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
       shape.radius, error, facevarying, flip_texcoords);
 }
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool facevarying,
-    bool flip_texcoords, bool ascii) {
+[[nodiscard]] bool save_shape(const path& filename, const generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords, bool ascii) {
   return save_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
       shape.radius, error, facevarying, flip_texcoords, ascii);
 }
 
+// Load ply mesh
+[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<float>& radius, string& error, bool facevarying,
+    bool flip_texcoord) {
+  return load_shape(path{filename}, points, lines, triangles, quads, quadspos,
+      quadsnorm, quadstexcoord, positions, normals, texcoords, colors, radius,
+      error, facevarying, flip_texcoord);
+}
+
+// Save ply mesh
+[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<float>& radius, string& error, bool facevarying,
+    bool flip_texcoord, bool ascii) {
+  return save_shape(path{filename}, points, lines, triangles, quads, quadspos,
+      quadsnorm, quadstexcoord, positions, normals, texcoords, colors, radius,
+      error, facevarying, flip_texcoord, ascii);
+}
+
+// Load/save a shape as indexed meshes
+[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords) {
+  return load_shape(path{filename}, shape, error, facevarying, flip_texcoords);
+}
+[[nodiscard]] bool save_shape(const string& filename,
+    const generic_shape& shape, string& error, bool facevarying,
+    bool flip_texcoords, bool ascii) {
+  return save_shape(
+      path{filename}, shape, error, facevarying, flip_texcoords, ascii);
+}
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

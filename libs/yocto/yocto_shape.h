@@ -501,21 +501,21 @@ struct generic_shape {
 };
 
 // Load/save a shape
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+[[nodiscard]] bool load_shape(const path& filename, generic_shape& shape,
     string& error, bool facevarying = false, bool flip_texcoords = true);
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool facevarying = false,
-    bool flip_texcoords = true, bool ascii = false);
+[[nodiscard]] bool save_shape(const path& filename, const generic_shape& shape,
+    string& error, bool facevarying = false, bool flip_texcoords = true,
+    bool ascii = false);
 
 // Load/save a shape
-[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
+[[nodiscard]] bool load_shape(const path& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
     vector<float>& radius, string& error, bool facevarying = false,
     bool flip_texcoords = true);
-[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
+[[nodiscard]] bool save_shape(const path& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
@@ -523,6 +523,31 @@ struct generic_shape {
     const vector<vec2f>& texcoords, const vector<vec3f>& colors,
     const vector<float>& radius, string& error, bool facevarying = false,
     bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a shape
+[[nodiscard]] [[deprecated]] bool load_shape(const string& filename,
+    generic_shape& shape, string& error, bool facevarying = false,
+    bool flip_texcoords = true);
+[[nodiscard]] [[deprecated]] bool save_shape(const string& filename,
+    const generic_shape& shape, string& error, bool facevarying = false,
+    bool flip_texcoords = true, bool ascii = false);
+
+// Load/save a shape
+[[nodiscard]] [[deprecated]] bool load_shape(const string& filename,
+    vector<int>& points, vector<vec2i>& lines, vector<vec3i>& triangles,
+    vector<vec4i>& quads, vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<float>& radius, string& error, bool facevarying = false,
+    bool flip_texcoords = true);
+[[nodiscard]] [[deprecated]] bool save_shape(const string& filename,
+    const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, const vector<float>& radius, string& error,
+    bool facevarying = false, bool flip_texcoords = true, bool ascii = false);
 
 }  // namespace yocto
 
