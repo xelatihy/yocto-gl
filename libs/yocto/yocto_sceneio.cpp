@@ -389,7 +389,7 @@ inline bool load_json(const string& filename, json& js, string& error) {
   try {
     js = json::parse(text);
     return true;
-  } catch (std::exception& e) {
+  } catch (std::exception&) {
     return parse_error();
   }
 }
@@ -708,8 +708,8 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   for (auto [name, shape] : shape_map) {
     if (progress_cb) progress_cb("load shape", progress.x++, progress.y);
     auto path = get_filename(name, "shapes", {".ply", ".obj"});
-    if (!load_shape(path, shape->points, shape->lines, shape->triangles,
-            shape->quads, shape->quadspos, shape->quadsnorm,
+    if (!load_shape(path.string(), shape->points, shape->lines,
+            shape->triangles, shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
             shape->texcoords, shape->colors, shape->radius, error,
             shape->catmullclark && shape->subdivisions))
@@ -738,7 +738,8 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   for (auto [name, instance] : ply_instance_map) {
     if (progress_cb) progress_cb("load instance", progress.x++, progress.y);
     auto path = get_filename(name, "instances", {".ply"});
-    if (!load_instance(path, instance->frames, error)) return dependent_error();
+    if (!load_instance(path.string(), instance->frames, error))
+      return dependent_error();
   }
 
   // apply instances
@@ -910,8 +911,8 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
     if (progress_cb) progress_cb("save shape", progress.x++, progress.y);
     auto path = get_filename(shape->name, "shapes",
         (shape->catmullclark && shape->subdivisions) ? ".obj" : ".ply");
-    if (!save_shape(path, shape->points, shape->lines, shape->triangles,
-            shape->quads, shape->quadspos, shape->quadsnorm,
+    if (!save_shape(path.string(), shape->points, shape->lines,
+            shape->triangles, shape->quads, shape->quadspos, shape->quadsnorm,
             shape->quadstexcoord, shape->positions, shape->normals,
             shape->texcoords, shape->colors, shape->radius, error,
             shape->catmullclark && shape->subdivisions))
@@ -1101,8 +1102,8 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            get_filename(name), texture->colorf, texture->colorb, error))
+    if (!load_image(get_filename(name).string(), texture->colorf,
+            texture->colorb, error))
       return dependent_error();
   }
 
@@ -1110,8 +1111,8 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            get_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(get_filename(name).string(), texture->scalarf,
+            texture->scalarb, error))
       return dependent_error();
   }
 
