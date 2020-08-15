@@ -1634,7 +1634,6 @@ static void draw_window(gui_window* win) {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
-      draw_messages(win);
       win->widgets_cb(win, win->input);
     }
     ImGui::End();
@@ -1892,46 +1891,6 @@ bool begin_glmodal(gui_window* win, const char* lbl) {
 void end_glmodal(gui_window* win) { ImGui::EndPopup(); }
 bool is_glmodal_open(gui_window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
-}
-
-bool draw_message(gui_window* win, const char* lbl, const string& message) {
-  if (ImGui::BeginPopupModal(lbl)) {
-    auto open = true;
-    ImGui::Text("%s", message.c_str());
-    if (ImGui::Button("Ok")) {
-      ImGui::CloseCurrentPopup();
-      open = false;
-    }
-    ImGui::EndPopup();
-    return open;
-  } else {
-    return false;
-  }
-}
-
-deque<string> _message_queue = {};
-mutex         _message_mutex;
-void          push_message(gui_window* win, const string& message) {
-  std::lock_guard lock(_message_mutex);
-  _message_queue.push_back(message);
-}
-bool draw_messages(gui_window* win) {
-  std::lock_guard lock(_message_mutex);
-  if (_message_queue.empty()) return false;
-  if (!is_glmodal_open(win, "<message>")) {
-    open_glmodal(win, "<message>");
-    return true;
-  } else if (ImGui::BeginPopupModal("<message>")) {
-    ImGui::Text("%s", _message_queue.front().c_str());
-    if (ImGui::Button("Ok")) {
-      ImGui::CloseCurrentPopup();
-      _message_queue.pop_front();
-    }
-    ImGui::EndPopup();
-    return true;
-  } else {
-    return false;
-  }
 }
 
 // Utility to normalize a path
