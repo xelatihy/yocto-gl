@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <string>
@@ -51,6 +52,7 @@ namespace yocto {
 
 // using directives
 using std::function;
+using std::filesystem::path;
 
 }  // namespace yocto
 
@@ -66,10 +68,17 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, scene_model* scene, string& error,
+bool load_scene(const path& filename, scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const scene_model* scene, string& error,
+bool save_scene(const path& filename, const scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
+
+// Load/save a scene in the supported formats. Throws on error.
+// Calls the progress callback, if defined, as we process more data.
+[[deprecated]] bool load_scene(const string& filename, scene_model* scene,
+    string& error, progress_callback progress_cb = {}, bool noparallel = false);
+[[deprecated]] bool save_scene(const string& filename, const scene_model* scene,
+    string& error, progress_callback progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto
 

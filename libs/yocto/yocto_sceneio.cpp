@@ -68,39 +68,39 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Load/save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, scene_model* scene,
+static bool load_json_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
-static bool save_json_scene(const string& filename, const scene_model* scene,
+static bool save_json_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const string& filename, scene_model* scene,
+static bool load_obj_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
-static bool save_obj_scene(const string& filename, const scene_model* scene,
+static bool save_obj_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const string& filename, scene_model* scene,
+static bool load_ply_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
-static bool save_ply_scene(const string& filename, const scene_model* scene,
+static bool save_ply_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const string& filename, scene_model* scene,
+static bool load_gltf_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load/save a scene from/to pbrt-> This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const string& filename, scene_model* scene,
+static bool load_pbrt_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
-static bool save_pbrt_scene(const string& filename, const scene_model* scene,
+static bool save_pbrt_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel);
 
 // Load a scene
-bool load_scene(const string& filename, scene_model* scene, string& error,
+bool load_scene(const path& filename, scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  auto ext = path(filename).extension();
+  auto ext = filename.extension();
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -112,14 +112,14 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    throw std::runtime_error{filename.string() + ": unknown format"};
   }
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene_model* scene, string& error,
+bool save_scene(const path& filename, const scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  auto ext = path(filename).extension();
+  auto ext = filename.extension();
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -129,8 +129,20 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    throw std::runtime_error{filename.string() + ": unknown format"};
   }
+}
+
+// Load a scene
+bool load_scene(const string& filename, scene_model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
+  return load_scene(path(filename), scene, error, progress_cb, noparallel);
+}
+
+// Save a scene
+bool save_scene(const string& filename, const scene_model* scene, string& error,
+    progress_callback progress_cb, bool noparallel) {
+  return save_scene(path(filename), scene, error, progress_cb, noparallel);
 }
 
 }  // namespace yocto
@@ -140,15 +152,8 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 // Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec4f>& colorf,
+static bool load_image(const path& filename, image<vec4f>& colorf,
     image<vec4b>& colorb, string& error) {
   if (is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
@@ -158,7 +163,7 @@ static bool load_image(const string& filename, image<vec4f>& colorf,
 }
 
 // Loads/saves a 3 channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec3f>& colorf,
+static bool load_image(const path& filename, image<vec3f>& colorf,
     image<vec3b>& colorb, string& error) {
   if (is_hdr_filename(filename)) {
     return load_image(filename, colorf, error);
@@ -166,7 +171,7 @@ static bool load_image(const string& filename, image<vec3f>& colorf,
     return load_image(filename, colorb, error);
   }
 }
-static bool save_image(const string& filename, const image<vec3f>& colorf,
+static bool save_image(const path& filename, const image<vec3f>& colorf,
     const image<vec3b>& colorb, string& error) {
   if (is_hdr_filename(filename)) {
     return save_image(filename, colorf, error);
@@ -176,7 +181,7 @@ static bool save_image(const string& filename, const image<vec3f>& colorf,
 }
 
 // Loads/saves a 1 channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<float>& scalarf,
+static bool load_image(const path& filename, image<float>& scalarf,
     image<byte>& scalarb, string& error) {
   if (is_hdr_filename(filename)) {
     return load_image(filename, scalarf, error);
@@ -184,7 +189,7 @@ static bool load_image(const string& filename, image<float>& scalarf,
     return load_image(filename, scalarb, error);
   }
 }
-static bool save_image(const string& filename, const image<float>& scalarf,
+static bool save_image(const path& filename, const image<float>& scalarf,
     const image<byte>& scalarb, string& error) {
   if (is_hdr_filename(filename)) {
     return save_image(filename, scalarf, error);
@@ -195,12 +200,12 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 
 // load instances
 static bool load_instance(
-    const string& filename, vector<frame3f>& frames, string& error) {
+    const path& filename, vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, &ply, error)) return false;
@@ -216,13 +221,13 @@ static bool load_instance(
 
 // save instances
 // static
-bool save_instance(const string& filename, const vector<frame3f>& frames,
+bool save_instance(const path& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     add_values(&ply, "instance",
@@ -274,14 +279,14 @@ namespace yocto {
 using json = nlohmann::json;
 
 // Load a text file
-inline bool load_text(const string& filename, string& str, string& error) {
+inline bool load_text(const path& filename, string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
@@ -298,15 +303,14 @@ inline bool load_text(const string& filename, string& str, string& error) {
 }
 
 // Save a text file
-inline bool save_text(
-    const string& filename, const string& str, string& error) {
+inline bool save_text(const path& filename, const string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
@@ -318,7 +322,7 @@ inline bool save_text(
 }
 
 // Load a binary file
-inline string load_text(const string& filename, string& error) {
+inline string load_text(const path& filename, string& error) {
   auto text = string{};
   if (!load_text(filename, text, error)) return {};
   return text;
@@ -326,14 +330,14 @@ inline string load_text(const string& filename, string& error) {
 
 // Load a binary file
 inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
+    const path& filename, vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
@@ -351,14 +355,14 @@ inline bool load_binary(
 
 // Save a binary file
 inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
+    const path& filename, const vector<byte>& data, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
@@ -371,17 +375,17 @@ inline bool save_binary(
 }
 
 // Load a binary file
-inline vector<byte> load_binary(const string& filename, string& error) {
+inline vector<byte> load_binary(const path& filename, string& error) {
   auto data = vector<byte>{};
   if (!load_binary(filename, data, error)) return {};
   return data;
 }
 
 // load/save json
-inline bool load_json(const string& filename, json& js, string& error) {
+inline bool load_json(const path& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
+    error = filename.string() + ": parse error in json";
     return false;
   };
   auto text = ""s;
@@ -394,29 +398,29 @@ inline bool load_json(const string& filename, json& js, string& error) {
   }
 }
 
-inline bool save_json(const string& filename, const json& js, string& error) {
+inline bool save_json(const path& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
 }
 
-inline json load_json(const string& filename, string& error) {
+inline json load_json(const path& filename, string& error) {
   auto js = json{};
   if (!load_json(filename, js, error)) return {};
   return js;
 }
 
 // Save a scene in the builtin JSON format.
-static bool load_json_scene(const string& filename, scene_model* scene,
+static bool load_json_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + name;
+    error = filename.string() + ": missing material " + name;
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -781,10 +785,10 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 }
 
 // Save a scene in the builtin JSON format.
-static bool save_json_scene(const string& filename, const scene_model* scene,
+static bool save_json_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -947,14 +951,14 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
 namespace yocto {
 
 // Loads an OBJ
-static bool load_obj_scene(const string& filename, scene_model* scene,
+static bool load_obj_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -1127,14 +1131,14 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   return true;
 }
 
-static bool save_obj_scene(const string& filename, const scene_model* scene,
+static bool save_obj_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -1280,7 +1284,7 @@ void print_obj_camera(scene_camera* camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(const string& filename, scene_model* scene,
+static bool load_ply_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   // handle progress
   auto progress = vec2i{0, 1};
@@ -1308,10 +1312,10 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
   return true;
 }
 
-static bool save_ply_scene(const string& filename, const scene_model* scene,
+static bool save_ply_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   if (scene->shapes.empty())
-    throw std::runtime_error{filename + ": empty shape"};
+    throw std::runtime_error{filename.string() + ": empty shape"};
 
   // handle progress
   auto progress = vec2i{0, 1};
@@ -1338,18 +1342,18 @@ static bool save_ply_scene(const string& filename, const scene_model* scene,
 namespace yocto {
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, scene_model* scene,
+static bool load_gltf_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
   auto primitive_error = [filename, &error]() {
-    error = filename + ": primitive error";
+    error = filename.string() + ": primitive error";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -1824,10 +1828,10 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
 namespace yocto {
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, scene_model* scene,
+static bool load_pbrt_scene(const path& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -2001,10 +2005,10 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 }
 
 // Save a pbrt scene
-static bool save_pbrt_scene(const string& filename, const scene_model* scene,
+static bool save_pbrt_scene(const path& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 

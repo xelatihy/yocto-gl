@@ -38,6 +38,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -58,6 +59,7 @@ using std::pair;
 using std::string;
 using std::unordered_map;
 using std::vector;
+using std::filesystem::path;
 
 }  // namespace yocto
 
