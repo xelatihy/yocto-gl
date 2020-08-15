@@ -721,7 +721,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = get_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture->colorf, texture->colorb, error))
+    if (!load_image(path.string(), texture->colorf, texture->colorb, error))
       return dependent_error();
   }
   // load textures
@@ -730,7 +730,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = get_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture->scalarf, texture->scalarb, error))
+    if (!load_image(path.string(), texture->scalarf, texture->scalarb, error))
       return dependent_error();
   }
   // load instances
@@ -769,7 +769,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem();
+  if (scene->name == "") scene->name = path(filename).stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1148,7 +1148,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // convert cameras
   for (auto camera : scene->cameras) {
     auto ocamera      = add_camera(obj);
-    ocamera->name     = path(camera->name).stem();
+    ocamera->name     = path(camera->name).stem().string();
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
     ocamera->width    = camera->film;
@@ -1171,7 +1171,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
-    omaterial->name                 = path(material->name).stem();
+    omaterial->name                 = path(material->name).stem().string();
     omaterial->illum                = 2;
     omaterial->as_pbr               = true;
     omaterial->pbr_emission         = material->emission;
