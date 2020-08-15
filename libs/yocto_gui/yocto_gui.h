@@ -67,6 +67,7 @@ void assert_ogl_error();
 bool check_ogl_error(string& error);
 void clear_ogl_framebuffer(const vec4f& color, bool clear_depth = true);
 void set_ogl_viewport(const vec4i& viewport);
+void set_ogl_viewport(const vec2i& viewport);
 void set_ogl_wireframe(bool enabled);
 void set_ogl_blending(bool enabled);
 void set_ogl_point_size(int size);
@@ -117,6 +118,56 @@ void set_texture(ogl_texture* texture, const image<byte>& img,
     bool as_srgb = true, bool linear = true, bool mipmap = true);
 void set_texture(ogl_texture* texture, const image<float>& img,
     bool as_float = false, bool linear = true, bool mipmap = true);
+
+struct ogl_cubemap {
+  // Cubemap properties
+  int  size      = 0;
+  int  nchannels = 0;
+  bool is_srgb   = false;
+  bool is_float  = false;
+  bool linear    = false;
+  bool mipmap    = false;
+
+  // OpenGL state
+  uint cubemap_id = 0;
+};
+
+// set cubemap
+void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+    const array<byte*, 6>& img, bool as_srgb = false, bool linear = true,
+    bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+    const array<float*, 6>& img, bool as_float = false, bool linear = true,
+    bool mipmap = true);
+
+template <typename T>
+void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+    bool as_float = false, bool linear = true, bool mipmap = true) {
+  auto img = array<T*, 6>{0, 0, 0, 0, 0, 0};
+  set_cubemap(cubemap, size, nchannels, img, as_float, mipmap);
+}
+
+// check if cubemap is initialized
+bool is_initialized(ogl_cubemap* cubemap);
+
+// clear cubemap
+void clear_cubemap(ogl_cubemap* cubemap);
+
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
+    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
+    int nchannels, bool as_float = false, bool linear = true,
+    bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
+    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
+    int nchannels, bool as_float = false, bool linear = true,
+    bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
+    int nchannels, bool as_srgb = true, bool linear = true, bool mipmap = true);
+void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
+    int nchannels, bool as_float = false, bool linear = true,
+    bool mipmap = true);
 
 // Opengl array/element buffer
 struct ogl_arraybuffer {
@@ -239,6 +290,16 @@ void set_uniform(ogl_program* program, int location, int location_on,
 void set_uniform(ogl_program* program, const char* name, const char* name_on,
     const ogl_texture* texture, int unit);
 
+// set uniform cubemap
+void set_uniform(
+    ogl_program* program, int location, const ogl_cubemap* cubemap, int unit);
+void set_uniform(ogl_program* program, const char* name,
+    const ogl_cubemap* cubemap, int unit);
+void set_uniform(ogl_program* program, int location, int location_on,
+    const ogl_cubemap* cubemap, int unit);
+void set_uniform(ogl_program* program, const char* name, const char* name_on,
+    const ogl_cubemap* cubemap, int unit);
+
 // get attribute location
 int get_attribute_location(ogl_program* program, const char* name);
 
@@ -324,6 +385,28 @@ struct ogl_image_params {
 
 // draw image
 void draw_image(ogl_image* image, const ogl_image_params& params);
+
+struct ogl_framebuffer {
+  vec2i size            = {0, 0};
+  uint  framebuffer_id  = 0;
+  uint  renderbuffer_id = 0;
+
+  static inline uint bound_framebuffer_id = 0;
+  // TODO(giacomo): Maybe the following is better
+  // static inline ogl_framebuffer* bound_framebuffer = nullptr;
+};
+
+void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size);
+
+void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+    const ogl_texture* texture, uint mipmap_level = 0);
+
+void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+    const ogl_cubemap* cubemap, uint face, uint mipmap_level = 0);
+
+void bind_framebuffer(const ogl_framebuffer* target);
+void unbind_framebuffer();
+void clear_framebuffer(ogl_framebuffer* target);
 
 }  // namespace yocto
 
@@ -422,6 +505,12 @@ struct ogl_scene {
 
   // OpenGL state
   ogl_program* program = new ogl_program{};
+
+  ogl_program* environment_program = new ogl_program{};
+  ogl_cubemap* environment_cubemap = new ogl_cubemap{};
+  ogl_cubemap* irradiance_map      = new ogl_cubemap{};
+  ogl_cubemap* prefiltered_map     = new ogl_cubemap{};
+  ogl_texture* brdf_lut            = new ogl_texture{};
 };
 
 // Shading type

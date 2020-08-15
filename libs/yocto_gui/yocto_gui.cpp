@@ -108,6 +108,10 @@ void set_ogl_viewport(const vec4i& viewport) {
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 }
 
+void set_ogl_viewport(const vec2i& viewport) {
+  glViewport(0, 0, viewport.x, viewport.y);
+}
+
 void set_ogl_wireframe(bool enabled) {
   if (enabled)
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -148,7 +152,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
       {4, GL_RGBA},
   };
   assert_ogl_error();
-  if (size == zero2i || img == nullptr) {
+  if (size == zero2i) {
     clear_texture(texture);
     return;
   }
@@ -202,7 +206,7 @@ void set_texture(ogl_texture* texture, const vec2i& size, int nchannels,
       {4, GL_RGBA},
   };
   assert_ogl_error();
-  if (!img) {
+  if (size == zero2i) {
     clear_texture(texture);
     return;
   }
@@ -284,6 +288,210 @@ void set_texture(ogl_texture* texture, const image<float>& img, bool as_float,
       linear, mipmap);
 }
 
+void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+    const array<byte*, 6>& images, bool as_srgb, bool linear, bool mipmap) {
+  static auto sformat = unordered_map<int, uint>{
+      {1, GL_SRGB},
+      {2, GL_SRGB},
+      {3, GL_SRGB},
+      {4, GL_SRGB_ALPHA},
+  };
+  static auto iformat = unordered_map<int, uint>{
+      {1, GL_RGB},
+      {2, GL_RGB},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  static auto cformat = unordered_map<int, uint>{
+      {1, GL_RED},
+      {2, GL_RG},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  assert_ogl_error();
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
+
+  if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
+  if (cubemap->size != size || cubemap->nchannels != nchannels ||
+      cubemap->is_srgb != as_srgb || cubemap->is_float == true ||
+      cubemap->linear != linear || cubemap->mipmap != mipmap) {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+
+    for (auto i = 0; i < 6; i++) {
+      if (!images[i]) {
+        throw std::runtime_error("cannot initialize cubemap from empty image");
+        return;
+      }
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+          as_srgb ? sformat.at(nchannels) : iformat.at(nchannels), size, size,
+          0, cformat.at(nchannels), GL_UNSIGNED_BYTE, images[i]);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER,
+        linear ? GL_LINEAR : GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    if (mipmap) {
+      glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    }
+  } else {
+    throw std::runtime_error("cannot modify initialized cubemap");
+    // glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
+    // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+    //     cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
+    // if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+  cubemap->size      = size;
+  cubemap->nchannels = nchannels;
+  cubemap->is_srgb   = as_srgb;
+  cubemap->is_float  = false;
+  cubemap->linear    = linear;
+  cubemap->mipmap    = mipmap;
+  assert_ogl_error();
+}
+
+void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
+    const array<float*, 6>& images, bool as_float, bool linear, bool mipmap) {
+  static auto fformat = unordered_map<int, uint>{
+      {1, GL_RGB16F},
+      {2, GL_RGB16F},
+      {3, GL_RGB16F},
+      {4, GL_RGBA32F},
+  };
+  static auto iformat = unordered_map<int, uint>{
+      {1, GL_RGB},
+      {2, GL_RGB},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  static auto cformat = unordered_map<int, uint>{
+      {1, GL_RED},
+      {2, GL_RG},
+      {3, GL_RGB},
+      {4, GL_RGBA},
+  };
+  assert_ogl_error();
+  if (size == 0) {
+    clear_cubemap(cubemap);
+    return;
+  }
+
+  if (!cubemap->cubemap_id) glGenTextures(1, &cubemap->cubemap_id);
+  if (cubemap->size != size || cubemap->nchannels != nchannels ||
+      cubemap->is_float != as_float || cubemap->is_srgb == true ||
+      cubemap->linear != linear || cubemap->mipmap != mipmap) {
+    glGenTextures(1, &cubemap->cubemap_id);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+
+    for (auto i = 0; i < 6; i++) {
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+          as_float ? fformat.at(nchannels) : iformat.at(nchannels), size, size,
+          0, iformat.at(nchannels), GL_FLOAT, images[i]);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+        mipmap ? (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST)
+               : (linear ? GL_LINEAR : GL_NEAREST));
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER,
+        linear ? GL_LINEAR : GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    if (mipmap) {
+      glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    }
+
+  } else {
+    // TODO(giacomo): handle this case.
+    throw std::runtime_error("cannot modify initialized cubemap");
+
+    //    glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
+    //    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size, size,
+    //        iformat.at(nchannels), GL_FLOAT, img);
+    //    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+  cubemap->size      = size;
+  cubemap->nchannels = nchannels;
+  cubemap->is_srgb   = false;
+  cubemap->is_float  = as_float;
+  cubemap->linear    = linear;
+  cubemap->mipmap    = mipmap;
+  assert_ogl_error();
+}
+
+// check if cubemap is initialized
+bool is_initialized(ogl_cubemap* cubemap) { return cubemap->cubemap_id != 0; }
+
+// clear cubemap
+void clear_cubemap(ogl_cubemap* cubemap) {
+  if (cubemap->cubemap_id) glDeleteTextures(1, &cubemap->cubemap_id);
+  *cubemap = ogl_cubemap{};
+}
+
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4b>, 6>& img,
+    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
+      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
+      (byte*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+}
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec4f>, 6>& img,
+    int nchannels, bool as_float, bool linear, bool mipmap) {
+  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
+      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
+      (float*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+}
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3b>, 6>& img,
+    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
+      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
+      (byte*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+}
+void set_cubemap(ogl_cubemap* cubemap, const array<image<vec3f>, 6>& img,
+    int nchannels, bool as_float, bool linear, bool mipmap) {
+  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
+      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
+      (float*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+}
+void set_cubemap(ogl_cubemap* cubemap, const array<image<byte>, 6>& img,
+    int nchannels, bool as_srgb, bool linear, bool mipmap) {
+  auto data = array<byte*, 6>{(byte*)img[0].data(), (byte*)img[1].data(),
+      (byte*)img[2].data(), (byte*)img[3].data(), (byte*)img[4].data(),
+      (byte*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_srgb, linear, mipmap);
+}
+void set_cubemap(ogl_cubemap* cubemap, const array<image<float>, 6>& img,
+    int nchannels, bool as_float, bool linear, bool mipmap) {
+  auto data = array<float*, 6>{(float*)img[0].data(), (float*)img[1].data(),
+      (float*)img[2].data(), (float*)img[3].data(), (float*)img[4].data(),
+      (float*)img[5].data()};
+  set_cubemap(
+      cubemap, img[0].imsize().x, nchannels, data, as_float, linear, mipmap);
+}
+
+// check if buffer is initialized
+bool is_initialized(ogl_arraybuffer* buffer) { return buffer->buffer_id != 0; }
+
 // set buffer
 void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
     const float* data, bool dynamic) {
@@ -306,9 +514,6 @@ void set_arraybuffer(ogl_arraybuffer* buffer, size_t size, int esize,
   buffer->dynamic = dynamic;
   assert_ogl_error();
 }
-
-// check if buffer is initialized
-bool is_initialized(ogl_arraybuffer* buffer) { return buffer->buffer_id != 0; }
 
 // clear buffer
 void clear_arraybuffer(ogl_arraybuffer* buffer) {
@@ -455,17 +660,23 @@ bool init_program(ogl_program* program, const string& vertex,
   glAttachShader(program->program_id, program->vertex_id);
   glAttachShader(program->program_id, program->fragment_id);
   glLinkProgram(program->program_id);
-  glValidateProgram(program->program_id);
   glGetProgramiv(program->program_id, GL_LINK_STATUS, &errflags);
   if (!errflags) {
     glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
     return program_error("program not linked", errbuf);
   }
-  glGetProgramiv(program->program_id, GL_VALIDATE_STATUS, &errflags);
-  if (!errflags) {
-    glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
-    return program_error("program not validated", errbuf);
-  }
+  // TODO(giacomo): Apparently validation must be done just before drawing.
+  //    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
+  // If done here, validation fails when using cubemaps and textures in the same
+  // shader. We should create a function validate_program() anc call it
+  // separately.
+  //
+  // glValidateProgram(program->program_id);
+  // glGetProgramiv(program->program_id, GL_VALIDATE_STATUS, &errflags);
+  // if (!errflags) {
+  //   glGetProgramInfoLog(program->program_id, 10000, 0, errbuf);
+  //   return program_error("program not validated", errbuf);
+  // }
   assert_ogl_error();
 
   // done
@@ -795,6 +1006,39 @@ void set_uniform(ogl_program* program, const char* name, const char* name_on,
       get_uniform_location(program, name_on), texture, unit);
 }
 
+// set uniform cubemap
+void set_uniform(
+    ogl_program* program, int location, const ogl_cubemap* cubemap, int unit) {
+  assert_ogl_error();
+  glActiveTexture(GL_TEXTURE0 + unit);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+  glUniform1i(location, unit);
+  assert_ogl_error();
+}
+void set_uniform(ogl_program* program, const char* name,
+    const ogl_cubemap* cubemap, int unit) {
+  return set_uniform(
+      program, get_uniform_location(program, name), cubemap, unit);
+}
+void set_uniform(ogl_program* program, int location, int location_on,
+    const ogl_cubemap* cubemap, int unit) {
+  assert_ogl_error();
+  if (cubemap && cubemap->cubemap_id) {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->cubemap_id);
+    glUniform1i(location, unit);
+    glUniform1i(location_on, 1);
+  } else {
+    glUniform1i(location_on, 0);
+  }
+  assert_ogl_error();
+}
+void set_uniform(ogl_program* program, const char* name, const char* name_on,
+    const ogl_cubemap* cubemap, int unit) {
+  return set_uniform(program, get_uniform_location(program, name),
+      get_uniform_location(program, name_on), cubemap, unit);
+}
+
 // get attribute location
 int get_attribute_location(ogl_program* program, const char* name) {
   return glGetAttribLocation(program->program_id, name);
@@ -842,6 +1086,78 @@ void draw_elements(ogl_elementbuffer* buffer) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
   glDrawElements(
       elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
+}
+
+void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
+  assert(!framebuffer->framebuffer_id);
+  assert(!framebuffer->renderbuffer_id);
+
+  glGenFramebuffers(1, &framebuffer->framebuffer_id);
+  glGenRenderbuffers(1, &framebuffer->renderbuffer_id);
+  framebuffer->size = size;
+
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+  glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+
+  // create render buffer for depth and stencil
+  // TODO(giacomo): Why do we need to put STENCIL8 to make things work on Mac??
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+      framebuffer->size.x, framebuffer->size.y);
+
+  // bind together frame buffer and render buffer
+  // TODO(giacomo): We put STENCIL here for the same reason...
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+      GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+  assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  assert_ogl_error();
+}
+
+inline void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+    uint texture_id, uint target, uint mipmap_level) {
+  // TODO(giacomo): We change the state of the framebuffer, but we don't store
+  // this information anywhere, unlike the rest of the library.
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+  glFramebufferTexture2D(
+      GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, texture_id, mipmap_level);
+  // glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
+  assert_ogl_error();
+}
+
+bool is_framebuffer_bound(const ogl_framebuffer* framebuffer) {
+  return framebuffer->framebuffer_id == ogl_framebuffer::bound_framebuffer_id;
+}
+
+void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+    const ogl_texture* texture, uint mipmap_level) {
+  set_framebuffer_texture(
+      framebuffer, texture->texture_id, GL_TEXTURE_2D, mipmap_level);
+}
+
+void set_framebuffer_texture(const ogl_framebuffer* framebuffer,
+    const ogl_cubemap* cubemap, uint face, uint mipmap_level) {
+  set_framebuffer_texture(framebuffer, cubemap->cubemap_id,
+      GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, mipmap_level);
+}
+
+void bind_framebuffer(const ogl_framebuffer* framebuffer) {
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+  ogl_framebuffer::bound_framebuffer_id = framebuffer->framebuffer_id;
+  assert_ogl_error();
+}
+
+void unbind_framebuffer() {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  ogl_framebuffer::bound_framebuffer_id = 0;
+  assert_ogl_error();
+}
+
+void clear_framebuffer(ogl_framebuffer* framebuffer) {
+  glDeleteFramebuffers(1, &framebuffer->framebuffer_id);
+  glDeleteRenderbuffers(1, &framebuffer->renderbuffer_id);
+  *framebuffer = {};
 }
 
 }  // namespace yocto
@@ -1188,6 +1504,8 @@ void clear_scene(ogl_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
   clear_program(scene->program);
+  clear_program(scene->environment_program);
+  clear_cubemap(scene->environment_cubemap);
 }
 
 // add camera
