@@ -111,7 +111,7 @@ void load_scene_async(
   app->filename    = filename;
   app->imagename   = path(filename).replace_extension(".png").string();
   app->outname     = path(filename).replace_extension(".edited.yaml").string();
-  app->name        = path(app->filename).filename();
+  app->name        = path(app->filename).filename().string();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
@@ -472,7 +472,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", path(app->filename).filename());
+    draw_label(win, "scene", path(app->filename).filename().string());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
