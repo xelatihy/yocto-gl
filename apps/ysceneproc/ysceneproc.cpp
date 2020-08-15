@@ -795,12 +795,12 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
   return true;
 }
 
-void make_dir(const string& dirname) {
-  if (exists(path(dirname))) return;
+void make_dir(const path& dirname) {
+  if (exists(dirname)) return;
   try {
-    create_directories(path(dirname));
+    create_directories(dirname);
   } catch (...) {
-    print_fatal("cannot create directory " + dirname);
+    print_fatal("cannot create directory " + dirname.string());
   }
 }
 
@@ -822,13 +822,14 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext         = filename.extension().string();
+  auto ext         = filename.extension();
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (ext == ".ypreset") {
     print_progress("make preset", 0, 1);
-    if (!make_preset(scene, filename.stem().string(), ioerror)) print_fatal(ioerror);
+    if (!make_preset(scene, filename.stem().string(), ioerror))
+      print_fatal(ioerror);
     print_progress("make preset", 1, 1);
   } else {
     if (!load_scene(filename, scene, ioerror, print_progress))
@@ -857,11 +858,9 @@ int main(int argc, const char* argv[]) {
   }
 
   // make a directory if needed
-  make_dir(path(output).parent_path().string());
-  if (!scene->shapes.empty())
-    make_dir((path(output).parent_path() / "shapes").string());
-  if (!scene->textures.empty())
-    make_dir((path(output).parent_path() / "textures").string());
+  make_dir(output.parent_path());
+  if (!scene->shapes.empty()) make_dir(output.parent_path() / "shapes");
+  if (!scene->textures.empty()) make_dir(output.parent_path() / "textures");
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

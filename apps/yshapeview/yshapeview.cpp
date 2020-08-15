@@ -227,7 +227,7 @@ void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
 
 // draw with shading
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static auto load_path = ""s, save_path = ""s, error_message = ""s;
+  static auto load_path = path{}, save_path = path{};
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.ply;*.obj")) {
     load_shape_async(apps, load_path);
@@ -235,8 +235,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, path(save_path).parent_path().string(),
-          path(save_path).filename().string(), "*.ply;*.obj")) {
+          "save", save_path, true, save_path.parent_path(),
+          save_path.filename(), "*.ply;*.obj")) {
     auto app     = apps->selected;
     app->outname = save_path;
     auto ok      = save_shape(app->outname, *app->ioshape, app->error);
@@ -299,7 +299,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "shape", path(app->filename).filename().string());
+    draw_label(win, "shape", app->name);
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);
