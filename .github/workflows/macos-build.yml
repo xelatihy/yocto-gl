@@ -6,17 +6,17 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: install macos dependencies
-      run: |
-        brew update
-        brew install ninja embree
-    - name: configure
-      run: |
-        mkdir build
-        cd build
-        cmake .. -GNinja -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=ON
-    - name: build
-      run: |
-        cd build
-        cmake --build . --parallel 8
+      - uses: actions/checkout@v1
+      - name: install macos dependencies
+        run: |
+          brew update
+          brew install ninja embree
+      - name: configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -GNinja -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=ON
+      - name: build
+        run: |
+          cd build
+          cmake --build . --parallel 8

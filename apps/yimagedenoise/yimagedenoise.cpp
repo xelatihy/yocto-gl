@@ -34,9 +34,6 @@
 using namespace yocto;
 using namespace std::string_literals;
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 #include <OpenImageDenoise/oidn.hpp>
 #include <iostream>
 

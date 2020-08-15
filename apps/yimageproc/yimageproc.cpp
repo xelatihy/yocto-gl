@@ -31,9 +31,6 @@
 #include <yocto/yocto_math.h>
 using namespace yocto;
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 namespace yocto {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
@@ -284,8 +281,8 @@ int main(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext      = sfs::path(filename).extension().string();
-  auto basename = sfs::path(filename).stem().string();
+  auto ext      = path(filename).extension().string();
+  auto basename = path(filename).stem().string();
   auto ioerror  = ""s;
   auto img      = image<vec4f>{};
   if (ext == ".ypreset") {

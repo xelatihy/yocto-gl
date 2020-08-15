@@ -124,7 +124,7 @@ Other external libraries are included with their own license.
 ## Compilation
 
 This library requires a C++17 compiler and is know to compiled on
-OsX (Xcode >= 10), Windows (MSVC 2019) and Linux (gcc >= 7, clang >= 4).
+OsX (Xcode >= 11), Windows (MSVC 2019) and Linux (gcc >= 9, clang >= 9).
 
 You can build the example applications using CMake with
 `mkdir build; cd build; cmake ..; cmake --build`

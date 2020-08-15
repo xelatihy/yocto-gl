@@ -36,9 +36,6 @@ using namespace yocto;
 #include <map>
 #include <memory>
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 int main(int argc, const char* argv[]) {
   // options
   auto params         = trace_params{};
@@ -106,10 +103,9 @@ int main(int argc, const char* argv[]) {
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
-                   sfs::path(imfilename).extension().string();
-        auto outfilename =
-            sfs::path(imfilename).replace_extension(ext).string();
-        auto ioerror = ""s;
+                   path(imfilename).extension().string();
+        auto outfilename = path(imfilename).replace_extension(ext).string();
+        auto ioerror     = ""s;
         print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });
@@ -124,11 +120,10 @@ int main(int argc, const char* argv[]) {
     const int   feature_samples = 8;
     std::string feature_ext     = "exr"s;
 
-    auto imext = sfs::path(imfilename).extension();
+    auto imext = path(imfilename).extension().string();
     if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
 
-    auto base_name =
-        sfs::path(imfilename).filename().replace_extension("").string();
+    auto base_name = path(imfilename).filename().replace_extension("").string();
 
     auto fparams    = params;
     fparams.bounces = feature_bounces;
@@ -137,7 +132,7 @@ int main(int argc, const char* argv[]) {
     // render denoise albedo
     fparams.sampler      = trace_sampler_type::albedo;
     auto albedo          = trace_image(scene, camera, fparams, print_progress);
-    auto albedo_filename = sfs::path(imfilename)
+    auto albedo_filename = path(imfilename)
                                .replace_filename(base_name + "-albedo")
                                .replace_extension(feature_ext)
                                .string();
@@ -149,7 +144,7 @@ int main(int argc, const char* argv[]) {
     // render denoise normals
     fparams.sampler      = trace_sampler_type::normal;
     auto normal          = trace_image(scene, camera, fparams, print_progress);
-    auto normal_filename = sfs::path(imfilename)
+    auto normal_filename = path(imfilename)
                                .replace_filename(base_name + "-normal")
                                .replace_extension(feature_ext)
                                .string();
