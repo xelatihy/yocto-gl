@@ -430,25 +430,59 @@ struct filedialog_state {
   vector<string>             extensions    = {};
 
   filedialog_state() {}
-  filedialog_state(const string& dirname, const string& filename, bool save,
-      const string& filter) {
+  filedialog_state(const string& dirname, const string& filename,
+      const string& filter, bool save) {
+    set(dirname, filename, filter, save);
+  }
+
+  void set(const string& dirname, const string& filename, const string& filter,
+      bool save) {
     this->save = save;
-    set_filter(filter);
-    set_dirname(dirname);
-    set_filename(filename);
+    _set_filter(filter);
+    _set_dirname(dirname);
+    _set_filename(filename);
   }
-  void set_dirname(const string& name) {
-    dirname = name;
-    dirname = normalize_path(dirname);
-    if (dirname == "") dirname = "./";
-    if (dirname.back() != '/') dirname += '/';
-    refresh();
+
+  void _set_dirname(const string& name) {
+    if (exists(path{name}) && is_directory(path{name})) {
+      dirname = name;
+    } else if (exists(path{dirname}) && is_directory(path{dirname})) {
+      // leave it like this
+    } else {
+      dirname = std::filesystem::current_path().string();
+    }
+    dirname = canonical(path{dirname}).string();
+    entries.clear();
+    for (auto entry : directory_iterator(path{dirname})) {
+      if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
+      if (entry.is_directory()) {
+        entries.push_back({entry.path().filename().string() + "/", true});
+      } else {
+        entries.push_back({entry.path().filename().string(), false});
+      }
+    }
+    std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
+      if (a.second == b.second) return a.first < b.first;
+      return a.second;
+    });
   }
-  void set_filename(const string& name) {
+
+  void _set_filename(const string& name) {
     filename = name;
-    check_filename();
+    if (filename.empty()) return;
+    auto ext = path{filename}.extension().string();
+    if (std::find(extensions.begin(), extensions.end(), ext) ==
+        extensions.end()) {
+      filename = "";
+      return;
+    }
+    if (!save && !exists(path{dirname} / path{filename})) {
+      filename = "";
+      return;
+    }
   }
-  void set_filter(const string& flt) {
+
+  void _set_filter(const string& flt) {
     auto globs = vector<string>{""};
     for (auto i = 0; i < flt.size(); i++) {
       if (flt[i] == ';') {
@@ -468,64 +502,32 @@ struct filedialog_state {
       }
     }
   }
-  void check_filename() {
-    if (filename.empty()) return;
-    auto ext = get_extension(filename);
-    if (std::find(extensions.begin(), extensions.end(), ext) ==
-        extensions.end()) {
-      filename = "";
-      return;
-    }
-    if (!save && !exists_file(dirname + filename)) {
-      filename = "";
-      return;
-    }
-  }
-  void select_entry(int idx) {
+
+  void select(int idx) {
     if (entries[idx].second) {
-      set_dirname(dirname + entries[idx].first);
+      set((path{dirname} / path{entries[idx].first}).string(), filename, filter,
+          save);
     } else {
-      set_filename(entries[idx].first);
+      set(dirname, entries[idx].first, filter, save);
     }
   }
 
-  void refresh() {
-    entries.clear();
-    for (auto entry : directory_iterator(path{dirname})) {
-      if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
-      if (entry.is_directory()) {
-        entries.push_back({entry.path().stem().string() + "/", true});
-      } else {
-        entries.push_back({entry.path().stem().string(), false});
-      }
-    }
-    std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
-      if (a.second == b.second) return a.first < b.first;
-      return a.second;
-    });
-  }
-
-  string get_path() const { return dirname + filename; }
-  bool   exists_file(const string& filename) {
-    auto f = fopen(filename.c_str(), "r");
-    if (!f) return false;
-    fclose(f);
-    return true;
-  }
+  string get_path() const { return (path{dirname} / path{filename}).string(); }
 };
+
 bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
-      states[lbl] = filedialog_state{dirname, filename, save, filter};
+      states[lbl] = filedialog_state{dirname, filename, filter, save};
     }
     auto& state = states.at(lbl);
     char  dir_buffer[1024];
     snprintf(dir_buffer, sizeof(dir_buffer), "%s", state.dirname.c_str());
     if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
-      state.set_dirname(dir_buffer);
+      state.set(dir_buffer, state.filename, state.filter, save);
     }
     auto current_item = -1;
     if (ImGui::ListBox(
@@ -536,17 +538,17 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
               return true;
             },
             &state, (int)state.entries.size())) {
-      state.select_entry(current_item);
+      state.select(current_item);
     }
     char file_buffer[1024];
     snprintf(file_buffer, sizeof(file_buffer), "%s", state.filename.c_str());
     if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
-      state.set_filename(file_buffer);
+      state.set(state.dirname, file_buffer, state.filter, save);
     }
     char filter_buffer[1024];
     snprintf(filter_buffer, sizeof(filter_buffer), "%s", state.filter.c_str());
     if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
-      state.set_filter(filter_buffer);
+      state.set(state.dirname, state.filename, filter_buffer, save);
     }
     auto ok = false, exit = false;
     if (ImGui::Button("Ok")) {
@@ -568,10 +570,12 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     return false;
   }
 }
+
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
+    draw_button(win, button_lbl, button_active);
     return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
   } else {
     if (draw_button(win, button_lbl, button_active)) {

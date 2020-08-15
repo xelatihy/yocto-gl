@@ -41,7 +41,7 @@ using namespace yocto;
 // Application state
 struct app_state {
   // loading options
-  string filename  = "scene.yaml";
+  string filename  = "scene.json";
   string imagename = "out.png";
   string name      = "";
 
