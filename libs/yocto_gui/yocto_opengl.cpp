@@ -30,6 +30,7 @@
 #include "yocto_opengl.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdarg>
 #include <string>
 #include <unordered_map>
