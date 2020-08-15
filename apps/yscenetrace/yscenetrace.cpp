@@ -121,7 +121,7 @@ int main(int argc, const char* argv[]) {
     std::string feature_ext     = "exr"s;
 
     auto imext = path(imfilename).extension().string();
-    if (imext != "hdr" && is_hdr_filename(imext) feature_ext = imext;
+    if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
 
     auto base_name = path(imfilename).filename().replace_extension("").string();
 
