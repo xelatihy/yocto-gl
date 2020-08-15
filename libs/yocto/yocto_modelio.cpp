@@ -3645,13 +3645,13 @@ struct pbrt_medium {
 
 // convert pbrt films
 inline bool convert_film(pbrt_film* film, const pbrt_command& command,
-    const string& filename, string& error, bool verbose = false) {
+    const path& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
@@ -3672,14 +3672,14 @@ inline bool convert_film(pbrt_film* film, const pbrt_command& command,
 
 // convert pbrt elements
 inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
-    const vec2i& resolution, const string& filename, string& error,
+    const vec2i& resolution, const path& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
@@ -3730,14 +3730,14 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
 
 // convert pbrt textures
 inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
-    unordered_map<string, pbrt_texture>& texture_map, const string& filename,
+    unordered_map<string, pbrt_texture>& texture_map, const path& filename,
     string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
@@ -3828,21 +3828,21 @@ inline bool convert_material(pbrt_material*     pmaterial,
     const pbrt_command&                         command,
     const unordered_map<string, pbrt_material>& named_materials,
     const unordered_map<string, pbrt_texture>&  named_textures,
-    const string& filename, string& error, bool verbose = false) {
+    const path& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
   auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + name;
+    error = filename.string() + ": missing material " + name;
     return false;
   };
   auto bsdf_error = [filename, &error](const string& name) {
-    error = filename + ": missing bsdf " + name;
+    error = filename.string() + ": missing bsdf " + name;
     return false;
   };
 
@@ -4227,18 +4227,18 @@ inline void make_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     string& alphamap, const unordered_map<string, pbrt_texture>& named_textures,
-    const path& ply_dirname, const string& filename, string& error,
+    const path& ply_dirname, const path& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -4315,14 +4315,14 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
 
 // Convert pbrt arealights
 inline bool convert_arealight(pbrt_arealight* parealight,
-    const pbrt_command& command, const string& filename, string& error,
+    const pbrt_command& command, const path& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
@@ -4340,13 +4340,13 @@ inline bool convert_arealight(pbrt_arealight* parealight,
 
 // Convert pbrt lights
 inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
-    const string& filename, string& error, bool verbose = false) {
+    const path& filename, string& error, bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
@@ -4401,14 +4401,14 @@ inline bool convert_light(pbrt_light* plight, const pbrt_command& command,
 }
 
 inline bool convert_environment(pbrt_environment* penvironment,
-    const pbrt_command& command, const string& filename, string& error,
+    const pbrt_command& command, const path& filename, string& error,
     bool verbose = false) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto type_error = [filename, &error, &command]() {
-    error = filename + ": unknown type " + command.type;
+    error = filename.string() + ": unknown type " + command.type;
     return false;
   };
 
