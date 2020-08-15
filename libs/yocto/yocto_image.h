@@ -44,8 +44,8 @@
 #include <algorithm>
 #include <functional>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "yocto_math.h"
 
