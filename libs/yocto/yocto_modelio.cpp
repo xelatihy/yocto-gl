@@ -267,7 +267,7 @@ template <typename T>
 template <typename T>
 inline T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
   union {
     T             value;
     unsigned char bytes[sizeof(T)];
