@@ -1272,7 +1272,7 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
 }
 
 // add instance
-ogl_instance* add_object(ogl_scene* scene) {
+ogl_instance* add_instance(ogl_scene* scene) {
   return scene->instances.emplace_back(new ogl_instance{});
 }
 void set_frame(ogl_instance* instance, const frame3f& frame) {
@@ -1326,6 +1326,59 @@ void set_metallic(
 }
 void set_normalmap(ogl_material* material, ogl_texture* normal_tex) {
   material->normal_tex = normal_tex;
+}
+
+// shortcuts
+ogl_camera* add_camera(ogl_scene* scene, const frame3f& frame, float lens,
+    float aspect, float film, float near, float far) {
+  auto camera = add_camera(scene);
+  set_frame(camera, frame);
+  set_lens(camera, lens, aspect, film);
+  set_nearfar(camera, near, far);
+  return camera;
+}
+ogl_material* add_material(ogl_scene* scene, const vec3f& emission,
+    const vec3f& color, float specular, float metallic, float roughness,
+    ogl_texture* emission_tex, ogl_texture* color_tex,
+    ogl_texture* specular_tex, ogl_texture* metallic_tex,
+    ogl_texture* roughness_tex, ogl_texture* normalmap_tex) {
+  auto material = add_material(scene);
+  set_emission(material, emission, emission_tex);
+  set_color(material, color, color_tex);
+  set_specular(material, specular, specular_tex);
+  set_metallic(material, metallic, metallic_tex);
+  set_roughness(material, roughness, roughness_tex);
+  set_normalmap(material, normalmap_tex);
+  return material;
+}
+ogl_shape* add_shape(ogl_scene* scene, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, bool edges) {
+  auto shape = add_shape(scene);
+  set_points(shape, points);
+  set_lines(shape, lines);
+  set_triangles(shape, triangles);
+  set_quads(shape, quads);
+  set_positions(shape, positions);
+  set_normals(shape, normals);
+  set_texcoords(shape, texcoords);
+  set_colors(shape, colors);
+  if (edges && (!triangles.empty() || !quads.empty())) {
+    set_edges(shape, triangles, quads);
+  }
+  return shape;
+}
+ogl_instance* add_instance(ogl_scene* scene, const frame3f& frame,
+    ogl_shape* shape, ogl_material* material, bool hidden, bool highlighted) {
+  auto instance = add_instance(scene);
+  set_frame(instance, frame);
+  set_shape(instance, shape);
+  set_material(instance, material);
+  set_hidden(instance, hidden);
+  set_highlighted(instance, highlighted);
+  return instance;
 }
 
 // add light
@@ -2018,7 +2071,7 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     }
     auto& state = states.at(lbl);
     char  dir_buffer[1024];
-    strcpy(dir_buffer, state.dirname.c_str());
+    snprintf(dir_buffer, sizeof(dir_buffer), "%s", state.dirname.c_str());
     if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
       state.set_dirname(dir_buffer);
     }
@@ -2034,12 +2087,12 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
       state.select_entry(current_item);
     }
     char file_buffer[1024];
-    strcpy(file_buffer, state.filename.c_str());
+    snprintf(file_buffer, sizeof(file_buffer), "%s", state.filename.c_str());
     if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
       state.set_filename(file_buffer);
     }
     char filter_buffer[1024];
-    strcpy(filter_buffer, state.filter.c_str());
+    snprintf(filter_buffer, sizeof(filter_buffer), "%s", state.filter.c_str());
     if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
       state.set_filter(filter_buffer);
     }

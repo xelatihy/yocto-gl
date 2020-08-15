@@ -158,6 +158,7 @@ vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
+vector<vec2i> get_edges(const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 // Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);

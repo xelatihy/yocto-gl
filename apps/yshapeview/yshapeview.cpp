@@ -147,6 +147,36 @@ vector<vec3f> compute_normals(const generic_shape& shape) {
   }
 }
 
+// Create a shape with small spheres for each point
+quads_shape make_spheres(
+    const vector<vec3f>& positions, float radius, int steps) {
+  auto shape = quads_shape{};
+  for (auto position : positions) {
+    auto sphere = make_sphere(steps, radius);
+    for (auto& p : sphere.positions) p += position;
+    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+        sphere.quads, sphere.positions, sphere.normals, sphere.texcoords);
+  }
+  return shape;
+}
+quads_shape make_cylinders(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, float radius, const vec3i& steps) {
+  auto shape = quads_shape{};
+  for (auto line : lines) {
+    auto len      = length(positions[line.x] - positions[line.y]);
+    auto dir      = normalize(positions[line.x] - positions[line.y]);
+    auto center   = (positions[line.x] + positions[line.y]) / 2;
+    auto cylinder = make_uvcylinder({4, 1, 1}, {radius, len});
+    auto frame    = frame_fromz(center, dir);
+    for (auto& p : cylinder.positions) p = transform_point(frame, p);
+    for (auto& n : cylinder.normals) n = transform_direction(frame, n);
+    merge_quads(shape.quads, shape.positions, shape.normals, shape.texcoords,
+        cylinder.quads, cylinder.positions, cylinder.normals,
+        cylinder.texcoords);
+  }
+  return shape;
+}
+
 void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
     progress_callback progress_cb) {
   // handle progress
@@ -162,42 +192,35 @@ void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
 
   // camera
   if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
-  auto glcamera = add_camera(glscene);
-  set_frame(glcamera, camera_frame(bbox, 0.050, 16.0f / 9.0f, 0.036));
-  set_lens(glcamera, 0.050, 16.0f / 9.0f, 0.036);
-  set_nearfar(glcamera, 0.001, 10000);
+  auto glcamera   = add_camera(glscene,
+      camera_frame(bbox, 0.050, 16.0f / 9.0f, 0.036), 0.050, 16.0f / 9.0f,
+      0.036);
   glcamera->focus = length(glcamera->frame.o - center(bbox));
 
   // material
   if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
-  auto glmaterial = add_material(glscene);
-  set_emission(glmaterial, {0, 0, 0}, nullptr);
-  set_color(glmaterial, {0.5, 1, 0.5}, nullptr);
-  set_specular(glmaterial, 1, nullptr);
-  set_metallic(glmaterial, 0, nullptr);
-  set_roughness(glmaterial, 0.2, nullptr);
-  set_opacity(glmaterial, 1, nullptr);
-  set_normalmap(glmaterial, nullptr);
+  auto glmaterial  = add_material(glscene, {0, 0, 0}, {0.5, 1, 0.5}, 1, 0, 0.2);
+  auto glmateriale = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
+  auto glmaterialv = add_material(glscene, {0, 0, 0}, {0, 0, 0}, 0, 0, 1);
 
   // shapes
   if (progress_cb) progress_cb("convert shape", progress.x++, progress.y);
-  auto glshape = add_shape(glscene);
-  set_positions(glshape, ioshape->positions);
-  set_normals(glshape, ioshape->normals);
-  set_texcoords(glshape, ioshape->texcoords);
-  set_colors(glshape, ioshape->colors);
-  set_points(glshape, ioshape->points);
-  set_lines(glshape, ioshape->lines);
-  set_triangles(glshape, ioshape->triangles);
-  set_quads(glshape, ioshape->quads);
-  set_edges(glshape, ioshape->triangles, ioshape->quads);
+  auto glshape  = add_shape(glscene, ioshape->points, ioshape->lines,
+      ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
+      ioshape->texcoords, ioshape->colors, true);
+  auto edges    = make_cylinders(get_edges(ioshape->triangles, ioshape->quads),
+      ioshape->positions, 0.01, {4, 1, 1});
+  auto glshapee = add_shape(glscene, {}, {}, {}, edges.quads, edges.positions,
+      edges.normals, edges.texcoords, {});
+  auto vertices = make_spheres(ioshape->positions, 0.01, 2);
+  auto glshapev = add_shape(glscene, {}, {}, {}, vertices.quads,
+      vertices.positions, vertices.normals, vertices.texcoords, {});
 
   // shapes
   if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-  auto globject = add_object(glscene);
-  set_frame(globject, identity3x4f);
-  set_shape(globject, glshape);
-  set_material(globject, glmaterial);
+  add_instance(glscene, identity3x4f, glshape, glmaterial);
+  add_instance(glscene, identity3x4f, glshapee, glmateriale, true);
+  add_instance(glscene, identity3x4f, glshapev, glmaterialv, true);
 
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
@@ -247,15 +270,20 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     auto ioshape    = app->ioshape;
     auto glshape    = app->glscene->shapes.front();
     auto glmaterial = app->glscene->materials.front();
-    if (!is_initialized(glshape->normals)) {
-      if (draw_button(win, "smooth"))
+    auto smooth     = is_initialized(glshape->normals);
+    if (draw_checkbox(win, "smooth", smooth)) {
+      if (smooth) {
         set_normals(glshape, !ioshape->normals.empty()
                                  ? ioshape->normals
                                  : compute_normals(*ioshape));
-    } else {
-      if (draw_button(win, "facet"))
-          set_normals(glshape, {});
+      } else {
+        set_normals(glshape, {});
+      }
     }
+    continue_line(win);
+    draw_checkbox(win, "lines", app->glscene->instances[1]->hidden);
+    continue_line(win);
+    draw_checkbox(win, "points", app->glscene->instances[2]->hidden);
     draw_coloredit(win, "color", glmaterial->color);
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
