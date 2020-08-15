@@ -157,8 +157,7 @@ void load_image_async(app_states* apps, const path& filename) {
 }
 
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static string load_path = path{}, save_path = path{};
-  static auto   error_message = "";
+  static auto load_path = path{}, save_path = path{};
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -166,9 +165,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save image", save_path, true, path(save_path).parent_path().string(),
-          path(save_path).filename().string(),
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+          "save image", save_path, true, save_path.parent_path(),
+          save_path.filename(), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_image(app->outname, app->display, app->error);
