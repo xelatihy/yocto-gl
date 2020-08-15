@@ -2033,7 +2033,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   auto material_map = unordered_map<scene_material*, pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
-    pmaterial->name         = path(material->name).stem();
+    pmaterial->name         = path(material->name).stem().string();
     pmaterial->emission     = material->emission;
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -2049,11 +2049,12 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
 
   // convert instances
   for (auto instance : scene->instances) {
-    auto pshape       = add_shape(pbrt);
-    pshape->filename_ = path(instance->shape->name).replace_extension(".ply");
-    pshape->frame     = instance->frame;
-    pshape->frend     = instance->frame;
-    pshape->material  = material_map.at(instance->material);
+    auto pshape = add_shape(pbrt);
+    pshape->filename_ =
+        path(instance->shape->name).replace_extension(".ply").string();
+    pshape->frame    = instance->frame;
+    pshape->frend    = instance->frame;
+    pshape->material = material_map.at(instance->material);
   }
 
   // convert environments
