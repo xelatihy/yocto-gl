@@ -2325,8 +2325,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    if (!save_mtl(path(filename).replace_extension(".mtl").string(), 
-    obj, error))
+    if (!save_mtl(
+            path(filename).replace_extension(".mtl").string(), obj, error))
       return dependent_error();
   }
 
@@ -2334,8 +2334,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    if (!save_objx(path(filename).replace_extension(".objx").string(), 
-    obj, error))
+    if (!save_objx(
+            path(filename).replace_extension(".objx").string(), obj, error))
       return dependent_error();
   }
 
