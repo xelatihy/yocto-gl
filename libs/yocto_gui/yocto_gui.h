@@ -720,8 +720,7 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value);
-bool draw_checkbox(gui_window* win, const char* lbl,
-    const function<bool()>& get, const function<void(bool)>& set);
+bool draw_checkbox(gui_window* win, const char* lbl, bool& value, bool invert);
 
 bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value);

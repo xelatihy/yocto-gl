@@ -166,7 +166,7 @@ quads_shape make_cylinders(const vector<vec2i>& lines,
     auto len      = length(positions[line.x] - positions[line.y]);
     auto dir      = normalize(positions[line.x] - positions[line.y]);
     auto center   = (positions[line.x] + positions[line.y]) / 2;
-    auto cylinder = make_uvcylinder({4, 1, 1}, {radius, len});
+    auto cylinder = make_uvcylinder({4, 1, 1}, {radius, len / 2});
     auto frame    = frame_fromz(center, dir);
     for (auto& p : cylinder.positions) p = transform_point(frame, p);
     for (auto& n : cylinder.normals) n = transform_direction(frame, n);
@@ -209,7 +209,7 @@ void init_glscene(ogl_scene* glscene, const generic_shape* ioshape,
       ioshape->triangles, ioshape->quads, ioshape->positions, ioshape->normals,
       ioshape->texcoords, ioshape->colors, true);
   auto edges    = make_cylinders(get_edges(ioshape->triangles, ioshape->quads),
-      ioshape->positions, 0.01, {4, 1, 1});
+      ioshape->positions, 0.005, {4, 1, 1});
   auto glshapee = add_shape(glscene, {}, {}, {}, edges.quads, edges.positions,
       edges.normals, edges.texcoords, {});
   auto vertices = make_spheres(ioshape->positions, 0.01, 2);
@@ -281,9 +281,9 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       }
     }
     continue_line(win);
-    draw_checkbox(win, "lines", app->glscene->instances[1]->hidden);
+    draw_checkbox(win, "lines", app->glscene->instances[1]->hidden, true);
     continue_line(win);
-    draw_checkbox(win, "points", app->glscene->instances[2]->hidden);
+    draw_checkbox(win, "points", app->glscene->instances[2]->hidden, true);
     draw_coloredit(win, "color", glmaterial->color);
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);

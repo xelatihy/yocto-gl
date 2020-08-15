@@ -2231,6 +2231,16 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
+bool draw_checkbox(gui_window* win, const char* lbl, bool& value, bool invert) {
+  if (!invert) {
+    return draw_checkbox(win, lbl, value);
+  } else {
+    auto inverted = !value;
+    auto edited   = ImGui::Checkbox(lbl, &inverted);
+    if (edited) value = !inverted;
+    return edited;
+  }
+}
 
 bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
