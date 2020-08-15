@@ -1593,7 +1593,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+    if (LoadEXR(&pixels, &width, &height, filename.string().c_str(), nullptr) <
+        0)
       return read_error();
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
@@ -1601,14 +1602,16 @@ bool is_hdr_filename(const path& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = load_pfm(
+        filename.string().c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = stbi_loadf(
+        filename.string().c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -1637,18 +1640,18 @@ bool is_hdr_filename(const path& filename) {
 
   auto ext = filename.extension();
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            (float*)img.data()))
+    if (!stbi_write_hdr(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 4, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 4,
+    if (!save_pfm(filename.string().c_str(), img.imsize().x, img.imsize().y, 4,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 4,
-            filename.c_str()) < 0)
+            filename.string().c_str()) < 0)
       return write_error();
     return true;
   } else if (!is_hdr_filename(filename)) {
@@ -1674,7 +1677,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = stbi_load(
+        filename.string().c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
@@ -1703,23 +1707,23 @@ bool is_hdr_filename(const path& filename) {
 
   auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), img.imsize().x * 4))
+    if (!stbi_write_png(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 4, img.data(), img.imsize().x * 4))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 4,
-            img.data(), 75))
+    if (!stbi_write_jpg(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 4, img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
+    if (!stbi_write_tga(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 4, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 4, img.data()))
+    if (!stbi_write_bmp(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 4, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -1745,7 +1749,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+    if (LoadEXR(&pixels, &width, &height, filename.string().c_str(), nullptr) <
+        0)
       return read_error();
     if (!pixels) return read_error();
     auto cpixels = std::unique_ptr<float[]>(new float[width * height * 3]);
@@ -1759,14 +1764,16 @@ bool is_hdr_filename(const path& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 3);
+    auto pixels = load_pfm(
+        filename.string().c_str(), &width, &height, &ncomp, 3);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec3f*)pixels};
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 3);
+    auto pixels = stbi_loadf(
+        filename.string().c_str(), &width, &height, &ncomp, 3);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec3f*)pixels};
     free(pixels);
@@ -1795,18 +1802,18 @@ bool is_hdr_filename(const path& filename) {
 
   auto ext = filename.extension();
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)img.data()))
+    if (!stbi_write_hdr(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 3,
+    if (!save_pfm(filename.string().c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 3,
-            filename.c_str()) < 0)
+            filename.string().c_str()) < 0)
       return write_error();
     return true;
   } else if (!is_hdr_filename(filename)) {
@@ -1832,7 +1839,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 3);
+    auto pixels = stbi_load(
+        filename.string().c_str(), &width, &height, &ncomp, 3);
     if (!pixels) return read_error();
     img = image{{width, height}, (const vec3b*)pixels};
     free(pixels);
@@ -1861,23 +1869,23 @@ bool is_hdr_filename(const path& filename) {
 
   auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), img.imsize().x * 3))
+    if (!stbi_write_png(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, img.data(), img.imsize().x * 3))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), 75))
+    if (!stbi_write_jpg(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
+    if (!stbi_write_tga(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
+    if (!stbi_write_bmp(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -1903,7 +1911,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+    if (LoadEXR(&pixels, &width, &height, filename.string().c_str(), nullptr) <
+        0)
       return read_error();
     if (!pixels) return read_error();
     auto cpixels = std::unique_ptr<float[]>(new float[width * height]);
@@ -1916,14 +1925,16 @@ bool is_hdr_filename(const path& filename) {
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = load_pfm(
+        filename.string().c_str(), &width, &height, &ncomp, 1);
     if (!pixels) return read_error();
     img = image{{width, height}, (const float*)pixels};
     delete[] pixels;
     return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = stbi_loadf(
+        filename.string().c_str(), &width, &height, &ncomp, 1);
     if (!pixels) return read_error();
     img = image{{width, height}, (const float*)pixels};
     free(pixels);
@@ -1959,18 +1970,18 @@ bool is_hdr_filename(const path& filename) {
       cpixels[idx * 3 + 1] = *(img.begin() + idx);
       cpixels[idx * 3 + 2] = *(img.begin() + idx);
     }
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)cpixels.get()))
+    if (!stbi_write_hdr(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 3, (float*)cpixels.get()))
       return write_error();
     return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 1,
+    if (!save_pfm(filename.string().c_str(), img.imsize().x, img.imsize().y, 1,
             (float*)img.data()))
       return write_error();
     return true;
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 1,
-            filename.c_str()) < 0)
+            filename.string().c_str()) < 0)
       return write_error();
     return true;
   } else if (!is_hdr_filename(filename)) {
@@ -1996,7 +2007,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = stbi_load(
+        filename.string().c_str(), &width, &height, &ncomp, 1);
     if (!pixels) return read_error();
     img = image{{width, height}, (const byte*)pixels};
     free(pixels);
@@ -2025,23 +2037,23 @@ bool is_hdr_filename(const path& filename) {
 
   auto ext = filename.extension();
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), img.imsize().x * 1))
+    if (!stbi_write_png(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 1, img.data(), img.imsize().x * 1))
       return write_error();
     return true;
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), 75))
+    if (!stbi_write_jpg(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 1, img.data(), 75))
       return write_error();
     return true;
   } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
+    if (!stbi_write_tga(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 1, img.data()))
       return write_error();
     return true;
   } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
+    if (!stbi_write_bmp(filename.string().c_str(), img.imsize().x,
+            img.imsize().y, 1, img.data()))
       return write_error();
     return true;
   } else if (is_hdr_filename(filename)) {
@@ -2067,7 +2079,8 @@ bool is_hdr_filename(const path& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = stbi_load_16(
+        filename.string().c_str(), &width, &height, &ncomp, 1);
     if (!pixels) return read_error();
     img = image{{width, height}, (const uint16_t*)pixels};
     free(pixels);
@@ -2318,7 +2331,8 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
-  auto voxels = load_yvol(filename.c_str(), &width, &height, &depth, &ncomp, 1);
+  auto voxels = load_yvol(
+      filename.string().c_str(), &width, &height, &depth, &ncomp, 1);
   if (!voxels) return read_error();
   vol = volume{{width, height, depth}, (const float*)voxels};
   delete[] voxels;
@@ -2332,8 +2346,8 @@ bool save_volume(
     error = filename + ": write error";
     return false;
   };
-  if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
-          vol.data()))
+  if (!save_yvol(filename.string().c_str(), vol.size().x, vol.size().y,
+          vol.size().z, 1, vol.data()))
     return write_error();
   return true;
 }

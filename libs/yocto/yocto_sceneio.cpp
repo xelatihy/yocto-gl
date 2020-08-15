@@ -291,7 +291,7 @@ inline bool load_text(const path& filename, string& str, string& error) {
   };
 
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen(filename.string().c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
@@ -314,7 +314,7 @@ inline bool save_text(const path& filename, const string& str, string& error) {
     return false;
   };
 
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen(filename.string().c_str(), "wt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fprintf(fs, "%s", str.c_str()) < 0) return write_error();
@@ -342,7 +342,7 @@ inline bool load_binary(
   };
 
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen(filename.string().c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
@@ -366,7 +366,7 @@ inline bool save_binary(
     return false;
   };
 
-  auto fs = fopen(filename.c_str(), "wb");
+  auto fs = fopen(filename.string().c_str(), "wb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fwrite(data.data(), 1, data.size(), fs) != data.size())
@@ -1365,7 +1365,7 @@ static bool load_gltf_scene(const path& filename, scene_model* scene,
   auto params = cgltf_options{};
   memset(&params, 0, sizeof(params));
   auto data   = (cgltf_data*)nullptr;
-  auto result = cgltf_parse_file(&params, filename.c_str(), &data);
+  auto result = cgltf_parse_file(&params, filename.string().c_str(), &data);
   if (result != cgltf_result_success) return read_error();
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};

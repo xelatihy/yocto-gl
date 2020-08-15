@@ -376,7 +376,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename) {
-  auto fs = fopen(filename.c_str(), "r");
+  auto fs = fopen(filename.string().c_str(), "r");
   if (fs) {
     fclose(fs);
     return true;
@@ -395,7 +395,7 @@ namespace yocto {
 // Load a text file
 inline bool load_text(const path& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen(filename.string().c_str(), "rb");
   if (!fs) {
     error = filename.string() + ": file not found";
     return false;
@@ -414,7 +414,7 @@ inline bool load_text(const path& filename, string& str, string& error) {
 
 // Save a text file
 inline bool save_text(const path& filename, const string& str, string& error) {
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen(filename.string().c_str(), "wt");
   if (!fs) {
     error = filename.string() + ": file not found";
     return false;
@@ -431,7 +431,7 @@ inline bool save_text(const path& filename, const string& str, string& error) {
 inline bool load_binary(
     const path& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen(filename.string().c_str(), "rb");
   if (!fs) {
     error = filename.string() + ": file not found";
     return false;
@@ -451,7 +451,7 @@ inline bool load_binary(
 // Save a binary file
 inline bool save_binary(
     const path& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen(filename.c_str(), "wb");
+  auto fs = fopen(filename.string().c_str(), "wb");
   if (!fs) {
     error = filename.string() + ": file not found";
     return false;

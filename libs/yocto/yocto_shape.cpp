@@ -3500,7 +3500,7 @@ namespace yocto {
 
 // Save a text file
 static bool save_text(const path& filename, const string& str, string& error) {
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen(filename.string().c_str(), "wt");
   if (!fs) {
     error = filename.string() + ": file not found";
     return false;
