@@ -3573,10 +3573,12 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
           } else if (path(filenamep).extension() == ".eta") {
-            auto eta = get_etak(path(filenamep).replace_extension("")).first;
+            auto eta =
+                get_etak(path(filenamep).replace_extension("").string()).first;
             value.value3f = {eta.x, eta.y, eta.z};
           } else if (path(filenamep).extension() == ".k") {
-            auto k = get_etak(path(filenamep).replace_extension("")).second;
+            auto k =
+                get_etak(path(filenamep).replace_extension("").string()).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
@@ -4723,9 +4725,9 @@ struct pbrt_context {
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
-      if (!load_pbrt(path(filename).parent_path() / includename, pbrt, error,
-              ctx, material_map, named_materials, named_textures, named_mediums,
-              ply_dirname))
+      if (!load_pbrt((path(filename).parent_path() / includename).string(),
+              pbrt, error, ctx, material_map, named_materials, named_textures,
+              named_mediums, ply_dirname))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -5042,8 +5044,8 @@ bool save_pbrt(
       add_normals(ply, shape->normals);
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
-      if (!save_ply(
-              path(filename).parent_path() / shape->filename_, ply, error))
+      if (!save_ply((path(filename).parent_path() / shape->filename_).string(),
+              ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
