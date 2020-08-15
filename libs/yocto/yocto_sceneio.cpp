@@ -1117,7 +1117,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem();
+  if (scene->name == "") scene->name = path(filename).stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1225,7 +1225,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // convert environments
   for (auto environment : scene->environments) {
     auto oenvironment          = add_environment(obj);
-    oenvironment->name         = path(environment->name).stem();
+    oenvironment->name         = path(environment->name).stem().string();
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_tex = get_texture(environment->emission_tex);
@@ -1798,7 +1798,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       scene->textures.end());
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem();
+  if (scene->name == "") scene->name = path(filename).stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1990,7 +1990,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem();
+  if (scene->name == "") scene->name = path(filename).stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
