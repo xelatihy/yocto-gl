@@ -1924,7 +1924,8 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(path(filename).parent_path() / mtllib, obj, error))
+        if (!load_mtl(
+                (path(filename).parent_path() / mtllib).string(), obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1974,7 +1975,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   // load extensions
   auto extfilename = path(filename).replace_extension(".objx");
   if (exists(path(extfilename))) {
-    if (!load_objx(extfilename, obj, error)) return dependent_error();
+    if (!load_objx(extfilename.string(), obj, error)) return dependent_error();
   }
 
   return true;
