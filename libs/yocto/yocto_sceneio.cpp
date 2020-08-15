@@ -440,7 +440,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     }
   };
 
-  // parse yaml reference
+  // parse json reference
   auto get_ref = [&material_error, &get_value](const json& ejs,
                      const string& name, auto& value,
                      const auto& refs) -> bool {
@@ -808,7 +808,7 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
       0, 2 + (int)scene->shapes.size() + (int)scene->textures.size()};
   if (progress_cb) progress_cb("save scene", progress.x++, progress.y);
 
-  // save yaml file
+  // save json file
   auto js = json::object();
 
   // asset

@@ -46,9 +46,9 @@ void print_obj_camera(scene_camera* camera);
 // Application scene
 struct app_state {
   // loading options
-  string filename  = "app->yaml";
+  string filename  = "scene.json";
   string imagename = "out.png";
-  string outname   = "out.yaml";
+  string outname   = "out.json";
   string name      = "";
 
   // scene
@@ -268,7 +268,7 @@ void load_scene_async(app_states* apps, const string& filename,
   app->name      = path{filename}.filename().string() + " [loading]";
   app->filename  = filename;
   app->imagename = path{filename}.replace_extension(".png").string();
-  app->outname   = path{filename}.replace_extension(".edited.yaml").string();
+  app->outname   = path{filename}.replace_extension(".edited.json").string();
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name,
@@ -457,14 +457,14 @@ T1* get_element(
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
-          "", "*.yaml;*.obj;*.pbrt")) {
+          "", "*.json;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
           "save", save_path, true, path{save_path}.parent_path().string(),
-          path{save_path}.filename().string(), "*.yaml;*.obj;*.pbrt")) {
+          path{save_path}.filename().string(), "*.json;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -598,7 +598,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  if (!app->ioscene->instances.empty() && begin_header(win, "objects")) {
+  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
     draw_combobox(win, "instance##2", app->selected_instance,
         app->ioscene->instances, true);
     if (draw_widgets(win, app->ioscene, app->selected_instance)) {
