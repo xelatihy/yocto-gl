@@ -51,8 +51,9 @@
 #include "ext/imgui/imgui_impl_opengl3.h"
 #include "ext/imgui/imgui_internal.h"
 
-#define CUTE_FILES_IMPLEMENTATION
-#include "ext/cute_files.h"
+// filesystem
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 #ifdef _WIN32
 #undef near
@@ -1992,20 +1993,14 @@ struct filedialog_state {
 
   void refresh() {
     entries.clear();
-    cf_dir_t dir;
-    cf_dir_open(&dir, dirname.c_str());
-    while (dir.has_next) {
-      cf_file_t file;
-      cf_read_file(&dir, &file);
-      cf_dir_next(&dir);
-      if (remove_hidden && file.name[0] == '.') continue;
-      if (file.is_dir) {
-        entries.push_back({file.name + "/"s, true});
+    for (auto entry : fs::directory_iterator(dirname)) {
+      if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
+      if (entry.is_directory()) {
+        entries.push_back({entry.path().stem().string() + "/", true});
       } else {
-        entries.push_back({file.name, false});
+        entries.push_back({entry.path().stem().string(), false});
       }
     }
-    cf_dir_close(&dir);
     std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
       if (a.second == b.second) return a.first < b.first;
       return a.second;
