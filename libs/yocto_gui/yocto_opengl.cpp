@@ -31,24 +31,12 @@
 
 #include <algorithm>
 #include <cstdarg>
-#include <filesystem>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
 #include "ext/glad/glad.h"
-
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#endif
-#include <GLFW/glfw3.h>
-
-#include "ext/imgui/imgui.h"
-#include "ext/imgui/imgui_impl_glfw.h"
-#include "ext/imgui/imgui_impl_opengl3.h"
-#include "ext/imgui/imgui_internal.h"
 
 #ifdef _WIN32
 #undef near
@@ -61,11 +49,8 @@
 namespace yocto {
 
 // using directives
-using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
-using std::filesystem::directory_iterator;
-using std::filesystem::path;
 using namespace std::string_literals;
 
 }  // namespace yocto
