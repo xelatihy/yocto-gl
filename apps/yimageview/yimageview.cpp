@@ -135,7 +135,7 @@ void load_image_async(app_states* apps, const string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname  = path(filename).replace_extension(".display.png").string();
-  app->name     = path(filename).filename();
+  app->name     = path(filename).filename().string();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;
