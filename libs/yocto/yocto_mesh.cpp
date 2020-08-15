@@ -2476,23 +2476,16 @@ mesh_point eval_path_point(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 // Load ply mesh
-[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+[[nodiscard]] bool load_mesh(const path& filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
@@ -2502,7 +2495,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = filename.string();
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2551,21 +2544,21 @@ static string get_extension(const string& filename) {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_mesh(const string& filename,
+[[nodiscard]] bool save_mesh(const path& filename,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec3f>& colors, string& error, bool ascii,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2596,15 +2589,15 @@ static string get_extension(const string& filename) {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+[[nodiscard]] bool load_lines(const path& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
@@ -2614,7 +2607,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2663,21 +2656,20 @@ static string get_extension(const string& filename) {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii,
-    bool flip_texcoord) {
+[[nodiscard]] bool save_lines(const path& filename, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = filename.string() + ": unknown format";
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = filename.string() + ": empty shape";
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2705,6 +2697,42 @@ static string get_extension(const string& filename) {
   } else {
     return format_error();
   }
+}
+
+// Load ply mesh
+[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec3f>& colors, string& error, bool flip_texcoord) {
+  return load_mesh(path{filename}, triangles, positions, normals, texcoords,
+      colors, error, flip_texcoord);
+}
+
+// Save ply mesh
+[[nodiscard]] bool save_mesh(const string& filename,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, string& error, bool ascii,
+    bool flip_texcoord) {
+  return save_mesh(path{filename}, triangles, positions, normals, texcoords,
+      colors, error, ascii, flip_texcoord);
+}
+
+// Load ply mesh
+[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec3f>& colors, string& error, bool flip_texcoord) {
+  return load_lines(path{filename}, lines, positions, normals, texcoords,
+      colors, error, flip_texcoord);
+}
+
+// Save ply mesh
+[[nodiscard]] bool save_lines(const string& filename,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, string& error, bool ascii,
+    bool flip_texcoord) {
+  return save_lines(path{filename}, lines, positions, normals, texcoords,
+      colors, error, ascii, flip_texcoord);
 }
 
 }  // namespace yocto
