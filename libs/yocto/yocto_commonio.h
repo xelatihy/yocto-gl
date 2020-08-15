@@ -376,7 +376,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename) {
-  auto fs = fopen(filename.string().c_str(), "r");
+  auto fs = fopen(filename.c_str(), "r");
   if (fs) {
     fclose(fs);
     return true;

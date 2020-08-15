@@ -2325,9 +2325,9 @@ static inline bool save_yvol(
 }
 
 // Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
+bool load_volume(const path& filename, volume<float>& vol, string& error) {
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
   auto width = 0, height = 0, depth = 0, ncomp = 0;
@@ -2341,9 +2341,9 @@ bool load_volume(const string& filename, volume<float>& vol, string& error) {
 
 // Saves volume data in binary format.
 bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
+    const path& filename, const volume<float>& vol, string& error) {
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
   if (!save_yvol(filename.string().c_str(), vol.size().x, vol.size().y,

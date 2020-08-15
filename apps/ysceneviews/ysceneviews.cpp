@@ -51,9 +51,9 @@ void print_obj_camera(scene_camera* camera);
 // Application state
 struct app_state {
   // loading parameters
-  string filename  = "scene.json";
-  string imagename = "out.png";
-  string outname   = "scene.json";
+  path   filename  = "scene.json";
+  path   imagename = "out.png";
+  path   outname   = "scene.json";
   string name      = "";
 
   // options
