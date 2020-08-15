@@ -2306,7 +2306,7 @@ struct filedialog_state {
 
   void refresh() {
     entries.clear();
-    for (auto entry : directory_iterator(path(dirname))) {
+    for (auto entry : directory_iterator(path{dirname})) {
       if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
       if (entry.is_directory()) {
         entries.push_back({entry.path().stem().string() + "/", true});

@@ -270,10 +270,9 @@ int main(int argc, const char* argv[]) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
-  if (ext == ".ypreset") {
-    if (!make_shape_preset(shape, basename, ioerror)) print_fatal(ioerror);
+  if (path{filename}.extension().string() == ".ypreset") {
+    if (!make_shape_preset(shape, path{filename}.stem().string(), ioerror))
+      print_fatal(ioerror);
   } else {
     if (!load_shape(filename, shape, ioerror, facevarying))
       print_fatal(ioerror);
