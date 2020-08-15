@@ -3498,24 +3498,16 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 // Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
+static bool save_text(const path& filename, const string& str, string& error) {
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fprintf(fs, "%s", str.c_str()) < 0) {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   }
   return true;
@@ -3551,7 +3543,7 @@ static bool save_text(
   colors        = {};
   radius        = {};
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -3651,7 +3643,7 @@ static bool save_text(
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = filename.extension();
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
