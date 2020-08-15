@@ -2287,7 +2287,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   // save material library
   if (!obj->materials.empty()) {
     if (!format_obj_values(fs, "mtllib {}\n\n",
-            path{filename}.filename().replace_extension(".mtl")))
+            path{filename}.filename().replace_extension(".mtl").string()))
       return write_error();
   }
 
