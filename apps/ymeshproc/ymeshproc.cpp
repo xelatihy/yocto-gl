@@ -32,9 +32,8 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
+#include <filesystem>
+using namespace std::filesystem;
 using namespace std::string_literals;
 
 // Shape presets used ofr testing.
@@ -169,8 +168,8 @@ int main(int argc, const char* argv[]) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load mesh", 0, 1);
-  auto ext      = sfs::path(filename).extension().string();
-  auto basename = sfs::path(filename).stem().string();
+  auto ext      = path(filename).extension().string();
+  auto basename = path(filename).stem().string();
   if (ext == ".ypreset") {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
             basename, ioerror))
