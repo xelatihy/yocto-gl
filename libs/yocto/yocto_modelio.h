@@ -38,6 +38,7 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -55,6 +56,7 @@ using std::array;
 using std::string;
 using std::unordered_map;
 using std::vector;
+using std::filesystem::path;
 
 }  // namespace yocto
 
@@ -115,8 +117,14 @@ struct ply_model {
 };
 
 // Load and save ply
-bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, ply_model* ply, string& error);
+bool load_ply(const path& filename, ply_model* ply, string& error);
+bool save_ply(const path& filename, ply_model* ply, string& error);
+
+// Load and save ply
+[[deprecated]] bool load_ply(
+    const string& filename, ply_model* ply, string& error);
+[[deprecated]] bool save_ply(
+    const string& filename, ply_model* ply, string& error);
 
 // Get ply properties
 bool has_property(
@@ -346,10 +354,17 @@ struct obj_model {
 };
 
 // Load and save obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(const path& filename, obj_model* obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const string& filename, obj_model* obj, string& error);
+bool save_obj(const path& filename, const obj_model* obj, string& error);
+
+// Load and save obj
+[[deprecated]] bool load_obj(const string& filename, obj_model* obj,
+    string& error, bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
+[[deprecated]] bool save_obj(
+    const string& filename, const obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -540,9 +555,15 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
+bool load_pbrt(const path& filename, pbrt_model* pbrt, string& error);
+bool save_pbrt(const path& filename, pbrt_model* pbrt, string& error,
     bool ply_meshes = false);
+
+// Load/save pbrt
+[[deprecated]] bool load_pbrt(
+    const string& filename, pbrt_model* pbrt, string& error);
+[[deprecated]] bool save_pbrt(const string& filename, pbrt_model* pbrt,
+    string& error, bool ply_meshes = false);
 
 // Create pbrt
 pbrt_camera*      add_camera(pbrt_model* pbrt);

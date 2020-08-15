@@ -316,7 +316,7 @@ inline ply_property* add_property(ply_element* element) {
 }
 
 // Load ply
-bool load_ply(const string& filename, ply_model* ply, string& error) {
+bool load_ply(const path& filename, ply_model* ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
@@ -335,15 +335,15 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
@@ -585,7 +585,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 }
 
 // Save ply
-bool save_ply(const string& filename, ply_model* ply, string& error) {
+bool save_ply(const path& filename, ply_model* ply, string& error) {
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -599,11 +599,11 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
 
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
@@ -771,6 +771,16 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
   }
 
   return true;
+}
+
+// Load and save ply
+[[deprecated]] bool load_ply(
+    const string& filename, ply_model* ply, string& error) {
+  return load_ply(path{filename}, ply, error);
+}
+[[deprecated]] bool save_ply(
+    const string& filename, ply_model* ply, string& error) {
+  return save_ply(path{filename}, ply, error);
 }
 
 // Get ply properties
@@ -1420,18 +1430,18 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const path& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
@@ -1660,18 +1670,18 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 
 // Read obj
 [[nodiscard]] inline bool load_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const path& filename, obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
 
@@ -1761,23 +1771,23 @@ obj_shape* add_shape(obj_model* obj) {
 }
 
 // Read obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(const path& filename, obj_model* obj, string& error,
     bool geom_only, bool split_elements, bool split_materials) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -2002,15 +2012,15 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_mtl(
-    const string& filename, obj_model* obj, string& error) {
+    const path& filename, const obj_model* obj, string& error) {
   // throw helpers
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
@@ -2184,14 +2194,14 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] inline bool save_objx(
-    const string& filename, obj_model* obj, string& error) {
+    const path& filename, const obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
 
@@ -2244,24 +2254,24 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
 // Save obj
 [[nodiscard]] bool save_obj(
-    const string& filename, obj_model* obj, string& error) {
+    const path& filename, const obj_model* obj, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
   // open file
   auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  if (!fs) throw std::runtime_error{filename.string() + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
@@ -2341,6 +2351,18 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // done
   return true;
+}
+
+// Read obj
+[[nodiscard]] inline bool load_obj(const string& filename, obj_model* obj,
+    string& error, bool geom_only, bool split_elements, bool split_materials) {
+  return load_obj(
+      path{filename}, obj, error, geom_only, split_elements, split_materials);
+}
+// Save obj
+[[nodiscard]] inline bool save_obj(
+    const string& filename, const obj_model* obj, string& error) {
+  return save_obj(path{filename}, obj, error);
 }
 
 // Get obj vertices
@@ -4438,7 +4460,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-[[nodiscard]] inline bool load_pbrt(const string& filename, pbrt_model* pbrt,
+[[nodiscard]] inline bool load_pbrt(const path& filename, pbrt_model* pbrt,
     string& error, pbrt_context& ctx,
     unordered_map<string, pbrt_material*>& material_map,
     unordered_map<string, pbrt_material>&  named_materials,
@@ -4447,23 +4469,23 @@ struct pbrt_context {
     const string&                          ply_dirname) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = filename.string() + ": parse error";
     return false;
   };
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = filename.string() + ": read error";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
   auto command_error = [filename, &error](const string& cmd) {
-    error = filename + ": unknown command " + cmd;
+    error = filename.string() + ": unknown command " + cmd;
     return false;
   };
 
@@ -4496,21 +4518,25 @@ struct pbrt_context {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
       if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [bad stack]"};
       ctx.stack.pop_back();
       if (ctx.stack.size() != 1)
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [bad stack]"};
     } else if (cmd == "AttributeBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "AttributeEnd") {
       if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "TransformBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "TransformEnd") {
       if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [bad stack]"};
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
@@ -4523,7 +4549,8 @@ struct pbrt_context {
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
       if (ctx.objects.find(object) == ctx.objects.end())
-        throw std::runtime_error{filename + ": parse error [unknown object]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [unknown object]"};
       for (auto shape : ctx.objects.at(object)) {
         shape->instances.push_back(ctx.stack.back().transform_start);
         shape->instaends.push_back(ctx.stack.back().transform_end);
@@ -4541,7 +4568,8 @@ struct pbrt_context {
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = true;
       } else {
-        throw std::runtime_error{filename + ": parse error [bad coordsys]"};
+        throw std::runtime_error{
+            filename.string() + ": parse error [bad coordsys]"};
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
@@ -4762,7 +4790,7 @@ pbrt_light* add_light(pbrt_model* pbrt) {
 }
 
 // load pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
+bool load_pbrt(const path& filename, pbrt_model* pbrt, string& error) {
   auto ctx             = pbrt_context{};
   auto material_map    = unordered_map<string, pbrt_material*>{};
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
@@ -4867,18 +4895,18 @@ inline void format_pbrt_value(string& str, const vector<pbrt_value>& values) {
 }
 
 bool save_pbrt(
-    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
+    const path& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
   // error helpers
   auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
+    error = filename.string() + ": file not found";
     return false;
   };
   auto write_error = [filename, &error]() {
-    error = filename + ": write error";
+    error = filename.string() + ": write error";
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = filename.string() + ": error in " + error;
     return false;
   };
 
@@ -5087,6 +5115,15 @@ bool save_pbrt(
 
   // done
   return true;
+}
+
+// load pbrt
+bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
+  return load_pbrt(path{filename}, pbrt, error);
+}
+bool save_pbrt(
+    const string& filename, pbrt_model* pbrt, string& error, bool ply_meshes) {
+  return save_pbrt(path{filename}, pbrt, error, ply_meshes);
 }
 
 }  // namespace yocto
