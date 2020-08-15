@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -59,6 +60,7 @@ using std::function;
 using std::string;
 using std::unordered_set;
 using std::vector;
+using std::filesystem::path;
 using namespace std::string_literals;
 
 }  // namespace yocto

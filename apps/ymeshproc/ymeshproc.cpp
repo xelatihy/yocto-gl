@@ -32,10 +32,6 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 
-#include <filesystem>
-using namespace std::filesystem;
-using namespace std::string_literals;
-
 // Shape presets used ofr testing.
 bool make_mesh_preset(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
