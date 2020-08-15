@@ -796,9 +796,9 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
 }
 
 void make_dir(const string& dirname) {
-  if (exists(path(dirname))) return;
+  if (exists(path{dirname})) return;
   try {
-    create_directories(path(dirname));
+    create_directories(path{dirname});
   } catch (...) {
     print_fatal("cannot create directory " + dirname);
   }
@@ -822,8 +822,8 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext         = path(filename).extension().string();
-  auto basename    = path(filename).stem().string();
+  auto ext         = path{filename}.extension().string();
+  auto basename    = path{filename}.stem().string();
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
@@ -853,16 +853,16 @@ int main(int argc, const char* argv[]) {
   }
 
   // tesselate if needed
-  if (path(output).extension() != ".json") {
+  if (path{output}.extension() != ".json") {
     tesselate_shapes(scene, print_progress);
   }
 
   // make a directory if needed
-  make_dir(path(output).parent_path().string());
+  make_dir(path{output}.parent_path().string());
   if (!scene->shapes.empty())
-    make_dir((path(output).parent_path() / "shapes").string());
+    make_dir((path{output}.parent_path() / "shapes").string());
   if (!scene->textures.empty())
-    make_dir((path(output).parent_path() / "textures").string());
+    make_dir((path{output}.parent_path() / "textures").string());
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

@@ -134,8 +134,8 @@ void update_display(app_state* app) {
 void load_image_async(app_states* apps, const string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
-  app->outname  = path(filename).replace_extension(".display.png").string();
-  app->name     = path(filename).filename().string();
+  app->outname  = path{filename}.replace_extension(".display.png").string();
+  app->name     = path{filename}.filename().string();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;
@@ -164,8 +164,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save image", save_path, true, path(save_path).parent_path().string(),
-          path(save_path).filename().string(),
+          "save image", save_path, true, path{save_path}.parent_path().string(),
+          path{save_path}.filename().string(),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
@@ -227,7 +227,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "image", path(app->filename).filename().string());
+    draw_label(win, "image", path{app->filename}.filename().string());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "image",

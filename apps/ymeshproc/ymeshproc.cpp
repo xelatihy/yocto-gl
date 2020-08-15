@@ -164,8 +164,8 @@ int main(int argc, const char* argv[]) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load mesh", 0, 1);
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
+  auto ext      = path{filename}.extension().string();
+  auto basename = path{filename}.stem().string();
   if (ext == ".ypreset") {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
             basename, ioerror))

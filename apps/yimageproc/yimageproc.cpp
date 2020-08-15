@@ -281,8 +281,8 @@ int main(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
+  auto ext      = path{filename}.extension().string();
+  auto basename = path{filename}.stem().string();
   auto ioerror  = ""s;
   auto img      = image<vec4f>{};
   if (ext == ".ypreset") {
