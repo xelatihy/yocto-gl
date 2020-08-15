@@ -123,8 +123,8 @@ int main(int argc, const char* argv[]) {
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
-  auto output               = "out.ply"s;
-  auto filename             = "mesh.ply"s;
+  auto output               = path{"out.ply"};
+  auto filename             = path{"mesh.ply"};
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
@@ -164,11 +164,10 @@ int main(int argc, const char* argv[]) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load mesh", 0, 1);
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
+  auto ext = filename.extension();
   if (ext == ".ypreset") {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,
-            basename, ioerror))
+            filename.stem().string(), ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_mesh(filename, triangles, positions, normals, texcoords, colors,

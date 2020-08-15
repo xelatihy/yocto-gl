@@ -127,10 +127,10 @@ bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
 }
 
 int main(int argc, const char *argv[]) {
-  auto outname     = "out.png"s;
-  auto filename    = "img.hdr"s;
-  auto albedo_name = ""s;
-  auto normal_name = ""s;
+  auto outname     = path{"out.png"s};
+  auto filename    = path{"img.hdr"s};
+  auto albedo_name = path{""s};
+  auto normal_name = path{""s};
 
   // parse cli arguments and assure their correctness
   auto cli = make_cli(

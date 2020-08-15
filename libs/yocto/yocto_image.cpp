@@ -2084,85 +2084,85 @@ bool is_hdr_filename(const path& filename) {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
-  return is_hdr_filename(path(filename));
+  return is_hdr_filename(path{filename});
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<vec4f>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<vec4f>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<vec4b>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<vec4b>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<vec3f>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<vec3f>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<vec3b>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<vec3b>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads an hdr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<float>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an hdr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<float>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads an ldr image.
 [[nodiscard]] bool load_image(
     const string& filename, image<byte>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 // Saves an ldr image.
 [[nodiscard]] bool save_image(
     const string& filename, const image<byte>& img, string& error) {
-  return save_image(path(filename), img, error);
+  return save_image(path{filename}, img, error);
 }
 
 // Loads a 16 bit image.
 [[nodiscard]] bool load_image(
     const string& filename, image<ushort>& img, string& error) {
-  return load_image(path(filename), img, error);
+  return load_image(path{filename}, img, error);
 }
 
 }  // namespace yocto

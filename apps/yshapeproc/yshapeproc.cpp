@@ -239,8 +239,8 @@ int main(int argc, const char* argv[]) {
   auto uscale        = 1.0f;
   auto translate     = zero3f;
   auto info          = false;
-  auto output        = "out.ply"s;
-  auto filename      = "mesh.ply"s;
+  auto output        = path{"out.ply"};
+  auto filename      = path{"mesh.ply"};
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
@@ -270,10 +270,10 @@ int main(int argc, const char* argv[]) {
   // load mesh
   auto ioerror = ""s;
   print_progress("load shape", 0, 1);
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
+  auto ext = filename.extension();
   if (ext == ".ypreset") {
-    if (!make_shape_preset(shape, basename, ioerror)) print_fatal(ioerror);
+    if (!make_shape_preset(shape, filename.stem().string(), ioerror))
+      print_fatal(ioerror);
   } else {
     if (!load_shape(filename, shape, ioerror, facevarying))
       print_fatal(ioerror);

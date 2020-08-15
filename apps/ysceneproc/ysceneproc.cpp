@@ -809,8 +809,8 @@ int main(int argc, const char* argv[]) {
   auto validate  = false;
   auto info      = false;
   auto copyright = ""s;
-  auto output    = "out.json"s;
-  auto filename  = "scene.json"s;
+  auto output    = path{"out.json"};
+  auto filename  = path{"scene.json"};
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
@@ -822,14 +822,13 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext         = path(filename).extension().string();
-  auto basename    = path(filename).stem().string();
+  auto ext         = filename.extension().string();
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
   if (ext == ".ypreset") {
     print_progress("make preset", 0, 1);
-    if (!make_preset(scene, basename, ioerror)) print_fatal(ioerror);
+    if (!make_preset(scene, filename.stem().string(), ioerror)) print_fatal(ioerror);
     print_progress("make preset", 1, 1);
   } else {
     if (!load_scene(filename, scene, ioerror, print_progress))

@@ -466,25 +466,25 @@ inline bool save_binary(
 
 // Load a text file
 inline bool load_text(const string& filename, string& str, string& error) {
-  return load_text(path(filename), str, error);
+  return load_text(path{filename}, str, error);
 }
 
 // Save a text file
 inline bool save_text(
     const string& filename, const string& str, string& error) {
-  return save_text(path(filename), str, error);
+  return save_text(path{filename}, str, error);
 }
 
 // Load a binary file
 inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
-  return load_binary(path(filename), data, error);
+  return load_binary(path{filename}, data, error);
 }
 
 // Save a binary file
 inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
-  return save_binary(path(filename), data, error);
+  return save_binary(path{filename}, data, error);
 }
 
 }  // namespace yocto
@@ -704,26 +704,26 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, path> ||
+                    std::is_same_v<T, bool> || std::is_integral_v<T> ||
+                    std::is_floating_point_v<T> || std::is_enum_v<T>,
       "unsupported type");
   return add_cli_option(cli, name, value, usage, req, {});
 }
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, T& value,
     const string& usage, const vector<string>& choices, bool req) {
-  static_assert(
-      std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, path> ||
+                    std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
   return add_cli_option(cli, name, value, usage, req, choices);
 }
 template <typename T>
 inline void add_option(cli_state& cli, const string& name, vector<T>& value,
     const string& usage, bool req) {
-  static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
-                    std::is_integral_v<T> || std::is_floating_point_v<T> ||
-                    std::is_enum_v<T>,
+  static_assert(std::is_same_v<T, string> || std::is_same_v<T, path> ||
+                    std::is_same_v<T, bool> || std::is_integral_v<T> ||
+                    std::is_floating_point_v<T> || std::is_enum_v<T>,
       "unsupported type");
   return add_cli_option(cli, name, value, usage, req, {});
 }

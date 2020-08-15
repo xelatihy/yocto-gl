@@ -45,9 +45,9 @@ void print_obj_camera(scene_camera* camera);
 // Application scene
 struct app_state {
   // loading options
-  string filename  = "app->yaml";
-  string imagename = "out.png";
-  string outname   = "out.yaml";
+  path   filename  = "app->yaml";
+  path   imagename = "out.png";
+  path   outname   = "out.yaml";
   string name      = "";
 
   // scene
@@ -261,16 +261,18 @@ void reset_display(app_state* app) {
       });
 }
 
-void load_scene_async(app_states* apps, const string& filename,
+void load_scene_async(app_states* apps, const path& filename,
     const string& camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
-  app->name      = path(filename).filename().string() + " [loading]";
+  app->name      = filename.filename().string() + " [loading]";
   app->filename  = filename;
-  app->imagename = path(filename).replace_extension(".png").string();
-  app->outname   = path(filename).replace_extension(".edited.yaml").string();
-  app->params    = apps->params;
-  app->status    = "load";
-  app->loader    = std::async(std::launch::async, [app, camera_name,
+  app->imagename = filename;
+  app->imagename.replace_extension(".png");
+  app->outname = filename;
+  app->outname.replace_extension(".edited.yaml");
+  app->params = apps->params;
+  app->status = "load";
+  app->loader = std::async(std::launch::async, [app, camera_name,
                                                    add_skyenv]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->current = current;

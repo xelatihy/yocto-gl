@@ -35,8 +35,8 @@ using namespace yocto;
 
 struct app_state {
   // original data
-  string filename = "image.png";
-  string outname  = "out.png";
+  path filename = path{"image.png"};
+  path outname  = path{"out.png"};
 
   // image data
   image<vec4f> source = {};
@@ -70,7 +70,6 @@ int main(int argc, const char* argv[]) {
   // prepare application
   auto app_guard = std::make_unique<app_state>();
   auto app       = app_guard.get();
-  auto filenames = vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgviews", "view images");

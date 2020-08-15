@@ -243,13 +243,13 @@ int main(int argc, const char* argv[]) {
   auto spatial_sigma       = 0.0f;
   auto range_sigma         = 0.0f;
   auto alpha_to_color      = false;
-  auto alpha_filename      = ""s;
-  auto coloralpha_filename = ""s;
-  auto diff_filename       = ""s;
+  auto alpha_filename      = path{};
+  auto coloralpha_filename = path{};
+  auto diff_filename       = path{};
   auto diff_signal         = false;
   auto diff_threshold      = 0.0f;
-  auto output              = "out.png"s;
-  auto filename            = "img.hdr"s;
+  auto output              = path{"out.png"};
+  auto filename            = path{"img.hdr"};
 
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");
@@ -281,12 +281,12 @@ int main(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
-  auto ioerror  = ""s;
-  auto img      = image<vec4f>{};
+  auto ext     = filename.extension().string();
+  auto ioerror = ""s;
+  auto img     = image<vec4f>{};
   if (ext == ".ypreset") {
-    if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
+    if (!make_image_preset(filename.stem().string(), img, ioerror))
+      print_fatal(ioerror);
   } else {
     if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
   }

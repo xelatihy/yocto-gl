@@ -40,8 +40,8 @@ using namespace yocto;
 // Application state
 struct app_state {
   // loading options
-  string filename  = "scene.yaml";
-  string imagename = "out.png";
+  path   filename  = "scene.yaml";
+  path   imagename = "out.png";
   string name      = "";
 
   // options

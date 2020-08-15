@@ -45,8 +45,8 @@ struct image_stats {
 struct app_state {
   // original data
   string name     = "";
-  string filename = "";
-  string outname  = "";
+  path   filename = "";
+  path   outname  = "";
 
   // image data
   image<vec4f> source  = {};
@@ -131,11 +131,12 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const string& filename) {
+void load_image_async(app_states* apps, const path& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
-  app->outname  = path(filename).replace_extension(".display.png").string();
-  app->name     = path(filename).filename().string();
+  app->outname  = filename;
+  app->outname.replace_extension(".display.png");
+  app->name     = filename.filename().string();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;

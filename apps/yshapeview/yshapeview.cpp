@@ -50,9 +50,9 @@ void print_obj_camera(scene_camera* camera);
 // Application state
 struct app_state {
   // loading parameters
-  string filename  = "shape.obj";
-  string imagename = "out.png";
-  string outname   = "out.obj";
+  path   filename  = "shape.obj";
+  path   imagename = "out.png";
+  path   outname   = "out.obj";
   string name      = "";
 
   // options
@@ -97,12 +97,14 @@ struct app_states {
 };
 
 void load_shape_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
-  auto app         = apps->states.emplace_back(new app_state{});
-  app->filename    = filename;
-  app->imagename   = path(filename).replace_extension(".png").string();
-  app->outname     = path(filename).replace_extension(".edited.obj").string();
-  app->name        = path(app->filename).filename().string();
+    app_states* apps, const path& filename, const string& camera_name = "") {
+  auto app       = apps->states.emplace_back(new app_state{});
+  app->filename  = filename;
+  app->imagename = filename;
+  app->imagename.replace_extension(".png");
+  app->outname = filename;
+  app->outname.replace_extension(".edited.obj");
+  app->name        = filename.filename().string();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {

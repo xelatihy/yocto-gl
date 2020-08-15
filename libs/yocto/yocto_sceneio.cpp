@@ -136,13 +136,13 @@ bool save_scene(const path& filename, const scene_model* scene, string& error,
 // Load a scene
 bool load_scene(const string& filename, scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  return load_scene(path(filename), scene, error, progress_cb, noparallel);
+  return load_scene(path{filename}, scene, error, progress_cb, noparallel);
 }
 
 // Save a scene
 bool save_scene(const string& filename, const scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  return save_scene(path(filename), scene, error, progress_cb, noparallel);
+  return save_scene(path{filename}, scene, error, progress_cb, noparallel);
 }
 
 }  // namespace yocto
@@ -701,10 +701,10 @@ static bool load_json_scene(const path& filename, scene_model* scene,
   auto get_filename = [filename](const string& name, const string& group,
                           const vector<string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = path(filename).parent_path() / group / (name + extension);
+      auto filepath = path{filename}.parent_path() / group / (name + extension);
       if (exists(filepath)) return filepath;
     }
-    return path(filename).parent_path() / group / (name + extensions.front());
+    return path{filename}.parent_path() / group / (name + extensions.front());
   };
 
   // load shapes
@@ -773,7 +773,7 @@ static bool load_json_scene(const path& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem().string();
+  if (scene->name == "") scene->name = filename.stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -907,7 +907,7 @@ static bool save_json_scene(const path& filename, const scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
                           const string& extension) {
-    return path(filename).parent_path() / group / (name + extension);
+    return filename.parent_path() / group / (name + extension);
   };
 
   // save shapes
@@ -1099,7 +1099,7 @@ static bool load_obj_scene(const path& filename, scene_model* scene,
 
   // get filename from name
   auto get_filename = [filename](const string& name) {
-    return path(filename).parent_path() / name;
+    return filename.parent_path() / name;
   };
 
   // load textures
@@ -1121,7 +1121,7 @@ static bool load_obj_scene(const path& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = path(filename).stem().string();
+  if (scene->name == "") scene->name = filename.stem().string();
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1244,7 +1244,7 @@ static bool save_obj_scene(const path& filename, const scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
                           const string& extension) {
-    return path(filename).parent_path() / group / (name + extension);
+    return filename.parent_path() / group / (name + extension);
   };
 
   // save textures
@@ -1374,7 +1374,7 @@ static bool load_gltf_scene(const path& filename, scene_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load buffers
-  auto dirname = path(filename).parent_path().string();
+  auto dirname = filename.parent_path();
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success)
@@ -1705,8 +1705,8 @@ static bool load_gltf_scene(const path& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [tpath, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image((path(filename).parent_path() / tpath).string(),
-            texture->colorf, texture->colorb, error))
+    if (!load_image(filename.parent_path() / tpath, texture->colorf,
+            texture->colorb, error))
       return dependent_error();
   }
 
@@ -1716,8 +1716,8 @@ static bool load_gltf_scene(const path& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = image<vec4f>{};
     auto color_opacityb = image<vec4b>{};
-    if (!load_image((path(filename).parent_path() / tpath).string(),
-            color_opacityf, color_opacityb, error))
+    if (!load_image(filename.parent_path() / tpath, color_opacityf,
+            color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
       auto [ctexture, otexture] = textures;
@@ -1755,8 +1755,8 @@ static bool load_gltf_scene(const path& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec3f>{};
     auto metallic_roughnessb = image<vec3b>{};
-    if (!load_image((path(filename).parent_path() / tpath).string(),
-            metallic_roughnessf, metallic_roughnessb, error))
+    if (!load_image(filename.parent_path() / tpath, metallic_roughnessf,
+            metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
