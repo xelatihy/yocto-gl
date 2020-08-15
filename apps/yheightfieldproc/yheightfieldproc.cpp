@@ -32,9 +32,6 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto smooth    = false;

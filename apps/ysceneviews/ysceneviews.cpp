@@ -39,9 +39,6 @@ using namespace yocto;
 #include <future>
 using namespace std::string_literals;
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 #ifdef _WIN32
 #undef near
 #undef far

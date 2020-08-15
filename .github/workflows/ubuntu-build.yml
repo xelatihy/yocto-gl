@@ -6,17 +6,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: install ubuntu dependencies
-      run: |
-        sudo apt-get update --yes
-        sudo apt-get install --yes ninja-build
-    - name: configure
-      run: |
-        mkdir build
-        cd build
-        cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
-    - name: build
-      run: |
-        cd build
-        cmake --build . --parallel 8
+      - uses: actions/checkout@v1
+      - name: install ubuntu dependencies
+        run: |
+          sudo apt-get update --yes
+          sudo apt-get install --yes ninja-build
+      - name: configure
+        env:
+          CC: gcc-8
+          CXX: g++-8
+        run: |
+          mkdir build
+          cd build
+          cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+      - name: build
+        run: |
+          cd build
+          cmake --build . --parallel 8

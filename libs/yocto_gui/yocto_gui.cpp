@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cstdarg>
+#include <filesystem>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -49,10 +50,6 @@
 #include "ext/imgui/imgui_impl_opengl3.h"
 #include "ext/imgui/imgui_internal.h"
 
-// filesystem
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
-
 #ifdef _WIN32
 #undef near
 #undef far
@@ -67,6 +64,8 @@ namespace yocto {
 using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
+using std::filesystem::directory_iterator;
+using std::filesystem::path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -2307,7 +2306,7 @@ struct filedialog_state {
 
   void refresh() {
     entries.clear();
-    for (auto entry : fs::directory_iterator(dirname)) {
+    for (auto entry : directory_iterator(path(dirname))) {
       if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
       if (entry.is_directory()) {
         entries.push_back({entry.path().stem().string() + "/", true});

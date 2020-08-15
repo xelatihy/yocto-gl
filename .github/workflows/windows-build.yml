@@ -6,17 +6,17 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: install dependencies
-      run: |
-        choco update
-        choco install ninja
-    - name: configure
-      run: |
-        mkdir build
-        cd build
-        cmake .. -GNinja -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF
-    - name: build
-      run: |
-        cd build
-        cmake --build . --parallel 8
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: |
+          choco update
+          choco install ninja
+      - name: configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 16 2019" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF
+      - name: build
+        run: |
+          cd build
+          cmake --build . --parallel 8

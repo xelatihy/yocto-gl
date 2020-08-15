@@ -36,9 +36,6 @@ using namespace yocto;
 
 #include <memory>
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
   auto rgb = image<vec3b>{rgba.imsize()};
   for (auto i = 0; i < rgb.count(); i++)
@@ -799,9 +796,9 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
 }
 
 void make_dir(const string& dirname) {
-  if (sfs::exists(dirname)) return;
+  if (exists(path(dirname))) return;
   try {
-    sfs::create_directories(dirname);
+    create_directories(path(dirname));
   } catch (...) {
     print_fatal("cannot create directory " + dirname);
   }
@@ -825,8 +822,8 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto ext         = sfs::path(filename).extension().string();
-  auto basename    = sfs::path(filename).stem().string();
+  auto ext         = path(filename).extension().string();
+  auto basename    = path(filename).stem().string();
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
@@ -856,16 +853,16 @@ int main(int argc, const char* argv[]) {
   }
 
   // tesselate if needed
-  if (sfs::path(output).extension() != ".json") {
+  if (path(output).extension() != ".json") {
     tesselate_shapes(scene, print_progress);
   }
 
   // make a directory if needed
-  make_dir(sfs::path(output).parent_path());
+  make_dir(path(output).parent_path().string());
   if (!scene->shapes.empty())
-    make_dir(sfs::path(output).parent_path() / "shapes");
+    make_dir((path(output).parent_path() / "shapes").string());
   if (!scene->textures.empty())
-    make_dir(sfs::path(output).parent_path() / "textures");
+    make_dir((path(output).parent_path() / "textures").string());
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

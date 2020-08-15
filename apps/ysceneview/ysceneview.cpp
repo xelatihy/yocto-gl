@@ -38,9 +38,6 @@ using namespace yocto;
 #include <deque>
 #include <future>
 
-#include "ext/filesystem.hpp"
-namespace sfs = ghc::filesystem;
-
 #ifdef _WIN32
 #undef near
 #undef far
@@ -112,9 +109,9 @@ void load_scene_async(
     app_states* apps, const string& filename, const string& camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
-  app->imagename   = sfs::path(filename).replace_extension(".png");
-  app->outname     = sfs::path(filename).replace_extension(".edited.yaml");
-  app->name        = sfs::path(app->filename).filename();
+  app->imagename   = path(filename).replace_extension(".png").string();
+  app->outname     = path(filename).replace_extension(".edited.yaml").string();
+  app->name        = path(app->filename).filename().string();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
@@ -425,8 +422,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, sfs::path(save_path).parent_path(),
-          sfs::path(save_path).filename(), "*.yaml;*.obj;*.pbrt")) {
+          "save", save_path, true, path(save_path).parent_path().string(),
+          path(save_path).filename().string(), "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -475,7 +472,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", sfs::path(app->filename).filename());
+    draw_label(win, "scene", path(app->filename).filename().string());
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);

@@ -29,12 +29,12 @@
 #include "yocto_modelio.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "ext/filesystem.hpp"
 #include "yocto_color.h"
 
 // -----------------------------------------------------------------------------
@@ -46,8 +46,8 @@ namespace yocto {
 using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
+using std::filesystem::path;
 using namespace std::string_literals;
-namespace sfs = ghc::filesystem;
 
 }  // namespace yocto
 
@@ -267,7 +267,7 @@ template <typename T>
 template <typename T>
 inline T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
   union {
     T             value;
     unsigned char bytes[sizeof(T)];
@@ -1924,7 +1924,8 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(sfs::path(filename).parent_path() / mtllib, obj, error))
+        if (!load_mtl(
+                (path(filename).parent_path() / mtllib).string(), obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -1972,9 +1973,9 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   if (geom_only) return true;
 
   // load extensions
-  auto extfilename = sfs::path(filename).replace_extension(".objx");
-  if (sfs::exists(sfs::path(extfilename))) {
-    if (!load_objx(extfilename, obj, error)) return dependent_error();
+  auto extfilename = path(filename).replace_extension(".objx");
+  if (exists(path(extfilename))) {
+    if (!load_objx(extfilename.string(), obj, error)) return dependent_error();
   }
 
   return true;
@@ -2277,7 +2278,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   // save material library
   if (!obj->materials.empty()) {
     if (!format_obj_values(fs, "mtllib {}\n\n",
-            sfs::path(filename).filename().replace_extension(".mtl")))
+            (path(filename).filename().replace_extension(".mtl").string())))
       return write_error();
   }
 
@@ -2324,7 +2325,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    if (!save_mtl(sfs::path(filename).replace_extension(".mtl"), obj, error))
+    if (!save_mtl(
+            path(filename).replace_extension(".mtl").string(), obj, error))
       return dependent_error();
   }
 
@@ -2332,7 +2334,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    if (!save_objx(sfs::path(filename).replace_extension(".objx"), obj, error))
+    if (!save_objx(
+            path(filename).replace_extension(".objx").string(), obj, error))
       return dependent_error();
   }
 
@@ -3564,18 +3567,18 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
         auto filenames = vector<string>{};
         if (!parse_pbrt_value(str, filename)) return false;
         if (!str.data()) return false;
-        auto filenamep = sfs::path(filename).filename();
-        if (sfs::path(filenamep).extension() == ".spd") {
-          filenamep = sfs::path(filenamep).replace_extension("").string();
+        auto filenamep = path(filename).filename();
+        if (path(filenamep).extension() == ".spd") {
+          filenamep = path(filenamep).replace_extension("").string();
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (sfs::path(filenamep).extension() == ".eta") {
+          } else if (path(filenamep).extension() == ".eta") {
             auto eta =
-                get_etak(sfs::path(filenamep).replace_extension("")).first;
+                get_etak(path(filenamep).replace_extension("").string()).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (sfs::path(filenamep).extension() == ".k") {
+          } else if (path(filenamep).extension() == ".k") {
             auto k =
-                get_etak(sfs::path(filenamep).replace_extension("")).second;
+                get_etak(path(filenamep).replace_extension("").string()).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             return false;
@@ -4722,8 +4725,8 @@ struct pbrt_context {
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
-      if (!load_pbrt(sfs::path(filename).parent_path() / includename, pbrt,
-              error, ctx, material_map, named_materials, named_textures,
+      if (!load_pbrt((path(filename).parent_path() / includename).string(),
+              pbrt, error, ctx, material_map, named_materials, named_textures,
               named_mediums, ply_dirname))
         return dependent_error();
     } else {
@@ -4765,7 +4768,7 @@ bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname         = sfs::path(filename).parent_path().string();
+  auto dirname         = path(filename).parent_path().string();
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
           named_textures, named_mediums, dirname))
@@ -5041,8 +5044,8 @@ bool save_pbrt(
       add_normals(ply, shape->normals);
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
-      if (!save_ply(
-              sfs::path(filename).parent_path() / shape->filename_, ply, error))
+      if (!save_ply((path(filename).parent_path() / shape->filename_).string(),
+              ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
