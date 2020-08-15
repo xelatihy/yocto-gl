@@ -2055,7 +2055,7 @@ static bool save_pbrt_scene(const path& filename, const scene_model* scene,
   for (auto instance : scene->instances) {
     auto pshape = add_shape(pbrt);
     pshape->filename_ =
-        path(instance->shape->name).replace_extension(".ply").string();
+        path{instance->shape->name}.replace_extension(".ply").string();
     pshape->frame    = instance->frame;
     pshape->frend    = instance->frame;
     pshape->material = material_map.at(instance->material);

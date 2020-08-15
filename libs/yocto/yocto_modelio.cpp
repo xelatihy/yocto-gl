@@ -1982,8 +1982,7 @@ bool load_obj(const path& filename, obj_model* obj, string& error,
   if (geom_only) return true;
 
   // load extensions
-  auto extfilename = filename;
-  extfilename.replace_extension(".objx");
+  auto extfilename = path{filename}.replace_extension(".objx");
   if (exists(path(extfilename))) {
     if (!load_objx(extfilename.string(), obj, error)) return dependent_error();
   }
@@ -2287,8 +2286,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // save material library
   if (!obj->materials.empty()) {
-    if (!format_obj_values(
-            fs, "mtllib {}\n\n", filename.filename().replace_extension(".mtl")))
+    if (!format_obj_values(fs, "mtllib {}\n\n",
+            path{filename}.filename().replace_extension(".mtl")))
       return write_error();
   }
 
@@ -2335,8 +2334,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // save mtl
   if (!obj->materials.empty()) {
-    auto mtlname = filename;
-    mtlname.replace_extension("*.mtl");
+    auto mtlname = path{filename}.replace_extension("*.mtl");
     if (!save_mtl(mtlname, obj, error)) return dependent_error();
   }
 
@@ -2344,8 +2342,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!obj->cameras.empty() || !obj->environments.empty() ||
       std::any_of(obj->shapes.begin(), obj->shapes.end(),
           [](auto shape) { return !shape->instances.empty(); })) {
-    auto objxname = filename;
-    objxname.replace_extension("*.objx");
+    auto objxname = path{filename}.replace_extension("*.objx");
     if (!save_objx(objxname, obj, error)) return dependent_error();
   }
 

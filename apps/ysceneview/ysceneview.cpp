@@ -107,12 +107,10 @@ struct app_states {
 
 void load_scene_async(
     app_states* apps, const path& filename, const string& camera_name = "") {
-  auto app       = apps->states.emplace_back(new app_state{});
-  app->filename  = filename;
-  app->imagename = filename;
-  app->imagename.replace_extension(".png");
-  app->outname = filename;
-  app->outname.replace_extension(".edited.json");
+  auto app         = apps->states.emplace_back(new app_state{});
+  app->filename    = filename;
+  app->imagename   = path{filename}.replace_extension(".png");
+  app->outname     = path{filename}.replace_extension(".edited.json");
   app->name        = filename.filename().string();
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";

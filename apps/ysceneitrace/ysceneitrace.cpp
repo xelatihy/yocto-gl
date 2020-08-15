@@ -266,13 +266,11 @@ void load_scene_async(app_states* apps, const path& filename,
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = filename.filename().string() + " [loading]";
   app->filename  = filename;
-  app->imagename = filename;
-  app->imagename.replace_extension(".png");
-  app->outname = filename;
-  app->outname.replace_extension(".edited.yaml");
-  app->params = apps->params;
-  app->status = "load";
-  app->loader = std::async(std::launch::async, [app, camera_name,
+  app->imagename = path{filename}.replace_extension(".png");
+  app->outname   = path{filename}.replace_extension(".edited.yaml");
+  app->params    = apps->params;
+  app->status    = "load";
+  app->loader    = std::async(std::launch::async, [app, camera_name,
                                                    add_skyenv]() {
     auto progress_cb = [app](const string& message, int current, int total) {
       app->current = current;

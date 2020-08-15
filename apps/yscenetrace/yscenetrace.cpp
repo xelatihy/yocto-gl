@@ -104,9 +104,8 @@ int main(int argc, const char* argv[]) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
                    imfilename.extension().string();
-        auto outfilename = imfilename;
-        outfilename.replace_extension(ext);
-        auto ioerror = ""s;
+        auto outfilename = path{imfilename}.replace_extension(ext);
+        auto ioerror     = ""s;
         print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });
@@ -124,7 +123,7 @@ int main(int argc, const char* argv[]) {
     auto imext = path(imfilename).extension();
     if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext.string();
 
-    auto base_name = path(imfilename).filename().replace_extension("").string();
+    auto base_name = path{imfilename}.filename().replace_extension("").string();
 
     auto fparams    = params;
     fparams.bounces = feature_bounces;
@@ -133,9 +132,9 @@ int main(int argc, const char* argv[]) {
     // render denoise albedo
     fparams.sampler      = trace_sampler_type::albedo;
     auto albedo          = trace_image(scene, camera, fparams, print_progress);
-    auto albedo_filename = imfilename;
-    albedo_filename.replace_filename(base_name + "-albedo");
-    albedo_filename.replace_extension(feature_ext);
+    auto albedo_filename = path{imfilename}
+                               .replace_filename(base_name + "-albedo")
+                               .replace_extension(feature_ext);
 
     print_progress("save albedo feature", 0, 1);
     if (!save_image(albedo_filename, albedo, ioerror)) print_fatal(ioerror);
@@ -144,9 +143,9 @@ int main(int argc, const char* argv[]) {
     // render denoise normals
     fparams.sampler      = trace_sampler_type::normal;
     auto normal          = trace_image(scene, camera, fparams, print_progress);
-    auto normal_filename = imfilename;
-    normal_filename.replace_filename(base_name + "-normal");
-    normal_filename.replace_extension(feature_ext);
+    auto normal_filename = path{imfilename}
+                               .replace_filename(base_name + "-normal")
+                               .replace_extension(feature_ext);
 
     print_progress("save normal feature", 0, 1);
     if (!save_image(normal_filename, normal, ioerror)) print_fatal(ioerror);

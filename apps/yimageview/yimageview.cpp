@@ -134,8 +134,7 @@ void update_display(app_state* app) {
 void load_image_async(app_states* apps, const path& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
-  app->outname  = filename;
-  app->outname.replace_extension(".display.png");
+  app->outname  = path{filename}.replace_extension(".display.png");
   app->name     = filename.filename().string();
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
