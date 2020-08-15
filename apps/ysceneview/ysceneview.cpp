@@ -514,10 +514,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     }
     end_header(win);
   }
-  if (!app->ioscene->instances.empty() && begin_header(win, "objects")) {
+  if (!app->ioscene->instances.empty() && begin_header(win, "instances")) {
     draw_combobox(
         win, "instance##2", app->selected_instance, app->ioscene->instances);
-    if (!draw_widgets(win, app->ioscene, app->selected_instance)) {
+    if (draw_widgets(win, app->ioscene, app->selected_instance)) {
       auto ioobject = app->selected_instance;
       auto globject = get_element(
           ioobject, app->ioscene->instances, app->glscene->instances);
