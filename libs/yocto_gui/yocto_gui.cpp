@@ -30,9 +30,7 @@
 #include "yocto_gui.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cstdarg>
-#include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -66,8 +64,6 @@ namespace fs = ghc::filesystem;
 namespace yocto {
 
 // using directives
-using std::atomic;
-using std::deque;
 using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
