@@ -157,7 +157,8 @@ void load_image_async(app_states* apps, const path& filename) {
 }
 
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static string load_path = "", save_path = "", error_message = "";
+  static string load_path = path{}, save_path = path{};
+  static auto   error_message = "";
   if (draw_filedialog_button(win, "load", true, "load image", load_path, false,
           "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);

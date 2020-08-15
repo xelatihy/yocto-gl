@@ -867,11 +867,19 @@ void draw_histogram(
 void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec4f>& values);
 
-bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+bool draw_filedialog(gui_window* win, const char* lbl, path& filepath,
+    bool save, const path& dirname, const path& filename, const string& filter);
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+    bool button_active, const char* lbl, path& filepath, bool save,
+    const path& dirname, const path& filename, const string& filter);
+
+[[deprecated]] bool draw_filedialog(gui_window* win, const char* lbl,
+    string& path, bool save, const string& dirname, const string& filename,
+    const string& filter);
+[[deprecated]] bool draw_filedialog_button(gui_window* win,
+    const char* button_lbl, bool button_active, const char* lbl, string& path,
+    bool save, const string& dirname, const string& filename,
+    const string& filter);
 
 void log_info(gui_window* win, const string& msg);
 void log_error(gui_window* win, const string& msg);

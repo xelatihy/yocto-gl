@@ -2328,13 +2328,16 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter) {
+
+bool draw_filedialog(gui_window* win, const char* lbl, path& filepath,
+    bool save, const path& dirname, const path& filename,
+    const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
-      states[lbl] = filedialog_state{dirname, filename, save, filter};
+      states[lbl] = filedialog_state{
+          dirname.string(), filename.string(), save, filter};
     }
     auto& state = states.at(lbl);
     char  dir_buffer[1024];
@@ -2365,9 +2368,9 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     }
     auto ok = false, exit = false;
     if (ImGui::Button("Ok")) {
-      path = state.dirname + state.filename;
-      ok   = true;
-      exit = true;
+      filepath = path{state.dirname} / state.filename;
+      ok       = true;
+      exit     = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Cancel")) {
@@ -2383,11 +2386,35 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     return false;
   }
 }
+
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
+    bool button_active, const char* lbl, path& filepath, bool save,
+    const path& dirname, const path& filename, const string& filter) {
+  if (is_glmodal_open(win, lbl)) {
+    return draw_filedialog(win, lbl, filepath, save, dirname, filename, filter);
+  } else {
+    if (draw_button(win, button_lbl, button_active)) {
+      open_glmodal(win, lbl);
+    }
+    return false;
+  }
+}
+
+bool draw_filedialog(gui_window* win, const char* lbl, string& filepath,
+    bool save, const string& dirname, const string& filename,
+    const string& filter) {
+  auto filepathp = path{filename};
+  auto selected  = draw_filedialog(
+      win, lbl, filepathp, save, path{dirname}, path{filename}, filter);
+  if (selected) filepath = filepathp.string();
+  return selected;
+}
+
+bool draw_filedialog_button(gui_window* win, const char* button_lbl,
+    bool button_active, const char* lbl, string& filepath, bool save,
     const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
-    return draw_filedialog(win, lbl, path, save, dirname, filename, filter);
+    return draw_filedialog(win, lbl, filepath, save, dirname, filename, filter);
   } else {
     if (draw_button(win, button_lbl, button_active)) {
       open_glmodal(win, lbl);
