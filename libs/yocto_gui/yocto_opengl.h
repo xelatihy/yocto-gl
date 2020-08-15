@@ -37,7 +37,7 @@
 #include <yocto/yocto_image.h>
 #include <yocto/yocto_math.h>
 
-#include <memory>
+#include <string>
 #include <vector>
 
 // forward declaration
