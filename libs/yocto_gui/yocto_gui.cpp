@@ -819,15 +819,19 @@ void set_attribute(
 
 // set vertex attributes
 void set_attribute(ogl_program* program, int location, float value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib1f(location, value);
 }
 void set_attribute(ogl_program* program, int location, const vec2f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib2f(location, value.x, value.y);
 }
 void set_attribute(ogl_program* program, int location, const vec3f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib3f(location, value.x, value.y, value.z);
 }
 void set_attribute(ogl_program* program, int location, const vec4f& value) {
+  glDisableVertexAttribArray(location);
   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
 }
 
@@ -1268,7 +1272,7 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
 }
 
 // add instance
-ogl_instance* add_object(ogl_scene* scene) {
+ogl_instance* add_instance(ogl_scene* scene) {
   return scene->instances.emplace_back(new ogl_instance{});
 }
 void set_frame(ogl_instance* instance, const frame3f& frame) {
@@ -1324,6 +1328,59 @@ void set_normalmap(ogl_material* material, ogl_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
+// shortcuts
+ogl_camera* add_camera(ogl_scene* scene, const frame3f& frame, float lens,
+    float aspect, float film, float near, float far) {
+  auto camera = add_camera(scene);
+  set_frame(camera, frame);
+  set_lens(camera, lens, aspect, film);
+  set_nearfar(camera, near, far);
+  return camera;
+}
+ogl_material* add_material(ogl_scene* scene, const vec3f& emission,
+    const vec3f& color, float specular, float metallic, float roughness,
+    ogl_texture* emission_tex, ogl_texture* color_tex,
+    ogl_texture* specular_tex, ogl_texture* metallic_tex,
+    ogl_texture* roughness_tex, ogl_texture* normalmap_tex) {
+  auto material = add_material(scene);
+  set_emission(material, emission, emission_tex);
+  set_color(material, color, color_tex);
+  set_specular(material, specular, specular_tex);
+  set_metallic(material, metallic, metallic_tex);
+  set_roughness(material, roughness, roughness_tex);
+  set_normalmap(material, normalmap_tex);
+  return material;
+}
+ogl_shape* add_shape(ogl_scene* scene, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec3f>& colors, bool edges) {
+  auto shape = add_shape(scene);
+  set_points(shape, points);
+  set_lines(shape, lines);
+  set_triangles(shape, triangles);
+  set_quads(shape, quads);
+  set_positions(shape, positions);
+  set_normals(shape, normals);
+  set_texcoords(shape, texcoords);
+  set_colors(shape, colors);
+  if (edges && (!triangles.empty() || !quads.empty())) {
+    set_edges(shape, triangles, quads);
+  }
+  return shape;
+}
+ogl_instance* add_instance(ogl_scene* scene, const frame3f& frame,
+    ogl_shape* shape, ogl_material* material, bool hidden, bool highlighted) {
+  auto instance = add_instance(scene);
+  set_frame(instance, frame);
+  set_shape(instance, shape);
+  set_material(instance, material);
+  set_hidden(instance, hidden);
+  set_highlighted(instance, highlighted);
+  return instance;
+}
+
 // add light
 ogl_light* add_light(ogl_scene* scene) {
   return scene->lights.emplace_back(new ogl_light{});
@@ -1359,6 +1416,7 @@ void draw_object(
 
   if (instance->hidden) return;
 
+  assert_ogl_error();
   auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
@@ -1370,6 +1428,7 @@ void draw_object(
   } else {
     set_uniform(scene->program, "highlight", vec4f{0, 0, 0, 0});
   }
+  assert_ogl_error();
 
   auto material = instance->material;
   auto mtype    = 2;
@@ -1393,6 +1452,7 @@ void draw_object(
       material->opacity_tex, 4);
   set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
       material->normal_tex, 5);
+  assert_ogl_error();
 
   auto shape = instance->shape;
   set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
@@ -1401,6 +1461,7 @@ void draw_object(
   set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
   set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
   set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
+  assert_ogl_error();
 
   if (is_initialized(shape->points)) {
     glPointSize(shape->points_size);
@@ -1419,15 +1480,17 @@ void draw_object(
     set_uniform(scene->program, "etype", 3);
     draw_elements(shape->quads);
   }
+  assert_ogl_error();
 
   if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
     set_uniform(scene->program, "mtype", mtype);
     set_uniform(scene->program, "emission", vec3f{0, 0, 0});
     set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
     set_uniform(scene->program, "specular", vec3f{0, 0, 0});
-    set_uniform(scene->program, "roughness", 1);
-    set_uniform(scene->program, "etype", 2);
+    set_uniform(scene->program, "roughness", 0);
+    set_uniform(scene->program, "etype", 3);
     draw_elements(shape->edges);
+    assert_ogl_error();
   }
 }
 
@@ -1453,10 +1516,13 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
+  assert_ogl_error();
   clear_ogl_framebuffer(params.background);
   set_ogl_viewport(viewport);
 
+  assert_ogl_error();
   bind_program(scene->program);
+  assert_ogl_error();
   set_uniform(scene->program, "eye", camera->frame.o);
   set_uniform(scene->program, "view", camera_view);
   set_uniform(scene->program, "projection", camera_proj);
@@ -1464,9 +1530,11 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
       params.shading == ogl_shading_type::eyelight ? 1 : 0);
   set_uniform(scene->program, "exposure", params.exposure);
   set_uniform(scene->program, "gamma", params.gamma);
+  assert_ogl_error();
 
   if (params.shading == ogl_shading_type::lights ||
       params.shading == ogl_shading_type::camlights) {
+    assert_ogl_error();
     auto& lights = params.shading == ogl_shading_type::lights ? scene->lights
                                                               : camera_lights;
     set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
@@ -1489,6 +1557,7 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
           scene->program, ("ltype[" + is + "]").c_str(), (int)light->type);
       lid++;
     }
+    assert_ogl_error();
   }
 
   if (params.wireframe) set_ogl_wireframe(true);
@@ -2002,7 +2071,7 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     }
     auto& state = states.at(lbl);
     char  dir_buffer[1024];
-    strcpy(dir_buffer, state.dirname.c_str());
+    snprintf(dir_buffer, sizeof(dir_buffer), "%s", state.dirname.c_str());
     if (ImGui::InputText("dir", dir_buffer, sizeof(dir_buffer))) {
       state.set_dirname(dir_buffer);
     }
@@ -2018,12 +2087,12 @@ bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
       state.select_entry(current_item);
     }
     char file_buffer[1024];
-    strcpy(file_buffer, state.filename.c_str());
+    snprintf(file_buffer, sizeof(file_buffer), "%s", state.filename.c_str());
     if (ImGui::InputText("file", file_buffer, sizeof(file_buffer))) {
       state.set_filename(file_buffer);
     }
     char filter_buffer[1024];
-    strcpy(filter_buffer, state.filter.c_str());
+    snprintf(filter_buffer, sizeof(filter_buffer), "%s", state.filter.c_str());
     if (ImGui::InputText("filter", filter_buffer, sizeof(filter_buffer))) {
       state.set_filter(filter_buffer);
     }
@@ -2161,6 +2230,16 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value, float speed,
 
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
+}
+bool draw_checkbox(gui_window* win, const char* lbl, bool& value, bool invert) {
+  if (!invert) {
+    return draw_checkbox(win, lbl, value);
+  } else {
+    auto inverted = !value;
+    auto edited   = ImGui::Checkbox(lbl, &inverted);
+    if (edited) value = !inverted;
+    return edited;
+  }
 }
 
 bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value) {

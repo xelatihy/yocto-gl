@@ -249,7 +249,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   // shapes
   for (auto ioinstance : ioscene->instances) {
     if (progress_cb) progress_cb("convert instance", progress.x++, progress.y);
-    auto globject = add_object(glscene);
+    auto globject = add_instance(glscene);
     set_frame(globject, ioinstance->frame);
     set_shape(globject, shape_map.at(ioinstance->shape));
     set_material(globject, material_map.at(ioinstance->material));

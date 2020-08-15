@@ -334,12 +334,14 @@ namespace yocto {
 
 // Opengl caemra
 struct ogl_camera {
-  frame3f frame  = identity3x4f;
-  float   lens   = 0.050;
-  float   aspect = 1.000;
-  float   film   = 0.036;
-  float   near   = 0.001;
-  float   far    = 10000;
+  frame3f frame    = identity3x4f;
+  float   lens     = 0.050;
+  float   aspect   = 1.000;
+  float   film     = 0.036;
+  float   near     = 0.001;
+  float   far      = 10000;
+  float   aperture = 0;
+  float   focus    = 0;
 };
 
 // Opengl material
@@ -458,7 +460,7 @@ ogl_camera*   add_camera(ogl_scene* scene);
 ogl_texture*  add_texture(ogl_scene* scene);
 ogl_material* add_material(ogl_scene* scene);
 ogl_shape*    add_shape(ogl_scene* scene);
-ogl_instance* add_object(ogl_scene* scene);
+ogl_instance* add_instance(ogl_scene* scene);
 ogl_light*    add_light(ogl_scene* scene);
 
 // camera properties
@@ -500,6 +502,23 @@ void set_shape(ogl_instance* instance, ogl_shape* shape);
 void set_material(ogl_instance* instance, ogl_material* material);
 void set_hidden(ogl_instance* instance, bool hidden);
 void set_highlighted(ogl_instance* instance, bool highlighted);
+
+// shortcuts
+ogl_camera*   add_camera(ogl_scene* scene, const frame3f& frame, float lens,
+      float aspect, float film = 0.036, float near = 0.001, float far = 10000);
+ogl_material* add_material(ogl_scene* scene, const vec3f& emission,
+    const vec3f& color, float specular, float metallic, float roughness,
+    ogl_texture* emission_tex = nullptr, ogl_texture* color_tex = nullptr,
+    ogl_texture* specular_tex = nullptr, ogl_texture* metallic_tex = nullptr,
+    ogl_texture* roughness_tex = nullptr, ogl_texture* normalmap_tex = nullptr);
+ogl_shape*    add_shape(ogl_scene* scene, const vector<int>& points,
+       const vector<vec2i>& lines, const vector<vec3i>& triangles,
+       const vector<vec4i>& quads, const vector<vec3f>& positions,
+       const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+       const vector<vec3f>& colors, bool edges = false);
+ogl_instance* add_instance(ogl_scene* scene, const frame3f& frame,
+    ogl_shape* shape, ogl_material* material, bool hidden = false,
+    bool highlighted = false);
 
 // light properties
 void add_default_lights(ogl_scene* scene);
@@ -701,6 +720,7 @@ bool draw_dragger(gui_window* win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
 bool draw_checkbox(gui_window* win, const char* lbl, bool& value);
+bool draw_checkbox(gui_window* win, const char* lbl, bool& value, bool invert);
 
 bool draw_coloredit(gui_window* win, const char* lbl, vec3f& value);
 bool draw_coloredit(gui_window* win, const char* lbl, vec4f& value);

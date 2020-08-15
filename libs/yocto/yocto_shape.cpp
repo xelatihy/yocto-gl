@@ -396,6 +396,13 @@ vector<vec2i> get_edges(const vector<vec3i>& triangles) {
 vector<vec2i> get_edges(const vector<vec4i>& quads) {
   return get_edges(make_edge_map(quads));
 }
+vector<vec2i> get_edges(
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+  auto edges      = get_edges(triangles);
+  auto more_edges = get_edges(quads);
+  edges.insert(edges.end(), more_edges.begin(), more_edges.end());
+  return edges;
+}
 
 // Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
