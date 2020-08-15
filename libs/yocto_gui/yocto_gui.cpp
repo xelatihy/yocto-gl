@@ -30,9 +30,7 @@
 #include "yocto_gui.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cstdarg>
-#include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -51,8 +49,9 @@
 #include "ext/imgui/imgui_impl_opengl3.h"
 #include "ext/imgui/imgui_internal.h"
 
-#define CUTE_FILES_IMPLEMENTATION
-#include "ext/cute_files.h"
+// filesystem
+#include "ext/filesystem.hpp"
+namespace fs = ghc::filesystem;
 
 #ifdef _WIN32
 #undef near
@@ -65,8 +64,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
-using std::deque;
 using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
@@ -1634,7 +1631,6 @@ static void draw_window(gui_window* win) {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
-      draw_messages(win);
       win->widgets_cb(win, win->input);
     }
     ImGui::End();
@@ -1894,46 +1890,6 @@ bool is_glmodal_open(gui_window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-bool draw_message(gui_window* win, const char* lbl, const string& message) {
-  if (ImGui::BeginPopupModal(lbl)) {
-    auto open = true;
-    ImGui::Text("%s", message.c_str());
-    if (ImGui::Button("Ok")) {
-      ImGui::CloseCurrentPopup();
-      open = false;
-    }
-    ImGui::EndPopup();
-    return open;
-  } else {
-    return false;
-  }
-}
-
-deque<string> _message_queue = {};
-mutex         _message_mutex;
-void          push_message(gui_window* win, const string& message) {
-  std::lock_guard lock(_message_mutex);
-  _message_queue.push_back(message);
-}
-bool draw_messages(gui_window* win) {
-  std::lock_guard lock(_message_mutex);
-  if (_message_queue.empty()) return false;
-  if (!is_glmodal_open(win, "<message>")) {
-    open_glmodal(win, "<message>");
-    return true;
-  } else if (ImGui::BeginPopupModal("<message>")) {
-    ImGui::Text("%s", _message_queue.front().c_str());
-    if (ImGui::Button("Ok")) {
-      ImGui::CloseCurrentPopup();
-      _message_queue.pop_front();
-    }
-    ImGui::EndPopup();
-    return true;
-  } else {
-    return false;
-  }
-}
-
 // Utility to normalize a path
 static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
@@ -2033,20 +1989,14 @@ struct filedialog_state {
 
   void refresh() {
     entries.clear();
-    cf_dir_t dir;
-    cf_dir_open(&dir, dirname.c_str());
-    while (dir.has_next) {
-      cf_file_t file;
-      cf_read_file(&dir, &file);
-      cf_dir_next(&dir);
-      if (remove_hidden && file.name[0] == '.') continue;
-      if (file.is_dir) {
-        entries.push_back({file.name + "/"s, true});
+    for (auto entry : fs::directory_iterator(dirname)) {
+      if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
+      if (entry.is_directory()) {
+        entries.push_back({entry.path().stem().string() + "/", true});
       } else {
-        entries.push_back({file.name, false});
+        entries.push_back({entry.path().stem().string(), false});
       }
     }
-    cf_dir_close(&dir);
     std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
       if (a.second == b.second) return a.first < b.first;
       return a.second;

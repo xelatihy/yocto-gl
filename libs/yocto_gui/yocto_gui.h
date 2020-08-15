@@ -778,8 +778,6 @@ void draw_histogram(
 void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec4f>& values);
 
-bool draw_messages(gui_window* win);
-void push_message(gui_window* win, const string& message);
 bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
