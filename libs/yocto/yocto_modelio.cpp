@@ -5072,8 +5072,7 @@ bool save_pbrt(
       add_normals(ply, shape->normals);
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
-      if (!save_ply((path(filename).parent_path() / shape->filename_).string(),
-              ply, error))
+      if (!save_ply(filename.parent_path() / shape->filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
