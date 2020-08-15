@@ -28,7 +28,8 @@
 
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_image.h>
-#include <yocto_gui/yocto_gui.h>
+#include <yocto_gui/yocto_imgui.h>
+#include <yocto_gui/yocto_opengl.h>
 using namespace yocto;
 
 #include <atomic>
