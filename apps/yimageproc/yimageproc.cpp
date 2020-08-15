@@ -281,12 +281,11 @@ int main(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto ext      = path(filename).extension().string();
-  auto basename = path(filename).stem().string();
-  auto ioerror  = ""s;
-  auto img      = image<vec4f>{};
-  if (ext == ".ypreset") {
-    if (!make_image_preset(basename, img, ioerror)) print_fatal(ioerror);
+  auto ioerror = ""s;
+  auto img     = image<vec4f>{};
+  if (path{filename}.extension().string() == ".ypreset") {
+    if (!make_image_preset(path{filename}.stem().string(), img, ioerror))
+      print_fatal(ioerror);
   } else {
     if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
   }
