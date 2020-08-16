@@ -2512,7 +2512,7 @@ mesh_point eval_path_point(const geodesic_path& path,
 namespace yocto {
 
 // Get extension (not including '.').
-static string get_extension(const string& filename) {
+static string path_extension(const string& filename) {
   auto pos = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
@@ -2537,7 +2537,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2600,7 +2600,7 @@ static string get_extension(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2649,7 +2649,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2712,7 +2712,7 @@ static string get_extension(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();

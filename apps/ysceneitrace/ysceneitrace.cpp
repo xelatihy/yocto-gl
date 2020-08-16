@@ -265,10 +265,10 @@ void reset_display(app_state* app) {
 void load_scene_async(app_states* apps, const string& filename,
     const string& camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
-  app->name      = path{filename}.filename().string() + " [loading]";
+  app->name      = path_filename(filename) + " [loading]";
   app->filename  = filename;
-  app->imagename = path{filename}.replace_extension(".png").string();
-  app->outname   = path{filename}.replace_extension(".edited.json").string();
+  app->imagename = replace_extension(filename, ".png");
+  app->outname   = replace_extension(filename, ".edited.json");
   app->params    = apps->params;
   app->status    = "load";
   app->loader    = std::async(std::launch::async, [app, camera_name,
@@ -463,8 +463,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, path{save_path}.parent_path().string(),
-          path{save_path}.filename().string(), "*.json;*.obj;*.pbrt")) {
+          "save", save_path, true, path_dirname(save_path),
+          path_filename(save_path), "*.json;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -473,8 +473,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   continue_line(win);
   if (draw_filedialog_button(win, "save image",
           apps->selected && apps->selected->ok, "save image", save_path, true,
-          path{save_path}.parent_path().string(),
-          path{save_path}.filename().string(),
+          path_dirname(save_path), path_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
@@ -528,7 +527,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", path{app->filename}.filename().string());
+    draw_label(win, "scene", app->name);
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);

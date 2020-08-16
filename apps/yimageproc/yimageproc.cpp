@@ -283,8 +283,8 @@ int main(int argc, const char* argv[]) {
   // load
   auto ioerror = ""s;
   auto img     = image<vec4f>{};
-  if (path{filename}.extension().string() == ".ypreset") {
-    if (!make_image_preset(path{filename}.stem().string(), img, ioerror))
+  if (path_extension(filename) == ".ypreset") {
+    if (!make_image_preset(path_basename(filename), img, ioerror))
       print_fatal(ioerror);
   } else {
     if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
