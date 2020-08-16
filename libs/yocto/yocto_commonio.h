@@ -140,23 +140,17 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// These utilities are here only for backward compatibility. They should be
-// considered deprecated.
-
 // Utility to normalize a path
 inline string normalize_path(const string& filename);
 
-// Get directory name (including '/').
+// Get directory name (not including '/').
 inline string get_dirname(const string& filename);
 
-// Get extension (not including '.').
+// Get extension (including '.').
 inline string get_extension(const string& filename);
 
 // Get filename without directory.
 inline string get_filename(const string& filename);
-
-// Get extension.
-inline string get_noextension(const string& filename);
 
 // Get filename without directory and extension.
 inline string get_basename(const string& filename);
@@ -300,67 +294,39 @@ inline void print_progress(const string& message, int current, int total) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Utility to normalize a path
-inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
+// Normalize path
+inline string normalize_path(const string& filename) {
+  return u8path(filename).generic_u8string();
 }
 
-// Get directory name (including '/').
-inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
+// Get directory name (not including /)
+inline string get_dirname(const string& filename) {
+  return u8path(filename).parent_path().generic_u8string();
 }
 
-// Get extension (not including '.').
-inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
+// Get extension (including .)
+inline string get_extension(const string& filename) {
+  return u8path(filename).extension().u8string();
 }
 
 // Get filename without directory.
-inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
+inline string get_filename(const string& filename) {
+  return u8path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
 inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
+  return u8path(filename).stem().u8string();
+}
+
+// Get filename without directory and extension.
+inline string get_stem(const string& filename) {
+  return u8path(filename).stem().u8string();
 }
 
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext) {
-  return get_noextension(filename) + ext;
+  return u8path(filename).replace_extension(ext).u8string();
 }
 
 // Check if a file can be opened for reading.
