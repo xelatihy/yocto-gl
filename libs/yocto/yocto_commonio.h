@@ -170,6 +170,9 @@ inline bool path_isdir(const string& filename);
 // Check if a file is a file
 inline bool path_isfile(const string& filename);
 
+// List the contents of a directory
+inline vector<string> list_directory(const string& filename);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -362,6 +365,15 @@ inline bool path_isdir(const string& filename) {
 // Check if a file is a file
 inline bool path_isfile(const string& filename) {
   return is_regular_file(make_path(filename));
+}
+
+// List the contents of a directory
+inline vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
 }
 
 }  // namespace yocto
