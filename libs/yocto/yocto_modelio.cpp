@@ -3768,7 +3768,7 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     return false;
   };
 
-  auto get_filename = [&texture_map](const string& name) {
+  auto make_filename = [&texture_map](const string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
@@ -3816,10 +3816,10 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     auto tex1 = pair{vec3f{0, 0, 0}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex2)) return parse_error();
-    if (!get_filename(tex1.second).empty()) {
-      ptexture->filename = get_filename(tex1.second);
-    } else if (!get_filename(tex2.second).empty()) {
-      ptexture->filename = get_filename(tex2.second);
+    if (!make_filename(tex1.second).empty()) {
+      ptexture->filename = make_filename(tex1.second);
+    } else if (!make_filename(tex2.second).empty()) {
+      ptexture->filename = make_filename(tex2.second);
     } else {
       ptexture->constant = {1, 0, 0};
     }
@@ -3828,10 +3828,10 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     auto tex1 = pair{vec3f{1, 1, 1}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
     if (!get_pbrt_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex1)) return parse_error();
-    if (!get_filename(tex1.second).empty()) {
-      ptexture->filename = get_filename(tex1.second);
-    } else if (!get_filename(tex2.second).empty()) {
-      ptexture->filename = get_filename(tex2.second);
+    if (!make_filename(tex1.second).empty()) {
+      ptexture->filename = make_filename(tex1.second);
+    } else if (!make_filename(tex2.second).empty()) {
+      ptexture->filename = make_filename(tex2.second);
     } else {
       ptexture->constant = {1, 0, 0};
     }
