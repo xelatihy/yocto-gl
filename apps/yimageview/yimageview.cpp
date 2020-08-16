@@ -136,7 +136,7 @@ void load_image_async(app_states* apps, const string& filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname  = replace_extension(filename, ".display.png");
-  app->name     = get_filename(filename);
+  app->name     = path_filename(filename);
   app->exposure = apps->exposure;
   app->filmic   = apps->filmic;
   app->params   = apps->params;
@@ -165,8 +165,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save image", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+          "save image", save_path, true, path_dirname(save_path),
+          path_filename(save_path), "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_image(app->outname, app->display, app->error);

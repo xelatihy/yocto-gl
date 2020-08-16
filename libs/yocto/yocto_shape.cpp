@@ -3499,7 +3499,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 namespace yocto {
 
 // Get extension (not including '.').
-static string get_extension(const string& filename) {
+static string path_extension(const string& filename) {
   auto pos = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
@@ -3562,7 +3562,7 @@ static bool save_text(
   colors        = {};
   radius        = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -3662,7 +3662,7 @@ static bool save_text(
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();

@@ -103,7 +103,7 @@ int main(int argc, const char* argv[]) {
           const image<vec4f>& render, int sample, int samples) {
         if (!save_batch) return;
         auto ext = "-s" + std::to_string(sample + samples) +
-                   get_extension(imfilename);
+                   path_extension(imfilename);
         auto outfilename = replace_extension(imfilename, ext);
         auto ioerror     = ""s;
         print_progress("save image", sample, samples);
@@ -120,7 +120,7 @@ int main(int argc, const char* argv[]) {
     const int   feature_samples = 8;
     std::string feature_ext     = "exr"s;
 
-    auto imext = get_extension(imfilename);
+    auto imext = path_extension(imfilename);
     if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;
 
     auto fparams    = params;

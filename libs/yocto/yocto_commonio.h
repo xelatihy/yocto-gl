@@ -144,22 +144,22 @@ namespace yocto {
 inline string normalize_path(const string& filename);
 
 // Get directory name (not including '/').
-inline string get_dirname(const string& filename);
+inline string path_dirname(const string& filename);
 
 // Get extension (including '.').
-inline string get_extension(const string& filename);
+inline string path_extension(const string& filename);
 
 // Get filename without directory.
-inline string get_filename(const string& filename);
+inline string path_filename(const string& filename);
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename);
+inline string path_basename(const string& filename);
 
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
-inline bool file_exists(const string& filename);
+inline bool path_exists(const string& filename);
 
 }  // namespace yocto
 
@@ -301,27 +301,22 @@ inline string normalize_path(const string& filename) {
 }
 
 // Get directory name (not including /)
-inline string get_dirname(const string& filename) {
+inline string path_dirname(const string& filename) {
   return u8path(filename).parent_path().generic_u8string();
 }
 
 // Get extension (including .)
-inline string get_extension(const string& filename) {
+inline string path_extension(const string& filename) {
   return u8path(filename).extension().u8string();
 }
 
 // Get filename without directory.
-inline string get_filename(const string& filename) {
+inline string path_filename(const string& filename) {
   return u8path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename) {
-  return u8path(filename).stem().u8string();
-}
-
-// Get filename without directory and extension.
-inline string get_stem(const string& filename) {
+inline string path_basename(const string& filename) {
   return u8path(filename).stem().u8string();
 }
 
@@ -331,7 +326,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 }
 
 // Check if a file can be opened for reading.
-inline bool file_exists(const string& filename) {
+inline bool path_exists(const string& filename) {
   return exists(u8path(filename));
 }
 

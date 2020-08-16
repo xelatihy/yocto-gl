@@ -1580,7 +1580,7 @@ static bool save_pfm(
 }
 
 // Get extension (not including '.').
-static string get_extension(const string& filename) {
+static string path_extension(const string& filename) {
   auto pos = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
@@ -1588,7 +1588,7 @@ static string get_extension(const string& filename) {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
@@ -1604,7 +1604,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1650,7 +1650,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             (float*)img.data()))
@@ -1685,7 +1685,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1716,7 +1716,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 4,
             img.data(), img.imsize().x * 4))
@@ -1756,7 +1756,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1808,7 +1808,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             (float*)img.data()))
@@ -1843,7 +1843,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1874,7 +1874,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
             img.data(), img.imsize().x * 3))
@@ -1914,7 +1914,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1965,7 +1965,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     auto npixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
     auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
@@ -2007,7 +2007,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -2038,7 +2038,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
             img.data(), img.imsize().x * 1))
@@ -2078,7 +2078,7 @@ bool is_hdr_filename(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;

@@ -796,7 +796,7 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
 }
 
 void make_dir(const string& dirname) {
-  if (file_exists(dirname)) return;
+  if (path_exists(dirname)) return;
   try {
     create_directories(std::filesystem::u8path(dirname));
   } catch (...) {
@@ -825,9 +825,9 @@ int main(int argc, const char* argv[]) {
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
   auto ioerror     = ""s;
-  if (get_extension(filename) == ".ypreset") {
+  if (path_extension(filename) == ".ypreset") {
     print_progress("make preset", 0, 1);
-    if (!make_preset(scene, get_basename(filename), ioerror))
+    if (!make_preset(scene, path_basename(filename), ioerror))
       print_fatal(ioerror);
     print_progress("make preset", 1, 1);
   } else {
@@ -852,15 +852,15 @@ int main(int argc, const char* argv[]) {
   }
 
   // tesselate if needed
-  if (get_extension(output) != ".json") {
+  if (path_extension(output) != ".json") {
     tesselate_shapes(scene, print_progress);
   }
 
   // make a directory if needed
-  make_dir(get_dirname(output));
-  if (!scene->shapes.empty()) make_dir(get_dirname(output) + "/" + "shapes");
+  make_dir(path_dirname(output));
+  if (!scene->shapes.empty()) make_dir(path_dirname(output) + "/" + "shapes");
   if (!scene->textures.empty())
-    make_dir(get_dirname(output) + "/" + "textures");
+    make_dir(path_dirname(output) + "/" + "textures");
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);

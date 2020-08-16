@@ -414,7 +414,7 @@ static inline string normalize_path(const string& filename_) {
 }
 
 // Get extension (not including '.').
-static string get_extension(const string& filename_) {
+static string path_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
@@ -496,7 +496,7 @@ struct filedialog_state {
     extensions.clear();
     for (auto pattern : globs) {
       if (pattern == "") continue;
-      auto ext = get_extension(pattern);
+      auto ext = path_extension(pattern);
       if (ext != "") {
         extensions.push_back(ext);
         filter += (filter == "") ? ("*." + ext) : (";*." + ext);

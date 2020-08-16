@@ -69,22 +69,22 @@ using namespace std::string_literals;
 namespace yocto {
 
 // Get directory name (not including /)
-inline string get_dirname(const string& filename) {
+inline string path_dirname(const string& filename) {
   return u8path(filename).parent_path().generic_u8string();
 }
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename) {
+inline string path_basename(const string& filename) {
   return u8path(filename).stem().u8string();
 }
 
 // Get extension (including .)
-inline string get_extension(const string& filename) {
+inline string path_extension(const string& filename) {
   return u8path(filename).extension().u8string();
 }
 
 // Check if a file can be opened for reading.
-inline bool file_exists(const string& filename) {
+inline bool path_exists(const string& filename) {
   return exists(u8path(filename));
 }
 
@@ -128,7 +128,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
 // Load a scene
 bool load_scene(const string& filename, scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -147,7 +147,7 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
 // Save a scene
 bool save_scene(const string& filename, const scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -221,7 +221,7 @@ static bool load_instance(
     error = filename + ": unknown format";
     return false;
   };
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     if (!load_ply(filename, &ply, error)) return false;
@@ -243,7 +243,7 @@ bool save_instance(const string& filename, const vector<frame3f>& frames,
     error = filename + ": unknown format";
     return false;
   };
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     add_values(&ply, "instance",
@@ -663,11 +663,11 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   auto get_filename = [filename](const string& name, const string& group,
                           const vector<string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = get_dirname(filename) + "/" + group + "/" + name +
+      auto filepath = path_dirname(filename) + "/" + group + "/" + name +
                       extension;
-      if (file_exists(filepath)) return filepath;
+      if (path_exists(filepath)) return filepath;
     }
-    return get_dirname(filename) + "/" + group + "/" + name +
+    return path_dirname(filename) + "/" + group + "/" + name +
            extensions.front();
   };
 
@@ -737,7 +737,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = get_basename(filename);
+  if (scene->name == "") scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -871,7 +871,7 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
                           const string& extension) {
-    return get_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_dirname(filename) + "/" + group + "/" + name + extension;
   };
 
   // save shapes
@@ -1063,7 +1063,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
 
   // get filename from name
   auto get_filename = [filename](const string& name) {
-    return get_dirname(filename) + "/" + name;
+    return path_dirname(filename) + "/" + name;
   };
 
   // load textures
@@ -1085,7 +1085,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = get_basename(filename);
+  if (scene->name == "") scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1116,7 +1116,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // convert cameras
   for (auto camera : scene->cameras) {
     auto ocamera      = add_camera(obj);
-    ocamera->name     = get_basename(camera->name);
+    ocamera->name     = path_basename(camera->name);
     ocamera->frame    = camera->frame;
     ocamera->ortho    = camera->orthographic;
     ocamera->width    = camera->film;
@@ -1139,7 +1139,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
       {nullptr, nullptr}};
   for (auto material : scene->materials) {
     auto omaterial                  = add_material(obj);
-    omaterial->name                 = get_basename(material->name);
+    omaterial->name                 = path_basename(material->name);
     omaterial->illum                = 2;
     omaterial->as_pbr               = true;
     omaterial->pbr_emission         = material->emission;
@@ -1193,7 +1193,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // convert environments
   for (auto environment : scene->environments) {
     auto oenvironment          = add_environment(obj);
-    oenvironment->name         = get_basename(environment->name);
+    oenvironment->name         = path_basename(environment->name);
     oenvironment->frame        = environment->frame;
     oenvironment->emission     = environment->emission;
     oenvironment->emission_tex = get_texture(environment->emission_tex);
@@ -1208,7 +1208,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
                           const string& extension) {
-    return get_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_dirname(filename) + "/" + group + "/" + name + extension;
   };
 
   // save textures
@@ -1338,7 +1338,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
 
   // load buffers
-  auto dirname = get_dirname(filename);
+  auto dirname = path_dirname(filename);
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success)
@@ -1669,7 +1669,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [tpath, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(get_dirname(filename) + "/" + tpath, texture->colorf,
+    if (!load_image(path_dirname(filename) + "/" + tpath, texture->colorf,
             texture->colorb, error))
       return dependent_error();
   }
@@ -1680,7 +1680,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = image<vec4f>{};
     auto color_opacityb = image<vec4b>{};
-    if (!load_image(get_dirname(filename) + "/" + tpath, color_opacityf,
+    if (!load_image(path_dirname(filename) + "/" + tpath, color_opacityf,
             color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
@@ -1719,7 +1719,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec3f>{};
     auto metallic_roughnessb = image<vec3b>{};
-    if (!load_image(get_dirname(filename) + "/" + tpath, metallic_roughnessf,
+    if (!load_image(path_dirname(filename) + "/" + tpath, metallic_roughnessf,
             metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
@@ -1766,7 +1766,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       scene->textures.end());
 
   // fix scene
-  if (scene->name == "") scene->name = get_basename(filename);
+  if (scene->name == "") scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -1925,7 +1925,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 
   // get filename from name
   auto get_filename = [filename](const string& name) {
-    return get_dirname(filename) + "/" + name;
+    return path_dirname(filename) + "/" + name;
   };
 
   // load texture
@@ -1958,7 +1958,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   }
 
   // fix scene
-  if (scene->name == "") scene->name = get_basename(filename);
+  if (scene->name == "") scene->name = path_basename(filename);
   add_cameras(scene);
   add_radius(scene);
   add_materials(scene);
@@ -2001,7 +2001,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   auto material_map = unordered_map<scene_material*, pbrt_material*>{};
   for (auto material : scene->materials) {
     auto pmaterial          = add_material(pbrt);
-    pmaterial->name         = get_basename(material->name);
+    pmaterial->name         = path_basename(material->name);
     pmaterial->emission     = material->emission;
     pmaterial->color        = material->color;
     pmaterial->metallic     = material->metallic;
@@ -2043,7 +2043,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto get_filename = [filename](const string& name, const string& group,
                           const string& extension) {
-    return get_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_dirname(filename) + "/" + group + "/" + name + extension;
   };
 
   // save textures

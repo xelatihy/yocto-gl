@@ -112,7 +112,7 @@ void load_scene_async(
   app->filename    = filename;
   app->imagename   = replace_extension(filename, ".png");
   app->outname     = replace_extension(filename, ".edited.json");
-  app->name        = get_filename(app->filename);
+  app->name        = path_filename(app->filename);
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
@@ -423,8 +423,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
   }
   continue_line(win);
   if (draw_filedialog_button(win, "save", apps->selected && apps->selected->ok,
-          "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.json;*.obj;*.pbrt")) {
+          "save", save_path, true, path_dirname(save_path),
+          path_filename(save_path), "*.json;*.obj;*.pbrt")) {
     auto app     = apps->selected;
     app->outname = save_path;
     save_scene(app->outname, app->ioscene, app->error);
@@ -473,7 +473,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
     end_header(win);
   }
   if (begin_header(win, "inspect")) {
-    draw_label(win, "scene", get_filename(app->filename));
+    draw_label(win, "scene", path_filename(app->filename));
     draw_label(win, "filename", app->filename);
     draw_label(win, "outname", app->outname);
     draw_label(win, "imagename", app->imagename);

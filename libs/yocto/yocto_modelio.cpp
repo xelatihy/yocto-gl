@@ -69,22 +69,22 @@ inline FILE* fopen_utf8(const char* filename, const char* mode) {
 }
 
 // Get directory name (not including /)
-inline string get_dirname(const string& filename) {
+inline string path_dirname(const string& filename) {
   return u8path(filename).parent_path().generic_u8string();
 }
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename) {
+inline string path_basename(const string& filename) {
   return u8path(filename).stem().u8string();
 }
 
 // Get extension (including .)
-inline string get_extension(const string& filename) {
+inline string path_extension(const string& filename) {
   return u8path(filename).extension().u8string();
 }
 
 // Get filename without directory.
-inline string get_filename(const string& filename) {
+inline string path_filename(const string& filename) {
   return u8path(filename).filename().u8string();
 }
 
@@ -94,7 +94,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 }
 
 // Check if a file can be opened for reading.
-inline bool file_exists(const string& filename) {
+inline bool path_exists(const string& filename) {
   return exists(u8path(filename));
 }
 
@@ -1973,7 +1973,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(get_dirname(filename) + "/" + mtllib, obj, error))
+        if (!load_mtl(path_dirname(filename) + "/" + mtllib, obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -2022,7 +2022,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
 
   // load extensions
   auto extfilename = replace_extension(filename, ".objx");
-  if (file_exists(extfilename)) {
+  if (path_exists(extfilename)) {
     if (!load_objx(extfilename, obj, error)) return dependent_error();
   }
 
@@ -3613,15 +3613,15 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
         auto filenames = vector<string>{};
         if (!parse_pbrt_value(str, filename)) return false;
         if (!str.data()) return false;
-        auto filenamep = get_filename(filename);
-        if (get_extension(filenamep) == ".spd") {
+        auto filenamep = path_filename(filename);
+        if (path_extension(filenamep) == ".spd") {
           filenamep = replace_extension(filenamep, "");
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
-          } else if (get_extension(filenamep) == ".eta") {
+          } else if (path_extension(filenamep) == ".eta") {
             auto eta      = get_etak(replace_extension(filenamep, "")).first;
             value.value3f = {eta.x, eta.y, eta.z};
-          } else if (get_extension(filenamep) == ".k") {
+          } else if (path_extension(filenamep) == ".k") {
             auto k        = get_etak(replace_extension(filenamep, "")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
@@ -4769,7 +4769,7 @@ struct pbrt_context {
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
-      if (!load_pbrt(get_dirname(filename) + "/" + includename, pbrt, error,
+      if (!load_pbrt(path_dirname(filename) + "/" + includename, pbrt, error,
               ctx, material_map, named_materials, named_textures, named_mediums,
               ply_dirname))
         return dependent_error();
@@ -4812,7 +4812,7 @@ bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname         = get_dirname(filename);
+  auto dirname         = path_dirname(filename);
   if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
           named_textures, named_mediums, dirname))
@@ -5088,7 +5088,8 @@ bool save_pbrt(
       add_normals(ply, shape->normals);
       add_texcoords(ply, shape->texcoords);
       add_triangles(ply, shape->triangles);
-      if (!save_ply(get_dirname(filename) + "/" + shape->filename_, ply, error))
+      if (!save_ply(
+              path_dirname(filename) + "/" + shape->filename_, ply, error))
         return dependent_error();
     }
     auto object = "object" + std::to_string(object_id++);
