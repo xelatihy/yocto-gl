@@ -61,6 +61,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 using std::filesystem::path;
+using std::filesystem::u8path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -364,13 +365,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename) {
-  auto fs = fopen(filename.c_str(), "r");
-  if (fs) {
-    fclose(fs);
-    return true;
-  } else {
-    return false;
-  }
+  return exists(u8path(filename));
 }
 
 }  // namespace yocto
@@ -380,10 +375,21 @@ inline bool exists_file(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Opens a file with a utf8 file name
+inline FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
 // Load a text file
 inline bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -403,7 +409,7 @@ inline bool load_text(const string& filename, string& str, string& error) {
 // Save a text file
 inline bool save_text(
     const string& filename, const string& str, string& error) {
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -420,7 +426,7 @@ inline bool save_text(
 inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
@@ -440,7 +446,7 @@ inline bool load_binary(
 // Save a binary file
 inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen(filename.c_str(), "wb");
+  auto fs = fopen_utf8(filename.c_str(), "wb");
   if (!fs) {
     error = filename + ": file not found";
     return false;

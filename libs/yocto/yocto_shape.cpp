@@ -3505,10 +3505,21 @@ static string get_extension(const string& filename) {
   return filename.substr(pos);
 }
 
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
 // Save a text file
 static bool save_text(
     const string& filename, const string& str, string& error) {
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) {
     error = filename + ": file not found";
     return false;
