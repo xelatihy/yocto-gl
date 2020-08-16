@@ -83,6 +83,15 @@ inline string path_extension(const string& filename) {
   return u8path(filename).extension().u8string();
 }
 
+// Joins paths
+inline string path_join(const string& patha, const string& pathb) {
+  return (u8path(patha) / u8path(pathb)).generic_u8string();
+}
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (u8path(patha) / u8path(pathb) / u8path(pathc)).generic_u8string();
+}
+
 // Check if a file can be opened for reading.
 inline bool path_exists(const string& filename) {
   return exists(u8path(filename));
@@ -663,12 +672,11 @@ static bool load_json_scene(const string& filename, scene_model* scene,
   auto make_filename = [filename](const string& name, const string& group,
                            const vector<string>& extensions) {
     for (auto& extension : extensions) {
-      auto filepath = path_dirname(filename) + "/" + group + "/" + name +
-                      extension;
+      auto filepath = path_join(
+          path_dirname(filename), group, name + extension);
       if (path_exists(filepath)) return filepath;
     }
-    return path_dirname(filename) + "/" + group + "/" + name +
-           extensions.front();
+    return path_join(path_dirname(filename), group, name + extensions.front());
   };
 
   // load shapes
@@ -871,7 +879,7 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
                            const string& extension) {
-    return path_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_join(path_dirname(filename), group, name + extension);
   };
 
   // save shapes
@@ -1063,7 +1071,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
 
   // get filename from name
   auto make_filename = [filename](const string& name) {
-    return path_dirname(filename) + "/" + name;
+    return path_join(path_dirname(filename), name);
   };
 
   // load textures
@@ -1208,7 +1216,7 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
                            const string& extension) {
-    return path_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_join(path_dirname(filename), group, name + extension);
   };
 
   // save textures
@@ -1669,7 +1677,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [tpath, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(path_dirname(filename) + "/" + tpath, texture->colorf,
+    if (!load_image(path_join(path_dirname(filename), tpath), texture->colorf,
             texture->colorb, error))
       return dependent_error();
   }
@@ -1680,7 +1688,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto color_opacityf = image<vec4f>{};
     auto color_opacityb = image<vec4b>{};
-    if (!load_image(path_dirname(filename) + "/" + tpath, color_opacityf,
+    if (!load_image(path_join(path_dirname(filename), tpath), color_opacityf,
             color_opacityb, error))
       return dependent_error();
     if (!color_opacityf.empty()) {
@@ -1719,8 +1727,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto metallic_roughnessf = image<vec3f>{};
     auto metallic_roughnessb = image<vec3b>{};
-    if (!load_image(path_dirname(filename) + "/" + tpath, metallic_roughnessf,
-            metallic_roughnessb, error))
+    if (!load_image(path_join(path_dirname(filename), tpath),
+            metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
@@ -1925,7 +1933,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 
   // get filename from name
   auto make_filename = [filename](const string& name) {
-    return path_dirname(filename) + "/" + name;
+    return path_join(path_dirname(filename), name);
   };
 
   // load texture
@@ -2043,7 +2051,7 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   // get filename from name
   auto make_filename = [filename](const string& name, const string& group,
                            const string& extension) {
-    return path_dirname(filename) + "/" + group + "/" + name + extension;
+    return path_join(path_dirname(filename), group, name + extension);
   };
 
   // save textures

@@ -88,6 +88,15 @@ inline string path_filename(const string& filename) {
   return u8path(filename).filename().u8string();
 }
 
+// Joins paths
+inline string path_join(const string& patha, const string& pathb) {
+  return (u8path(patha) / u8path(pathb)).generic_u8string();
+}
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (u8path(patha) / u8path(pathb) / u8path(pathc)).generic_u8string();
+}
+
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext) {
   return u8path(filename).replace_extension(ext).u8string();
@@ -1973,7 +1982,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
-        if (!load_mtl(path_dirname(filename) + "/" + mtllib, obj, error))
+        if (!load_mtl(path_join(path_dirname(filename), mtllib), obj, error))
           return dependent_error();
         for (auto material : obj->materials)
           material_map[material->name] = material;
@@ -4316,7 +4325,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
     auto ply = std::make_unique<ply_model>();
-    if (!load_ply(ply_dirname + shape->filename_, ply.get(), error))
+    if (!load_ply(path_join(ply_dirname, shape->filename_), ply.get(), error))
       return dependent_error();
     get_positions(ply.get(), shape->positions);
     get_normals(ply.get(), shape->normals);
@@ -4769,9 +4778,9 @@ struct pbrt_context {
     } else if (cmd == "Include") {
       auto includename = ""s;
       if (!parse_param(str, includename)) return parse_error();
-      if (!load_pbrt(path_dirname(filename) + "/" + includename, pbrt, error,
-              ctx, material_map, named_materials, named_textures, named_mediums,
-              ply_dirname))
+      if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
+              error, ctx, material_map, named_materials, named_textures,
+              named_mediums, ply_dirname))
         return dependent_error();
     } else {
       return command_error(cmd);
@@ -4812,10 +4821,8 @@ bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
   auto named_materials = unordered_map<string, pbrt_material>{{"", {}}};
   auto named_mediums   = unordered_map<string, pbrt_medium>{{"", {}}};
   auto named_textures  = unordered_map<string, pbrt_texture>{{"", {}}};
-  auto dirname         = path_dirname(filename);
-  if (dirname != "") dirname += "/";
   if (!load_pbrt(filename, pbrt, error, ctx, material_map, named_materials,
-          named_textures, named_mediums, dirname))
+          named_textures, named_mediums, path_dirname(filename)))
     return false;
 
   // remove unused materials

@@ -155,6 +155,11 @@ inline string path_filename(const string& filename);
 // Get filename without directory and extension.
 inline string path_basename(const string& filename);
 
+// Joins paths
+inline string path_join(const string& patha, const string& pathb);
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc);
+
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext);
 
@@ -318,6 +323,15 @@ inline string path_filename(const string& filename) {
 // Get filename without directory and extension.
 inline string path_basename(const string& filename) {
   return u8path(filename).stem().u8string();
+}
+
+// Joins paths
+inline string path_join(const string& patha, const string& pathb) {
+  return (u8path(patha) / u8path(pathb)).generic_u8string();
+}
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (u8path(patha) / u8path(pathb) / u8path(pathc)).generic_u8string();
 }
 
 // Replaces extensions

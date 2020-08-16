@@ -858,9 +858,10 @@ int main(int argc, const char* argv[]) {
 
   // make a directory if needed
   make_dir(path_dirname(output));
-  if (!scene->shapes.empty()) make_dir(path_dirname(output) + "/" + "shapes");
+  if (!scene->shapes.empty())
+    make_dir(path_join(path_dirname(output), "shapes"));
   if (!scene->textures.empty())
-    make_dir(path_dirname(output) + "/" + "textures");
+    make_dir(path_join(path_dirname(output), "textures"));
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
