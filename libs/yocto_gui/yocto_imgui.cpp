@@ -64,10 +64,83 @@ namespace yocto {
 using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
-using std::filesystem::directory_iterator;
-using std::filesystem::path;
-using std::filesystem::u8path;
 using namespace std::string_literals;
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Make a path from a utf8 string
+inline std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Normalize path
+inline string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
+}
+
+// Get directory name (not including /)
+inline string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get extension (including .)
+inline string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
+}
+
+// Get filename without directory.
+inline string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
+}
+
+// Get filename without directory and extension.
+inline string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+inline string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
+}
+
+// Replaces extensions
+inline string replace_extension(const string& filename, const string& ext) {
+  return make_path(filename).replace_extension(ext).u8string();
+}
+
+// Check if a file can be opened for reading.
+inline bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+inline bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// Check if a file is a file
+inline bool path_isfile(const string& filename) {
+  return is_regular_file(make_path(filename));
+}
+
+// List the contents of a directory
+inline vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
+}
 
 }  // namespace yocto
 
@@ -393,34 +466,6 @@ bool is_glmodal_open(gui_window* win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
-// Utility to normalize a path
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get extension (not including '.').
-static string path_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 struct filedialog_state {
   string                     dirname       = "";
   string                     filename      = "";
@@ -445,21 +490,21 @@ struct filedialog_state {
   }
 
   void _set_dirname(const string& name) {
-    if (exists(u8path(name)) && is_directory(u8path(name))) {
+    if (path_exists(name) && path_isdir(name)) {
       dirname = name;
-    } else if (exists(u8path(dirname)) && is_directory(u8path(dirname))) {
+    } else if (path_exists(dirname) && path_isdir(dirname)) {
       // leave it like this
     } else {
       dirname = std::filesystem::current_path().u8string();
     }
-    dirname = canonical(u8path(dirname)).u8string();
+    dirname = normalize_path(dirname);
     entries.clear();
-    for (auto entry : directory_iterator(u8path(dirname))) {
-      if (remove_hidden && entry.path().stem().u8string()[0] == '.') continue;
-      if (entry.is_directory()) {
-        entries.push_back({entry.path().filename().u8string() + "/", true});
+    for (auto entry : list_directory(dirname)) {
+      if (remove_hidden && path_basename(entry)[0] == '.') continue;
+      if (path_isdir(entry)) {
+        entries.push_back({path_filename(entry) + "/", true});
       } else {
-        entries.push_back({entry.path().filename().u8string(), false});
+        entries.push_back({path_filename(entry), false});
       }
     }
     std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
@@ -471,13 +516,13 @@ struct filedialog_state {
   void _set_filename(const string& name) {
     filename = name;
     if (filename.empty()) return;
-    auto ext = u8path(filename).extension().u8string();
+    auto ext = path_extension(filename);
     if (std::find(extensions.begin(), extensions.end(), ext) ==
         extensions.end()) {
       filename = "";
       return;
     }
-    if (!save && !exists(u8path(dirname) / u8path(filename))) {
+    if (!save && !path_exists(path_join(dirname, filename))) {
       filename = "";
       return;
     }
@@ -506,16 +551,13 @@ struct filedialog_state {
 
   void select(int idx) {
     if (entries[idx].second) {
-      set((u8path(dirname) / u8path(entries[idx].first)).u8string(), filename,
-          filter, save);
+      set(path_join(dirname, entries[idx].first), filename, filter, save);
     } else {
       set(dirname, entries[idx].first, filter, save);
     }
   }
 
-  string get_path() const {
-    return (u8path(dirname) / u8path(filename)).u8string();
-  }
+  string get_path() const { return path_join(dirname, filename); }
 };
 
 bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,

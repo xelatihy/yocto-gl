@@ -60,8 +60,6 @@ using std::function;
 using std::string;
 using std::unordered_set;
 using std::vector;
-using std::filesystem::path;
-using std::filesystem::u8path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -165,6 +163,12 @@ inline string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
 inline bool path_exists(const string& filename);
+
+// Check if a file is a directory
+inline bool path_isdir(const string& filename);
+
+// Check if a file is a file
+inline bool path_isfile(const string& filename);
 
 }  // namespace yocto
 
@@ -300,48 +304,64 @@ inline void print_progress(const string& message, int current, int total) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Make a path from a utf8 string
+inline std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
 // Normalize path
 inline string normalize_path(const string& filename) {
-  return u8path(filename).generic_u8string();
+  return make_path(filename).generic_u8string();
 }
 
 // Get directory name (not including /)
 inline string path_dirname(const string& filename) {
-  return u8path(filename).parent_path().generic_u8string();
+  return make_path(filename).parent_path().generic_u8string();
 }
 
 // Get extension (including .)
 inline string path_extension(const string& filename) {
-  return u8path(filename).extension().u8string();
+  return make_path(filename).extension().u8string();
 }
 
 // Get filename without directory.
 inline string path_filename(const string& filename) {
-  return u8path(filename).filename().u8string();
+  return make_path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
 inline string path_basename(const string& filename) {
-  return u8path(filename).stem().u8string();
+  return make_path(filename).stem().u8string();
 }
 
 // Joins paths
 inline string path_join(const string& patha, const string& pathb) {
-  return (u8path(patha) / u8path(pathb)).generic_u8string();
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
 inline string path_join(
     const string& patha, const string& pathb, const string& pathc) {
-  return (u8path(patha) / u8path(pathb) / u8path(pathc)).generic_u8string();
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
 }
 
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext) {
-  return u8path(filename).replace_extension(ext).u8string();
+  return make_path(filename).replace_extension(ext).u8string();
 }
 
 // Check if a file can be opened for reading.
 inline bool path_exists(const string& filename) {
-  return exists(u8path(filename));
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+inline bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// Check if a file is a file
+inline bool path_isfile(const string& filename) {
+  return is_regular_file(make_path(filename));
 }
 
 }  // namespace yocto

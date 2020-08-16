@@ -57,8 +57,6 @@ namespace yocto {
 using std::atomic;
 using std::deque;
 using std::unique_ptr;
-using std::filesystem::path;
-using std::filesystem::u8path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -68,33 +66,39 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Make a path from a utf8 string
+inline std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
 // Get directory name (not including /)
 inline string path_dirname(const string& filename) {
-  return u8path(filename).parent_path().generic_u8string();
+  return make_path(filename).parent_path().generic_u8string();
 }
 
 // Get filename without directory and extension.
 inline string path_basename(const string& filename) {
-  return u8path(filename).stem().u8string();
+  return make_path(filename).stem().u8string();
 }
 
 // Get extension (including .)
 inline string path_extension(const string& filename) {
-  return u8path(filename).extension().u8string();
+  return make_path(filename).extension().u8string();
 }
 
 // Joins paths
 inline string path_join(const string& patha, const string& pathb) {
-  return (u8path(patha) / u8path(pathb)).generic_u8string();
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
 inline string path_join(
     const string& patha, const string& pathb, const string& pathc) {
-  return (u8path(patha) / u8path(pathb) / u8path(pathc)).generic_u8string();
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
 }
 
 // Check if a file can be opened for reading.
 inline bool path_exists(const string& filename) {
-  return exists(u8path(filename));
+  return exists(make_path(filename));
 }
 
 }  // namespace yocto
