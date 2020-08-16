@@ -56,6 +56,17 @@ using namespace std::string_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Opens a file with a utf8 file name
+inline FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
 // string literals
 using namespace std::string_literals;
 
@@ -348,7 +359,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -608,7 +619,7 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "wb");
+  auto fs = fopen_utf8(filename.c_str(), "wb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -1436,7 +1447,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen_utf8(filename.c_str(), "rt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -1676,7 +1687,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen_utf8(filename.c_str(), "rt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -1782,7 +1793,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen_utf8(filename.c_str(), "rt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -2015,7 +2026,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -2196,7 +2207,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -2260,7 +2271,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -4468,7 +4479,7 @@ struct pbrt_context {
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs = fopen_utf8(filename.c_str(), "rt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
@@ -4883,7 +4894,7 @@ bool save_pbrt(
   };
 
   // open file
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 

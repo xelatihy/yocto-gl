@@ -89,7 +89,7 @@ struct color_space_params {
 // Input: red, green, blue, white (x,y) chromoticities
 // Algorithm from: SMPTE Recommended Practice RP 177-1993
 // http://car.france3.mars.free.fr/HD/INA-%2026%20jan%2006/SMPTE%20normes%20et%20confs/rp177.pdf
-static inline mat3f rgb_to_xyz_mat(
+inline mat3f rgb_to_xyz_mat(
     const vec2f& rc, const vec2f& gc, const vec2f& bc, const vec2f& wc) {
   auto rgb = mat3f{
       {rc.x, rc.y, 1 - rc.x - rc.y},
@@ -102,7 +102,7 @@ static inline mat3f rgb_to_xyz_mat(
 }
 
 // Construct an RGB color space. Predefined color spaces below
-static inline color_space_params get_color_scape_params(color_space space) {
+inline color_space_params get_color_scape_params(color_space space) {
   static auto make_linear_rgb_space = [](const vec2f& red, const vec2f& green,
                                           const vec2f& blue,
                                           const vec2f& white) {
@@ -214,16 +214,15 @@ static inline color_space_params get_color_scape_params(color_space space) {
 }
 
 // gamma to linear
-static inline float gamma_display_to_linear(float x, float gamma) {
+inline float gamma_display_to_linear(float x, float gamma) {
   return pow(x, gamma);
 };
-static inline float gamma_linear_to_display(float x, float gamma) {
+inline float gamma_linear_to_display(float x, float gamma) {
   return pow(x, 1 / gamma);
 };
 
 // https://en.wikipedia.org/wiki/Rec._709
-static inline float gamma_display_to_linear(
-    float x, float gamma, const vec4f& abcd) {
+inline float gamma_display_to_linear(float x, float gamma, const vec4f& abcd) {
   auto& [a, b, c, d] = abcd;
   if (x < 1 / d) {
     return x / c;
@@ -231,8 +230,7 @@ static inline float gamma_display_to_linear(
     return pow((x + b) / a, gamma);
   }
 };
-static inline float gamma_linear_to_display(
-    float x, float gamma, const vec4f& abcd) {
+inline float gamma_linear_to_display(float x, float gamma, const vec4f& abcd) {
   auto& [a, b, c, d] = abcd;
   if (x < d) {
     return x * c;
@@ -242,7 +240,7 @@ static inline float gamma_linear_to_display(
 };
 
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-static inline float acescc_display_to_linear(float x) {
+inline float acescc_display_to_linear(float x) {
   if (x < -0.3013698630f) {  // (9.72-15)/17.52
     return (exp2(x * 17.52f - 9.72f) - exp2(-16.0f)) * 2;
   } else if (x < (log2(65504.0f) + 9.72f) / 17.52f) {
@@ -252,7 +250,7 @@ static inline float acescc_display_to_linear(float x) {
   }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-static inline float acescct_display_to_linear(float x) {
+inline float acescct_display_to_linear(float x) {
   if (x < 0.155251141552511f) {
     return (x - 0.0729055341958355f) / 10.5402377416545f;
   } else {
@@ -260,7 +258,7 @@ static inline float acescct_display_to_linear(float x) {
   }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-static inline float acescc_linear_to_display(float x) {
+inline float acescc_linear_to_display(float x) {
   if (x <= 0) {
     return -0.3584474886f;  // =(log2( pow(2.,-16.))+9.72)/17.52
   } else if (x < exp2(-15.0f)) {
@@ -270,7 +268,7 @@ static inline float acescc_linear_to_display(float x) {
   }
 }
 // https://en.wikipedia.org/wiki/Academy_Color_Encoding_Systemx
-static inline float acescct_linear_to_display(float x) {
+inline float acescct_linear_to_display(float x) {
   if (x <= 0.0078125f) {
     return 10.5402377416545f * x + 0.0729055341958355f;
   } else {
@@ -282,14 +280,14 @@ static inline float acescct_linear_to_display(float x) {
 // https://github.com/ampas/aces-dev/blob/master/transforms/ctl/lib/ACESlib.Utilities_Color.ctl
 // In PQ, we assume that the linear luminance in [0,1] corresponds to
 // [0,10000] cd m^2
-static inline float pq_display_to_linear(float x) {
+inline float pq_display_to_linear(float x) {
   auto Np = pow(x, 1 / 78.84375f);
   auto L  = max(Np - 0.8359375f, 0.0f);
   L       = L / (18.8515625f - 18.6875f * Np);
   L       = pow(L, 1 / 0.1593017578125f);
   return L;
 }
-static inline float pq_linear_to_display(float x) {
+inline float pq_linear_to_display(float x) {
   return pow((0.8359375f + 18.8515625f * pow(x, 0.1593017578125f)) /
                  (1 + 18.6875f * pow(x, 0.1593017578125f)),
       78.84375f);
@@ -300,14 +298,14 @@ static inline float pq_linear_to_display(float x) {
 // range for nominal luminance. But HLG was initially defined in the [0,12]
 // range where it maps 1 to 0.5 and 12 to 1. For use in HDR tonemapping that is
 // likely a better range to use.
-static inline float hlg_display_to_linear(float x) {
+inline float hlg_display_to_linear(float x) {
   if (x < 0.5f) {
     return 3 * 3 * x * x;
   } else {
     return (exp((x - 0.55991073f) / 0.17883277f) + 0.28466892f) / 12;
   }
 }
-static inline float hlg_linear_to_display(float x) {
+inline float hlg_linear_to_display(float x) {
   if (x < 1 / 12.0f) {
     return sqrt(3 * x);
   } else {
@@ -1411,7 +1409,7 @@ volume<float> make_volume_preset(const string& type) {
 namespace yocto {
 
 // Split a string
-static inline vector<string> split_string(const string& str) {
+static vector<string> split_string(const string& str) {
   auto ret = vector<string>();
   if (str.empty()) return ret;
   auto lpos = (size_t)0;
@@ -1428,10 +1426,20 @@ static inline vector<string> split_string(const string& str) {
   return ret;
 }
 
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
 // Pfm load
-static inline float* load_pfm(
-    const char* filename, int* w, int* h, int* nc, int req) {
-  auto fs = fopen(filename, "rb");
+static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+  auto fs = fopen_utf8(filename, "rb");
   if (!fs) return nullptr;
   auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
@@ -1541,9 +1549,9 @@ static inline float* load_pfm(
 }
 
 // save pfm
-static inline bool save_pfm(
+static bool save_pfm(
     const char* filename, int w, int h, int nc, const float* pixels) {
-  auto fs = fopen(filename, "wb");
+  auto fs = fopen_utf8(filename, "wb");
   if (!fs) return false;
   auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
@@ -2096,12 +2104,10 @@ bool is_hdr_filename(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-namespace impl {
-
 // Volume load
-static inline float* load_yvol(
+static float* load_yvol(
     const char* filename, int* w, int* h, int* d, int* nc, int req) {
-  auto fs = fopen(filename, "rb");
+  auto fs = fopen_utf8(filename, "rb");
   if (!fs) return nullptr;
   auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
@@ -2220,9 +2226,9 @@ static inline float* load_yvol(
 }
 
 // save pfm
-static inline bool save_yvol(
+static bool save_yvol(
     const char* filename, int w, int h, int d, int nc, const float* voxels) {
-  auto fs = fopen(filename, "wb");
+  auto fs = fopen_utf8(filename, "wb");
   if (!fs) return false;
   auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
       fs, [](FILE* f) { fclose(f); }};
@@ -2260,19 +2266,6 @@ bool save_volume(
           vol.data()))
     return write_error();
   return true;
-}
-
-}  // namespace impl
-
-// Loads volume data from binary format.
-bool load_volume(const string& filename, volume<float>& vol, string& error) {
-  return impl::load_volume(filename, vol, error);
-}
-
-// Saves volume data in binary format.
-bool save_volume(
-    const string& filename, const volume<float>& vol, string& error) {
-  return impl::save_volume(filename, vol, error);
 }
 
 }  // namespace yocto
