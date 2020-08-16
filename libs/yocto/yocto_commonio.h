@@ -159,7 +159,8 @@ inline string get_basename(const string& filename);
 inline string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
+inline bool file_exists(const string& filename);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -330,7 +331,7 @@ inline string replace_extension(const string& filename, const string& ext) {
 }
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename) {
+inline bool file_exists(const string& filename) {
   return exists(u8path(filename));
 }
 

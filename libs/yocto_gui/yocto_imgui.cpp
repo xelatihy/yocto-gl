@@ -66,6 +66,7 @@ using std::unordered_map;
 using std::unordered_set;
 using std::filesystem::directory_iterator;
 using std::filesystem::path;
+using std::filesystem::u8path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -444,21 +445,21 @@ struct filedialog_state {
   }
 
   void _set_dirname(const string& name) {
-    if (exists(path{name}) && is_directory(path{name})) {
+    if (exists(u8path(name)) && is_directory(u8path(name))) {
       dirname = name;
-    } else if (exists(path{dirname}) && is_directory(path{dirname})) {
+    } else if (exists(u8path(dirname)) && is_directory(u8path(dirname))) {
       // leave it like this
     } else {
-      dirname = std::filesystem::current_path().string();
+      dirname = std::filesystem::current_path().u8string();
     }
-    dirname = canonical(path{dirname}).string();
+    dirname = canonical(u8path(dirname)).u8string();
     entries.clear();
-    for (auto entry : directory_iterator(path{dirname})) {
-      if (remove_hidden && entry.path().stem().string()[0] == '.') continue;
+    for (auto entry : directory_iterator(u8path(dirname))) {
+      if (remove_hidden && entry.path().stem().u8string()[0] == '.') continue;
       if (entry.is_directory()) {
-        entries.push_back({entry.path().filename().string() + "/", true});
+        entries.push_back({entry.path().filename().u8string() + "/", true});
       } else {
-        entries.push_back({entry.path().filename().string(), false});
+        entries.push_back({entry.path().filename().u8string(), false});
       }
     }
     std::sort(entries.begin(), entries.end(), [](auto& a, auto& b) {
@@ -470,13 +471,13 @@ struct filedialog_state {
   void _set_filename(const string& name) {
     filename = name;
     if (filename.empty()) return;
-    auto ext = path{filename}.extension().string();
+    auto ext = u8path(filename).extension().u8string();
     if (std::find(extensions.begin(), extensions.end(), ext) ==
         extensions.end()) {
       filename = "";
       return;
     }
-    if (!save && !exists(path{dirname} / path{filename})) {
+    if (!save && !exists(u8path(dirname) / u8path(filename))) {
       filename = "";
       return;
     }
@@ -505,14 +506,16 @@ struct filedialog_state {
 
   void select(int idx) {
     if (entries[idx].second) {
-      set((path{dirname} / path{entries[idx].first}).string(), filename, filter,
-          save);
+      set((u8path(dirname) / u8path(entries[idx].first)).u8string(), filename,
+          filter, save);
     } else {
       set(dirname, entries[idx].first, filter, save);
     }
   }
 
-  string get_path() const { return (path{dirname} / path{filename}).string(); }
+  string get_path() const {
+    return (u8path(dirname) / u8path(filename)).u8string();
+  }
 };
 
 bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
