@@ -273,8 +273,19 @@ namespace yocto {
 
 using json = nlohmann::json;
 
+// Opens a file with a utf8 file name
+static FILE* fopen_utf8(const char* filename, const char* mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
+  return _wfopen(path.c_str(), wmode.c_str());
+#else
+  return fopen(filename, mode);
+#endif
+}
+
 // Load a text file
-inline bool load_text(const string& filename, string& str, string& error) {
+static bool load_text(const string& filename, string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
     error = filename + ": file not found";
@@ -286,7 +297,7 @@ inline bool load_text(const string& filename, string& str, string& error) {
   };
 
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename.c_str(), "rb");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
@@ -298,7 +309,7 @@ inline bool load_text(const string& filename, string& str, string& error) {
 }
 
 // Save a text file
-inline bool save_text(
+static bool save_text(
     const string& filename, const string& str, string& error) {
   // error helpers
   auto open_error = [filename, &error]() {
@@ -310,75 +321,15 @@ inline bool save_text(
     return false;
   };
 
-  auto fs = fopen(filename.c_str(), "wt");
+  auto fs = fopen_utf8(filename.c_str(), "wt");
   if (!fs) return open_error();
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fprintf(fs, "%s", str.c_str()) < 0) return write_error();
   return true;
 }
 
-// Load a binary file
-inline string load_text(const string& filename, string& error) {
-  auto text = string{};
-  if (!load_text(filename, text, error)) return {};
-  return text;
-}
-
-// Load a binary file
-inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rb");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) return read_error();
-  return true;
-}
-
-// Save a binary file
-inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto fs = fopen(filename.c_str(), "wb");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size())
-    return write_error();
-  return true;
-}
-
-// Load a binary file
-inline vector<byte> load_binary(const string& filename, string& error) {
-  auto data = vector<byte>{};
-  if (!load_binary(filename, data, error)) return {};
-  return data;
-}
-
 // load/save json
-inline bool load_json(const string& filename, json& js, string& error) {
+static bool load_json(const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
     error = filename + ": parse error in json";
@@ -394,14 +345,8 @@ inline bool load_json(const string& filename, json& js, string& error) {
   }
 }
 
-inline bool save_json(const string& filename, const json& js, string& error) {
+static bool save_json(const string& filename, const json& js, string& error) {
   return save_text(filename, js.dump(2), error);
-}
-
-inline json load_json(const string& filename, string& error) {
-  auto js = json{};
-  if (!load_json(filename, js, error)) return {};
-  return js;
 }
 
 // Save a scene in the builtin JSON format.
