@@ -72,9 +72,9 @@ using std::vector;
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg);
+inline void print_info(string_view msg);
 // Prints a message to the console and exit with an error.
-inline void print_fatal(const string& msg);
+inline void print_fatal(string_view msg);
 
 // Timer that prints as scope end. Create with `print_timed` and print with
 // `print_elapsed`.
@@ -83,11 +83,11 @@ struct print_timer {
   ~print_timer();  // print time if scope ends
 };
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg);
+inline print_timer print_timed(string_view msg);
 inline void        print_elapsed(print_timer& timer);
 
 // Print progress
-inline void print_progress(const string& message, int current, int total);
+inline void print_progress(string_view message, int current, int total);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -103,7 +103,7 @@ namespace yocto {
 
 // Initialize a command line parser.
 struct cli_state;
-inline cli_state make_cli(const string& cmd, const string& usage);
+inline cli_state make_cli(string_view cmd, string_view usage);
 // parse arguments, checks for errors, and exits on error or help
 inline void parse_cli(cli_state& cli, int argc, const char** argv);
 // parse arguments and checks for errors
@@ -121,17 +121,17 @@ inline bool get_help(const cli_state& cli);
 // Boolean flags are indicated with a pair of names "--name/--no-name", so that
 // both options are explicitly specified.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req = false);
+inline void add_option(cli_state& cli, string_view name, T& value,
+    string_view usage, bool req = false);
 // Parses an optional or positional argument where values can only be within a
 // set of choices. Supports strings, integers and enums.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req = false);
+inline void add_option(cli_state& cli, string_view name, T& value,
+    string_view usage, const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line. Can only be used as argument.
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req = false);
+inline void add_option(cli_state& cli, string_view name, vector<T>& value,
+    string_view usage, bool req = false);
 
 }  // namespace yocto
 
@@ -141,39 +141,39 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& value,
 namespace yocto {
 
 // Utility to normalize a path
-inline string normalize_path(const string& filename);
+inline string normalize_path(string_view filename);
 
 // Get directory name (not including '/').
-inline string path_dirname(const string& filename);
+inline string path_dirname(string_view filename);
 
 // Get extension (including '.').
-inline string path_extension(const string& filename);
+inline string path_extension(string_view filename);
 
 // Get filename without directory.
-inline string path_filename(const string& filename);
+inline string path_filename(string_view filename);
 
 // Get filename without directory and extension.
-inline string path_basename(const string& filename);
+inline string path_basename(string_view filename);
 
 // Joins paths
-inline string path_join(const string& patha, const string& pathb);
+inline string path_join(string_view patha, string_view pathb);
 inline string path_join(
-    const string& patha, const string& pathb, const string& pathc);
+    string_view patha, string_view pathb, string_view pathc);
 
 // Replaces extensions
-inline string replace_extension(const string& filename, const string& ext);
+inline string replace_extension(string_view filename, string_view ext);
 
 // Check if a file can be opened for reading.
-inline bool path_exists(const string& filename);
+inline bool path_exists(string_view filename);
 
 // Check if a file is a directory
-inline bool path_isdir(const string& filename);
+inline bool path_isdir(string_view filename);
 
 // Check if a file is a file
-inline bool path_isfile(const string& filename);
+inline bool path_isfile(string_view filename);
 
 // List the contents of a directory
-inline vector<string> list_directory(const string& filename);
+inline vector<string> list_directory(string_view filename);
 
 }  // namespace yocto
 
@@ -183,17 +183,17 @@ inline vector<string> list_directory(const string& filename);
 namespace yocto {
 
 // Load/save a text file
-inline bool load_text(const string& filename, string& str, string& error);
-inline bool save_text(const string& filename, const string& str, string& error);
+inline bool load_text(string_view filename, string& str, string& error);
+inline bool save_text(string_view filename, const string& str, string& error);
 
 // Using directive
 using byte = unsigned char;
 
 // Load/save a binary file
 inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error);
+    string_view filename, vector<byte>& data, string& error);
 inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error);
+    string_view filename, const vector<byte>& data, string& error);
 
 }  // namespace yocto
 
@@ -213,7 +213,7 @@ namespace yocto {
 // This is a very crude replacement for `std::format()` that will be used when
 // available on all platforms.
 template <typename... Args>
-inline string format(const string& fmt, Args&&... args);
+inline string format(string_view fmt, Args&&... args);
 
 // Formats values to string
 inline void _format_value(string& str, string_view value) { str += value; }
@@ -245,16 +245,16 @@ inline void _format_values(
   auto pos = fmt.find("{}");
   if (pos == string::npos) throw std::invalid_argument{"bad format string"};
   str += fmt.substr(0, pos);
-  _format_value(str, std::forward(arg));
+  _format_value(str, std::forward<Arg>(arg));
   _format_values(str, fmt.substr(pos + 2), std::forward(args)...);
 }
 
 // This is a very crude replacement for `std::format()` that will be used when
 // available on all platforms.
 template <typename... Args>
-inline string format(const string& fmt, Args&&... args) {
+inline string format(string_view fmt, Args&&... args) {
   auto str = string{};
-  _format_values(str, fmt, std::forward(args)...);
+  _format_values(str, fmt, std::forward<Args>(args)...);
   return str;
 }
 
@@ -266,10 +266,12 @@ inline string format(const string& fmt, Args&&... args) {
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+inline void print_info(string_view msg) {
+  printf("%.*s\n", (int)msg.size(), msg.data());
+}
 // Prints a messgae to the console and exit with an error.
-inline void print_fatal(const string& msg) {
-  printf("%s\n", msg.c_str());
+inline void print_fatal(string_view msg) {
+  printf("%.*s\n", (int)msg.size(), msg.data());
   exit(1);
 }
 
@@ -302,8 +304,8 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline print_timer print_timed(const string& msg) {
-  printf("%s", msg.c_str());
+inline print_timer print_timed(string_view msg) {
+  printf("%.*s", (int)msg.size(), msg.data());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
   return print_timer{get_time_()};
@@ -316,15 +318,15 @@ inline void print_elapsed(print_timer& timer) {
 inline print_timer::~print_timer() { print_elapsed(*this); }
 
 // Print progress
-inline void print_progress(const string& message, int current, int total) {
-  static auto pad = [](const string& str, int n) -> string {
-    return string(std::max(0, n - (int)str.size()), '0') + str;
+inline void print_progress(string_view message, int current, int total) {
+  static auto pad = [](string_view str, int n) -> string {
+    return string(std::max(0, n - (int)str.size()), '0') + string{str};
   };
-  static auto pade = [](const string& str, int n) -> string {
-    return str + string(std::max(0, n - (int)str.size()), ' ');
+  static auto pade = [](string_view str, int n) -> string {
+    return string{str} + string(std::max(0, n - (int)str.size()), ' ');
   };
-  static auto pads = [](const string& str, int n) -> string {
-    return string(std::max(0, n - (int)str.size()), ' ') + str;
+  static auto pads = [](string_view str, int n) -> string {
+    return string(std::max(0, n - (int)str.size()), ' ') + string{str};
   };
   using clock               = std::chrono::high_resolution_clock;
   static int64_t start_time = 0;
@@ -353,67 +355,67 @@ inline void print_progress(const string& message, int current, int total) {
 namespace yocto {
 
 // Make a path from a utf8 string
-inline std::filesystem::path make_path(const string& filename) {
+inline std::filesystem::path make_path(string_view filename) {
   return std::filesystem::u8path(filename);
 }
 
 // Normalize path
-inline string normalize_path(const string& filename) {
+inline string normalize_path(string_view filename) {
   return make_path(filename).generic_u8string();
 }
 
 // Get directory name (not including /)
-inline string path_dirname(const string& filename) {
+inline string path_dirname(string_view filename) {
   return make_path(filename).parent_path().generic_u8string();
 }
 
 // Get extension (including .)
-inline string path_extension(const string& filename) {
+inline string path_extension(string_view filename) {
   return make_path(filename).extension().u8string();
 }
 
 // Get filename without directory.
-inline string path_filename(const string& filename) {
+inline string path_filename(string_view filename) {
   return make_path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
-inline string path_basename(const string& filename) {
+inline string path_basename(string_view filename) {
   return make_path(filename).stem().u8string();
 }
 
 // Joins paths
-inline string path_join(const string& patha, const string& pathb) {
+inline string path_join(string_view patha, string_view pathb) {
   return (make_path(patha) / make_path(pathb)).generic_u8string();
 }
 inline string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
+    string_view patha, string_view pathb, string_view pathc) {
   return (make_path(patha) / make_path(pathb) / make_path(pathc))
       .generic_u8string();
 }
 
 // Replaces extensions
-inline string replace_extension(const string& filename, const string& ext) {
+inline string replace_extension(string_view filename, string_view ext) {
   return make_path(filename).replace_extension(ext).u8string();
 }
 
 // Check if a file can be opened for reading.
-inline bool path_exists(const string& filename) {
+inline bool path_exists(string_view filename) {
   return exists(make_path(filename));
 }
 
 // Check if a file is a directory
-inline bool path_isdir(const string& filename) {
+inline bool path_isdir(string_view filename) {
   return is_directory(make_path(filename));
 }
 
 // Check if a file is a file
-inline bool path_isfile(const string& filename) {
+inline bool path_isfile(string_view filename) {
   return is_regular_file(make_path(filename));
 }
 
 // List the contents of a directory
-inline vector<string> list_directory(const string& filename) {
+inline vector<string> list_directory(string_view filename) {
   auto entries = vector<string>{};
   for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
     entries.push_back(entry.path().generic_u8string());
@@ -429,22 +431,22 @@ inline vector<string> list_directory(const string& filename) {
 namespace yocto {
 
 // Opens a file with a utf8 file name
-inline FILE* fopen_utf8(const char* filename, const char* mode) {
+inline FILE* fopen_utf8(string_view filename, string_view mode) {
 #ifdef _Win32
   auto path8 = std::filesystem::u8path(filename);
   auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
   return _wfopen(path.c_str(), wmode.c_str());
 #else
-  return fopen(filename, mode);
+  return fopen(string{filename}.c_str(), string{mode}.c_str());
 #endif
 }
 
 // Load a text file
-inline bool load_text(const string& filename, string& str, string& error) {
+inline bool load_text(string_view filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename, "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = format("{}: file not found", filename);
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -453,23 +455,22 @@ inline bool load_text(const string& filename, string& str, string& error) {
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
   if (fread(str.data(), 1, length, fs) != length) {
-    error = filename + ": read error";
+    error = format("{}: read error", filename);
     return false;
   }
   return true;
 }
 
 // Save a text file
-inline bool save_text(
-    const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+inline bool save_text(string_view filename, const string& str, string& error) {
+  auto fs = fopen_utf8(filename, "wt");
   if (!fs) {
-    error = filename + ": file not found";
+    error = format("{}: file not found", filename);
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fprintf(fs, "%s", str.c_str()) < 0) {
-    error = filename + ": write error";
+    error = format("{}: write error", filename);
     return false;
   }
   return true;
@@ -477,11 +478,11 @@ inline bool save_text(
 
 // Load a binary file
 inline bool load_binary(
-    const string& filename, vector<byte>& data, string& error) {
+    string_view filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = fopen_utf8(filename, "rb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = format("{}: file not found", filename);
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -490,7 +491,7 @@ inline bool load_binary(
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
-    error = filename + ": read error";
+    error = format("{}: read error", filename);
     return false;
   }
   return true;
@@ -498,15 +499,15 @@ inline bool load_binary(
 
 // Save a binary file
 inline bool save_binary(
-    const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
+    string_view filename, const vector<byte>& data, string& error) {
+  auto fs = fopen_utf8(filename, "wb");
   if (!fs) {
-    error = filename + ": file not found";
+    error = format("{}: file not found", filename);
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    error = filename + ": write error";
+    error = format("{}: write error", filename);
     return false;
   }
   return true;
@@ -536,7 +537,7 @@ struct cli_state {
 };
 
 // initialize a command line parser
-inline cli_state make_cli(const string& cmd, const string& usage) {
+inline cli_state make_cli(string_view cmd, string_view usage) {
   auto cli  = cli_state{};
   cli.name  = cmd;
   cli.usage = usage;
@@ -544,8 +545,8 @@ inline cli_state make_cli(const string& cmd, const string& usage) {
   return cli;
 }
 
-inline vector<string> split_cli_names(const string& name_) {
-  auto name  = name_;
+inline vector<string> split_cli_names(string_view name_) {
+  auto name  = string{name_};
   auto split = vector<string>{};
   if (name.empty()) throw std::runtime_error("option name cannot be empty");
   if (name.find_first_of(" \t\r\n") != string::npos)
@@ -678,8 +679,8 @@ inline bool parse_cli_value(
 }
 
 template <typename T>
-inline void add_cli_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req, const vector<string>& choices) {
+inline void add_cli_option(cli_state& cli, string_view name, T& value,
+    string_view usage, bool req, const vector<string>& choices) {
   // check for errors
   auto used = unordered_set<string>{};
   for (auto& option : cli.options) {
@@ -696,7 +697,7 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
   }
 
   // help message
-  auto line = "  " + name + " " + cli_type_name<T>();
+  auto line = "  " + string{name} + " " + cli_type_name<T>();
   while (line.size() < 32) line += " ";
   line += usage;
   line += !req ? " [" + cli_to_string(value, choices) + "]\n" : " [required]\n";
@@ -720,15 +721,15 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
     cli.usage_arguments += line;
   }
   // add option
-  cli.options.push_back({name, req, cli_nargs<T>(),
+  cli.options.push_back({string{name}, req, cli_nargs<T>(),
       [&value, choices](const vector<string>& args) -> bool {
         return parse_cli_value(args, value, choices);
       }});
 }
 
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, bool req) {
+inline void add_option(
+    cli_state& cli, string_view name, T& value, string_view usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
@@ -736,16 +737,16 @@ inline void add_option(cli_state& cli, const string& name, T& value,
   return add_cli_option(cli, name, value, usage, req, {});
 }
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, T& value,
-    const string& usage, const vector<string>& choices, bool req) {
+inline void add_option(cli_state& cli, string_view name, T& value,
+    string_view usage, const vector<string>& choices, bool req) {
   static_assert(
       std::is_same_v<T, string> || std::is_integral_v<T> || std::is_enum_v<T>,
       "unsupported type");
   return add_cli_option(cli, name, value, usage, req, choices);
 }
 template <typename T>
-inline void add_option(cli_state& cli, const string& name, vector<T>& value,
-    const string& usage, bool req) {
+inline void add_option(cli_state& cli, string_view name, vector<T>& value,
+    string_view usage, bool req) {
   static_assert(std::is_same_v<T, string> || std::is_same_v<T, bool> ||
                     std::is_integral_v<T> || std::is_floating_point_v<T> ||
                     std::is_enum_v<T>,
