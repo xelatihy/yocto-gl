@@ -44,6 +44,7 @@
 
 #include "ext/cgltf.h"
 #include "ext/json.hpp"
+#include "yocto_commonio.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
 #include "yocto_shape.h"

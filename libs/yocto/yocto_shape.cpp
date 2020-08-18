@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 #include "yocto_noise.h"

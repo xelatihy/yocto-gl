@@ -36,6 +36,7 @@
 #include <unordered_set>
 
 #include "yocto_color.h"
+#include "yocto_commonio.h"
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
