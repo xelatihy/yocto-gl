@@ -32,7 +32,6 @@
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_trace.h>
 using namespace yocto;
-using namespace std::string_literals;
 
 #include <OpenImageDenoise/oidn.hpp>
 #include <iostream>
@@ -127,8 +126,8 @@ bool oidn_image_denoise(const image<vec3f> &color, bool hdr,
 }
 
 int main(int argc, const char *argv[]) {
-  auto outname     = "out.png"s;
-  auto filename    = "img.hdr"s;
+  auto outname     = string{"out.png"};
+  auto filename    = string{"img.hdr"};
   auto albedo_name = string{};
   auto normal_name = string{};
 

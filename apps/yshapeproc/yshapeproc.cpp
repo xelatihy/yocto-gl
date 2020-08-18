@@ -31,8 +31,6 @@
 #include <yocto/yocto_shape.h>
 using namespace yocto;
 
-using namespace std::string_literals;
-
 // Shape presets used ofr testing.
 bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
@@ -234,13 +232,13 @@ int main(int argc, const char* argv[]) {
   auto trianglesonly = false;
   auto smooth        = false;
   auto faceted       = false;
-  auto rotate        = zero3f;
+  auto rotate        = vec3f{0, 0, 0};
   auto scale         = vec3f{1, 1, 1};
   auto uscale        = 1.0f;
-  auto translate     = zero3f;
+  auto translate     = vec3f{0, 0, 0};
   auto info          = false;
-  auto output        = "out.ply"s;
-  auto filename      = "mesh.ply"s;
+  auto output        = string{"out.ply"};
+  auto filename      = string{"mesh.ply"};
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");

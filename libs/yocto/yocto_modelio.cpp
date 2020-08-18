@@ -46,7 +46,6 @@ namespace yocto {
 using std::string_view;
 using std::unordered_map;
 using std::unordered_set;
-using namespace std::string_literals;
 
 }  // namespace yocto
 
@@ -117,9 +116,6 @@ inline bool path_exists(const string& filename) {
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// string literals
-using namespace std::string_literals;
 
 // utilities
 inline bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
@@ -1279,9 +1275,6 @@ bool add_points(ply_model* ply, const vector<int>& values) {
 // IMPLEMENTATION FOR OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// string literals
-using namespace std::string_literals;
 
 // utilities
 inline bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
@@ -2822,9 +2815,6 @@ void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// string literals
-using namespace std::string_literals;
-
 // utilities
 inline bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_pbrt_space(char c) {
@@ -3701,7 +3691,7 @@ inline bool convert_film(pbrt_film* film, const pbrt_command& command,
       return parse_error();
     if (!get_pbrt_value(command.values, "yresolution", film->resolution.y))
       return parse_error();
-    film->filename = "out.png"s;
+    film->filename = "out.png";
     if (!get_pbrt_value(command.values, "filename", film->filename))
       return parse_error();
     return true;
@@ -4963,7 +4953,7 @@ bool save_pbrt(
         make_pbrt_value("xresolution", camera->resolution.x));
     command.values.push_back(
         make_pbrt_value("yresolution", camera->resolution.y));
-    command.values.push_back(make_pbrt_value("filename", "image.exr"s));
+    command.values.push_back(make_pbrt_value("filename", string{"image.exr"}));
     if (!format_pbrt_values(
             fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();

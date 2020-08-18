@@ -52,7 +52,6 @@ namespace yocto {
 // using directives
 using std::unordered_map;
 using std::unordered_set;
-using namespace std::string_literals;
 
 }  // namespace yocto
 

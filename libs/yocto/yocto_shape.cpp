@@ -27,7 +27,6 @@ namespace yocto {
 // using directives
 using std::atomic;
 using std::deque;
-using namespace std::string_literals;
 
 }  // namespace yocto
 

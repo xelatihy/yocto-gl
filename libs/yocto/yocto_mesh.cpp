@@ -34,7 +34,6 @@ using std::atomic;
 using std::deque;
 using std::pair;
 using std::unordered_set;
-using namespace std::string_literals;
 
 }  // namespace yocto
 

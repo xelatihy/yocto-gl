@@ -38,7 +38,6 @@ using namespace yocto;
 #include <atomic>
 #include <deque>
 #include <future>
-using namespace std::string_literals;
 
 #ifdef _WIN32
 #undef near

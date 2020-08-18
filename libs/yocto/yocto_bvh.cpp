@@ -29,7 +29,6 @@ namespace yocto {
 using std::atomic;
 using std::deque;
 using std::pair;
-using namespace std::string_literals;
 
 }  // namespace yocto
 
@@ -47,20 +46,21 @@ static RTCDevice bvh_embree_device() {
     device = rtcNewDevice("");
     rtcSetDeviceErrorFunction(
         device,
-        [](void* ctx, RTCError code, const char* str) {
+        [](void* ctx, RTCError code, const char* str_) {
+          auto str = string{str_};
           switch (code) {
             case RTC_ERROR_UNKNOWN:
-              throw std::runtime_error("RTC_ERROR_UNKNOWN: "s + str);
+              throw std::runtime_error("RTC_ERROR_UNKNOWN: " + str);
             case RTC_ERROR_INVALID_ARGUMENT:
-              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
+              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: " + str);
             case RTC_ERROR_INVALID_OPERATION:
-              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
+              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: " + str);
             case RTC_ERROR_OUT_OF_MEMORY:
-              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
+              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: " + str);
             case RTC_ERROR_UNSUPPORTED_CPU:
-              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
+              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: " + str);
             case RTC_ERROR_CANCELLED:
-              throw std::runtime_error("RTC_ERROR_CANCELLED: "s + str);
+              throw std::runtime_error("RTC_ERROR_CANCELLED: " + str);
             default: throw std::runtime_error("invalid error code");
           }
         },
