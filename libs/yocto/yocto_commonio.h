@@ -576,7 +576,7 @@ namespace yocto {
 // Formats values to string
 inline void format_value(string& str, const string& value) { str += value; }
 inline void format_value(string& str, int8_t value) {
-  str += std::to_string((int)value);
+  str += std::to_string((int32_t)value);
 }
 inline void format_value(string& str, int16_t value) {
   str += std::to_string(value);
@@ -588,7 +588,7 @@ inline void format_value(string& str, int64_t value) {
   str += std::to_string(value);
 }
 inline void format_value(string& str, uint8_t value) {
-  str += std::to_string((uint)value);
+  str += std::to_string((uint32_t)value);
 }
 inline void format_value(string& str, uint16_t value) {
   str += std::to_string(value);
