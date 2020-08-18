@@ -241,8 +241,8 @@ struct ogl_program {
 };
 
 // initialize program
-bool init_program(ogl_program* program, const string& vertex,
-    const string& fragment, string& error, string& errorlog);
+bool init_program(ogl_program* program, string_view vertex,
+    string_view fragment, string& error, string& errorlog);
 bool is_initialized(const ogl_program* program);
 
 // clear program
