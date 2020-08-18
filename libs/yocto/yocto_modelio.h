@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -53,6 +54,7 @@ namespace yocto {
 // using directives
 using std::array;
 using std::string;
+using std::string_view;
 using std::unordered_map;
 using std::vector;
 
@@ -115,32 +117,31 @@ struct ply_model {
 };
 
 // Load and save ply
-bool load_ply(const string& filename, ply_model* ply, string& error);
-bool save_ply(const string& filename, ply_model* ply, string& error);
+bool load_ply(string_view filename, ply_model* ply, string& error);
+bool save_ply(string_view filename, ply_model* ply, string& error);
 
 // Get ply properties
-bool has_property(
-    ply_model* ply, const string& element, const string& property);
+bool has_property(ply_model* ply, string_view element, string_view property);
 ply_property* get_property(
-    ply_model* ply, const string& element, const string& property);
+    ply_model* ply, string_view element, string_view property);
 
-bool get_value(ply_model* ply, const string& element, const string& property,
+bool get_value(ply_model* ply, string_view element, string_view property,
     vector<float>& values);
-bool get_values(ply_model* ply, const string& element,
-    const array<string, 2>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
-    const array<string, 3>& properties, vector<vec3f>& values);
-bool get_values(ply_model* ply, const string& element,
-    const array<string, 4>& properties, vector<vec4f>& values);
-bool get_values(ply_model* ply, const string& element,
-    const array<string, 12>& properties, vector<frame3f>& values);
+bool get_values(ply_model* ply, string_view element,
+    const array<string_view, 2>& properties, vector<vec4f>& values);
+bool get_values(ply_model* ply, string_view element,
+    const array<string_view, 3>& properties, vector<vec3f>& values);
+bool get_values(ply_model* ply, string_view element,
+    const array<string_view, 4>& properties, vector<vec4f>& values);
+bool get_values(ply_model* ply, string_view element,
+    const array<string_view, 12>& properties, vector<frame3f>& values);
 
-bool get_lists(ply_model* ply, const string& element, const string& property,
+bool get_lists(ply_model* ply, string_view element, string_view property,
     vector<vector<int>>& lists);
-bool get_list_sizes(ply_model* ply, const string& element,
-    const string& property, vector<byte>& sizes);
-bool get_list_values(ply_model* ply, const string& element,
-    const string& property, vector<int>& values);
+bool get_list_sizes(ply_model* ply, string_view element, string_view property,
+    vector<byte>& sizes);
+bool get_list_values(ply_model* ply, string_view element, string_view property,
+    vector<int>& values);
 
 // Get ply properties for meshes
 bool get_positions(ply_model* ply, vector<vec3f>& values);
@@ -156,28 +157,28 @@ bool get_quads(ply_model* ply, vector<vec4i>& values);
 bool has_quads(ply_model* ply);
 
 // Add ply properties
-bool add_value(ply_model* ply, const string& element, const string& property,
+bool add_value(ply_model* ply, string_view element, string_view property,
     const vector<float>& values);
-bool add_values(ply_model* ply, const string& element,
-    const array<string, 2>& properties, const vector<vec2f>& values);
-bool add_values(ply_model* ply, const string& element,
-    const array<string, 3>& properties, const vector<vec3f>& values);
-bool add_values(ply_model* ply, const string& element,
-    const array<string, 4>& properties, const vector<vec4f>& values);
-bool add_values(ply_model* ply, const string& element,
-    const array<string, 12>& properties, const vector<frame3f>& values);
+bool add_values(ply_model* ply, string_view element,
+    const array<string_view, 2>& properties, const vector<vec2f>& values);
+bool add_values(ply_model* ply, string_view element,
+    const array<string_view, 3>& properties, const vector<vec3f>& values);
+bool add_values(ply_model* ply, string_view element,
+    const array<string_view, 4>& properties, const vector<vec4f>& values);
+bool add_values(ply_model* ply, string_view element,
+    const array<string_view, 12>& properties, const vector<frame3f>& values);
 
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<vector<int>>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<byte>& sizes, const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<int>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<vec2i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<vec3i>& values);
-bool add_lists(ply_model* ply, const string& element, const string& property,
+bool add_lists(ply_model* ply, string_view element, string_view property,
     const vector<vec4i>& values);
 
 // Add ply properties for meshes
@@ -224,8 +225,7 @@ struct obj_texture {
   unordered_map<string, vector<float>> props;
 
   obj_texture() {}
-  explicit obj_texture(const char* path) : path{path} {}
-  explicit obj_texture(const string& path) : path{path} {}
+  explicit obj_texture(string_view path) : path{path} {}
 };
 
 // Obj element
@@ -346,10 +346,10 @@ struct obj_model {
 };
 
 // Load and save obj
-bool load_obj(const string& filename, obj_model* obj, string& error,
+bool load_obj(string_view filename, obj_model* obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-bool save_obj(const string& filename, obj_model* obj, string& error);
+bool save_obj(string_view filename, obj_model* obj, string& error);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
@@ -540,8 +540,8 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error);
-bool save_pbrt(const string& filename, pbrt_model* pbrt, string& error,
+bool load_pbrt(string_view filename, pbrt_model* pbrt, string& error);
+bool save_pbrt(string_view filename, pbrt_model* pbrt, string& error,
     bool ply_meshes = false);
 
 // Create pbrt
