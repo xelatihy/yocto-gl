@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 #include "yocto_noise.h"
@@ -638,9 +639,9 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, split_axis};
@@ -677,9 +678,9 @@ static pair<int, int> split_balanced(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -716,9 +717,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -3498,40 +3499,6 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _Win32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    error = filename + ": write error";
-    return false;
-  }
-  return true;
-}
-
 // Load ply mesh
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -3562,7 +3529,7 @@ static bool save_text(
   colors        = {};
   radius        = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -3662,7 +3629,7 @@ static bool save_text(
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();

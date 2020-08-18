@@ -15,11 +15,13 @@
 #include <atomic>
 #include <cassert>
 #include <deque>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_set>
 #include <utility>
 
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
@@ -2511,13 +2513,6 @@ mesh_point eval_path_point(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string get_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
 // Load ply mesh
 [[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -2537,7 +2532,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2600,7 +2595,7 @@ static string get_extension(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2649,7 +2644,7 @@ static string get_extension(const string& filename) {
   texcoords = {};
   colors    = {};
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply_guard = std::make_unique<ply_model>();
@@ -2712,7 +2707,7 @@ static string get_extension(const string& filename) {
     return false;
   };
 
-  auto ext = get_extension(filename);
+  auto ext = path_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply_guard = std::make_unique<ply_model>();

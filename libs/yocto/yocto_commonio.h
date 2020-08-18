@@ -60,8 +60,6 @@ using std::function;
 using std::string;
 using std::unordered_set;
 using std::vector;
-using std::filesystem::path;
-using std::filesystem::u8path;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -140,32 +138,41 @@ inline void add_option(cli_state& cli, const string& name, vector<T>& value,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// These utilities are here only for backward compatibility. They should be
-// considered deprecated.
-
 // Utility to normalize a path
 inline string normalize_path(const string& filename);
 
-// Get directory name (including '/').
-inline string get_dirname(const string& filename);
+// Get directory name (not including '/').
+inline string path_dirname(const string& filename);
 
-// Get extension (not including '.').
-inline string get_extension(const string& filename);
+// Get extension (including '.').
+inline string path_extension(const string& filename);
 
 // Get filename without directory.
-inline string get_filename(const string& filename);
-
-// Get extension.
-inline string get_noextension(const string& filename);
+inline string path_filename(const string& filename);
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename);
+inline string path_basename(const string& filename);
+
+// Joins paths
+inline string path_join(const string& patha, const string& pathb);
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc);
 
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
+inline bool path_exists(const string& filename);
+
+// Check if a file is a directory
+inline bool path_isdir(const string& filename);
+
+// Check if a file is a file
+inline bool path_isfile(const string& filename);
+
+// List the contents of a directory
+inline vector<string> list_directory(const string& filename);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -300,72 +307,73 @@ inline void print_progress(const string& message, int current, int total) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Utility to normalize a path
-inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
+// Make a path from a utf8 string
+inline std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
 }
 
-// Get directory name (including '/').
-inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
+// Normalize path
+inline string normalize_path(const string& filename) {
+  return make_path(filename).generic_u8string();
 }
 
-// Get extension (not including '.').
-inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
+// Get directory name (not including /)
+inline string path_dirname(const string& filename) {
+  return make_path(filename).parent_path().generic_u8string();
+}
+
+// Get extension (including .)
+inline string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
 }
 
 // Get filename without directory.
-inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
+inline string path_filename(const string& filename) {
+  return make_path(filename).filename().u8string();
 }
 
 // Get filename without directory and extension.
-inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
+inline string path_basename(const string& filename) {
+  return make_path(filename).stem().u8string();
+}
+
+// Joins paths
+inline string path_join(const string& patha, const string& pathb) {
+  return (make_path(patha) / make_path(pathb)).generic_u8string();
+}
+inline string path_join(
+    const string& patha, const string& pathb, const string& pathc) {
+  return (make_path(patha) / make_path(pathb) / make_path(pathc))
+      .generic_u8string();
 }
 
 // Replaces extensions
 inline string replace_extension(const string& filename, const string& ext) {
-  return get_noextension(filename) + ext;
+  return make_path(filename).replace_extension(ext).u8string();
 }
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename) {
-  return exists(u8path(filename));
+inline bool path_exists(const string& filename) {
+  return exists(make_path(filename));
+}
+
+// Check if a file is a directory
+inline bool path_isdir(const string& filename) {
+  return is_directory(make_path(filename));
+}
+
+// Check if a file is a file
+inline bool path_isfile(const string& filename) {
+  return is_regular_file(make_path(filename));
+}
+
+// List the contents of a directory
+inline vector<string> list_directory(const string& filename) {
+  auto entries = vector<string>{};
+  for (auto entry : std::filesystem::directory_iterator(make_path(filename))) {
+    entries.push_back(entry.path().generic_u8string());
+  }
+  return entries;
 }
 
 }  // namespace yocto
@@ -374,6 +382,109 @@ inline bool exists_file(const string& filename) {
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Safe wrapper for FILE stream
+struct file_stream {
+  // file parameters
+  string filename = "";
+  FILE*  fs       = nullptr;
+  bool   owned    = false;
+
+  // move-only type
+  file_stream(const file_stream&) = delete;
+  file_stream& operator=(const file_stream&) = delete;
+  ~file_stream();
+
+  // operator bool to check for error
+  explicit operator bool() const { return fs != nullptr; }
+};
+
+// Cleanup
+inline file_stream::~file_stream() {
+  if (owned && fs) fclose(fs);
+}
+
+// Open a file
+inline file_stream open_file(const string& filename, const string& mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  auto fs    = _wfopen(path.c_str(), wmode.c_str());
+#else
+  auto fs = fopen(filename.c_str(), mode.c_str());
+#endif
+  return {filename, fs, true};
+}
+
+// Close a file
+inline void close_file(file_stream& fs) {
+  if (fs.owned && fs.fs) fclose(fs.fs);
+  fs.filename = "";
+  fs.fs       = nullptr;
+  fs.owned    = false;
+}
+
+// Read a line of text
+inline bool read_line(file_stream& fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs.fs);
+}
+
+// Write text to a file
+inline bool write_text(file_stream& fs, const string& str) {
+  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
+}
+
+// Read data from a file
+template <typename T>
+inline bool read_value(file_stream& fs, T& buffer) {
+  return fread(&buffer, sizeof(T), 1, fs.fs) == 1;
+}
+
+// Write data from a file
+template <typename T>
+inline bool write_value(file_stream& fs, const T& buffer) {
+  return fwrite(&buffer, sizeof(T), 1, fs.fs) == 1;
+}
+
+// Read data from a file
+template <typename T>
+inline bool read_values(file_stream& fs, T* buffer, size_t count) {
+  return fread(buffer, sizeof(T), count, fs.fs) == count;
+}
+
+// Write data from a file
+template <typename T>
+inline bool write_values(file_stream& fs, const T* buffer, size_t count) {
+  return fwrite(buffer, sizeof(T), count, fs.fs) == count;
+}
+
+template <typename T>
+inline T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+inline bool read_value(file_stream& fs, T& value, bool big_endian) {
+  if (!read_value(fs, value)) return false;
+  if (big_endian) value = swap_endian(value);
+  return true;
+}
+
+template <typename T>
+inline bool write_value(file_stream& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  if (!write_value(fs, value)) return false;
+  return true;
+}
 
 // Opens a file with a utf8 file name
 inline FILE* fopen_utf8(const char* filename, const char* mode) {
@@ -389,17 +500,16 @@ inline FILE* fopen_utf8(const char* filename, const char* mode) {
 // Load a text file
 inline bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
+  if (!read_values(fs, str.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -409,13 +519,12 @@ inline bool load_text(const string& filename, string& str, string& error) {
 // Save a text file
 inline bool save_text(
     const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
+  if (!write_text(fs, str)) {
     error = filename + ": write error";
     return false;
   }
@@ -426,17 +535,16 @@ inline bool save_text(
 inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
+  if (!read_values(fs, data.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -446,16 +554,91 @@ inline bool load_binary(
 // Save a binary file
 inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+  if (!write_values(fs, data.data(), data.size()) != data.size()) {
     error = filename + ": write error";
     return false;
   }
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FORMATTING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Formats values to string
+inline void format_value(string& str, const string& value) { str += value; }
+inline void format_value(string& str, int8_t value) {
+  str += std::to_string((int32_t)value);
+}
+inline void format_value(string& str, int16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint8_t value) {
+  str += std::to_string((uint32_t)value);
+}
+inline void format_value(string& str, uint16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, float value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+inline void format_value(string& str, double value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+
+// Foramt to file
+inline void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::invalid_argument("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+inline void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+inline bool format_values(
+    file_stream& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  if (!write_text(fs, str)) return false;
+  return true;
+}
+template <typename T>
+inline bool format_value(file_stream& fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
+  if (!write_text(fs, str)) return false;
   return true;
 }
 
@@ -494,19 +677,19 @@ inline cli_state make_cli(const string& cmd, const string& usage) {
 inline vector<string> split_cli_names(const string& name_) {
   auto name  = name_;
   auto split = vector<string>{};
-  if (name.empty()) throw std::runtime_error("option name cannot be empty");
+  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
   if (name.find_first_of(" \t\r\n") != string::npos)
-    throw std::runtime_error("option name cannot contain whitespaces");
+    throw std::invalid_argument("option name cannot contain whitespaces");
   while (name.find_first_of(",/") != string::npos) {
     auto pos = name.find_first_of(",/");
     if (pos > 0) split.push_back(name.substr(0, pos));
     name = name.substr(pos + 1);
   }
   if (!name.empty()) split.push_back(name);
-  if (split.empty()) throw std::runtime_error("option name cannot be empty");
+  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
   for (auto& name : split)
     if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::runtime_error("inconsistent option names for " + name);
+      throw std::invalid_argument("inconsistent option names for " + name);
   return split;
 }
 
@@ -630,15 +813,16 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
   // check for errors
   auto used = unordered_set<string>{};
   for (auto& option : cli.options) {
-    if (option.name.empty()) throw std::runtime_error("name cannot be empty");
+    if (option.name.empty())
+      throw std::invalid_argument("name cannot be empty");
     auto names = split_cli_names(option.name);
-    if (names.empty()) throw std::runtime_error("name cannot be empty");
+    if (names.empty()) throw std::invalid_argument("name cannot be empty");
     for (auto& name : names) {
       if (used.find(name) != used.end())
-        throw std::runtime_error("option name " + name + " already in use");
+        throw std::invalid_argument("option name " + name + " already in use");
       used.insert(name);
       if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::runtime_error("inconsistent option type for " + name);
+        throw std::invalid_argument("inconsistent option type for " + name);
     }
   }
 
