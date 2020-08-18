@@ -43,7 +43,7 @@ Both callback functions are optional.
 ```cpp
 auto scene = new scene_model{...};        // initialize scene
 auto params = trace_params{};             // default params
-auto progress = [](const string& message, // progress callback
+auto progress = [](string_view message,   // progress callback
       int current, int total) {
   print_info(message, current, total);
 };
