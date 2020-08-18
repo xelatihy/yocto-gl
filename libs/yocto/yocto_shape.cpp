@@ -3499,7 +3499,7 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 namespace yocto {
 
 // Load ply mesh
-[[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
+[[nodiscard]] bool load_shape(string_view filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
@@ -3507,11 +3507,11 @@ namespace yocto {
     vector<float>& radius, string& error, bool facevarying,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
@@ -3611,7 +3611,7 @@ namespace yocto {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_shape(const string& filename, const vector<int>& points,
+[[nodiscard]] bool save_shape(string_view filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
@@ -3620,11 +3620,11 @@ namespace yocto {
     const vector<float>& radius, string& error, bool facevarying,
     bool flip_texcoord, bool ascii) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
@@ -3680,12 +3680,12 @@ namespace yocto {
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".cpp" || ext == ".CPP") {
-    auto to_cpp = [](const string& name, const string& vname,
+    auto to_cpp = [](string_view name, string_view vname,
                       const auto& values) -> string {
       using T = typename std::remove_const_t<
           std::remove_reference_t<decltype(values)>>::value_type;
       if (values.empty()) return string{};
-      auto str = "auto " + name + "_" + vname + " = ";
+      auto str = "auto " + string{name} + "_" + string{vname} + " = ";
       if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
       if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
       if constexpr (std::is_same_v<vec2i, T>) str += "vector<vec2i>{\n";
@@ -3739,16 +3739,15 @@ namespace yocto {
 }
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
+[[nodiscard]] bool load_shape(string_view filename, generic_shape& shape,
     string& error, bool facevarying, bool flip_texcoords) {
   return load_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
       shape.radius, error, facevarying, flip_texcoords);
 }
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool facevarying,
-    bool flip_texcoords, bool ascii) {
+[[nodiscard]] bool save_shape(string_view filename, const generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords, bool ascii) {
   return save_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
