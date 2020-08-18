@@ -64,7 +64,6 @@ namespace yocto {
 using std::mutex;
 using std::unordered_map;
 using std::unordered_set;
-using namespace std::string_literals;
 
 }  // namespace yocto
 
@@ -762,8 +761,9 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec3f& value) {
     exposure = log2(scale);
   }
   auto edit_exposure = draw_slider(
-      win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
+      win, (lbl + string{" [exp]"}).c_str(), exposure, 0, 10);
+  auto edit_color = draw_coloredit(
+      win, (lbl + string{" [col]"}).c_str(), color);
   if (edit_exposure || edit_color) {
     value = color * exp2(exposure);
     return true;
@@ -782,8 +782,9 @@ bool draw_hdrcoloredit(gui_window* win, const char* lbl, vec4f& value) {
     exposure = log2(scale);
   }
   auto edit_exposure = draw_slider(
-      win, (lbl + " [exp]"s).c_str(), exposure, 0, 10);
-  auto edit_color = draw_coloredit(win, (lbl + " [col]"s).c_str(), color);
+      win, (lbl + string{" [exp]"}).c_str(), exposure, 0, 10);
+  auto edit_color = draw_coloredit(
+      win, (lbl + string{" [col]"}).c_str(), color);
   if (edit_exposure || edit_color) {
     value.x = color.x * exp2(exposure);
     value.y = color.y * exp2(exposure);
@@ -876,30 +877,39 @@ void draw_histogram(
 }
 void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec2f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
+  ImGui::PlotHistogram((lbl + string{" x"}).c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec2f));
+  ImGui::PlotHistogram((lbl + string{" y"}).c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec3f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
-  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((lbl + string{" x"}).c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((lbl + string{" y"}).c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
+  ImGui::PlotHistogram((lbl + string{" z"}).c_str(),
+      (const float*)values.data() + 2, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec4f>& values) {
-  ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " z"s).c_str(), (const float*)values.data() + 2,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
-  ImGui::PlotHistogram((lbl + " w"s).c_str(), (const float*)values.data() + 3,
-      (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + string{" x"}).c_str(),
+      (const float*)values.data() + 0, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + string{" y"}).c_str(),
+      (const float*)values.data() + 1, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + string{" z"}).c_str(),
+      (const float*)values.data() + 2, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
+  ImGui::PlotHistogram((lbl + string{" w"}).c_str(),
+      (const float*)values.data() + 3, (int)values.size(), 0, nullptr, flt_max,
+      flt_max, {0, 0}, sizeof(vec4f));
 }
 
 // https://github.com/ocornut/imgui/issues/300
