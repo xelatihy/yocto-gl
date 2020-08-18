@@ -111,7 +111,7 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    throw std::runtime_error{format_file_error(filename, "unknown format")};
   }
 }
 
@@ -128,7 +128,7 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    throw std::runtime_error{format_file_error(filename, "unknown format")};
   }
 }
 
@@ -189,7 +189,7 @@ static bool save_image(const string& filename, const image<float>& scalarf,
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto ext = path_extension(filename);
@@ -211,7 +211,7 @@ static bool load_instance(
 bool save_instance(const string& filename, const vector<frame3f>& frames,
     string& error, bool ascii = false) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto ext = path_extension(filename);
@@ -269,7 +269,7 @@ using json = nlohmann::json;
 static bool load_json(const string& filename, json& js, string& error) {
   // error helpers
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error in json";
+    error = format_file_error(filename, "parse error in json");
     return false;
   };
   auto text = string{};
@@ -290,15 +290,15 @@ static bool save_json(const string& filename, const json& js, string& error) {
 static bool load_json_scene(const string& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto parse_error = [filename, &error]() {
-    error = filename + ": parse error";
+    error = format_file_error(filename, "parse error");
     return false;
   };
   auto material_error = [filename, &error](const string& name) {
-    error = filename + ": missing material " + name;
+    error = format_file_error(filename, ": missing material " + name);
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, ": error in " + error);
     return false;
   };
 
@@ -667,7 +667,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
 static bool save_json_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, ": error in " + error);
     return false;
   };
 
@@ -833,11 +833,11 @@ namespace yocto {
 static bool load_obj_scene(const string& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, ": error in " + error);
     return false;
   };
 
@@ -1013,11 +1013,11 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
 static bool save_obj_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, ": error in " + error);
     return false;
   };
 
@@ -1193,8 +1193,10 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
 
 static bool save_ply_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
-  if (scene->shapes.empty())
-    throw std::runtime_error{filename + ": empty shape"};
+  if (scene->shapes.empty()) {
+    error = format_file_error(filename, "empty shape");
+    return false;
+  }
 
   // handle progress
   auto progress = vec2i{0, 1};
@@ -1224,15 +1226,15 @@ namespace yocto {
 static bool load_gltf_scene(const string& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto read_error = [filename, &error]() {
-    error = filename + ": read error";
+    error = format_file_error(filename, "read error");
     return false;
   };
   auto primitive_error = [filename, &error]() {
-    error = filename + ": primitive error";
+    error = format_file_error(filename, "primitive error");
     return false;
   };
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, ": error in " + error);
     return false;
   };
 
@@ -1710,7 +1712,7 @@ namespace yocto {
 static bool load_pbrt_scene(const string& filename, scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, "error in " + error);
     return false;
   };
 
@@ -1887,7 +1889,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
 static bool save_pbrt_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
   auto dependent_error = [filename, &error]() {
-    error = filename + ": error in " + error;
+    error = format_file_error(filename, "error in " + error);
     return false;
   };
 

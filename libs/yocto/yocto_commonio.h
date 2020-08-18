@@ -441,12 +441,17 @@ inline FILE* fopen_utf8(string_view filename, string_view mode) {
 #endif
 }
 
+// Format an error message
+inline string format_file_error(string_view filename, string_view msg) {
+  return string{filename} + ": " + string{msg};
+}
+
 // Load a text file
 inline bool load_text(string_view filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename, "rb");
   if (!fs) {
-    error = format("{}: file not found", filename);
+    error = format_file_error(filename, "file not found");
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -455,7 +460,7 @@ inline bool load_text(string_view filename, string& str, string& error) {
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
   if (fread(str.data(), 1, length, fs) != length) {
-    error = format("{}: read error", filename);
+    error = format_file_error(filename, "read error");
     return false;
   }
   return true;
@@ -465,12 +470,12 @@ inline bool load_text(string_view filename, string& str, string& error) {
 inline bool save_text(string_view filename, const string& str, string& error) {
   auto fs = fopen_utf8(filename, "wt");
   if (!fs) {
-    error = format("{}: file not found", filename);
+    error = format_file_error(filename, "file not found");
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fprintf(fs, "%s", str.c_str()) < 0) {
-    error = format("{}: write error", filename);
+    error = format_file_error(filename, "write error");
     return false;
   }
   return true;
@@ -482,7 +487,7 @@ inline bool load_binary(
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen_utf8(filename, "rb");
   if (!fs) {
-    error = format("{}: file not found", filename);
+    error = format_file_error(filename, "file not found");
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
@@ -491,7 +496,7 @@ inline bool load_binary(
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
   if (fread(data.data(), 1, length, fs) != length) {
-    error = format("{}: read error", filename);
+    error = format_file_error(filename, "read error");
     return false;
   }
   return true;
@@ -502,12 +507,12 @@ inline bool save_binary(
     string_view filename, const vector<byte>& data, string& error) {
   auto fs = fopen_utf8(filename, "wb");
   if (!fs) {
-    error = format("{}: file not found", filename);
+    error = format_file_error(filename, "file not found");
     return false;
   }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    error = format("{}: write error", filename);
+    error = format_file_error(filename, "write error");
     return false;
   }
   return true;
