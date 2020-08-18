@@ -179,121 +179,6 @@ inline void skip_ply_whitespace(string_view& str) {
 }
 #endif
 
-// Formats values to string
-inline void format_ply_value(string& str, const string& value) { str += value; }
-inline void format_ply_value(string& str, int8_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, int16_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, int32_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, int64_t value) {
-  char buf[256];
-  sprintf(buf, "%lld", (long long)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, uint8_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, uint16_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, uint32_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, uint64_t value) {
-  char buf[256];
-  sprintf(buf, "%llu", (unsigned long long)value);
-  str += buf;
-}
-inline void format_ply_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-inline void format_ply_value(string& str, double value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-
-// Foramt to file
-inline void format_ply_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-inline void format_ply_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
-  str += fmt.substr(0, pos);
-  format_ply_value(str, arg);
-  format_ply_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-[[nodiscard]] inline bool format_ply_values(
-    file_stream& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_ply_values(str, fmt, args...);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-template <typename T>
-[[nodiscard]] inline bool format_ply_value(file_stream& fs, const T& value) {
-  auto str = ""s;
-  format_ply_value(str, value);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-
-template <typename T>
-inline T swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
-template <typename T>
-[[nodiscard]] inline bool read_ply_value(
-    file_stream& fs, T& value, bool big_endian) {
-  if (!read_value(fs, value)) return false;
-  if (big_endian) value = swap_endian(value);
-  return true;
-}
-
-template <typename T>
-[[nodiscard]] inline bool write_ply_value(
-    file_stream& fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? swap_endian(value_) : value_;
-  if (!write_value(fs, value)) return false;
-  return true;
-}
-
 inline void remove_ply_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
@@ -519,60 +404,50 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       for (auto idx = 0; idx < elem->count; idx++) {
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            if (!read_ply_value(fs, prop->ldata_u8.emplace_back(), big_endian))
+            if (!read_value(fs, prop->ldata_u8.emplace_back(), big_endian))
               return read_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!read_ply_value(
-                        fs, prop->data_i8.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_i8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i16:
-                if (!read_ply_value(
-                        fs, prop->data_i16.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_i16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i32:
-                if (!read_ply_value(
-                        fs, prop->data_i32.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_i32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::i64:
-                if (!read_ply_value(
-                        fs, prop->data_i64.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_i64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u8:
-                if (!read_ply_value(
-                        fs, prop->data_u8.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_u8.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u16:
-                if (!read_ply_value(
-                        fs, prop->data_u16.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_u16.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u32:
-                if (!read_ply_value(
-                        fs, prop->data_u32.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_u32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::u64:
-                if (!read_ply_value(
-                        fs, prop->data_u64.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_u64.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f32:
-                if (!read_ply_value(
-                        fs, prop->data_f32.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_f32.emplace_back(), big_endian))
                   return read_error();
                 break;
               case ply_type::f64:
-                if (!read_ply_value(
-                        fs, prop->data_f64.emplace_back(), big_endian))
+                if (!read_value(fs, prop->data_f64.emplace_back(), big_endian))
                   return read_error();
                 break;
             }
@@ -612,33 +487,32 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
   if (!fs) return open_error();
 
   // header
-  if (!format_ply_values(fs, "ply\n")) return write_error();
-  if (!format_ply_values(fs, "format {} 1.0\n", format_map.at(ply->format)))
+  if (!format_values(fs, "ply\n")) return write_error();
+  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply->format)))
     return write_error();
-  if (!format_ply_values(fs, "comment Written by Yocto/GL\n"))
-    return write_error();
-  if (!format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "comment Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
   for (auto& comment : ply->comments)
-    if (!format_ply_values(fs, "comment {}\n", comment)) return write_error();
+    if (!format_values(fs, "comment {}\n", comment)) return write_error();
   for (auto elem : ply->elements) {
-    if (!format_ply_values(
+    if (!format_values(
             fs, "element {} {}\n", elem->name, (uint64_t)elem->count))
       return write_error();
     for (auto prop : elem->properties) {
       if (prop->is_list) {
-        if (!format_ply_values(fs, "property list uchar {} {}\n",
+        if (!format_values(fs, "property list uchar {} {}\n",
                 type_map[prop->type], prop->name))
           return write_error();
       } else {
-        if (!format_ply_values(
+        if (!format_values(
                 fs, "property {} {}\n", type_map[prop->type], prop->name))
           return write_error();
       }
     }
   }
 
-  if (!format_ply_values(fs, "end_header\n")) return write_error();
+  if (!format_values(fs, "end_header\n")) return write_error();
 
   // properties
   if (ply->format == ply_format::ascii) {
@@ -648,54 +522,54 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
           if (prop->is_list)
-            if (!format_ply_values(fs, "{} ", (int)prop->ldata_u8[idx]))
+            if (!format_values(fs, "{} ", (int)prop->ldata_u8[idx]))
               return write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!format_ply_values(fs, "{} ", prop->data_i8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_i8[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i16:
-                if (!format_ply_values(fs, "{} ", prop->data_i16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_i16[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i32:
-                if (!format_ply_values(fs, "{} ", prop->data_i32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_i32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::i64:
-                if (!format_ply_values(fs, "{} ", prop->data_i64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_i64[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u8:
-                if (!format_ply_values(fs, "{} ", prop->data_u8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_u8[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u16:
-                if (!format_ply_values(fs, "{} ", prop->data_u16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_u16[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u32:
-                if (!format_ply_values(fs, "{} ", prop->data_u32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_u32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::u64:
-                if (!format_ply_values(fs, "{} ", prop->data_u64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_u64[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::f32:
-                if (!format_ply_values(fs, "{} ", prop->data_f32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_f32[cur[idx]++]))
                   return write_error();
                 break;
               case ply_type::f64:
-                if (!format_ply_values(fs, "{} ", prop->data_f64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop->data_f64[cur[idx]++]))
                   return write_error();
                 break;
             }
           }
-          if (!format_ply_values(fs, "\n")) return write_error();
+          if (!format_values(fs, "\n")) return write_error();
         }
       }
     }
@@ -707,59 +581,49 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
         for (auto pidx = 0; pidx < elem->properties.size(); pidx++) {
           auto prop = elem->properties[pidx];
           if (prop->is_list)
-            if (!write_ply_value(fs, prop->ldata_u8[idx], big_endian))
+            if (!write_value(fs, prop->ldata_u8[idx], big_endian))
               return write_error();
           auto vcount = prop->is_list ? prop->ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!write_ply_value(
-                        fs, prop->data_i8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_i8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i16:
-                if (!write_ply_value(
-                        fs, prop->data_i16[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_i16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i32:
-                if (!write_ply_value(
-                        fs, prop->data_i32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_i32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::i64:
-                if (!write_ply_value(
-                        fs, prop->data_i64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_i64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u8:
-                if (!write_ply_value(
-                        fs, prop->data_u8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_u8[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u16:
-                if (!write_ply_value(
-                        fs, prop->data_u16[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_u16[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u32:
-                if (!write_ply_value(
-                        fs, prop->data_u32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_u32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::u64:
-                if (!write_ply_value(
-                        fs, prop->data_u64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_u64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f32:
-                if (!write_ply_value(
-                        fs, prop->data_f32[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_f32[cur[pidx]++], big_endian))
                   return write_error();
                 break;
               case ply_type::f64:
-                if (!write_ply_value(
-                        fs, prop->data_f64[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop->data_f64[cur[pidx]++], big_endian))
                   return write_error();
                 break;
             }

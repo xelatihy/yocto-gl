@@ -458,6 +458,34 @@ inline bool write_values(file_stream& fs, const T* buffer, size_t count) {
   return fwrite(buffer, sizeof(T), count, fs.fs) == count;
 }
 
+template <typename T>
+inline T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(sizeof(char) == 1, "sizeof(char) == 1");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+inline bool read_value(file_stream& fs, T& value, bool big_endian) {
+  if (!read_value(fs, value)) return false;
+  if (big_endian) value = swap_endian(value);
+  return true;
+}
+
+template <typename T>
+inline bool write_value(file_stream& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  if (!write_value(fs, value)) return false;
+  return true;
+}
+
 // Opens a file with a utf8 file name
 inline FILE* fopen_utf8(const char* filename, const char* mode) {
 #ifdef _Win32
@@ -535,6 +563,82 @@ inline bool save_binary(
     error = filename + ": write error";
     return false;
   }
+  return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FORMATTING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Formats values to string
+inline void format_value(string& str, const string& value) { str += value; }
+inline void format_value(string& str, int8_t value) {
+  str += std::to_string((int)value);
+}
+inline void format_value(string& str, int16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, int64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint8_t value) {
+  str += std::to_string((uint)value);
+}
+inline void format_value(string& str, uint16_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint32_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, uint64_t value) {
+  str += std::to_string(value);
+}
+inline void format_value(string& str, float value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+inline void format_value(string& str, double value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+
+// Foramt to file
+inline void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+inline void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+inline bool format_values(
+    file_stream& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  if (!write_text(fs, str)) return false;
+  return true;
+}
+template <typename T>
+inline bool format_value(file_stream& fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
+  if (!write_text(fs, str)) return false;
   return true;
 }
 
