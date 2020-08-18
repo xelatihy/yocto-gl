@@ -88,6 +88,21 @@ inline void format_value(string& str, const mat4f& value) {
   }
 }
 
+inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
+inline bool is_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+inline void skip_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+}
+
+inline void remove_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -98,23 +113,14 @@ namespace yocto {
 // string literals
 using namespace std::string_literals;
 
-// utilities
-inline bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
-inline bool is_ply_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-inline void skip_ply_whitespace(string_view& str) {
-  while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
-}
-
 // Parse values from a string
 [[nodiscard]] inline bool parse_ply_value(
     string_view& str, string_view& value) {
-  skip_ply_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_ply_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -218,13 +224,6 @@ inline void skip_ply_whitespace(string_view& str) {
 }
 #endif
 
-inline void remove_ply_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
 ply_element::~ply_element() {
   for (auto property : properties) delete property;
 }
@@ -285,8 +284,8 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_ply_comment(str);
-    skip_ply_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
@@ -317,10 +316,10 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
         return parse_error();
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       ply->comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto elem = ply->elements.emplace_back(new ply_element{});
