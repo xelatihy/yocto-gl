@@ -248,8 +248,8 @@ int main(int argc, const char* argv[]) {
   auto diff_filename       = string{};
   auto diff_signal         = false;
   auto diff_threshold      = 0.0f;
-  auto output              = "out.png"s;
-  auto filename            = "img.hdr"s;
+  auto output              = string{"out.png"};
+  auto filename            = string{"img.hdr"};
 
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");

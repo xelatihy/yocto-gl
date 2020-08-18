@@ -809,8 +809,8 @@ int main(int argc, const char* argv[]) {
   auto validate  = false;
   auto info      = false;
   auto copyright = string{};
-  auto output    = "out.json"s;
-  auto filename  = "scene.json"s;
+  auto output    = string{"out.json"};
+  auto filename  = string{"scene.json"};
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");

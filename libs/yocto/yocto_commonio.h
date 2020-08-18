@@ -63,7 +63,6 @@ using std::string;
 using std::string_view;
 using std::unordered_set;
 using std::vector;
-using namespace std::string_literals;
 
 }  // namespace yocto
 

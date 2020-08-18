@@ -42,8 +42,8 @@ int main(int argc, const char* argv[]) {
   auto save_batch     = false;
   auto add_skyenv     = false;
   auto camera_name    = string{};
-  auto imfilename     = "out.hdr"s;
-  auto filename       = "scene.json"s;
+  auto imfilename     = string{"out.hdr"};
+  auto filename       = string{"scene.json"};
   auto feature_images = false;
 
   // parse command line
@@ -116,9 +116,9 @@ int main(int argc, const char* argv[]) {
   print_progress("save image", 1, 1);
 
   if (feature_images) {
-    const int   feature_bounces = 5;
-    const int   feature_samples = 8;
-    std::string feature_ext     = "exr"s;
+    auto feature_bounces = 5;
+    auto feature_samples = 8;
+    auto feature_ext     = string{"exr"};
 
     auto imext = path_extension(imfilename);
     if (imext != "hdr" && is_hdr_filename(imext)) feature_ext = imext;

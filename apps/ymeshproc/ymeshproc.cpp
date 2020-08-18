@@ -123,8 +123,8 @@ int main(int argc, const char* argv[]) {
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
-  auto output               = "out.ply"s;
-  auto filename             = "mesh.ply"s;
+  auto output               = string{"out.ply"};
+  auto filename             = string{"mesh.ply"};
 
   // parse command line
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");

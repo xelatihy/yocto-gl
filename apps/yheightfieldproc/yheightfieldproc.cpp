@@ -41,8 +41,8 @@ int main(int argc, const char* argv[]) {
   auto rotate    = zero3f;
   auto translate = zero3f;
   auto info      = false;
-  auto output    = "out.ply"s;
-  auto filename  = "heightfield.png"s;
+  auto output    = string{"out.ply"};
+  auto filename  = string{"heightfield.png"};
 
   // parse command line
   auto cli = make_cli("yheightfieldproc", "Makes a mesh from a heightfield");
