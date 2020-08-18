@@ -46,8 +46,10 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -58,6 +60,7 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
+using std::string_view;
 using std::unordered_set;
 using std::vector;
 using namespace std::string_literals;
@@ -212,6 +215,49 @@ namespace yocto {
 // available on all platforms.
 template <typename... Args>
 inline string format(const string& fmt, Args&&... args);
+
+// Formats values to string
+inline void _format_value(string& str, string_view value) { str += value; }
+inline void _format_value(string& str, const string& value) { str += value; }
+inline void _format_value(string& str, const char* value) { str += value; }
+inline void _format_value(string& str, int value) {
+  str += std::to_string(value);
+}
+inline void _format_value(string& str, float value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+inline void _format_value(string& str, double value) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%g", value);
+  str += buf;
+}
+
+// Foramt to file
+inline void _format_values(string& str, string_view fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::invalid_argument{"bad format string"};
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+inline void _format_values(
+    string& str, string_view fmt, Arg&& arg, Args&&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::invalid_argument{"bad format string"};
+  str += fmt.substr(0, pos);
+  _format_value(str, std::forward(arg));
+  _format_values(str, fmt.substr(pos + 2), std::forward(args)...);
+}
+
+// This is a very crude replacement for `std::format()` that will be used when
+// available on all platforms.
+template <typename... Args>
+inline string format(const string& fmt, Args&&... args) {
+  auto str = string{};
+  _format_values(str, fmt, std::forward(args)...);
+  return str;
+}
 
 }  // namespace yocto
 
