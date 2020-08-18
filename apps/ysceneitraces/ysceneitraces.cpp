@@ -88,7 +88,7 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const string& message, int sample, int nsamples) {
+      [app](string_view message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },

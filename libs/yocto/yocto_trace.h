@@ -41,6 +41,7 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "yocto_image.h"
@@ -62,6 +63,7 @@ using std::atomic;
 using std::function;
 using std::future;
 using std::string;
+using std::string_view;
 using std::vector;
 
 }  // namespace yocto
@@ -139,7 +141,7 @@ const auto bvh_names              = vector<string>{
 
 // Progress report callback
 using progress_callback =
-    function<void(const string& message, int current, int total)>;
+    function<void(string_view message, int current, int total)>;
 // Callback used to report partially computed image
 using image_callback =
     function<void(const image<vec4f>& render, int current, int total)>;

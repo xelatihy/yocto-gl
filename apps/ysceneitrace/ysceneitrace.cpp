@@ -246,7 +246,7 @@ void reset_display(app_state* app) {
   app->render_counter = 0;
   trace_start(
       app->render_state, app->scene, app->camera, app->params,
-      [app](const string& message, int sample, int nsamples) {
+      [app](string_view message, int sample, int nsamples) {
         app->current = sample;
         app->total   = nsamples;
       },
@@ -271,28 +271,28 @@ void load_scene_async(app_states* apps, const string& filename,
   app->outname   = replace_extension(filename, ".edited.json");
   app->params    = apps->params;
   app->status    = "load";
-  app->loader    = std::async(std::launch::async, [app, camera_name,
-                                                   add_skyenv]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
-      app->current = current;
-      app->total   = total;
-    };
-    if (!load_scene(
-            app->filename, app->ioscene, app->loader_error, progress_cb))
-      return;
-    app->current = 1;
-    app->total   = 1;
-    if (add_skyenv) add_sky(app->ioscene);
-    app->iocamera = get_camera(app->ioscene, camera_name);
-    tesselate_shapes(app->ioscene, progress_cb);
-    init_scene(
-        app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
-    init_bvh(app->scene, app->params);
-    init_lights(app->scene);
-    if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
-      app->params.sampler = trace_sampler_type::eyelight;
-    }
-  });
+  app->loader    = std::async(
+      std::launch::async, [app, camera_name, add_skyenv]() {
+        auto progress_cb = [app](string_view message, int current, int total) {
+          app->current = current;
+          app->total   = total;
+        };
+        if (!load_scene(
+                app->filename, app->ioscene, app->loader_error, progress_cb))
+          return;
+        app->current = 1;
+        app->total   = 1;
+        if (add_skyenv) add_sky(app->ioscene);
+        app->iocamera = get_camera(app->ioscene, camera_name);
+        tesselate_shapes(app->ioscene, progress_cb);
+        init_scene(
+            app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+        init_bvh(app->scene, app->params);
+        init_lights(app->scene);
+        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+          app->params.sampler = trace_sampler_type::eyelight;
+        }
+      });
   apps->loading.push_back(app);
   if (!apps->selected) apps->selected = app;
 }

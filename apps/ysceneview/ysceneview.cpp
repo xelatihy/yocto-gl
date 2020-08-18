@@ -116,7 +116,7 @@ void load_scene_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](string_view message, int current, int total) {
       app->current = current;
       app->total   = total;
     };
@@ -511,7 +511,7 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       begin_header(win, "environments")) {
     draw_combobox(win, "environments##2", app->selected_environment,
         app->ioscene->environments);
-    if (draw_widgets(win, app->ioscene, app->selected_environment)) {
+    if (draw_widgets(win, app->ioscene, app->selected_environment)) {  // pass
     }
     end_header(win);
   }
@@ -615,7 +615,7 @@ void update(gui_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](string_view message, int current, int total) {
       app->current = current;
       app->total   = total;
     };

@@ -41,6 +41,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -60,6 +61,7 @@ namespace yocto {
 using std::function;
 using std::pair;
 using std::string;
+using std::string_view;
 using std::vector;
 
 }  // namespace yocto
@@ -507,7 +509,7 @@ struct scene_bvh_params {
 
 // Progress callback called when loading.
 using progress_callback =
-    function<void(const string& message, int current, int total)>;
+    function<void(string_view message, int current, int total)>;
 
 // Build the bvh acceleration structure.
 void init_bvh(scene_model* scene, const scene_bvh_params& params,

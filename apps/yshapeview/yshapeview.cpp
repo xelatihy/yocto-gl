@@ -340,7 +340,7 @@ void update(gui_window* win, app_states* apps) {
     auto app = apps->loading.front();
     if (!is_ready(app->loader)) break;
     apps->loading.pop_front();
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](string_view message, int current, int total) {
       app->current = current;
       app->total   = total;
     };

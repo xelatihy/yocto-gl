@@ -41,6 +41,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "yocto_scene.h"
 
@@ -51,6 +52,8 @@ namespace yocto {
 
 // using directives
 using std::function;
+using std::string;
+using std::string_view;
 
 }  // namespace yocto
 
@@ -62,7 +65,7 @@ namespace yocto {
 
 // Progress callback called when loading.
 using progress_callback =
-    function<void(const string& message, int current, int total)>;
+    function<void(string_view message, int current, int total)>;
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
