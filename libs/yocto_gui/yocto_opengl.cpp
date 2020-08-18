@@ -1069,8 +1069,8 @@ void draw_elements(ogl_elementbuffer* buffer) {
       {ogl_element_type::triangles, GL_TRIANGLES},
   };
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->buffer_id);
-  glDrawElements(
-      elements.at(buffer->element), buffer->size, GL_UNSIGNED_INT, nullptr);
+  glDrawElements(elements.at(buffer->element), (GLsizei)buffer->size,
+      GL_UNSIGNED_INT, nullptr);
 }
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
