@@ -268,7 +268,7 @@ int main(int argc, const char* argv[]) {
   auto shape = generic_shape{};
 
   // load mesh
-  auto ioerror = ""s;
+  auto ioerror = string{};
   print_progress("load shape", 0, 1);
   if (path_filename(filename) == ".ypreset") {
     if (!make_shape_preset(shape, path_basename(filename), ioerror))

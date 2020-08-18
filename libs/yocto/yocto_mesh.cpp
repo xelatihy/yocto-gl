@@ -2626,7 +2626,7 @@ inline string path_extension(const string& filename) {
     } else {
       return shape_error();
     }
-    auto err = ""s;
+    auto err = string{};
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else {
@@ -2738,7 +2738,7 @@ inline string path_extension(const string& filename) {
     } else {
       return shape_error();
     }
-    auto err = ""s;
+    auto err = string{};
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else {

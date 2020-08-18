@@ -415,7 +415,8 @@ T1* get_element(
 
 // draw with shading
 void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
-  static auto load_path = ""s, save_path = ""s, error_message = ""s;
+  static auto load_path = string{}, save_path = string{},
+              error_message = string{};
   if (draw_filedialog_button(win, "load", true, "load", load_path, false, "./",
           "", "*.json;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
@@ -637,7 +638,7 @@ int main(int argc, const char* argv[]) {
   auto apps_guard  = std::make_unique<app_states>();
   auto apps        = apps_guard.get();
   auto filenames   = vector<string>{};
-  auto camera_name = ""s;
+  auto camera_name = string{};
 
   // parse command line
   auto cli = make_cli("ysceneview", "views scenes inteactively");

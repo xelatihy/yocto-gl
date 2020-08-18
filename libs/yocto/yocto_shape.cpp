@@ -3710,7 +3710,7 @@ static bool save_text(
     } else {
       return shape_error();
     }
-    auto err = ""s;
+    auto err = string{};
     if (!save_obj(filename, obj, error)) return false;
     return true;
   } else if (ext == ".cpp" || ext == ".CPP") {
@@ -3718,7 +3718,7 @@ static bool save_text(
                       const auto& values) -> string {
       using T = typename std::remove_const_t<
           std::remove_reference_t<decltype(values)>>::value_type;
-      if (values.empty()) return ""s;
+      if (values.empty()) return string{};
       auto str = "auto " + name + "_" + vname + " = ";
       if constexpr (std::is_same_v<int, T>) str += "vector<int>{\n";
       if constexpr (std::is_same_v<float, T>) str += "vector<float>{\n";
@@ -3753,7 +3753,7 @@ static bool save_text(
     };
 
     auto name = string{"shape"};
-    auto str  = ""s;
+    auto str  = string{};
     str += to_cpp(name, "positions", positions);
     str += to_cpp(name, "normals", normals);
     str += to_cpp(name, "texcoords", texcoords);

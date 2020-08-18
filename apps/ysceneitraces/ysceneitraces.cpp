@@ -110,7 +110,7 @@ int main(int argc, const char* argv[]) {
   auto app       = app_guard.get();
 
   // command line options
-  auto camera_name = ""s;
+  auto camera_name = string{};
   auto add_skyenv  = false;
 
   // parse command line
@@ -137,7 +137,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioerror = ""s;
+  auto ioerror = string{};
   if (!load_scene(app->filename, app->scene, ioerror, print_progress))
     print_fatal(ioerror);
 

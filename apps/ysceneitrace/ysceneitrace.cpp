@@ -738,7 +738,7 @@ int main(int argc, const char* argv[]) {
   auto apps        = apps_guard.get();
   auto filenames   = vector<string>{};
   auto add_skyenv  = false;
-  auto camera_name = ""s;
+  auto camera_name = string{};
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");

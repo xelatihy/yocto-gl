@@ -243,9 +243,9 @@ int main(int argc, const char* argv[]) {
   auto spatial_sigma       = 0.0f;
   auto range_sigma         = 0.0f;
   auto alpha_to_color      = false;
-  auto alpha_filename      = ""s;
-  auto coloralpha_filename = ""s;
-  auto diff_filename       = ""s;
+  auto alpha_filename      = string{};
+  auto coloralpha_filename = string{};
+  auto diff_filename       = string{};
   auto diff_signal         = false;
   auto diff_threshold      = 0.0f;
   auto output              = "out.png"s;
@@ -278,10 +278,10 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // error string buffer
-  auto error = ""s;
+  auto error = string{};
 
   // load
-  auto ioerror = ""s;
+  auto ioerror = string{};
   auto img     = image<vec4f>{};
   if (path_extension(filename) == ".ypreset") {
     if (!make_image_preset(path_basename(filename), img, ioerror))

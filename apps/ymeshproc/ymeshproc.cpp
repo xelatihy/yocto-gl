@@ -162,7 +162,7 @@ int main(int argc, const char* argv[]) {
   auto lines     = vector<vec2i>{};  // for line output
 
   // load mesh
-  auto ioerror = ""s;
+  auto ioerror = string{};
   print_progress("load mesh", 0, 1);
   if (path_extension(filename) == ".ypreset") {
     if (!make_mesh_preset(triangles, positions, normals, texcoords, colors,

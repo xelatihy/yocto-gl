@@ -73,7 +73,7 @@ int main(int argc, const char* argv[]) {
   auto heightfield = image<float>{};
 
   // load mesh
-  auto ioerror = ""s;
+  auto ioerror = string{};
   print_progress("load image", 0, 1);
   if (is_hdr_filename(filename)) {
     if (!load_image(filename, heightfield, ioerror)) print_fatal(ioerror);

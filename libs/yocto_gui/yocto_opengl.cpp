@@ -822,7 +822,7 @@ bool init_image(ogl_image* image) {
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-  auto error = ""s, errorlog = ""s;
+  auto error = string{}, errorlog = string{};
   if (!init_program(
           image->program, glimage_vertex, glimage_fragment, error, errorlog))
     return false;
@@ -1464,7 +1464,7 @@ ogl_scene::~ogl_scene() {
 // Initialize an OpenGL scene
 void init_scene(ogl_scene* scene) {
   if (is_initialized(scene->program)) return;
-  auto error = ""s, errorlog = ""s;
+  auto error = string{}, errorlog = string{};
   init_program(
       scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }

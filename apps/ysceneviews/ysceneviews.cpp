@@ -225,7 +225,7 @@ int main(int argc, const char* argv[]) {
   // initialize app
   auto app_guard   = std::make_unique<app_state>();
   auto app         = app_guard.get();
-  auto camera_name = ""s;
+  auto camera_name = string{};
 
   // parse command line
   auto cli = make_cli("ysceneviews", "views scene inteactively");
@@ -238,7 +238,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // loading scene
-  auto ioerror = ""s;
+  auto ioerror = string{};
   if (!load_scene(app->filename, app->ioscene, ioerror, print_progress))
     print_fatal(ioerror);
 

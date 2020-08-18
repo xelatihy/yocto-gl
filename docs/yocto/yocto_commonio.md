@@ -47,7 +47,7 @@ and arrays of strings. Boolean flags are indicated with a pair of names
 
 ```cpp
 auto samples = 10; auto flag = false;                // state
-auto out = ""s, name = ""s;
+auto out = string{}, name = string{};
 auto names = vector<string>{};
 auto cli = make_cli("app", "testing cli");           // initialize cli
 add_option(cli, "--out", out, "out", true);          // required argument

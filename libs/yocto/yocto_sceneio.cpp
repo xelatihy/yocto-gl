@@ -369,7 +369,7 @@ static bool load_json(const string& filename, json& js, string& error) {
     error = filename + ": parse error in json";
     return false;
   };
-  auto text = ""s;
+  auto text = string{};
   if (!load_text(filename, text, error)) return false;
   try {
     js = json::parse(text);
@@ -424,7 +424,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
                      const string& name, auto& value,
                      const auto& refs) -> bool {
     if (!ejs.contains(name)) return true;
-    auto ref = ""s;
+    auto ref = string{};
     if (!get_value(ejs, name, ref)) return false;
     if (ref == "") {
       value = nullptr;
@@ -441,7 +441,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
                           const string& name, scene_texture*& value,
                           const string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
-    auto path = ""s;
+    auto path = string{};
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = ctexture_map.find(path);
@@ -461,7 +461,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
                           const string& name, scene_texture*& value,
                           const string& dirname = "textures/") -> bool {
     if (!ejs.contains(name)) return true;
-    auto path = ""s;
+    auto path = string{};
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = stexture_map.find(path);
@@ -481,7 +481,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
                        const string& name, scene_shape*& value,
                        const string& dirname = "shapes/") -> bool {
     if (!ejs.contains(name)) return true;
-    auto path = ""s;
+    auto path = string{};
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = shape_map.find(path);
@@ -508,7 +508,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
                                scene_instance* instance,
                                const string&   dirname = "instances/") -> bool {
     if (!ejs.contains(name)) return true;
-    auto path = ""s;
+    auto path = string{};
     if (!get_value(ejs, name, path)) return false;
     if (path == "") return true;
     auto it = ply_instance_map.find(path);
@@ -795,7 +795,7 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   {
     auto& ejs        = js["asset"];
     ejs["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-    add_opt(ejs, "copyright", scene->copyright, ""s);
+    add_opt(ejs, "copyright", scene->copyright, string{});
   }
 
   auto def_cam = scene_camera{};

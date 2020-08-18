@@ -313,14 +313,14 @@ inline void format_ply_values(
 template <typename... Args>
 [[nodiscard]] inline bool format_ply_values(
     FILE* fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
+  auto str = string{};
   format_ply_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
 }
 template <typename T>
 [[nodiscard]] inline bool format_ply_value(FILE* fs, const T& value) {
-  auto str = ""s;
+  auto str = string{};
   format_ply_value(str, value);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
@@ -428,7 +428,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
     if (str.empty()) continue;
 
     // get command
-    auto cmd = ""s;
+    auto cmd = string{};
     if (!parse_ply_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
@@ -443,7 +443,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
     if (cmd == "ply") {
       if (!first_line) return parse_error();
     } else if (cmd == "format") {
-      auto fmt = ""s;
+      auto fmt = string{};
       if (!parse_ply_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
         ply->format = ply_format::ascii;
@@ -468,7 +468,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       if (ply->elements.empty()) return parse_error();
       auto prop = ply->elements.back()->properties.emplace_back(
           new ply_property{});
-      auto tname = ""s;
+      auto tname = string{};
       if (!parse_ply_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop->is_list = true;
@@ -1410,14 +1410,14 @@ inline void format_obj_values(
 template <typename... Args>
 [[nodiscard]] inline bool format_obj_values(
     FILE* fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
+  auto str = string{};
   format_obj_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
 }
 template <typename T>
 [[nodiscard]] inline bool format_obj_value(FILE* fs, const T& value) {
-  auto str = ""s;
+  auto str = string{};
   format_obj_value(str, value);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
@@ -1458,7 +1458,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   auto tokens = vector<string>();
   skip_obj_whitespace(str);
   while (!str.empty()) {
-    auto token = ""s;
+    auto token = string{};
     if (!parse_obj_value(str, token)) return false;
     tokens.push_back(token);
     skip_obj_whitespace(str);
@@ -1515,7 +1515,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
     if (str.empty()) continue;
 
     // get command
-    auto cmd = ""s;
+    auto cmd = string{};
     if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
@@ -1758,7 +1758,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
     if (str.empty()) continue;
 
     // get command
-    auto cmd = ""s;
+    auto cmd = string{};
     if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
@@ -1777,13 +1777,13 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
       auto environment = add_environment(obj);
       if (!parse_obj_value(str, environment->name)) return parse_error();
       if (!parse_obj_value(str, environment->emission)) return parse_error();
-      auto emission_path = ""s;
+      auto emission_path = string{};
       if (!parse_obj_value(str, emission_path)) return parse_error();
       if (emission_path == "\"\"") emission_path = "";
       environment->emission_tex.path = emission_path;
       if (!parse_obj_value(str, environment->frame)) return parse_error();
     } else if (cmd == "i") {
-      auto object = ""s;
+      auto object = string{};
       auto frame  = identity3x4f;
       if (!parse_obj_value(str, object)) return parse_error();
       if (!parse_obj_value(str, frame)) return parse_error();
@@ -1853,9 +1853,9 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   auto onormals     = vector<vec3f>{};
   auto otexcoords   = vector<vec2f>{};
   auto vert_size    = obj_vertex{};
-  auto oname        = ""s;
-  auto gname        = ""s;
-  auto mname        = ""s;
+  auto oname        = string{};
+  auto gname        = string{};
+  auto mname        = string{};
   auto mtllibs      = vector<string>{};
   auto material_map = unordered_map<string, obj_material*>{};
 
@@ -1880,7 +1880,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
     if (str.empty()) continue;
 
     // get command
-    auto cmd = ""s;
+    auto cmd = string{};
     if (!parse_obj_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
@@ -1982,7 +1982,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
-      auto mtllib = ""s;
+      auto mtllib = string{};
       if (!parse_obj_value(str, mtllib)) return parse_error();
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
@@ -2285,7 +2285,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
     if (!format_obj_values(fs, "e {} {} {} {}\n", environment->name,
             environment->emission,
             environment->emission_tex.path.empty()
-                ? "\"\""s
+                ? string{"\"\""}
                 : environment->emission_tex.path,
             environment->frame))
       return write_error();
@@ -2961,14 +2961,14 @@ inline void format_pbrt_values(
 template <typename... Args>
 [[nodiscard]] inline bool format_pbrt_values(
     FILE* fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
+  auto str = string{};
   format_pbrt_values(str, fmt, args...);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
 }
 template <typename T>
 [[nodiscard]] inline bool format_pbrt_value(FILE* fs, const T& value) {
-  auto str = ""s;
+  auto str = string{};
   format_pbrt_value(str, value);
   if (fputs(str.c_str(), fs) < 0) return false;
   return true;
@@ -3328,7 +3328,7 @@ template <typename T>
 // parse a quoted string
 [[nodiscard]] inline bool parse_nametype(
     string_view& str_, string& name, string& type) {
-  auto value = ""s;
+  auto value = string{};
   if (!parse_pbrt_value(str_, value)) return false;
   if (!str_.data()) return false;
   auto str  = string_view{value};
@@ -3552,7 +3552,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
   skip_pbrt_whitespace(str);
   while (!str.empty()) {
     auto& value = values.emplace_back();
-    auto  type  = ""s;
+    auto  type  = string{};
     if (!parse_nametype(str, value.name, type)) return false;
     skip_pbrt_whitespace(str);
     if (str.empty()) return false;
@@ -3568,7 +3568,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       if (!parse_pvalues(str, value.value1s, vector1s)) return false;
       if (!vector1s.empty()) return false;
     } else if (type == "bool") {
-      auto value1s  = ""s;
+      auto value1s  = string{};
       auto vector1s = vector<string>{};
       value.type    = pbrt_type::boolean;
       if (!parse_pvalues(str, value1s, vector1s)) return false;
@@ -3622,7 +3622,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       }
       if (is_string) {
         value.type     = pbrt_type::color;
-        auto filename  = ""s;
+        auto filename  = string{};
         auto filenames = vector<string>{};
         if (!parse_pbrt_value(str, filename)) return false;
         if (!str.data()) return false;
@@ -3747,7 +3747,7 @@ inline bool convert_camera(pbrt_camera* pcamera, const pbrt_command& command,
       return parse_error();
     return true;
   } else if (command.type == "realistic") {
-    auto lensfile = ""s;
+    auto lensfile = string{};
     if (!get_pbrt_value(command.values, "lensfile", lensfile))
       return parse_error();
     lensfile          = lensfile.substr(0, lensfile.size() - 4);
@@ -3781,10 +3781,10 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     return false;
   };
 
-  auto make_filename = [&texture_map](const string& name) {
-    if (name.empty()) return ""s;
+  auto make_filename = [&texture_map](const string& name) -> string {
+    if (name.empty()) return {};
     auto pos = texture_map.find(name);
-    if (pos == texture_map.end()) return ""s;
+    if (pos == texture_map.end()) return {};
     return pos->second.filename;
   };
 
@@ -3805,8 +3805,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
   } else if (command.type == "checkerboard") {
     // auto tex1     = if(!get_pbrt_value(command.values, "tex1",
     // pair{vec3f{1},
-    // ""s}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
-    //  pair{vec3f{0}, ""s}); auto rgb1     = tex1.second == "" ?
+    // string{}}); auto tex2     = if(!get_pbrt_value(command.values, "tex2",
+    //  pair{vec3f{0}, string{}}); auto rgb1     = tex1.second == "" ?
     //  tex1.first :
     // vec3f{0.4f, 0.4f, 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first :
     // vec3f{0.6f, 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type
@@ -3826,7 +3826,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     ptexture->constant = {0.5, 0.5, 0.5};
     return true;
   } else if (command.type == "mix") {
-    auto tex1 = pair{vec3f{0, 0, 0}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{vec3f{0, 0, 0}, string{}},
+         tex2 = pair{vec3f{1, 1, 1}, string{}};
     if (!get_pbrt_value(command.values, "tex1", tex1)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex2)) return parse_error();
     if (!make_filename(tex1.second).empty()) {
@@ -3838,7 +3839,8 @@ inline bool convert_texture(pbrt_texture* ptexture, const pbrt_command& command,
     }
     return true;
   } else if (command.type == "scale") {
-    auto tex1 = pair{vec3f{1, 1, 1}, ""s}, tex2 = pair{vec3f{1, 1, 1}, ""s};
+    auto tex1 = pair{vec3f{1, 1, 1}, string{}},
+         tex2 = pair{vec3f{1, 1, 1}, string{}};
     if (!get_pbrt_value(command.values, "tex1", tex2)) return parse_error();
     if (!get_pbrt_value(command.values, "tex2", tex1)) return parse_error();
     if (!make_filename(tex1.second).empty()) {
@@ -3890,7 +3892,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
                          const vec3f& def) -> bool {
-    auto textured = pair{def, ""s};
+    auto textured = pair{def, string{}};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color    = textured.first;
@@ -3909,7 +3911,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
   auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
                         float& scalar, float def) -> bool {
-    auto textured = pair{vec3f{def, def, def}, ""s};
+    auto textured = pair{vec3f{def, def, def}, string{}};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       scalar = mean(textured.first);
@@ -3925,7 +3927,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
   };
   auto get_color = [&](const vector<pbrt_value>& values, const string& name,
                        vec3f& color, const vec3f& def) -> bool {
-    auto textured = pair{def, ""s};
+    auto textured = pair{def, string{}};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       color = textured.first;
@@ -3942,7 +3944,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
 
   auto get_roughness = [&](const vector<pbrt_value>& values, float& roughness,
                            float def = 0.1) -> bool {
-    auto roughness_ = pair{vec3f{def, def, def}, ""s};
+    auto roughness_ = pair{vec3f{def, def, def}, string{}};
     if (!get_pbrt_value(values, "roughness", roughness_)) return parse_error();
     auto uroughness = roughness_, vroughness = roughness_;
     auto remaproughness = true;
@@ -3974,7 +3976,8 @@ inline bool convert_material(pbrt_material*     pmaterial,
   pmaterial->name = command.name;
   if (command.type == "uber") {
     auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
-    auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
+    auto diffuse_map = string{}, specular_map = string{},
+         transmission_map = string{};
     if (!get_texture(command.values, "Kd", diffuse, diffuse_map,
             vec3f{0.25, 0.25, 0.25}))
       return parse_error();
@@ -4122,7 +4125,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     pmaterial->volscale = 1 / scale;
     auto sigma_a = zero3f, sigma_s = zero3f;
-    auto sigma_a_tex = ""s, sigma_s_tex = ""s;
+    auto sigma_a_tex = string{}, sigma_s_tex = string{};
     if (!get_texture(command.values, "sigma_a", sigma_a, sigma_a_tex,
             vec3f{0011, .0024, .014}))
       return parse_error();
@@ -4134,7 +4137,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
     if (verbose) printf("subsurface material not properly supported\n");
     return true;
   } else if (command.type == "mix") {
-    auto namedmaterial1 = ""s, namedmaterial2 = ""s;
+    auto namedmaterial1 = string{}, namedmaterial2 = string{};
     if (!get_pbrt_value(command.values, "namedmaterial1", namedmaterial1))
       return parse_error();
     if (!get_pbrt_value(command.values, "namedmaterial2", namedmaterial2))
@@ -4148,7 +4151,7 @@ inline bool convert_material(pbrt_material*     pmaterial,
     if (verbose) printf("mix material not properly supported\n");
     return true;
   } else if (command.type == "fourier") {
-    auto bsdffile = ""s;
+    auto bsdffile = string{};
     if (!get_pbrt_value(command.values, "bsdffile", bsdffile))
       return parse_error();
     if (bsdffile.rfind("/") != string::npos)
@@ -4286,7 +4289,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
   auto get_alpha = [&](const vector<pbrt_value>& values, const string& name,
                        string& filename) -> bool {
     auto def      = 1.0f;
-    auto textured = pair{def, ""s};
+    auto textured = pair{def, string{}};
     if (!get_pbrt_value(values, name, textured)) return parse_error();
     if (textured.second == "") {
       filename = "";
@@ -4324,7 +4327,7 @@ inline bool convert_shape(pbrt_shape* shape, const pbrt_command& command,
     // compute_normals(shape->normals, shape->triangles, shape->positions);
     return true;
   } else if (command.type == "plymesh") {
-    shape->filename_ = ""s;
+    shape->filename_ = {};
     if (!get_pbrt_value(command.values, "filename", shape->filename_))
       return parse_error();
     if (!get_alpha(command.values, "alpha", alphamap)) return parse_error();
@@ -4463,7 +4466,7 @@ inline bool convert_environment(pbrt_environment* penvironment,
     if (!get_pbrt_value(command.values, "L", l)) return parse_error();
     if (!get_pbrt_value(command.values, "scale", scale)) return parse_error();
     penvironment->emission     = scale * l;
-    penvironment->emission_tex = ""s;
+    penvironment->emission_tex = {};
     if (!get_pbrt_value(command.values, "mapname", penvironment->emission_tex))
       return parse_error();
     return true;
@@ -4543,11 +4546,11 @@ struct pbrt_context {
   if (ctx.stack.empty()) ctx.stack.emplace_back();
 
   // parse command by command
-  auto line = ""s;
+  auto line = string{};
   while (read_pbrt_cmdline(fs, line)) {
     auto str = string_view{line};
     // get command
-    auto cmd = ""s;
+    auto cmd = string{};
     if (!parse_command(str, cmd)) return parse_error();
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
@@ -4577,7 +4580,7 @@ struct pbrt_context {
       ctx.stack.pop_back();
       ctx.cur_object = "";
     } else if (cmd == "ObjectInstance") {
-      auto object = ""s;
+      auto object = string{};
       if (!parse_param(str, object)) return parse_error();
       if (ctx.objects.find(object) == ctx.objects.end())
         throw std::runtime_error{filename + ": parse error [unknown object]"};
@@ -4586,7 +4589,7 @@ struct pbrt_context {
         shape->instaends.push_back(ctx.stack.back().transform_end);
       }
     } else if (cmd == "ActiveTransform") {
-      auto name = ""s;
+      auto name = string{};
       if (!parse_command(str, name)) return parse_error();
       if (name == "StartTime") {
         ctx.stack.back().active_transform_start = true;
@@ -4631,12 +4634,12 @@ struct pbrt_context {
     } else if (cmd == "ReverseOrientation") {
       ctx.stack.back().reverse = !ctx.stack.back().reverse;
     } else if (cmd == "CoordinateSystem") {
-      auto name = ""s;
+      auto name = string{};
       if (!parse_param(str, name)) return parse_error();
       ctx.coordsys[name].transform_start = ctx.stack.back().transform_start;
       ctx.coordsys[name].transform_end   = ctx.stack.back().transform_end;
     } else if (cmd == "CoordSysTransform") {
-      auto name = ""s;
+      auto name = string{};
       if (!parse_param(str, name)) return parse_error();
       if (ctx.coordsys.find(name) != ctx.coordsys.end()) {
         ctx.stack.back().transform_start =
@@ -4678,7 +4681,7 @@ struct pbrt_context {
         return false;
     } else if (cmd == "Texture") {
       auto command  = pbrt_command{};
-      auto comptype = ""s;
+      auto comptype = string{};
       if (!parse_param(str, command.name)) return parse_error();
       if (!parse_param(str, comptype)) return parse_error();
       if (!parse_param(str, command.type)) return parse_error();
@@ -4711,7 +4714,7 @@ struct pbrt_context {
               named_materials, named_textures, filename, error))
         return false;
     } else if (cmd == "NamedMaterial") {
-      auto name = ""s;
+      auto name = string{};
       if (!parse_param(str, name)) return parse_error();
       ctx.stack.back().material = named_materials.at(name);
     } else if (cmd == "Shape") {
@@ -4721,7 +4724,7 @@ struct pbrt_context {
       command.frame = ctx.stack.back().transform_start;
       command.frend = ctx.stack.back().transform_end;
       auto shape    = add_shape(pbrt);
-      auto alphamap = ""s;
+      auto alphamap = string{};
       if (!convert_shape(shape, command, alphamap, named_textures, ply_dirname,
               filename, error))
         return false;
@@ -4774,13 +4777,13 @@ struct pbrt_context {
       auto medium                 = pbrt_medium{};
       named_mediums[command.name] = medium;
     } else if (cmd == "MediumInterface") {
-      auto interior = ""s, exterior = ""s;
+      auto interior = string{}, exterior = string{};
       if (!parse_param(str, interior)) return parse_error();
       if (!parse_param(str, exterior)) return parse_error();
       ctx.stack.back().interior = named_mediums.at(interior);
       ctx.stack.back().exterior = named_mediums.at(exterior);
     } else if (cmd == "Include") {
-      auto includename = ""s;
+      auto includename = string{};
       if (!parse_param(str, includename)) return parse_error();
       if (!load_pbrt(path_join(path_dirname(filename), includename), pbrt,
               error, ctx, material_map, named_materials, named_textures,

@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
   auto params         = trace_params{};
   auto save_batch     = false;
   auto add_skyenv     = false;
-  auto camera_name    = ""s;
+  auto camera_name    = string{};
   auto imfilename     = "out.hdr"s;
   auto filename       = "scene.json"s;
   auto feature_images = false;
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto ioerror     = string{};
   if (!load_scene(filename, scene, ioerror, print_progress))
     print_fatal(ioerror);
 
@@ -105,7 +105,7 @@ int main(int argc, const char* argv[]) {
         auto ext = "-s" + std::to_string(sample + samples) +
                    path_extension(imfilename);
         auto outfilename = replace_extension(imfilename, ext);
-        auto ioerror     = ""s;
+        auto ioerror     = string{};
         print_progress("save image", sample, samples);
         if (!save_image(outfilename, render, ioerror)) print_fatal(ioerror);
       });

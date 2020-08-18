@@ -80,7 +80,7 @@ int main(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // load image
-  auto ioerror = ""s;
+  auto ioerror = string{};
   if (!load_image(app->filename, app->source, ioerror)) {
     print_fatal(ioerror);
     return 1;

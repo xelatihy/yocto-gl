@@ -808,7 +808,7 @@ int main(int argc, const char* argv[]) {
   // command line parameters
   auto validate  = false;
   auto info      = false;
-  auto copyright = ""s;
+  auto copyright = string{};
   auto output    = "out.json"s;
   auto filename  = "scene.json"s;
 
@@ -824,7 +824,7 @@ int main(int argc, const char* argv[]) {
   // load scene
   auto scene_guard = std::make_unique<scene_model>();
   auto scene       = scene_guard.get();
-  auto ioerror     = ""s;
+  auto ioerror     = string{};
   if (path_extension(filename) == ".ypreset") {
     print_progress("make preset", 0, 1);
     if (!make_preset(scene, path_basename(filename), ioerror))
