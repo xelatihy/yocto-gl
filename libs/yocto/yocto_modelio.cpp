@@ -2015,7 +2015,7 @@ inline void format_value(string& str, const obj_vertex& value) {
 
   // open file
   auto fs = open_file(filename, "wt");
-  if (!fs) throw std::runtime_error{filename + ": file not found"};
+  if (!fs) return open_error();
 
   // save comments
   if (!format_values(fs, "#\n")) return write_error();
@@ -4063,6 +4063,14 @@ struct pbrt_context {
     error = filename + ": unknown command " + cmd;
     return false;
   };
+  auto stack_error = [filename, &error]() {
+    error = filename + ": parse error (bad stack)";
+    return false;
+  };
+  auto object_error = [filename, &error](const string& obj) {
+    error = filename + ": unknown object " + obj;
+    return false;
+  };
 
   // open file
   auto fs = open_file(filename, "rt");
@@ -4091,22 +4099,18 @@ struct pbrt_context {
     if (cmd == "WorldBegin") {
       ctx.stack.push_back({});
     } else if (cmd == "WorldEnd") {
-      if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty()) return stack_error();
       ctx.stack.pop_back();
-      if (ctx.stack.size() != 1)
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.size() != 1) return stack_error();
     } else if (cmd == "AttributeBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "AttributeEnd") {
-      if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty()) return stack_error();
       ctx.stack.pop_back();
     } else if (cmd == "TransformBegin") {
       ctx.stack.push_back(ctx.stack.back());
     } else if (cmd == "TransformEnd") {
-      if (ctx.stack.empty())
-        throw std::runtime_error{filename + ": parse error [bad stack]"};
+      if (ctx.stack.empty()) return stack_error();
       ctx.stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       ctx.stack.push_back(ctx.stack.back());
@@ -4119,7 +4123,7 @@ struct pbrt_context {
       auto object = ""s;
       if (!parse_param(str, object)) return parse_error();
       if (ctx.objects.find(object) == ctx.objects.end())
-        throw std::runtime_error{filename + ": parse error [unknown object]"};
+        return object_error(object);
       for (auto shape : ctx.objects.at(object)) {
         shape->instances.push_back(ctx.stack.back().transform_start);
         shape->instaends.push_back(ctx.stack.back().transform_end);
@@ -4137,7 +4141,7 @@ struct pbrt_context {
         ctx.stack.back().active_transform_start = true;
         ctx.stack.back().active_transform_end   = true;
       } else {
-        throw std::runtime_error{filename + ": parse error [bad coordsys]"};
+        return parse_error();
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;

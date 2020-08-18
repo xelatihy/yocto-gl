@@ -100,6 +100,11 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
 // Load a scene
 bool load_scene(const string& filename, scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -112,13 +117,18 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Save a scene
 bool save_scene(const string& filename, const scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -129,7 +139,7 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
@@ -1194,8 +1204,12 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
 
 static bool save_ply_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
-  if (scene->shapes.empty())
-    throw std::runtime_error{filename + ": empty shape"};
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  if (scene->shapes.empty()) return shape_error();
 
   // handle progress
   auto progress = vec2i{0, 1};

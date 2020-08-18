@@ -296,7 +296,7 @@ void init_window(gui_window* win, const vec2i& size, const string& title,
 
   // init gl extensions
   if (!gladLoadGL())
-    throw std::runtime_error("cannot initialize OpenGL extensions");
+    throw std::runtime_error{"cannot initialize OpenGL extensions"};
 
   // widgets
   if (widgets) {

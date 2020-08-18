@@ -47,20 +47,21 @@ static RTCDevice bvh_embree_device() {
     device = rtcNewDevice("");
     rtcSetDeviceErrorFunction(
         device,
-        [](void* ctx, RTCError code, const char* str) {
+        [](void* ctx, RTCError code, const char* message) {
+          auto str = string{message};
           switch (code) {
             case RTC_ERROR_UNKNOWN:
-              throw std::runtime_error("RTC_ERROR_UNKNOWN: "s + str);
+              throw std::runtime_error("RTC_ERROR_UNKNOWN: " + str);
             case RTC_ERROR_INVALID_ARGUMENT:
-              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
+              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: " + str);
             case RTC_ERROR_INVALID_OPERATION:
-              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
+              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: " + str);
             case RTC_ERROR_OUT_OF_MEMORY:
-              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
+              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: " + str);
             case RTC_ERROR_UNSUPPORTED_CPU:
-              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
+              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: " + str);
             case RTC_ERROR_CANCELLED:
-              throw std::runtime_error("RTC_ERROR_CANCELLED: "s + str);
+              throw std::runtime_error("RTC_ERROR_CANCELLED: " + str);
             default: throw std::runtime_error("invalid error code");
           }
         },
@@ -317,9 +318,9 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, split_axis};
@@ -356,9 +357,9 @@ static pair<int, int> split_balanced(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -395,9 +396,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};

@@ -639,9 +639,9 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     split_axis = 0;
     mid        = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, split_axis};
@@ -678,9 +678,9 @@ static pair<int, int> split_balanced(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};
@@ -717,9 +717,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
-    throw std::runtime_error("bad bvh split");
     axis = 0;
     mid  = (start + end) / 2;
+    throw std::runtime_error("bad bvh split");
   }
 
   return {mid, axis};

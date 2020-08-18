@@ -613,7 +613,7 @@ inline void format_value(string& str, double value) {
 // Foramt to file
 inline void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
+  if (pos != string::npos) throw std::invalid_argument("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
@@ -677,19 +677,19 @@ inline cli_state make_cli(const string& cmd, const string& usage) {
 inline vector<string> split_cli_names(const string& name_) {
   auto name  = name_;
   auto split = vector<string>{};
-  if (name.empty()) throw std::runtime_error("option name cannot be empty");
+  if (name.empty()) throw std::invalid_argument("option name cannot be empty");
   if (name.find_first_of(" \t\r\n") != string::npos)
-    throw std::runtime_error("option name cannot contain whitespaces");
+    throw std::invalid_argument("option name cannot contain whitespaces");
   while (name.find_first_of(",/") != string::npos) {
     auto pos = name.find_first_of(",/");
     if (pos > 0) split.push_back(name.substr(0, pos));
     name = name.substr(pos + 1);
   }
   if (!name.empty()) split.push_back(name);
-  if (split.empty()) throw std::runtime_error("option name cannot be empty");
+  if (split.empty()) throw std::invalid_argument("option name cannot be empty");
   for (auto& name : split)
     if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::runtime_error("inconsistent option names for " + name);
+      throw std::invalid_argument("inconsistent option names for " + name);
   return split;
 }
 
@@ -813,15 +813,16 @@ inline void add_cli_option(cli_state& cli, const string& name, T& value,
   // check for errors
   auto used = unordered_set<string>{};
   for (auto& option : cli.options) {
-    if (option.name.empty()) throw std::runtime_error("name cannot be empty");
+    if (option.name.empty())
+      throw std::invalid_argument("name cannot be empty");
     auto names = split_cli_names(option.name);
-    if (names.empty()) throw std::runtime_error("name cannot be empty");
+    if (names.empty()) throw std::invalid_argument("name cannot be empty");
     for (auto& name : names) {
       if (used.find(name) != used.end())
-        throw std::runtime_error("option name " + name + " already in use");
+        throw std::invalid_argument("option name " + name + " already in use");
       used.insert(name);
       if ((name[0] == '-') != (option.name[0] == '-'))
-        throw std::runtime_error("inconsistent option type for " + name);
+        throw std::invalid_argument("inconsistent option type for " + name);
     }
   }
 

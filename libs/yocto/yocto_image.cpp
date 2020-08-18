@@ -357,7 +357,7 @@ vec3f color_to_xyz(const vec3f& col, color_space from) {
         hlg_linear_to_display(rgb.z),
     };
   } else {
-    throw std::runtime_error("should not have gotten here");
+    throw std::runtime_error{"should not have gotten here"};
   }
   return space.rgb_to_xyz_mat * rgb;
 }
@@ -403,7 +403,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
         hlg_display_to_linear(rgb.z),
     };
   } else {
-    throw std::runtime_error("should not have gotten here");
+    throw std::runtime_error{"should not have gotten here"};
   }
   return rgb;
 }
@@ -765,7 +765,7 @@ vec3f compute_white_balance(const image<vec4f>& img) {
 static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   auto size = size_;
   if (size == zero2i) {
-    throw std::invalid_argument("bad image size in resize");
+    throw std::invalid_argument{"bad image size in resize"};
   }
   if (size.y == 0) {
     size.y = (int)round(size.x * (float)img_size.y / (float)img_size.x);
@@ -798,7 +798,7 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool display) {
   if (a.imsize() != b.imsize())
-    throw std::invalid_argument("image haev different sizes");
+    throw std::invalid_argument{"image haev different sizes"};
   auto diff = image<vec4f>{a.imsize()};
   for (auto i = 0llu; i < diff.count(); i++) diff[i] = abs(a[i] - b[i]);
   if (display) {
@@ -1287,7 +1287,7 @@ static const auto logo_small = vector<byte> {
       img[i] = vec4b{logo_small[i], logo_small[i], logo_small[i], (byte)255};
     return img;
   } else {
-    throw std::runtime_error("unknown builtin image " + type);
+    throw std::invalid_argument{"unknown logo type " + type};
     return {};
   }
 }
@@ -1393,7 +1393,7 @@ void make_volume_preset(volume<float>& vol, const string& type) {
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
   } else {
-    throw std::runtime_error("unknown volume preset " + type);
+    throw std::invalid_argument{"unknown volume preset " + type};
   }
 }
 volume<float> make_volume_preset(const string& type) {
