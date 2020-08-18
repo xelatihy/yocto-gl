@@ -229,6 +229,16 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
+[[nodiscard]] inline bool parse_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+[[nodiscard]] inline bool parse_value(string_view& str, mat4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 [[nodiscard]] inline bool parse_value(string_view& str, frame3f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
@@ -2504,73 +2514,6 @@ void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Parse values from a string
-[[nodiscard]] inline bool parse_pbrt_value(
-    string_view& str, string_view& value) {
-  skip_whitespace(str);
-  if (str.empty()) return false;
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-  } else {
-    if (str.front() != '"') return false;
-    str.remove_prefix(1);
-    if (str.empty()) return false;
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) return false;
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-  }
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, string& value) {
-  auto valuev = string_view{};
-  if (!parse_pbrt_value(str, valuev)) return false;
-  value = string{valuev};
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, int& value) {
-  char* end = nullptr;
-  value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, float& value) {
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++)
-    if (!parse_pbrt_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_pbrt_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, vec4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_pbrt_value(str, value[i])) return false;
-  return true;
-}
-[[nodiscard]] inline bool parse_pbrt_value(string_view& str, mat4f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_pbrt_value(str, value[i])) return false;
-  return true;
-}
-
 // Pbrt type
 enum struct pbrt_type {
   // clang-format off
@@ -2912,7 +2855,7 @@ template <typename T>
   skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
-  if (!parse_pbrt_value(str, value)) return false;
+  if (!parse_value(str, value)) return false;
   if (!str.data()) return false;
   if (parens) {
     skip_whitespace(str);
@@ -2926,7 +2869,7 @@ template <typename T>
 [[nodiscard]] inline bool parse_nametype(
     string_view& str_, string& name, string& type) {
   auto value = ""s;
-  if (!parse_pbrt_value(str_, value)) return false;
+  if (!parse_value(str_, value)) return false;
   if (!str_.data()) return false;
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
@@ -3129,7 +3072,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       if (str.empty()) return false;
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
-        if (!parse_pbrt_value(str, val)) return false;
+        if (!parse_value(str, val)) return false;
         if (!str.data()) return false;
         skip_whitespace(str);
         if (str.empty()) break;
@@ -3141,7 +3084,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       str.remove_prefix(1);
       return true;
     } else {
-      return parse_pbrt_value(str, value);
+      return parse_value(str, value);
     }
   };
 
@@ -3210,9 +3153,9 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
       auto is_string = false;
       auto str1      = str;
       skip_whitespace(str1);
-      if (!str1.empty() && str1.front() == '"')
+      if (!str1.empty() && str1.front() == '"') {
         is_string = true;
-      else if (!str1.empty() && str1.front() == '[') {
+      } else if (!str1.empty() && str1.front() == '[') {
         str1.remove_prefix(1);
         skip_whitespace(str1);
         if (!str1.empty() && str1.front() == '"') is_string = true;
@@ -3221,7 +3164,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
         value.type     = pbrt_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
-        if (!parse_pbrt_value(str, filename)) return false;
+        if (!parse_value(str, filename)) return false;
         if (!str.data()) return false;
         auto filenamep = path_filename(filename);
         if (path_extension(filenamep) == ".spd") {
