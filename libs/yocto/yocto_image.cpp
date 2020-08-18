@@ -42,6 +42,7 @@
 #include "ext/stb_image_write.h"
 #include "ext/tinyexr.h"
 #include "yocto_color.h"
+#include "yocto_commonio.h"
 #include "yocto_noise.h"
 
 // -----------------------------------------------------------------------------
@@ -1426,30 +1427,17 @@ static vector<string> split_string(const string& str) {
   return ret;
 }
 
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _Win32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
 // Pfm load
 static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
-  auto fs = fopen_utf8(filename, "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) return nullptr;
-  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
-      fs, [](FILE* f) { fclose(f); }};
 
   // buffer
   char buffer[4096];
   auto toks = vector<string>();
 
   // read magic
-  if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
   toks = split_string(buffer);
   if (toks[0] == "Pf")
     *nc = 1;
@@ -1459,13 +1447,13 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     return nullptr;
 
   // read w, h
-  if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
   toks = split_string(buffer);
   *w   = atoi(toks[0].c_str());
   *h   = atoi(toks[1].c_str());
 
   // read scale
-  if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
   toks   = split_string(buffer);
   auto s = atof(toks[0].c_str());
 
@@ -1475,8 +1463,7 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
   auto nrow    = (size_t)(*w) * (size_t)(*nc);
   auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
   for (auto j = *h - 1; j >= 0; j--) {
-    if (fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
-      return nullptr;
+    if (!read_values(fs, pixels.get() + j * nrow, nrow)) return nullptr;
   }
 
   // endian conversion
@@ -1551,39 +1538,30 @@ static float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 // save pfm
 static bool save_pfm(
     const char* filename, int w, int h, int nc, const float* pixels) {
-  auto fs = fopen_utf8(filename, "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) return false;
-  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
-      fs, [](FILE* f) { fclose(f); }};
 
-  if (fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF") < 0) return false;
-  if (fprintf(fs, "%d %d\n", w, h) < 0) return false;
-  if (fprintf(fs, "-1\n") < 0) return false;
+  if (!write_text(fs, (nc == 1) ? "Pf\n" : "PF\n")) return false;
+  if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + "\n"))
+    return false;
+  if (!write_text(fs, "-1\n")) return false;
   if (nc == 1 || nc == 3) {
-    if (fwrite(pixels, sizeof(float), w * h * nc, fs) != w * h * nc)
-      return false;
+    if (!write_values(fs, pixels, w * h * nc)) return false;
   } else {
     for (auto i = 0; i < w * h; i++) {
       auto vz = 0.0f;
       auto v  = pixels + i * nc;
-      if (fwrite(v + 0, sizeof(float), 1, fs) != 1) return false;
-      if (fwrite(v + 1, sizeof(float), 1, fs) != 1) return false;
+      if (!write_value(fs, v + 0)) return false;
+      if (!write_value(fs, v + 1)) return false;
       if (nc == 2) {
-        if (fwrite(&vz, sizeof(float), 1, fs) != 1) return false;
+        if (!write_value(fs, &vz)) return false;
       } else {
-        if (fwrite(v + 2, sizeof(float), 1, fs) != 1) return false;
+        if (!write_value(fs, v + 2)) return false;
       }
     }
   }
 
   return true;
-}
-
-// Get extension (not including '.').
-static string path_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
 }
 
 // Check if an image is HDR based on filename.
@@ -2107,22 +2085,20 @@ namespace yocto {
 // Volume load
 static float* load_yvol(
     const char* filename, int* w, int* h, int* d, int* nc, int req) {
-  auto fs = fopen_utf8(filename, "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) return nullptr;
-  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
-      fs, [](FILE* f) { fclose(f); }};
 
   // buffer
   char buffer[4096];
   auto toks = vector<string>();
 
   // read magic
-  if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
   toks = split_string(buffer);
   if (toks[0] != "YVOL") return nullptr;
 
   // read w, h
-  if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+  if (!read_line(fs, buffer, sizeof(buffer))) return nullptr;
   toks = split_string(buffer);
   *w   = atoi(toks[0].c_str());
   *h   = atoi(toks[1].c_str());
@@ -2133,8 +2109,7 @@ static float* load_yvol(
   auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
   auto nvalues = nvoxels * (size_t)(*nc);
   auto voxels  = std::unique_ptr<float[]>(new float[nvalues]);
-  if (fread(voxels.get(), sizeof(float), nvalues, fs) != nvalues)
-    return nullptr;
+  if (!read_values(fs, voxels.get(), nvalues)) return nullptr;
 
   // proper number of channels
   if (!req || *nc == req) return voxels.release();
@@ -2228,15 +2203,15 @@ static float* load_yvol(
 // save pfm
 static bool save_yvol(
     const char* filename, int w, int h, int d, int nc, const float* voxels) {
-  auto fs = fopen_utf8(filename, "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) return false;
-  auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
-      fs, [](FILE* f) { fclose(f); }};
 
-  if (fprintf(fs, "YVOL\n") < 0) return false;
-  if (fprintf(fs, "%d %d %d %d\n", w, h, d, nc) < 0) return false;
+  if (!write_text(fs, "YVOL\n")) return false;
+  if (!write_text(fs, std::to_string(w) + " " + std::to_string(h) + " " +
+                          std::to_string(d) + " " + std::to_string(nc) + "\n"))
+    return false;
   auto nvalues = (size_t)w * (size_t)h * (size_t)d * (size_t)nc;
-  if (fwrite(voxels, sizeof(float), nvalues, fs) != nvalues) return false;
+  if (!write_values(fs, voxels, nvalues)) return false;
 
   return true;
 }
