@@ -1346,17 +1346,17 @@ inline void format_obj_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_obj_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    file_stream& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_obj_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 template <typename T>
-[[nodiscard]] inline bool format_obj_value(FILE* fs, const T& value) {
+[[nodiscard]] inline bool format_obj_value(file_stream& fs, const T& value) {
   auto str = ""s;
   format_obj_value(str, value);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 
@@ -1435,16 +1435,15 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // init parsing
   add_material(obj);
 
   // read the file str by str
   char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1675,9 +1674,8 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<obj_shape*>>{};
@@ -1687,7 +1685,7 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 
   // read the file str by str
   char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1781,9 +1779,8 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parsing state
   auto opositions   = vector<vec3f>{};
@@ -1809,7 +1806,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
 
   // read the file str by str
   char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2013,9 +2010,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return write_error();
@@ -2194,9 +2190,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return write_error();
@@ -2258,9 +2253,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) throw std::runtime_error{filename + ": file not found"};
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return write_error();
@@ -2897,24 +2891,24 @@ inline void format_pbrt_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_pbrt_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    file_stream& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_pbrt_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 template <typename T>
-[[nodiscard]] inline bool format_pbrt_value(FILE* fs, const T& value) {
+[[nodiscard]] inline bool format_pbrt_value(file_stream& fs, const T& value) {
   auto str = ""s;
   format_pbrt_value(str, value);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 
 // Pbrt type
 enum struct pbrt_type {
   // clang-format off
-  real, integer, boolean, string, point, normal, vector, texture, color, 
+  real, integer, boolean, string, point, normal, vector, texture, color,
   point2, vector2, spectrum
   // clang-format on
 };
@@ -3198,12 +3192,12 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-[[nodiscard]] inline bool read_pbrt_cmdline(FILE* fs, string& cmd) {
+[[nodiscard]] inline bool read_pbrt_cmdline(file_stream& fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
-  auto pos   = ftell(fs);
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  auto pos   = ftell(fs.fs);
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
@@ -3214,7 +3208,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
     auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
     if (is_cmd) {
       if (found) {
-        fseek(fs, pos, SEEK_SET);
+        fseek(fs.fs, pos, SEEK_SET);
         // line_num -= 1;
         return true;
       } else {
@@ -3225,7 +3219,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
     }
     cmd += line;
     cmd += " ";
-    pos = ftell(fs);
+    pos = ftell(fs.fs);
   }
   return found;
 }
@@ -4462,9 +4456,8 @@ struct pbrt_context {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -4875,9 +4868,8 @@ bool save_pbrt(
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_pbrt_values(fs, "#\n")) return write_error();
