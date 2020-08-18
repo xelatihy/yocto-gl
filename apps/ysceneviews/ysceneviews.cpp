@@ -288,7 +288,7 @@ int main(int argc, const char* argv[]) {
     draw_slider(win, "near", params.near, 0.01f, 1.0f);
     draw_slider(win, "far", params.far, 1000.0f, 10000.0f);
   };
-  callbacks.update_cb = [app](gui_window* win, const gui_input& input) {
+  callbacks.update_cb = [](gui_window* win, const gui_input& input) {
     // update(win, apps);
   };
   callbacks.uiupdate_cb = [app](gui_window* win, const gui_input& input) {

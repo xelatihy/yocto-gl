@@ -775,8 +775,8 @@ inline bool parse_cli_value(
       value    = (int)strtol(args[0].c_str(), &end, 10);
       return end != nullptr;
     } else {
-      value = std::find(choices.begin(), choices.end(), args[0]) -
-              choices.begin();
+      value = (T)(
+          std::find(choices.begin(), choices.end(), args[0]) - choices.begin());
       return true;
     }
   } else if constexpr (std::is_same_v<T, float>) {

@@ -107,10 +107,6 @@ void load_shape_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
-      app->current = current;
-      app->total   = total;
-    };
     if (!load_shape(app->filename, *app->ioshape, app->loader_error)) return;
   });
   apps->loading.push_back(app);
@@ -238,8 +234,8 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
           path_filename(save_path), "*.ply;*.obj")) {
     auto app     = apps->selected;
     app->outname = save_path;
-    auto ok      = save_shape(app->outname, *app->ioshape, app->error);
-    save_path    = "";
+    save_shape(app->outname, *app->ioshape, app->error);
+    save_path = "";
   }
   continue_line(win);
   if (draw_button(win, "close", (bool)apps->selected)) {
