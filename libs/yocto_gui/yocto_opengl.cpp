@@ -307,7 +307,7 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
 
     for (auto i = 0; i < 6; i++) {
       if (!images[i]) {
-        throw std::runtime_error("cannot initialize cubemap from empty image");
+        throw std::runtime_error{"cannot initialize cubemap from empty image"};
         return;
       }
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
@@ -328,7 +328,7 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
       glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
     }
   } else {
-    throw std::runtime_error("cannot modify initialized cubemap");
+    throw std::runtime_error{"cannot modify initialized cubemap"};
     // glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
     // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
     //     cformat.at(nchannels), GL_UNSIGNED_BYTE, img);
@@ -399,7 +399,7 @@ void set_cubemap(ogl_cubemap* cubemap, int size, int nchannels,
 
   } else {
     // TODO(giacomo): handle this case.
-    throw std::runtime_error("cannot modify initialized cubemap");
+    throw std::runtime_error{"cannot modify initialized cubemap"};
 
     //    glBindTexture(GL_TEXTURE_2D, cubemap->cubemap_id);
     //    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size, size,
@@ -652,8 +652,8 @@ bool init_program(ogl_program* program, const string& vertex,
   }
   // TODO(giacomo): Apparently validation must be done just before drawing.
   //    https://community.khronos.org/t/samplers-of-different-types-use-the-same-textur/66329
-  // If done here, validation fails when using cubemaps and textures in the same
-  // shader. We should create a function validate_program() anc call it
+  // If done here, validation fails when using cubemaps and textures in the
+  // same shader. We should create a function validate_program() anc call it
   // separately.
   //
   // glValidateProgram(program->program_id);

@@ -293,7 +293,7 @@ int main(int argc, const char* argv[]) {
   // convert data
   if (trianglesonly) {
     if (!shape.quadspos.empty())
-      throw std::runtime_error("cannot convert facevarying data to triangles");
+      print_fatal("cannot convert facevarying data to triangles");
     if (!shape.quads.empty()) {
       shape.triangles = quads_to_triangles(shape.quads);
       shape.quads     = {};

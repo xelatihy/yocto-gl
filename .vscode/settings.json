@@ -96,7 +96,8 @@
     "ciso646": "cpp",
     "climits": "cpp",
     "ctgmath": "cpp",
-    "cstdbool": "cpp"
+    "cstdbool": "cpp",
+    "ranges": "cpp"
   },
   "json.schemas": [
     {

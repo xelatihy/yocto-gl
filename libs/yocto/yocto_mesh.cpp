@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
@@ -2511,16 +2512,6 @@ mesh_point eval_path_point(const geodesic_path& path,
 // IMPLEMENTATION OF MESH IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Make a path from a utf8 string
-inline std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Get extension (including .)
-inline string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
 
 // Load ply mesh
 [[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,

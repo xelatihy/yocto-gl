@@ -44,6 +44,7 @@
 
 #include "ext/cgltf.h"
 #include "ext/json.hpp"
+#include "yocto_commonio.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
@@ -58,48 +59,6 @@ using std::atomic;
 using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Make a path from a utf8 string
-inline std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Get directory name (not including /)
-inline string path_dirname(const string& filename) {
-  return make_path(filename).parent_path().generic_u8string();
-}
-
-// Get filename without directory and extension.
-inline string path_basename(const string& filename) {
-  return make_path(filename).stem().u8string();
-}
-
-// Get extension (including .)
-inline string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
-
-// Joins paths
-inline string path_join(const string& patha, const string& pathb) {
-  return (make_path(patha) / make_path(pathb)).generic_u8string();
-}
-inline string path_join(
-    const string& patha, const string& pathb, const string& pathc) {
-  return (make_path(patha) / make_path(pathb) / make_path(pathc))
-      .generic_u8string();
-}
-
-// Check if a file can be opened for reading.
-inline bool path_exists(const string& filename) {
-  return exists(make_path(filename));
-}
 
 }  // namespace yocto
 
@@ -141,6 +100,11 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
 // Load a scene
 bool load_scene(const string& filename, scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return load_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -153,13 +117,18 @@ bool load_scene(const string& filename, scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return load_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
 // Save a scene
 bool save_scene(const string& filename, const scene_model* scene, string& error,
     progress_callback progress_cb, bool noparallel) {
+  auto format_error = [filename, &error]() {
+    error = filename + ": unknown format";
+    return false;
+  };
+
   auto ext = path_extension(filename);
   if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, error, progress_cb, noparallel);
@@ -170,7 +139,7 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
   } else if (ext == ".ply" || ext == ".PLY") {
     return save_ply_scene(filename, scene, error, progress_cb, noparallel);
   } else {
-    throw std::runtime_error{filename + ": unknown format"};
+    return format_error();
   }
 }
 
@@ -306,61 +275,6 @@ inline void from_json(const json& j, frame3f& value) {
 namespace yocto {
 
 using json = nlohmann::json;
-
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _Win32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Load a text file
-static bool load_text(const string& filename, string& str, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) return read_error();
-  return true;
-}
-
-// Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) return write_error();
-  return true;
-}
 
 // load/save json
 static bool load_json(const string& filename, json& js, string& error) {
@@ -1290,8 +1204,12 @@ static bool load_ply_scene(const string& filename, scene_model* scene,
 
 static bool save_ply_scene(const string& filename, const scene_model* scene,
     string& error, progress_callback progress_cb, bool noparallel) {
-  if (scene->shapes.empty())
-    throw std::runtime_error{filename + ": empty shape"};
+  auto shape_error = [filename, &error]() {
+    error = filename + ": empty shape";
+    return false;
+  };
+
+  if (scene->shapes.empty()) return shape_error();
 
   // handle progress
   auto progress = vec2i{0, 1};
