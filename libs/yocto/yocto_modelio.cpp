@@ -75,6 +75,18 @@ inline void format_value(string& str, const frame3f& value) {
     format_value(str, value[i]);
   }
 }
+inline void format_value(string& str, const vec4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+inline void format_value(string& str, const mat4f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
 
 }  // namespace yocto
 
@@ -2655,79 +2667,6 @@ inline void skip_pbrt_whitespace(string_view& str) {
   return true;
 }
 
-// Formats values to string
-inline void format_pbrt_value(string& str, const string& value) {
-  str += value;
-}
-inline void format_pbrt_value(string& str, const char* value) { str += value; }
-inline void format_pbrt_value(string& str, int value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-
-inline void format_pbrt_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
-    format_pbrt_value(str, value[i]);
-  }
-}
-inline void format_pbrt_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
-    format_pbrt_value(str, value[i]);
-  }
-}
-inline void format_pbrt_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_pbrt_value(str, value[i]);
-  }
-}
-inline void format_pbrt_value(string& str, const mat4f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_pbrt_value(str, value[i]);
-  }
-}
-
-// Foramt to file
-inline void format_pbrt_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-inline void format_pbrt_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
-  str += fmt.substr(0, pos);
-  format_pbrt_value(str, arg);
-  format_pbrt_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-[[nodiscard]] inline bool format_pbrt_values(
-    file_stream& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_pbrt_values(str, fmt, args...);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-template <typename T>
-[[nodiscard]] inline bool format_pbrt_value(file_stream& fs, const T& value) {
-  auto str = ""s;
-  format_pbrt_value(str, value);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-
 // Pbrt type
 enum struct pbrt_type {
   // clang-format off
@@ -4597,7 +4536,7 @@ bool load_pbrt(const string& filename, pbrt_model* pbrt, string& error) {
   return true;
 }
 
-inline void format_pbrt_value(string& str, const pbrt_value& value) {
+inline void format_value(string& str, const pbrt_value& value) {
   static auto type_labels = unordered_map<pbrt_type, string>{
       {pbrt_type::real, "float"},
       {pbrt_type::integer, "integer"},
@@ -4617,34 +4556,32 @@ inline void format_pbrt_value(string& str, const pbrt_value& value) {
     str += "[ ";
     for (auto& value : values) {
       str += " ";
-      format_pbrt_value(str, value);
+      format_value(str, value);
     }
     str += " ]";
   };
 
-  format_pbrt_values(str, "\"{} {}\" ", type_labels.at(value.type), value.name);
+  format_values(str, "\"{} {}\" ", type_labels.at(value.type), value.name);
   switch (value.type) {
     case pbrt_type::real:
       if (!value.vector1f.empty()) {
         format_vector(str, value.vector1f);
       } else {
-        format_pbrt_value(str, value.value1f);
+        format_value(str, value.value1f);
       }
       break;
     case pbrt_type::integer:
       if (!value.vector1f.empty()) {
         format_vector(str, value.vector1i);
       } else {
-        format_pbrt_value(str, value.value1i);
+        format_value(str, value.value1i);
       }
       break;
     case pbrt_type::boolean:
-      format_pbrt_values(str, "\"{}\"", value.value1b ? "true" : "false");
+      format_values(str, "\"{}\"", value.value1b ? "true" : "false");
       break;
     case pbrt_type::string:
-    case pbrt_type::texture:
-      format_pbrt_values(str, "\"{}\"", value.value1s);
-      break;
+    case pbrt_type::texture: format_values(str, "\"{}\"", value.value1s); break;
     case pbrt_type::point:
     case pbrt_type::vector:
     case pbrt_type::normal:
@@ -4652,7 +4589,7 @@ inline void format_pbrt_value(string& str, const pbrt_value& value) {
       if (!value.vector3f.empty()) {
         format_vector(str, value.vector3f);
       } else {
-        format_pbrt_values(str, "[ {} ]", value.value3f);
+        format_values(str, "[ {} ]", value.value3f);
       }
       break;
     case pbrt_type::spectrum: format_vector(str, value.vector1f); break;
@@ -4661,16 +4598,16 @@ inline void format_pbrt_value(string& str, const pbrt_value& value) {
       if (!value.vector2f.empty()) {
         format_vector(str, value.vector2f);
       } else {
-        format_pbrt_values(str, "[ {} ]", value.value2f);
+        format_values(str, "[ {} ]", value.value2f);
       }
       break;
   }
 }
 
-inline void format_pbrt_value(string& str, const vector<pbrt_value>& values) {
+inline void format_value(string& str, const vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
-    format_pbrt_value(str, value);
+    format_value(str, value);
   }
 }
 
@@ -4695,15 +4632,15 @@ bool save_pbrt(
   if (!fs) return open_error();
 
   // save comments
-  if (!format_pbrt_values(fs, "#\n")) return write_error();
-  if (!format_pbrt_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_pbrt_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_pbrt_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
   for (auto& comment : pbrt->comments) {
-    if (!format_pbrt_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_pbrt_values(fs, "\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
 
   for (auto camera : pbrt->cameras) {
     auto command = pbrt_command{};
@@ -4713,8 +4650,7 @@ bool save_pbrt(
     command.values.push_back(
         make_pbrt_value("yresolution", camera->resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
-    if (!format_pbrt_values(
-            fs, "Film \"{}\" {}\n", command.type, command.values))
+    if (!format_values(fs, "Film \"{}\" {}\n", command.type, command.values))
       return write_error();
   }
 
@@ -4724,15 +4660,14 @@ bool save_pbrt(
     command.frame = camera->frame;
     command.values.push_back(make_pbrt_value(
         "fov", 2 * tan(0.036f / (2 * camera->lens)) * 180 / pif));
-    if (!format_pbrt_values(fs, "LookAt {} {} {}\n", command.frame.o,
+    if (!format_values(fs, "LookAt {} {} {}\n", command.frame.o,
             command.frame.o - command.frame.z, command.frame.y))
       return write_error();
-    if (!format_pbrt_values(
-            fs, "Camera \"{}\" {}\n", command.type, command.values))
+    if (!format_values(fs, "Camera \"{}\" {}\n", command.type, command.values))
       return write_error();
   }
 
-  if (!format_pbrt_values(fs, "\nWorldBegin\n\n")) return write_error();
+  if (!format_values(fs, "\nWorldBegin\n\n")) return write_error();
 
   for (auto light : pbrt->lights) {
     auto command  = pbrt_command{};
@@ -4744,13 +4679,13 @@ bool save_pbrt(
       command.type = "point";
       command.values.push_back(make_pbrt_value("I", light->emission));
     }
-    if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
+    if (!format_values(fs, "AttributeBegin\n")) return write_error();
+    if (!format_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
       return write_error();
-    if (!format_pbrt_values(
+    if (!format_values(
             fs, "LightSource \"{}\" {}\n", command.type, command.values))
       return write_error();
-    if (!format_pbrt_values(fs, "AttributeEnd\n")) return write_error();
+    if (!format_values(fs, "AttributeEnd\n")) return write_error();
   }
 
   for (auto environment : pbrt->environments) {
@@ -4760,13 +4695,13 @@ bool save_pbrt(
     command.values.push_back(make_pbrt_value("L", environment->emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment->emission_tex));
-    if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
+    if (!format_values(fs, "AttributeBegin\n")) return write_error();
+    if (!format_values(fs, "Transform {}\n", frame_to_mat(command.frame)))
       return write_error();
-    if (!format_pbrt_values(
+    if (!format_values(
             fs, "LightSource \"{}\" {}\n", command.type, command.values))
       return write_error();
-    if (!format_pbrt_values(fs, "AttributeEnd\n")) return write_error();
+    if (!format_values(fs, "AttributeEnd\n")) return write_error();
   }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
@@ -4820,7 +4755,7 @@ bool save_pbrt(
         command.values.push_back(make_pbrt_value("opacity", material->opacity));
       }
     }
-    if (!format_pbrt_values(fs,
+    if (!format_values(fs,
             "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
             material->name, command.type, command.values))
       return write_error();
@@ -4857,40 +4792,38 @@ bool save_pbrt(
     }
     auto object = "object" + std::to_string(object_id++);
     if (!shape->instances.empty())
-      if (!format_pbrt_values(fs, "ObjectBegin \"{}\"\n", object))
+      if (!format_values(fs, "ObjectBegin \"{}\"\n", object))
         return write_error();
-    if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-    if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
+    if (!format_values(fs, "AttributeBegin\n")) return write_error();
+    if (!format_values(fs, "Transform {}\n", frame_to_mat(shape->frame)))
       return write_error();
     if (shape->material->emission != zero3f) {
       auto acommand = pbrt_command{};
       acommand.type = "diffuse";
       acommand.values.push_back(
           make_pbrt_value("L", shape->material->emission));
-      if (!format_pbrt_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
+      if (!format_values(fs, "AreaLightSource \"{}\" {}\n", acommand.type,
               acommand.values))
         return write_error();
     }
-    if (!format_pbrt_values(
-            fs, "NamedMaterial \"{}\"\n", shape->material->name))
+    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape->material->name))
       return write_error();
-    if (!format_pbrt_values(
-            fs, "Shape \"{}\" {}\n", command.type, command.values))
+    if (!format_values(fs, "Shape \"{}\" {}\n", command.type, command.values))
       return write_error();
-    if (!format_pbrt_values(fs, "AttributeEnd\n")) return write_error();
+    if (!format_values(fs, "AttributeEnd\n")) return write_error();
     if (!shape->instances.empty())
-      if (!format_pbrt_values(fs, "ObjectEnd\n")) return write_error();
+      if (!format_values(fs, "ObjectEnd\n")) return write_error();
     for (auto& iframe : shape->instances) {
-      if (!format_pbrt_values(fs, "AttributeBegin\n")) return write_error();
-      if (!format_pbrt_values(fs, "Transform {}\n", frame_to_mat(iframe)))
+      if (!format_values(fs, "AttributeBegin\n")) return write_error();
+      if (!format_values(fs, "Transform {}\n", frame_to_mat(iframe)))
         return write_error();
-      if (!format_pbrt_values(fs, "ObjectInstance \"{}\"\n", object))
+      if (!format_values(fs, "ObjectInstance \"{}\"\n", object))
         return write_error();
-      if (!format_pbrt_values(fs, "AttributeEnd\n")) return write_error();
+      if (!format_values(fs, "AttributeEnd\n")) return write_error();
     }
   }
 
-  if (!format_pbrt_values(fs, "\nWorldEnd\n\n")) return write_error();
+  if (!format_values(fs, "\nWorldEnd\n\n")) return write_error();
 
   // done
   return true;
