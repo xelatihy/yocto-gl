@@ -38,6 +38,7 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // forward declaration
@@ -51,6 +52,7 @@ namespace yocto {
 // using directives
 using std::function;
 using std::string;
+using std::string_view;
 using std::vector;
 
 }  // namespace yocto
@@ -128,9 +130,8 @@ struct gui_callbacks {
 };
 
 // run the user interface with the give callbacks
-void run_ui(const vec2i& size, const string& title,
-    const gui_callbacks& callbaks, int widgets_width = 320,
-    bool widgets_left = true);
+void run_ui(const vec2i& size, string_view title, const gui_callbacks& callbaks,
+    int widgets_width = 320, bool widgets_left = true);
 
 }  // namespace yocto
 
@@ -161,7 +162,7 @@ struct gui_window {
 };
 
 // Windows initialization
-void init_window(gui_window* win, const vec2i& size, const string& title,
+void init_window(gui_window* win, const vec2i& size, string_view title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
@@ -194,7 +195,7 @@ namespace yocto {
 bool begin_header(gui_window* win, const char* title);
 void end_header(gui_window* win);
 
-void draw_label(gui_window* win, const char* lbl, const string& text);
+void draw_label(gui_window* win, const char* lbl, string_view text);
 
 void draw_separator(gui_window* win);
 void continue_line(gui_window* win);
@@ -299,13 +300,13 @@ void draw_histogram(
     gui_window* win, const char* lbl, const vector<vec4f>& values);
 
 bool draw_filedialog(gui_window* win, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+    string_view dirname, string_view filename, string_view filter);
 bool draw_filedialog_button(gui_window* win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
+    string_view dirname, string_view filename, string_view filter);
 
-void log_info(gui_window* win, const string& msg);
-void log_error(gui_window* win, const string& msg);
+void log_info(gui_window* win, string_view msg);
+void log_error(gui_window* win, string_view msg);
 void clear_log(gui_window* win);
 void draw_log(gui_window* win);
 
