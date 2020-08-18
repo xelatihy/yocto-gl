@@ -35,7 +35,7 @@ using namespace yocto;
 // Shape presets used ofr testing.
 bool make_mesh_preset(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
-    const string& type, string& error) {
+    string_view type, string& error) {
   auto set_quads = [&](quads_shape&& shape) {
     triangles = quads_to_triangles(shape.quads);
     positions = shape.positions;

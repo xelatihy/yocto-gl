@@ -98,7 +98,7 @@ image<vec4f> filter_bilateral(
   return filtered;
 }
 
-bool make_image_preset(const string& type, image<vec4f>& img, string& error) {
+bool make_image_preset(string_view type, image<vec4f>& img, string& error) {
   auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
                         const vec2i& offset) {
     for (auto j = 0; j < region.imsize().y; j++) {

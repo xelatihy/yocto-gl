@@ -36,7 +36,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec3f>& colors, vector<float>& radius, const string& type,
+    vector<vec3f>& colors, vector<float>& radius, string_view type,
     string& error) {
   auto set_quads = [&](quads_shape&& shape) {
     quads     = shape.quads;
@@ -217,8 +217,7 @@ bool make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Shape presets used ofr testing.
-bool make_shape_preset(
-    generic_shape& shape, const string& type, string& error) {
+bool make_shape_preset(generic_shape& shape, string_view type, string& error) {
   return make_shape_preset(shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,

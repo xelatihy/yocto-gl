@@ -132,7 +132,7 @@ void update_display(app_state* app) {
 }
 
 // add a new image
-void load_image_async(app_states* apps, const string& filename) {
+void load_image_async(app_states* apps, string_view filename) {
   auto app      = apps->states.emplace_back(new app_state{});
   app->filename = filename;
   app->outname  = replace_extension(filename, ".display.png");

@@ -262,8 +262,8 @@ void reset_display(app_state* app) {
       });
 }
 
-void load_scene_async(app_states* apps, const string& filename,
-    const string& camera_name = "", bool add_skyenv = false) {
+void load_scene_async(app_states* apps, string_view filename,
+    string_view camera_name = "", bool add_skyenv = false) {
   auto app       = apps->states.emplace_back(new app_state{});
   app->name      = path_filename(filename) + " [loading]";
   app->filename  = filename;

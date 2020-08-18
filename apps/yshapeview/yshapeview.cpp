@@ -98,7 +98,7 @@ struct app_states {
 };
 
 void load_shape_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
+    app_states* apps, string_view filename, string_view camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = replace_extension(filename, ".png");
@@ -107,7 +107,7 @@ void load_shape_async(
   app->drawgl_prms = apps->drawgl_prms;
   app->status      = "load";
   app->loader      = std::async(std::launch::async, [app, camera_name]() {
-    auto progress_cb = [app](const string& message, int current, int total) {
+    auto progress_cb = [app](string_view message, int current, int total) {
       app->current = current;
       app->total   = total;
     };

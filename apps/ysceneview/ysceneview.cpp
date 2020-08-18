@@ -107,7 +107,7 @@ struct app_states {
 };
 
 void load_scene_async(
-    app_states* apps, const string& filename, const string& camera_name = "") {
+    app_states* apps, string_view filename, string_view camera_name = "") {
   auto app         = apps->states.emplace_back(new app_state{});
   app->filename    = filename;
   app->imagename   = replace_extension(filename, ".png");
