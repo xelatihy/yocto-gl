@@ -355,7 +355,7 @@ can be updated with `update_bvh(...)`.
 ```cpp
 auto scene = new scene_model{...};               // create a complete scene
 auto params = scene_bvh_params{};                // default params
-auto progress = [](const string& message,        // progress callback
+auto progress = [](string_view message,          // progress callback
    int current, int total) {
   print_info(message, current, total);
 };

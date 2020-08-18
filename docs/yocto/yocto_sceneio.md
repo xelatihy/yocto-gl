@@ -41,7 +41,7 @@ that is called as scene loading progresses.
 
 ```cpp
 auto scene = new scene_model{};                    // scene
-auto progress = [](const string& message,          // progress callback
+auto progress = [](string_view message,            // progress callback
                    int current, int total) {
   print_info(message, current, total);
 };
