@@ -280,14 +280,14 @@ struct scene_model {
 namespace yocto {
 
 // add element to a scene
-scene_camera*      add_camera(scene_model* scene, const string& name = "");
-scene_environment* add_environment(scene_model* scene, const string& name = "");
-scene_instance*    add_instance(scene_model* scene, const string& name = "");
-scene_material*    add_material(scene_model* scene, const string& name = "");
-scene_shape*       add_shape(scene_model* scene, const string& name = "");
-scene_texture*     add_texture(scene_model* scene, const string& name = "");
+scene_camera*      add_camera(scene_model* scene, string_view name = "");
+scene_environment* add_environment(scene_model* scene, string_view name = "");
+scene_instance*    add_instance(scene_model* scene, string_view name = "");
+scene_material*    add_material(scene_model* scene, string_view name = "");
+scene_shape*       add_shape(scene_model* scene, string_view name = "");
+scene_texture*     add_texture(scene_model* scene, string_view name = "");
 scene_instance*    add_complete_instance(
-       scene_model* scene, const string& name = "");
+       scene_model* scene, string_view name = "");
 
 // set camera properties
 void set_frame(scene_camera* camera, const frame3f& frame);
@@ -368,7 +368,7 @@ void clone_scene(scene_model* dest, const scene_model* scene);
 bbox3f compute_bounds(const scene_model* scene);
 
 // get named camera or default if name is empty
-scene_camera* get_camera(const scene_model* scene, const string& name = "");
+scene_camera* get_camera(const scene_model* scene, string_view name = "");
 
 }  // namespace yocto
 

@@ -192,15 +192,15 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
 // Checks for validity of the scene->
 vector<string> scene_validation(const scene_model* scene, bool notextures) {
   auto errs        = vector<string>();
-  auto check_names = [&errs](const auto& vals, const string& base) {
+  auto check_names = [&errs](const auto& vals, string_view base) {
     auto used = unordered_map<string, int>();
     used.reserve(vals.size());
     for (auto& value : vals) used[value->name] += 1;
     for (auto& [name, used] : used) {
       if (name == "") {
-        errs.push_back("empty " + base + " name");
+        errs.push_back("empty " + string{base} + " name");
       } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
+        errs.push_back("duplicated " + string{base} + " name " + name);
       }
     }
   };
@@ -254,32 +254,33 @@ scene_model::~scene_model() {
 // add an element
 template <typename T>
 static T* add_element(
-    vector<T*>& elements, const string& name, const string& base) {
+    vector<T*>& elements, string_view name, string_view base) {
   auto element  = elements.emplace_back(new T{});
-  element->name = name != "" ? name : (base + std::to_string(elements.size()));
+  element->name = name != "" ? string{name}
+                             : (string{base} + std::to_string(elements.size()));
   return element;
 }
 
 // add element
-scene_camera* add_camera(scene_model* scene, const string& name) {
+scene_camera* add_camera(scene_model* scene, string_view name) {
   return add_element(scene->cameras, name, "camera");
 }
-scene_environment* add_environment(scene_model* scene, const string& name) {
+scene_environment* add_environment(scene_model* scene, string_view name) {
   return add_element(scene->environments, name, "environment");
 }
-scene_shape* add_shape(scene_model* scene, const string& name) {
+scene_shape* add_shape(scene_model* scene, string_view name) {
   return add_element(scene->shapes, name, "shape");
 }
-scene_texture* add_texture(scene_model* scene, const string& name) {
+scene_texture* add_texture(scene_model* scene, string_view name) {
   return add_element(scene->textures, name, "texture");
 }
-scene_instance* add_instance(scene_model* scene, const string& name) {
+scene_instance* add_instance(scene_model* scene, string_view name) {
   return add_element(scene->instances, name, "instance");
 }
-scene_material* add_material(scene_model* scene, const string& name) {
+scene_material* add_material(scene_model* scene, string_view name) {
   return add_element(scene->materials, name, "material");
 }
-scene_instance* add_complete_instance(scene_model* scene, const string& name) {
+scene_instance* add_complete_instance(scene_model* scene, string_view name) {
   auto instance      = add_instance(scene, name);
   instance->shape    = add_shape(scene, name);
   instance->material = add_material(scene, name);
@@ -514,7 +515,7 @@ void add_sky(scene_model* scene, float sun_angle) {
 }
 
 // get named camera or default if camera is empty
-scene_camera* get_camera(const scene_model* scene, const string& name) {
+scene_camera* get_camera(const scene_model* scene, string_view name) {
   if (scene->cameras.empty()) return nullptr;
   for (auto camera : scene->cameras) {
     if (camera->name == name) return camera;
