@@ -383,6 +383,64 @@ inline vector<string> list_directory(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Safe wrapper for FILE stream
+struct file_stream {
+  // file parameters
+  string filename = "";
+  FILE*  fs       = nullptr;
+  bool   owned    = false;
+
+  // move-only type
+  file_stream(const file_stream&) = delete;
+  file_stream& operator=(const file_stream&) = delete;
+  ~file_stream();
+
+  // operator bool to check for error
+  explicit operator bool() const { return fs != nullptr; }
+};
+
+// Cleanup
+inline file_stream::~file_stream() {
+  if (owned && fs) fclose(fs);
+}
+
+// Open a file
+inline file_stream open_file(const string& filename, const string& mode) {
+#ifdef _Win32
+  auto path8 = std::filesystem::u8path(filename);
+  auto wmode = std::wstring(mode.begin(), mode.end());
+  auto fs    = _wfopen(path.c_str(), wmode.c_str());
+#else
+  auto fs = fopen(filename.c_str(), mode.c_str());
+#endif
+  return {filename, fs, true};
+}
+
+// Close a file
+inline void close_file(file_stream& fs) {
+  if (fs.owned && fs.fs) fclose(fs.fs);
+  fs.filename = "";
+  fs.fs       = nullptr;
+  fs.owned    = false;
+}
+
+// Write text to a file
+inline bool write_text(file_stream& fs, const string& str) {
+  return fprintf(fs.fs, "%s", str.c_str()) >= 0;
+}
+
+// Read data from a file
+template <typename T>
+inline bool read_data(file_stream& fs, T* buffer, size_t count) {
+  return fread(buffer, sizeof(T), count, fs.fs) == count;
+}
+
+// Write data from a file
+template <typename T>
+inline bool write_data(file_stream& fs, const T* buffer, size_t count) {
+  return fwrite(buffer, sizeof(T), count, fs.fs) == count;
+}
+
 // Opens a file with a utf8 file name
 inline FILE* fopen_utf8(const char* filename, const char* mode) {
 #ifdef _Win32
@@ -397,17 +455,16 @@ inline FILE* fopen_utf8(const char* filename, const char* mode) {
 // Load a text file
 inline bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
+  if (!read_data(fs, str.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -417,13 +474,12 @@ inline bool load_text(const string& filename, string& str, string& error) {
 // Save a text file
 inline bool save_text(
     const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
+  if (!write_text(fs, str)) {
     error = filename + ": write error";
     return false;
   }
@@ -434,17 +490,16 @@ inline bool save_text(
 inline bool load_binary(
     const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
+  fseek(fs.fs, 0, SEEK_END);
+  auto length = ftell(fs.fs);
+  fseek(fs.fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
+  if (!read_data(fs, data.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -454,13 +509,12 @@ inline bool load_binary(
 // Save a binary file
 inline bool save_binary(
     const string& filename, const vector<byte>& data, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) {
     error = filename + ": file not found";
     return false;
   }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+  if (!write_data(fs, data.data(), data.size()) != data.size()) {
     error = filename + ": write error";
     return false;
   }
