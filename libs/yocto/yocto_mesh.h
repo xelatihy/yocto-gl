@@ -39,6 +39,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -55,6 +56,7 @@ namespace yocto {
 using std::array;
 using std::pair;
 using std::string;
+using std::string_view;
 using std::unordered_map;
 using std::vector;
 
@@ -354,24 +356,23 @@ void meandering_triangles(const vector<float>& field, float isoline,
 namespace yocto {
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+[[nodiscard]] bool load_mesh(string_view filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_mesh(const string& filename,
+[[nodiscard]] bool save_mesh(string_view filename,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec3f>& colors, string& error, bool ascii = false,
     bool flip_texcoords = true);
 
 // Load/save a set of lines
-[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+[[nodiscard]] bool load_lines(string_view filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoords = true);
-[[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii = false,
-    bool flip_texcoords = true);
+[[nodiscard]] bool save_lines(string_view filename, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii = false, bool flip_texcoords = true);
 
 }  // namespace yocto
 

@@ -2515,15 +2515,15 @@ mesh_point eval_path_point(const geodesic_path& path,
 namespace yocto {
 
 // Load ply mesh
-[[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
+[[nodiscard]] bool load_mesh(string_view filename, vector<vec3i>& triangles,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
@@ -2582,17 +2582,17 @@ namespace yocto {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_mesh(const string& filename,
+[[nodiscard]] bool save_mesh(string_view filename,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec3f>& colors, string& error, bool ascii,
     bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
@@ -2627,15 +2627,15 @@ namespace yocto {
 }
 
 // Load ply mesh
-[[nodiscard]] bool load_lines(const string& filename, vector<vec2i>& lines,
+[[nodiscard]] bool load_lines(string_view filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec3f>& colors, string& error, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
@@ -2694,17 +2694,16 @@ namespace yocto {
 }
 
 // Save ply mesh
-[[nodiscard]] bool save_lines(const string& filename,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<vec3f>& colors, string& error, bool ascii,
-    bool flip_texcoord) {
+[[nodiscard]] bool save_lines(string_view filename, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec3f>& colors, string& error,
+    bool ascii, bool flip_texcoord) {
   auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
+    error = format_file_error(filename, "unknown format");
     return false;
   };
   auto shape_error = [filename, &error]() {
-    error = filename + ": empty shape";
+    error = format_file_error(filename, "empty shape");
     return false;
   };
 
