@@ -12,6 +12,7 @@
 
 #include "yocto_mesh.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <deque>
@@ -21,6 +22,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "yocto_commonio.h"
 #include "yocto_geometry.h"
 #include "yocto_modelio.h"
 
@@ -629,7 +631,8 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
       solver.graph[i].push_back({p, length(e)});
       auto opp   = opposite_face(triangles, adjacencies, tid, i);
       auto strip = vector<int>{tid, opp};
-      auto k = find_in_vec(adjacencies[tid], opp);  // TODO: this is not needeed
+      auto k     = find_in_vec(
+          adjacencies[tid], opp);  // TODO(fabio): this is not needeed
       assert(k != -1);
       auto a       = opposite_vertex(triangles, adjacencies, tid, k);
       offset       = find_in_vec(triangles[opp], a);
@@ -867,7 +870,7 @@ vector<vector<float>> compute_voronoi_fields(
     fields[i]                = vector<float>(solver.graph.size(), flt_max);
     fields[i][generators[i]] = 0;
     fields[i] = compute_geodesic_distances(solver, {generators[i]}, max);
-  };
+  }
   return fields;
 }
 
@@ -1424,9 +1427,9 @@ int set_target_parent(const vector<pair<int, float>>& nbr,
     const vector<int>& parents, const vector<float>& f) {
   auto vid    = -1;
   auto lambda = flt_max;
-  if (nbr.size() == 1)
+  if (nbr.size() == 1) {
     vid = parents[nbr[0].first];
-  else {
+  } else {
     for (auto i = 0; i < nbr.size(); ++i) {
       auto val = f[nbr[i].first] + nbr[i].second;
       if (val < lambda) {
@@ -1964,7 +1967,7 @@ static vector<int> short_strip(const geodesic_solver& solver,
 
 // returns a strip of triangles such target belongs to the first one and
 // source to the last one
-//(TO DO:may be the names could change in order to get the call
+// TODO(fabio): may be the names could change in order to get the call
 // more consistent with the output)
 vector<int> get_strip(const geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
@@ -2510,16 +2513,6 @@ mesh_point eval_path_point(const geodesic_path& path,
 // IMPLEMENTATION OF MESH IO
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Make a path from a utf8 string
-inline std::filesystem::path make_path(const string& filename) {
-  return std::filesystem::u8path(filename);
-}
-
-// Get extension (including .)
-inline string path_extension(const string& filename) {
-  return make_path(filename).extension().u8string();
-}
 
 // Load ply mesh
 [[nodiscard]] bool load_mesh(const string& filename, vector<vec3i>& triangles,
