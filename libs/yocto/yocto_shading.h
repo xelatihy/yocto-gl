@@ -84,7 +84,7 @@ inline pair<vec3f, vec3f> edgetint_to_eta(
     const vec3f& reflectivity, const vec3f& edgetint);
 
 // Get tabulated ior for conductors
-inline pair<vec3f, vec3f> conductor_eta(const string& name);
+inline pair<vec3f, vec3f> conductor_eta(string_view name);
 
 // Evaluates the microfacet distribution.
 inline float microfacet_distribution(float roughness, const vec3f& normal,
@@ -855,7 +855,7 @@ inline float sample_phasefunction_pdf(
 }
 
 // Conductor etas
-inline pair<vec3f, vec3f> conductor_eta(const string& name) {
+inline pair<vec3f, vec3f> conductor_eta(string_view name) {
   static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
       {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                   {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
@@ -938,7 +938,7 @@ inline pair<vec3f, vec3f> conductor_eta(const string& name) {
       {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
                 {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
   };
-  return metal_ior_table.at(name);
+  return metal_ior_table.at(string{name});
 }
 
 }  // namespace yocto
