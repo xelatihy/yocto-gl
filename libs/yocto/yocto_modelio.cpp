@@ -110,9 +110,6 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// string literals
-using namespace std::string_literals;
-
 // Parse values from a string
 [[nodiscard]] inline bool parse_ply_value(
     string_view& str, string_view& value) {
@@ -1119,26 +1116,14 @@ bool add_points(ply_model* ply, const vector<int>& values) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// string literals
-using namespace std::string_literals;
-
-// utilities
-inline bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
-inline bool is_obj_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-inline void skip_obj_whitespace(string_view& str) {
-  while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
-}
-
 // Parse values from a string
 [[nodiscard]] inline bool parse_obj_value(
     string_view& str, string_view& value) {
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -1199,13 +1184,6 @@ inline void skip_obj_whitespace(string_view& str) {
   return true;
 }
 
-inline void remove_obj_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
 [[nodiscard]] inline bool parse_obj_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
   if (!parse_obj_value(str, value.position)) return false;
@@ -1232,12 +1210,12 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 
   // get tokens
   auto tokens = vector<string>();
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
     if (!parse_obj_value(str, token)) return false;
     tokens.push_back(token);
-    skip_obj_whitespace(str);
+    skip_whitespace(str);
   }
   if (tokens.empty()) return false;
 
@@ -1285,8 +1263,8 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
@@ -1527,8 +1505,8 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
@@ -1648,8 +1626,8 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
@@ -1712,7 +1690,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
         element.material = (uint8_t)mat_idx;
       }
       // parse vertices
-      skip_obj_whitespace(str);
+      skip_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
         if (!parse_obj_value(str, vert)) return parse_error();
@@ -1724,11 +1702,11 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         shape->vertices.push_back(vert);
         element.size += 1;
-        skip_obj_whitespace(str);
+        skip_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      skip_obj_whitespace(str);
+      skip_whitespace(str);
       if (cmd == "o") {
         if (str.empty()) {
           oname = "";
