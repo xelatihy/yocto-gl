@@ -2565,26 +2565,14 @@ void set_instances(obj_shape* shape, const vector<frame3f>& instances) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// string literals
-using namespace std::string_literals;
-
-// utilities
-inline bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
-inline bool is_pbrt_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-inline void skip_pbrt_whitespace(string_view& str) {
-  while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
-}
-
 // Parse values from a string
 [[nodiscard]] inline bool parse_pbrt_value(
     string_view& str, string_view& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_pbrt_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -2919,7 +2907,7 @@ inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& val,
 }
 
 inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
   while (!cpy.empty()) {
@@ -2939,8 +2927,8 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
-    remove_pbrt_comment(line);
-    skip_pbrt_whitespace(line);
+    remove_comment(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // check if command
@@ -2965,7 +2953,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 
 // parse a quoted string
 [[nodiscard]] inline bool parse_command(string_view& str, string& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (!isalpha((int)str.front())) return false;
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -2982,13 +2970,13 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 // parse pbrt value with optional parens
 template <typename T>
 [[nodiscard]] inline bool parse_param(string_view& str, T& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
   if (!parse_pbrt_value(str, value)) return false;
   if (!str.data()) return false;
   if (parens) {
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (!str.empty() && str.front() == '[') return false;
     str.remove_prefix(1);
   }
@@ -3194,17 +3182,17 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
     string_view& str, vector<pbrt_value>& values) {
   auto parse_pvalues = [](string_view& str, auto& value, auto& values) -> bool {
     values.clear();
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (str.empty()) return false;
     if (str.front() == '[') {
       str.remove_prefix(1);
-      skip_pbrt_whitespace(str);
+      skip_whitespace(str);
       if (str.empty()) return false;
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
         if (!parse_pbrt_value(str, val)) return false;
         if (!str.data()) return false;
-        skip_pbrt_whitespace(str);
+        skip_whitespace(str);
         if (str.empty()) break;
         if (str.front() == ']') break;
         if (values.empty()) values.push_back(value);
@@ -3219,12 +3207,12 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
   };
 
   values.clear();
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
     if (!parse_nametype(str, value.name, type)) return false;
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (str.empty()) return false;
     if (type == "float") {
       value.type = pbrt_type::real;
@@ -3282,12 +3270,12 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
-      skip_pbrt_whitespace(str1);
+      skip_whitespace(str1);
       if (!str1.empty() && str1.front() == '"')
         is_string = true;
       else if (!str1.empty() && str1.front() == '[') {
         str1.remove_prefix(1);
-        skip_pbrt_whitespace(str1);
+        skip_whitespace(str1);
         if (!str1.empty() && str1.front() == '"') is_string = true;
       }
       if (is_string) {
@@ -3320,7 +3308,7 @@ inline pair<vec3f, vec3f> get_subsurface(const string& name) {
     } else {
       return false;
     }
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
   }
   return true;
 }
