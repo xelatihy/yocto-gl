@@ -52,6 +52,33 @@ using namespace std::string_literals;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Formats values to string
+inline void format_value(string& str, const vec2f& value) {
+  for (auto i = 0; i < 2; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+inline void format_value(string& str, const vec3f& value) {
+  for (auto i = 0; i < 3; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+inline void format_value(string& str, const frame3f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1161,69 +1188,6 @@ inline void skip_obj_whitespace(string_view& str) {
   return true;
 }
 
-// Formats values to string
-inline void format_obj_value(string& str, const string& value) { str += value; }
-inline void format_obj_value(string& str, int value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-inline void format_obj_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-inline void format_obj_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-inline void format_obj_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-
-// Foramt to file
-inline void format_obj_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-inline void format_obj_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::invalid_argument("bad format string");
-  str += fmt.substr(0, pos);
-  format_obj_value(str, arg);
-  format_obj_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-[[nodiscard]] inline bool format_obj_values(
-    file_stream& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_obj_values(str, fmt, args...);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-template <typename T>
-[[nodiscard]] inline bool format_obj_value(file_stream& fs, const T& value) {
-  auto str = ""s;
-  format_obj_value(str, value);
-  if (!write_text(fs, str)) return false;
-  return true;
-}
-
 inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
@@ -1841,21 +1805,21 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
 }
 
 // Format values
-inline void format_obj_value(string& str, const obj_texture& value) {
+inline void format_value(string& str, const obj_texture& value) {
   str += value.path.empty() ? "" : value.path;
 }
-inline void format_obj_value(string& str, const obj_vertex& value) {
-  format_obj_value(str, value.position);
+inline void format_value(string& str, const obj_vertex& value) {
+  format_value(str, value.position);
   if (value.texcoord) {
     str += "/";
-    format_obj_value(str, value.texcoord);
+    format_value(str, value.texcoord);
     if (value.normal) {
       str += "/";
-      format_obj_value(str, value.normal);
+      format_value(str, value.normal);
     }
   } else if (value.normal) {
     str += "//";
-    format_obj_value(str, value.normal);
+    format_value(str, value.normal);
   }
 }
 
@@ -1878,164 +1842,159 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!fs) return open_error();
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return write_error();
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_obj_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_obj_values(fs, "\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
 
   // write material
   for (auto material : obj->materials) {
-    if (!format_obj_values(fs, "newmtl {}\n", material->name))
-      return write_error();
+    if (!format_values(fs, "newmtl {}\n", material->name)) return write_error();
     if (!material->as_pbr) {
-      if (!format_obj_values(fs, "illum {}\n", material->illum))
+      if (!format_values(fs, "illum {}\n", material->illum))
         return write_error();
       if (material->emission != zero3f)
-        if (!format_obj_values(fs, "Ke {}\n", material->emission))
+        if (!format_values(fs, "Ke {}\n", material->emission))
           return write_error();
       if (material->ambient != zero3f)
-        if (!format_obj_values(fs, "Ka {}\n", material->ambient))
+        if (!format_values(fs, "Ka {}\n", material->ambient))
           return write_error();
-      if (!format_obj_values(fs, "Kd {}\n", material->diffuse))
+      if (!format_values(fs, "Kd {}\n", material->diffuse))
         return write_error();
-      if (!format_obj_values(fs, "Ks {}\n", material->specular))
+      if (!format_values(fs, "Ks {}\n", material->specular))
         return write_error();
       if (material->reflection != zero3f)
-        if (!format_obj_values(fs, "Kr {}\n", material->reflection))
+        if (!format_values(fs, "Kr {}\n", material->reflection))
           return write_error();
       if (material->transmission != zero3f)
-        if (!format_obj_values(fs, "Kt {}\n", material->transmission))
+        if (!format_values(fs, "Kt {}\n", material->transmission))
           return write_error();
-      if (!format_obj_values(fs, "Ns {}\n", (int)material->exponent))
+      if (!format_values(fs, "Ns {}\n", (int)material->exponent))
         return write_error();
       if (material->opacity != 1)
-        if (!format_obj_values(fs, "d {}\n", material->opacity))
+        if (!format_values(fs, "d {}\n", material->opacity))
           return write_error();
       if (!material->emission_tex.path.empty())
-        if (!format_obj_values(fs, "map_Ke {}\n", material->emission_tex))
+        if (!format_values(fs, "map_Ke {}\n", material->emission_tex))
           return write_error();
       if (!material->diffuse_tex.path.empty())
-        if (!format_obj_values(fs, "map_Kd {}\n", material->diffuse_tex))
+        if (!format_values(fs, "map_Kd {}\n", material->diffuse_tex))
           return write_error();
       if (!material->specular_tex.path.empty())
-        if (!format_obj_values(fs, "map_Ks {}\n", material->specular_tex))
+        if (!format_values(fs, "map_Ks {}\n", material->specular_tex))
           return write_error();
       if (!material->transmission_tex.path.empty())
-        if (!format_obj_values(fs, "map_Kt {}\n", material->transmission_tex))
+        if (!format_values(fs, "map_Kt {}\n", material->transmission_tex))
           return write_error();
       if (!material->reflection_tex.path.empty())
-        if (!format_obj_values(fs, "map_Kr {}\n", material->reflection_tex))
+        if (!format_values(fs, "map_Kr {}\n", material->reflection_tex))
           return write_error();
       if (!material->exponent_tex.path.empty())
-        if (!format_obj_values(fs, "map_Ns {}\n", material->exponent_tex))
+        if (!format_values(fs, "map_Ns {}\n", material->exponent_tex))
           return write_error();
       if (!material->opacity_tex.path.empty())
-        if (!format_obj_values(fs, "map_d {}\n", material->opacity_tex))
+        if (!format_values(fs, "map_d {}\n", material->opacity_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
-        if (!format_obj_values(fs, "map_bump {}\n", material->bump_tex))
+        if (!format_values(fs, "map_bump {}\n", material->bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_obj_values(fs, "map_disp {}\n", material->displacement_tex))
+        if (!format_values(fs, "map_disp {}\n", material->displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
-        if (!format_obj_values(fs, "map_norm {}\n", material->normal_tex))
+        if (!format_values(fs, "map_norm {}\n", material->normal_tex))
           return write_error();
     } else {
-      if (!format_obj_values(fs, "illum 2\n")) return write_error();
+      if (!format_values(fs, "illum 2\n")) return write_error();
       if (material->pbr_emission != zero3f)
-        if (!format_obj_values(fs, "Pe {}\n", material->pbr_emission))
+        if (!format_values(fs, "Pe {}\n", material->pbr_emission))
           return write_error();
       if (material->pbr_base != zero3f)
-        if (!format_obj_values(fs, "Pb {}\n", material->pbr_base))
+        if (!format_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
       if (material->pbr_specular)
-        if (!format_obj_values(fs, "Ps {}\n", material->pbr_specular))
+        if (!format_values(fs, "Ps {}\n", material->pbr_specular))
           return write_error();
       if (material->pbr_roughness)
-        if (!format_obj_values(fs, "Pr {}\n", material->pbr_roughness))
+        if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
           return write_error();
       if (material->pbr_metallic)
-        if (!format_obj_values(fs, "Pm {}\n", material->pbr_metallic))
+        if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
           return write_error();
       if (material->pbr_sheen)
-        if (!format_obj_values(fs, "Psh {}\n", material->pbr_sheen))
+        if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
           return write_error();
       if (material->pbr_transmission)
-        if (!format_obj_values(fs, "Pt {}\n", material->pbr_transmission))
+        if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
           return write_error();
       if (material->pbr_translucency)
-        if (!format_obj_values(fs, "Pss {}\n", material->pbr_translucency))
+        if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
           return write_error();
       if (material->pbr_coat)
-        if (!format_obj_values(fs, "Pc {}\n", material->pbr_coat))
+        if (!format_values(fs, "Pc {}\n", material->pbr_coat))
           return write_error();
       if (material->pbr_coatroughness)
-        if (!format_obj_values(fs, "Pcr {}\n", material->pbr_coatroughness))
+        if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
           return write_error();
       if (material->pbr_volscattering != zero3f)
-        if (!format_obj_values(fs, "Pvs {}\n", material->pbr_volscattering))
+        if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
           return write_error();
       if (material->pbr_volanisotropy)
-        if (!format_obj_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
+        if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
           return write_error();
       if (material->pbr_volscale)
-        if (!format_obj_values(fs, "Pvr {}\n", material->pbr_volscale))
+        if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
           return write_error();
       if (!material->pbr_emission_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
+        if (!format_values(fs, "map_Pe {}\n", material->pbr_emission_tex))
           return write_error();
       if (!material->pbr_base_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pb {}\n", material->pbr_base_tex))
+        if (!format_values(fs, "map_Pb {}\n", material->pbr_base_tex))
           return write_error();
       if (!material->pbr_specular_tex.path.empty())
-        if (!format_obj_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
+        if (!format_values(fs, "map_Ps {}\n", material->pbr_specular_tex))
           return write_error();
       if (!material->pbr_roughness_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
+        if (!format_values(fs, "map_Pr {}\n", material->pbr_roughness_tex))
           return write_error();
       if (!material->pbr_metallic_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
+        if (!format_values(fs, "map_Pm {}\n", material->pbr_metallic_tex))
           return write_error();
       if (!material->pbr_sheen_tex.path.empty())
-        if (!format_obj_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
+        if (!format_values(fs, "map_Psh {}\n", material->pbr_sheen_tex))
           return write_error();
       if (!material->pbr_transmission_tex.path.empty())
-        if (!format_obj_values(
-                fs, "map_Pt {}\n", material->pbr_transmission_tex))
+        if (!format_values(fs, "map_Pt {}\n", material->pbr_transmission_tex))
           return write_error();
       if (!material->pbr_translucency_tex.path.empty())
-        if (!format_obj_values(
-                fs, "map_Pss {}\n", material->pbr_translucency_tex))
+        if (!format_values(fs, "map_Pss {}\n", material->pbr_translucency_tex))
           return write_error();
       if (!material->pbr_coat_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
+        if (!format_values(fs, "map_Pc {}\n", material->pbr_coat_tex))
           return write_error();
       if (!material->pbr_coatroughness_tex.path.empty())
-        if (!format_obj_values(
-                fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
+        if (!format_values(fs, "map_Pcr {}\n", material->pbr_coatroughness_tex))
           return write_error();
       if (!material->pbr_volscattering_tex.path.empty())
-        if (!format_obj_values(
-                fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
+        if (!format_values(fs, "map_Pvs {}\n", material->pbr_volscattering_tex))
           return write_error();
       if (!material->bump_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
+        if (!format_values(fs, "map_Pbump {}\n", material->pbr_bump_tex))
           return write_error();
       if (!material->displacement_tex.path.empty())
-        if (!format_obj_values(
+        if (!format_values(
                 fs, "map_Pdisp {}\n", material->pbr_displacement_tex))
           return write_error();
       if (!material->normal_tex.path.empty())
-        if (!format_obj_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
+        if (!format_values(fs, "map_Pnorm {}\n", material->pbr_normal_tex))
           return write_error();
     }
-    if (!format_obj_values(fs, "\n")) return write_error();
+    if (!format_values(fs, "\n")) return write_error();
   }
   return true;
 }
@@ -2058,19 +2017,19 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!fs) return open_error();
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return write_error();
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_obj_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_obj_values(fs, "\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
 
   // cameras
   for (auto camera : obj->cameras) {
-    if (!format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
+    if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera->name,
             camera->ortho, camera->width, camera->height, camera->lens,
             camera->focus, camera->aperture, camera->frame))
       return write_error();
@@ -2078,7 +2037,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 
   // environments
   for (auto environment : obj->environments) {
-    if (!format_obj_values(fs, "e {} {} {} {}\n", environment->name,
+    if (!format_values(fs, "e {} {} {} {}\n", environment->name,
             environment->emission,
             environment->emission_tex.path.empty()
                 ? "\"\""s
@@ -2090,7 +2049,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   // instances
   for (auto shape : obj->shapes) {
     for (auto& frame : shape->instances) {
-      if (!format_obj_values(fs, "i {} {}\n", shape->name, frame))
+      if (!format_values(fs, "i {} {}\n", shape->name, frame))
         return write_error();
     }
   }
@@ -2121,19 +2080,19 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   if (!fs) throw std::runtime_error{filename + ": file not found"};
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return write_error();
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "#\n")) return write_error();
+  if (!format_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return write_error();
-  if (!format_obj_values(fs, "#\n\n")) return write_error();
+  if (!format_values(fs, "#\n\n")) return write_error();
   for (auto& comment : obj->comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return write_error();
+    if (!format_values(fs, "# {}\n", comment)) return write_error();
   }
-  if (!format_obj_values(fs, "\n")) return write_error();
+  if (!format_values(fs, "\n")) return write_error();
 
   // save material library
   if (!obj->materials.empty()) {
-    if (!format_obj_values(
+    if (!format_values(
             fs, "mtllib {}\n\n", replace_extension(filename, ".mtl")))
       return write_error();
   }
@@ -2141,13 +2100,13 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto shape : obj->shapes) {
-    if (!format_obj_values(fs, "o {}\n", shape->name)) return write_error();
+    if (!format_values(fs, "o {}\n", shape->name)) return write_error();
     for (auto& p : shape->positions)
-      if (!format_obj_values(fs, "v {}\n", p)) return write_error();
+      if (!format_values(fs, "v {}\n", p)) return write_error();
     for (auto& n : shape->normals)
-      if (!format_obj_values(fs, "vn {}\n", n)) return write_error();
+      if (!format_values(fs, "vn {}\n", n)) return write_error();
     for (auto& t : shape->texcoords)
-      if (!format_obj_values(fs, "vt {}\n", t)) return write_error();
+      if (!format_values(fs, "vt {}\n", t)) return write_error();
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape->faces, &shape->lines, &shape->points};
@@ -2157,23 +2116,23 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape->materials.empty() && cur_material != element.material) {
-          if (!format_obj_values(
+          if (!format_values(
                   fs, "usemtl {}\n", shape->materials[element.material]->name))
             return write_error();
           cur_material = element.material;
         }
-        if (!format_obj_values(fs, "{}", label)) return write_error();
+        if (!format_values(fs, "{}", label)) return write_error();
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape->vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          if (!format_obj_values(fs, " {}", vert)) return write_error();
+          if (!format_values(fs, " {}", vert)) return write_error();
         }
-        if (!format_obj_values(fs, "\n")) return write_error();
+        if (!format_values(fs, "\n")) return write_error();
       }
     }
-    if (!format_obj_values(fs, "\n")) return write_error();
+    if (!format_values(fs, "\n")) return write_error();
     vert_size.position += (int)shape->positions.size();
     vert_size.normal += (int)shape->normals.size();
     vert_size.texcoord += (int)shape->texcoords.size();
