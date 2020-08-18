@@ -28,10 +28,11 @@
 //
 
 #include "yocto_draw.h"
-#include <unordered_map>
-#include <unordered_set>
 
 #include <yocto/yocto_commonio.h>
+
+#include <unordered_map>
+#include <unordered_set>
 
 #include "ext/glad/glad.h"
 
@@ -940,6 +941,41 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
 
   unbind_program();
   unbind_framebuffer();
+}
+
+inline void init_ibl_data(
+    ogl_scene* scene, const ogl_texture* environment_texture) {
+  scene->program = ibl::load_program(
+      "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
+  scene->environment_program = ibl::load_program(
+      "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
+
+  // make cubemap from environment texture
+  {
+    auto size    = environment_texture->size.y;
+    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
+        "apps/ibl/shaders/bake_environment.frag");
+    bake_cubemap(
+        scene->environment_cubemap, environment_texture, program, size);
+  }
+
+  // bake irradiance map
+  {
+    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
+        "apps/ibl/shaders/bake_irradiance.frag");
+    bake_cubemap(
+        scene->irradiance_map, scene->environment_cubemap, program, 64);
+  }
+
+  // bake specular map
+  {
+    auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
+        "apps/ibl/shaders/bake_specular.frag");
+    bake_cubemap(
+        scene->prefiltered_map, scene->environment_cubemap, program, 256, 6);
+  }
+
+  bake_specular_brdf_texture(scene->brdf_lut);
 }
 }  // namespace ibl
 
