@@ -103,16 +103,8 @@ inline void remove_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PLY LOADER AND WRITER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // Parse values from a string
-[[nodiscard]] inline bool parse_ply_value(
-    string_view& str, string_view& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
@@ -135,76 +127,76 @@ namespace yocto {
   }
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, string& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if (!parse_ply_value(str, valuev)) return false;
+  if (!parse_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, int8_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, int16_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, int32_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, int64_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, uint8_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, uint16_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, uint32_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, uint64_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, float& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-[[nodiscard]] inline bool parse_ply_value(string_view& str, double& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -212,7 +204,7 @@ namespace yocto {
   return true;
 }
 #ifdef __APPLE__
-[[nodiscard]] inline bool parse_ply_value(string_view& str, size_t& value) {
+[[nodiscard]] inline bool parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -220,6 +212,13 @@ namespace yocto {
   return true;
 }
 #endif
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PLY LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 ply_element::~ply_element() {
   for (auto property : properties) delete property;
@@ -287,7 +286,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 
     // get command
     auto cmd = ""s;
-    if (!parse_ply_value(str, cmd)) return parse_error();
+    if (!parse_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // check magic number
@@ -302,7 +301,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       if (!first_line) return parse_error();
     } else if (cmd == "format") {
       auto fmt = ""s;
-      if (!parse_ply_value(str, fmt)) return parse_error();
+      if (!parse_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
         ply->format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -320,20 +319,20 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto elem = ply->elements.emplace_back(new ply_element{});
-      if (!parse_ply_value(str, elem->name)) return parse_error();
-      if (!parse_ply_value(str, elem->count)) return parse_error();
+      if (!parse_value(str, elem->name)) return parse_error();
+      if (!parse_value(str, elem->count)) return parse_error();
     } else if (cmd == "property") {
       if (ply->elements.empty()) return parse_error();
       auto prop = ply->elements.back()->properties.emplace_back(
           new ply_property{});
       auto tname = ""s;
-      if (!parse_ply_value(str, tname)) return parse_error();
+      if (!parse_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop->is_list = true;
-        if (!parse_ply_value(str, tname)) return parse_error();
+        if (!parse_value(str, tname)) return parse_error();
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8) return parse_error();
-        if (!parse_ply_value(str, tname)) return parse_error();
+        if (!parse_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end()) return parse_error();
         prop->type = type_map.at(tname);
       } else {
@@ -341,7 +340,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
         if (type_map.find(tname) == type_map.end()) return parse_error();
         prop->type = type_map.at(tname);
       }
-      if (!parse_ply_value(str, prop->name)) return parse_error();
+      if (!parse_value(str, prop->name)) return parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -382,50 +381,50 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
         auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
-            if (!parse_ply_value(str, prop->ldata_u8.emplace_back()))
+            if (!parse_value(str, prop->ldata_u8.emplace_back()))
               return parse_error();
           }
           auto vcount = prop->is_list ? prop->ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop->type) {
               case ply_type::i8:
-                if (!parse_ply_value(str, prop->data_i8.emplace_back()))
+                if (!parse_value(str, prop->data_i8.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i16:
-                if (!parse_ply_value(str, prop->data_i16.emplace_back()))
+                if (!parse_value(str, prop->data_i16.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i32:
-                if (!parse_ply_value(str, prop->data_i32.emplace_back()))
+                if (!parse_value(str, prop->data_i32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::i64:
-                if (!parse_ply_value(str, prop->data_i64.emplace_back()))
+                if (!parse_value(str, prop->data_i64.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u8:
-                if (!parse_ply_value(str, prop->data_u8.emplace_back()))
+                if (!parse_value(str, prop->data_u8.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u16:
-                if (!parse_ply_value(str, prop->data_u16.emplace_back()))
+                if (!parse_value(str, prop->data_u16.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u32:
-                if (!parse_ply_value(str, prop->data_u32.emplace_back()))
+                if (!parse_value(str, prop->data_u32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::u64:
-                if (!parse_ply_value(str, prop->data_u64.emplace_back()))
+                if (!parse_value(str, prop->data_u64.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::f32:
-                if (!parse_ply_value(str, prop->data_f32.emplace_back()))
+                if (!parse_value(str, prop->data_f32.emplace_back()))
                   return parse_error();
                 break;
               case ply_type::f64:
-                if (!parse_ply_value(str, prop->data_f64.emplace_back()))
+                if (!parse_value(str, prop->data_f64.emplace_back()))
                   return parse_error();
                 break;
             }
