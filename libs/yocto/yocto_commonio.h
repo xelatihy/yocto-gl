@@ -424,6 +424,11 @@ inline void close_file(file_stream& fs) {
   fs.owned    = false;
 }
 
+// Read a line of text
+inline bool read_line(file_stream& fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs.fs);
+}
+
 // Write text to a file
 inline bool write_text(file_stream& fs, const string& str) {
   return fprintf(fs.fs, "%s", str.c_str()) >= 0;
@@ -431,13 +436,25 @@ inline bool write_text(file_stream& fs, const string& str) {
 
 // Read data from a file
 template <typename T>
-inline bool read_data(file_stream& fs, T* buffer, size_t count) {
+inline bool read_value(file_stream& fs, T& buffer) {
+  return fread(&buffer, sizeof(T), 1, fs.fs) == 1;
+}
+
+// Write data from a file
+template <typename T>
+inline bool write_value(file_stream& fs, const T& buffer) {
+  return fwrite(&buffer, sizeof(T), 1, fs.fs) == 1;
+}
+
+// Read data from a file
+template <typename T>
+inline bool read_values(file_stream& fs, T* buffer, size_t count) {
   return fread(buffer, sizeof(T), count, fs.fs) == count;
 }
 
 // Write data from a file
 template <typename T>
-inline bool write_data(file_stream& fs, const T* buffer, size_t count) {
+inline bool write_values(file_stream& fs, const T* buffer, size_t count) {
   return fwrite(buffer, sizeof(T), count, fs.fs) == count;
 }
 
@@ -464,7 +481,7 @@ inline bool load_text(const string& filename, string& str, string& error) {
   auto length = ftell(fs.fs);
   fseek(fs.fs, 0, SEEK_SET);
   str.resize(length);
-  if (!read_data(fs, str.data(), length)) {
+  if (!read_values(fs, str.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -499,7 +516,7 @@ inline bool load_binary(
   auto length = ftell(fs.fs);
   fseek(fs.fs, 0, SEEK_SET);
   data.resize(length);
-  if (!read_data(fs, data.data(), length)) {
+  if (!read_values(fs, data.data(), length)) {
     error = filename + ": read error";
     return false;
   }
@@ -514,7 +531,7 @@ inline bool save_binary(
     error = filename + ": file not found";
     return false;
   }
-  if (!write_data(fs, data.data(), data.size()) != data.size()) {
+  if (!write_values(fs, data.data(), data.size()) != data.size()) {
     error = filename + ": write error";
     return false;
   }

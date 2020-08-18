@@ -250,17 +250,17 @@ inline void format_ply_values(
 
 template <typename... Args>
 [[nodiscard]] inline bool format_ply_values(
-    FILE* fs, const string& fmt, const Args&... args) {
+    file_stream& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_ply_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 template <typename T>
-[[nodiscard]] inline bool format_ply_value(FILE* fs, const T& value) {
+[[nodiscard]] inline bool format_ply_value(file_stream& fs, const T& value) {
   auto str = ""s;
   format_ply_value(str, value);
-  if (fputs(str.c_str(), fs) < 0) return false;
+  if (!write_text(fs, str)) return false;
   return true;
 }
 
@@ -279,17 +279,18 @@ inline T swap_endian(T value) {
 }
 
 template <typename T>
-[[nodiscard]] inline bool read_ply_value(FILE* fs, T& value, bool big_endian) {
-  if (fread(&value, sizeof(value), 1, fs) != 1) return false;
+[[nodiscard]] inline bool read_ply_value(
+    file_stream& fs, T& value, bool big_endian) {
+  if (!read_value(fs, value)) return false;
   if (big_endian) value = swap_endian(value);
   return true;
 }
 
 template <typename T>
 [[nodiscard]] inline bool write_ply_value(
-    FILE* fs, const T& value_, bool big_endian) {
+    file_stream& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_endian(value_) : value_;
-  if (fwrite(&value, sizeof(value), 1, fs) != 1) return false;
+  if (!write_value(fs, value)) return false;
   return true;
 }
 
@@ -348,9 +349,8 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parsing checks
   auto first_line = true;
@@ -358,7 +358,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
 
   // read header ---------------------------------------------
   char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -458,7 +458,7 @@ bool load_ply(const string& filename, ply_model* ply, string& error) {
     char buffer[4096];
     for (auto elem : ply->elements) {
       for (auto idx = 0; idx < elem->count; idx++) {
-        if (!fgets(buffer, sizeof(buffer), fs)) return read_error();
+        if (!read_line(fs, buffer, sizeof(buffer))) return read_error();
         auto str = string_view{buffer};
         for (auto prop : elem->properties) {
           if (prop->is_list) {
@@ -608,9 +608,8 @@ bool save_ply(const string& filename, ply_model* ply, string& error) {
   };
 
   // open file
-  auto fs = fopen_utf8(filename.c_str(), "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // header
   if (!format_ply_values(fs, "ply\n")) return write_error();
