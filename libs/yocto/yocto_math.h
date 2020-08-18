@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <stdexcept>
@@ -65,7 +66,7 @@ namespace yocto {
 
 using byte   = unsigned char;
 using uint   = unsigned int;
-using ushort = unsigned short;
+using ushort = uint16_t;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;

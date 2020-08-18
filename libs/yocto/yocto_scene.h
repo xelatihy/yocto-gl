@@ -37,6 +37,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -73,11 +74,11 @@ namespace yocto {
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct scene_bvh_node {
-  bbox3f bbox;
-  int    start;
-  short  num;
-  bool   internal;
-  byte   axis;
+  bbox3f  bbox;
+  int32_t start;
+  int16_t num;
+  int8_t  axis;
+  bool    internal;
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
