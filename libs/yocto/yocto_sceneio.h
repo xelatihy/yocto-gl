@@ -69,9 +69,9 @@ using progress_callback =
 
 // Load/save a scene in the supported formats. Throws on error.
 // Calls the progress callback, if defined, as we process more data.
-bool load_scene(const string& filename, scene_model* scene, string& error,
+bool load_scene(string_view filename, scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
-bool save_scene(const string& filename, const scene_model* scene, string& error,
+bool save_scene(string_view filename, const scene_model* scene, string& error,
     progress_callback progress_cb = {}, bool noparallel = false);
 
 }  // namespace yocto
