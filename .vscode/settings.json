@@ -113,5 +113,6 @@
     "-whitespace/braces",
     "-readability/casting",
     "-build/c++11"
-  ]
+  ],
+  "clang-tidy.executable": "/usr/local/opt/llvm/bin/clang-tidy"
 }

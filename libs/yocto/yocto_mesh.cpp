@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cassert>
 #include <deque>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -2511,11 +2512,14 @@ mesh_point eval_path_point(const geodesic_path& path,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Get extension (not including '.').
-static string path_extension(const string& filename) {
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
+// Make a path from a utf8 string
+inline std::filesystem::path make_path(const string& filename) {
+  return std::filesystem::u8path(filename);
+}
+
+// Get extension (including .)
+inline string path_extension(const string& filename) {
+  return make_path(filename).extension().u8string();
 }
 
 // Load ply mesh
