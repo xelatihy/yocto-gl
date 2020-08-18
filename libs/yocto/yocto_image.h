@@ -70,7 +70,7 @@ template <typename T>
 struct image {
   // constructors
   image();
-  image(const vec2i& size, const T& value = {});
+  explicit image(const vec2i& size, const T& value = {});
   image(const vec2i& size, const T* value);
 
   // size
@@ -85,8 +85,8 @@ struct image {
   void   swap(image& other);
 
   // element access
-  T&       operator[](int i);
-  const T& operator[](int i) const;
+  T&       operator[](size_t i);
+  const T& operator[](size_t i) const;
   T&       operator[](const vec2i& ij);
   const T& operator[](const vec2i& ij) const;
 
@@ -525,11 +525,11 @@ inline void image<T>::swap(image<T>& other) {
 
 // element access
 template <typename T>
-inline T& image<T>::operator[](int i) {
+inline T& image<T>::operator[](size_t i) {
   return pixels[i];
 }
 template <typename T>
-inline const T& image<T>::operator[](int i) const {
+inline const T& image<T>::operator[](size_t i) const {
   return pixels[i];
 }
 template <typename T>

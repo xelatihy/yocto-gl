@@ -1016,7 +1016,7 @@ bool add_values(ply_model* ply, const string& element,
     const array<string, 12>& properties, const vector<frame3f>& values) {
   if (values.empty()) return false;
   return add_values(ply, (float*)values.data(), values.size(), element,
-      properties.data(), properties.size());
+      properties.data(), (int)properties.size());
 }
 
 bool add_lists(ply_model* ply, const string& element, const string& property,
@@ -1050,7 +1050,7 @@ bool add_lists(ply_model* ply, const int* values, size_t count, int size,
     return false;
   auto prop = get_property(ply, element, property);
   prop->data_i32.assign(values, values + count * size);
-  prop->ldata_u8.assign(count, size);
+  prop->ldata_u8.assign(count, (byte)size);
   return true;
 }
 bool add_lists(ply_model* ply, const string& element, const string& property,
@@ -1414,7 +1414,7 @@ namespace yocto {
     } else {
       material->pbr_base     = material->diffuse;
       material->pbr_base_tex = material->diffuse_tex;
-      material->pbr_specular = max(material->specular) ? 1 : 0;
+      material->pbr_specular = max(material->specular) != 0 ? 1 : 0;
     }
     material->pbr_bump_tex         = material->bump_tex;
     material->pbr_normal_tex       = material->normal_tex;
@@ -1634,7 +1634,7 @@ bool load_obj(const string& filename, obj_model* obj, string& error,
           if (shape->materials[midx]->name == mname) mat_idx = midx;
         if (mat_idx < 0) {
           shape->materials.push_back(material_map.at(mname));
-          mat_idx = shape->materials.size() - 1;
+          mat_idx = (int)shape->materials.size() - 1;
         }
         element.material = (uint8_t)mat_idx;
       }
@@ -1855,37 +1855,37 @@ inline void format_value(string& str, const obj_vertex& value) {
       if (material->pbr_base != zero3f)
         if (!format_values(fs, "Pb {}\n", material->pbr_base))
           return write_error();
-      if (material->pbr_specular)
+      if (material->pbr_specular != 0)
         if (!format_values(fs, "Ps {}\n", material->pbr_specular))
           return write_error();
-      if (material->pbr_roughness)
+      if (material->pbr_roughness != 0)
         if (!format_values(fs, "Pr {}\n", material->pbr_roughness))
           return write_error();
-      if (material->pbr_metallic)
+      if (material->pbr_metallic != 0)
         if (!format_values(fs, "Pm {}\n", material->pbr_metallic))
           return write_error();
-      if (material->pbr_sheen)
+      if (material->pbr_sheen != 0)
         if (!format_values(fs, "Psh {}\n", material->pbr_sheen))
           return write_error();
-      if (material->pbr_transmission)
+      if (material->pbr_transmission != 0)
         if (!format_values(fs, "Pt {}\n", material->pbr_transmission))
           return write_error();
-      if (material->pbr_translucency)
+      if (material->pbr_translucency != 0)
         if (!format_values(fs, "Pss {}\n", material->pbr_translucency))
           return write_error();
-      if (material->pbr_coat)
+      if (material->pbr_coat != 0)
         if (!format_values(fs, "Pc {}\n", material->pbr_coat))
           return write_error();
-      if (material->pbr_coatroughness)
+      if (material->pbr_coatroughness != 0)
         if (!format_values(fs, "Pcr {}\n", material->pbr_coatroughness))
           return write_error();
       if (material->pbr_volscattering != zero3f)
         if (!format_values(fs, "Pvs {}\n", material->pbr_volscattering))
           return write_error();
-      if (material->pbr_volanisotropy)
+      if (material->pbr_volanisotropy != 0)
         if (!format_values(fs, "Pvg {}\n", material->pbr_volanisotropy))
           return write_error();
-      if (material->pbr_volscale)
+      if (material->pbr_volscale != 0)
         if (!format_values(fs, "Pvr {}\n", material->pbr_volscale))
           return write_error();
       if (!material->pbr_emission_tex.path.empty())

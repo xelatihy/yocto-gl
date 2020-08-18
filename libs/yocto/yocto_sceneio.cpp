@@ -1325,7 +1325,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
     } else {
       auto persp     = &gcam->data.perspective;
       camera->aspect = persp->aspect_ratio;
-      if (!camera->aspect) camera->aspect = 16.0f / 9.0f;
+      if (camera->aspect == 0) camera->aspect = 16.0f / 9.0f;
       camera->film = 0.036;
       if (camera->aspect >= 1) {
         camera->lens = (camera->film / camera->aspect) /

@@ -2537,7 +2537,7 @@ inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
   auto len = length(axis);
-  if (!len) return {0, 0, 0, 1};
+  if (len == 0) return {0, 0, 0, 1};
   return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }

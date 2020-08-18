@@ -151,7 +151,7 @@ vector<vector<float>> compute_voronoi_fields(
 
 // Convert distances to colors
 vector<vec3f> colors_from_field(const vector<float>& field, float scale = 1,
-    const vec3f& c0 = {1, 1, 1}, const vec3f& c1 = {1, 0.1, 0.1});
+    const vec3f& c0 = {1, 1, 1}, const vec3f& c1 = {1, 0.1f, 0.1f});
 
 // Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
@@ -296,13 +296,13 @@ vec3f eval_position(const vector<vec3i>& triangles,
 vec3f eval_normal(const vector<vec3i>& triangles, const vector<vec3f>& normals,
     const mesh_point& point);
 
-pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2);
-pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2);
-pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2);
-pair<bool, int>   point_is_edge(const mesh_point& p, float tol = 5 * 1e-3);
+pair<bool, int>   bary_is_edge(const vec3f& bary, float tol = 1e-2f);
+pair<bool, int>   bary_is_vert(const vec3f& bary, float tol = 1e-2f);
+pair<bool, int>   point_is_vert(const mesh_point& p, float tol = 1e-2f);
+pair<bool, int>   point_is_edge(const mesh_point& p, float tol = 5e-3f);
 pair<bool, vec2f> point_in_triangle(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, int tid, const vec3f& point,
-    float tol = 5 * 1e-3);
+    float tol = 5e-3f);
 
 std::array<vec2f, 3> init_flat_triangle(
     const vector<vec3f>& positions, const vec3i& tr);

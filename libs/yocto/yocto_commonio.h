@@ -426,7 +426,7 @@ inline void close_file(file_stream& fs) {
 
 // Read a line of text
 inline bool read_line(file_stream& fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs.fs);
+  return fgets(buffer, (int)size, fs.fs);
 }
 
 // Write text to a file
