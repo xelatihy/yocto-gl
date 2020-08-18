@@ -10,6 +10,8 @@ if(YOCTO_OPENGL)
   add_library(yocto_gui 
     yocto_opengl.h 
     yocto_opengl.cpp 
+    yocto_draw.h 
+    yocto_draw.cpp 
     yocto_imgui.h 
     yocto_imgui.cpp 
     ext/imgui/imgui.cpp 
