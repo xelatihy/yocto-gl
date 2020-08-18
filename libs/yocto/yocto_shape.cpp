@@ -3498,22 +3498,6 @@ void make_heightfield(vector<vec4i>& quads, vector<vec3f>& positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) {
-    error = filename + ": file not found";
-    return false;
-  }
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    error = filename + ": write error";
-    return false;
-  }
-  return true;
-}
-
 // Load ply mesh
 [[nodiscard]] bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,

@@ -265,61 +265,6 @@ namespace yocto {
 
 using json = nlohmann::json;
 
-// Opens a file with a utf8 file name
-static FILE* fopen_utf8(const char* filename, const char* mode) {
-#ifdef _Win32
-  auto path8 = std::filesystem::u8path(filename);
-  auto wmode = std::wstring(string{mode}.begin(), string{mode}.end());
-  return _wfopen(path.c_str(), wmode.c_str());
-#else
-  return fopen(filename, mode);
-#endif
-}
-
-// Load a text file
-static bool load_text(const string& filename, string& str, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen_utf8(filename.c_str(), "rb");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) return read_error();
-  return true;
-}
-
-// Save a text file
-static bool save_text(
-    const string& filename, const string& str, string& error) {
-  // error helpers
-  auto open_error = [filename, &error]() {
-    error = filename + ": file not found";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto fs = fopen_utf8(filename.c_str(), "wt");
-  if (!fs) return open_error();
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) return write_error();
-  return true;
-}
-
 // load/save json
 static bool load_json(const string& filename, json& js, string& error) {
   // error helpers
