@@ -57,15 +57,15 @@ struct app_state {
   string name      = "";
 
   // options
-  ogl_scene_params drawgl_prms = {};
+  gui_scene_params drawgl_prms = {};
 
   // scene
   scene_model*  ioscene  = new scene_model{};
   scene_camera* iocamera = nullptr;
 
   // rendering state
-  ogl_scene*  glscene  = new ogl_scene{};
-  ogl_camera* glcamera = nullptr;
+  gui_scene*  glscene  = new gui_scene{};
+  gui_camera* glcamera = nullptr;
 
   // editing
   scene_camera*      selected_camera      = nullptr;
@@ -90,7 +90,7 @@ struct app_state {
   }
 };
 
-void update_lights(ogl_scene* glscene, scene_model* ioscene) {
+void update_lights(gui_scene* glscene, scene_model* ioscene) {
   clear_lights(glscene);
   for (auto ioobject : ioscene->instances) {
     if (has_max_lights(glscene)) break;
@@ -120,8 +120,8 @@ void update_lights(ogl_scene* glscene, scene_model* ioscene) {
   }
 }
 
-void init_glscene(ogl_scene* glscene, scene_model* ioscene,
-    ogl_camera*& glcamera, scene_camera* iocamera,
+void init_glscene(gui_scene* glscene, scene_model* ioscene,
+    gui_camera*& glcamera, scene_camera* iocamera,
     progress_callback progress_cb) {
   // handle progress
   auto progress = vec2i{
@@ -133,7 +133,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   init_scene(glscene);
 
   // camera
-  auto camera_map     = unordered_map<scene_camera*, ogl_camera*>{};
+  auto camera_map     = unordered_map<scene_camera*, gui_camera*>{};
   camera_map[nullptr] = nullptr;
   for (auto iocamera : ioscene->cameras) {
     if (progress_cb) progress_cb("convert camera", progress.x++, progress.y);
@@ -159,7 +159,7 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
   }
 
   // material
-  auto material_map     = unordered_map<scene_material*, ogl_material*>{};
+  auto material_map     = unordered_map<scene_material*, gui_material*>{};
   material_map[nullptr] = nullptr;
   for (auto iomaterial : ioscene->materials) {
     if (progress_cb) progress_cb("convert material", progress.x++, progress.y);
@@ -234,7 +234,7 @@ int main(int argc, const char* argv[]) {
   add_option(
       cli, "--resolution,-r", app->drawgl_prms.resolution, "Image resolution.");
   add_option(cli, "--shading", app->drawgl_prms.shading, "Eyelight rendering.",
-      ogl_shading_names);
+      gui_shading_names);
   add_option(cli, "scene", app->filename, "Scene filename", true);
   parse_cli(cli, argc, argv);
 
@@ -263,7 +263,7 @@ int main(int argc, const char* argv[]) {
     clear_scene(app->glscene);
   };
   callbacks.draw_cb = [app](gui_window* win, const gui_input& input) {
-    if (app->drawgl_prms.shading == ogl_shading_type::lights)
+    if (app->drawgl_prms.shading == gui_shading_type::lights)
       update_lights(app->glscene, app->ioscene);
     draw_scene(app->glscene, app->glcamera, input.framebuffer_viewport,
         app->drawgl_prms);
@@ -279,7 +279,7 @@ int main(int argc, const char* argv[]) {
     auto& params = app->drawgl_prms;
     draw_slider(win, "resolution", params.resolution, 0, 4096);
     draw_checkbox(win, "wireframe", params.wireframe);
-    draw_combobox(win, "shading", (int&)params.shading, ogl_shading_names);
+    draw_combobox(win, "shading", (int&)params.shading, gui_shading_names);
     continue_line(win);
     draw_checkbox(win, "edges", params.edges);
     continue_line(win);

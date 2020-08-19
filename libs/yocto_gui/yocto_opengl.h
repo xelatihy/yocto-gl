@@ -406,6 +406,32 @@ void bind_framebuffer(const ogl_framebuffer* target);
 void unbind_framebuffer();
 void clear_framebuffer(ogl_framebuffer* target);
 
+// Opengl shape
+struct ogl_shape {
+  // vertex buffers
+  ogl_arraybuffer*   positions      = new ogl_arraybuffer{};
+  ogl_arraybuffer*   normals        = new ogl_arraybuffer{};
+  ogl_arraybuffer*   texcoords      = new ogl_arraybuffer{};
+  ogl_arraybuffer*   colors         = new ogl_arraybuffer{};
+  ogl_arraybuffer*   tangents       = new ogl_arraybuffer{};
+  ogl_elementbuffer* points         = new ogl_elementbuffer{};
+  ogl_elementbuffer* lines          = new ogl_elementbuffer{};
+  ogl_elementbuffer* triangles      = new ogl_elementbuffer{};
+  ogl_elementbuffer* quads          = new ogl_elementbuffer{};
+  ogl_elementbuffer* edges          = new ogl_elementbuffer{};
+  float              points_size    = 10;
+  float              line_thickness = 4;
+
+  uint shape_id = 0;
+
+  ogl_shape() {}
+  ogl_shape(const ogl_shape&) = delete;
+  ogl_shape& operator=(const ogl_shape&) = delete;
+  ~ogl_shape();
+};
+
+void clear_shape(ogl_shape* shape);
+
 }  // namespace yocto
 
 #endif

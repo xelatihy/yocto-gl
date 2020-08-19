@@ -1152,4 +1152,32 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   *framebuffer = {};
 }
 
+// Clear an OpenGL shape
+void clear_shape(ogl_shape* shape) {
+  clear_arraybuffer(shape->positions);
+  clear_arraybuffer(shape->normals);
+  clear_arraybuffer(shape->texcoords);
+  clear_arraybuffer(shape->colors);
+  clear_arraybuffer(shape->tangents);
+  clear_elementbuffer(shape->points);
+  clear_elementbuffer(shape->lines);
+  clear_elementbuffer(shape->triangles);
+  clear_elementbuffer(shape->quads);
+  clear_elementbuffer(shape->edges);
+}
+
+ogl_shape::~ogl_shape() {
+  clear_shape(this);
+  if (positions) delete positions;
+  if (normals) delete normals;
+  if (texcoords) delete texcoords;
+  if (colors) delete colors;
+  if (tangents) delete tangents;
+  if (points) delete points;
+  if (lines) delete lines;
+  if (triangles) delete triangles;
+  if (quads) delete quads;
+  if (edges) delete edges;
+}
+
 }  // namespace yocto

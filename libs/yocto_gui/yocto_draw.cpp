@@ -338,24 +338,7 @@ void main() {
 #pragma GCC diagnostic pop
 #endif
 
-// forward declaration
-void clear_shape(ogl_shape* shape);
-
-ogl_shape::~ogl_shape() {
-  clear_shape(this);
-  if (positions) delete positions;
-  if (normals) delete normals;
-  if (texcoords) delete texcoords;
-  if (colors) delete colors;
-  if (tangents) delete tangents;
-  if (points) delete points;
-  if (lines) delete lines;
-  if (triangles) delete triangles;
-  if (quads) delete quads;
-  if (edges) delete edges;
-}
-
-ogl_scene::~ogl_scene() {
+gui_scene::~gui_scene() {
   clear_scene(this);
   for (auto camera : cameras) delete camera;
   for (auto shape : shapes) delete shape;
@@ -365,30 +348,16 @@ ogl_scene::~ogl_scene() {
 }
 
 // Initialize an OpenGL scene
-void init_scene(ogl_scene* scene) {
+void init_scene(gui_scene* scene) {
   if (is_initialized(scene->program)) return;
   auto error = ""s, errorlog = ""s;
   init_program(
       scene->program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(ogl_scene* scene) { return is_initialized(scene->program); }
-
-// Clear an OpenGL shape
-void clear_shape(ogl_shape* shape) {
-  clear_arraybuffer(shape->positions);
-  clear_arraybuffer(shape->normals);
-  clear_arraybuffer(shape->texcoords);
-  clear_arraybuffer(shape->colors);
-  clear_arraybuffer(shape->tangents);
-  clear_elementbuffer(shape->points);
-  clear_elementbuffer(shape->lines);
-  clear_elementbuffer(shape->triangles);
-  clear_elementbuffer(shape->quads);
-  clear_elementbuffer(shape->edges);
-}
+bool is_initialized(gui_scene* scene) { return is_initialized(scene->program); }
 
 // Clear an OpenGL scene
-void clear_scene(ogl_scene* scene) {
+void clear_scene(gui_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
   clear_program(scene->program);
@@ -397,29 +366,29 @@ void clear_scene(ogl_scene* scene) {
 }
 
 // add camera
-ogl_camera* add_camera(ogl_scene* scene) {
-  return scene->cameras.emplace_back(new ogl_camera{});
+gui_camera* add_camera(gui_scene* scene) {
+  return scene->cameras.emplace_back(new gui_camera{});
 }
-void set_frame(ogl_camera* camera, const frame3f& frame) {
+void set_frame(gui_camera* camera, const frame3f& frame) {
   camera->frame = frame;
 }
-void set_lens(ogl_camera* camera, float lens, float aspect, float film) {
+void set_lens(gui_camera* camera, float lens, float aspect, float film) {
   camera->lens   = lens;
   camera->aspect = aspect;
   camera->film   = film;
 }
-void set_nearfar(ogl_camera* camera, float near, float far) {
+void set_nearfar(gui_camera* camera, float near, float far) {
   camera->near = near;
   camera->far  = far;
 }
 
 // add texture
-ogl_texture* add_texture(ogl_scene* scene) {
+ogl_texture* add_texture(gui_scene* scene) {
   return scene->textures.emplace_back(new ogl_texture{});
 }
 
 // add shape
-ogl_shape* add_shape(ogl_scene* scene) {
+ogl_shape* add_shape(gui_scene* scene) {
   return scene->shapes.emplace_back(new ogl_shape{});
 }
 
@@ -475,64 +444,64 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
 }
 
 // add instance
-ogl_instance* add_instance(ogl_scene* scene) {
-  return scene->instances.emplace_back(new ogl_instance{});
+gui_instance* add_instance(gui_scene* scene) {
+  return scene->instances.emplace_back(new gui_instance{});
 }
-void set_frame(ogl_instance* instance, const frame3f& frame) {
+void set_frame(gui_instance* instance, const frame3f& frame) {
   instance->frame = frame;
 }
-void set_shape(ogl_instance* instance, ogl_shape* shape) {
+void set_shape(gui_instance* instance, ogl_shape* shape) {
   instance->shape = shape;
 }
-void set_material(ogl_instance* instance, ogl_material* material) {
+void set_material(gui_instance* instance, gui_material* material) {
   instance->material = material;
 }
-void set_hidden(ogl_instance* instance, bool hidden) {
+void set_hidden(gui_instance* instance, bool hidden) {
   instance->hidden = hidden;
 }
-void set_highlighted(ogl_instance* instance, bool highlighted) {
+void set_highlighted(gui_instance* instance, bool highlighted) {
   instance->highlighted = highlighted;
 }
 
 // add material
-ogl_material* add_material(ogl_scene* scene) {
-  return scene->materials.emplace_back(new ogl_material{});
+gui_material* add_material(gui_scene* scene) {
+  return scene->materials.emplace_back(new gui_material{});
 }
 void set_emission(
-    ogl_material* material, const vec3f& emission, ogl_texture* emission_tex) {
+    gui_material* material, const vec3f& emission, ogl_texture* emission_tex) {
   material->emission     = emission;
   material->emission_tex = emission_tex;
 }
 void set_color(
-    ogl_material* material, const vec3f& color, ogl_texture* color_tex) {
+    gui_material* material, const vec3f& color, ogl_texture* color_tex) {
   material->color     = color;
   material->color_tex = color_tex;
 }
 void set_specular(
-    ogl_material* material, float specular, ogl_texture* specular_tex) {
+    gui_material* material, float specular, ogl_texture* specular_tex) {
   material->specular     = specular;
   material->specular_tex = specular_tex;
 }
 void set_roughness(
-    ogl_material* material, float roughness, ogl_texture* roughness_tex) {
+    gui_material* material, float roughness, ogl_texture* roughness_tex) {
   material->roughness     = roughness;
   material->roughness_tex = roughness_tex;
 }
 void set_opacity(
-    ogl_material* material, float opacity, ogl_texture* opacity_tex) {
+    gui_material* material, float opacity, ogl_texture* opacity_tex) {
   material->opacity = opacity;
 }
 void set_metallic(
-    ogl_material* material, float metallic, ogl_texture* metallic_tex) {
+    gui_material* material, float metallic, ogl_texture* metallic_tex) {
   material->metallic     = metallic;
   material->metallic_tex = metallic_tex;
 }
-void set_normalmap(ogl_material* material, ogl_texture* normal_tex) {
+void set_normalmap(gui_material* material, ogl_texture* normal_tex) {
   material->normal_tex = normal_tex;
 }
 
 // shortcuts
-ogl_camera* add_camera(ogl_scene* scene, const frame3f& frame, float lens,
+gui_camera* add_camera(gui_scene* scene, const frame3f& frame, float lens,
     float aspect, float film, float near, float far) {
   auto camera = add_camera(scene);
   set_frame(camera, frame);
@@ -540,7 +509,7 @@ ogl_camera* add_camera(ogl_scene* scene, const frame3f& frame, float lens,
   set_nearfar(camera, near, far);
   return camera;
 }
-ogl_material* add_material(ogl_scene* scene, const vec3f& emission,
+gui_material* add_material(gui_scene* scene, const vec3f& emission,
     const vec3f& color, float specular, float metallic, float roughness,
     ogl_texture* emission_tex, ogl_texture* color_tex,
     ogl_texture* specular_tex, ogl_texture* metallic_tex,
@@ -554,7 +523,7 @@ ogl_material* add_material(ogl_scene* scene, const vec3f& emission,
   set_normalmap(material, normalmap_tex);
   return material;
 }
-ogl_shape* add_shape(ogl_scene* scene, const vector<int>& points,
+ogl_shape* add_shape(gui_scene* scene, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
@@ -573,8 +542,8 @@ ogl_shape* add_shape(ogl_scene* scene, const vector<int>& points,
   }
   return shape;
 }
-ogl_instance* add_instance(ogl_scene* scene, const frame3f& frame,
-    ogl_shape* shape, ogl_material* material, bool hidden, bool highlighted) {
+gui_instance* add_instance(gui_scene* scene, const frame3f& frame,
+    ogl_shape* shape, gui_material* material, bool hidden, bool highlighted) {
   auto instance = add_instance(scene);
   set_frame(instance, frame);
   set_shape(instance, shape);
@@ -585,22 +554,22 @@ ogl_instance* add_instance(ogl_scene* scene, const frame3f& frame,
 }
 
 // add light
-ogl_light* add_light(ogl_scene* scene) {
-  return scene->lights.emplace_back(new ogl_light{});
+gui_light* add_light(gui_scene* scene) {
+  return scene->lights.emplace_back(new gui_light{});
 }
-void set_light(ogl_light* light, const vec3f& position, const vec3f& emission,
+void set_light(gui_light* light, const vec3f& position, const vec3f& emission,
     ogl_light_type type, bool camera) {
   light->position = position;
   light->emission = emission;
   light->type     = type;
   light->camera   = camera;
 }
-void clear_lights(ogl_scene* scene) {
+void clear_lights(gui_scene* scene) {
   for (auto light : scene->lights) delete light;
   scene->lights.clear();
 }
-bool has_max_lights(ogl_scene* scene) { return scene->lights.size() >= 16; }
-void add_default_lights(ogl_scene* scene) {
+bool has_max_lights(gui_scene* scene) { return scene->lights.size() >= 16; }
+void add_default_lights(gui_scene* scene) {
   clear_lights(scene);
   set_light(add_light(scene), normalize(vec3f{1, 1, 1}),
       vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true);
@@ -614,7 +583,7 @@ void add_default_lights(ogl_scene* scene) {
 
 // Draw a shape
 void draw_object(
-    ogl_scene* scene, ogl_instance* instance, const ogl_scene_params& params) {
+    gui_scene* scene, gui_instance* instance, const gui_scene_params& params) {
   static auto empty_instances = vector<frame3f>{identity3x4f};
 
   if (instance->hidden) return;
@@ -702,17 +671,17 @@ inline ogl_shape* cube_shape();
 }
 
 // Display a scene
-void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
-    const ogl_scene_params& params) {
-  static auto camera_light0 = ogl_light{normalize(vec3f{1, 1, 1}),
+void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
+    const gui_scene_params& params) {
+  static auto camera_light0 = gui_light{normalize(vec3f{1, 1, 1}),
       vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light1 = ogl_light{normalize(vec3f{-1, 1, 1}),
+  static auto camera_light1 = gui_light{normalize(vec3f{-1, 1, 1}),
       vec3f{pif / 2, pif / 2, pif / 2}, ogl_light_type::directional, true};
-  static auto camera_light2 = ogl_light{normalize(vec3f{-1, -1, 1}),
+  static auto camera_light2 = gui_light{normalize(vec3f{-1, -1, 1}),
       vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
-  static auto camera_light3 = ogl_light{normalize(vec3f{0.1, 0.5, -1}),
+  static auto camera_light3 = gui_light{normalize(vec3f{0.1, 0.5, -1}),
       vec3f{pif / 4, pif / 4, pif / 4}, ogl_light_type::directional, true};
-  static auto camera_lights = vector<ogl_light*>{
+  static auto camera_lights = vector<gui_light*>{
       &camera_light0, &camera_light1, &camera_light2, &camera_light3};
   auto camera_aspect = (float)viewport.z / (float)viewport.w;
   auto camera_yfov =
@@ -734,15 +703,15 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
   set_uniform(scene->program, "view", camera_view);
   set_uniform(scene->program, "projection", camera_proj);
   set_uniform(scene->program, "eyelight",
-      params.shading == ogl_shading_type::eyelight ? 1 : 0);
+      params.shading == gui_shading_type::eyelight ? 1 : 0);
   set_uniform(scene->program, "exposure", params.exposure);
   set_uniform(scene->program, "gamma", params.gamma);
   assert_ogl_error();
 
-  if (params.shading == ogl_shading_type::lights ||
-      params.shading == ogl_shading_type::camlights) {
+  if (params.shading == gui_shading_type::lights ||
+      params.shading == gui_shading_type::camlights) {
     assert_ogl_error();
-    auto& lights = params.shading == ogl_shading_type::lights ? scene->lights
+    auto& lights = params.shading == gui_shading_type::lights ? scene->lights
                                                               : camera_lights;
     set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
     set_uniform(scene->program, "lnum", (int)lights.size());
@@ -965,9 +934,9 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   unbind_framebuffer();
 }
 
-void init_ibl_data(ogl_scene* scene, const ogl_texture* environment_texture) {
-  // scene->program = ibl::load_program(
-  //     "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
+void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
+  scene->ibl_program = ibl::load_program(
+      "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
   scene->environment_program = ibl::load_program(
       "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
 
