@@ -462,7 +462,7 @@ trace_vsdf eval_vsdf(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// RAY-SCENE INTERSECTION
+// RENDERING API
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -478,51 +478,6 @@ enum struct trace_bvh_type {
   embree_compact  // only for copy interface
 #endif
 };
-
-// Params for scene bvh build
-struct trace_bvh_params {
-  trace_bvh_type bvh        = trace_bvh_type::default_;
-  bool           noparallel = false;
-};
-
-// Progress callback called when loading.
-using progress_callback =
-    function<void(const string& message, int current, int total)>;
-
-// Build the bvh acceleration structure.
-void init_bvh(trace_scene* scene, const trace_bvh_params& params,
-    progress_callback progress_cb = {});
-
-// Refit bvh data
-void update_bvh(trace_scene*       scene,
-    const vector<trace_instance*>& updated_objects,
-    const vector<trace_shape*>& updated_shapes, const trace_bvh_params& params);
-
-// Results of intersect functions that include hit flag, the instance id,
-// the shape element id, the shape element uv and intersection distance.
-// Results values are set only if hit is true.
-struct trace_intersection {
-  int   instance = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
-};
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene* scene,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_instance* instance,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RENDERING API
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // Type of tracing algorithm
 enum struct trace_sampler_type {
@@ -571,7 +526,7 @@ const auto trace_falsecolor_names = vector<string>{"position", "normal",
     "diffuse", "specular", "coat", "metal", "transmission", "translucency",
     "refraction", "roughness", "opacity", "ior", "instance", "element",
     "highlight"};
-const auto bvh_names              = vector<string>{
+const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
@@ -630,6 +585,32 @@ void trace_start(trace_state* state, const trace_scene* scene,
     progress_callback progress_cb = {}, image_callback image_cb = {},
     async_callback async_cb = {});
 void trace_stop(trace_state* state);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// RAY-SCENE INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Results of intersect functions that include hit flag, the instance id,
+// the shape element id, the shape element uv and intersection distance.
+// Results values are set only if hit is true.
+struct trace_intersection {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(const trace_instance* instance,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
