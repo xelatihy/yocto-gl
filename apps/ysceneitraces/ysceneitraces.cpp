@@ -265,6 +265,9 @@ int main(int argc, const char* argv[]) {
   // trace scene initialization
   init_scene(app->scene, ioscene, app->camera, iocamera);
 
+  // cleanup
+  ioscene_guard.reset();
+
   // tesselation
   tesselate_shapes(app->scene, print_progress);
 
