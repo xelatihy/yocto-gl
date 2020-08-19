@@ -28,14 +28,12 @@
 
 #include "yocto_trace.h"
 
-#include <atomic>
 #include <cstring>
 #include <deque>
-#include <future>
 #include <memory>
-#include <mutex>
 
 #include "yocto_geometry.h"
+#include "yocto_parallel.h"
 #include "yocto_sampling.h"
 #include "yocto_shading.h"
 
@@ -49,7 +47,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 
@@ -1092,26 +1089,6 @@ void init_lights(scene_model* scene, progress_callback progress_cb) {
   if (progress_cb) progress_cb("build light", progress.x++, progress.y);
 }
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = std::thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
     const trace_params& params, progress_callback progress_cb,
@@ -1129,9 +1106,9 @@ image<vec4f> trace_image(const scene_model* scene, const scene_camera* camera,
         }
       }
     } else {
-      parallel_for(state->render.imsize(),
-          [state, scene, camera, &params](const vec2i& ij) {
-            trace_sample(state, scene, camera, ij, params);
+      parallel_for(state->render.imsize().x, state->render.imsize().y,
+          [state, scene, camera, &params](int i, int j) {
+            trace_sample(state, scene, camera, {i, j}, params);
           });
     }
     if (image_cb) image_cb(state->render, sample + 1, params.samples);
@@ -1170,11 +1147,13 @@ void trace_start(trace_state* state, const scene_model* scene,
     for (auto sample = 0; sample < params.samples; sample++) {
       if (state->stop) return;
       if (progress_cb) progress_cb("trace image", sample, params.samples);
-      parallel_for(state->render.imsize(), [&](const vec2i& ij) {
-        if (state->stop) return;
-        trace_sample(state, scene, camera, ij, params);
-        if (async_cb) async_cb(state->render, sample, params.samples, ij);
-      });
+      parallel_for(state->render.imsize().x, state->render.imsize().y,
+          [&](int i, int j) {
+            if (state->stop) return;
+            trace_sample(state, scene, camera, {i, j}, params);
+            if (async_cb)
+              async_cb(state->render, sample, params.samples, {i, j});
+          });
       if (image_cb) image_cb(state->render, sample + 1, params.samples);
     }
     if (progress_cb) progress_cb("trace image", params.samples, params.samples);

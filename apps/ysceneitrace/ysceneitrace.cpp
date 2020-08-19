@@ -28,6 +28,7 @@
 
 #include <yocto/yocto_color.h>
 #include <yocto/yocto_commonio.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto/yocto_trace.h>
@@ -35,9 +36,7 @@
 #include <yocto_gui/yocto_opengl.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 
 namespace yocto {
 void print_obj_camera(scene_camera* camera);

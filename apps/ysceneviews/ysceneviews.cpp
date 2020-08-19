@@ -29,15 +29,14 @@
 #include <yocto/yocto_commonio.h>
 #include <yocto/yocto_geometry.h>
 #include <yocto/yocto_image.h>
+#include <yocto/yocto_parallel.h>
 #include <yocto/yocto_sceneio.h>
 #include <yocto/yocto_shape.h>
 #include <yocto_gui/yocto_imgui.h>
 #include <yocto_gui/yocto_opengl.h>
 using namespace yocto;
 
-#include <atomic>
 #include <deque>
-#include <future>
 using namespace std::string_literals;
 
 #ifdef _WIN32

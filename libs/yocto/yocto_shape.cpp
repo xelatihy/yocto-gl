@@ -9,7 +9,6 @@
 #include "yocto_shape.h"
 
 #include <algorithm>
-#include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
@@ -26,7 +25,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 
@@ -3740,16 +3738,15 @@ namespace yocto {
 }
 
 // Load/save a shape as indexed meshes
-[[nodiscard]] bool load_shape(const string& filename, generic_shape& shape,
-    string& error, bool facevarying, bool flip_texcoords) {
+bool load_shape(const string& filename, generic_shape& shape, string& error,
+    bool facevarying, bool flip_texcoords) {
   return load_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
       shape.radius, error, facevarying, flip_texcoords);
 }
-[[nodiscard]] bool save_shape(const string& filename,
-    const generic_shape& shape, string& error, bool facevarying,
-    bool flip_texcoords, bool ascii) {
+bool save_shape(const string& filename, const generic_shape& shape,
+    string& error, bool facevarying, bool flip_texcoords, bool ascii) {
   return save_shape(filename, shape.points, shape.lines, shape.triangles,
       shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
       shape.positions, shape.normals, shape.texcoords, shape.colors,

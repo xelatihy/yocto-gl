@@ -32,10 +32,7 @@
 
 #include "yocto_image.h"
 
-#include <atomic>
-#include <future>
 #include <memory>
-#include <thread>
 
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
@@ -44,17 +41,7 @@
 #include "yocto_color.h"
 #include "yocto_commonio.h"
 #include "yocto_noise.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::atomic;
-using std::future;
-
-}  // namespace yocto
+#include "yocto_parallel.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -532,26 +519,6 @@ inline void get_region(image<T>& clipped, const image<T>& img,
   }
 }
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(const vec2i& size, Func&& func) {
-  auto        futures  = vector<future<void>>{};
-  auto        nthreads = std::thread::hardware_concurrency();
-  atomic<int> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
   auto fl = image<vec4f>{bt.imsize()};
@@ -694,8 +661,8 @@ image<vec4b> tonemap_imageb(
 
 void tonemap_image_mt(image<vec4f>& ldr, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
-  parallel_for(hdr.imsize(), [&](const vec2i& ij) {
-    ldr[ij] = tonemap(hdr[ij], exposure, filmic, srgb);
+  parallel_for(hdr.imsize().x, hdr.imsize().y, [&](int i, int j) {
+    ldr[{i, j}] = tonemap(hdr[{i, j}], exposure, filmic, srgb);
   });
 }
 vec3f colorgrade(
@@ -749,8 +716,8 @@ image<vec4f> colorgrade_image(
 // Apply exposure and filmic tone mapping
 void colorgrade_image_mt(image<vec4f>& corrected, const image<vec4f>& img,
     bool linear, const colorgrade_params& params) {
-  parallel_for(img.imsize(), [&](const vec2i& ij) {
-    corrected[ij] = colorgrade(img[ij], linear, params);
+  parallel_for(img.imsize().x, img.imsize().y, [&](int i, int j) {
+    corrected[{i, j}] = colorgrade(img[{i, j}], linear, params);
   });
 }
 

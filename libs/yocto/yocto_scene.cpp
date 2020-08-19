@@ -29,7 +29,6 @@
 #include "yocto_scene.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cctype>
 #include <climits>
@@ -42,6 +41,7 @@
 
 #include "yocto_color.h"
 #include "yocto_geometry.h"
+#include "yocto_parallel.h"
 #include "yocto_shading.h"
 #include "yocto_shape.h"
 
@@ -51,7 +51,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 

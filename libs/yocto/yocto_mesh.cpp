@@ -12,7 +12,6 @@
 
 #include "yocto_mesh.h"
 
-#include <atomic>
 #include <cassert>
 #include <deque>
 #include <filesystem>
@@ -31,7 +30,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using std::pair;
 using std::unordered_set;
