@@ -697,6 +697,10 @@ void draw_object(
   }
 }
 
+namespace ibl {
+inline ogl_shape* cube_shape();
+}
+
 // Display a scene
 void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
     const ogl_scene_params& params) {
@@ -768,12 +772,30 @@ void draw_scene(ogl_scene* scene, ogl_camera* camera, const vec4i& viewport,
     draw_object(scene, instance, params);
   }
 
+  bind_program(scene->environment_program);
+  // set_scene_uniforms
+  set_uniform(scene->environment_program, "eye", camera->frame.o);
+  set_uniform(scene->environment_program, "view", camera_view);
+  set_uniform(scene->environment_program, "projection", camera_proj);
+  set_uniform(scene->environment_program, "exposure", params.exposure);
+  set_uniform(scene->environment_program, "gamma", params.gamma);
+
+  set_uniform(
+      scene->environment_program, "environment", scene->environment_cubemap, 0);
+  set_uniform(scene->environment_program, "roughness", 0.0f);
+
+  auto cube = ibl::cube_shape();
+  set_attribute(
+      scene->environment_program, "positions", cube->positions, vec3f{0, 0, 0});
+  draw_elements(cube->triangles);
+
   unbind_program();
   if (params.wireframe) set_ogl_wireframe(false);
 }
 
 // image based lighting
 namespace ibl {
+
 static ogl_program* load_program(
     const string& vertex_filename, const string& fragment_filename) {
   auto error           = ""s;
