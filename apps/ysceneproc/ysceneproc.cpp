@@ -36,29 +36,6 @@ using namespace yocto;
 
 #include <memory>
 
-image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
-  auto rgb = image<vec3b>{rgba.imsize()};
-  for (auto i = 0; i < rgb.count(); i++)
-    rgb[i] = {rgba[i].x, rgba[i].y, rgba[i].z};
-  return rgb;
-}
-image<vec3f> rgba_to_rgb(const image<vec4f>& rgba) {
-  auto rgb = image<vec3f>{rgba.imsize()};
-  for (auto i = 0; i < rgb.count(); i++)
-    rgb[i] = {rgba[i].x, rgba[i].y, rgba[i].z};
-  return rgb;
-}
-image<byte> rgba_to_r(const image<vec4b>& rgba) {
-  auto r = image<byte>{rgba.imsize()};
-  for (auto i = 0; i < r.count(); i++) r[i] = rgba[i].x;
-  return r;
-}
-image<float> rgba_to_r(const image<vec4f>& rgba) {
-  auto r = image<float>{rgba.imsize()};
-  for (auto i = 0; i < r.count(); i++) r[i] = rgba[i].x;
-  return r;
-}
-
 #include "yshapedata.h"
 triangles_shape make_bunny(float scale = 1, bool align_middle = true) {
   auto shape      = triangles_shape{};
@@ -123,14 +100,14 @@ scene_texture* add_texture(scene_model* scene, const string& name,
   auto texture = add_texture(scene, name);
   if (hdr) {
     if (single_channel) {
-      set_texture(texture, rgba_to_r(img));
+      set_texture(texture, rgba_to_red(img));
     } else {
       set_texture(texture, rgba_to_rgb(img));
     }
   } else {
     auto imgb = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
     if (single_channel) {
-      set_texture(texture, rgba_to_r(imgb));
+      set_texture(texture, rgba_to_red(imgb));
     } else {
       set_texture(texture, rgba_to_rgb(imgb));
     }

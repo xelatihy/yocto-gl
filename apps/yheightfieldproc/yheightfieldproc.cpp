@@ -69,20 +69,21 @@ int main(int argc, const char* argv[]) {
   auto texcoords = vector<vec2f>{};
   auto quads     = vector<vec4i>{};
 
-  // image data
-  auto heightfield = image<float>{};
-
   // load mesh
+  auto img     = image<vec4f>{};
   auto ioerror = ""s;
   print_progress("load image", 0, 1);
   if (is_hdr_filename(filename)) {
-    if (!load_image(filename, heightfield, ioerror)) print_fatal(ioerror);
+    if (!load_image(filename, img, ioerror)) print_fatal(ioerror);
   } else {
-    auto heightfield16 = image<ushort>{};
-    if (!load_image(filename, heightfield16, ioerror)) print_fatal(ioerror);
-    heightfield = ushort_to_float(heightfield16);
+    auto img16 = image<vec4s>{};
+    if (!load_image(filename, img16, ioerror)) print_fatal(ioerror);
+    img = ushort_to_float(img16);
   }
-  print_progress("load shape", 1, 1);
+  print_progress("load image", 1, 1);
+
+  // heightfield data
+  auto heightfield = rgba_to_gray(img);
 
   // adjust height
   if (height != 1) {

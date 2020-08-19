@@ -97,7 +97,10 @@
     "climits": "cpp",
     "ctgmath": "cpp",
     "cstdbool": "cpp",
-    "ranges": "cpp"
+    "ranges": "cpp",
+    "compare": "cpp",
+    "concepts": "cpp",
+    "stop_token": "cpp"
   },
   "json.schemas": [
     {
