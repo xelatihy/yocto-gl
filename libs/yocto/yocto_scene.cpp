@@ -164,24 +164,14 @@ vector<string> scene_stats(const scene_model* scene, bool verbose) {
                   format(accumulate(scene->shapes,
                       [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
-      "texels3b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorb.imsize().x *
-               (size_t)texture->colorb.imsize().x;
+      "texels4b:     " + format(accumulate(scene->textures, [](auto texture) {
+        return (size_t)texture->ldr.imsize().x *
+               (size_t)texture->ldr.imsize().x;
       })));
   stats.push_back(
-      "texels3f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->colorf.imsize().x *
-               (size_t)texture->colorf.imsize().y;
-      })));
-  stats.push_back(
-      "texels1b:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarb.imsize().x *
-               (size_t)texture->scalarb.imsize().x;
-      })));
-  stats.push_back(
-      "texels1f:     " + format(accumulate(scene->textures, [](auto texture) {
-        return (size_t)texture->scalarf.imsize().x *
-               (size_t)texture->scalarf.imsize().y;
+      "texels4f:     " + format(accumulate(scene->textures, [](auto texture) {
+        return (size_t)texture->hdr.imsize().x *
+               (size_t)texture->hdr.imsize().y;
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
@@ -206,8 +196,7 @@ vector<string> scene_validation(const scene_model* scene, bool notextures) {
   };
   auto check_empty_textures = [&errs](const vector<scene_texture*>& vals) {
     for (auto value : vals) {
-      if (value->colorf.empty() && value->colorb.empty() &&
-          value->scalarf.empty() && value->scalarb.empty()) {
+      if (value->hdr.empty() && value->ldr.empty()) {
         errs.push_back("empty texture " + value->name);
       }
     }
@@ -303,29 +292,13 @@ void set_focus(scene_camera* camera, float aperture, float focus) {
 }
 
 // Add texture
-void set_texture(scene_texture* texture, const image<vec3b>& img) {
-  texture->colorb  = img;
-  texture->colorf  = {};
-  texture->scalarb = {};
-  texture->scalarf = {};
+void set_texture(scene_texture* texture, const image<vec4b>& img) {
+  texture->ldr = img;
+  texture->hdr = {};
 }
-void set_texture(scene_texture* texture, const image<vec3f>& img) {
-  texture->colorb  = {};
-  texture->colorf  = img;
-  texture->scalarb = {};
-  texture->scalarf = {};
-}
-void set_texture(scene_texture* texture, const image<byte>& img) {
-  texture->colorb  = {};
-  texture->colorf  = {};
-  texture->scalarb = img;
-  texture->scalarf = {};
-}
-void set_texture(scene_texture* texture, const image<float>& img) {
-  texture->colorb  = {};
-  texture->colorf  = {};
-  texture->scalarb = {};
-  texture->scalarf = img;
+void set_texture(scene_texture* texture, const image<vec4f>& img) {
+  texture->ldr = {};
+  texture->hdr = img;
 }
 
 // Add shape
@@ -502,12 +475,8 @@ void add_materials(scene_model* scene) {
 
 // Add a sky environment
 void add_sky(scene_model* scene, float sun_angle) {
-  auto texture = add_texture(scene, "sky");
-  auto sunsky  = make_sunsky({1024, 512}, sun_angle);
-  texture->colorf.resize(sunsky.imsize());
-  for (auto j = 0; j < sunsky.imsize().y; j++)
-    for (auto i = 0; i < sunsky.imsize().x; i++)
-      texture->colorf[{i, j}] = xyz(sunsky[{i, j}]);
+  auto texture              = add_texture(scene, "sky");
+  texture->hdr              = make_sunsky({1024, 512}, sun_angle);
   auto environment          = add_environment(scene, "sky");
   environment->emission     = {1, 1, 1};
   environment->emission_tex = texture;
@@ -572,10 +541,8 @@ void trim_memory(scene_model* scene) {
     shape->quadstexcoord.shrink_to_fit();
   }
   for (auto texture : scene->textures) {
-    texture->colorf.shrink_to_fit();
-    texture->colorb.shrink_to_fit();
-    texture->scalarf.shrink_to_fit();
-    texture->scalarb.shrink_to_fit();
+    texture->hdr.shrink_to_fit();
+    texture->ldr.shrink_to_fit();
   }
   scene->cameras.shrink_to_fit();
   scene->shapes.shrink_to_fit();
@@ -677,9 +644,7 @@ void tesselate_shape(scene_shape* shape) {
       for (auto idx = 0; idx < shape->positions.size(); idx++) {
         auto disp = mean(
             eval_texture(shape->displacement_tex, shape->texcoords[idx], true));
-        if (!shape->displacement_tex->scalarb.empty() ||
-            !shape->displacement_tex->colorb.empty())
-          disp -= 0.5f;
+        if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
         shape->positions[idx] += shape->normals[idx] * shape->displacement *
                                  disp;
       }
@@ -701,9 +666,7 @@ void tesselate_shape(scene_shape* shape) {
         for (auto i = 0; i < 4; i++) {
           auto disp = mean(eval_texture(
               shape->displacement_tex, shape->texcoords[qtxt[i]], true));
-          if (!shape->displacement_tex->scalarb.empty() ||
-              !shape->displacement_tex->colorb.empty())
-            disp -= 0.5f;
+          if (!shape->displacement_tex->ldr.empty()) disp -= 0.5f;
           offset[qpos[i]] += shape->displacement * disp;
           count[qpos[i]] += 1;
         }
@@ -757,14 +720,10 @@ namespace yocto {
 
 // Check texture size
 vec2i texture_size(const scene_texture* texture) {
-  if (!texture->colorf.empty()) {
-    return texture->colorf.imsize();
-  } else if (!texture->colorb.empty()) {
-    return texture->colorb.imsize();
-  } else if (!texture->scalarf.empty()) {
-    return texture->scalarf.imsize();
-  } else if (!texture->scalarb.empty()) {
-    return texture->scalarb.imsize();
+  if (!texture->hdr.empty()) {
+    return texture->hdr.imsize();
+  } else if (!texture->ldr.empty()) {
+    return texture->ldr.imsize();
   } else {
     return zero2i;
   }
@@ -773,19 +732,11 @@ vec2i texture_size(const scene_texture* texture) {
 // Evaluate a texture
 vec3f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear) {
-  if (!texture->colorf.empty()) {
-    return texture->colorf[ij];
-  } else if (!texture->colorb.empty()) {
-    return ldr_as_linear ? byte_to_float(texture->colorb[ij])
-                         : srgb_to_rgb(byte_to_float(texture->colorb[ij]));
-  } else if (!texture->scalarf.empty()) {
-    auto scalarf = texture->scalarf[ij];
-    return vec3f{scalarf, scalarf, scalarf};
-  } else if (!texture->scalarb.empty()) {
-    auto scalarb = texture->scalarb[ij];
-    return ldr_as_linear
-               ? byte_to_float(vec3b{scalarb, scalarb, scalarb})
-               : srgb_to_rgb(byte_to_float(vec3b{scalarb, scalarb, scalarb}));
+  if (!texture->hdr.empty()) {
+    return xyz(texture->hdr[ij]);
+  } else if (!texture->ldr.empty()) {
+    return ldr_as_linear ? byte_to_float(xyz(texture->ldr[ij]))
+                         : srgb_to_rgb(byte_to_float(xyz(texture->ldr[ij])));
   } else {
     return {1, 1, 1};
   }

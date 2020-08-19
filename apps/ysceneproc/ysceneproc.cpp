@@ -99,18 +99,9 @@ scene_texture* add_texture(scene_model* scene, const string& name,
     bool single_channel = false) {
   auto texture = add_texture(scene, name);
   if (hdr) {
-    if (single_channel) {
-      set_texture(texture, rgba_to_red(img));
-    } else {
-      set_texture(texture, rgba_to_rgb(img));
-    }
+    set_texture(texture, img);
   } else {
-    auto imgb = ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img);
-    if (single_channel) {
-      set_texture(texture, rgba_to_red(imgb));
-    } else {
-      set_texture(texture, rgba_to_rgb(imgb));
-    }
+    set_texture(texture, ldr_linear ? float_to_byte(img) : rgb_to_srgbb(img));
   }
   return texture;
 }

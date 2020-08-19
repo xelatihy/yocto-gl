@@ -148,43 +148,6 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Loads/saves a 3 channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec3f>& colorf,
-    image<vec3b>& colorb, string& error) {
-  auto img4f = image<vec4f>{};
-  auto img4b = image<vec4b>{};
-  if (!load_image(filename, img4f, img4b, error)) return false;
-  if (!img4f.empty()) {
-    colorf = rgba_to_rgb(img4f);
-  } else {
-    colorb = rgba_to_rgb(img4b);
-  }
-  return true;
-}
-static bool save_image(const string& filename, const image<vec3f>& colorf,
-    const image<vec3b>& colorb, string& error) {
-  return save_image(filename, rgb_to_rgba(colorf), rgb_to_rgba(colorb), error);
-}
-
-// Loads/saves a 1 channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<float>& scalarf,
-    image<byte>& scalarb, string& error) {
-  auto img4f = image<vec4f>{};
-  auto img4b = image<vec4b>{};
-  if (!load_image(filename, img4f, img4b, error)) return false;
-  if (!img4f.empty()) {
-    scalarf = rgba_to_red(img4f);
-  } else {
-    scalarb = rgba_to_red(img4b);
-  }
-  return true;
-}
-static bool save_image(const string& filename, const image<float>& scalarf,
-    const image<byte>& scalarb, string& error) {
-  return save_image(
-      filename, gray_to_rgba(scalarf), gray_to_rgba(scalarb), error);
-}
-
 // load instances
 static bool load_instance(
     const string& filename, vector<frame3f>& frames, string& error) {
@@ -604,7 +567,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = make_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture->colorf, texture->colorb, error))
+    if (!load_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
   // load textures
@@ -613,7 +576,7 @@ static bool load_json_scene(const string& filename, scene_model* scene,
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
     auto path = make_filename(
         name, "textures", {".hdr", ".exr", ".png", ".jpg"});
-    if (!load_image(path, texture->scalarf, texture->scalarb, error))
+    if (!load_image(path, texture->hdr, texture->ldr, error))
       return dependent_error();
   }
 
@@ -805,16 +768,10 @@ static bool save_json_scene(const string& filename, const scene_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(texture->name, "textures",
-        (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
-                                                                : ".png");
-    if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
-        return dependent_error();
-    } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
-        return dependent_error();
-    }
+    auto path = make_filename(
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+    if (!save_image(path, texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done
@@ -985,8 +942,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            make_filename(name), texture->colorf, texture->colorb, error))
+    if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
   }
 
@@ -994,8 +950,7 @@ static bool load_obj_scene(const string& filename, scene_model* scene,
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            make_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
   }
 
@@ -1129,16 +1084,10 @@ static bool save_obj_scene(const string& filename, const scene_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(texture->name, "textures",
-        (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
-                                                                : ".png");
-    if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
-        return dependent_error();
-    } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
-        return dependent_error();
-    }
+    auto path = make_filename(
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+    if (!save_image(path, texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done
@@ -1588,8 +1537,8 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [tpath, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(path_join(path_dirname(filename), tpath), texture->colorf,
-            texture->colorb, error))
+    if (!load_image(path_join(path_dirname(filename), tpath), texture->hdr,
+            texture->ldr, error))
       return dependent_error();
   }
 
@@ -1604,31 +1553,35 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
       return dependent_error();
     if (!color_opacityf.empty()) {
       auto [ctexture, otexture] = textures;
-      ctexture->colorf.resize(color_opacityf.imsize());
-      otexture->scalarf.resize(color_opacityf.imsize());
+      ctexture->hdr.resize(color_opacityf.imsize());
+      otexture->hdr.resize(color_opacityf.imsize());
       auto oempty = true;
       for (auto j = 0; j < color_opacityf.imsize().y; j++) {
         for (auto i = 0; i < color_opacityf.imsize().x; i++) {
-          ctexture->colorf[{i, j}]  = xyz(color_opacityf[{i, j}]);
-          otexture->scalarf[{i, j}] = color_opacityf[{i, j}].w;
-          if (color_opacityb[{i, j}].w != 1) oempty = false;
+          auto color            = xyz(color_opacityf[{i, j}]);
+          auto opacity          = color_opacityf[{i, j}].w;
+          ctexture->hdr[{i, j}] = {color.x, color.y, color.z, opacity};
+          otexture->hdr[{i, j}] = {opacity, opacity, opacity, opacity};
+          if (opacity != 1) oempty = false;
         }
       }
-      if (oempty) otexture->scalarf.clear();
+      if (oempty) otexture->hdr.clear();
     }
     if (!color_opacityb.empty()) {
       auto [ctexture, otexture] = textures;
-      ctexture->colorb.resize(color_opacityb.imsize());
-      otexture->scalarb.resize(color_opacityb.imsize());
+      ctexture->ldr.resize(color_opacityb.imsize());
+      otexture->ldr.resize(color_opacityb.imsize());
       auto oempty = true;
       for (auto j = 0; j < color_opacityb.imsize().y; j++) {
         for (auto i = 0; i < color_opacityb.imsize().x; i++) {
-          ctexture->colorb[{i, j}]  = xyz(color_opacityb[{i, j}]);
-          otexture->scalarb[{i, j}] = color_opacityb[{i, j}].w;
-          if (color_opacityb[{i, j}].w != 255) oempty = false;
+          auto color            = xyz(color_opacityb[{i, j}]);
+          auto opacity          = color_opacityb[{i, j}].w;
+          ctexture->ldr[{i, j}] = {color.x, color.y, color.z, opacity};
+          otexture->ldr[{i, j}] = {opacity, opacity, opacity, opacity};
+          if (opacity != 1) oempty = false;
         }
       }
-      if (oempty) otexture->scalarb.clear();
+      if (oempty) otexture->ldr.clear();
     }
   }
 
@@ -1636,30 +1589,34 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   mrtexture_map.erase("");
   for (auto [tpath, textures] : mrtexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    auto metallic_roughnessf = image<vec3f>{};
-    auto metallic_roughnessb = image<vec3b>{};
+    auto metallic_roughnessf = image<vec4f>{};
+    auto metallic_roughnessb = image<vec4b>{};
     if (!load_image(path_join(path_dirname(filename), tpath),
             metallic_roughnessf, metallic_roughnessb, error))
       return dependent_error();
     if (!metallic_roughnessf.empty()) {
       auto [mtexture, rtexture] = textures;
-      mtexture->scalarf.resize(metallic_roughnessf.imsize());
-      rtexture->scalarf.resize(metallic_roughnessf.imsize());
+      mtexture->hdr.resize(metallic_roughnessf.imsize());
+      rtexture->hdr.resize(metallic_roughnessf.imsize());
       for (auto j = 0; j < metallic_roughnessf.imsize().y; j++) {
         for (auto i = 0; i < metallic_roughnessf.imsize().x; i++) {
-          mtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].z;
-          rtexture->scalarf[{i, j}] = metallic_roughnessf[{i, j}].y;
+          auto metallic         = metallic_roughnessf[{i, j}].z;
+          auto roughness        = metallic_roughnessf[{i, j}].y;
+          mtexture->hdr[{i, j}] = {metallic, metallic, metallic, 1};
+          rtexture->hdr[{i, j}] = {roughness, roughness, roughness, 1};
         }
       }
     }
     if (!metallic_roughnessb.empty()) {
       auto [mtexture, rtexture] = textures;
-      mtexture->scalarb.resize(metallic_roughnessb.imsize());
-      rtexture->scalarb.resize(metallic_roughnessb.imsize());
+      mtexture->ldr.resize(metallic_roughnessb.imsize());
+      rtexture->ldr.resize(metallic_roughnessb.imsize());
       for (auto j = 0; j < metallic_roughnessb.imsize().y; j++) {
         for (auto i = 0; i < metallic_roughnessb.imsize().x; i++) {
-          mtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].z;
-          rtexture->scalarb[{i, j}] = metallic_roughnessb[{i, j}].y;
+          auto metallic         = metallic_roughnessb[{i, j}].z;
+          auto roughness        = metallic_roughnessb[{i, j}].y;
+          mtexture->ldr[{i, j}] = {metallic, metallic, metallic, 1};
+          rtexture->ldr[{i, j}] = {roughness, roughness, roughness, 1};
         }
       }
     }
@@ -1668,14 +1625,13 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   // remove empty textures
   for (auto material : scene->materials) {
     if (material->opacity_tex) {
-      if (material->opacity_tex->scalarb.empty() &&
-          material->opacity_tex->scalarf.empty())
+      if (material->opacity_tex->hdr.empty() &&
+          material->opacity_tex->ldr.empty())
         material->opacity_tex = nullptr;
     }
   }
   for (auto& texture : scene->textures) {
-    if (texture->scalarb.empty() && texture->scalarf.empty() &&
-        texture->colorb.empty() && texture->colorf.empty()) {
+    if (texture->hdr.empty() && texture->ldr.empty()) {
       delete texture;
       texture = nullptr;
     }
@@ -1701,7 +1657,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
   // load done
   if (progress_cb) progress_cb("load scene", progress.x++, progress.y);
   return true;
-}
+}  // namespace yocto
 
 }  // namespace yocto
 
@@ -1851,8 +1807,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   ctexture_map.erase("");
   for (auto [name, texture] : ctexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            make_filename(name), texture->colorf, texture->colorb, error))
+    if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
   }
 
@@ -1860,8 +1815,7 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   stexture_map.erase("");
   for (auto [name, texture] : stexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            make_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
   }
 
@@ -1869,11 +1823,16 @@ static bool load_pbrt_scene(const string& filename, scene_model* scene,
   atexture_map.erase("");
   for (auto [name, texture] : atexture_map) {
     if (progress_cb) progress_cb("load texture", progress.x++, progress.y);
-    if (!load_image(
-            make_filename(name), texture->scalarf, texture->scalarb, error))
+    if (!load_image(make_filename(name), texture->hdr, texture->ldr, error))
       return dependent_error();
-    for (auto& c : texture->scalarf) c = (c < 0.01) ? 1 : 1;
-    for (auto& c : texture->scalarb) c = (c < 2) ? 0 : 255;
+    for (auto& c : texture->hdr) {
+      c = (max(vec3f{c.x, c.y, c.z}) < 0.01) ? vec4f{0, 0, 0, c.w}
+                                             : vec4f{1, 1, 1, c.w};
+    }
+    for (auto& c : texture->ldr) {
+      c = (max(vec3i{c.x, c.y, c.z}) < 2) ? vec4b{0, 0, 0, c.w}
+                                          : vec4b{255, 255, 255, c.w};
+    }
   }
 
   // fix scene
@@ -1968,16 +1927,10 @@ static bool save_pbrt_scene(const string& filename, const scene_model* scene,
   // save textures
   for (auto texture : scene->textures) {
     if (progress_cb) progress_cb("save texture", progress.x++, progress.y);
-    auto path = make_filename(texture->name, "textures",
-        (!texture->colorf.empty() || !texture->scalarf.empty()) ? ".hdr"
-                                                                : ".png");
-    if (!texture->colorf.empty() || !texture->colorb.empty()) {
-      if (!save_image(path, texture->colorf, texture->colorb, error))
-        return dependent_error();
-    } else {
-      if (!save_image(path, texture->scalarf, texture->scalarb, error))
-        return dependent_error();
-    }
+    auto path = make_filename(
+        texture->name, "textures", (!texture->hdr.empty()) ? ".hdr" : ".png");
+    if (!save_image(path, texture->hdr, texture->ldr, error))
+      return dependent_error();
   }
 
   // done

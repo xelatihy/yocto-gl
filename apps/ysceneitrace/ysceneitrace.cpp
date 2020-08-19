@@ -146,14 +146,10 @@ void init_scene(scene_model* scene, scene_model* ioscene, scene_camera*& camera,
     if (progress_cb)
       progress_cb("converting textures", progress.x++, progress.y);
     auto texture = add_texture(scene);
-    if (!iotexture->colorf.empty()) {
-      set_texture(texture, iotexture->colorf);
-    } else if (!iotexture->colorb.empty()) {
-      set_texture(texture, iotexture->colorb);
-    } else if (!iotexture->scalarf.empty()) {
-      set_texture(texture, iotexture->scalarf);
-    } else if (!iotexture->scalarb.empty()) {
-      set_texture(texture, iotexture->scalarb);
+    if (!iotexture->hdr.empty()) {
+      set_texture(texture, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(texture, iotexture->ldr);
     }
     texture_map[iotexture] = texture;
   }
@@ -327,18 +323,12 @@ bool draw_widgets(
   if (!iotexture) return false;
   auto edited = 0;
   draw_label(win, "name", iotexture->name);
-  draw_label(win, "colorf",
-      std::to_string(iotexture->colorf.imsize().x) + " x " +
-          std::to_string(iotexture->colorf.imsize().y));
-  draw_label(win, "colorb",
-      std::to_string(iotexture->colorb.imsize().x) + " x " +
-          std::to_string(iotexture->colorb.imsize().y));
-  draw_label(win, "scalarf",
-      std::to_string(iotexture->scalarf.imsize().x) + " x " +
-          std::to_string(iotexture->scalarf.imsize().y));
-  draw_label(win, "scalarb",
-      std::to_string(iotexture->scalarb.imsize().x) + " x " +
-          std::to_string(iotexture->scalarb.imsize().y));
+  draw_label(win, "hdr",
+      std::to_string(iotexture->hdr.imsize().x) + " x " +
+          std::to_string(iotexture->hdr.imsize().y));
+  draw_label(win, "ldr",
+      std::to_string(iotexture->ldr.imsize().x) + " x " +
+          std::to_string(iotexture->ldr.imsize().y));
   // TODO: load texture
   return edited;
 }
@@ -680,14 +670,10 @@ void draw_widgets(gui_window* win, app_states* apps, const gui_input& input) {
       auto iotexture = app->selected_texture;
       auto texture   = get_element(
           iotexture, app->ioscene->textures, app->scene->textures);
-      if (!iotexture->colorf.empty()) {
-        set_texture(texture, iotexture->colorf);
-      } else if (!iotexture->colorb.empty()) {
-        set_texture(texture, iotexture->colorb);
-      } else if (!iotexture->scalarf.empty()) {
-        set_texture(texture, iotexture->scalarf);
-      } else if (!iotexture->scalarb.empty()) {
-        set_texture(texture, iotexture->scalarb);
+      if (!iotexture->hdr.empty()) {
+        set_texture(texture, iotexture->hdr);
+      } else if (!iotexture->ldr.empty()) {
+        set_texture(texture, iotexture->ldr);
       }
       reset_display(app);
     }
