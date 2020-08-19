@@ -178,6 +178,11 @@ struct ogl_scene_params {
 void init_scene(ogl_scene* scene);
 bool is_initialized(const ogl_scene* scene);
 
+namespace ibl {
+// Initialize data for image based lighting
+void init_ibl_data(ogl_scene* scene, const ogl_texture* environment);
+}  // namespace ibl
+
 // Clear an OpenGL scene
 void clear_scene(ogl_scene* scene);
 

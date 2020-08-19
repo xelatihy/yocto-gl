@@ -209,6 +209,12 @@ void init_glscene(ogl_scene* glscene, scene_model* ioscene,
     set_material(globject, material_map.at(ioobject->material));
   }
 
+  // bake prefiltered environments
+  // TODO(giacomo): find a more robust way to get the environment texture
+  // if (progress_cb) progress_cb("baking environment", progress.x++,
+  // progress.y);
+  ibl::init_ibl_data(glscene, texture_map[ioscene->textures[0]]);
+
   // done
   if (progress_cb) progress_cb("convert done", progress.x++, progress.y);
 

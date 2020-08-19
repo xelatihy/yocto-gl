@@ -1076,29 +1076,33 @@ void draw_elements(ogl_elementbuffer* buffer) {
 }
 
 void set_framebuffer(ogl_framebuffer* framebuffer, const vec2i& size) {
-  assert(!framebuffer->framebuffer_id);
-  assert(!framebuffer->renderbuffer_id);
+  if (!framebuffer->framebuffer_id) {
+    glGenFramebuffers(1, &framebuffer->framebuffer_id);
+  }
 
-  glGenFramebuffers(1, &framebuffer->framebuffer_id);
-  glGenRenderbuffers(1, &framebuffer->renderbuffer_id);
-  framebuffer->size = size;
+  if (!framebuffer->renderbuffer_id) {
+    glGenRenderbuffers(1, &framebuffer->renderbuffer_id);
+    // bind together frame buffer and render buffer
+    // TODO(giacomo): We put STENCIL here for the same reason...
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
+    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+  }
+
+  if (size != framebuffer->size) {
+    // create render buffer for depth and stencil
+    // TODO(giacomo): Why do we need to put STENCIL8 to make things work on
+    // Mac??
+    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
+    framebuffer->size = size;
+  }
 
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer_id);
-  glBindRenderbuffer(GL_RENDERBUFFER, framebuffer->renderbuffer_id);
-
-  // create render buffer for depth and stencil
-  // TODO(giacomo): Why do we need to put STENCIL8 to make things work on Mac??
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-      framebuffer->size.x, framebuffer->size.y);
-
-  // bind together frame buffer and render buffer
-  // TODO(giacomo): We put STENCIL here for the same reason...
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-      GL_RENDERBUFFER, framebuffer->renderbuffer_id);
   assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+  glBindFramebuffer(GL_FRAMEBUFFER, ogl_framebuffer::bound_framebuffer_id);
 
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   assert_ogl_error();
 }
 

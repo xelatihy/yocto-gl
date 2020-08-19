@@ -943,10 +943,9 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   unbind_framebuffer();
 }
 
-inline void init_ibl_data(
-    ogl_scene* scene, const ogl_texture* environment_texture) {
-  scene->program = ibl::load_program(
-      "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
+void init_ibl_data(ogl_scene* scene, const ogl_texture* environment_texture) {
+  // scene->program = ibl::load_program(
+  //     "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
   scene->environment_program = ibl::load_program(
       "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
 
