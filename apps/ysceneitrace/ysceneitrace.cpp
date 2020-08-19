@@ -193,12 +193,16 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     set_lines(shape, ioshape->lines);
     set_triangles(shape, ioshape->triangles);
     set_quads(shape, ioshape->quads);
+    set_fvquads(
+        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
     set_positions(shape, ioshape->positions);
     set_normals(shape, ioshape->normals);
     set_texcoords(shape, ioshape->texcoords);
     set_colors(shape, ioshape->colors);
     set_radius(shape, ioshape->radius);
     set_tangents(shape, ioshape->tangents);
+    set_subdivision(
+        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
     shape_map[ioshape] = shape;
   }
 
@@ -279,9 +283,9 @@ void load_scene_async(app_states* apps, const string& filename,
     app->total   = 1;
     if (add_skyenv) add_sky(app->ioscene);
     app->iocamera = get_camera(app->ioscene, camera_name);
-    tesselate_shapes(app->ioscene, progress_cb);
     init_scene(
         app->scene, app->ioscene, app->camera, app->iocamera, progress_cb);
+    tesselate_shapes(app->scene, progress_cb);
     init_bvh(app->scene, app->params);
     init_lights(app->scene);
     if (app->scene->lights.empty() && is_sampler_lit(app->params)) {

@@ -113,12 +113,16 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     set_lines(shape, ioshape->lines);
     set_triangles(shape, ioshape->triangles);
     set_quads(shape, ioshape->quads);
+    set_fvquads(
+        shape, ioshape->quadspos, ioshape->quadsnorm, ioshape->quadstexcoord);
     set_positions(shape, ioshape->positions);
     set_normals(shape, ioshape->normals);
     set_texcoords(shape, ioshape->texcoords);
     set_colors(shape, ioshape->colors);
     set_radius(shape, ioshape->radius);
     set_tangents(shape, ioshape->tangents);
+    set_subdivision(
+        shape, ioshape->subdivisions, ioshape->catmullclark, ioshape->smooth);
     shape_map[ioshape] = shape;
   }
 
