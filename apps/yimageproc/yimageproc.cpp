@@ -328,7 +328,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // bilateral
-  if (spatial_sigma && range_sigma) {
+  if (spatial_sigma != 0 && range_sigma != 0) {
     img = filter_bilateral(img, spatial_sigma, range_sigma, {}, {});
   }
 

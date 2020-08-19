@@ -664,7 +664,7 @@ void tesselate_shape(scene_shape* shape) {
     shape->subdivisions = 0;
   }
 
-  if (shape->displacement && shape->displacement_tex) {
+  if (shape->displacement != 0 && shape->displacement_tex) {
     if (shape->texcoords.empty())
       throw std::runtime_error("missing texture coordinates");
 
@@ -1128,7 +1128,7 @@ scene_material_sample eval_material(
                      eval_texture(material->translucency_tex, texcoord, true).x;
   mat.opacity = material->opacity *
                 mean(eval_texture(material->opacity_tex, texcoord, true));
-  mat.thin       = material->thin || !material->transmission;
+  mat.thin       = material->thin || material->transmission == 0;
   mat.scattering = material->scattering *
                    eval_texture(material->scattering_tex, texcoord, false);
   mat.scanisotropy = material->scanisotropy;
@@ -1184,7 +1184,7 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
   auto translucency =
       material->translucency *
       eval_texture(material->translucency_tex, texcoord, true).x;
-  auto thin = material->thin || !material->transmission;
+  auto thin = material->thin || material->transmission == 0;
 
   // factors
   auto bsdf   = scene_bsdf{};
@@ -1209,7 +1209,8 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
   bsdf.ior       = ior;
 
   // textures
-  if (bsdf.diffuse != zero3f || bsdf.translucency != zero3f || bsdf.roughness) {
+  if (bsdf.diffuse != zero3f || bsdf.translucency != zero3f ||
+      bsdf.roughness != 0) {
     bsdf.roughness = clamp(bsdf.roughness, coat_roughness, 1.0f);
   }
   if (bsdf.specular == zero3f && bsdf.metal == zero3f &&
@@ -1231,7 +1232,7 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
   auto pdf_sum = bsdf.diffuse_pdf + bsdf.specular_pdf + bsdf.metal_pdf +
                  bsdf.coat_pdf + bsdf.transmission_pdf + bsdf.translucency_pdf +
                  bsdf.refraction_pdf;
-  if (pdf_sum) {
+  if (pdf_sum != 0) {
     bsdf.diffuse_pdf /= pdf_sum;
     bsdf.specular_pdf /= pdf_sum;
     bsdf.metal_pdf /= pdf_sum;
@@ -1244,7 +1245,7 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
 }
 
 // check if a brdf is a delta
-bool is_delta(const scene_bsdf& bsdf) { return !bsdf.roughness; }
+bool is_delta(const scene_bsdf& bsdf) { return bsdf.roughness == 0; }
 
 // evaluate volume
 scene_vsdf eval_vsdf(
@@ -1260,7 +1261,7 @@ scene_vsdf eval_vsdf(
       material->translucency *
       eval_texture(material->translucency_tex, texcoord, true).x;
   auto thin = material->thin ||
-              (!material->transmission && !material->translucency);
+              (material->transmission == 0 && material->translucency == 0);
   auto scattering = material->scattering *
                     eval_texture(material->scattering_tex, texcoord, false);
   auto scanisotropy = material->scanisotropy;
@@ -1268,7 +1269,7 @@ scene_vsdf eval_vsdf(
 
   // factors
   auto vsdf    = scene_vsdf{};
-  vsdf.density = ((transmission || translucency) && !thin)
+  vsdf.density = ((transmission != 0 || translucency != 0) && !thin)
                      ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
                      : zero3f;
   vsdf.scatter    = scattering;
@@ -1279,7 +1280,7 @@ scene_vsdf eval_vsdf(
 
 // check if we have a volume
 bool has_volume(const scene_instance* instance) {
-  return !instance->material->thin && instance->material->transmission;
+  return !instance->material->thin && instance->material->transmission != 0;
 }
 
 }  // namespace yocto
@@ -1707,7 +1708,7 @@ static void build_bvh_serial(vector<scene_bvh_node>& nodes,
 
       // make an internal node
       node.internal = true;
-      node.axis     = axis;
+      node.axis     = (uint8_t)axis;
       node.num      = 2;
       node.start    = (int)nodes.size();
       nodes.emplace_back();
@@ -1717,7 +1718,7 @@ static void build_bvh_serial(vector<scene_bvh_node>& nodes,
     } else {
       // Make a leaf node
       node.internal = false;
-      node.num      = end - start;
+      node.num      = (int16_t)(end - start);
       node.start    = start;
     }
   }

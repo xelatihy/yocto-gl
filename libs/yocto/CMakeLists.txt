@@ -42,9 +42,9 @@ endif(YOCTO_EMBREE)
 
 # warning flags
 if(APPLE)
-  target_compile_options(yocto PRIVATE -Wall)
+  target_compile_options(yocto PUBLIC -Wall -Wconversion -Wno-sign-conversion -Wno-implicit-float-conversion)
 endif(APPLE)
 if(MSVC)
-target_compile_options(yocto PRIVATE /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
-target_compile_options(yocto PUBLIC /EHsc)
+  target_compile_options(yocto PUBLIC /D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
+  target_compile_options(yocto PUBLIC /EHsc)
 endif(MSVC)

@@ -94,7 +94,7 @@ inline float exp(float a);
 inline float log2(float a);
 inline float exp2(float a);
 inline float pow(float a, float b);
-inline float isfinite(float a);
+inline bool  isfinite(float a);
 inline float atan2(float a, float b);
 inline float fmod(float a, float b);
 inline float radians(float a);
@@ -1099,7 +1099,7 @@ inline float exp(float a) { return std::exp(a); }
 inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
-inline float isfinite(float a) { return std::isfinite(a); }
+inline bool  isfinite(float a) { return std::isfinite(a); }
 inline float atan2(float a, float b) { return std::atan2(a, b); }
 inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
@@ -1516,7 +1516,7 @@ inline vec4f slerp(const vec4f& a, const vec4f& b, float u) {
   }
   if (d > (float)0.9995) return normalize(an + u * (bn - an));
   auto th = acos(clamp(d, (float)-1, (float)1));
-  if (!th) return an;
+  if (th == 0) return an;
   return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
 }
 
@@ -2537,7 +2537,7 @@ inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
   auto len = length(axis);
-  if (!len) return {0, 0, 0, 1};
+  if (len == 0) return {0, 0, 0, 1};
   return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
       sin(angle / 2) * axis.z / len, cos(angle / 2)};
 }
@@ -2578,7 +2578,7 @@ inline void update_imview(vec2f& center, float& scale, const vec2i& imsize,
 inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec2f& rotate, float dolly, const vec2f& pan) {
   // rotate if necessary
-  if (rotate.x || rotate.y) {
+  if (rotate != zero2f) {
     auto z     = normalize(to - from);
     auto lz    = length(to - from);
     auto phi   = atan2(z.z, z.x) + rotate.x;
@@ -2590,7 +2590,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
   }
 
   // dolly if necessary
-  if (dolly) {
+  if (dolly != 0) {
     auto z  = normalize(to - from);
     auto lz = max(0.001f, length(to - from) * (1 + dolly));
     z *= lz;
@@ -2598,7 +2598,7 @@ inline void update_turntable(vec3f& from, vec3f& to, vec3f& up,
   }
 
   // pan if necessary
-  if (pan.x || pan.y) {
+  if (pan != zero2f) {
     auto z = normalize(to - from);
     auto x = normalize(cross(up, z));
     auto y = normalize(cross(z, x));
@@ -2626,14 +2626,14 @@ inline void update_turntable(frame3f& frame, float& focus, const vec2f& rotate,
   }
 
   // pan if necessary
-  if (dolly) {
+  if (dolly != 0) {
     auto c  = frame.o - frame.z * focus;
     focus   = max(focus * (1 + dolly), 0.001f);
     frame.o = c + frame.z * focus;
   }
 
   // pan if necessary
-  if (pan.x || pan.y) {
+  if (pan != zero2f) {
     frame.o += frame.x * pan.x + frame.y * pan.y;
   }
 }

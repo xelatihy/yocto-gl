@@ -277,9 +277,9 @@ int main(int argc, const char* argv[]) {
       plines.insert(plines.end(), line.begin(), line.end());
       ppositions.insert(ppositions.end(), pos.begin(), pos.end());
     }
-    lines     = lines;
+    lines     = plines;
     triangles = {};
-    positions = positions;
+    positions = ppositions;
     normals   = {};
     texcoords = {};
     colors    = {};

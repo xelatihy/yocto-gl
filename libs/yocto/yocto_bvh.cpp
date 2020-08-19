@@ -453,7 +453,7 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
 
       // make an internal node
       node.internal = true;
-      node.axis     = axis;
+      node.axis     = (uint8_t)axis;
       node.num      = 2;
       node.start    = (int)nodes.size();
       nodes.emplace_back();
@@ -463,7 +463,7 @@ static void build_bvh(bvh_tree_& bvh, vector<bbox3f>& bboxes) {
     } else {
       // Make a leaf node
       node.internal = false;
-      node.num      = end - start;
+      node.num      = (int16_t)(end - start);
       node.start    = start;
     }
   }
