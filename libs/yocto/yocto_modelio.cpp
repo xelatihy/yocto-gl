@@ -868,13 +868,15 @@ bool get_colors(ply_model* ply, vector<vec3f>& colors) {
 }
 bool get_colors(ply_model* ply, vector<vec4f>& colors) {
   if (has_property(ply, "vertex", "alpha")) {
+    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+  } else {
     auto colors3 = vector<vec3f>{};
-    return get_values(ply, "vertex", {"red", "green", "blue"}, colors3);
+    if (!get_values(ply, "vertex", {"red", "green", "blue"}, colors3))
+      return false;
     colors.resize(colors3.size());
     for (auto i = 0; i < colors.size(); i++)
       colors[i] = {colors3[i].x, colors3[i].y, colors3[i].z, 1};
-  } else {
-    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+    return true;
   }
 }
 bool get_radius(ply_model* ply, vector<float>& radius) {

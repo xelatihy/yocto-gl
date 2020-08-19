@@ -193,13 +193,13 @@ void init_scene(trace_scene* scene, scene_model* ioscene, trace_camera*& camera,
     shape_map[ioshape] = shape;
   }
 
-  for (auto ioobject : ioscene->instances) {
+  for (auto ioinstance : ioscene->instances) {
     if (progress_cb)
-      progress_cb("converting objects", progress.x++, progress.y);
+      progress_cb("converting instances", progress.x++, progress.y);
     auto instance = add_instance(scene);
-    set_frame(instance, ioobject->frame);
-    set_shape(instance, shape_map.at(ioobject->shape));
-    set_material(instance, material_map.at(ioobject->material));
+    set_frame(instance, ioinstance->frame);
+    set_shape(instance, shape_map.at(ioinstance->shape));
+    set_material(instance, material_map.at(ioinstance->material));
   }
 
   for (auto ioenvironment : ioscene->environments) {
