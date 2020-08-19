@@ -38,7 +38,9 @@
 // -----------------------------------------------------------------------------
 
 #include <chrono>
+#include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -47,6 +49,7 @@
 namespace yocto {
 
 // using directives
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -67,12 +70,14 @@ inline int64_t get_time();
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Python `range()` equivalent. Construct an instance to iterate over a
-// sequence.
-inline auto range(int min, int max);
-inline auto range(int max);
+// Python `range()` equivalent. Construct an object that c over an
+// integer sequence.
+template <typename T>
+inline auto range(T min, T max);
+template <typename T>
+inline auto range(T max);
 
-// Python `enumerate()` equivalent. Construct an object that iteraterates over a
+// Python `enumerate()` equivalent. Construct an object that iterates over a
 // sequence of elements and numbers them.
 template <typename T>
 inline auto enumerate(const vector<T>& vals);
@@ -81,13 +86,13 @@ inline auto enumerate(vector<T>& vals);
 
 // Vector append and concatenation
 template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
+inline vector<T>& append(vector<T>& a, const vector<T>& b);
 template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b);
+inline vector<T>& append(vector<T>& a, const T& b);
 template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
+inline vector<T> join(const vector<T>& a, const vector<T>& b);
 template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b);
+inline vector<T> join(const vector<T>& a, const T& b);
 
 }  // namespace yocto
 
@@ -117,40 +122,47 @@ inline int64_t get_time() {
 namespace yocto {
 
 // Range object to support Python-like iteration. Use with `range()`.
+template <typename T>
 struct range_helper {
   struct iterator {
-    int       pos = 0;
+    T         pos = 0;
     iterator& operator++() {
       pos++;
       return *this;
     }
     bool operator!=(const iterator& other) const { return pos != other.pos; }
-    int  operator*() const { return pos; }
+    T    operator*() const { return pos; }
   };
-  int      begin_ = 0, end_ = 0;
+  T        begin_ = 0, end_ = 0;
   iterator begin() const { return {begin_}; }
   iterator end() const { return {end_}; }
 };
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
-inline auto range(int min, int max) { return range_helper{min, max}; }
-inline auto range(int max) { return range(0, max); }
+template <typename T>
+inline auto range(T min, T max) {
+  return range_helper{min, max};
+}
+template <typename T>
+inline auto range(T max) {
+  return range((T)0, max);
+}
 
 // Enumerate object to support Python-like enumeration. Use with `enumerate()`.
 template <typename T>
 struct enumerate_helper {
   struct iterator {
     T*        data = nullptr;
-    int       pos  = 0;
+    int64_t   pos  = 0;
     iterator& operator++() {
       pos++;
       return *this;
     }
     bool operator!=(const iterator& other) const { return pos != other.pos; }
-    pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
+    pair<int64_t&, T&> operator*() const { return {pos, *(data + pos)}; }
   };
   T*       data = nullptr;
-  int      size = 0;
+  int64_t  size = 0;
   iterator begin() const { return {data, 0}; }
   iterator end() const { return {data, size}; }
 };
@@ -159,33 +171,33 @@ struct enumerate_helper {
 // sequence of elements and numbers them.
 template <typename T>
 inline auto enumerate(const vector<T>& vals) {
-  return enumerate_helper<const T>{vals.data(), vals.size()};
+  return enumerate_helper<const T>{vals.data(), (int64_t)vals.size()};
 }
 template <typename T>
 inline auto enumerate(vector<T>& vals) {
-  return enumerate_helper<T>{vals.data(), vals.size()};
+  return enumerate_helper<T>{vals.data(), (int64_t)vals.size()};
 }
 
 // Vector append and concatenation
 template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
+inline vector<T>& append(vector<T>& a, const vector<T>& b) {
   a.insert(a.end(), b.begin(), b.end());
   return a;
 }
 template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b) {
+inline vector<T>& append(vector<T>& a, const T& b) {
   a.push_back(b);
   return a;
 }
 template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
+inline vector<T> join(const vector<T>& a, const vector<T>& b) {
   auto c = a;
-  return c += b;
+  return append(b);
 }
 template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b) {
+inline vector<T> join(const vector<T>& a, const T& b) {
   auto c = a;
-  return c += b;
+  return append(b);
 }
 
 }  // namespace yocto
