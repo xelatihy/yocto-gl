@@ -459,18 +459,42 @@ struct vec4b {
   const byte& operator[](int i) const;
 };
 
+struct vec3s {
+  ushort x = 0;
+  ushort y = 0;
+  ushort z = 0;
+
+  ushort&       operator[](int i);
+  const ushort& operator[](int i) const;
+};
+
+struct vec4s {
+  ushort x = 0;
+  ushort y = 0;
+  ushort z = 0;
+  ushort w = 0;
+
+  ushort&       operator[](int i);
+  const ushort& operator[](int i) const;
+};
+
 // Zero vector constants.
 inline const auto zero2i = vec2i{0, 0};
 inline const auto zero3i = vec3i{0, 0, 0};
 inline const auto zero4i = vec4i{0, 0, 0, 0};
 inline const auto zero3b = vec3b{0, 0, 0};
 inline const auto zero4b = vec4b{0, 0, 0, 0};
+inline const auto zero3s = vec3s{0, 0, 0};
+inline const auto zero4s = vec4s{0, 0, 0, 0};
 
 // Element access
 inline const vec3i& xyz(const vec4i& a);
 
 // Element access
 inline const vec3b& xyz(const vec4b& a);
+
+// Element access
+inline const vec3s& xyz(const vec4s& a);
 
 // Vector sequence operations.
 inline int        size(const vec2i& a);
@@ -1625,11 +1649,22 @@ inline const byte& vec3b::operator[](int i) const { return (&x)[i]; }
 inline byte& vec4b::operator[](int i) { return (&x)[i]; }
 inline const byte& vec4b::operator[](int i) const { return (&x)[i]; }
 
+// Vector data types
+inline ushort& vec3s::operator[](int i) { return (&x)[i]; }
+inline const ushort& vec3s::operator[](int i) const { return (&x)[i]; }
+
+// Vector data types
+inline ushort& vec4s::operator[](int i) { return (&x)[i]; }
+inline const ushort& vec4s::operator[](int i) const { return (&x)[i]; }
+
 // Element access
 inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
 
 // Element access
 inline const vec3b& xyz(const vec4b& a) { return (const vec3b&)a; }
+
+// Element access
+inline const vec3s& xyz(const vec4s& a) { return (const vec3s&)a; }
 
 // Vector sequence operations.
 inline int        size(const vec2i& a) { return 2; }

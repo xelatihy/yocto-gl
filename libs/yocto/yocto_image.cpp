@@ -546,26 +546,24 @@ image<vec3b> float_to_byte(const image<vec3f>& fl) {
 // Conversion from/to floats.
 image<float> byte_to_float(const image<byte>& bt) {
   auto fl = image<float>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = yocto::byte_to_float(bt[i]);
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
   return fl;
 }
 image<byte> float_to_byte(const image<float>& fl) {
   auto bt = image<byte>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = yocto::float_to_byte(fl[i]);
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
   return bt;
 }
 
 // Conversion from/to floats.
-image<float> ushort_to_float(const image<ushort>& bt) {
-  auto fl = image<float>{bt.imsize()};
-  for (auto i = 0ull; i < fl.count(); i++)
-    fl[i] = yocto::ushort_to_float(bt[i]);
+image<vec4f> ushort_to_float(const image<vec4s>& bt) {
+  auto fl = image<vec4f>{bt.imsize()};
+  for (auto i = 0ull; i < fl.count(); i++) fl[i] = ushort_to_float(bt[i]);
   return fl;
 }
-image<ushort> float_to_ushort(const image<float>& fl) {
-  auto bt = image<ushort>{fl.imsize()};
-  for (auto i = 0ull; i < bt.count(); i++)
-    bt[i] = yocto::float_to_ushort(fl[i]);
+image<vec4s> float_to_ushort(const image<vec4f>& fl) {
+  auto bt = image<vec4s>{fl.imsize()};
+  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_ushort(fl[i]);
   return bt;
 }
 
@@ -620,27 +618,87 @@ image<vec3b> rgb_to_srgbb(const image<vec3f>& rgb) {
 // Conversion between linear and gamma-encoded images.
 image<float> srgb_to_rgb(const image<float>& srgb) {
   auto rgb = image<float>{srgb.imsize()};
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::srgb_to_rgb(srgb[i]);
+  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
   return rgb;
 }
 image<float> rgb_to_srgb(const image<float>& rgb) {
   auto srgb = image<float>{rgb.imsize()};
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::rgb_to_srgb(rgb[i]);
+  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
   return srgb;
 }
 image<float> srgb_to_rgb(const image<byte>& srgb) {
   auto rgb = image<float>{srgb.imsize()};
   for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = yocto::srgb_to_rgb(yocto::byte_to_float(srgb[i]));
+    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
   return rgb;
 }
 image<byte> rgb_to_srgbb(const image<float>& rgb) {
   auto srgb = image<byte>{rgb.imsize()};
   for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = yocto::float_to_byte(yocto::rgb_to_srgb(rgb[i]));
+    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
   return srgb;
+}
+
+// Conversion between number of channels.
+image<vec4f> rgb_to_rgba(const image<vec3f>& rgb) {
+  auto rgba = image<vec4f>{rgb.imsize()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgba[i] = rgb_to_rgba(rgb[i]);
+  return rgba;
+}
+image<vec3f> rgba_to_rgb(const image<vec4f>& rgba) {
+  auto rgb = image<vec3f>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) rgb[i] = rgba_to_rgb(rgba[i]);
+  return rgb;
+}
+image<vec4b> rgb_to_rgba(const image<vec3b>& rgb) {
+  auto rgba = image<vec4b>{rgb.imsize()};
+  for (auto i = 0ull; i < rgb.count(); i++) rgba[i] = rgb_to_rgba(rgb[i]);
+  return rgba;
+}
+image<vec3b> rgba_to_rgb(const image<vec4b>& rgba) {
+  auto rgb = image<vec3b>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) rgb[i] = rgba_to_rgb(rgba[i]);
+  return rgb;
+}
+image<vec4f> red_to_rgba(const image<float>& red) {
+  auto rgba = image<vec4f>{red.imsize()};
+  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
+  return rgba;
+}
+image<float> rgba_to_red(const image<vec4f>& rgba) {
+  auto red = image<float>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
+  return red;
+}
+image<vec4b> red_to_rgba(const image<byte>& red) {
+  auto rgba = image<vec4b>{red.imsize()};
+  for (auto i = 0ull; i < red.count(); i++) rgba[i] = red_to_rgba(red[i]);
+  return rgba;
+}
+image<byte> rgba_to_red(const image<vec4b>& rgba) {
+  auto red = image<byte>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) red[i] = rgba_to_red(rgba[i]);
+  return red;
+}
+image<vec4f> gray_to_rgba(const image<float>& gray) {
+  auto rgba = image<vec4f>{gray.imsize()};
+  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
+  return rgba;
+}
+image<float> rgba_to_gray(const image<vec4f>& rgba) {
+  auto gray = image<float>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
+  return gray;
+}
+image<vec4b> gray_to_rgba(const image<byte>& gray) {
+  auto rgba = image<vec4b>{gray.imsize()};
+  for (auto i = 0ull; i < gray.count(); i++) rgba[i] = gray_to_rgba(gray[i]);
+  return rgba;
+}
+image<byte> rgba_to_gray(const image<vec4b>& rgba) {
+  auto gray = image<byte>{rgba.imsize()};
+  for (auto i = 0ull; i < rgba.count(); i++) gray[i] = rgba_to_gray(rgba[i]);
+  return gray;
 }
 
 // Apply exposure and filmic tone mapping
@@ -1010,7 +1068,7 @@ image<vec4f> add_border(
     }
   }
   return img;
-};
+}
 
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
@@ -1689,331 +1747,9 @@ bool is_hdr_filename(const string& filename) {
   }
 }
 
-// Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec3f>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      return read_error();
-    if (!pixels) return read_error();
-    auto cpixels = std::unique_ptr<float[]>(new float[width * height * 3]);
-    for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
-      cpixels[i * 3 + 0] = pixels[i * 4 + 0];
-      cpixels[i * 3 + 1] = pixels[i * 4 + 1];
-      cpixels[i * 3 + 2] = pixels[i * 4 + 2];
-    }
-    img = image{{width, height}, (const vec3f*)cpixels.get()};
-    free(pixels);
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3f*)pixels};
-    delete[] pixels;
-    return true;
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3f*)pixels};
-    free(pixels);
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    auto imgb = image<vec3b>{};
-    if (!load_image(filename, imgb, error)) return false;
-    img = srgb_to_rgb(imgb);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an hdr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<vec3f>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 3,
-            filename.c_str()) < 0)
-      return write_error();
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    return save_image(filename, rgb_to_srgbb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<vec3b>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 3);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const vec3b*)pixels};
-    free(pixels);
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    auto imgf = image<vec3f>{};
-    if (!load_image(filename, imgf, error)) return false;
-    img = rgb_to_srgbb(imgf);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an ldr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<vec3b>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), img.imsize().x * 3))
-      return write_error();
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            img.data(), 75))
-      return write_error();
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 3, img.data()))
-      return write_error();
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    return save_image(filename, srgb_to_rgb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an hdr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<float>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".exr" || ext == ".EXR") {
-    auto width = 0, height = 0;
-    auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      return read_error();
-    if (!pixels) return read_error();
-    auto cpixels = std::unique_ptr<float[]>(new float[width * height]);
-    for (auto i = (size_t)0; i < (size_t)width * (size_t)height; i++) {
-      cpixels[i + 0] =
-          (pixels[i * 4 + 0] + pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 3;
-    }
-    img = image{{width, height}, (const float*)cpixels.get()};
-    free(pixels);
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const float*)pixels};
-    delete[] pixels;
-    return true;
-  } else if (ext == ".hdr" || ext == ".HDR") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const float*)pixels};
-    free(pixels);
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    auto imgb = image<byte>{};
-    if (!load_image(filename, imgb, error)) return false;
-    img = srgb_to_rgb(imgb);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an hdr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<float>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".hdr" || ext == ".HDR") {
-    auto npixels = (size_t)img.imsize().x * (size_t)img.imsize().y;
-    auto cpixels = std::unique_ptr<float[]>(new float[npixels * 3]);
-    for (auto idx = (size_t)0; idx < npixels; idx++) {
-      cpixels[idx * 3 + 0] = *(img.begin() + idx);
-      cpixels[idx * 3 + 1] = *(img.begin() + idx);
-      cpixels[idx * 3 + 2] = *(img.begin() + idx);
-    }
-    if (!stbi_write_hdr(filename.c_str(), img.imsize().x, img.imsize().y, 3,
-            (float*)cpixels.get()))
-      return write_error();
-    return true;
-  } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            (float*)img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.imsize().x, img.imsize().y, 1,
-            filename.c_str()) < 0)
-      return write_error();
-    return true;
-  } else if (!is_hdr_filename(filename)) {
-    return save_image(filename, rgb_to_srgbb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
-// Loads an ldr image.
-[[nodiscard]] bool load_image(
-    const string& filename, image<byte>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto read_error = [filename, &error]() {
-    error = filename + ": read error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 1);
-    if (!pixels) return read_error();
-    img = image{{width, height}, (const byte*)pixels};
-    free(pixels);
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    auto imgf = image<float>{};
-    if (!load_image(filename, imgf, error)) return false;
-    img = rgb_to_srgbb(imgf);
-    return true;
-  } else {
-    return format_error();
-  }
-}
-
-// Saves an ldr image.
-[[nodiscard]] bool save_image(
-    const string& filename, const image<byte>& img, string& error) {
-  auto format_error = [filename, &error]() {
-    error = filename + ": unknown format";
-    return false;
-  };
-  auto write_error = [filename, &error]() {
-    error = filename + ": write error";
-    return false;
-  };
-
-  auto ext = path_extension(filename);
-  if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), img.imsize().x * 1))
-      return write_error();
-    return true;
-  } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(filename.c_str(), img.imsize().x, img.imsize().y, 1,
-            img.data(), 75))
-      return write_error();
-    return true;
-  } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
-      return write_error();
-    return true;
-  } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.imsize().x, img.imsize().y, 1, img.data()))
-      return write_error();
-    return true;
-  } else if (is_hdr_filename(filename)) {
-    return save_image(filename, srgb_to_rgb(img), error);
-  } else {
-    return format_error();
-  }
-}
-
 // Loads a 16 bit image.
 [[nodiscard]] bool load_image(
-    const string& filename, image<ushort>& img, string& error) {
+    const string& filename, image<vec4s>& img, string& error) {
   auto format_error = [filename, &error]() {
     error = filename + ": unknown format";
     return false;
@@ -2027,18 +1763,38 @@ bool is_hdr_filename(const string& filename) {
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 1);
+    auto pixels = stbi_load_16(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) return read_error();
-    img = image{{width, height}, (const uint16_t*)pixels};
+    img = image{{width, height}, (const vec4s*)pixels};
     free(pixels);
     return true;
   } else if (is_hdr_filename(filename)) {
-    auto imgf = image<float>{};
+    auto imgf = image<vec4f>{};
     if (!load_image(filename, imgf, error)) return false;
     img = float_to_ushort(imgf);
     return true;
   } else {
     return format_error();
+  }
+}
+
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+bool load_image(const string& filename, image<vec4f>& imgf, image<vec4b>& imgb,
+    string& error) {
+  if (is_hdr_filename(filename)) {
+    return load_image(filename, imgf, error);
+  } else {
+    return load_image(filename, imgb, error);
+  }
+}
+
+// Loads/saves a  channel float/byte image in linear/srgb color space.
+bool save_image(const string& filename, const image<vec4f>& imgf,
+    const image<vec4b>& imgb, string& error) {
+  if (!imgf.empty()) {
+    return save_image(filename, imgf, error);
+  } else {
+    return save_image(filename, imgb, error);
   }
 }
 

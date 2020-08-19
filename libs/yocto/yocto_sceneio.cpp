@@ -148,50 +148,41 @@ bool save_scene(const string& filename, const scene_model* scene, string& error,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Loads/saves a  channel float/byte image in linear/srgb color space.
-static bool load_image(const string& filename, image<vec4f>& colorf,
-    image<vec4b>& colorb, string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, colorf, error);
-  } else {
-    return load_image(filename, colorb, error);
-  }
-}
-
 // Loads/saves a 3 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<vec3f>& colorf,
     image<vec3b>& colorb, string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, colorf, error);
+  auto img4f = image<vec4f>{};
+  auto img4b = image<vec4b>{};
+  if (!load_image(filename, img4f, img4b, error)) return false;
+  if (!img4f.empty()) {
+    colorf = rgba_to_rgb(img4f);
   } else {
-    return load_image(filename, colorb, error);
+    colorb = rgba_to_rgb(img4b);
   }
+  return true;
 }
 static bool save_image(const string& filename, const image<vec3f>& colorf,
     const image<vec3b>& colorb, string& error) {
-  if (is_hdr_filename(filename)) {
-    return save_image(filename, colorf, error);
-  } else {
-    return save_image(filename, colorb, error);
-  }
+  return save_image(filename, rgb_to_rgba(colorf), rgb_to_rgba(colorb), error);
 }
 
 // Loads/saves a 1 channel float/byte image in linear/srgb color space.
 static bool load_image(const string& filename, image<float>& scalarf,
     image<byte>& scalarb, string& error) {
-  if (is_hdr_filename(filename)) {
-    return load_image(filename, scalarf, error);
+  auto img4f = image<vec4f>{};
+  auto img4b = image<vec4b>{};
+  if (!load_image(filename, img4f, img4b, error)) return false;
+  if (!img4f.empty()) {
+    scalarf = rgba_to_red(img4f);
   } else {
-    return load_image(filename, scalarb, error);
+    scalarb = rgba_to_red(img4b);
   }
+  return true;
 }
 static bool save_image(const string& filename, const image<float>& scalarf,
     const image<byte>& scalarb, string& error) {
-  if (is_hdr_filename(filename)) {
-    return save_image(filename, scalarf, error);
-  } else {
-    return save_image(filename, scalarb, error);
-  }
+  return save_image(
+      filename, gray_to_rgba(scalarf), gray_to_rgba(scalarb), error);
 }
 
 // load instances
