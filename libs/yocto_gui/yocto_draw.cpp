@@ -349,18 +349,20 @@ gui_scene::~gui_scene() {
 
 // Initialize an OpenGL scene
 void init_scene(gui_scene* scene) {
-  if (is_initialized(scene->program)) return;
+  if (is_initialized(scene->lights_program)) return;
   auto error = ""s, errorlog = ""s;
   init_program(
-      scene->program, glscene_vertex, glscene_fragment, error, errorlog);
+      scene->lights_program, glscene_vertex, glscene_fragment, error, errorlog);
 }
-bool is_initialized(gui_scene* scene) { return is_initialized(scene->program); }
+bool is_initialized(gui_scene* scene) {
+  return is_initialized(scene->lights_program);
+}
 
 // Clear an OpenGL scene
 void clear_scene(gui_scene* scene) {
   for (auto texture : scene->textures) clear_texture(texture);
   for (auto shape : scene->shapes) clear_shape(shape);
-  clear_program(scene->program);
+  clear_program(scene->lights_program);
   clear_program(scene->environment_program);
   clear_cubemap(scene->environment_cubemap);
 }
@@ -541,79 +543,75 @@ void draw_object(
   if (instance->hidden) return;
 
   assert_ogl_error();
+  auto program         = scene->lights_program;
   auto shape_xform     = frame_to_mat(instance->frame);
   auto shape_inv_xform = transpose(
       frame_to_mat(inverse(instance->frame, params.non_rigid_frames)));
-  set_uniform(scene->program, "frame", shape_xform);
-  set_uniform(scene->program, "frameit", shape_inv_xform);
-  set_uniform(scene->program, "offset", 0.0f);
+  set_uniform(program, "frame", shape_xform);
+  set_uniform(program, "frameit", shape_inv_xform);
+  set_uniform(program, "offset", 0.0f);
   if (instance->highlighted) {
-    set_uniform(scene->program, "highlight", vec4f{1, 1, 0, 1});
+    set_uniform(program, "highlight", vec4f{1, 1, 0, 1});
   } else {
-    set_uniform(scene->program, "highlight", vec4f{0, 0, 0, 0});
+    set_uniform(program, "highlight", vec4f{0, 0, 0, 0});
   }
   assert_ogl_error();
 
   auto material = instance->material;
   auto mtype    = 2;
-  set_uniform(scene->program, "mtype", mtype);
-  set_uniform(scene->program, "emission", material->emission);
-  set_uniform(scene->program, "diffuse", material->color);
-  set_uniform(scene->program, "specular",
+  set_uniform(program, "mtype", mtype);
+  set_uniform(program, "emission", material->emission);
+  set_uniform(program, "diffuse", material->color);
+  set_uniform(program, "specular",
       vec3f{material->metallic, material->metallic, material->metallic});
-  set_uniform(scene->program, "roughness", material->roughness);
-  set_uniform(scene->program, "opacity", material->opacity);
-  set_uniform(scene->program, "double_sided", (int)params.double_sided);
-  set_uniform(scene->program, "emission_tex", "emission_tex_on",
-      material->emission_tex, 0);
+  set_uniform(program, "roughness", material->roughness);
+  set_uniform(program, "opacity", material->opacity);
+  set_uniform(program, "double_sided", (int)params.double_sided);
   set_uniform(
-      scene->program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
-  set_uniform(scene->program, "specular_tex", "specular_tex_on",
-      material->metallic_tex, 2);
-  set_uniform(scene->program, "roughness_tex", "roughness_tex_on",
-      material->roughness_tex, 3);
-  set_uniform(scene->program, "opacity_tex", "opacity_tex_on",
-      material->opacity_tex, 4);
-  set_uniform(scene->program, "mat_norm_tex", "mat_norm_tex_on",
-      material->normal_tex, 5);
+      program, "emission_tex", "emission_tex_on", material->emission_tex, 0);
+  set_uniform(program, "diffuse_tex", "diffuse_tex_on", material->color_tex, 1);
+  set_uniform(
+      program, "specular_tex", "specular_tex_on", material->metallic_tex, 2);
+  set_uniform(
+      program, "roughness_tex", "roughness_tex_on", material->roughness_tex, 3);
+  set_uniform(
+      program, "opacity_tex", "opacity_tex_on", material->opacity_tex, 4);
+  set_uniform(
+      program, "mat_norm_tex", "mat_norm_tex_on", material->normal_tex, 5);
 
-  set_uniform(scene->program, "irradiance_cubemap", scene->irradiance_map, 6);
-  set_uniform(scene->program, "reflection_cubemap", scene->prefiltered_map, 7);
-  set_uniform(scene->program, "brdf_lut", scene->brdf_lut, 8);
+  set_uniform(program, "irradiance_cubemap", scene->diffuse_cubemap, 6);
+  set_uniform(program, "reflection_cubemap", scene->specular_cubemap, 7);
+  set_uniform(program, "brdf_lut", scene->brdf_lut, 8);
   assert_ogl_error();
 
   auto shape = instance->shape;
 
   if (is_initialized(shape->points)) {
-    set_uniform(scene->program, "etype", 1);
+    set_uniform(program, "etype", 1);
   }
   if (is_initialized(shape->lines)) {
-    set_uniform(scene->program, "etype", 2);
+    set_uniform(program, "etype", 2);
   }
   if (is_initialized(shape->triangles)) {
-    set_uniform(scene->program, "etype", 3);
+    set_uniform(program, "etype", 3);
   }
   if (is_initialized(shape->quads)) {
-    set_uniform(scene->program, "etype", 3);
+    set_uniform(program, "etype", 3);
   }
   draw_shape(shape);
 
   assert_ogl_error();
 
   if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
-    set_uniform(scene->program, "mtype", mtype);
-    set_uniform(scene->program, "emission", vec3f{0, 0, 0});
-    set_uniform(scene->program, "diffuse", vec3f{0, 0, 0});
-    set_uniform(scene->program, "specular", vec3f{0, 0, 0});
-    set_uniform(scene->program, "roughness", 0);
-    set_uniform(scene->program, "etype", 3);
+    set_uniform(program, "mtype", mtype);
+    set_uniform(program, "emission", vec3f{0, 0, 0});
+    set_uniform(program, "diffuse", vec3f{0, 0, 0});
+    set_uniform(program, "specular", vec3f{0, 0, 0});
+    set_uniform(program, "roughness", 0);
+    set_uniform(program, "etype", 3);
     draw_shape(shape);
     assert_ogl_error();
   }
-}
-
-namespace ibl {
-inline ogl_shape* cube_shape();
 }
 
 // Display a scene
@@ -643,15 +641,15 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
   set_ogl_viewport(viewport);
 
   assert_ogl_error();
-  bind_program(scene->program);
+  bind_program(scene->lights_program);
   assert_ogl_error();
-  set_uniform(scene->program, "eye", camera->frame.o);
-  set_uniform(scene->program, "view", camera_view);
-  set_uniform(scene->program, "projection", camera_proj);
-  set_uniform(scene->program, "eyelight",
+  set_uniform(scene->lights_program, "eye", camera->frame.o);
+  set_uniform(scene->lights_program, "view", camera_view);
+  set_uniform(scene->lights_program, "projection", camera_proj);
+  set_uniform(scene->lights_program, "eyelight",
       params.shading == gui_shading_type::eyelight ? 1 : 0);
-  set_uniform(scene->program, "exposure", params.exposure);
-  set_uniform(scene->program, "gamma", params.gamma);
+  set_uniform(scene->lights_program, "exposure", params.exposure);
+  set_uniform(scene->lights_program, "gamma", params.gamma);
   assert_ogl_error();
 
   if (params.shading == gui_shading_type::lights ||
@@ -659,8 +657,8 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
     assert_ogl_error();
     auto& lights = params.shading == gui_shading_type::lights ? scene->lights
                                                               : camera_lights;
-    set_uniform(scene->program, "lamb", vec3f{0, 0, 0});
-    set_uniform(scene->program, "lnum", (int)lights.size());
+    set_uniform(scene->lights_program, "lamb", vec3f{0, 0, 0});
+    set_uniform(scene->lights_program, "lnum", (int)lights.size());
     auto lid = 0;
     for (auto light : lights) {
       auto is = std::to_string(lid);
@@ -669,14 +667,16 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
                             ? transform_direction(
                                   camera->frame, light->position)
                             : transform_point(camera->frame, light->position);
-        set_uniform(scene->program, ("lpos[" + is + "]").c_str(), position);
-      } else {
         set_uniform(
-            scene->program, ("lpos[" + is + "]").c_str(), light->position);
+            scene->lights_program, ("lpos[" + is + "]").c_str(), position);
+      } else {
+        set_uniform(scene->lights_program, ("lpos[" + is + "]").c_str(),
+            light->position);
       }
-      set_uniform(scene->program, ("lke[" + is + "]").c_str(), light->emission);
       set_uniform(
-          scene->program, ("ltype[" + is + "]").c_str(), (int)light->type);
+          scene->lights_program, ("lke[" + is + "]").c_str(), light->emission);
+      set_uniform(scene->lights_program, ("ltype[" + is + "]").c_str(),
+          (int)light->type);
       lid++;
     }
     assert_ogl_error();
@@ -699,7 +699,7 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
       scene->environment_program, "environment", scene->environment_cubemap, 0);
   set_uniform(scene->environment_program, "roughness", 0.0f);
 
-  auto cube = ibl::cube_shape();
+  auto cube = cube_shape();
   draw_shape(cube);
 
   unbind_program();
@@ -734,51 +734,6 @@ static ogl_program* load_program(
     return nullptr;
   }
   return program;
-}
-
-inline ogl_shape* cube_shape() {
-  // Do not call this function for the first time in a draw loop!
-  // Untested behavior.
-  static ogl_shape* cube = nullptr;
-  if (!cube) {
-    // clang-format off
-    static const auto cube_positions = vector<vec3f>{
-      {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
-      {1,  1, -1}, {1,  1,  1}, {-1,  1,  1}, {-1,  1, -1},
-    };
-    static const auto cube_triangles = vector<vec3i>{
-      {1, 3, 0}, {7, 5, 4}, {4, 1, 0}, {5, 2, 1},
-      {2, 7, 3}, {0, 7, 4}, {1, 2, 3}, {7, 6, 5},
-      {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
-    };
-    // clang-format on
-    cube = new ogl_shape{};
-    set_shape(cube);
-    set_positions(cube, cube_positions);
-    set_triangles(cube, cube_triangles);
-  }
-  return cube;
-}
-
-inline ogl_shape* brdf_plane_shape() {
-  // Do not call this function for the first time in a draw loop!
-  // Untested behavior.
-  static ogl_shape* brdf_plane = nullptr;
-  if (!brdf_plane) {
-    // clang-format off
-    static const auto brdf_plane_positions = vector<vec3f>{
-      {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
-    };
-    static const auto brdf_plane_triangles = vector<vec3i>{
-      {0, 1, 3}, {3, 2, 1}
-    };
-    // clang-format on
-    brdf_plane = new ogl_shape{};
-    set_shape(brdf_plane);
-    set_positions(brdf_plane, brdf_plane_positions);
-    set_triangles(brdf_plane, brdf_plane_triangles);
-  }
-  return brdf_plane;
 }
 
 // Using 6 render passes, bake a cubemap given a sampler for the environment.
@@ -836,20 +791,18 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
 inline void bake_specular_brdf_texture(ogl_texture* texture) {
   auto size        = 512;
   auto framebuffer = ogl_framebuffer{};
-  auto brdf_plane  = brdf_plane_shape();
+  auto screen_quad = quad_shape();
 
   auto program = load_program(
       "apps/ibl/shaders/bake_brdf.vert", "apps/ibl/shaders/bake_brdf.frag");
   assert_ogl_error();
 
-  // ************ create texture ***************
   texture->is_float  = true;
   texture->linear    = true;
   texture->nchannels = 3;
   texture->size      = {size, size};
   glGenTextures(1, &texture->texture_id);
 
-  // pre-allocate enough memory for the LUT texture.
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, size, size, 0, GL_RGB, GL_FLOAT, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -869,15 +822,17 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   set_ogl_viewport(vec2i{size, size});
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
-  draw_shape(brdf_plane);
+  draw_shape(screen_quad);
   assert_ogl_error();
 
   unbind_program();
   unbind_framebuffer();
+  clear_framebuffer(&framebuffer);
+  clear_program(program);
 }
 
 void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
-  scene->program = ibl::load_program(
+  scene->lights_program = ibl::load_program(
       "apps/ibl/shaders/scene.vert", "apps/ibl/shaders/ibl.frag");
   scene->environment_program = ibl::load_program(
       "apps/ibl/shaders/environment.vert", "apps/ibl/shaders/environment.frag");
@@ -889,6 +844,7 @@ void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
         "apps/ibl/shaders/bake_environment.frag");
     bake_cubemap(
         scene->environment_cubemap, environment_texture, program, size);
+    clear_program(program);
   }
 
   // bake irradiance map
@@ -896,7 +852,8 @@ void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
     auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
         "apps/ibl/shaders/bake_irradiance.frag");
     bake_cubemap(
-        scene->irradiance_map, scene->environment_cubemap, program, 64);
+        scene->diffuse_cubemap, scene->environment_cubemap, program, 64);
+    clear_program(program);
   }
 
   // bake specular map
@@ -904,7 +861,8 @@ void init_ibl_data(gui_scene* scene, const ogl_texture* environment_texture) {
     auto program = ibl::load_program("apps/ibl/shaders/bake_cubemap.vert",
         "apps/ibl/shaders/bake_specular.frag");
     bake_cubemap(
-        scene->prefiltered_map, scene->environment_cubemap, program, 256, 6);
+        scene->specular_cubemap, scene->environment_cubemap, program, 256, 6);
+    clear_program(program);
   }
 
   bake_specular_brdf_texture(scene->brdf_lut);

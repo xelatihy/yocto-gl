@@ -448,6 +448,9 @@ void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 void draw_shape(const ogl_shape* shape);
 
+ogl_shape* cube_shape();
+ogl_shape* quad_shape();
+
 }  // namespace yocto
 
 #endif

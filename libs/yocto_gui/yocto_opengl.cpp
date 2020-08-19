@@ -1336,4 +1336,45 @@ void draw_shape(const ogl_shape* shape) {
   }
 }
 
+ogl_shape* cube_shape() {
+  static ogl_shape* cube = nullptr;
+  if (!cube) {
+    // clang-format off
+    static const auto cube_positions = vector<vec3f>{
+      {1, -1, -1}, {1, -1,  1}, {-1, -1,  1}, {-1, -1, -1},
+      {1,  1, -1}, {1,  1,  1}, {-1,  1,  1}, {-1,  1, -1},
+    };
+    static const auto cube_triangles = vector<vec3i>{
+      {1, 3, 0}, {7, 5, 4}, {4, 1, 0}, {5, 2, 1},
+      {2, 7, 3}, {0, 7, 4}, {1, 2, 3}, {7, 6, 5},
+      {4, 5, 1}, {5, 6, 2}, {2, 6, 7}, {0, 3, 7}
+    };
+    // clang-format on
+    cube = new ogl_shape{};
+    set_shape(cube);
+    set_positions(cube, cube_positions);
+    set_triangles(cube, cube_triangles);
+  }
+  return cube;
+}
+
+ogl_shape* quad_shape() {
+  static ogl_shape* quad = nullptr;
+  if (!quad) {
+    // clang-format off
+    static const auto quad_positions = vector<vec3f>{
+      {-1, -1, 0}, {1, -1,  0}, {1, 1,  0}, {-1, 1, 0},
+    };
+    static const auto quad_triangles = vector<vec3i>{
+      {0, 1, 3}, {3, 2, 1}
+    };
+    // clang-format on
+    quad = new ogl_shape{};
+    set_shape(quad);
+    set_positions(quad, quad_positions);
+    set_triangles(quad, quad_triangles);
+  }
+  return quad;
+}
+
 }  // namespace yocto

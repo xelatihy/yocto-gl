@@ -119,13 +119,13 @@ struct gui_scene {
   vector<gui_light*>    lights    = {};
 
   // OpenGL state
-  ogl_program* program     = new ogl_program{};
-  ogl_program* ibl_program = new ogl_program{};
-
+  ogl_program* lights_program      = new ogl_program{};
+  ogl_program* ibl_program         = new ogl_program{};
   ogl_program* environment_program = new ogl_program{};
+
   ogl_cubemap* environment_cubemap = new ogl_cubemap{};
-  ogl_cubemap* irradiance_map      = new ogl_cubemap{};
-  ogl_cubemap* prefiltered_map     = new ogl_cubemap{};
+  ogl_cubemap* diffuse_cubemap     = new ogl_cubemap{};
+  ogl_cubemap* specular_cubemap    = new ogl_cubemap{};
   ogl_texture* brdf_lut            = new ogl_texture{};
 };
 
