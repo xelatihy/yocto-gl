@@ -147,6 +147,7 @@ bool get_positions(ply_model* ply, vector<vec3f>& values);
 bool get_normals(ply_model* ply, vector<vec3f>& values);
 bool get_texcoords(ply_model* ply, vector<vec2f>& values, bool flipv = false);
 bool get_colors(ply_model* ply, vector<vec3f>& values);
+bool get_colors(ply_model* ply, vector<vec4f>& values);
 bool get_radius(ply_model* ply, vector<float>& values);
 bool get_faces(ply_model* ply, vector<vector<int>>*& values);
 bool get_lines(ply_model* ply, vector<vec2i>& values);
@@ -186,6 +187,7 @@ bool add_normals(ply_model* ply, const vector<vec3f>& values);
 bool add_texcoords(
     ply_model* ply, const vector<vec2f>& values, bool flipv = false);
 bool add_colors(ply_model* ply, const vector<vec3f>& values);
+bool add_colors(ply_model* ply, const vector<vec4f>& values);
 bool add_radius(ply_model* ply, const vector<float>& values);
 bool add_faces(ply_model* ply, const vector<vector<int>>& values);
 bool add_faces(

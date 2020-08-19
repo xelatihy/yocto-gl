@@ -866,6 +866,17 @@ bool get_texcoords(ply_model* ply, vector<vec2f>& texcoords, bool flipv) {
 bool get_colors(ply_model* ply, vector<vec3f>& colors) {
   return get_values(ply, "vertex", {"red", "green", "blue"}, colors);
 }
+bool get_colors(ply_model* ply, vector<vec4f>& colors) {
+  if (has_property(ply, "vertex", "alpha")) {
+    auto colors3 = vector<vec3f>{};
+    return get_values(ply, "vertex", {"red", "green", "blue"}, colors3);
+    colors.resize(colors3.size());
+    for (auto i = 0; i < colors.size(); i++)
+      colors[i] = {colors3[i].x, colors3[i].y, colors3[i].z, 1};
+  } else {
+    return get_values(ply, "vertex", {"red", "green", "blue", "alpha"}, colors);
+  }
+}
 bool get_radius(ply_model* ply, vector<float>& radius) {
   return get_value(ply, "vertex", "radius", radius);
 }
@@ -1090,6 +1101,9 @@ bool add_texcoords(ply_model* ply, const vector<vec2f>& values, bool flipv) {
 }
 bool add_colors(ply_model* ply, const vector<vec3f>& values) {
   return add_values(ply, "vertex", {"red", "green", "blue"}, values);
+}
+bool add_colors(ply_model* ply, const vector<vec4f>& values) {
+  return add_values(ply, "vertex", {"red", "green", "blue", "alpha"}, values);
 }
 bool add_radius(ply_model* ply, const vector<float>& values) {
   return add_value(ply, "vertex", "radius", values);

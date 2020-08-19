@@ -495,7 +495,7 @@ struct generic_shape {
   vector<vec3f> positions     = {};
   vector<vec3f> normals       = {};
   vector<vec2f> texcoords     = {};
-  vector<vec3f> colors        = {};
+  vector<vec4f> colors        = {};
   vector<float> radius        = {};
 };
 
@@ -511,7 +511,7 @@ bool load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec3f>& colors,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, string& error, bool facevarying = false,
     bool flip_texcoords = true);
 bool save_shape(const string& filename, const vector<int>& points,
@@ -519,7 +519,7 @@ bool save_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, string& error, bool facevarying = false,
     bool flip_texcoords = true, bool ascii = false);
 
@@ -539,7 +539,7 @@ vector<string> shape_stats(const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec3f>& colors,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool verbose = false);
 
 }  // namespace yocto
