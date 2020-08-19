@@ -840,7 +840,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
   }
 
   auto albedo = material->color * color *
-                eval_texture(material->color_tex, texcoord, false);
+                xyz(eval_texture(material->color_tex, texcoord, false));
 
   // handle opacity
   if (opacity < 1.0f) {

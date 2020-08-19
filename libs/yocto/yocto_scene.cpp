@@ -730,23 +730,23 @@ vec2i texture_size(const scene_texture* texture) {
 }
 
 // Evaluate a texture
-vec3f lookup_texture(
+vec4f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear) {
   if (!texture->hdr.empty()) {
-    return xyz(texture->hdr[ij]);
+    return texture->hdr[ij];
   } else if (!texture->ldr.empty()) {
-    return ldr_as_linear ? byte_to_float(xyz(texture->ldr[ij]))
-                         : srgb_to_rgb(byte_to_float(xyz(texture->ldr[ij])));
+    return ldr_as_linear ? byte_to_float(texture->ldr[ij])
+                         : srgb_to_rgb(byte_to_float(texture->ldr[ij]));
   } else {
-    return {1, 1, 1};
+    return {1, 1, 1, 1};
   }
 }
 
 // Evaluate a texture
-vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   // get texture
-  if (!texture) return {1, 1, 1};
+  if (!texture) return {1, 1, 1, 1};
 
   // get image width/height
   auto size = texture_size(texture);
@@ -981,7 +981,7 @@ vec3f eval_normalmap(
   auto normal   = eval_normal(instance, element, uv);
   auto texcoord = eval_texcoord(instance, element, uv);
   if (normal_tex && (!shape->triangles.empty() || !shape->quads.empty())) {
-    auto normalmap = -1 + 2 * eval_texture(normal_tex, texcoord, true);
+    auto normalmap = -1 + 2 * xyz(eval_texture(normal_tex, texcoord, true));
     auto [tu, tv]  = eval_element_tangents(instance, element);
     auto frame     = frame3f{tu, tv, normal, zero3f};
     frame.x        = orthonormalize(frame.x, frame.z);
@@ -1045,7 +1045,7 @@ vec3f eval_environment(
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
   return environment->emission *
-         eval_texture(environment->emission_tex, texcoord);
+         xyz(eval_texture(environment->emission_tex, texcoord));
 }
 
 // Evaluate all environment color.
@@ -1060,9 +1060,11 @@ vec3f eval_environment(const scene_model* scene, const vec3f& direction) {
 // Evaluate point
 scene_material_sample eval_material(
     const scene_material* material, const vec2f& texcoord) {
-  auto mat  = scene_material_sample{};
+  auto mat     = scene_material_sample{};
+  mat.emission = material->emission *
+                 xyz(eval_texture(material->emission_tex, texcoord, false));
   mat.color = material->color *
-              eval_texture(material->color_tex, texcoord, false);
+              xyz(eval_texture(material->color_tex, texcoord, false));
   mat.specular = material->specular *
                  eval_texture(material->specular_tex, texcoord, true).x;
   mat.metallic = material->metallic *
@@ -1077,16 +1079,16 @@ scene_material_sample eval_material(
   mat.translucency = material->translucency *
                      eval_texture(material->translucency_tex, texcoord, true).x;
   mat.opacity = material->opacity *
-                mean(eval_texture(material->opacity_tex, texcoord, true));
+                eval_texture(material->opacity_tex, texcoord, true).x;
   mat.thin       = material->thin || material->transmission == 0;
   mat.scattering = material->scattering *
-                   eval_texture(material->scattering_tex, texcoord, false);
+                   xyz(eval_texture(material->scattering_tex, texcoord, false));
   mat.scanisotropy = material->scanisotropy;
   mat.trdepth      = material->trdepth;
-  mat.normalmap    = material->normal_tex
-                      ? -1 + 2 * eval_texture(
-                                     material->normal_tex, texcoord, true)
-                      : vec3f{0, 0, 1};
+  mat.normalmap =
+      material->normal_tex
+          ? -1 + 2 * xyz(eval_texture(material->normal_tex, texcoord, true))
+          : vec3f{0, 0, 1};
   return mat;
 }
 
@@ -1099,7 +1101,8 @@ vec3f eval_emission(const scene_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
-  return material->emission * eval_texture(material->emission_tex, texcoord);
+  return material->emission *
+         xyz(eval_texture(material->emission_tex, texcoord));
 }
 
 // Eval material to obtain emission, brdf and opacity.
@@ -1119,7 +1122,7 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
   auto color    = material->color * eval_color(instance, element, uv) *
-               eval_texture(material->color_tex, texcoord, false);
+               xyz(eval_texture(material->color_tex, texcoord, false));
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord, true).x;
   auto metallic = material->metallic *
@@ -1203,8 +1206,8 @@ scene_vsdf eval_vsdf(
   auto material = instance->material;
   // initialize factors
   auto texcoord = eval_texcoord(instance, element, uv);
-  auto base     = material->color * eval_color(instance, element, uv) *
-              eval_texture(material->color_tex, texcoord, false);
+  auto color    = material->color * eval_color(instance, element, uv) *
+               xyz(eval_texture(material->color_tex, texcoord, false));
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;
   auto translucency =
@@ -1212,15 +1215,16 @@ scene_vsdf eval_vsdf(
       eval_texture(material->translucency_tex, texcoord, true).x;
   auto thin = material->thin ||
               (material->transmission == 0 && material->translucency == 0);
-  auto scattering = material->scattering *
-                    eval_texture(material->scattering_tex, texcoord, false);
+  auto scattering =
+      material->scattering *
+      xyz(eval_texture(material->scattering_tex, texcoord, false));
   auto scanisotropy = material->scanisotropy;
   auto trdepth      = material->trdepth;
 
   // factors
   auto vsdf    = scene_vsdf{};
   vsdf.density = ((transmission != 0 || translucency != 0) && !thin)
-                     ? -log(clamp(base, 0.0001f, 1.0f)) / trdepth
+                     ? -log(clamp(color, 0.0001f, 1.0f)) / trdepth
                      : zero3f;
   vsdf.scatter    = scattering;
   vsdf.anisotropy = scanisotropy;

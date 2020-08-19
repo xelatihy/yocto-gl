@@ -377,9 +377,9 @@ ray3f eval_camera(
 
 // Evaluates a texture
 vec2i texture_size(const scene_texture* texture);
-vec3f lookup_texture(
+vec4f lookup_texture(
     const scene_texture* texture, const vec2i& ij, bool ldr_as_linear = false);
-vec3f eval_texture(const scene_texture* texture, const vec2f& uv,
+vec4f eval_texture(const scene_texture* texture, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
