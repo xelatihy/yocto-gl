@@ -106,7 +106,6 @@ struct trace_bvh {
 // To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
 struct trace_camera {
-  string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
@@ -119,9 +118,8 @@ struct trace_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct trace_texture {
-  string       name = "";
-  image<vec4f> hdr  = {};
-  image<vec4b> ldr  = {};
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 };
 
 // Material for surfaces, lines and triangles.
@@ -129,9 +127,6 @@ struct trace_texture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct trace_material {
-  // material data
-  string name = "";
-
   // material
   vec3f emission     = {0, 0, 0};
   vec3f color        = {0, 0, 0};
@@ -169,9 +164,6 @@ struct trace_material {
 // Additionally, we support face-varying primitives where
 // each vertex data has its own topology.
 struct trace_shape {
-  // shape data
-  string name = "";
-
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -215,8 +207,6 @@ struct trace_shape {
 
 // Object.
 struct trace_instance {
-  // instance data
-  string          name     = "";
   frame3f         frame    = identity3x4f;
   trace_shape*    shape    = nullptr;
   trace_material* material = nullptr;
@@ -224,7 +214,6 @@ struct trace_instance {
 
 // Environment map.
 struct trace_environment {
-  string         name         = "";
   frame3f        frame        = identity3x4f;
   vec3f          emission     = {0, 0, 0};
   trace_texture* emission_tex = nullptr;
@@ -278,14 +267,13 @@ struct trace_scene {
 namespace yocto {
 
 // add element to a scene
-trace_camera*      add_camera(trace_scene* scene, const string& name = "");
-trace_environment* add_environment(trace_scene* scene, const string& name = "");
-trace_instance*    add_instance(trace_scene* scene, const string& name = "");
-trace_material*    add_material(trace_scene* scene, const string& name = "");
-trace_shape*       add_shape(trace_scene* scene, const string& name = "");
-trace_texture*     add_texture(trace_scene* scene, const string& name = "");
-trace_instance*    add_complete_instance(
-       trace_scene* scene, const string& name = "");
+trace_camera*      add_camera(trace_scene* scene);
+trace_environment* add_environment(trace_scene* scene);
+trace_instance*    add_instance(trace_scene* scene);
+trace_material*    add_material(trace_scene* scene);
+trace_shape*       add_shape(trace_scene* scene);
+trace_texture*     add_texture(trace_scene* scene);
+trace_instance*    add_complete_instance(trace_scene* scene);
 
 // set camera properties
 void set_frame(trace_camera* camera, const frame3f& frame);

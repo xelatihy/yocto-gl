@@ -80,38 +80,29 @@ trace_scene::~trace_scene() {
 #endif
 }
 
-// add an element
-template <typename T>
-static T* add_element(
-    vector<T*>& elements, const string& name, const string& base) {
-  auto element  = elements.emplace_back(new T{});
-  element->name = name != "" ? name : (base + std::to_string(elements.size()));
-  return element;
-}
-
 // add element
-trace_camera* add_camera(trace_scene* scene, const string& name) {
-  return add_element(scene->cameras, name, "camera");
+trace_camera* add_camera(trace_scene* scene) {
+  return scene->cameras.emplace_back(new trace_camera{});
 }
-trace_environment* add_environment(trace_scene* scene, const string& name) {
-  return add_element(scene->environments, name, "environment");
+trace_environment* add_environment(trace_scene* scene) {
+  return scene->environments.emplace_back(new trace_environment{});
 }
-trace_shape* add_shape(trace_scene* scene, const string& name) {
-  return add_element(scene->shapes, name, "shape");
+trace_shape* add_shape(trace_scene* scene) {
+  return scene->shapes.emplace_back(new trace_shape{});
 }
-trace_texture* add_texture(trace_scene* scene, const string& name) {
-  return add_element(scene->textures, name, "texture");
+trace_texture* add_texture(trace_scene* scene) {
+  return scene->textures.emplace_back(new trace_texture{});
 }
-trace_instance* add_instance(trace_scene* scene, const string& name) {
-  return add_element(scene->instances, name, "instance");
+trace_instance* add_instance(trace_scene* scene) {
+  return scene->instances.emplace_back(new trace_instance{});
 }
-trace_material* add_material(trace_scene* scene, const string& name) {
-  return add_element(scene->materials, name, "material");
+trace_material* add_material(trace_scene* scene) {
+  return scene->materials.emplace_back(new trace_material{});
 }
-trace_instance* add_complete_instance(trace_scene* scene, const string& name) {
-  auto instance      = add_instance(scene, name);
-  instance->shape    = add_shape(scene, name);
-  instance->material = add_material(scene, name);
+trace_instance* add_complete_instance(trace_scene* scene) {
+  auto instance      = add_instance(scene);
+  instance->shape    = add_shape(scene);
+  instance->material = add_material(scene);
   return instance;
 }
 
