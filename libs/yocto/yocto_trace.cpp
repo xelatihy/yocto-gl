@@ -28,12 +28,9 @@
 
 #include "yocto_trace.h"
 
-#include <atomic>
 #include <cstring>
 #include <deque>
-#include <future>
 #include <memory>
-#include <mutex>
 
 #include "yocto_geometry.h"
 #include "yocto_parallel.h"
@@ -50,7 +47,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 

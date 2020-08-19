@@ -29,14 +29,12 @@
 #include "yocto_sceneio.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cctype>
 #include <climits>
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
-#include <future>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -47,6 +45,7 @@
 #include "yocto_commonio.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
+#include "yocto_parallel.h"
 #include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
@@ -55,7 +54,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using std::unique_ptr;
 using namespace std::string_literals;

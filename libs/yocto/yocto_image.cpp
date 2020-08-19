@@ -32,10 +32,7 @@
 
 #include "yocto_image.h"
 
-#include <atomic>
-#include <future>
 #include <memory>
-#include <thread>
 
 #include "ext/stb_image.h"
 #include "ext/stb_image_resize.h"
@@ -45,17 +42,6 @@
 #include "yocto_commonio.h"
 #include "yocto_noise.h"
 #include "yocto_parallel.h"
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// using directives
-using std::atomic;
-using std::future;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES

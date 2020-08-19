@@ -9,7 +9,6 @@
 #include "yocto_shape.h"
 
 #include <algorithm>
-#include <atomic>
 #include <deque>
 #include <memory>
 #include <string>
@@ -26,7 +25,6 @@
 namespace yocto {
 
 // using directives
-using std::atomic;
 using std::deque;
 using namespace std::string_literals;
 
