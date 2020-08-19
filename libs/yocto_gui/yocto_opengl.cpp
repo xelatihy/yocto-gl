@@ -1172,9 +1172,10 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   *framebuffer = {};
 }
 
+void bind_shape(const ogl_shape* shape) { glBindVertexArray(shape->shape_id); }
+
 void set_shape(ogl_shape* shape) {
   glGenVertexArrays(1, &shape->shape_id);
-  // glBindVertexArray(shape->shape_id);  // TODO(giacomo): not needed?
   assert_ogl_error();
 }
 
@@ -1206,18 +1207,18 @@ ogl_shape::~ogl_shape() {
   if (edges) delete edges;
 }
 
-// void set_vertex_attribute(int location, float value) {
-//   glVertexAttrib1f(location, value);
-// }
-// void set_vertex_attribute(int location, const vec2f& value) {
-//   glVertexAttrib2f(location, value.x, value.y);
-// }
-// void set_vertex_attribute(int location, const vec3f& value) {
-//   glVertexAttrib3f(location, value.x, value.y, value.z);
-// }
-// void set_vertex_attribute(int location, const vec4f& value) {
-//   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
-// }
+void set_vertex_attribute(int location, float value) {
+  glVertexAttrib1f(location, value);
+}
+void set_vertex_attribute(int location, const vec2f& value) {
+  glVertexAttrib2f(location, value.x, value.y);
+}
+void set_vertex_attribute(int location, const vec3f& value) {
+  glVertexAttrib3f(location, value.x, value.y, value.z);
+}
+void set_vertex_attribute(int location, const vec4f& value) {
+  glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+}
 
 void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
   assert_ogl_error();
@@ -1231,40 +1232,63 @@ void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
 template <typename T>
 void set_vertex_attribute(ogl_shape* shape, ogl_arraybuffer* attribute,
     const vector<T>& data, int location) {
-  if (data.empty()) return;
+    assert(!data.empty());
   set_arraybuffer(attribute, data, false);
-  axxx_ssert_ogl_error();
-  glBindVertexArray(shape->shape_id);
+  assert_ogl_error();
+  bind_shape(shape);
   set_vertex_attribute(location, attribute);
-  axxx_ssert_ogl_error();
+  assert_ogl_error();
+}
+
+template <typename T>
+void set_vertex_attribute(ogl_shape* shape, const T& attribute, int location) {
+  assert_ogl_error();
+  bind_shape(shape);
+  set_vertex_attribute(location, attribute);
+  assert_ogl_error();
 }
 
 void set_positions(ogl_shape* shape, const vector<vec3f>& positions) {
-  set_vertex_attribute(shape, shape->positions, positions, 0);
+  if (positions.empty())
+    set_vertex_attribute(shape, vec3f{0, 0, 0}, 0);
+  else
+    set_vertex_attribute(shape, shape->positions, positions, 0);
 }
 void set_normals(ogl_shape* shape, const vector<vec3f>& normals) {
-  set_vertex_attribute(shape, shape->normals, normals, 1);
+  if (normals.empty())
+    set_vertex_attribute(shape, vec3f{0, 0, 1}, 1);
+  else
+    set_vertex_attribute(shape, shape->normals, normals, 1);
 }
 void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
-  set_vertex_attribute(shape, shape->texcoords, texcoords, 2);
+  if (texcoords.empty())
+    set_vertex_attribute(shape, vec2f{0, 0}, 2);
+  else
+    set_vertex_attribute(shape, shape->texcoords, texcoords, 2);
 }
 void set_colors(ogl_shape* shape, const vector<vec3f>& colors) {
-  set_vertex_attribute(shape, shape->colors, colors, 3);
+  if (colors.empty())
+    set_vertex_attribute(shape, vec4f{1, 1, 1, 1}, 3);
+  else
+    set_vertex_attribute(shape, shape->colors, colors, 3);
 }
 void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
-  set_vertex_attribute(shape, shape->tangents, tangents, 4);
+  if (tangents.empty())
+    set_vertex_attribute(shape, vec4f{0, 0, 1, 1}, 4);
+  else
+    set_vertex_attribute(shape, shape->tangents, tangents, 4);
 }
 
 template <typename T>
 void set_index_buffer(
     ogl_shape* shape, ogl_elementbuffer* elements, const vector<T>& data) {
-  glBindVertexArray(shape->shape_id);
+  bind_shape(shape);
   set_arraybuffer(elements, data);
   // auto elem_size = sizeof(T) / sizeof(int);
   // if (elem_size == 1) shape.type = Shape::type::points;
   // if (elem_size == 2) shape.type = Shape::type::lines;
   // if (elem_size == 3) shape.type = Shape::type::triangles;
-  axxx_ssert_ogl_error();
+  assert_ogl_error();
 }
 
 void set_points(ogl_shape* shape, const vector<int>& points) {
@@ -1301,6 +1325,21 @@ void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
   }
   auto edges = vector<vec2i>(edgemap.begin(), edgemap.end());
   set_elementbuffer(shape->edges, edges);
+}
+
+void draw_shape(const ogl_shape* shape) {
+  bind_shape(shape);
+
+  if (is_initialized(shape->points)) {
+    glPointSize(shape->points_size);
+    draw_elements(shape->points);
+  } else if (is_initialized(shape->lines)) {
+    draw_elements(shape->lines);
+  } else if (is_initialized(shape->triangles)) {
+    draw_elements(shape->triangles);
+  } else if (is_initialized(shape->quads)) {
+    draw_elements(shape->quads);
+  }
 }
 
 }  // namespace yocto

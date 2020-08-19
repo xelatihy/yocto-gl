@@ -579,31 +579,34 @@ void draw_object(
   assert_ogl_error();
 
   auto shape = instance->shape;
-  set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
-  set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0, 0});
-  set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0, 1});
-  set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0, 0});
-  set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1, 1});
-  set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0, 1, 1});
+  // set_uniform(scene->program, "faceted", !is_initialized(shape->normals));
+  // set_attribute(scene->program, "positions", shape->positions, vec3f{0, 0,
+  // 0}); set_attribute(scene->program, "normals", shape->normals, vec3f{0, 0,
+  // 1}); set_attribute(scene->program, "texcoords", shape->texcoords, vec2f{0,
+  // 0}); set_attribute(scene->program, "colors", shape->colors, vec4f{1, 1, 1,
+  // 1}); set_attribute(scene->program, "tangents", shape->tangents, vec4f{0, 0,
+  // 1, 1});
   assert_ogl_error();
 
   if (is_initialized(shape->points)) {
-    glPointSize(shape->points_size);
+    // glPointSize(shape->points_size);
     set_uniform(scene->program, "etype", 1);
-    draw_elements(shape->points);
+    // draw_elements(shape->points);
   }
   if (is_initialized(shape->lines)) {
     set_uniform(scene->program, "etype", 2);
-    draw_elements(shape->lines);
+    // draw_elements(shape->lines);
   }
   if (is_initialized(shape->triangles)) {
     set_uniform(scene->program, "etype", 3);
-    draw_elements(shape->triangles);
+    // draw_elements(shape->triangles);
   }
   if (is_initialized(shape->quads)) {
     set_uniform(scene->program, "etype", 3);
-    draw_elements(shape->quads);
+    // draw_elements(shape->quads);
   }
+  draw_shape(shape);
+
   assert_ogl_error();
 
   if (is_initialized(shape->edges) && params.edges && !params.wireframe) {
@@ -613,7 +616,8 @@ void draw_object(
     set_uniform(scene->program, "specular", vec3f{0, 0, 0});
     set_uniform(scene->program, "roughness", 0);
     set_uniform(scene->program, "etype", 3);
-    draw_elements(shape->edges);
+    // draw_elements(shape->edges);
+    draw_shape(shape);
     assert_ogl_error();
   }
 }
@@ -706,9 +710,11 @@ void draw_scene(gui_scene* scene, gui_camera* camera, const vec4i& viewport,
   set_uniform(scene->environment_program, "roughness", 0.0f);
 
   auto cube = ibl::cube_shape();
-  set_attribute(
-      scene->environment_program, "positions", cube->positions, vec3f{0, 0, 0});
-  draw_elements(cube->triangles);
+  draw_shape(cube);
+  // set_attribute(
+  //     scene->environment_program, "positions", cube->positions, vec3f{0, 0,
+  //     0});
+  // draw_elements(cube->triangles);
 
   unbind_program();
   if (params.wireframe) set_ogl_wireframe(false);
@@ -834,8 +840,9 @@ inline void bake_cubemap(ogl_cubemap* cubemap, const Sampler* environment,
       set_uniform(program, "mipmap_level", mipmap_level);
       set_uniform(program, "environment", environment, 0);
 
-      set_attribute(program, "positions", cube->positions, vec3f{0, 0, 0});
-      draw_elements(cube->triangles);
+      // set_attribute(program, "positions", cube->positions, vec3f{0, 0, 0});
+      // draw_elements(cube->triangles);
+      draw_shape(cube);
     }
     size /= 2;
   }
@@ -879,9 +886,9 @@ inline void bake_specular_brdf_texture(ogl_texture* texture) {
   set_ogl_viewport(vec2i{size, size});
   clear_ogl_framebuffer({0, 0, 0, 0}, true);
 
-  set_attribute(program, "positions", brdf_plane->positions, vec3f{0, 0, 0});
-
-  draw_elements(brdf_plane->triangles);
+  // set_attribute(program, "positions", brdf_plane->positions, vec3f{0, 0, 0});
+  // draw_elements(brdf_plane->triangles);
+  draw_shape(brdf_plane);
   assert_ogl_error();
 
   unbind_program();
