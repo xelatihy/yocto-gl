@@ -173,6 +173,9 @@ inline bool path_isfile(const string& filename);
 // List the contents of a directory
 inline vector<string> list_directory(const string& filename);
 
+// Create a directory and all missing parent directories if needed
+inline bool make_directory(const string& dirname, string& error);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -374,6 +377,18 @@ inline vector<string> list_directory(const string& filename) {
     entries.push_back(entry.path().generic_u8string());
   }
   return entries;
+}
+
+// Create a directory and all missing parent directories if needed
+inline bool make_directory(const string& dirname, string& error) {
+  if (path_exists(dirname)) return true;
+  try {
+    create_directories(make_path(dirname));
+    return true;
+  } catch (...) {
+    error = dirname + ": cannot create directory";
+    return false;
+  }
 }
 
 }  // namespace yocto

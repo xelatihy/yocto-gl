@@ -763,15 +763,6 @@ bool make_preset(scene_model* scene, const string& type, string& error) {
   return true;
 }
 
-void make_dir(const string& dirname) {
-  if (path_exists(dirname)) return;
-  try {
-    create_directories(std::filesystem::u8path(dirname));
-  } catch (...) {
-    print_fatal("cannot create directory " + dirname);
-  }
-}
-
 int main(int argc, const char* argv[]) {
   // command line parameters
   auto validate  = false;
@@ -825,11 +816,15 @@ int main(int argc, const char* argv[]) {
   }
 
   // make a directory if needed
-  make_dir(path_dirname(output));
-  if (!scene->shapes.empty())
-    make_dir(path_join(path_dirname(output), "shapes"));
-  if (!scene->textures.empty())
-    make_dir(path_join(path_dirname(output), "textures"));
+  if (!make_directory(path_dirname(output), ioerror)) print_fatal(ioerror);
+  if (!scene->shapes.empty()) {
+    if (!make_directory(path_join(path_dirname(output), "shapes"), ioerror))
+      print_fatal(ioerror);
+  }
+  if (!scene->textures.empty()) {
+    if (!make_directory(path_join(path_dirname(output), "textures"), ioerror))
+      print_fatal(ioerror);
+  }
 
   // save scene
   if (!save_scene(output, scene, ioerror, print_progress)) print_fatal(ioerror);
