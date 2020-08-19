@@ -786,7 +786,7 @@ static vec4f trace_falsecolor(const scene_model* scene, const ray3f& ray,
           dot(gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1);
     case trace_falsecolor_type::texcoord:
       return {fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0, 1};
-    case trace_falsecolor_type::color: return make_vec(color, 1);
+    case trace_falsecolor_type::color: return make_vec(xyz(color), 1);
     case trace_falsecolor_type::emission: return make_vec(emission, 1);
     case trace_falsecolor_type::diffuse: return make_vec(bsdf.diffuse, 1);
     case trace_falsecolor_type::specular: return make_vec(bsdf.specular, 1);
@@ -839,7 +839,7 @@ static vec4f trace_albedo(const scene_model* scene, const ray3f& ray,
     return {emission.x, emission.y, emission.z, 1};
   }
 
-  auto albedo = material->color * color *
+  auto albedo = material->color * xyz(color) *
                 xyz(eval_texture(material->color_tex, texcoord, false));
 
   // handle opacity

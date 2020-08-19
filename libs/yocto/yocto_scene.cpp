@@ -329,7 +329,7 @@ void set_normals(scene_shape* shape, const vector<vec3f>& normals) {
 void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords) {
   shape->texcoords = texcoords;
 }
-void set_colors(scene_shape* shape, const vector<vec3f>& colors) {
+void set_colors(scene_shape* shape, const vector<vec4f>& colors) {
   shape->colors = colors;
 }
 void set_radius(scene_shape* shape, const vector<float>& radius) {
@@ -1016,9 +1016,9 @@ vec3f eval_shading_normal(const scene_instance* instance, int element,
 }
 
 // Eval color
-vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
+vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
   auto shape = instance->shape;
-  if (shape->colors.empty()) return {1, 1, 1};
+  if (shape->colors.empty()) return {1, 1, 1, 1};
   if (!shape->triangles.empty()) {
     auto t = shape->triangles[element];
     return interpolate_triangle(
@@ -1033,7 +1033,7 @@ vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv) {
   } else if (!shape->points.empty()) {
     return shape->colors[shape->points[element]];
   } else {
-    return zero3f;
+    return {0, 0, 0, 0};
   }
 }
 
@@ -1121,7 +1121,7 @@ scene_bsdf eval_bsdf(const scene_instance* instance, int element,
     const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto material = instance->material;
   auto texcoord = eval_texcoord(instance, element, uv);
-  auto color    = material->color * eval_color(instance, element, uv) *
+  auto color    = material->color * xyz(eval_color(instance, element, uv)) *
                xyz(eval_texture(material->color_tex, texcoord, false));
   auto specular = material->specular *
                   eval_texture(material->specular_tex, texcoord, true).x;
@@ -1206,7 +1206,7 @@ scene_vsdf eval_vsdf(
   auto material = instance->material;
   // initialize factors
   auto texcoord = eval_texcoord(instance, element, uv);
-  auto color    = material->color * eval_color(instance, element, uv) *
+  auto color    = material->color * xyz(eval_color(instance, element, uv)) *
                xyz(eval_texture(material->color_tex, texcoord, false));
   auto transmission = material->transmission *
                       eval_texture(material->emission_tex, texcoord, true).x;

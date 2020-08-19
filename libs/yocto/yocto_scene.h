@@ -185,7 +185,7 @@ struct scene_shape {
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
-  vector<vec3f> colors    = {};
+  vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
 
@@ -333,7 +333,7 @@ void set_fvquads(scene_shape* shape, const vector<vec4i>& quadspos,
 void set_positions(scene_shape* shape, const vector<vec3f>& positions);
 void set_normals(scene_shape* shape, const vector<vec3f>& normals);
 void set_texcoords(scene_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(scene_shape* shape, const vector<vec3f>& colors);
+void set_colors(scene_shape* shape, const vector<vec4f>& colors);
 void set_radius(scene_shape* shape, const vector<float>& radius);
 void set_tangents(scene_shape* shape, const vector<vec4f>& tangents);
 void set_subdivision(scene_shape* shape, int subdivisions, bool catmullclark,
@@ -396,7 +396,7 @@ vec3f eval_normalmap(
     const scene_instance* instance, int element, const vec2f& uv);
 vec3f eval_shading_normal(const scene_instance* instance, int element,
     const vec2f& uv, const vec3f& outgoing);
-vec3f eval_color(const scene_instance* instance, int element, const vec2f& uv);
+vec4f eval_color(const scene_instance* instance, int element, const vec2f& uv);
 
 // Environment
 vec3f eval_environment(

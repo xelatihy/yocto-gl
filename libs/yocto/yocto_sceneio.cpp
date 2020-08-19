@@ -1384,7 +1384,7 @@ static bool load_gltf_scene(const string& filename, scene_model* scene,
             for (auto i = 0; i < gacc->count; i++) {
               auto color4 = vec4f{0, 0, 0, 0};
               cgltf_accessor_read_float(gacc, i, &color4.x, 4);
-              shape->colors[i] = xyz(color4);
+              shape->colors[i] = color4;
             }
           }
         } else if (semantic == "TANGENT") {
