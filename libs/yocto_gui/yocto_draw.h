@@ -82,7 +82,6 @@ struct gui_material {
   ogl_texture* normal_tex    = nullptr;
 };
 
-
 // Opengl instance
 struct gui_instance {
   // instance properties
@@ -193,19 +192,6 @@ void set_specular(gui_material* material, float specular,
 void set_opacity(
     gui_material* material, float opacity, ogl_texture* opacity_tex = nullptr);
 void set_normalmap(gui_material* material, ogl_texture* normal_tex);
-
-// shape properties
-void set_points(ogl_shape* shape, const vector<int>& points);
-void set_lines(ogl_shape* shape, const vector<vec2i>& lines);
-void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles);
-void set_quads(ogl_shape* shape, const vector<vec4i>& quads);
-void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads);
-void set_positions(ogl_shape* shape, const vector<vec3f>& positions);
-void set_normals(ogl_shape* shape, const vector<vec3f>& normals);
-void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords);
-void set_colors(ogl_shape* shape, const vector<vec3f>& colors);
-void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 // instance properties
 void set_frame(gui_instance* instance, const frame3f& frame);

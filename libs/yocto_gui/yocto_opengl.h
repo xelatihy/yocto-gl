@@ -430,7 +430,21 @@ struct ogl_shape {
   ~ogl_shape();
 };
 
+void set_shape(ogl_shape* shape);
 void clear_shape(ogl_shape* shape);
+
+// shape properties
+void set_points(ogl_shape* shape, const vector<int>& points);
+void set_lines(ogl_shape* shape, const vector<vec2i>& lines);
+void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles);
+void set_quads(ogl_shape* shape, const vector<vec4i>& quads);
+void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads);
+void set_positions(ogl_shape* shape, const vector<vec3f>& positions);
+void set_normals(ogl_shape* shape, const vector<vec3f>& normals);
+void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords);
+void set_colors(ogl_shape* shape, const vector<vec3f>& colors);
+void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents);
 
 }  // namespace yocto
 

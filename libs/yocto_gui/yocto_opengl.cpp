@@ -71,6 +71,26 @@ bool init_ogl(string& error) {
   return true;
 }
 
+// GLenum _assert_ogl_error() {
+//   auto error_code = glGetError();
+//   if (error_code != GL_NO_ERROR) {
+//     auto error = ""s;
+//     switch (error_code) {
+//       case GL_INVALID_ENUM: error = "INVALID_ENUM"; break;
+//       case GL_INVALID_VALUE: error = "INVALID_VALUE"; break;
+//       case GL_INVALID_OPERATION: error = "INVALID_OPERATION"; break;
+//       // case GL_STACK_OVERFLOW: error = "STACK_OVERFLOW"; break;
+//       // case GL_STACK_UNDERFLOW: error = "STACK_UNDERFLOW"; break;
+//       case GL_OUT_OF_MEMORY: error = "OUT_OF_MEMORY"; break;
+//       case GL_INVALID_FRAMEBUFFER_OPERATION:
+//         error = "INVALID_FRAMEBUFFER_OPERATION";
+//         break;
+//     }
+//     printf("\n    OPENGL ERROR: %s\n\n", error.c_str());
+//   }
+//   return error_code;
+// }
+// void assert_ogl_error() assert(_assert_ogl_error() == GL_NO_ERROR)
 void assert_ogl_error() { assert(glGetError() == GL_NO_ERROR); }
 
 bool check_ogl_error(string& error) {
@@ -1152,6 +1172,12 @@ void clear_framebuffer(ogl_framebuffer* framebuffer) {
   *framebuffer = {};
 }
 
+void set_shape(ogl_shape* shape) {
+  glGenVertexArrays(1, &shape->shape_id);
+  // glBindVertexArray(shape->shape_id);  // TODO(giacomo): not needed?
+  assert_ogl_error();
+}
+
 // Clear an OpenGL shape
 void clear_shape(ogl_shape* shape) {
   clear_arraybuffer(shape->positions);
@@ -1178,6 +1204,103 @@ ogl_shape::~ogl_shape() {
   if (triangles) delete triangles;
   if (quads) delete quads;
   if (edges) delete edges;
+}
+
+// void set_vertex_attribute(int location, float value) {
+//   glVertexAttrib1f(location, value);
+// }
+// void set_vertex_attribute(int location, const vec2f& value) {
+//   glVertexAttrib2f(location, value.x, value.y);
+// }
+// void set_vertex_attribute(int location, const vec3f& value) {
+//   glVertexAttrib3f(location, value.x, value.y, value.z);
+// }
+// void set_vertex_attribute(int location, const vec4f& value) {
+//   glVertexAttrib4f(location, value.x, value.y, value.z, value.w);
+// }
+
+void set_vertex_attribute(int location, const ogl_arraybuffer* buffer) {
+  assert_ogl_error();
+  assert(buffer->buffer_id);  // == 0) return;
+  glBindBuffer(GL_ARRAY_BUFFER, buffer->buffer_id);
+  glEnableVertexAttribArray(location);
+  glVertexAttribPointer(location, buffer->esize, GL_FLOAT, false, 0, nullptr);
+  assert_ogl_error();
+}
+
+template <typename T>
+void set_vertex_attribute(ogl_shape* shape, ogl_arraybuffer* attribute,
+    const vector<T>& data, int location) {
+  if (data.empty()) return;
+  set_arraybuffer(attribute, data, false);
+  axxx_ssert_ogl_error();
+  glBindVertexArray(shape->shape_id);
+  set_vertex_attribute(location, attribute);
+  axxx_ssert_ogl_error();
+}
+
+void set_positions(ogl_shape* shape, const vector<vec3f>& positions) {
+  set_vertex_attribute(shape, shape->positions, positions, 0);
+}
+void set_normals(ogl_shape* shape, const vector<vec3f>& normals) {
+  set_vertex_attribute(shape, shape->normals, normals, 1);
+}
+void set_texcoords(ogl_shape* shape, const vector<vec2f>& texcoords) {
+  set_vertex_attribute(shape, shape->texcoords, texcoords, 2);
+}
+void set_colors(ogl_shape* shape, const vector<vec3f>& colors) {
+  set_vertex_attribute(shape, shape->colors, colors, 3);
+}
+void set_tangents(ogl_shape* shape, const vector<vec4f>& tangents) {
+  set_vertex_attribute(shape, shape->tangents, tangents, 4);
+}
+
+template <typename T>
+void set_index_buffer(
+    ogl_shape* shape, ogl_elementbuffer* elements, const vector<T>& data) {
+  glBindVertexArray(shape->shape_id);
+  set_arraybuffer(elements, data);
+  // auto elem_size = sizeof(T) / sizeof(int);
+  // if (elem_size == 1) shape.type = Shape::type::points;
+  // if (elem_size == 2) shape.type = Shape::type::lines;
+  // if (elem_size == 3) shape.type = Shape::type::triangles;
+  axxx_ssert_ogl_error();
+}
+
+void set_points(ogl_shape* shape, const vector<int>& points) {
+  set_elementbuffer(shape->points, points);
+}
+void set_lines(ogl_shape* shape, const vector<vec2i>& lines) {
+  set_elementbuffer(shape->lines, lines);
+}
+void set_triangles(ogl_shape* shape, const vector<vec3i>& triangles) {
+  set_elementbuffer(shape->triangles, triangles);
+}
+void set_quads(ogl_shape* shape, const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
+  triangles.reserve(quads.size() * 2);
+  for (auto& q : quads) {
+    triangles.push_back({q.x, q.y, q.w});
+    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+  }
+  set_elementbuffer(shape->quads, triangles);
+}
+void set_edges(ogl_shape* shape, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads) {
+  auto edgemap = unordered_set<vec2i>{};
+  for (auto t : triangles) {
+    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
+    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
+    edgemap.insert({min(t.z, t.x), max(t.z, t.x)});
+  }
+  for (auto t : quads) {
+    edgemap.insert({min(t.x, t.y), max(t.x, t.y)});
+    edgemap.insert({min(t.y, t.z), max(t.y, t.z)});
+    edgemap.insert({min(t.z, t.w), max(t.z, t.w)});
+    edgemap.insert({min(t.w, t.x), max(t.w, t.x)});
+  }
+  auto edges = vector<vec2i>(edgemap.begin(), edgemap.end());
+  set_elementbuffer(shape->edges, edges);
 }
 
 }  // namespace yocto
